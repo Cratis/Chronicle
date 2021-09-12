@@ -10,6 +10,8 @@ using Cratis.GraphQL;
 using Cratis.Types;
 using GraphQL.Server.Ui.Playground;
 using HotChocolate.AspNetCore;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
@@ -31,6 +33,12 @@ namespace Cratis.Server
         {
             services.AddSingleton(Types);
             services.AddGraphQL(_environment, Types);
+            services.AddMvc();
+
+            foreach( var controllerAssembly in Types.FindMultiple<Controller>().Select(_ => _.Assembly).Distinct() )
+            {
+                services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(controllerAssembly));
+            }
 
             services.AddCodeFirstGrpc(config => config.ResponseCompressionLevel = CompressionLevel.Optimal);
             services.AddCodeFirstGrpcReflection();
@@ -57,6 +65,8 @@ namespace Cratis.Server
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapControllers();
+
                 if (env.IsDevelopment())
                 {
                     endpoints.MapGraphQLPlayground(
