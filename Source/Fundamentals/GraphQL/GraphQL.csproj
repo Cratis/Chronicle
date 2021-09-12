@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.GraphQL</AssemblyName>
+        <RootNamespace>Cratis.GraphQL</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="HotChocolate.AspNetCore" Version="$(HotChocolateVersion)" />
+        <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="$(HotChocolateVersion)" />
+        <PackageReference Include="GraphQL.Server.Ui.Playground" Version="5.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Collections/Collections.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Types/Types.csproj" />
+    </ItemGroup>
+</Project>

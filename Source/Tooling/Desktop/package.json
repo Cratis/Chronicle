@@ -1,0 +1,104 @@
+{
+    "name": "cratis-desktop",
+    "version": "1.0.0",
+    "description": "The desktop experience for Cratis.",
+    "main": "build/index.js",
+    "scripts": {
+        "clean": "tsc -b --clean main && tsc -b --clean renderer",
+        "build:main": "cd main && webpack --mode=production",
+        "build:renderer": "cd renderer && webpack --mode=production",
+        "build": "tsc -b main && cd renderer && webpack --mode=production",
+        "build:dev": "cd renderer && webpack --mode=development",
+        "start:main": "yarn clean && tsc --project main",
+        "start:renderer": "cd renderer && cross-env WEBPACK_DEV_SERVER=true webpack serve --mode=development --progress --hot",
+        "start:dev": "yarn clean && concurrently \"npm:start:main\" \"npm:start:renderer\" \"wait-on http://localhost:9100 && nodemon\"",
+        "prepackage": "yarn build:renderer && yarn build:main && cp ./assets/icon.png build",
+        "package": "electron-builder build -mwl --publish never",
+        "test": "mocha",
+        "lint": "eslint '**/*.{js,ts,tsx}' --quiet --fix",
+        "lint:ci": "eslint '**/*.{js,ts,tsx}' --quiet",
+        "ci": "yarn clean && yarn lint:ci && tsc -b main && tsc -b renderer && yarn test"
+    },
+    "nodemonConfig": {
+        "restartable": "rs",
+        "execMap": {
+            "js": "electron main/dist/main/index.js"
+        },
+        "watch": [
+            "./main/dist"
+        ],
+        "ext": "js"
+    },
+    "build": {
+        "productName": "Cratis Desktop",
+        "appId": "io.cratis.desktop",
+        "mac": {
+            "category": "public.app-category.developer-tools",
+            "target": [
+                "dmg"
+            ],
+            "type": "distribution",
+            "hardenedRuntime": true,
+            "entitlements": "assets/entitlements.mac.plist",
+            "entitlementsInherit": "assets/entitlements.mac.plist",
+            "gatekeeperAssess": false
+        },
+        "files": [
+            "!node_modules",
+            "build",
+            {
+                "from": "assets/icon.png",
+                "to": "icon.png"
+            }
+        ],
+        "dmg": {
+            "sign": false,
+            "contents": [
+                {
+                    "x": 130,
+                    "y": 220
+                },
+                {
+                    "x": 410,
+                    "y": 220,
+                    "type": "link",
+                    "path": "/Applications"
+                }
+            ]
+        },
+        "win": {
+            "target": [
+                "nsis"
+            ]
+        },
+        "linux": {
+            "target": [
+                "AppImage"
+            ],
+            "category": "Development"
+        }
+    },
+    "author": "Cratis",
+    "license": "MIT",
+    "dependencies": {
+        "@cratis/react": "1.0.0",
+        "@cratis/fluentui": "1.0.0",
+        "electron-is-dev": "1.2.0",
+        "electron-squirrel-startup": "1.0.0",
+        "reflect-metadata": "^0.1.13",
+        "shell-path": "2.1.0",
+        "xterm-addon-fit": "0.4.0",
+        "xterm-for-react": "1.0.4"
+    },
+    "devDependencies": {
+        "@cratis/webpack": "1.0.0",
+        "nodemon": "2.0.9",
+        "concurrently": "6.2.0",
+        "cross-env": "7.0.3",
+        "electron": "11.1.1",
+        "electron-builder": "22.9.1",
+        "rimraf": "3.0.2",
+        "sleep-ms": "2.0.1",
+        "wait-on": "5.2.0"
+    }
+}

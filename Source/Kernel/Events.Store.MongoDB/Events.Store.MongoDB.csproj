@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Store.MongoDB</AssemblyName>
+        <RootNamespace>Cratis.Events.Store.MongoDB</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Configuration/Configuration.csproj" />
+        <ProjectReference Include="../Events.Store/Events.Store.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="MongoDB.Driver" Version="$(MongoDB)" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Schemas.GraphQL</AssemblyName>
+        <RootNamespace>Cratis.Events.Schemas.GraphQL</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
+        <ProjectReference Include="../../Fundamentals/GraphQL/GraphQL.csproj"/>
+    </ItemGroup>
+</Project>

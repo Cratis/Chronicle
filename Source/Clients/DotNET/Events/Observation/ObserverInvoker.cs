@@ -1,0 +1,79 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Reflection;
+
+namespace Cratis.Events.Observation
+{
+    /// <summary>
+    /// Represents an implementation of <see cref="IObserverInvoker"/>.
+    /// </summary>
+    public class ObserverInvoker : IObserverInvoker
+    {
+        readonly Dictionary<Type, MethodInfo> _methodsByEventTypeId;
+        readonly IServiceProvider _serviceProvider;
+        readonly IEventTypes _eventTypes;
+        readonly Type _targetType;
+
+        public ObserverInvoker(IServiceProvider serviceProvider, IEventTypes eventTypes, Type targetType)
+        {
+            _serviceProvider = serviceProvider;
+            _eventTypes = eventTypes;
+            _targetType = targetType;
+
+            // TODO: Make a choice; can we have multiple methods handling the same event -
+            // if so, make this either throw an exception if duplicates, or array of methods if allowed
+            _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                                            .Where(_ => IsObservingMethod(_))
+                                            .ToDictionary(_ => _.GetParameters()[0].ParameterType, _ => _);
+        }
+
+        /// <inheritdoc/>
+        public Task Invoke(object content, EventContext eventContext)
+        {
+            var actualObserver = _serviceProvider.GetService(_targetType);
+            object returnValue = null!;
+            if (_methodsByEventTypeId.ContainsKey(content.GetType()))
+            {
+                var method = _methodsByEventTypeId[content.GetType()];
+                var parameters = method.GetParameters();
+
+                if (parameters.Length == 2)
+                {
+                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content, null! })!;
+                }
+                else
+                {
+                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content })!;
+                }
+            }
+            if (returnValue != null) return (Task)returnValue;
+
+            return Task.CompletedTask;
+        }
+
+        bool IsObservingMethod(MethodInfo methodInfo)
+        {
+            var isObservingMethod = methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
+                                    methodInfo.ReturnType == typeof(void);
+
+            if (!isObservingMethod) return false;
+            var parameters = methodInfo.GetParameters();
+            if (parameters.Length >= 1)
+            {
+                isObservingMethod = _eventTypes.HasFor(parameters[0].ParameterType);
+                if (parameters.Length == 2)
+                {
+                    isObservingMethod &= parameters[1].ParameterType != typeof(EventContext);
+                }
+                else if (parameters.Length > 2)
+                {
+                    isObservingMethod = false;
+                }
+                return isObservingMethod;
+            }
+
+            return false;
+        }
+    }
+}

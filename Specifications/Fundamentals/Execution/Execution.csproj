@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Execution.Specs</AssemblyName>
+        <RootNamespace>Cratis.Execution</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Fundamentals/Execution/Execution.csproj"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Configuration</AssemblyName>
+        <RootNamespace>Cratis.Configuration</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/DependencyInversion/DependencyInversion.csproj"/>
+        <ProjectReference Include="../../Fundamentals/Execution/Execution.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+    </ItemGroup>
+
+</Project>

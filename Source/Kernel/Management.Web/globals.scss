@@ -1,0 +1,22 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+@import './Styles/theme-colors.scss';
+
+%flex-container {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+}
+
+%flex-container-horizontal {
+    @extend %flex-container;
+    flex-direction: row;
+}
+
+$color-gray-darkest: #2b2b2b !default;
+$app-header-height: 3rem;
+$top-level-menu-height: 2.75rem;
+$app-header-link-padding: 0.625rem 1rem;
+$grid-gutter: 1.5rem !default;
+$navigation-color: rgba(lighten($ms-color-white, 10%), 0.7);

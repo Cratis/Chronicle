@@ -1,0 +1,20 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+.toolbarMenu {
+    position: absolute;
+    display: inline-flex;
+    margin: 0;
+}
+
+.horizontalMenu {
+    left: 4rem;
+    margin-top: -0.75rem;
+    flex-direction: row;
+}
+
+.verticalMenu {
+    top: 4rem;
+    margin-left: -2.75rem;
+    flex-direction: column;
+}

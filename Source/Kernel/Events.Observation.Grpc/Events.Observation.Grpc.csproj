@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Observation.Grpc</AssemblyName>
+        <RootNamespace>Cratis.Events.Observation.Grpc</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events.Observation/Events.Observation.csproj"/>
+        <ProjectReference Include="../Events.Observation.Grpc.Contracts/Events.Observation.Grpc.Contracts.csproj"/>
+    </ItemGroup>
+</Project>

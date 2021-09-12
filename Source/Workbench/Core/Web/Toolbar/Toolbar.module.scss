@@ -1,0 +1,29 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+@import '../Styles/acrylic.scss';
+
+.toolbar {
+    @extend .acrylic;
+    display: inline-flex;
+    padding: .5rem;
+    margin: 1rem;
+    border-radius: .25rem;
+    overflow: visible;
+    
+    li {
+        list-style-type: none;
+    }
+}
+
+.horizontal {
+    flex-direction: row;
+}
+
+.vertical {
+    flex-direction: column;
+}
+
+.toolbarItem {
+    padding: .3rem;
+}

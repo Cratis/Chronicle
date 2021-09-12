@@ -1,0 +1,36 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+.label {
+    opacity: 1;
+}
+
+.previousLabel {
+    opacity: 0;
+}
+
+.enter {
+    animation: fadeIn .25s ease forwards;
+}
+
+.exit {
+    animation: fadeOut .25s ease forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}

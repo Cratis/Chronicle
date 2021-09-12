@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Execution</AssemblyName>
+        <RootNamespace>Cratis.Execution</RootNamespace>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Autofac" Version="$(Autofac)" />
+        <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="$(Orleans)" />
+    </ItemGroup>
+
+</Project>

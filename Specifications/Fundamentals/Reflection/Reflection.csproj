@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Reflection.Specs</AssemblyName>
+        <RootNamespace>Cratis.Reflection</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Fundamentals/Reflection/Reflection.csproj"/>
+    </ItemGroup>
+
+</Project>

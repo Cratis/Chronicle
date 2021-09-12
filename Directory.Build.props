@@ -1,0 +1,23 @@
+<Project>
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>CS1591;RCS1090;CA2252;CS8632;RCS1217</NoWarn>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <HotChocolateVersion>11.3.0</HotChocolateVersion>
+        <NewtonsoftJson>13.0.1</NewtonsoftJson>
+        <NewtonsoftJsonSchema>3.0.14</NewtonsoftJsonSchema>
+        <Autofac>6.2.0</Autofac>
+        <AutofacExtensions>7.1.0</AutofacExtensions>
+        <Orleans>3.4.3</Orleans>
+        <MongoDB>2.13.1</MongoDB>
+        <ProtobufNet>3.0.101</ProtobufNet>
+        <ProtobufNetGrpc>1.0.152</ProtobufNetGrpc>
+        <ServiceModelPrimitives>4.8.1</ServiceModelPrimitives>
+    </PropertyGroup>
+</Project>

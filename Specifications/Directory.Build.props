@@ -1,0 +1,30 @@
+<Project>
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <IsTestProject>true</IsTestProject>
+        <NoWarn>CA1707;CA2252;CA2211;RCS1169;RCS1018;RCS1213;IDE0044;IDE0052;IDE1006;RCS1090;IDE0051;CA1051;CS8632;CS8618;RCS1225</NoWarn>
+        <Nullable>disable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit" Version="2.4.1" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+
+        <PackageReference Include="moq" Version="4.13.*" />
+
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
+        <PackageReference Include="Machine.Specifications.Runner.VisualStudio" Version="2.10.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)/BDD/BDD.csproj" Condition="$(MSBuildProjectFullPath.EndsWith('BDD.csproj')) != 'true'"/>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+    </ItemGroup>
+</Project>

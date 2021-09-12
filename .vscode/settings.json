@@ -1,0 +1,66 @@
+{
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": false,
+    "editor.insertSpaces": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": false
+    },
+    "files.exclude": {
+        "**/*.scss.d.ts": true,
+        "**/node_modules": true,
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.DS_Store": true
+    },
+    "files.watcherExclude": {
+        "**/.git": true,
+        "**/node_modules": true,
+        "**/lib": true,
+        "**/lib-commonjs": true,
+        "**/lib-amd": true,
+        "**/temp": true,
+        "**/dist": true,
+        "**/dist-storybook": true,
+        "**/*.scss.ts": true,
+        "**/coverage": true
+    },
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/lib": true,
+        "**/lib-amd": true,
+        "**/lib-commonjs": true,
+        "**/dist": true,
+        "**/*.scss.ts": true,
+        "**/temp": true
+    },
+    "dotnet-test-explorer.testProjectPath": "Specifications/**/*.csproj",
+    "dotnet-test-explorer.treeMode": "full",
+    "dotnet-test-explorer.runInParallel": true,
+    "dotnet-test-explorer.showCodeLens": true,
+    "dotnet-test-explorer.autoExpandTree": true,
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp"
+    },
+    "omnisharp.enableMsBuildLoadProjectsOnDemand": true,
+    "omnisharp.enableEditorConfigSupport": true,
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.useEditorFormattingSettings": true,
+    "typescript.preferences.includePackageJsonAutoImports": "on",
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.preferences.importModuleSpecifierEnding": "index",
+    "typescript.preferences.quoteStyle": "single",
+    "typescript.suggest.autoImports": true,
+    "typescript.implementationsCodeLens.enabled": true,
+    "typescript.tsdk": "./node_modules/typescript/lib",
+    "cSpell.words": [
+        "Bson",
+        "Cratis",
+        "Grpc",
+        "Proto",
+        "fluentui",
+        "protobuf",
+        "tinycolor"
+    ]
+}

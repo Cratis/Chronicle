@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Schemas</AssemblyName>
+        <RootNamespace>Cratis.Events.Schemas</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events/Events.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+      <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
+    </ItemGroup>
+</Project>

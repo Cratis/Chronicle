@@ -1,0 +1,20 @@
+{
+    "name": "@cratis/rudiments",
+    "version": "1.0.0",
+    "description": "",
+    "private": "false",
+    "author": "Cratis",
+    "license": "MIT",
+    "files": [
+        "dist",
+        "**/*.ts"
+    ],
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "dependencies": {
+        "@cratis/typescript": "1.0.0",
+        "@cratis/types": "1.0.0"
+    },
+    "devDependencies": {
+    }
+}

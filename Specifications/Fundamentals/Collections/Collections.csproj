@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Collections.Specs</AssemblyName>
+        <RootNamespace>Cratis.Collections</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Fundamentals/Collections/Collections.csproj"/>
+    </ItemGroup>
+
+</Project>

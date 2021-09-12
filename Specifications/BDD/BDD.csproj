@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsTestProject>false</IsTestProject>
+        <AssemblyName>Cratis.BDD</AssemblyName>
+        <RootNamespace>Cratis.BDD</RootNamespace>
+    </PropertyGroup>
+</Project>

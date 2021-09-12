@@ -1,0 +1,55 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+.menuItem {
+    fill: transparent;
+    cursor: pointer;
+
+    stroke-width: 8;
+    stroke-linecap: + butt;
+    stroke-linejoin: round;
+    stroke-miterlimit: 4;
+    stroke-opacity: 1;
+
+    pointer-events: visibleStroke;
+}
+
+.enter {
+    animation: slideIn 0.5s ease forwards;
+}
+
+.exit {
+    animation: slideOut 0.5s ease forwards;
+}
+
+
+@keyframes slideIn {
+    from {
+        stroke-dashoffset: 0;
+        stroke-dasharray: 0 100;
+        stroke-opacity: 0;
+        stroke-width: 8;
+    }
+    to {
+        stroke-dashoffset: var(--offset, 0);
+        stroke-dasharray: var(--array, 0 100);
+        stroke-opacity: 1;
+        stroke-width: 8;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        stroke-dashoffset: var(--offset, 0);
+        stroke-dasharray: var(--array, 0 100);
+        stroke-opacity: 1;
+        stroke-width: 8;
+    }
+    to {
+        stroke-dashoffset: 0;
+        stroke-dasharray: 0 100;
+        stroke-opacity: 0;
+        stroke-width: 0;
+    }
+}
+

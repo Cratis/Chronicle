@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events</AssemblyName>
+        <RootNamespace>Cratis.Events</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/Concepts/Concepts.csproj"/>
+    </ItemGroup>
+</Project>

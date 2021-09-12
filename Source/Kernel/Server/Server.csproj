@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Server</AssemblyName>
+        <RootNamespace>Cratis.Server</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="$(ProtobufNetGrpc)" />
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="$(ProtobufNetGrpc)" />
+        <PackageReference Include="serilog.aspnetcore" Version="4.0.0" />
+        <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
+        <PackageReference Include="Serilog" Version="2.10.0" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+        <PackageReference Include="Serilog.Sinks.PeriodicBatching" Version="2.3.0" />
+        <PackageReference Include="Microsoft.Orleans.Server" Version="$(Orleans)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Configuration/Configuration.csproj" />
+        <ProjectReference Include="../Events.Observation/Events.Observation.csproj" />
+        <ProjectReference Include="../Events.Observation.Grpc/Events.Observation.Grpc.csproj" />
+        <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
+        <ProjectReference Include="../Events.Schemas.GraphQL/Events.Schemas.GraphQL.csproj" />
+        <ProjectReference Include="../Events.Store/Events.Store.csproj" />
+        <ProjectReference Include="../Events.Store.Grpc/Events.Store.Grpc.csproj" />
+        <ProjectReference Include="../Events.Store.MongoDB/Events.Store.MongoDB.csproj" />
+        <ProjectReference Include="../Events.Store.GraphQL/Events.Store.GraphQL.csproj" />
+        <ProjectReference Include="../../Fundamentals/Execution/Execution.csproj" />
+        <ProjectReference Include="../../Fundamentals/MongoDB/MongoDB.csproj" />
+        <ProjectReference Include="../../Fundamentals/Types/Types.csproj" />
+        <ProjectReference Include="../../Fundamentals/DependencyInversion/DependencyInversion.csproj" />
+    </ItemGroup>
+</Project>

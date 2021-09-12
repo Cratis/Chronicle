@@ -1,0 +1,18 @@
+{
+    "name": "@cratis/types",
+    "version": "1.0.0",
+    "description": "",
+    "private": "false",
+    "author": "Cratis",
+    "license": "MIT",
+    "files": [
+        "dist",
+        "**/*.ts"
+    ],
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "dependencies": {
+    },
+    "devDependencies": {
+    }
+}

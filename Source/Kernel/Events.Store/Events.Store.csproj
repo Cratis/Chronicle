@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Store</AssemblyName>
+        <RootNamespace>Cratis.Events.Store</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
+        <ProjectReference Include="../../Fundamentals/Concepts/Concepts.csproj" />
+        <ProjectReference Include="../../Fundamentals/Execution/Execution.csproj" />
+        <ProjectReference Include="../../Fundamentals/DependencyInversion/DependencyInversion.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.Reactive" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
+    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
+    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
+    <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="$(Orleans)" />
+    <PackageReference Include="Microsoft.Orleans.Client" Version="$(Orleans)" />
+    </ItemGroup>
+</Project>

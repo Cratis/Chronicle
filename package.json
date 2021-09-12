@@ -1,0 +1,8 @@
+{
+    "private": true,
+    "workspaces": [
+        "Source/**/*"
+    ],
+    "license": "MIT",
+    "version": "0.0.0"
+}

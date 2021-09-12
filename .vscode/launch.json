@@ -1,0 +1,47 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": ".NET Core Launch (Server)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build server",
+            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net6.0/Cratis.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Source/Kernel/Server",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": ".NET Core Launch (Client)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build client",
+            "program": "${workspaceFolder}/Source/Clients/DotNET/bin/Debug/net6.0/Cratis.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Source/Clients/DotNET",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach"
+        }
+    ]
+}

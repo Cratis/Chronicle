@@ -1,0 +1,18 @@
+{
+    "name": "@cratis/react",
+    "version": "1.0.0",
+    "description": "",
+    "private": "false",
+    "author": "Cratis",
+    "license": "MIT",
+    "dependencies": {
+        "react": "17.0.2",
+        "react-dom": "17.0.2",
+        "react-router-dom": "5.2.0"
+    },
+    "devDependencies": {
+        "@types/react": "17.0.11",
+        "@types/react-dom": "17.0.8",
+        "@types/react-router-dom": "5.1.7"
+    }
+}

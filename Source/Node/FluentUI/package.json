@@ -1,0 +1,17 @@
+{
+    "name": "@cratis/fluentui",
+    "version": "1.0.0",
+    "description": "",
+    "private": "false",
+    "author": "Cratis",
+    "license": "MIT",
+    "dependencies": {
+        "@fluentui/font-icons-mdl2": "8.1.3",
+        "@fluentui/react": "8.20.0",
+        "@fluentui/react-charting": "5.2.9",
+        "@fluentui/react-hooks": "8.2.2",
+        "@fluentui/react-icons": "1.1.133"
+    },
+    "devDependencies": {
+    }
+}

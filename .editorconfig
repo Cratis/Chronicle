@@ -1,0 +1,151 @@
+﻿root = true
+
+[*]
+end_of_line = lf
+indent_style = space
+indent_size = 4
+charset = utf-8
+
+[*.yml]
+indent_size = 2
+
+[*.{cs,vb}]
+dotnet_analyzer_diagnostic.severity = warning
+file_header_template = Copyright (c) Cratis. All rights reserved.\nLicensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#### .NET Conventions ####
+dotnet_sort_system_directives_first = true:error
+
+# Avoid "this." and "Me." if not necessary
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# dont prefer ifs over ternary operators
+dotnet_style_prefer_conditional_expression_over_return = true:none
+dotnet_style_prefer_conditional_expression_over_assignment = true:none
+# dont need to declare private
+dotnet_style_require_accessibility_modifiers = never:error
+
+# consts are pascal case
+dotnet_naming_rule.const_fields.symbols                                         = const_fields
+dotnet_naming_rule.const_fields.style                                           = const_fields
+dotnet_naming_rule.const_fields.severity                                        = suggestion
+
+dotnet_naming_symbols.const_fields.applicable_kinds                             = field
+dotnet_naming_symbols.const_fields.applicable_accessibilities                   = *
+dotnet_naming_symbols.const_fields.required_modifiers                           = const
+
+dotnet_naming_style.const_fields.capitalization                                 = pascal_case
+dotnet_naming_style.const_fields.required_prefix                                = 
+
+# public static fields are pascal case
+dotnet_naming_rule.static_readonly_fields.symbols                               = static_readonly_fields
+dotnet_naming_rule.static_readonly_fields.style                                 = static_readonly_fields
+dotnet_naming_rule.static_readonly_fields.severity                              = suggestion
+
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds                   = field
+dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities         = public
+dotnet_naming_symbols.static_readonly_fields.required_modifiers                 = static
+
+dotnet_naming_style.static_readonly_fields.capitalization                       = pascal_case
+dotnet_naming_style.static_readonly_fields.required_prefix                      = 
+
+# private fields should be camel case and start with _
+dotnet_naming_rule.private_Fields.symbols                                       = private_fields
+dotnet_naming_rule.private_Fields.style                                         = private_fields
+dotnet_naming_rule.private_Fields.severity                                      = suggestion
+
+dotnet_naming_symbols.private_fields.applicable_kinds                           = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities                 = private
+dotnet_naming_symbols.private_fields.required_modifiers                         = 
+
+dotnet_naming_style.private_fields.capitalization                               = camel_case
+dotnet_naming_style.private_fields.required_prefix                              = _
+
+
+
+# upper camelcase for public properties
+dotnet_naming_rule.public_members_must_be_capitalized.style = first_word_upper_case_style
+dotnet_naming_style.first_word_upper_case_style.capitalization = first_word_upper
+dotnet_naming_rule.public_members_must_be_capitalized.symbols = public_symbols
+dotnet_naming_symbols.public_symbols.applicable_kinds = property,method,field,event,delegate
+dotnet_naming_symbols.public_symbols.applicable_accessibilities = public
+dotnet_naming_symbols.public_symbols.required_modifiers = readonly
+
+## Specific rule suppression
+# CA1822: Mark members as static
+dotnet_diagnostic.CA1822.severity = none
+# CA2016: Forward the CancellationToken parameter to methods that take one
+dotnet_diagnostic.CA2016.severity = none
+# CA1716: Identifiers should not match keywords
+dotnet_diagnostic.CA1716.severity = none
+# CA1725: Parameter names should match base declaration
+dotnet_diagnostic.CA1725.severity = none
+# CA1710: Identifiers should have correct suffix
+dotnet_diagnostic.CA1710.severity = none
+#CA1711: Identifiers should not have incorrect suffix
+dotnet_diagnostic.CA1711.severity = none
+# Add missing cases to switch expression (IDE0072 and IDE0010)
+# a bug in roslyn: https://github.com/dotnet/roslyn/issues/48876
+dotnet_diagnostic.IDE0072.severity = none
+dotnet_diagnostic.IDE0010.severity = none
+# IDE0130: Namespace does not match folder structure
+dotnet_diagnostic.IDE0130.severity = none
+# CA1834: Use StringBuilder.Append(char) for single character strings
+dotnet_diagnostic.CA1834.severity = none
+# CA1805: Do not initialize unnecessarily.
+dotnet_diagnostic.CA1805.severity = none
+# Use pattern matching (not operator) (IDE0083)
+dotnet_diagnostic.IDE0083.severity = none
+# CA1309: Use ordinal StringComparison
+dotnet_diagnostic.CA1309.severity = none
+# CA1000: Do not declare static members on generic types
+dotnet_diagnostic.CA1000.severity = none
+# RCS1018: Add accessibility modifiers
+dotnet_diagnostic.RCS1018.severity = none
+# RCS1194: Implement exception constructors
+dotnet_diagnostic.RCS1194.severity = none
+
+#### C# Coding Conventions ####
+
+# var preferences
+csharp_style_var_elsewhere = true:error
+csharp_style_var_for_built_in_types = true:error
+csharp_style_var_when_type_is_apparent = true:error
+
+# use 'new' when possible
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+
+# curly bois preferred on multiline
+csharp_prefer_braces = when_multiline:error
+# we're ok with both old and new types of switches
+csharp_style_prefer_switch_expression = true:none
+
+# allow both => and regular blocks {}
+csharp_style_expression_bodied_methods = true:none
+csharp_style_expression_bodied_operators = true:none
+csharp_style_expression_bodied_constructors = true:none
+csharp_style_expression_bodied_local_functions = true:none
+csharp_style_expression_bodied_accessors = true:none
+
+# allow both local and anonymous functions
+csharp_style_pattern_local_over_anonymous_function = false:none
+
+# dont need to save everything to a var
+csharp_style_unused_value_expression_statement_preference = false:none
+
+# not ready for changing everything to pattern matching
+csharp_style_prefer_pattern_matching = false:none
+
+csharp_using_directive_placement = outside_namespace:error
+
+
+csharp_style_prefer_range_operator = false:none
+
+# CSharp formatting rules:
+# dont want these bombing the build logs, will still show up in the IDE
+dotnet_diagnostic.IDE0055.severity = none
+# prefere brace indentation when creating objects etc
+csharp_indent_braces = false

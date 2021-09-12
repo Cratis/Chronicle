@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis</AssemblyName>
+        <RootNamespace>Cratis</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Kernel/Events.Observation.Grpc.Contracts/Events.Observation.Grpc.Contracts.csproj" />
+        <ProjectReference Include="../../Kernel/Events.Store.Grpc.Contracts/Events.Store.Grpc.Contracts.csproj" />
+        <ProjectReference Include="../../Fundamentals/Concepts/Concepts.csproj" />
+        <ProjectReference Include="../../Fundamentals/Types/Types.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Grpc.Net.Client" Version="2.39.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+    </ItemGroup>
+</Project>
