@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Store.Api</AssemblyName>
+        <RootNamespace>Cratis.Events.Store.Api</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../Events.Store/Events.Store.csproj" />
+    </ItemGroup>
+
+</Project>
