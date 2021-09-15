@@ -2,8 +2,10 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
-        <NoWarn>CA1707;CA2252;CA2211;RCS1169;RCS1018;RCS1213;IDE0044;IDE0052;IDE1006;RCS1090;IDE0051;CA1051;CS8632;CS8618;RCS1225</NoWarn>
+        <NoWarn>$(NoWarn);CA1707;CA2252;CA2211;RCS1169;RCS1018;RCS1213;IDE0044;IDE0052;IDE1006;RCS1090;IDE0051;CA1051;CS8632;CS8618;RCS1225</NoWarn>
         <Nullable>disable</Nullable>
+
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
