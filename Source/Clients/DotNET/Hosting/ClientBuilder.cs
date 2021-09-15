@@ -17,6 +17,10 @@ namespace Cratis.Hosting
     {
         readonly MicroserviceId _microserviceId;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
+        /// </summary>
+        /// <param name="microserviceId">Microservice identifier.</param>
         public ClientBuilder(MicroserviceId microserviceId)
         {
             _microserviceId = microserviceId;
