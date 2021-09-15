@@ -3,10 +3,31 @@
         <TargetFramework>net6.0</TargetFramework>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <NoWarn>CS1591;RCS1090;CA2252;CS8632;RCS1217</NoWarn>
+        <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217</NoWarn>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+        <IsPackable>true</IsPackable>
+        <Copyright>Copyright Cratis</Copyright>
+        <Authors>all contributors</Authors>
+        <DebugType>portable</DebugType>
+        <PackageIcon>logo.png</PackageIcon>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryType>git</RepositoryType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <RepositoryUrl>https://github.com/Cratis/cratis</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/Cratis/cratis</PackageProjectUrl>
+
+        <IncludeSymbols>True</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <IncludeSource>True</IncludeSource>
+
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="$(MSBuildThisFileDirectory)logo.png" PackagePath="/" />
+    </ItemGroup>
 
     <PropertyGroup>
         <HotChocolateVersion>11.3.0</HotChocolateVersion>
