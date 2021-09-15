@@ -1,0 +1,42 @@
+name: Publish
+
+env:
+  NUGET_OUTPUT: ./Artifacts/NuGet
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '6.0.100-preview.7.21379.14'
+      - name: Build
+        run: dotnet build --configuration Release
+
+      - name: Release
+        id: release
+        uses: cratis/release-action@v1
+        with:
+          user-name: 'Cratis Build'
+          user-email: 'build@cratis.io'
+
+      - name: Remove any existing artifacts
+        run: rm -rf ${{ env.NUGET_OUTPUT }}
+
+      - name: Create NuGet packages
+        if: ${{ steps.release.outputs.should-publish == 'true' }}
+        run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ steps.release.outputs.version }}
+
+      - name: Push NuGet packages
+        if: ${{ steps.release.outputs.should-publish == 'true' }}
+        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+

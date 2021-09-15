@@ -5,4 +5,4 @@ global using Moq;
 global using static Moq.It;
 global using static Moq.Times;
 global using Xunit;
-global using Cratis.BDD;
+global using Aksio.Specifications;

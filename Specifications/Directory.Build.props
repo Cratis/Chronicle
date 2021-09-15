@@ -20,9 +20,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="$(MSBuildThisFileDirectory)/BDD/BDD.csproj" Condition="$(MSBuildProjectFullPath.EndsWith('BDD.csproj')) != 'true'"/>
+        <PackageReference Include="Aksio.Specifications" Version="1.*" />
     </ItemGroup>
-
 
     <ItemGroup>
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>

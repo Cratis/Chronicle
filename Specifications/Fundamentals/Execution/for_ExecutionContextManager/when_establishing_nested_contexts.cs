@@ -16,8 +16,10 @@ namespace Cratis.Execution
         TenantId actual_first_tenant_id;
         CorrelationId actual_first_correlation_id;
 
-        void Establish()
+        public when_establishing_nested_contexts()
         {
+            // Since the specification runner is using IAsyncLifetime - it will be in a different async context.
+            // Use default behavior, since we need to have control over the async context.
             manager = new();
             root_tenant_id = Guid.NewGuid();
             root_correlation_id = Guid.NewGuid().ToString();
@@ -25,11 +27,11 @@ namespace Cratis.Execution
             first_correlation_id = Guid.NewGuid().ToString();
             second_tenant_id = Guid.NewGuid();
             second_correlation_id = Guid.NewGuid().ToString();
+            manager.Establish(root_tenant_id, root_correlation_id);
         }
 
         void Because()
         {
-            manager.Establish(root_tenant_id, root_correlation_id);
             Task.Run(() =>
             {
                 manager.Establish(first_tenant_id, first_correlation_id);

@@ -6,7 +6,13 @@ namespace Cratis.Execution
     public class when_setting_current_statically : Specification
     {
         ExecutionContext new_context = new(Guid.NewGuid(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
-        void Because() => ExecutionContextManager.SetCurrent(new_context);
+
+        public when_setting_current_statically()
+        {
+            // Since the specification runner is using IAsyncLifetime - it will be in a different async context.
+            // Use default behavior, since we need to have control over the async context.
+            ExecutionContextManager.SetCurrent(new_context);
+        }
 
         [Fact] void should_hold_the_new_context() => ExecutionContextManager.GetCurrent().ShouldEqual(new_context);
     }
