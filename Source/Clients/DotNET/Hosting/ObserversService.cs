@@ -25,6 +25,7 @@ namespace Cratis.Hosting
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc/>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
