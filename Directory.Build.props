@@ -23,6 +23,8 @@
         <IncludeSource>True</IncludeSource>
 
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <ImplicitUsings>true</ImplicitUsings>
     </PropertyGroup>
 
     <ItemGroup>
