@@ -30,7 +30,7 @@ namespace Cratis.MongoDB
                 return (dynamic)createConceptSerializerGenericMethod.Invoke(null, Array.Empty<object>())!;
             }
 
-            return BsonSerializer.LookupSerializer(type);
+            return null!;
         }
     }
 }
