@@ -3,6 +3,7 @@
 
 using Cratis;
 using Cratis.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.AspNetCore.Builder
@@ -17,7 +18,7 @@ namespace Microsoft.AspNetCore.Builder
         /// </summary>
         /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
         /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
-        /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
+        /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
         public static WebApplicationBuilder UseCratis(this WebApplicationBuilder webApplicationBuilder, Action<IClientBuilder>? configureDelegate = null)
         {
             return webApplicationBuilder.UseCratis(Guid.Empty, configureDelegate);
@@ -29,10 +30,21 @@ namespace Microsoft.AspNetCore.Builder
         /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
         /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
         /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
-        /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
+        /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
         public static WebApplicationBuilder UseCratis(this WebApplicationBuilder webApplicationBuilder, MicroserviceId microserviceId, Action<IClientBuilder>? configureDelegate = null)
         {
             webApplicationBuilder.Host.UseCratis(microserviceId, configureDelegate);
+            return webApplicationBuilder;
+        }
+
+        /// <summary>
+        /// Use Cratis workbench.
+        /// </summary>
+        /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
+        /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
+        public static WebApplicationBuilder UseCratisWorkbench(this WebApplicationBuilder webApplicationBuilder)
+        {
+            webApplicationBuilder.Services.AddControllers();
             return webApplicationBuilder;
         }
     }
