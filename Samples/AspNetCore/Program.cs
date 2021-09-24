@@ -4,8 +4,10 @@
 //new HostBuilder().ConfigureWebHostDefaults()
 
 var builder = WebApplication.CreateBuilder(args)
-                            .UseCratis();
+                            .UseCratis()
+                            .UseCratisWorkbench();
 var app = builder.Build();
+app.AddCratisWorkbench();
 
 if (app.Environment.IsDevelopment())
 {
