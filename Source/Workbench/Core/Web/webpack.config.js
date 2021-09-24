@@ -8,7 +8,6 @@ module.exports = (env, argv) => {
     const isWebDevServer = (process.env.WEBPACK_DEV_SERVER || false) === 'true' ? true : false;
     const basePath = isWebDevServer ? '/' : './';
     return webpack(env, argv, basePath, config => {
-        config.output.path = path.resolve(process.cwd(), '..', 'build');
         config.devServer.port = 9000;
     }, 'Cratis Portal');
 };
