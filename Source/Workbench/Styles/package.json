@@ -1,5 +1,5 @@
 {
-    "name": "@cratis/workbench",
+    "name": "@cratis/workbench.styles",
     "version": "1.0.0",
     "description": "",
     "private": true,
@@ -15,13 +15,7 @@
         "ci": "yarn clean && yarn lint:ci && yarn build"
     },
     "dependencies": {
-        "@cratis/fluentui": "1.0.0",
-        "@cratis/react": "1.0.0",
-        "@cratis/rudiments": "1.0.0",
-        "@ctrl/tinycolor": "^3.4.0",
-        "d3": "^7.0.0"
     },
     "devDependencies": {
-        "@cratis/webpack": "1.0.0"
     }
 }
