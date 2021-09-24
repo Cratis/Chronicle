@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.AspnetCore</AssemblyName>
         <RootNamespace>Cratis.AspNetCore</RootNamespace>
+        <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,4 +12,20 @@
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="workbench/**/*"/>
+    </ItemGroup>
+
+    <Target Name="BuildWorkbench" Condition="$(Configuration) == 'Release'" BeforeTargets="BeforeBuild" >
+        <PropertyGroup>
+            <WorkbenchDirectory>$(MSBuildThisFileDirectory)../../Workbench/Events/Web</WorkbenchDirectory>
+        </PropertyGroup>
+        <ItemGroup>
+            <FilesToCopy Include="$(WorkbenchDirectory)/wwwroot/**/*"/>
+        </ItemGroup>
+
+        <Exec WorkingDirectory="$(WorkbenchDirectory)" Command="base_path=/events/ yarn build"/>
+        <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(MSBuildThisFileDirectory)/workbench"/>
+    </Target>
 </Project>
