@@ -7,6 +7,7 @@
             "type": "process",
             "args": [
                 "build",
+                "--no-restore",
                 "${workspaceFolder}/Source/Kernel/Server/Server.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
@@ -14,12 +15,13 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build client",
+            "label": "build sample",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Source/Clients/DotNET/DotNET.csproj",
+                "--no-restore",
+                "${workspaceFolder}/Samples/AspNetCore/AspNetCore.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
