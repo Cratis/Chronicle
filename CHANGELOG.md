@@ -1,3 +1,9 @@
+# [v2.1.3] - 2021-9-27 [PR: #6](https://github.com/Cratis/cratis/pull/6)
+
+### Fixed
+
+- Fixing embedding of the workbench SPA files to be embedded after it has been copied. This broke on Linux builds.
+
 # [v2.1.2] - 2021-9-27 [PR: #5](https://github.com/Cratis/cratis/pull/5)
 
 ### Fixed
