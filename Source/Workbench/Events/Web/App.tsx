@@ -6,6 +6,7 @@ import { Navigation } from './Navigation';
 import { EventTypes } from './EventTypes';
 
 import { default as styles } from './App.module.scss';
+import { EventLog } from './EventLog';
 
 export const App = () => {
     return (
@@ -14,12 +15,16 @@ export const App = () => {
                 <div className={styles.navigationBar}>
                     <Navigation />
                 </div>
-                <div>
+                <div style={{ width: '100%' }}>
                     <Route exact path="/">
                         Home
                     </Route>
                     <Route path="/events/types">
                         <EventTypes />
+                    </Route>
+
+                    <Route path="/events/eventlog">
+                        <EventLog />
                     </Route>
                 </div>
             </div>

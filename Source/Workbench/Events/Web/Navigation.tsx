@@ -34,12 +34,6 @@ const groups: INavLinkGroup[] = [
                         key: 'types',
                         url: '',
                         route: '/events/types'
-                    },
-                    {
-                        name: 'Migrations',
-                        key: 'migrations',
-                        url: '',
-                        route: '/events/migration'
                     }
                 ]
             },
