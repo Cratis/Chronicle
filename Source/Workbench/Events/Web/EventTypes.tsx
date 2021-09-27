@@ -2,25 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import {
-    CommandBar,
     DetailsList,
     IColumn,
-    ICommandBarItemProps,
     Pivot,
     PivotItem,
     SelectionMode
 } from '@fluentui/react';
 
 import { default as styles } from './EventTypes.module.scss';
-
-
-const commandBarItems: ICommandBarItemProps[] = [
-    {
-        key: 'newItem',
-        text: 'New',
-        iconProps: { iconName: 'Add' }
-    }
-];
 
 const eventTypesColumns: IColumn[] = [
     {
