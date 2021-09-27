@@ -44,7 +44,7 @@ namespace Microsoft.AspNetCore.Builder
         /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
         public static WebApplicationBuilder UseCratisWorkbench(this WebApplicationBuilder webApplicationBuilder)
         {
-            webApplicationBuilder.Services.AddControllers();
+            webApplicationBuilder.Services.UseCratisWorkbench();
             return webApplicationBuilder;
         }
     }
