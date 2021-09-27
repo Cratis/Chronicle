@@ -13,10 +13,6 @@
         <ProjectReference Include="../DotNET/DotNET.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="./workbench/**/*" />
-    </ItemGroup>
-
     <Target Name="BuildWorkbench" Condition="$(Configuration) == 'Release'" BeforeTargets="BeforeBuild">
         <PropertyGroup>
             <WorkbenchDirectory>$(MSBuildThisFileDirectory)../../Workbench/Events/Web</WorkbenchDirectory>
@@ -27,5 +23,9 @@
 
         <Exec WorkingDirectory="$(WorkbenchDirectory)" Command="base_path=/events/ yarn build" />
         <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(MSBuildThisFileDirectory)/workbench" />
+
+        <ItemGroup>
+            <EmbeddedResource Include="$(MSBuildThisFileDirectory)/workbench/**/*" />
+        </ItemGroup>
     </Target>
 </Project>
