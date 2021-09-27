@@ -1,7 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+
+.container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+}
+
+.commandBar {
+    flex: 0;
+}
+
+
 .eventSamplesContainer {
     width: calc(100%);
     height: 300px;
+}
+
+.eventList {
+    flex: 1;
 }

@@ -1,10 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
+import {
+    CommandBar,
+    DetailsList,
+    IColumn,
+    ICommandBarItemProps,
+    SelectionMode
+} from '@fluentui/react'
 
 import { default as styles } from './EventLog.module.scss';
-import { useRef, useEffect, useState } from 'react';
 
 type EChartsOption = echarts.EChartsOption;
 
@@ -12,22 +19,6 @@ const dataCount = 42;
 const data = generateData(dataCount);
 
 const option: EChartsOption = {
-    title: {
-        text: echarts.format.addCommas(dataCount) + ' Data',
-        left: 10
-    },
-    responsive: true,
-    maintainAspectRation: false,
-    toolbox: {
-        feature: {
-            dataZoom: {
-                yAxisIndex: false
-            },
-            saveAsImage: {
-                pixelRatio: 2
-            }
-        }
-    },
     tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -58,14 +49,13 @@ const option: EChartsOption = {
     yAxis: {
         splitArea: {
             show: false
-        },
+        }
     },
     series: [
         {
             type: 'line',
             data: data.valueData,
             smooth: true,
-            // Set `large` for large data amount
             large: true
         } as any
     ]
@@ -102,9 +92,35 @@ function generateData(count: number) {
     };
 }
 
+const eventListColumns: IColumn[] = [
+
+    {
+        key: 'sequence',
+        name: 'Sequence',
+        fieldName: 'sequence',
+        minWidth: 200
+    },
+    {
+        key: 'name',
+        name: 'Name',
+        fieldName: 'name',
+        minWidth: 200
+    },
+    {
+        key: 'occurred',
+        name: 'Occurred',
+        fieldName: 'occurred',
+        minWidth: 200
+    }
+];
+
+
+
 // https://echarts.apache.org/examples/en/
 export const EventLog = () => {
     const chartContainer = useRef<HTMLDivElement>(null);
+
+    const getChart = () => echarts.getInstanceByDom(chartContainer.current!);
 
     useEffect(() => {
         if (chartContainer.current) {
@@ -116,17 +132,50 @@ export const EventLog = () => {
 
     useEffect(() => {
         const listener = () => {
-            if (chartContainer.current) {
-                const chart = echarts.getInstanceByDom(chartContainer.current);
-                chart.resize();
-            }
+            getChart().resize();
         };
         window.addEventListener('resize', listener);
         return () => window.removeEventListener('resize', listener);
     }, []);
 
+    const commandBarItems: ICommandBarItemProps[] = [
+        {
+            key: 'resetZoom',
+            text: 'Reset Zoom',
+            iconProps: { iconName: 'ZoomToFit' },
+            onClick: () => {
+                getChart().dispatchAction({
+                    type: 'dataZoom',
+                    start: 0,
+                    end: 100
+                });
+            }
+        }
+    ];
+
+
+    const events: any[] = [
+        {
+            sequence: 1,
+            name: 'DebitAccountOpened',
+            occurred: new Date(2021, 9, 27, 12, 0).toString()
+        },
+        {
+            sequence: 2,
+            name: 'DepositToDebitAccountPerformed',
+            occurred: new Date(2021, 9, 27, 12, 0).toString()
+        }
+    ]
+
     return (
-        <div className={styles.eventSamplesContainer} ref={chartContainer}>
+        <div className={styles.container}>
+            <div className={styles.commandBar}>
+                <CommandBar items={commandBarItems} />
+            </div>
+            <div className={styles.eventSamplesContainer} ref={chartContainer} />
+            <div className={styles.eventList}>
+                <DetailsList columns={eventListColumns} items={events} selectionMode={SelectionMode.single} />
+            </div>
         </div>
     );
 }
