@@ -57,9 +57,10 @@
     "cSpell.words": [
         "Bson",
         "Cratis",
+        "echarts",
+        "fluentui",
         "Grpc",
         "Proto",
-        "fluentui",
         "protobuf",
         "tinycolor"
     ]
