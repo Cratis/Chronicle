@@ -4,12 +4,16 @@
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
 import {
+    ComboBox,
     CommandBar,
     DetailsList,
     IColumn,
+    IComboBoxOption,
     ICommandBarItemProps,
+    Panel,
     SelectionMode
 } from '@fluentui/react'
+import { useBoolean } from '@fluentui/react-hooks';
 
 import { default as styles } from './EventLog.module.scss';
 
@@ -98,7 +102,8 @@ const eventListColumns: IColumn[] = [
         key: 'sequence',
         name: 'Sequence',
         fieldName: 'sequence',
-        minWidth: 200
+        minWidth: 100,
+        maxWidth: 100
     },
     {
         key: 'name',
@@ -110,7 +115,7 @@ const eventListColumns: IColumn[] = [
         key: 'occurred',
         name: 'Occurred',
         fieldName: 'occurred',
-        minWidth: 200
+        minWidth: 300
     }
 ];
 
@@ -119,6 +124,7 @@ const eventListColumns: IColumn[] = [
 // https://echarts.apache.org/examples/en/
 export const EventLog = () => {
     const chartContainer = useRef<HTMLDivElement>(null);
+    const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
 
     const getChart = () => echarts.getInstanceByDom(chartContainer.current!);
 
@@ -138,7 +144,41 @@ export const EventLog = () => {
         return () => window.removeEventListener('resize', listener);
     }, []);
 
+    const eventTypes: ICommandBarItemProps[] = [
+        {
+            key:'00000000-0000-0000-0000-000000000000',
+            text: 'All',
+        },
+        {
+            key:'e871c9c9-49be-4881-b4ad-9f3b244ba688',
+            text: 'DebitAccountOpened',
+        },
+        {
+            key:'544c04a1-ee31-4f81-a716-71c729d2aaa7',
+            text: 'DepositToDebitAccountPerformed'
+        }
+    ]
+
     const commandBarItems: ICommandBarItemProps[] = [
+        {
+            key: 'eventTypes',
+            name: 'Event Types',
+            subMenuProps: {
+                items: eventTypes
+
+            }
+            // onRender: () => {
+            //     return (
+            //         <span>
+            //             <ComboBox
+            //                 multiSelect
+            //                 options={eventTypes}
+            //             />
+
+            //         </span>
+            //     )
+            // }
+        },
         {
             key: 'resetZoom',
             text: 'Reset Zoom',
@@ -151,6 +191,7 @@ export const EventLog = () => {
                 });
             }
         }
+
     ];
 
 
@@ -165,7 +206,12 @@ export const EventLog = () => {
             name: 'DepositToDebitAccountPerformed',
             occurred: new Date(2021, 9, 27, 12, 0).toString()
         }
-    ]
+    ];
+
+    const eventSelected = (item: any) => {
+        openPanel();
+    };
+
 
     return (
         <div className={styles.container}>
@@ -174,8 +220,19 @@ export const EventLog = () => {
             </div>
             <div className={styles.eventSamplesContainer} ref={chartContainer} />
             <div className={styles.eventList}>
-                <DetailsList columns={eventListColumns} items={events} selectionMode={SelectionMode.single} />
+                <DetailsList
+                    columns={eventListColumns}
+                    items={events} selectionMode={SelectionMode.single}
+                    onItemInvoked={eventSelected}
+                />
             </div>
+
+            <Panel
+                isLightDismiss
+                isOpen={isOpen}
+                onDismiss={dismissPanel}
+                headerText="Event Details"
+            />
         </div>
     );
 }
