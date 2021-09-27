@@ -1,3 +1,11 @@
+# [v2.1.1] - 2021-9-27 [PR: #4](https://github.com/Cratis/cratis/pull/4)
+
+### Fixed
+
+- Added missing service collection extensions for Cratis Workbench
+
+
+
 # [v2.1.0] - 2021-9-27 [PR: #3](https://github.com/Cratis/cratis/pull/3)
 
 Added:
