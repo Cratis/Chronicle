@@ -1,3 +1,9 @@
+# [v2.1.6] - 2021-9-27 [PR: #11](https://github.com/Cratis/cratis/pull/11)
+
+### Fixed
+
+- Index.html for Workbench now has the correct `/events` prefix for all file references.
+
 # [v2.1.5] - 2021-9-27 [PR: #9](https://github.com/Cratis/cratis/pull/9)
 
 ### Fixed
