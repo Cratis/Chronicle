@@ -17,6 +17,7 @@
         <PropertyGroup>
             <WorkbenchDirectory>$(MSBuildThisFileDirectory)../../Workbench/Events/Web</WorkbenchDirectory>
         </PropertyGroup>
+
         <ItemGroup>
             <FilesToCopy Include="$(WorkbenchDirectory)/wwwroot/**/*" />
         </ItemGroup>
