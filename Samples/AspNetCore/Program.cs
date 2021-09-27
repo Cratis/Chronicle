@@ -3,6 +3,17 @@
 
 //new HostBuilder().ConfigureWebHostDefaults()
 
+using AspNetCore;
+
+var builder = Host.CreateDefaultBuilder()
+                    .UseCratis()
+                    .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
+
+var app = builder.Build();
+
+app.Run();
+
+/*
 var builder = WebApplication.CreateBuilder(args)
                             .UseCratis()
                             .UseCratisWorkbench();
@@ -15,3 +26,4 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+*/
