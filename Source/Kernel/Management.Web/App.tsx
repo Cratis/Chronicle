@@ -9,7 +9,6 @@ import './App.scss';
 const navLinkGroups: INavLinkGroup[] = [
     {
         links: [
-
             {
                 name: 'Event Log',
                 icon: 'StackIndicator',
