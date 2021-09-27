@@ -14,6 +14,7 @@ module.exports = (basePath, port) => {
             publicPath: basePath,
             directory: process.cwd(),
         },
+        liveReload: false,
 
         proxy: {
             '/api': 'http://localhost:3000',
