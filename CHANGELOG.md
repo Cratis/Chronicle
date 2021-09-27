@@ -1,3 +1,11 @@
+# [v2.1.2] - 2021-9-27 [PR: #5](https://github.com/Cratis/cratis/pull/5)
+
+### Fixed
+
+- Type discovery for Cratis internals.
+- Deep linking fixed - SPA middleware.
+- Embedded resources relative path inclusion.
+
 # [v2.1.1] - 2021-9-27 [PR: #4](https://github.com/Cratis/cratis/pull/4)
 
 ### Fixed
