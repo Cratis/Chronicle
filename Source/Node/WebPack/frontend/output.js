@@ -10,15 +10,15 @@ module.exports = (env, argv, basePath) => {
         filename:
             production === true
                 ? '[name].[chunkhash].bundle.js'
-                : '[name].[hash].bundle.js',
+                : '[name].[fullhash].bundle.js',
         sourceMapFilename:
             production === true
                 ? '[name].[chunkhash].bundle.map'
-                : '[name].[hash].bundle.map',
+                : '[name].[fullhash].bundle.map',
         chunkFilename:
             production === true
                 ? '[name].[chunkhash].chunk.js'
-                : '[name].[hash].chunk.js',
+                : '[name].[fullhash].chunk.js',
         path: path.resolve(process.cwd(), 'wwwroot'),
         publicPath: basePath
     };
