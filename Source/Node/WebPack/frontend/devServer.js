@@ -10,14 +10,17 @@ module.exports = (basePath, port) => {
         historyApiFallback: { index: basePath },
         host: '0.0.0.0',
         port: actualPort,
-        publicPath: basePath,
-        contentBase: process.cwd(),
+        static: {
+            publicPath: basePath,
+            directory: process.cwd(),
+        },
+
         proxy: {
             '/api': 'http://localhost:3000',
             '/graphql': 'http://localhost:3000',
         },
-        before: (app, server, compiler) => {
-            app.get('*', (req, res, next) => {
+        onBeforeSetupMiddleware: (devServer) => {
+            devServer.app.get('*', (req, res, next) => {
                 const match = req.originalUrl.match(fileTypes);
                 if (match && match.length > 0) {
                     next();
