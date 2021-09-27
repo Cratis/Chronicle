@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.AspnetCore</AssemblyName>
+        <AssemblyName>Cratis.AspNetCore</AssemblyName>
         <RootNamespace>Cratis.AspNetCore</RootNamespace>
         <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
     </PropertyGroup>
@@ -24,8 +24,8 @@
         <Exec WorkingDirectory="$(WorkbenchDirectory)" Command="base_path=/events/ yarn build" />
         <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(MSBuildThisFileDirectory)/workbench" />
 
-        <ItemGroup>
-            <EmbeddedResource Include="$(MSBuildThisFileDirectory)/workbench/**/*" />
-        </ItemGroup>
+        <CreateItem Include="$(MSBuildThisFileDirectory)/workbench/**/*">
+            <Output TaskParameter="Include" ItemName="EmbeddedResource"/>
+        </CreateItem>
     </Target>
 </Project>
