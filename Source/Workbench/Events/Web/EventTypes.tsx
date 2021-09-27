@@ -107,9 +107,6 @@ export const EventTypes = () => {
 
     return (
         <div className={styles.container}>
-            <div className={styles.commandBar}>
-                <CommandBar items={commandBarItems} />
-            </div>
             <div className={styles.eventList}>
                 <DetailsList items={eventTypes} columns={eventTypesColumns} selectionMode={SelectionMode.single} />
             </div>
