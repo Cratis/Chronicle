@@ -14,18 +14,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="workbench/**/*"/>
+        <EmbeddedResource Include="./workbench/**/*" />
     </ItemGroup>
 
-    <Target Name="BuildWorkbench" Condition="$(Configuration) == 'Release'" BeforeTargets="BeforeBuild" >
+    <Target Name="BuildWorkbench" Condition="$(Configuration) == 'Release'" BeforeTargets="BeforeBuild">
         <PropertyGroup>
             <WorkbenchDirectory>$(MSBuildThisFileDirectory)../../Workbench/Events/Web</WorkbenchDirectory>
         </PropertyGroup>
         <ItemGroup>
-            <FilesToCopy Include="$(WorkbenchDirectory)/wwwroot/**/*"/>
+            <FilesToCopy Include="$(WorkbenchDirectory)/wwwroot/**/*" />
         </ItemGroup>
 
-        <Exec WorkingDirectory="$(WorkbenchDirectory)" Command="base_path=/events/ yarn build"/>
-        <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(MSBuildThisFileDirectory)/workbench"/>
+        <Exec WorkingDirectory="$(WorkbenchDirectory)" Command="base_path=/events/ yarn build" />
+        <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(MSBuildThisFileDirectory)/workbench" />
     </Target>
 </Project>
