@@ -13,6 +13,11 @@
         <ProjectReference Include="../DotNET/DotNET.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)/workbench/**/*"/>
+    </ItemGroup>
+
+    <!--
     <Target Name="BuildWorkbench" Condition="$(Configuration) == 'Release'" BeforeTargets="BeforeBuild">
         <PropertyGroup>
             <WorkbenchDirectory>$(MSBuildThisFileDirectory)../../Workbench/Events/Web</WorkbenchDirectory>
@@ -29,4 +34,5 @@
             <Output TaskParameter="Include" ItemName="EmbeddedResource"/>
         </CreateItem>
     </Target>
+    -->
 </Project>
