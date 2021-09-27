@@ -165,20 +165,14 @@ export const EventLog = () => {
             name: 'Event Types',
             subMenuProps: {
                 items: eventTypes
-
             }
-            // onRender: () => {
-            //     return (
-            //         <span>
-            //             <ComboBox
-            //                 multiSelect
-            //                 options={eventTypes}
-            //             />
-
-            //         </span>
-            //     )
-            // }
         },
+        {
+            key: 'reload',
+            name: 'Reload',
+            iconProps: { iconName: 'Refresh' },
+        },
+
         {
             key: 'resetZoom',
             text: 'Reset Zoom',
