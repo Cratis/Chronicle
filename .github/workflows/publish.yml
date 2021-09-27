@@ -43,7 +43,7 @@ jobs:
         run: |
           pushd .
           cd Source/Workbench/Events/Web
-          yarn build
+          base_path=/events/ yarn build
           cp -r wwwroot/. ../../../Clients/AspNetCore/workbench/
           popd
 
