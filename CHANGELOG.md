@@ -1,3 +1,10 @@
+# [v2.1.5] - 2021-9-27 [PR: #9](https://github.com/Cratis/cratis/pull/9)
+
+### Fixed
+
+- Disabling workbench build + copying - hoping embedding will finally work.
+
+
 # [v2.1.4] - 2021-9-27 [PR: #7](https://github.com/Cratis/cratis/pull/7)
 
 ### Fixed
