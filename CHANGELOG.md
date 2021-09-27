@@ -1,3 +1,10 @@
+# [v2.1.4] - 2021-9-27 [PR: #7](https://github.com/Cratis/cratis/pull/7)
+
+### Fixed
+
+- Getting the Workbench actually embedded (Famous last words).
+
+
 # [v2.1.3] - 2021-9-27 [PR: #6](https://github.com/Cratis/cratis/pull/6)
 
 ### Fixed
