@@ -71,7 +71,8 @@ namespace Cratis.Types
             var entryAssembly = Assembly.GetEntryAssembly();
             var dependencyModel = DependencyContext.Load(entryAssembly);
             var assemblies = dependencyModel.RuntimeLibraries
-                                .Where(_ => _.Type.Equals("project", StringComparison.InvariantCultureIgnoreCase))
+                                .Where(_ => _.Type.Equals("project", StringComparison.InvariantCultureIgnoreCase) ||
+                                            _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase))
                                 .Select(_ => Assembly.Load(_.Name))
                                 .ToArray();
             _assemblies.AddRange(assemblies);
