@@ -16,7 +16,6 @@
     <ItemGroup>
         <EmbeddedResource Include="$(MSBuildThisFileDirectory)/workbench/**/*" />
     </ItemGroup>
-
     <!--
     <Target Name="BuildWorkbench" Condition="$(Configuration) == 'Release'" BeforeTargets="BeforeBuild">
         <PropertyGroup>
