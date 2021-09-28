@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="$(MSBuildThisFileDirectory)/workbench/**/*"/>
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)/workbench/**/*" />
     </ItemGroup>
 
     <!--
