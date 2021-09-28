@@ -4,11 +4,9 @@
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
 import {
-    ComboBox,
     CommandBar,
     DetailsList,
     IColumn,
-    IComboBoxOption,
     ICommandBarItemProps,
     Panel,
     SelectionMode
@@ -18,6 +16,7 @@ import { useBoolean } from '@fluentui/react-hooks';
 import { default as styles } from './EventLogs.module.scss';
 import { useDataFrom } from './useDataFrom';
 import { EventLogInformation } from './EventLogInformation';
+import { EventType } from './EventType';
 
 type EChartsOption = echarts.EChartsOption;
 
@@ -130,6 +129,12 @@ export const EventLogs = () => {
             text: _.name
         } as ICommandBarItemProps
     });
+    const [eventTypes, refreshEventTypes] = useDataFrom<ICommandBarItemProps>('/api/events/types', (_: EventType) => {
+        return {
+            key: _.id,
+            text: _.name
+        }
+    });
 
     const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
 
@@ -150,21 +155,6 @@ export const EventLogs = () => {
         window.addEventListener('resize', listener);
         return () => window.removeEventListener('resize', listener);
     }, []);
-
-    const eventTypes: ICommandBarItemProps[] = [
-        {
-            key:'00000000-0000-0000-0000-000000000000',
-            text: 'All',
-        },
-        {
-            key:'e871c9c9-49be-4881-b4ad-9f3b244ba688',
-            text: 'DebitAccountOpened',
-        },
-        {
-            key:'544c04a1-ee31-4f81-a716-71c729d2aaa7',
-            text: 'DepositToDebitAccountPerformed'
-        }
-    ];
 
 
     const commandBarItems: ICommandBarItemProps[] = [

@@ -10,7 +10,16 @@ namespace Cratis.Extensions.Dolittle
     public class EventTypes : Controller
     {
         [HttpGet]
-        public Task<JSchema> AllEventTypes()
+        public Task<IEnumerable<EventType>> AllEvenTtypes()
+        {
+            return Task.FromResult(new[] {
+                new EventType("e871c9c9-49be-4881-b4ad-9f3b244ba688","DebitAccountOpened"),
+                new EventType("544c04a1-ee31-4f81-a716-71c729d2aaa7","DepositToDebitAccountPerformed")
+            }.AsEnumerable());
+        }
+
+        [HttpGet("schemas")]
+        public Task<JSchema> AllEventTypeSchemas()
         {
             return Task.FromResult(new JSchema());
         }
