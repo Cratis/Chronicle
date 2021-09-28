@@ -6,7 +6,7 @@ import { Navigation } from './Navigation';
 import { EventTypes } from './EventTypes';
 
 import { default as styles } from './App.module.scss';
-import { EventLog } from './EventLog';
+import { EventLogs } from './EventLogs';
 
 export const App = () => {
     return (
@@ -23,8 +23,8 @@ export const App = () => {
                         <EventTypes />
                     </Route>
 
-                    <Route path="/events/eventlog">
-                        <EventLog />
+                    <Route path="/events/eventlogs">
+                        <EventLogs />
                     </Route>
                 </div>
             </div>

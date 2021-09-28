@@ -5,13 +5,17 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Extensions.Dolittle
 {
+    public record EventLogInformation(string id, string name);
+
     [Route("/api/events/store/logs")]
     public class EventLogs : Controller
     {
         [HttpGet]
-        public Task<IEnumerable<string>> AllEventLogs()
+        public Task<IEnumerable<EventLogInformation>> AllEventLogs()
         {
-            return Task.FromResult(Array.Empty<string>() as IEnumerable<string>);
+            return Task.FromResult(new[] {
+                new EventLogInformation("62748262-7fa0-4591-8b18-d74416807820", "Main Event Log")
+            }.AsEnumerable());
         }
     }
 }

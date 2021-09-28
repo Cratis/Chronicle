@@ -45,7 +45,7 @@ const groups: INavLinkGroup[] = [
                         name: 'EventLog',
                         key: 'event-log',
                         url: '',
-                        route: '/events/eventlog'
+                        route: '/events/eventlogs'
                     },
                     {
                         name: 'Streams',

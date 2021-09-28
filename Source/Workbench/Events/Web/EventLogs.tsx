@@ -15,7 +15,9 @@ import {
 } from '@fluentui/react'
 import { useBoolean } from '@fluentui/react-hooks';
 
-import { default as styles } from './EventLog.module.scss';
+import { default as styles } from './EventLogs.module.scss';
+import { useDataFrom } from './useDataFrom';
+import { EventLogInformation } from './EventLogInformation';
 
 type EChartsOption = echarts.EChartsOption;
 
@@ -119,11 +121,16 @@ const eventListColumns: IColumn[] = [
     }
 ];
 
-
-
 // https://echarts.apache.org/examples/en/
-export const EventLog = () => {
+export const EventLogs = () => {
     const chartContainer = useRef<HTMLDivElement>(null);
+    const [eventLogs, refreshEventLogs] = useDataFrom<ICommandBarItemProps>('/api/events/store/logs', (_: EventLogInformation) => {
+        return {
+            key: _.id,
+            text: _.name
+        } as ICommandBarItemProps
+    });
+
     const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
 
     const getChart = () => echarts.getInstanceByDom(chartContainer.current!);
@@ -157,9 +164,17 @@ export const EventLog = () => {
             key:'544c04a1-ee31-4f81-a716-71c729d2aaa7',
             text: 'DepositToDebitAccountPerformed'
         }
-    ]
+    ];
+
 
     const commandBarItems: ICommandBarItemProps[] = [
+        {
+            key: 'eventLogs',
+            name: 'Event Log',
+            subMenuProps: {
+                items: eventLogs
+            }
+        },
         {
             key: 'eventTypes',
             name: 'Event Types',
@@ -185,7 +200,6 @@ export const EventLog = () => {
                 });
             }
         }
-
     ];
 
 
