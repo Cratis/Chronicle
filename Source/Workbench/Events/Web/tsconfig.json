@@ -5,6 +5,9 @@
             "path": "../../../Node/Rudiments/tsconfig.json"
         },
         {
+            "path": "../../../Node/types/tsconfig.json"
+        },
+        {
             "path": "../../Styles/tsconfig.json"
         }
     ]
