@@ -4,4 +4,7 @@
 export * from './Constructor';
 export * from './PrimitiveTypeMap';
 export * from './PrimitiveOrConstructor';
+export * from './PropertyAccessor';
+export * from './PropertyAccessorDescriptor';
+export * from './PropertyPathResolverProxyHandler';
 export * from './typeGuard';
