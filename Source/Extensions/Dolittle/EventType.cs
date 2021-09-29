@@ -3,5 +3,5 @@
 
 namespace Cratis.Extensions.Dolittle
 {
-    public record EventType(string identifier, string name);
+    public record EventType(string Identifier, string Name, uint Generations);
 }

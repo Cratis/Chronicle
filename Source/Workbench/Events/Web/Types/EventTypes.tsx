@@ -8,6 +8,7 @@ import {
     PivotItem,
     SelectionMode
 } from '@fluentui/react';
+import { useDataFrom } from '../useDataFrom';
 
 import { default as styles } from './EventTypes.module.scss';
 
@@ -43,13 +44,7 @@ const eventSchemaColumns: IColumn[] = [
 
 
 export const EventTypes = () => {
-    const eventTypes: any[] = [
-        {
-            name: 'DebitAccountOpened',
-            generations: 3
-        }
-    ];
-
+    const [eventTypes, reloadEventTypes] = useDataFrom<any>('/api/events/types');
     const eventSchemaGen1: any[] = [
         {
             property: 'Account',

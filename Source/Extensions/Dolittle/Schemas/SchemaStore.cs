@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Extensions.MongoDB;
+using Cratis.Reflection;
 using Cratis.Strings;
 using Cratis.Types;
 using Dolittle.SDK.Artifacts;
@@ -25,6 +26,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
         readonly IDictionary<Type, ICanExtendSchemaForType> _schemaInformationForTypesProviders;
         readonly IMongoDatabase _database;
         readonly IMongoCollection<EventSchemaMongoDB> _collection;
+        readonly ITypes _types;
 
         static SchemaStore()
         {
@@ -41,20 +43,33 @@ namespace Cratis.Extensions.Dolittle.Schemas
         /// <param name="configuration">The <see cref="SchemaStoreConfiguration"/>.</param>
         /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating MongoDB clients.</param>
         /// <param name="schemaInformationForTypesProviders"><see cref="IInstancesOf{T}"/> of <see cref="ICanExtendSchemaForType"/>.</param>
+        /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         public SchemaStore(
             SchemaStoreConfiguration configuration,
             IMongoDBClientFactory mongoDBClientFactory,
-            IInstancesOf<ICanExtendSchemaForType> schemaInformationForTypesProviders)
+            IInstancesOf<ICanExtendSchemaForType> schemaInformationForTypesProviders,
+            ITypes types)
         {
             _schemaInformationForTypesProviders = schemaInformationForTypesProviders.ToDictionary(_ => _.Type, _ => _);
             var mongoUrlBuilder = new MongoUrlBuilder
             {
-                Servers = new[] { new MongoServerAddress(configuration.Host, configuration.Port) }
+                Servers = new[] { new MongoServerAddress(configuration.Host, configuration.Port) }
             };
             var url = mongoUrlBuilder.ToMongoUrl();
             var client = mongoDBClientFactory.Create(url);
             _database = client.GetDatabase(DatabaseName);
             _collection = _database.GetCollection<EventSchemaMongoDB>(SchemasCollection);
+            _types = types;
+        }
+
+        /// <inheritdoc/>
+        public async Task DiscoverGenerateAndConsolidate()
+        {
+            foreach (var eventType in _types.All.Where(_ => _.HasAttribute<EventTypeAttribute>()))
+            {
+                var schema = GenerateFor(eventType);
+                await Save(schema);
+            }
         }
 
         /// <inheritdoc/>
@@ -64,6 +79,9 @@ namespace Cratis.Extensions.Dolittle.Schemas
             var eventTypeAttribute = type.GetCustomAttribute<EventTypeAttribute>()!;
 
             var typeSchema = _generator.Generate(type);
+            typeSchema.SetDisplayName(type.Name);
+            typeSchema.SetGeneration(eventTypeAttribute.EventType.Generation.Value);
+
             var eventSchema = new EventSchema(eventTypeAttribute.EventType, typeSchema);
             ExtendSchema(type, eventSchema, typeSchema);
 
@@ -71,16 +89,44 @@ namespace Cratis.Extensions.Dolittle.Schemas
         }
 
         /// <inheritdoc/>
-        public Task<IEnumerable<EventSchema>> GetAll()
+        public async Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
         {
-            throw new NotImplementedException();
+            var schemas = await _collection.Find(_ => true).ToListAsync();
+            return schemas
+                .GroupBy(_ => _.EventType)
+                .Select(_ =>
+                {
+                    var latest = _.OrderByDescending(_ => _.Generation).First();
+                    return new EventSchema(
+                        new global::Dolittle.SDK.Events.EventType(
+                            latest.EventType,
+                            latest.Generation),
+                        JSchema.Parse(latest.Schema));
+                });
         }
 
         /// <inheritdoc/>
-        public Task<EventSchema> GetFor(EventType type, Generation? generation = null) => throw new NotImplementedException();
+        public async Task<EventSchema> GetFor(global::Dolittle.SDK.Events.EventType type, Generation? generation = default)
+        {
+            var filter = GetFilterForSpecificSchema(type, generation);
+            var result = await _collection.FindAsync(filter);
+            var schemas = await result.ToListAsync();
+
+            return new EventSchema(
+                new global::Dolittle.SDK.Events.EventType(
+                    schemas[0].EventType,
+                    schemas[0].Generation),
+                JSchema.Parse(schemas[0].Schema));
+        }
 
         /// <inheritdoc/>
-        public Task<bool> HasFor(EventType type, Generation? generation = null) => throw new NotImplementedException();
+        public async Task<bool> HasFor(global::Dolittle.SDK.Events.EventType type, Generation? generation = default)
+        {
+            var filter = GetFilterForSpecificSchema(type, generation);
+            var result = await _collection.FindAsync(filter);
+            var schemas = await result.ToListAsync();
+            return schemas.Count == 1;
+        }
 
         /// <inheritdoc/>
         public async Task Save(EventSchema eventSchema)
@@ -89,6 +135,9 @@ namespace Cratis.Extensions.Dolittle.Schemas
             // .. if they're the same. Ignore saving.
             // If this is a new generation, there must be an upcaster and downcaster associated with the schema
             // .. do not allow generational gaps
+
+            if (await HasFor(eventSchema.EventType, eventSchema.EventType.Generation)) return;
+
             var schemaToSave = new EventSchemaMongoDB
             {
                 EventType = eventSchema.EventType.Id,
@@ -116,5 +165,10 @@ namespace Cratis.Extensions.Dolittle.Schemas
                 }
             }
         }
+
+        FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(global::Dolittle.SDK.Events.EventType type, Generation? generation) => Builders<EventSchemaMongoDB>.Filter.And(
+                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Id.Value),
+                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? type.Generation).Value)
+                   );
     }
 }
