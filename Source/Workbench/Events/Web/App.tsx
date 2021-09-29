@@ -3,10 +3,10 @@
 
 import { BrowserRouter as Router, Route } from 'react-router-dom';
 import { Navigation } from './Navigation';
-import { EventTypes } from './EventTypes';
+import { EventTypes } from './Types/EventTypes';
 
 import { default as styles } from './App.module.scss';
-import { EventLogs } from './EventLogs';
+import { EventLogs } from './Exploring/EventLogs';
 
 export const App = () => {
     return (
