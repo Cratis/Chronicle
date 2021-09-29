@@ -15,7 +15,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build sample",
+            "label": "build aspnetcore sample",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -28,17 +28,18 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "watch",
+            "label": "build dolittle sample",
             "command": "dotnet",
             "type": "process",
             "args": [
-                "watch",
-                "run",
-                "${workspaceFolder}/Source/Kernel/Server/Server.csproj",
+                "build",
+                "--no-restore",
+                "${workspaceFolder}/Samples/Dolittle/Dolittle.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         }
+
     ]
 }
