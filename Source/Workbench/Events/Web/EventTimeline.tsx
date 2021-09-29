@@ -84,7 +84,7 @@ function generateData(count: number) {
     };
 }
 
-export const EventChartSelector = () => {
+export const EventTimeline = () => {
     const chartContainer = useRef<HTMLDivElement>(null);
     const getChart = () => echarts.getInstanceByDom(chartContainer.current!);
 
