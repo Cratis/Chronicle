@@ -19,13 +19,26 @@
             }
         },
         {
-            "name": ".NET Core Launch (Sample)",
+            "name": ".NET Core Launch (AspNetCore Sample)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build sample",
-            "program": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net6.0/Sample.dll",
+            "preLaunchTask": "build aspnetcore sample",
+            "program": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net6.0/Cratis.Sample.AspNetCore.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Samples/AspNetCore",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Launch (Dolittle Sample)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build dolittle sample",
+            "program": "${workspaceFolder}/Samples/Dolittle/bin/Debug/net6.0/Cratis.Sample.Dolittle.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Samples/Dolittle",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
