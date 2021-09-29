@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 //new HostBuilder().ConfigureWebHostDefaults()
-
-using AspNetCore;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using Sample;
 
 var builder = Host.CreateDefaultBuilder()
-                    .UseCratis()
+                    .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                    .ConfigureContainer<ContainerBuilder>(containerBuilder => containerBuilder.RegisterDefaults(Startup.Types))
                     .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
 
 var app = builder.Build();

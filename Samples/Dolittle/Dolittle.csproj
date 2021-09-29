@@ -7,6 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Source/Extensions/Dolittle/Dolittle.csproj" />
     </ItemGroup>
