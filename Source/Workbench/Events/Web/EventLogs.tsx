@@ -17,7 +17,7 @@ import { default as styles } from './EventLogs.module.scss';
 import { useDataFrom } from './useDataFrom';
 import { EventLogInformation } from './EventLogInformation';
 import { EventType } from './EventType';
-import { EventChartSelector } from './EventChartSelector';
+import { EventTimeline } from './EventTimeline';
 
 
 const eventListColumns: IColumn[] = [
@@ -59,9 +59,8 @@ export const EventLogs = () => {
         }
     });
 
-    const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
-
-
+    const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
+    const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
 
     const commandBarItems: ICommandBarItemProps[] = [
         {
@@ -77,6 +76,12 @@ export const EventLogs = () => {
             subMenuProps: {
                 items: eventTypes
             }
+        },
+        {
+            key: 'timeline',
+            name: 'Timeline',
+            iconProps: { iconName: 'Timeline' },
+            onClick: () => toggleTimeline()
         },
         {
             key: 'filter',
@@ -127,7 +132,7 @@ export const EventLogs = () => {
             <div className={styles.commandBar}>
                 <CommandBar items={commandBarItems} />
             </div>
-            <EventChartSelector />
+            {isTimelineOpen && <EventTimeline />}
             <div className={styles.eventList}>
                 <DetailsList
                     columns={eventListColumns}
@@ -138,7 +143,7 @@ export const EventLogs = () => {
 
             <Panel
                 isLightDismiss
-                isOpen={isOpen}
+                isOpen={isDetailsPanelOpen}
                 onDismiss={dismissPanel}
                 headerText="Event Details"
             />
