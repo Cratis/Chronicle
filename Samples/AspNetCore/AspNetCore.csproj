@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
-        <AssemblyName>Sample</AssemblyName>
+        <AssemblyName>Cratis.Sample.AspNetCore</AssemblyName>
         <RootNamespace>Sample</RootNamespace>
 
         <IsPackable>false</IsPackable>
@@ -8,6 +8,5 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
-        <ProjectReference Include="../../Source/Extensions/Dolittle/Dolittle.csproj" />
     </ItemGroup>
 </Project>

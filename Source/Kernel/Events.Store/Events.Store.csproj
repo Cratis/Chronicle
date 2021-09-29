@@ -7,9 +7,7 @@
     <ItemGroup>
         <ProjectReference Include="../Events/Events.csproj" />
         <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
-        <ProjectReference Include="../../Fundamentals/Concepts/Concepts.csproj" />
-        <ProjectReference Include="../../Fundamentals/Execution/Execution.csproj" />
-        <ProjectReference Include="../../Fundamentals/DependencyInversion/DependencyInversion.csproj" />
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

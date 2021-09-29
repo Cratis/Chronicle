@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Extensions.Orleans.Specs</AssemblyName>
+        <RootNamespace>Cratis.Extensions.Orleans</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Extensions/Orleans/Orleans.csproj"/>
+    </ItemGroup>
+</Project>

@@ -5,6 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
     </ItemGroup>
 </Project>
