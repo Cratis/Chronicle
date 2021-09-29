@@ -14,7 +14,7 @@ import {
 import { useBoolean } from '@fluentui/react-hooks';
 
 import { default as styles } from './EventLogs.module.scss';
-import { useDataFrom } from './useDataFrom';
+import { useDataFrom } from '../useDataFrom';
 import { EventLogInformation } from './EventLogInformation';
 import { EventType } from './EventType';
 import { EventTimeline } from './EventTimeline';
