@@ -5,8 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/DependencyInversion/DependencyInversion.csproj"/>
-        <ProjectReference Include="../../Fundamentals/Execution/Execution.csproj"/>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -95,9 +95,7 @@ export const EventChartSelector = () => {
             chart.resize();
         }
 
-        const listener = () => {
-            getChart().resize();
-        };
+        const listener = () => getChart().resize();
         window.addEventListener('resize', listener);
         return () => window.removeEventListener('resize', listener);
     }, []);

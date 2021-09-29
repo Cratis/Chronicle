@@ -5,13 +5,26 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Extensions.Dolittle
 {
-    [Route("/api/events/store/log")]
+    [Route("/api/events/store/log/{eventLogId}")]
     public class EventLog : Controller
     {
-        [HttpGet("{eventLogId}/{eventSourceId}")]
+        [HttpGet]
         public Task FindFor(
             [FromRoute] string eventLogId,
-            [FromRoute] string eventSourceId)
+            [FromBody] EventFilter? filter)
+        {
+            return Task.CompletedTask;
+        }
+
+        [HttpGet("histogram")]
+        public Task<IDictionary<DateTimeOffset, uint>> Histogram([FromRoute] string eventLogId)
+        {
+            var result = new Dictionary<DateTimeOffset, uint>();
+            return Task.FromResult(result as IDictionary<DateTimeOffset, uint>);
+        }
+
+        [HttpGet("types")]
+        public Task Types([FromRoute] string eventLogId)
         {
             return Task.CompletedTask;
         }

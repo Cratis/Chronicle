@@ -79,9 +79,14 @@ export const EventLogs = () => {
             }
         },
         {
+            key: 'filter',
+            name: 'Filter',
+            iconProps: { iconName: 'QueryList' }
+        },
+        {
             key: 'reload',
             name: 'Reload',
-            iconProps: { iconName: 'Refresh' },
+            iconProps: { iconName: 'Refresh' }
         },
 
         {
@@ -122,7 +127,7 @@ export const EventLogs = () => {
             <div className={styles.commandBar}>
                 <CommandBar items={commandBarItems} />
             </div>
-            <EventChartSelector/>
+            <EventChartSelector />
             <div className={styles.eventList}>
                 <DetailsList
                     columns={eventListColumns}

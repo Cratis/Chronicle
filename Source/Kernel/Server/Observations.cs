@@ -4,7 +4,7 @@
 using Cratis.Events.Observation;
 using Cratis.Events.Store;
 using Cratis.Execution;
-using Cratis.GraphQL;
+using Cratis.Extensions.GraphQL;
 
 namespace Cratis.Server
 {

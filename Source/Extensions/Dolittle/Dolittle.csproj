@@ -5,10 +5,16 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
     <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
+        <PackageReference Include="Dolittle.SDK" Version="9.2.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..//MongoDB/MongoDB.csproj" />
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
     </ItemGroup>
 </Project>

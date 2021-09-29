@@ -4,6 +4,7 @@
 using Autofac;
 using Cratis.Events.Store;
 using Cratis.Execution;
+using Cratis.Extensions.Orleans.Execution;
 using Orleans;
 using Orleans.Configuration;
 

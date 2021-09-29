@@ -3,10 +3,9 @@
 
 using System.IO.Compression;
 using Autofac;
-using Cratis.DependencyInversion;
 using Cratis.Events.Observation.Grpc;
 using Cratis.Events.Store.Grpc;
-using Cratis.GraphQL;
+using Cratis.Extensions.GraphQL;
 using Cratis.Types;
 using GraphQL.Server.Ui.Playground;
 using HotChocolate.AspNetCore;
