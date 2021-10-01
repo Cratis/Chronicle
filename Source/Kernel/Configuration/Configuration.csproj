@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

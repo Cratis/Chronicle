@@ -5,7 +5,7 @@ using Autofac;
 using Cratis.Execution;
 using Cratis.Reflection;
 
-namespace Cratis.DependencyInversion
+namespace Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Represents a <see cref="Module">autofac module</see> for default convention (IFoo -> Foo).

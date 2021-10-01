@@ -32,5 +32,6 @@
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />
+        <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj" />
     </ItemGroup>
 </Project>

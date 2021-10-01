@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Extensions.Autofac</AssemblyName>
+        <RootNamespace>Cratis.Extensions.Autofac</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Autofac" Version="$(Autofac)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+    </ItemGroup>
+</Project>

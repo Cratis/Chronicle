@@ -59,13 +59,6 @@ namespace Cratis.Extensions.Dolittle.Schemas
             };
             var url = mongoUrlBuilder.ToMongoUrl();
             var settings = MongoClientSettings.FromUrl(url);
-            settings.ClusterConfigurator = cb =>
-            {
-                cb.Subscribe<CommandStartedEvent>(e =>
-                {
-                    Console.WriteLine(e.Command.ToJson());
-                });
-            };
             var client = mongoDBClientFactory.Create(settings);
             _database = client.GetDatabase(DatabaseName);
             _collection = _database.GetCollection<EventSchemaMongoDB>(SchemasCollection);
