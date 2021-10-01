@@ -1,3 +1,10 @@
+# [v2.4.4] - 2021-10-1 [PR: #22](https://github.com/Cratis/cratis/pull/22)
+
+### Fixed
+
+- Fixing a bug where Bson serializer for Guid already exists when we get to setting up how we want it setup. Turns out that the MongoDB driver will configure a bunch of serializers default if you create a MongoClient, if you then do a registration of a serializer after that - its too late. This fix makes sure we do it before.
+
+
 # [v2.4.3] - 2021-10-1 [PR: #21](https://github.com/Cratis/cratis/pull/21)
 
 ### Fixed
