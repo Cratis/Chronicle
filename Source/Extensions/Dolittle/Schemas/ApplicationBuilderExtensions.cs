@@ -16,7 +16,7 @@ namespace Microsoft.AspNetCore.Builder
         /// /// </summary>
         /// <param name="applicationBuilder"><see cref="IApplicationBuilder"/> to add to.</param>
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
-        public static IApplicationBuilder AddDolittleSchemaStore(this IApplicationBuilder applicationBuilder)
+        public static IApplicationBuilder UseDolittleSchemaStore(this IApplicationBuilder applicationBuilder)
         {
             applicationBuilder
                 .ApplicationServices
