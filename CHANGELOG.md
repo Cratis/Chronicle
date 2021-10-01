@@ -1,3 +1,10 @@
+# [v2.3.1] - 2021-10-1 [PR: #15](https://github.com/Cratis/cratis/pull/15)
+
+### Fixed
+
+- Fixing so that we actually initialize the assemblies prefix filter property before using it. 
+
+
 # [v2.3.0] - 2021-10-1 [PR: #14](https://github.com/Cratis/cratis/pull/14)
 
 ### Added
