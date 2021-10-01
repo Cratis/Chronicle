@@ -7,7 +7,7 @@ namespace AspNetCore
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.UseCratisWorkbench();
+            services.AddCratisWorkbench();
         }
 
         public void Configure(IApplicationBuilder app)
