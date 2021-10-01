@@ -13,11 +13,16 @@ namespace Cratis.Extensions.MongoDB
     /// </summary>
     public static class MongoDBDefaults
     {
+        static bool _initialized;
+
         /// <summary>
         /// Initialize the defaults.
         /// </summary>
         public static void Initialize()
         {
+            if( _initialized ) return;
+            _initialized = true;
+
             BsonSerializer
                 .RegisterSerializationProvider(
                     new ConceptSerializationProvider()

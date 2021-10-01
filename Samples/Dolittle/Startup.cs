@@ -12,16 +12,17 @@ namespace Sample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            services.AddSingleton(Types);
-            services.AddDolittleSchemaStore("localhost", 27017);
-            services.AddCratisWorkbench();
+            services.AddSingleton(Types)
+                .AddDolittleSchemaStore("localhost", 27017)
+                .AddCratisWorkbench();
         }
 
         public void Configure(IApplicationBuilder app)
         {
-            app.UseRouting();
-            app.UseDolittleSchemaStore();
-            app.UseCratisWorkbench();
+            app
+                .UseRouting()
+                .UseDolittleSchemaStore()
+                .UseCratisWorkbench();
         }
     }
 }
