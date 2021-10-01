@@ -7,7 +7,7 @@ using Autofac.Core;
 using Cratis.Execution;
 using Cratis.Reflection;
 
-namespace Cratis.DependencyInversion
+namespace Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Provides registrations on-the-fly for any concrete type not already registered with

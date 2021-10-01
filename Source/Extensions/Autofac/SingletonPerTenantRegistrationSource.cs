@@ -9,7 +9,7 @@ using Cratis.Execution;
 using Cratis.Reflection;
 using Cratis.Types;
 
-namespace Cratis.DependencyInversion
+namespace Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Represents a <see cref="IRegistrationSource"/> to handle correct lifecycle for implementations marked with <see cref="SingletonPerTenantAttribute"/>.

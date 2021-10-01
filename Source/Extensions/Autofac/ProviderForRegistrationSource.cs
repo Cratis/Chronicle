@@ -5,8 +5,9 @@ using System.Reflection;
 using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
+using Cratis.DependencyInversion;
 
-namespace Cratis.DependencyInversion
+namespace Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Represents a <see cref="IRegistrationSource"/> for automatically resolving <see cref="ProviderFor{T}"/> dependencies.
