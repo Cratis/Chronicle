@@ -1,3 +1,11 @@
+# [v2.4.1] - 2021-10-1 [PR: #18](https://github.com/Cratis/cratis/pull/18)
+
+### Fixed
+
+- Fixing ServiceCollection extension APIs from version 2.4.0. Instead of `Use*`for the methods, its now `Add*`. Should've been major version, but since this mistake was done 20 minutes ago - no one has consumed it yet :). 
+
+
+
 # [v2.4.0] - 2021-10-1 [PR: #17](https://github.com/Cratis/cratis/pull/17)
 
 ### Added
