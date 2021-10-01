@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../../Source/Clients/AspNetCore.Workbench/AspNetCore.Workbench.csproj" />
         <ProjectReference Include="../../Source/Extensions/Dolittle/Dolittle.csproj" />
         <ProjectReference Include="../../Source/Extensions/Autofac/Autofac.csproj" />
     </ItemGroup>
