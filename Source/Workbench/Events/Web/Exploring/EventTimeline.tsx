@@ -10,6 +10,7 @@ type EChartsOption = echarts.EChartsOption;
 const dataCount = 42;
 const data = generateData(dataCount);
 
+// https://echarts.apache.org/examples/en/
 const option: EChartsOption = {
     tooltip: {
         trigger: 'axis',
