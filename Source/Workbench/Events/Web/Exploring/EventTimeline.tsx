@@ -72,7 +72,7 @@ function generateData(count: number) {
 
     for (let i = 0; i < count; i++) {
         categoryData.push(
-            echarts.format.formatTime('yyyy-MM-dd\nhh:mm:ss', time, false)
+            echarts.time.format(time, 'yyyy-MM-dd\nhh:mm:ss',  false)
         );
         valueData.push(next(i).toFixed(2));
         time += 1000;

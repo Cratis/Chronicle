@@ -30,6 +30,13 @@ namespace Cratis.Extensions.Dolittle.Schemas
         Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes();
 
         /// <summary>
+        /// Get all the <see cref="EventSchema">event schemas</see> for all generations for a specific <see cref="global::Dolittle.SDK.Events.EventType"/>.
+        /// </summary>
+        /// <param name="eventType"><see cref="global::Dolittle.SDK.Events.EventType"/> to get for.</param>
+        /// <returns>A collection of <see cref="EventSchema">event schemas</see> - one item per generation.</returns>
+        Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(global::Dolittle.SDK.Events.EventType eventType);
+
+        /// <summary>
         /// Save an <see cref="EventSchema"/> to the store.
         /// </summary>
         /// <param name="eventSchema"><see cref="EventSchema"/> to save.</param>

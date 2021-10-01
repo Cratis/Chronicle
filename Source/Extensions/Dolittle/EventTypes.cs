@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Extensions.Dolittle.Schemas;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Schema;
 
 namespace Cratis.Extensions.Dolittle
@@ -30,9 +32,11 @@ namespace Cratis.Extensions.Dolittle
         }
 
         [HttpGet("schemas/{eventTypeId}")]
-        public Task<IEnumerable<JSchema>> GenerationSchemasForType()
+        public async Task<IEnumerable<JsonDocument>> GenerationSchemasForType(
+            [FromRoute] string eventTypeId)
         {
-            return Task.FromResult(new[] { new JSchema() }.AsEnumerable());
+            var schemas = await _schemaStore.GetAllGenerationsForEventType(new global::Dolittle.SDK.Events.EventType(eventTypeId, 1));
+            return schemas.Select(_ => JsonDocument.Parse(_.Schema.ToString()));
         }
     }
 }
