@@ -17,7 +17,7 @@ namespace Microsoft.AspNetCore.Builder
         /// /// </summary>
         /// <param name="applicationBuilder"><see cref="IApplicationBuilder"/> to add to.</param>
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
-        public static IApplicationBuilder AddCratisWorkbench(this IApplicationBuilder applicationBuilder)
+        public static IApplicationBuilder UseCratisWorkbench(this IApplicationBuilder applicationBuilder)
         {
             applicationBuilder.UseRouting();
             var filesOptions = new SharedOptions
