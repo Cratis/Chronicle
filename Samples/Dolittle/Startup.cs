@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Extensions.Dolittle;
 using Cratis.Types;
 
 namespace Sample
@@ -14,7 +15,7 @@ namespace Sample
             services.AddRazorPages();
             services.AddSingleton(Types)
                 .AddDolittleSchemaStore("localhost", 27017)
-                .AddCratisWorkbench();
+                .AddCratisWorkbench(_ => _.UseDolittle());
         }
 
         public void Configure(IApplicationBuilder app)
