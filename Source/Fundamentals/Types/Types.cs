@@ -21,9 +21,9 @@ namespace Cratis.Types
         /// <param name="assemblyPrefixesToInclude">Optional params of assembly prefixes to include in type discovery</param>
         public Types(params string[] assemblyPrefixesToInclude)
         {
+            _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
             All = DiscoverAllTypes();
             _contractToImplementorsMap.Feed(All);
-            _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
         }
 
         /// <inheritdoc/>
