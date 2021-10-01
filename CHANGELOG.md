@@ -1,3 +1,9 @@
+# [v2.4.2] - 2021-10-1 [PR: #20](https://github.com/Cratis/cratis/pull/20)
+
+### Fixed
+
+- Fixing build that creates the embedded version of the Events Workbench after restructuring. This got broken in 2.4.0.
+
 # [v2.4.1] - 2021-10-1 [PR: #18](https://github.com/Cratis/cratis/pull/18)
 
 ### Fixed
