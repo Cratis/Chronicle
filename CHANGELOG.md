@@ -1,3 +1,9 @@
+# [v2.4.0] - 2021-10-1 [PR: #17](https://github.com/Cratis/cratis/pull/17)
+
+### Added
+
+- Configuration methods for Dolittle Schema Store
+
 # [v2.3.2] - 2021-10-1 [PR: #16](https://github.com/Cratis/cratis/pull/16)
 
 ### Fixed
