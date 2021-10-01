@@ -1,3 +1,14 @@
+# [v2.2.0] - 2021-10-1 [PR: #13](https://github.com/Cratis/cratis/pull/13)
+
+### Added
+
+- Dolittle extensions for APIs used by Workbench
+- Event Workbench supporting event types with schemas
+
+### Changed
+
+- Consolidated projects into one Fundamentals project - no need to separate these out, improves build times and general happiness :)
+
 # [v2.1.6] - 2021-9-27 [PR: #11](https://github.com/Cratis/cratis/pull/11)
 
 ### Fixed
