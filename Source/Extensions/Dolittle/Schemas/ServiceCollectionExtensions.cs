@@ -17,7 +17,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="mongoDBHost">The MongoDB hostname.</param>
         /// <param name="mongoDBPort">The MongoDB port.</param>
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
-        public static IServiceCollection UseDolittleSchemaStore(this IServiceCollection services, string mongoDBHost, int mongoDBPort)
+        public static IServiceCollection AddDolittleSchemaStore(this IServiceCollection services, string mongoDBHost, int mongoDBPort)
         {
             services.AddSingleton(new SchemaStoreConfiguration(mongoDBHost, mongoDBPort));
             return services;

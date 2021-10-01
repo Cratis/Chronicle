@@ -15,7 +15,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services"><see cref="IServiceCollection"/> to build on.</param>
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
-        public static IServiceCollection UseCratisWorkbench(this IServiceCollection services)
+        public static IServiceCollection AddCratisWorkbench(this IServiceCollection services)
         {
             services.AddControllers().AddJsonOptions(_ => _.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull);
             return services;
