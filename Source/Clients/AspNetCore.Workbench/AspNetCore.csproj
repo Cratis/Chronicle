@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.AspNetCore.Workbench</AssemblyName>
+        <RootNamespace>Cratis.AspNetCore.Workbench</RootNamespace>
+        <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)/workbench/**/*" />
+    </ItemGroup>
+    <!--
+    <Target Name="BuildWorkbench" Condition="$(Configuration) == 'Release'" BeforeTargets="BeforeBuild">
+        <PropertyGroup>
+            <WorkbenchDirectory>$(MSBuildThisFileDirectory)../../Workbench/Events/Web</WorkbenchDirectory>
+        </PropertyGroup>
+
+        <ItemGroup>
+            <FilesToCopy Include="$(WorkbenchDirectory)/wwwroot/**/*" />
+        </ItemGroup>
+
+        <Exec WorkingDirectory="$(WorkbenchDirectory)" Command="base_path=/events/ yarn build" />
+        <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(MSBuildThisFileDirectory)/workbench" />
+
+        <CreateItem Include="$(MSBuildThisFileDirectory)/workbench/**/*">
+            <Output TaskParameter="Include" ItemName="EmbeddedResource"/>
+        </CreateItem>
+    </Target>
+    -->
+</Project>
