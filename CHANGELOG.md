@@ -1,3 +1,10 @@
+# [v2.3.0] - 2021-10-1 [PR: #14](https://github.com/Cratis/cratis/pull/14)
+
+### Added
+
+- One can now include more assemblies for type discovery in addition to the project referenced assemblies.
+
+
 # [v2.2.0] - 2021-10-1 [PR: #13](https://github.com/Cratis/cratis/pull/13)
 
 ### Added
