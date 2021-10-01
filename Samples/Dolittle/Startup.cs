@@ -20,8 +20,8 @@ namespace Sample
         public void Configure(IApplicationBuilder app)
         {
             app.UseRouting();
-            app.AddDolittleSchemaStore();
-            app.AddCratisWorkbench();
+            app.UseDolittleSchemaStore();
+            app.UseCratisWorkbench();
         }
     }
 }
