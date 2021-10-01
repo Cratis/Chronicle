@@ -17,7 +17,7 @@ namespace Microsoft.AspNetCore.Builder
     /// </summary>
     public static class ApplicationBuilderExtensions
     {
-        static bool _bootProceduresPerformed = false;
+        static bool _bootProceduresPerformed;
 
         /// <summary>
         /// Add the Cratis API endpoints for Workbench specific for Dolittle.
