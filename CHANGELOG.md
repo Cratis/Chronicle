@@ -1,3 +1,12 @@
+# [v2.5.0] - 2021-10-1 [PR: #23](https://github.com/Cratis/cratis/pull/23)
+
+### Added
+
+- Added builder for workbench for setting assembly that holds the API.
+- Added extension method for the Dolittle Workbench API configuration.
+
+
+
 # [v2.4.4] - 2021-10-1 [PR: #22](https://github.com/Cratis/cratis/pull/22)
 
 ### Fixed
