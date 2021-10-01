@@ -31,8 +31,8 @@ namespace Microsoft.AspNetCore.Builder
             applicationBuilder.UseDefaultFiles(new DefaultFilesOptions(filesOptions));
             applicationBuilder.UseStaticFiles(new StaticFileOptions(filesOptions));
 
-            applicationBuilder.UseEndpoints(_ => _.MapControllers());
             applicationBuilder.PerformBootProcedures();
+            applicationBuilder.UseEndpoints(_ => _.MapControllers());
             applicationBuilder.RunAsSinglePageApplication(filesOptions);
 
             return applicationBuilder;
