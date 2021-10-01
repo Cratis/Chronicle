@@ -43,7 +43,6 @@ const eventListColumns: IColumn[] = [
     }
 ];
 
-// https://echarts.apache.org/examples/en/
 export const EventLogs = () => {
 
     const [eventLogs, refreshEventLogs] = useDataFrom<ICommandBarItemProps>('/api/events/store/logs', (_: EventLogInformation) => {
