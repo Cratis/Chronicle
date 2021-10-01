@@ -1,3 +1,10 @@
+# [v2.4.3] - 2021-10-1 [PR: #21](https://github.com/Cratis/cratis/pull/21)
+
+### Fixed
+
+- Completely mixed up Use* and Add* for configuration APIs. Fixing this for Dolittle + Workbench setup.
+
+
 # [v2.4.2] - 2021-10-1 [PR: #20](https://github.com/Cratis/cratis/pull/20)
 
 ### Fixed
