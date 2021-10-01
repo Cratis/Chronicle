@@ -1,3 +1,10 @@
+# [v2.3.2] - 2021-10-1 [PR: #16](https://github.com/Cratis/cratis/pull/16)
+
+### Fixed
+
+- Separating out Workbench as its own package - decoupling from the Cratis Kernel, enabling using it with only 3rd parties like Dolittle without all the dependencies from Cratis.
+
+
 # [v2.3.1] - 2021-10-1 [PR: #15](https://github.com/Cratis/cratis/pull/15)
 
 ### Fixed
