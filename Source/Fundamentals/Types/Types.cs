@@ -13,14 +13,17 @@ namespace Cratis.Types
     {
         readonly IContractToImplementorsMap _contractToImplementorsMap = new ContractToImplementorsMap();
         readonly List<Assembly> _assemblies = new();
+        readonly string[] _assemblyPrefixesToInclude;
 
         /// <summary>
         /// Initializes a new instance of <see cref="Types"/>
         /// </summary>
-        public Types()
+        /// <param name="assemblyPrefixesToInclude">Optional params of assembly prefixes to include in type discovery</param>
+        public Types(params string[] assemblyPrefixesToInclude)
         {
             All = DiscoverAllTypes();
             _contractToImplementorsMap.Feed(All);
+            _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
         }
 
         /// <inheritdoc/>
@@ -72,7 +75,8 @@ namespace Cratis.Types
             var dependencyModel = DependencyContext.Load(entryAssembly);
             var assemblies = dependencyModel.RuntimeLibraries
                                 .Where(_ => _.Type.Equals("project", StringComparison.InvariantCultureIgnoreCase) ||
-                                            _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase))
+                                            _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase) ||
+                                            _assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm, StringComparison.InvariantCultureIgnoreCase)))
                                 .Select(_ => Assembly.Load(_.Name))
                                 .ToArray();
             _assemblies.AddRange(assemblies);
