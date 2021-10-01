@@ -8,7 +8,9 @@ using Cratis.Strings;
 using Cratis.Types;
 using Dolittle.SDK.Artifacts;
 using Dolittle.SDK.Events;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 using Newtonsoft.Json.Schema;
 using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
@@ -56,7 +58,15 @@ namespace Cratis.Extensions.Dolittle.Schemas
                 Servers = new[] { new MongoServerAddress(configuration.Host, configuration.Port) }
             };
             var url = mongoUrlBuilder.ToMongoUrl();
-            var client = mongoDBClientFactory.Create(url);
+            var settings = MongoClientSettings.FromUrl(url);
+            settings.ClusterConfigurator = cb =>
+            {
+                cb.Subscribe<CommandStartedEvent>(e =>
+                {
+                    Console.WriteLine(e.Command.ToJson());
+                });
+            };
+            var client = mongoDBClientFactory.Create(settings);
             _database = client.GetDatabase(DatabaseName);
             _collection = _database.GetCollection<EventSchemaMongoDB>(SchemasCollection);
             _types = types;
@@ -91,18 +101,23 @@ namespace Cratis.Extensions.Dolittle.Schemas
         /// <inheritdoc/>
         public async Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
         {
-            var schemas = await _collection.Find(_ => true).ToListAsync();
+            var result = await _collection.FindAsync(_ => true);
+            var schemas = await result.ToListAsync();
             return schemas
                 .GroupBy(_ => _.EventType)
-                .Select(_ =>
-                {
-                    var latest = _.OrderByDescending(_ => _.Generation).First();
-                    return new EventSchema(
-                        new global::Dolittle.SDK.Events.EventType(
-                            latest.EventType,
-                            latest.Generation),
-                        JSchema.Parse(latest.Schema));
-                });
+                .Select(_ => _.OrderByDescending(_ => _.Generation).First().ToEventSchema());
+        }
+
+        /// <inheritdoc/>
+        public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(global::Dolittle.SDK.Events.EventType eventType)
+        {
+            var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
+            var all = _collection.Find(_ => _.EventType == eventType.Id.Value).ToList();
+            var result = await _collection.FindAsync(filter);
+            var schemas = await result.ToListAsync();
+            return schemas
+                .OrderBy(_ => _.Generation)
+                .Select(_ => _.ToEventSchema());
         }
 
         /// <inheritdoc/>
@@ -112,11 +127,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
             var result = await _collection.FindAsync(filter);
             var schemas = await result.ToListAsync();
 
-            return new EventSchema(
-                new global::Dolittle.SDK.Events.EventType(
-                    schemas[0].EventType,
-                    schemas[0].Generation),
-                JSchema.Parse(schemas[0].Schema));
+            return schemas[0].ToEventSchema();
         }
 
         /// <inheritdoc/>
@@ -137,15 +148,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
             // .. do not allow generational gaps
 
             if (await HasFor(eventSchema.EventType, eventSchema.EventType.Generation)) return;
-
-            var schemaToSave = new EventSchemaMongoDB
-            {
-                EventType = eventSchema.EventType.Id,
-                Generation = eventSchema.EventType.Generation,
-                Schema = eventSchema.Schema.ToString()
-            };
-
-            await _collection.InsertOneAsync(schemaToSave).ConfigureAwait(false);
+            await _collection.InsertOneAsync(eventSchema.ToMongoDB()).ConfigureAwait(false);
         }
 
         void ExtendSchema(Type type, EventSchema eventSchema, JSchema typeSchema)

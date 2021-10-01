@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Microsoft.Extensions.DependencyInjection
 {
     /// <summary>
@@ -15,7 +17,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
         public static IServiceCollection UseCratisWorkbench(this IServiceCollection services)
         {
-            services.AddControllers();
+            services.AddControllers().AddJsonOptions(_ => _.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull);
             return services;
         }
     }

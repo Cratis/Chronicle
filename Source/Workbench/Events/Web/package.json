@@ -5,6 +5,7 @@
     "private": true,
     "author": "Cratis",
     "license": "MIT",
+
     "scripts": {
         "build": "webpack --mode=production",
         "build:dev": "webpack --mode=development",
@@ -20,7 +21,8 @@
         "@cratis/rudiments": "1.0.0",
         "@cratis/types": "1.0.0",
         "@cratis/workbench.styles": "1.0.0",
-        "echarts": "^5.2.1"
+        "echarts": "^5.2.1",
+        "handlebars": "^4.7.7"
     },
     "devDependencies": {
         "@cratis/webpack": "1.0.0"

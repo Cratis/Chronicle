@@ -11,6 +11,8 @@ import {
 import { useDataFrom } from '../useDataFrom';
 
 import { default as styles } from './EventTypes.module.scss';
+import { useState } from 'react';
+import { EventTypeSchema } from './EventTypeSchema';
 
 const eventTypesColumns: IColumn[] = [
     {
@@ -31,7 +33,7 @@ const eventSchemaColumns: IColumn[] = [
     {
         key: 'property',
         name: 'Property',
-        fieldName: 'property',
+        fieldName: 'name',
         minWidth: 200
     },
     {
@@ -42,69 +44,53 @@ const eventSchemaColumns: IColumn[] = [
     }
 ];
 
-
 export const EventTypes = () => {
-    const [eventTypes, reloadEventTypes] = useDataFrom<any>('/api/events/types');
-    const eventSchemaGen1: any[] = [
+    const [eventType, setEventType] = useState();
+    const [generationalSchemas, reloadGenerationalSchemas] = useDataFrom(
         {
-            property: 'Account',
-            type: 'UID'
-        },
-        {
-            property: 'Name',
-            type: 'String'
-        }
-    ];
-
-    const eventSchemaGen2: any[] = [
-        {
-            property: 'Account',
-            type: 'UID'
-        },
-        {
-            property: 'Name',
-            type: 'String'
-        },
-        {
-            property: 'Owner',
-            type: 'UID'
-        }
-    ];
-    const eventSchemaGen3: any[] = [
-        {
-            property: 'Account',
-            type: 'UID'
-        },
-        {
-            property: 'Name',
-            type: 'String'
-        },
-        {
-            property: 'Owner',
-            type: 'UID'
-        },
-        {
-            property: 'Parent',
-            type: 'UID'
-        }
-    ];
-
+            template: '/api/events/types/schemas/{{eventTypeId}}',
+            arguments: {
+                eventTypeId: eventType
+            }
+        });
+    const [eventTypes, reloadEventTypes] = useDataFrom('/api/events/types');
     return (
         <div className={styles.container}>
             <div className={styles.eventList}>
-                <DetailsList items={eventTypes} columns={eventTypesColumns} selectionMode={SelectionMode.single} />
+                <DetailsList
+                    items={eventTypes}
+                    columns={eventTypesColumns}
+                    selectionMode={SelectionMode.single}
+                    onActiveItemChanged={(item: any) => {
+                        setEventType(item.identifier);
+                    }}
+                />
             </div>
             <div className={styles.eventDetails}>
                 <Pivot linkFormat="tabs" defaultSelectedKey="2">
-                    <PivotItem headerText="1">
-                        <DetailsList items={eventSchemaGen1} columns={eventSchemaColumns} selectionMode={SelectionMode.none} />
-                    </PivotItem>
-                    <PivotItem headerText="2">
-                        <DetailsList items={eventSchemaGen2} columns={eventSchemaColumns} selectionMode={SelectionMode.none} />
-                    </PivotItem>
-                    <PivotItem headerText="3">
-                        <DetailsList items={eventSchemaGen3} columns={eventSchemaColumns} selectionMode={SelectionMode.none} />
-                    </PivotItem>
+                    {generationalSchemas.map((schema: EventTypeSchema) => {
+
+
+                        const properties = Object.keys(schema.properties).map(_ => {
+                            let type = schema.properties[_].type;
+                            if( Array.isArray(type)) {
+                                type = type[0];
+                            }
+
+                            return {
+                                name: _,
+                                type
+                            }
+                        });
+                        return (
+
+                            <PivotItem key={schema.generation} headerText={schema.generation.toString()}>
+                                <DetailsList items={properties}
+                                    columns={eventSchemaColumns}
+                                    selectionMode={SelectionMode.none} />
+                            </PivotItem>
+                        )
+                    })}
                 </Pivot>
             </div>
         </div>

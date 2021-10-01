@@ -10,6 +10,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
     </ItemGroup>
 
