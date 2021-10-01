@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Extensions.Dolittle.Schemas;
+using Cratis.Extensions.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder
@@ -18,6 +19,7 @@ namespace Microsoft.AspNetCore.Builder
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
         public static IApplicationBuilder UseDolittleSchemaStore(this IApplicationBuilder applicationBuilder)
         {
+            MongoDBDefaults.Initialize();
             applicationBuilder
                 .ApplicationServices
                 .GetService<ISchemaStore>()?
