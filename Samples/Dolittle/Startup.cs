@@ -13,8 +13,8 @@ namespace Sample
         {
             services.AddRazorPages();
             services.AddSingleton(Types);
-            services.UseDolittleSchemaStore("localhost", 27017);
-            services.UseCratisWorkbench();
+            services.AddDolittleSchemaStore("localhost", 27017);
+            services.AddCratisWorkbench();
         }
 
         public void Configure(IApplicationBuilder app)
