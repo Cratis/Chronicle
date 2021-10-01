@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.AspNetCore;
+using Cratis.Boot;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
 
@@ -15,6 +17,8 @@ namespace Microsoft.AspNetCore.Builder
     /// </summary>
     public static class ApplicationBuilderExtensions
     {
+        static bool _bootProceduresPerformed = false;
+
         /// <summary>
         /// Add the Cratis API endpoints for Workbench specific for Dolittle.
         /// /// </summary>
@@ -35,8 +39,22 @@ namespace Microsoft.AspNetCore.Builder
             applicationBuilder.UseStaticFiles(new StaticFileOptions(filesOptions));
 
             applicationBuilder.UseEndpoints(_ => _.MapControllers());
+            applicationBuilder.PerformBootProcedures();
             applicationBuilder.RunAsSinglePageApplication(filesOptions);
 
+            return applicationBuilder;
+        }
+
+        /// <summary>
+        /// Perform all <see cref="IPerformBootProcedure">boot procedures</see>.
+        /// </summary>
+        /// <param name="applicationBuilder"><see cref="IApplicationBuilder"/> to add to.</param>
+        /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
+        public static IApplicationBuilder PerformBootProcedures(this IApplicationBuilder applicationBuilder)
+        {
+            if( _bootProceduresPerformed ) return applicationBuilder;
+            applicationBuilder.ApplicationServices.GetService<IBootProcedures>()!.Perform();
+            _bootProceduresPerformed = true;
             return applicationBuilder;
         }
 
