@@ -44,7 +44,7 @@ jobs:
           pushd .
           cd Source/Workbench/Events/Web
           base_path=/events/ yarn build
-          cp -r wwwroot/. ../../../Clients/AspNetCore/workbench/
+          cp -r wwwroot/. ../../../Clients/AspNetCore.Workbench/workbench/
           popd
 
       - name: Setup .Net
