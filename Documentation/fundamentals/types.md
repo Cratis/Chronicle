@@ -9,6 +9,22 @@ The type discovery system is meant to make it easier to automate tasks at runtim
 remove the need for configuration of types to include in a system and discover them based on your
 criteria instead.
 
+If you want to bypass any automatic hookup of the system, you can manually create an instance of
+the class called `Types` in the `Cratis.Types` namespace. This implements the interface `ITypes`.
+
+## Assembly prefixes
+
+The constructor for `Types` supports taking an 'opt-in' filter for including assemblies in type discovery.
+This will make it possible to include more assemblies in addition to the default project referenced
+assemblies only. The strings you pass to it are considered prefixes, meaning that if you want to include
+a set of assemblies all starting with the same string, you simply put the common start.
+
+```csharp
+using Cratis.Types;
+
+var types = new Types("Microsoft","SomeOther");
+```
+
 ## Type Discovery
 
 There are basically 2 ways of discovering types:
