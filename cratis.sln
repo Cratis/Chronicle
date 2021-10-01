@@ -61,7 +61,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans", "Source\Extension
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autofac", "Source\Extensions\Autofac\Autofac.csproj", "{C674775B-268B-4EFB-AAB3-ACFF4EE7063B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore", "Source\Clients\AspNetCore.Workbench\AspNetCore.csproj", "{C44DD087-3074-4927-9D10-FDC2E76F6724}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.Workbench", "Source\Clients\AspNetCore.Workbench\AspNetCore.Workbench.csproj", "{C44DD087-3074-4927-9D10-FDC2E76F6724}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
