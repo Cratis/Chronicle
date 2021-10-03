@@ -20,6 +20,7 @@ import { EventType } from './EventType';
 import { EventHistogram } from './EventHistogram';
 import { Guid } from '@cratis/rudiments';
 import { useState } from 'react';
+import { EventFilter } from './EventFilter';
 
 
 const eventListColumns: IColumn[] = [
@@ -47,69 +48,90 @@ const eventListColumns: IColumn[] = [
 
 export const EventLogs = () => {
 
+    const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
+    const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
+    const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
+    const [eventLog, setEventLog] = useState(Guid.empty.toString())
     const [eventLogs, refreshEventLogs] = useDataFrom<ICommandBarItemProps>('/api/events/store/logs', (_: EventLogInformation) => {
         return {
             key: _.id,
             text: _.name
         } as ICommandBarItemProps
-    });
-    const [eventTypes, refreshEventTypes] = useDataFrom<ICommandBarItemProps>('/api/events/types', (_: EventType) => {
-        return {
-            key: _.id,
-            text: _.name
+    }, (data) => {
+        if (data.length == 1) {
+            setEventLog(data[0].key);
         }
     });
 
-    const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
-    const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
-    const [eventLog, setEventLog] = useState(Guid.empty.toString())
+    let commandBarItems: ICommandBarItemProps[] = [];
 
-    const commandBarItems: ICommandBarItemProps[] = [
-        {
-            key: 'eventLogs',
-            name: 'Event Log',
-            subMenuProps: {
-                items: eventLogs,
-                onItemClick: (ev, item) => setEventLog(item?.key ?? Guid.empty.toString())
+    if (eventLogs.length > 1) {
+        commandBarItems.push(
+
+            {
+                key: 'eventLogs',
+                name: 'Event Log',
+                subMenuProps: {
+                    items: eventLogs,
+                    onItemClick: (ev, item) => setEventLog(item?.key ?? Guid.empty.toString())
+                }
             }
-        },
-        {
-            key: 'eventTypes',
-            name: 'Event Types',
-            subMenuProps: {
-                items: eventTypes
-            }
-        },
+        );
+    }
+
+    commandBarItems = [...commandBarItems, ...[
         {
             key: 'timeline',
             name: 'Timeline',
             iconProps: { iconName: 'Timeline' },
-            onClick: () => toggleTimeline()
+            onClick: () => {
+                toggleTimeline()
+                if (isFilterOpen) toggleFilter();
+            }
         },
         {
             key: 'filter',
             name: 'Filter',
-            iconProps: { iconName: 'QueryList' }
+            iconProps: { iconName: 'QueryList' },
+            onClick: () => {
+                toggleFilter();
+                if (isTimelineOpen) toggleTimeline();
+            }
         },
         {
             key: 'reload',
             name: 'Reload',
             iconProps: { iconName: 'Refresh' }
         },
+    ]];
 
-        {
-            key: 'resetZoom',
-            text: 'Reset Zoom',
-            iconProps: { iconName: 'ZoomToFit' },
-            onClick: () => {
-                // getChart().dispatchAction({
-                //     type: 'dataZoom',
-                //     start: 0,
-                //     end: 100
-                // });
+    if (isTimelineOpen) {
+        commandBarItems.push(
+            {
+                key: 'resetZoom',
+                text: 'Reset Zoom',
+
+                iconProps: { iconName: 'ZoomToFit' },
+                onClick: () => {
+                    // getChart().dispatchAction({
+                    //     type: 'dataZoom',
+                    //     start: 0,
+                    //     end: 100
+                    // });
+                }
             }
-        }
-    ];
+        );
+    }
+
+    if (isFilterOpen) {
+        commandBarItems.push(
+            {
+                key: 'addCriteria',
+                text: 'Add Criteria',
+                iconProps: { iconName: 'Add' }
+            }
+        );
+    }
 
 
     const events: any[] = [
@@ -129,13 +151,13 @@ export const EventLogs = () => {
         openPanel();
     };
 
-
     return (
         <div className={styles.container}>
             <div className={styles.commandBar}>
                 <CommandBar items={commandBarItems} />
             </div>
             {isTimelineOpen && <EventHistogram eventLog={eventLog} />}
+            {isFilterOpen && <EventFilter />}
             <div className={styles.eventList}>
                 <DetailsList
                     columns={eventListColumns}
