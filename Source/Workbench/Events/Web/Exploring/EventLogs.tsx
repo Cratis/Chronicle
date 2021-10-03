@@ -17,7 +17,9 @@ import { default as styles } from './EventLogs.module.scss';
 import { useDataFrom } from '../useDataFrom';
 import { EventLogInformation } from './EventLogInformation';
 import { EventType } from './EventType';
-import { EventTimeline } from './EventTimeline';
+import { EventHistogram } from './EventHistogram';
+import { Guid } from '@cratis/rudiments';
+import { useState } from 'react';
 
 
 const eventListColumns: IColumn[] = [
@@ -60,13 +62,15 @@ export const EventLogs = () => {
 
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
+    const [eventLog, setEventLog] = useState(Guid.empty.toString())
 
     const commandBarItems: ICommandBarItemProps[] = [
         {
             key: 'eventLogs',
             name: 'Event Log',
             subMenuProps: {
-                items: eventLogs
+                items: eventLogs,
+                onItemClick: (ev, item) => setEventLog(item?.key ?? Guid.empty.toString())
             }
         },
         {
@@ -131,7 +135,7 @@ export const EventLogs = () => {
             <div className={styles.commandBar}>
                 <CommandBar items={commandBarItems} />
             </div>
-            {isTimelineOpen && <EventTimeline />}
+            {isTimelineOpen && <EventHistogram eventLog={eventLog} />}
             <div className={styles.eventList}>
                 <DetailsList
                     columns={eventListColumns}
