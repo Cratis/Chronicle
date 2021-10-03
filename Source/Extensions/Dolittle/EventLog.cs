@@ -9,8 +9,6 @@ using MongoDB.Driver;
 
 namespace Cratis.Extensions.Dolittle
 {
-    public record Histogram(DateTimeOffset Date, uint Count);
-
     [Route("/api/events/store/log/{eventLogId}")]
     public class EventLog : Controller
     {
@@ -32,7 +30,7 @@ namespace Cratis.Extensions.Dolittle
         }
 
         [HttpGet("histogram")]
-        public Task<IDictionary<DateTimeOffset, uint>> Histogram([FromRoute] string eventLogId)
+        public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] string eventLogId)
         {
             var collection = _database.GetCollection<Event>("event-log");
 
@@ -67,8 +65,8 @@ namespace Cratis.Extensions.Dolittle
                         });
 
             var pipeline = new[] { group, sort, project };
-            var result = collection.Aggregate<Histogram>(pipeline).ToList();
-            return Task.FromResult(result.ToDictionary(_ => _.Date, _ => _.Count) as IDictionary<DateTimeOffset, uint>);
+            var result = collection.Aggregate<EventHistogramEntry>(pipeline).ToList();
+            return Task.FromResult(result as IEnumerable<EventHistogramEntry>);
         }
 
         [HttpGet("types")]
