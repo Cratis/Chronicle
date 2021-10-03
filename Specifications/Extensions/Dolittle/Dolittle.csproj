@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Extensions.Dolittle.Specs</AssemblyName>
+        <RootNamespace>Cratis.Extensions.Dolittle</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Extensions/Dolittle/Dolittle.csproj"/>
+    </ItemGroup>
+</Project>

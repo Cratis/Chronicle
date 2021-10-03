@@ -19,7 +19,7 @@ namespace Microsoft.AspNetCore.Builder
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
         public static IApplicationBuilder UseDolittleSchemaStore(this IApplicationBuilder applicationBuilder)
         {
-            MongoDBDefaults.Initialize();
+            applicationBuilder.ApplicationServices.GetService<MongoDBDefaults>()!.Initialize();
             applicationBuilder
                 .ApplicationServices
                 .GetService<ISchemaStore>()?
