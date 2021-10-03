@@ -16,11 +16,10 @@ import { useBoolean } from '@fluentui/react-hooks';
 import { default as styles } from './EventLogs.module.scss';
 import { useDataFrom } from '../useDataFrom';
 import { EventLogInformation } from './EventLogInformation';
-import { EventType } from './EventType';
 import { EventHistogram } from './EventHistogram';
 import { Guid } from '@cratis/rudiments';
-import { useState } from 'react';
-import { EventFilter } from './EventFilter';
+import { useState, useRef } from 'react';
+import { FilterBuilder } from './FilterBuilder';
 
 
 const eventListColumns: IColumn[] = [
@@ -47,7 +46,6 @@ const eventListColumns: IColumn[] = [
 ];
 
 export const EventLogs = () => {
-
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
     const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
@@ -105,6 +103,10 @@ export const EventLogs = () => {
         },
     ]];
 
+    if (isTimelineOpen || isFilterOpen) {
+        commandBarItems[commandBarItems.length-1].split = true;
+    }
+
     if (isTimelineOpen) {
         commandBarItems.push(
             {
@@ -122,17 +124,6 @@ export const EventLogs = () => {
             }
         );
     }
-
-    if (isFilterOpen) {
-        commandBarItems.push(
-            {
-                key: 'addCriteria',
-                text: 'Add Criteria',
-                iconProps: { iconName: 'Add' }
-            }
-        );
-    }
-
 
     const events: any[] = [
         {
@@ -157,7 +148,7 @@ export const EventLogs = () => {
                 <CommandBar items={commandBarItems} />
             </div>
             {isTimelineOpen && <EventHistogram eventLog={eventLog} />}
-            {isFilterOpen && <EventFilter />}
+            {isFilterOpen && <FilterBuilder />}
             <div className={styles.eventList}>
                 <DetailsList
                     columns={eventListColumns}
