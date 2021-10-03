@@ -48,7 +48,7 @@ namespace Sample
                 Guid.Parse("b6058430-0b22-4229-a819-a652a27c6a4a"),
                 Guid.Parse("27d1d717-93aa-4aa2-ba83-fa6b7f817ab5"),
                 Guid.Parse("27d1d717-93aa-4aa2-ba83-fa6b7f817ab5")
-            }
+            };
 
             var client = _mongoDBClientFactory.Create(new MongoUrl("mongodb://localhost:27017"));
             var database = client.GetDatabase("event_store");
