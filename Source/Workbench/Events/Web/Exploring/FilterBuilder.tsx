@@ -4,13 +4,17 @@
 import Editor, { Monaco } from "@monaco-editor/react";
 
 // https://mono.software/2017/04/11/custom-intellisense-with-monaco-editor/
+// https://gist.github.com/mwrouse/05d8c11cd3872c19c684bd1904a2202e
+// https://blog.checklyhq.com/customizing-monaco/
 export const FilterBuilder = () => {
 
 
     const editorDidMount = (editor: any, monaco: Monaco) => {
+
         monaco.languages.registerCompletionItemProvider('json', {
 
             provideCompletionItems: function (model, position) {
+                const suggestions:any[] = [];
                 var word = model.getWordUntilPosition(position);
                 var range = {
                     startLineNumber: position.lineNumber,
@@ -18,18 +22,33 @@ export const FilterBuilder = () => {
                     startColumn: word.startColumn,
                     endColumn: word.endColumn
                 };
+                const enclosingBrackets = model.findEnclosingBrackets(position);
+                if (enclosingBrackets != null) {
+                    suggestions.push({
+                        label: 'Equals',
+                        insertText: '"$eq": {}',
+                        range
+                    });
+                    suggestions.push({
+                        label: 'And',
+                        insertText: '"$and": {}',
+                        range
+                    });
+                    suggestions.push({
+                        label: 'Or',
+                        insertText: '"$or": {}',
+                        range
+                    });
+                }
 
                 return {
-                    suggestions: [{
-                        label: 'Equals',
-                        insertText: '"$eq"',
-                        range
-                    }]
+                    suggestions
                 }
             }
         })
-
     };
+
+    const content = '{}';
 
     return (
         <Editor
@@ -37,7 +56,6 @@ export const FilterBuilder = () => {
             defaultLanguage="json"
             theme="vs-dark"
             onMount={editorDidMount}
-
-            value='{}'
+            value={content}
         />);
 };
