@@ -1,6 +1,7 @@
 {
     "name": "cratis-desktop",
     "version": "1.0.0",
+    "private": "true",
     "description": "The desktop experience for Cratis.",
     "main": "build/index.js",
     "scripts": {
