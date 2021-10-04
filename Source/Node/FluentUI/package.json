@@ -1,8 +1,7 @@
 {
     "name": "@cratis/fluentui",
-    "version": "1.0.0",
+    "version": "2.6.1",
     "description": "",
-    "private": "false",
     "author": "Cratis",
     "license": "MIT",
     "files": [
@@ -21,12 +20,12 @@
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
     },
     "dependencies": {
+        "@cratis/typescript": "2.6.1",
         "@fluentui/font-icons-mdl2": "8.1.11",
         "@fluentui/react": "8.34.7",
         "@fluentui/react-charting": "5.3.46",
         "@fluentui/react-hooks": "8.3.2",
-        "@fluentui/react-icons": "1.1.141",
-        "@cratis/typescript": "2.6.1"
+        "@fluentui/react-icons": "1.1.141"
     },
     "devDependencies": {}
 }
