@@ -1,3 +1,9 @@
+# [v2.6.2] - 2021-10-4 [PR: #27](https://github.com/Cratis/cratis/pull/27)
+
+### Fixed
+
+- Remove `"private":false`  from all package.json files. This broke NPM publish claiming the packages were private.
+
 # [v2.6.1] - 2021-10-4 [PR: #26](https://github.com/Cratis/cratis/pull/26)
 
 ### Fixed
