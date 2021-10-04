@@ -1,3 +1,9 @@
+# [v2.6.3] - 2021-10-4 [PR: #28](https://github.com/Cratis/cratis/pull/28)
+
+### Fixed
+
+- Making sure all package.json files for packages that should be public has a publish profile of such.
+
 # [v2.6.2] - 2021-10-4 [PR: #27](https://github.com/Cratis/cratis/pull/27)
 
 ### Fixed
