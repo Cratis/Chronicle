@@ -1,3 +1,9 @@
+# [v2.7.0] - 2021-10-4 [PR: #32](https://github.com/Cratis/cratis/pull/32)
+
+### Added
+
+- [C#] `ITypes` now have a property called `ProjectReferencedAssemblies` - enabling you to see all project referenced assemblies discovered.
+
 # [v2.6.4] - 2021-10-4 [PR: #30](https://github.com/Cratis/cratis/pull/30)
 
 Nothing
