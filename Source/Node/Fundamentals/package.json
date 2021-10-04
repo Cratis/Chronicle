@@ -2,7 +2,6 @@
     "name": "@cratis/fundamentals",
     "version": "1.0.0",
     "description": "",
-    "private": "false",
     "author": "Cratis",
     "license": "MIT",
     "files": [
