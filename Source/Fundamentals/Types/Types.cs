@@ -21,13 +21,16 @@ namespace Cratis.Types
         /// <param name="assemblyPrefixesToInclude">Optional params of assembly prefixes to include in type discovery</param>
         public Types(params string[] assemblyPrefixesToInclude)
         {
-            _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
+            _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
             All = DiscoverAllTypes();
             _contractToImplementorsMap.Feed(All);
         }
 
         /// <inheritdoc/>
         public IEnumerable<Assembly> Assemblies => _assemblies;
+
+        /// <inheritdoc/>
+        public IEnumerable<Assembly> ProjectReferencedAssemblies { get; private set; } = Array.Empty<Assembly>();
 
         /// <inheritdoc/>
         public IEnumerable<Type> All { get; }
@@ -73,16 +76,22 @@ namespace Cratis.Types
         {
             var entryAssembly = Assembly.GetEntryAssembly();
             var dependencyModel = DependencyContext.Load(entryAssembly);
+            var projectReferencedAssemblies = dependencyModel.RuntimeLibraries
+                                .Where(_ => _.Type.Equals("project", StringComparison.InvariantCultureIgnoreCase))
+                                .Select(_ => Assembly.Load(_.Name))
+                                .ToArray();
+            _assemblies.AddRange(projectReferencedAssemblies);
+            ProjectReferencedAssemblies = projectReferencedAssemblies;
+
             var assemblies = dependencyModel.RuntimeLibraries
-                                .Where(_ => _.Type.Equals("project", StringComparison.InvariantCultureIgnoreCase) ||
-                                            _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase) ||
+                                .Where(_ => _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase) ||
                                             _assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm, StringComparison.InvariantCultureIgnoreCase)))
                                 .Select(_ => Assembly.Load(_.Name))
                                 .ToArray();
-            _assemblies.AddRange(assemblies);
+            _assemblies.AddRange(assemblies.Where(_ => !projectReferencedAssemblies.Any(p => p == _)).Select(_ => _));
 
             var types = new List<Type>();
-            foreach (var assembly in assemblies)
+            foreach (var assembly in _assemblies)
             {
                 types.AddRange(assembly.DefinedTypes);
             }
