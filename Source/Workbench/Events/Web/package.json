@@ -18,7 +18,7 @@
     "dependencies": {
         "@cratis/fluentui": "1.0.0",
         "@cratis/react": "1.0.0",
-        "@cratis/rudiments": "1.0.0",
+        "@cratis/fundamentals": "1.0.0",
         "@cratis/workbench.styles": "1.0.0",
         "echarts": "^5.2.1",
         "handlebars": "^4.7.7"

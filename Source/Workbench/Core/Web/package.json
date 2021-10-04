@@ -17,7 +17,7 @@
     "dependencies": {
         "@cratis/fluentui": "1.0.0",
         "@cratis/react": "1.0.0",
-        "@cratis/rudiments": "1.0.0",
+        "@cratis/fundamentals": "1.0.0",
         "@ctrl/tinycolor": "^3.4.0",
         "d3": "^7.0.0"
     },
