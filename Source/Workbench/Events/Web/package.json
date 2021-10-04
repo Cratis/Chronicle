@@ -1,6 +1,6 @@
 {
     "name": "@cratis/workbench.events",
-    "version": "1.0.0",
+    "version": "2.6.4",
     "description": "",
     "private": true,
     "author": "Cratis",
@@ -16,14 +16,14 @@
         "ci": "yarn clean && yarn lint:ci && yarn build"
     },
     "dependencies": {
-        "@cratis/fluentui": "1.0.0",
-        "@cratis/react": "1.0.0",
-        "@cratis/fundamentals": "1.0.0",
-        "@cratis/workbench.styles": "1.0.0",
+        "@cratis/fluentui": "2.6.4",
+        "@cratis/react": "2.6.4",
+        "@cratis/fundamentals": "2.6.4",
+        "@cratis/workbench.styles": "2.6.4",
         "echarts": "^5.2.1",
         "handlebars": "^4.7.7"
     },
     "devDependencies": {
-        "@cratis/webpack": "1.0.0"
+        "@cratis/webpack": "2.6.4"
     }
 }
