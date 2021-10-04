@@ -1,6 +1,6 @@
 {
     "name": "@cratis/management.web",
-    "version": "2.6.4",
+    "version": "1.0.0",
     "description": "",
     "main": "index.js",
     "private": true,
@@ -16,13 +16,13 @@
         "ci": "yarn clean && yarn lint:ci && yarn build"
     },
     "dependencies": {
-        "@cratis/react": "2.6.4",
-        "@cratis/fluentui": "2.6.4",
+        "@cratis/react": "1.0.0",
+        "@cratis/fluentui": "1.0.0",
         "@apollo/client": "3.3.20",
         "graphql": "15.5.0",
         "shallow-equal": "^1.2.1"
     },
     "devDependencies": {
-        "@cratis/webpack": "2.6.4"
+        "@cratis/webpack": "1.0.0"
     }
 }
