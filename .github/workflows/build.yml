@@ -49,5 +49,10 @@ jobs:
         with:
           dotnet-version: "6.0.100-rc.1.21458.32"
 
-      - name: Build
+      - name: Build .NET
         run: dotnet build --configuration Release
+
+      - name: Build JS/TS
+        run: |
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          yarn ci

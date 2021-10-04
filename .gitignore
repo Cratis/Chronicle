@@ -286,5 +286,6 @@ package-json.lock
 dist
 **/node_modules/
 *.tsbuildinfo
+.eslintcache
 
 wwwroot
