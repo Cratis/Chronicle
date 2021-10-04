@@ -2,7 +2,7 @@
     "extends": "../../../../tsconfig.json",
     "references": [
         {
-            "path": "../../../Node/Rudiments/tsconfig.json"
+            "path": "../../../Node/Fundamentals/tsconfig.json"
         },
         {
             "path": "../../Styles/tsconfig.json"

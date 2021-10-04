@@ -4,7 +4,7 @@
 
 - CI + Publishing pipelines for NPM based packages.
 - Introducing NPM package @cratis/webpack
-- Introducing NPM package @cratis/rudiments
+- Introducing NPM package @cratis/fundamentals
 
 
 # [v2.5.0] - 2021-10-1 [PR: #23](https://github.com/Cratis/cratis/pull/23)
@@ -40,7 +40,7 @@
 
 ### Fixed
 
-- Fixing ServiceCollection extension APIs from version 2.4.0. Instead of `Use*`for the methods, its now `Add*`. Should've been major version, but since this mistake was done 20 minutes ago - no one has consumed it yet :). 
+- Fixing ServiceCollection extension APIs from version 2.4.0. Instead of `Use*`for the methods, its now `Add*`. Should've been major version, but since this mistake was done 20 minutes ago - no one has consumed it yet :).
 
 
 
@@ -61,7 +61,7 @@
 
 ### Fixed
 
-- Fixing so that we actually initialize the assemblies prefix filter property before using it. 
+- Fixing so that we actually initialize the assemblies prefix filter property before using it.
 
 
 # [v2.3.0] - 2021-10-1 [PR: #14](https://github.com/Cratis/cratis/pull/14)
