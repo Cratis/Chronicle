@@ -5,7 +5,7 @@ import { Guid } from '../Guid';
 
 describe('when converting to string', () => {
     const guid = Guid.create();
-    const regex = new RegExp('^(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})');
+    const regex = new RegExp('^({{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}}{0,1})');
 
     const stringVersion = guid.toString();
 

@@ -5,12 +5,28 @@
     "private": "false",
     "author": "Cratis",
     "license": "MIT",
+    "files": [
+        "dist",
+        "**/*.ts"
+    ],
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "prepublish": "yarn build",
+        "clean": "tsc -b --clean",
+        "build": "tsc -b",
+        "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
+        "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
+        "test": "mocha",
+        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
+    },
     "dependencies": {
         "@fluentui/font-icons-mdl2": "8.1.11",
         "@fluentui/react": "8.34.7",
         "@fluentui/react-charting": "5.3.46",
         "@fluentui/react-hooks": "8.3.2",
-        "@fluentui/react-icons": "1.1.141"
+        "@fluentui/react-icons": "1.1.141",
+        "@cratis/typescript": "1.0.0"
     },
     "devDependencies": {
     }

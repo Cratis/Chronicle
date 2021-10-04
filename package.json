@@ -3,6 +3,18 @@
     "workspaces": [
         "Source/**/*"
     ],
+    "scripts": {
+        "clean": "node ./run-task-on-workspaces.js clean",
+        "build": "node ./run-task-on-workspaces.js build",
+        "lint": "node ./run-task-on-workspaces.js lint",
+        "test": "node ./run-task-on-workspaces.js test",
+        "ci": "node ./run-task-on-workspaces.js ci",
+        "publish-version": "node ./run-task-on-workspaces.js publish-version $*"
+    },
+    "devDependencies": {
+        "edit-json-file": "1.6.0",
+        "glob": "7.2.0"
+    },
     "license": "MIT",
     "version": "0.0.0"
 }
