@@ -7,7 +7,7 @@ import { IToolbarItemProps } from './IToolbarItemProps';
 import { ToolbarButton } from './ToolbarButton';
 import { ToolbarContext } from './ToolbarContext';
 import { ToolbarDirection } from './ToolbarDirection';
-import { Guid } from '@cratis/rudiments';
+import { Guid } from '@cratis/fundamentals';
 import { Toolbar } from './Toolbar';
 
 export interface IToolbarMenuProps {
