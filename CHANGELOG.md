@@ -1,3 +1,9 @@
+# [v2.6.1] - 2021-10-4 [PR: #26](https://github.com/Cratis/cratis/pull/26)
+
+### Fixed
+
+- Fixing JS/TS publish pipeline to actually publish.
+
 # [v2.6.0] - 2021-10-4 [PR: #25](https://github.com/Cratis/cratis/pull/25)
 
 ### Added
