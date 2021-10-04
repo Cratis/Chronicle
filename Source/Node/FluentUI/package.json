@@ -1,6 +1,6 @@
 {
     "name": "@cratis/fluentui",
-    "version": "1.0.0",
+    "version": "2.6.3",
     "description": "",
     "author": "Cratis",
     "license": "MIT",
@@ -23,7 +23,7 @@
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
     },
     "dependencies": {
-        "@cratis/typescript": "1.0.0",
+        "@cratis/typescript": "2.6.3",
         "@fluentui/font-icons-mdl2": "8.1.11",
         "@fluentui/react": "8.34.7",
         "@fluentui/react-charting": "5.3.46",
