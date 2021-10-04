@@ -127,6 +127,18 @@ export const EventLogs = () => {
         );
     }
 
+    if( isFilterOpen) {
+        commandBarItems.push(
+            {
+                key: 'run',
+                text: 'Run',
+
+                iconProps: { iconName: 'Play' }
+            }
+        );
+
+    }
+
     const eventSelected = (item: any) => {
         if (item !== selectedEvent) {
             openPanel();
