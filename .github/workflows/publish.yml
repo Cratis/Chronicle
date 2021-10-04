@@ -51,8 +51,14 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '6.0.100-rc.1.21458.32'
-      - name: Build
+
+      - name: Build .NET
         run: dotnet build --configuration Release
+
+      - name: Build JS/TS
+        run: |
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          yarn ci
 
       - name: Release
         id: release
@@ -72,3 +78,9 @@ jobs:
         if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
+      - name: Publish NPM packages
+        if: ${{ steps.context.outputs.should-publish == 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          yarn publish-version ${{ steps.increment-version.outputs.next-version }}
