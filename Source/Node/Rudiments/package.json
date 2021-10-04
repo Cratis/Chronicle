@@ -11,6 +11,15 @@
     ],
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "scripts": {
+        "prepublish": "yarn build",
+        "clean": "tsc -b --clean",
+        "build": "tsc -b",
+        "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
+        "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
+        "test": "mocha",
+        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
+    },
     "dependencies": {
         "@cratis/typescript": "1.0.0"
     },

@@ -5,6 +5,21 @@
     "private": "false",
     "author": "Cratis",
     "license": "MIT",
+    "files": [
+        "dist",
+        "**/*.ts"
+    ],
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "prepublish": "yarn build",
+        "clean": "tsc -b --clean",
+        "build": "tsc -b",
+        "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
+        "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
+        "test": "mocha",
+        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
+    },
     "dependencies": {
         "react": "17.0.2",
         "react-dom": "17.0.2",
