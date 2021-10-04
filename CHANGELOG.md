@@ -1,3 +1,7 @@
+# [v2.6.4] - 2021-10-4 [PR: #30](https://github.com/Cratis/cratis/pull/30)
+
+Nothing
+
 # [v2.6.3] - 2021-10-4 [PR: #28](https://github.com/Cratis/cratis/pull/28)
 
 ### Fixed
