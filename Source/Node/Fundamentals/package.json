@@ -4,6 +4,9 @@
     "description": "",
     "author": "Cratis",
     "license": "MIT",
+    "publishConfig": {
+        "access": "public"
+    },
     "files": [
         "dist",
         "**/*.ts"

@@ -4,6 +4,9 @@
     "private": "true",
     "description": "The desktop experience for Cratis.",
     "main": "build/index.js",
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "clean": "tsc -b --clean main && tsc -b --clean renderer",
         "build:main": "cd main && webpack --mode=production",
