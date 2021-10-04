@@ -28,7 +28,7 @@ function fixPath() {
         '/usr/local/bin',
         process.env.PATH
     ].join(':');
-};
+}
 
 function createWindow() {
     fixPath();
