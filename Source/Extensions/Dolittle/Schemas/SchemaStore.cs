@@ -134,6 +134,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
             var filter = GetFilterForSpecificSchema(type, generation);
             var result = await _collection.FindAsync(filter);
             var schemas = await result.ToListAsync();
+            _schemasByTypeAndGeneration[type] = schemas.ToDictionary(_ => _.Generation, _ => _.ToEventSchema());
 
             return schemas[0].ToEventSchema();
         }
