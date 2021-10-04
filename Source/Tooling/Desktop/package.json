@@ -16,8 +16,8 @@
         "prepackage": "yarn build:renderer && yarn build:main && cp ./assets/icon.png build",
         "package": "electron-builder build -mwl --publish never",
         "test": "mocha",
-        "lint": "eslint '**/*.{js,ts,tsx}' --quiet --fix",
-        "lint:ci": "eslint '**/*.{js,ts,tsx}' --quiet",
+        "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
+        "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
         "ci": "yarn clean && yarn lint:ci && tsc -b main && tsc -b renderer && yarn test"
     },
     "nodemonConfig": {
