@@ -60,6 +60,8 @@ export const EventLogs = () => {
             setEventLog(data[0].key);
         }
     });
+    const [events, refreshEvents] = useDataFrom(`/api/events/store/log/${eventLog}`);
+    const [selectedEvent, setSelectedEvent] = useState(undefined);
 
     let commandBarItems: ICommandBarItemProps[] = [];
 
@@ -104,7 +106,7 @@ export const EventLogs = () => {
     ]];
 
     if (isTimelineOpen || isFilterOpen) {
-        commandBarItems[commandBarItems.length-1].split = true;
+        commandBarItems[commandBarItems.length - 1].split = true;
     }
 
     if (isTimelineOpen) {
@@ -125,21 +127,16 @@ export const EventLogs = () => {
         );
     }
 
-    const events: any[] = [
-        {
-            sequence: 1,
-            name: 'DebitAccountOpened',
-            occurred: new Date(2021, 9, 27, 12, 0).toString()
-        },
-        {
-            sequence: 2,
-            name: 'DepositToDebitAccountPerformed',
-            occurred: new Date(2021, 9, 27, 12, 0).toString()
-        }
-    ];
-
     const eventSelected = (item: any) => {
-        openPanel();
+        if (item !== selectedEvent) {
+            openPanel();
+            setSelectedEvent(selectedEvent);
+        }
+    };
+
+    const closePanel = () => {
+        setSelectedEvent(undefined);
+        dismissPanel();
     };
 
     return (
@@ -160,7 +157,7 @@ export const EventLogs = () => {
             <Panel
                 isLightDismiss
                 isOpen={isDetailsPanelOpen}
-                onDismiss={dismissPanel}
+                onDismiss={closePanel}
                 headerText="Event Details"
             />
         </div>

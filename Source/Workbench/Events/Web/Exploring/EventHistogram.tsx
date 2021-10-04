@@ -51,7 +51,7 @@ function getChartOption(dates: any, counts: any): EChartsOption {
                 large: true
             } as any
         ]
-    }
+    };
 }
 
 export interface EventHistogramProps {
