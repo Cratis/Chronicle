@@ -1,6 +1,6 @@
 {
     "name": "@cratis/desktop",
-    "version": "2.6.4",
+    "version": "1.0.0",
     "description": "The desktop experience for Cratis.",
     "main": "build/index.js",
     "publishConfig": {
@@ -84,8 +84,8 @@
     "author": "Cratis",
     "license": "MIT",
     "dependencies": {
-        "@cratis/fluentui": "2.6.4",
-        "@cratis/react": "2.6.4",
+        "@cratis/fluentui": "1.0.0",
+        "@cratis/react": "1.0.0",
         "electron-is-dev": "1.2.0",
         "electron-squirrel-startup": "1.0.0",
         "reflect-metadata": "^0.1.13",
@@ -94,7 +94,7 @@
         "xterm-for-react": "1.0.4"
     },
     "devDependencies": {
-        "@cratis/webpack": "2.6.4",
+        "@cratis/webpack": "1.0.0",
         "concurrently": "6.2.0",
         "cross-env": "7.0.3",
         "electron": "11.1.1",
