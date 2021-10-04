@@ -16,7 +16,9 @@
         "test": "mocha",
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
     },
-    "dependencies": {},
+    "dependencies": {
+        "reflect-metadata": "^0.1.13"
+    },
     "devDependencies": {
         "@types/chai": "4.2.21",
         "@types/chai-as-promised": "7.1.4",
