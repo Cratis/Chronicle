@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { typeGuard } from '@cratis/types';
+import { typeGuard } from '@cratis/rudiments';
 import { IEquatable } from './IEquatable';
 
 const lookUpTable: string[] = [];
