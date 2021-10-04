@@ -6,6 +6,7 @@ import Editor, { Monaco } from "@monaco-editor/react";
 // https://mono.software/2017/04/11/custom-intellisense-with-monaco-editor/
 // https://gist.github.com/mwrouse/05d8c11cd3872c19c684bd1904a2202e
 // https://blog.checklyhq.com/customizing-monaco/
+// https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.itextmodel.html
 export const FilterBuilder = () => {
 
 
@@ -23,6 +24,7 @@ export const FilterBuilder = () => {
                     endColumn: word.endColumn
                 };
                 const enclosingBrackets = model.findEnclosingBrackets(position);
+                debugger;
                 if (enclosingBrackets != null) {
                     suggestions.push({
                         label: 'Equals',
