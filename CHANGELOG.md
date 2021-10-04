@@ -1,3 +1,12 @@
+# [v2.6.0] - 2021-10-4 [PR: #25](https://github.com/Cratis/cratis/pull/25)
+
+### Added
+
+- CI + Publishing pipelines for NPM based packages.
+- Introducing NPM package @cratis/webpack
+- Introducing NPM package @cratis/rudiments
+
+
 # [v2.5.0] - 2021-10-1 [PR: #23](https://github.com/Cratis/cratis/pull/23)
 
 ### Added
