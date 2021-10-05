@@ -1,26 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-
-
 import {
     CommandBar,
-    DetailsList,
-    IDetailsListStyles,
-    IColumn,
     ICommandBarItemProps,
     IconButton,
     Panel,
-    SelectionMode,
     Stack,
     IPivotItemProps,
     Pivot,
     PivotItem
 } from '@fluentui/react';
 
-import {
-    Pagination
-} from '@fluentui/react-experiments';
 import { useBoolean } from '@fluentui/react-hooks';
 
 import { default as styles } from './EventLogs.module.scss';
@@ -28,54 +19,11 @@ import { useDataFrom } from '../useDataFrom';
 import { EventLogInformation } from './EventLogInformation';
 import { EventHistogram } from './EventHistogram';
 import { Guid } from '@cratis/rudiments';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { FilterBuilder } from './FilterBuilder';
+import { EventList } from './EventList';
 
 
-const eventListColumns: IColumn[] = [
-
-    {
-        key: 'sequence',
-        name: 'Sequence',
-        fieldName: 'sequence',
-        minWidth: 100,
-        maxWidth: 100
-    },
-    {
-        key: 'name',
-        name: 'Name',
-        fieldName: 'name',
-        minWidth: 200
-    },
-    {
-        key: 'occurred',
-        name: 'Occurred',
-        fieldName: 'occurred',
-        minWidth: 300
-    }
-];
-
-const gridStyles: Partial<IDetailsListStyles> = {
-    root: {
-        overflowX: 'scroll',
-        selectors: {
-            '& [role=grid]': {
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'start'
-            },
-        },
-    },
-    headerWrapper: {
-        flex: '0 0 auto',
-    },
-    contentWrapper: {
-        flex: '1 1 auto',
-        overflowX: 'hidden',
-        overflowY: 'auto',
-        height: '300px'
-    },
-};
 
 function pivotItemHeaderRenderer(
     link?: IPivotItemProps,
@@ -87,8 +35,8 @@ function pivotItemHeaderRenderer(
 
     return (
         <span style={{ flex: '0 1 100%' }}>
-            {defaultRenderer({ ...link, itemIcon: undefined })}
             <IconButton iconProps={{ iconName: 'StatusCircleErrorX' }} title="Close query" onClick={() => alert('hello world')} />
+            {defaultRenderer({ ...link, itemIcon: undefined })}
         </span>
     );
 }
@@ -97,7 +45,7 @@ export const EventLogs = () => {
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
     const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
-    const [eventLog, setEventLog] = useState(Guid.empty.toString())
+    const [eventLog, setEventLog] = useState(Guid.empty.toString());
     const [eventLogs, refreshEventLogs] = useDataFrom<ICommandBarItemProps>('/api/events/store/logs', (_: EventLogInformation) => {
         return {
             key: _.id,
@@ -194,13 +142,11 @@ export const EventLogs = () => {
                 <Stack.Item disableShrink>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">
-                            <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" />
-                            <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" itemIcon="Airplane" onRenderItemLink={pivotItemHeaderRenderer} />
-
+                            <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" onRenderItemLink={pivotItemHeaderRenderer}/>
+                            <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" onRenderItemLink={pivotItemHeaderRenderer} />
                         </Pivot>
                         <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
                     </Stack>
-
                 </Stack.Item>
                 <Stack.Item disableShrink>
                     <CommandBar items={commandBarItems} />
@@ -210,19 +156,7 @@ export const EventLogs = () => {
                     {isFilterOpen && <FilterBuilder />}
                 </Stack.Item>
                 <Stack.Item grow>
-                    <DetailsList
-                        styles={gridStyles}
-                        columns={eventListColumns}
-                        items={events} selectionMode={SelectionMode.single}
-                        onItemInvoked={eventSelected}
-                    />
-                </Stack.Item>
-                <Stack.Item>
-                    {/* https://codepen.io/micahgodbolt/pen/jXNLvB */}
-                    <Pagination
-                        format="buttons"
-                        pageCount={4}
-                        itemsPerPage={20} />
+                    <EventList items={events} />
                 </Stack.Item>
             </Stack>
             <Panel
