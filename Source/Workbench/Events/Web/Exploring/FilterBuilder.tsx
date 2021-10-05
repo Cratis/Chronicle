@@ -16,15 +16,14 @@ export const FilterBuilder = () => {
 
             provideCompletionItems: function (model, position) {
                 const suggestions:any[] = [];
-                var word = model.getWordUntilPosition(position);
-                var range = {
+                const word = model.getWordUntilPosition(position);
+                const range = {
                     startLineNumber: position.lineNumber,
                     endLineNumber: position.lineNumber,
                     startColumn: word.startColumn,
                     endColumn: word.endColumn
                 };
                 const enclosingBrackets = model.findEnclosingBrackets(position);
-                debugger;
                 if (enclosingBrackets != null) {
                     suggestions.push({
                         label: 'Equals',
