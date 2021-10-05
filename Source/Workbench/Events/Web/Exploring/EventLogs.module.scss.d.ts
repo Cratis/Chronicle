@@ -3,7 +3,8 @@
 interface CssExports {
   'commandBar': string;
   'container': string;
-  'eventList': string;
+  'eventListContainer': string;
+  'eventListPaging': string;
   'eventSamplesContainer': string;
 }
 export const cssExports: CssExports;

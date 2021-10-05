@@ -6,11 +6,17 @@
 import {
     CommandBar,
     DetailsList,
+    IDetailsListStyles,
     IColumn,
     ICommandBarItemProps,
     Panel,
-    SelectionMode
-} from '@fluentui/react'
+    SelectionMode,
+    Stack
+} from '@fluentui/react';
+
+import {
+    Pagination
+} from '@fluentui/react-experiments';
 import { useBoolean } from '@fluentui/react-hooks';
 
 import { default as styles } from './EventLogs.module.scss';
@@ -44,6 +50,28 @@ const eventListColumns: IColumn[] = [
         minWidth: 300
     }
 ];
+
+const gridStyles: Partial<IDetailsListStyles> = {
+    root: {
+        overflowX: 'scroll',
+        selectors: {
+            '& [role=grid]': {
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'start'
+            },
+        },
+    },
+    headerWrapper: {
+        flex: '0 0 auto',
+    },
+    contentWrapper: {
+        flex: '1 1 auto',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        height: '300px'
+    },
+};
 
 export const EventLogs = () => {
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
@@ -127,7 +155,7 @@ export const EventLogs = () => {
         );
     }
 
-    if( isFilterOpen) {
+    if (isFilterOpen) {
         commandBarItems.push(
             {
                 key: 'run',
@@ -152,26 +180,37 @@ export const EventLogs = () => {
     };
 
     return (
-        <div className={styles.container}>
-            <div className={styles.commandBar}>
-                <CommandBar items={commandBarItems} />
-            </div>
-            {isTimelineOpen && <EventHistogram eventLog={eventLog} />}
-            {isFilterOpen && <FilterBuilder />}
-            <div className={styles.eventList}>
-                <DetailsList
-                    columns={eventListColumns}
-                    items={events} selectionMode={SelectionMode.single}
-                    onItemInvoked={eventSelected}
-                />
-            </div>
-
+        <>
+            <Stack className={styles.container}>
+                <Stack.Item disableShrink>
+                    <CommandBar items={commandBarItems} />
+                </Stack.Item>
+                <Stack.Item disableShrink>
+                    {isTimelineOpen && <EventHistogram eventLog={eventLog} />}
+                    {isFilterOpen && <FilterBuilder />}
+                </Stack.Item>
+                <Stack.Item grow>
+                    <DetailsList
+                        styles={gridStyles}
+                        columns={eventListColumns}
+                        items={events} selectionMode={SelectionMode.single}
+                        onItemInvoked={eventSelected}
+                    />
+                </Stack.Item>
+                <Stack.Item>
+                    {/* https://codepen.io/micahgodbolt/pen/jXNLvB */}
+                    <Pagination
+                        format="buttons"
+                        pageCount={4}
+                        itemsPerPage={20} />
+                </Stack.Item>
+            </Stack>
             <Panel
                 isLightDismiss
                 isOpen={isDetailsPanelOpen}
                 onDismiss={closePanel}
                 headerText="Event Details"
             />
-        </div>
+        </>
     );
-}
+};
