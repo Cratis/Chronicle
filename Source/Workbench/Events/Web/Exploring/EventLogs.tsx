@@ -9,9 +9,13 @@ import {
     IDetailsListStyles,
     IColumn,
     ICommandBarItemProps,
+    IconButton,
     Panel,
     SelectionMode,
-    Stack
+    Stack,
+    IPivotItemProps,
+    Pivot,
+    PivotItem
 } from '@fluentui/react';
 
 import {
@@ -73,6 +77,22 @@ const gridStyles: Partial<IDetailsListStyles> = {
     },
 };
 
+function pivotItemHeaderRenderer(
+    link?: IPivotItemProps,
+    defaultRenderer?: (link?: IPivotItemProps) => JSX.Element | null,
+  ): JSX.Element | null {
+    if (!link || !defaultRenderer) {
+      return null;
+    }
+
+    return (
+      <span style={{ flex: '0 1 100%' }}>
+        {defaultRenderer({ ...link, itemIcon: undefined })}
+        <IconButton iconProps={{ iconName: 'StatusCircleErrorX'}} onClick={() => alert('hello world')} />
+      </span>
+    );
+  }
+
 export const EventLogs = () => {
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
@@ -127,10 +147,11 @@ export const EventLogs = () => {
             }
         },
         {
-            key: 'reload',
-            name: 'Reload',
-            iconProps: { iconName: 'Refresh' }
-        },
+            key: 'run',
+            text: 'Run',
+
+            iconProps: { iconName: 'Play' }
+        }
     ]];
 
     if (isTimelineOpen || isFilterOpen) {
@@ -155,18 +176,6 @@ export const EventLogs = () => {
         );
     }
 
-    if (isFilterOpen) {
-        commandBarItems.push(
-            {
-                key: 'run',
-                text: 'Run',
-
-                iconProps: { iconName: 'Play' }
-            }
-        );
-
-    }
-
     const eventSelected = (item: any) => {
         if (item !== selectedEvent) {
             openPanel();
@@ -181,6 +190,12 @@ export const EventLogs = () => {
 
     return (
         <>
+            <Pivot linkFormat="links">
+                <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" />
+                <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" itemIcon="Airplane" onRenderItemLink={pivotItemHeaderRenderer} />
+
+            </Pivot>
+
             <Stack className={styles.container}>
                 <Stack.Item disableShrink>
                     <CommandBar items={commandBarItems} />
