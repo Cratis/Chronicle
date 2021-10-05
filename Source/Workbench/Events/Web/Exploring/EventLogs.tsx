@@ -190,16 +190,18 @@ export const EventLogs = () => {
 
     return (
         <>
-            <Stack horizontal style={{ textAlign: 'center' }}>
-                <Pivot linkFormat="links">
-                    <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" />
-                    <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" itemIcon="Airplane" onRenderItemLink={pivotItemHeaderRenderer} />
-
-                </Pivot>
-                <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
-            </Stack>
-
             <Stack className={styles.container}>
+                <Stack.Item disableShrink>
+                    <Stack horizontal style={{ textAlign: 'center' }}>
+                        <Pivot linkFormat="links">
+                            <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" />
+                            <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" itemIcon="Airplane" onRenderItemLink={pivotItemHeaderRenderer} />
+
+                        </Pivot>
+                        <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
+                    </Stack>
+
+                </Stack.Item>
                 <Stack.Item disableShrink>
                     <CommandBar items={commandBarItems} />
                 </Stack.Item>
