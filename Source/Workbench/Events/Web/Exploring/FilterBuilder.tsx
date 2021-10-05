@@ -44,9 +44,9 @@ export const FilterBuilder = () => {
 
                 return {
                     suggestions
-                }
+                };
             }
-        })
+        });
     };
 
     const content = '{}';
