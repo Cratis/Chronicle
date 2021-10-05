@@ -9,7 +9,8 @@ import {
     Stack,
     IPivotItemProps,
     Pivot,
-    PivotItem
+    PivotItem,
+    TextField
 } from '@fluentui/react';
 
 import { useBoolean } from '@fluentui/react-hooks';
@@ -57,7 +58,7 @@ export const EventLogs = () => {
         }
     });
     const [events, refreshEvents] = useDataFrom(`/api/events/store/log/${eventLog}`);
-    const [selectedEvent, setSelectedEvent] = useState(undefined);
+    const [selectedEvent, setSelectedEvent] = useState<any>(undefined);
 
     let commandBarItems: ICommandBarItemProps[] = [];
 
@@ -127,7 +128,7 @@ export const EventLogs = () => {
     const eventSelected = (item: any) => {
         if (item !== selectedEvent) {
             openPanel();
-            setSelectedEvent(selectedEvent);
+            setSelectedEvent(item);
         }
     };
 
@@ -138,11 +139,11 @@ export const EventLogs = () => {
 
     return (
         <>
-            <Stack className={styles.container}>
+            <Stack>
                 <Stack.Item disableShrink>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">
-                            <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" onRenderItemLink={pivotItemHeaderRenderer}/>
+                            <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" onRenderItemLink={pivotItemHeaderRenderer} />
                             <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" onRenderItemLink={pivotItemHeaderRenderer} />
                         </Pivot>
                         <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
@@ -155,16 +156,20 @@ export const EventLogs = () => {
                     {isTimelineOpen && <EventHistogram eventLog={eventLog} />}
                     {isFilterOpen && <FilterBuilder />}
                 </Stack.Item>
-                <Stack.Item grow>
-                    <EventList items={events} />
+                <Stack.Item grow verticalFill>
+                    <EventList items={events} onEventSelected={eventSelected} />
                 </Stack.Item>
             </Stack>
             <Panel
                 isLightDismiss
                 isOpen={isDetailsPanelOpen}
                 onDismiss={closePanel}
-                headerText="Event Details"
-            />
+                headerText={selectedEvent?.name}>
+                <TextField label="Occurred" disabled defaultValue={selectedEvent?.occurred} />
+                {
+                    (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ => <TextField key={_} label={_} disabled defaultValue={selectedEvent!.content[_]} />)
+                }
+            </Panel>
         </>
     );
 };
