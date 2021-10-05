@@ -80,18 +80,18 @@ const gridStyles: Partial<IDetailsListStyles> = {
 function pivotItemHeaderRenderer(
     link?: IPivotItemProps,
     defaultRenderer?: (link?: IPivotItemProps) => JSX.Element | null,
-  ): JSX.Element | null {
+): JSX.Element | null {
     if (!link || !defaultRenderer) {
-      return null;
+        return null;
     }
 
     return (
-      <span style={{ flex: '0 1 100%' }}>
-        {defaultRenderer({ ...link, itemIcon: undefined })}
-        <IconButton iconProps={{ iconName: 'StatusCircleErrorX'}} onClick={() => alert('hello world')} />
-      </span>
+        <span style={{ flex: '0 1 100%' }}>
+            {defaultRenderer({ ...link, itemIcon: undefined })}
+            <IconButton iconProps={{ iconName: 'StatusCircleErrorX' }} title="Close query" onClick={() => alert('hello world')} />
+        </span>
     );
-  }
+}
 
 export const EventLogs = () => {
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
@@ -102,7 +102,7 @@ export const EventLogs = () => {
         return {
             key: _.id,
             text: _.name
-        } as ICommandBarItemProps
+        } as ICommandBarItemProps;
     }, (data) => {
         if (data.length == 1) {
             setEventLog(data[0].key);
@@ -190,11 +190,14 @@ export const EventLogs = () => {
 
     return (
         <>
-            <Pivot linkFormat="links">
-                <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" />
-                <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" itemIcon="Airplane" onRenderItemLink={pivotItemHeaderRenderer} />
+            <Stack horizontal style={{ textAlign: 'center' }}>
+                <Pivot linkFormat="links">
+                    <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" />
+                    <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" itemIcon="Airplane" onRenderItemLink={pivotItemHeaderRenderer} />
 
-            </Pivot>
+                </Pivot>
+                <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
+            </Stack>
 
             <Stack className={styles.container}>
                 <Stack.Item disableShrink>
