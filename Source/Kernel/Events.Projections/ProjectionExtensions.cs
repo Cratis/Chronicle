@@ -13,13 +13,13 @@ namespace Cratis.Events.Projections
     {
         public static IObservable<EventContext> From(this IObservable<EventContext> projection, EventType eventType, Expression? keyStrategy = default)
         {
-            var observable = projection.Where(_ => _.Event.EventType == eventType);
+            var observable = projection.Where(_ => _.Event.Type == eventType);
             return observable;
         }
 
         public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> projection, EventType eventType, Expression? keyStrategy = default)
         {
-            var observable = projection.Where(_ => _.Event.EventType == eventType);
+            var observable = projection.Where(_ => _.Event.Type == eventType);
             return observable;
         }
 
@@ -28,18 +28,21 @@ namespace Cratis.Events.Projections
             return projection;
         }
 
-        public static IObservable<EventContext> Children(this IObservable<EventContext> projection, Expression childrenPropertyAccessor, Expression? keyStrategy = default)
+        public static IObservable<EventContext> Children(this IProjection projection, Expression childrenPropertyAccessor, Expression? keyStrategy = default)
         {
             // Create new projection for the child property... ??
             // Projection could take a source state / collection
 
             // Changes should be done through changesets (Add, Remove, Update)
-            return projection;
+            return projection.Event;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, params Expression[] expressions)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, string prefix, params Expression[] expressions)
         {
-            observable.Subscribe(_ => { });
+            observable.Subscribe(_ =>
+            {
+                Console.WriteLine($"{prefix} - Event : {_.Event.Type}");
+            });
             return observable;
         }
     }
