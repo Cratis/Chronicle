@@ -16,7 +16,7 @@ namespace Cratis.Events.Projections
 
         public Projection(IEnumerable<EventType> eventTypes)
         {
-            Event = _subject.Where(_ => eventTypes.Any(et => et == _.Event.EventType));
+            Event = _subject.Where(_ => eventTypes.Any(et => et == _.Event.Type));
         }
 
         /// <inheritdoc/>

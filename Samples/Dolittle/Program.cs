@@ -21,6 +21,21 @@ var callable = Expression.Lambda<Func<Model, int>>(expression, new[] { parameter
 var result = callable(new Model { Value = 43 });
 result = callable(new Model { Value = 23 });
 
+var eventA = new EventType("b0ac7a3d-72c8-4bcc-ada6-a0e661df3e0b");
+var eventB = new EventType("5cafaa96-79c6-492c-af78-61a691a53ac8");
+var eventC = new EventType("8ed7485d-068a-4d20-af0d-247ca622edca");
+var eventD = new EventType("c8404d52-7d15-411c-9e10-a01de621756a");
+
+var projection = new Projection(new EventType[] {
+    eventA, eventB, eventC
+});
+
+projection.Event.Subscribe(_ => Console.WriteLine($"Raw event : {_.Event.Type}"));
+projection.Event.From(eventA).Project("A");
+projection.Event.From(eventB).Project("B");
+
+projection.Next(new Event(new EventLogSequenceNumber(0U), eventC, DateTimeOffset.UtcNow, new EventSourceId(Guid.NewGuid().ToString()), new ExpandoObject()));
+
 // var expando = new ExpandoObject();
 // Expression.Dynamic()
 
@@ -32,14 +47,14 @@ result = callable(new Model { Value = 23 });
 //     )
 // );
 
-var builder = Host.CreateDefaultBuilder()
-                    .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-                    .ConfigureContainer<ContainerBuilder>(containerBuilder => containerBuilder.RegisterDefaults(Startup.Types))
-                    .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
+// var builder = Host.CreateDefaultBuilder()
+//                     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+//                     .ConfigureContainer<ContainerBuilder>(containerBuilder => containerBuilder.RegisterDefaults(Startup.Types))
+//                     .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
 
-var app = builder.Build();
+// var app = builder.Build();
 
-app.Run();
+// app.Run();
 
 namespace Sample
 {
