@@ -34,7 +34,7 @@ projection.Event.Subscribe(_ => Console.WriteLine($"Raw event : {_.Event.Type}")
 projection.Event.From(eventA).Project("A");
 projection.Event.From(eventB).Project("B");
 
-projection.Next(new Event(new EventLogSequenceNumber(0U), eventC, DateTimeOffset.UtcNow, new EventSourceId(Guid.NewGuid().ToString()), new ExpandoObject()));
+projection.OnNext(new Event(new EventLogSequenceNumber(0U), eventC, DateTimeOffset.UtcNow, new EventSourceId(Guid.NewGuid().ToString()), new ExpandoObject()));
 
 // var expando = new ExpandoObject();
 // Expression.Dynamic()
