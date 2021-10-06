@@ -12,5 +12,17 @@ namespace Cratis.Events.Projections
         /// Gets the <see cref="IObservable{T}">observable</see> <see cref="EventContext">event</see>.
         /// </summary>
         IObservable<EventContext> Event { get; }
+
+        /// <summary>
+        /// Provides the projection with a new <see cref="Event"/>.
+        /// </summary>
+        /// <param name="event"><see cref="Event"/> to provide.</param>
+        Task OnNext(Event @event);
+
+        /// <summary>
+        /// Add a <see cref="IProjectionStorage"/> to store results in.
+        /// </summary>
+        /// <param name="storage"><see cref="IProjectionStorage"/> to store in.</param>
+        void StoreIn(IProjectionStorage storage);
     }
 }

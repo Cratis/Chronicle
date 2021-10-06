@@ -12,6 +12,7 @@ namespace Cratis.Events.Projections
     public class Projection : IProjection
     {
         readonly ISubject<EventContext> _subject = new Subject<EventContext>();
+        readonly List<IProjectionStorage> _storages = new();
         public IObservable<EventContext> Event { get; }
 
         public Projection(IEnumerable<EventType> eventTypes)
@@ -20,11 +21,19 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public void Next(Event @event)
+        public async Task OnNext(Event @event)
         {
-            var context = new EventContext(@event, new Changeset());
+            // If no storage provided - throw an exception
 
-            _subject.OnNext(context);
+            await Parallel.ForEachAsync(_storages, async (storage, _) =>
+            {
+                var initialState = await storage.FindOrDefault("");
+                var context = new EventContext(@event, new Changeset(initialState));
+                _subject.OnNext(context);
+            });
         }
+
+        /// <inheritdoc/>
+        public void StoreIn(IProjectionStorage storage) => _storages.Add(storage);
     }
 }
