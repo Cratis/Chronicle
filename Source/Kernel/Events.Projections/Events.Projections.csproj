@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Projections</AssemblyName>
+        <RootNamespace>Cratis.Events.Projections</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events/Events.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.Reactive" Version="5.0.0" />
+    </ItemGroup>
+</Project>
