@@ -46,16 +46,22 @@ namespace Cratis.Events.Projections
             {
                 propertyMapper(_event, workingState);
             }
+
+            var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
+            if (!comparer.Compare(_initialState, workingState, out var differences))
+            {
+                _changes.Add(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(_initialState, workingState, _))));
+            }
         }
 
         /// <summary>
         /// Applies properties to the child in the model to the <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="childrenAccessor"><see cref="Expression"/> for accessing the children collection.</param>
+        /// <param name="childrenAccessor"><see cref="PropertyAccessor"/> for accessing the children collection.</param>
         /// <param name="modelKey"><see cref="Expression"/> for accessing the model key.</param>
         /// <param name="key">The key value.</param>
         /// <param name="expressions"><see cref="Expression">Expressions</see> representing properties being manipulated.</param>
-        public void ApplyChildProperties(Expression childrenAccessor, Expression modelKey, object key, IEnumerable<Expression> expressions)
+        public void ApplyChildProperties(PropertyAccessor childrenAccessor, Expression modelKey, object key, IEnumerable<Expression> expressions)
         {
             var workingState = _initialState.Clone();
         }
