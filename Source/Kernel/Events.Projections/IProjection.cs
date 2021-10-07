@@ -3,8 +3,27 @@
 
 namespace Cratis.Events.Projections
 {
+    /// <summary>
+    /// Represents a projection in the system.
+    /// </summary>
     public interface IProjection
     {
+        /// <summary>
+        /// Gets the unique identifier of the <see cref="IProjection"/>.
+        /// </summary>
+        ProjectionId    Identifier { get; }
+
+        /// <summary>
+        /// Provides the projection with a new <see cref="Event"/>.
+        /// </summary>
+        /// <param name="event"><see cref="Event"/> to provide.</param>
+        /// <return>Async Task containing <see cref="Changeset"/> as result.</return>
+        Task<Changeset> OnNext(Event @event);
+
+        /// <summary>
+        /// Adds a <see cref="IProjectionStorage"/> for storing results.
+        /// </summary>
+        /// <param name="storage"><see cref="IProjectionStorage"/> to use.</param>
         void StoreIn(IProjectionStorage storage);
     }
 }
