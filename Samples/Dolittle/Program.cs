@@ -30,11 +30,22 @@ var projection = new Projection(new EventType[] {
     eventA, eventB, eventC
 });
 
-projection.Event.Subscribe(_ => Console.WriteLine($"Raw event : {_.Event.Type}"));
-projection.Event.From(eventA).Project("A");
-projection.Event.From(eventB).Project("B");
+var eventParameter = Expression.Parameter(typeof(Event));
+var keyResolverExpression = Expression.Property(eventParameter, "EventSourceId");
+var keyResolver = Expression.Lambda<KeyResolver>(keyResolverExpression, new [] { eventParameter }).Compile();
 
-projection.OnNext(new Event(new EventLogSequenceNumber(0U), eventC, DateTimeOffset.UtcNow, new EventSourceId(Guid.NewGuid().ToString()), new ExpandoObject()));
+projection.Event.Subscribe(_ => Console.WriteLine($"Raw event : {_.Event.Type}"));
+projection.Event.From(eventA).Project("A", keyResolver);
+projection.Event.From(eventB).Project("B", keyResolver);
+projection.Event.RemovedWith(eventC, keyResolver);
+
+var storage = new InMemoryProjectionStorage();
+var @event = new Event(new EventLogSequenceNumber(0U), eventB, DateTimeOffset.UtcNow, new EventSourceId(Guid.NewGuid().ToString()), new ExpandoObject());
+projection.OnNext(@event, storage);
+
+@event = new Event(new EventLogSequenceNumber(0U), eventC, DateTimeOffset.UtcNow, new EventSourceId(Guid.NewGuid().ToString()), new ExpandoObject());
+projection.OnNext(@event, storage);
+
 
 // var expando = new ExpandoObject();
 // Expression.Dynamic()
