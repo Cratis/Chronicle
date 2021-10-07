@@ -21,6 +21,16 @@ namespace Cratis.Events.Projections
         Task ProvideFor(IProjection projection);
 
         /// <summary>
+        /// Resumes if paused - continues providing events from this point.
+        /// </summary>
+        void Resume();
+
+        /// <summary>
+        /// Pause - ceases providing events from this point.
+        /// </summary>
+        void Pause();
+
+        /// <summary>
         /// Rewind for a <see cref="IProjection"/>.
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to rewind for.</param>
