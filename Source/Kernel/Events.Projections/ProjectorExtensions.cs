@@ -29,7 +29,7 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyValueResolver propertyResolver, KeyResolver keyResolver)
+        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyAccessor propertyResolver, KeyResolver keyResolver)
         {
             observable = observable.Where(_ => _.Event.Type == eventType);
             return observable;

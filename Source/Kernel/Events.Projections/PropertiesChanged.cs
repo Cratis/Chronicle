@@ -9,5 +9,6 @@ namespace Cratis.Events.Projections
     /// Represents properties that has been changed.
     /// </summary>
     /// <param name="State">State after change applied.</param>
-    public record PropertiesChanged(ExpandoObject State) : Change(State);
+    /// <param name="Differences">The differences between initial state and a change.</param>
+    public record PropertiesChanged(ExpandoObject State, IEnumerable<PropertyDifference> Differences) : Change(State);
 }
