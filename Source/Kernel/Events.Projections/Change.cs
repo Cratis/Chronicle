@@ -6,8 +6,8 @@ using System.Dynamic;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents properties that has been changed.
+    /// Defines a change as part of a <see cref="Changeset"/>.
     /// </summary>
     /// <param name="State">State after change applied.</param>
-    public record PropertiesChanged(ExpandoObject State) : Change(State);
+    public record Change(ExpandoObject State);
 }
