@@ -14,17 +14,17 @@ namespace Cratis.Events.Projections
         IProjectionEventProvider    EventProvider { get; }
 
         /// <summary>
-        /// Start the pipeline.
+        /// Starts the pipeline.
         /// </summary>
         void Start();
 
         /// <summary>
-        /// Resumes if paused - continues providing events from this point.
+        /// Resumes the pipeline if paused.
         /// </summary>
         void Resume();
 
         /// <summary>
-        /// Pause - ceases providing events from this point.
+        /// Pause the pipeline.
         /// </summary>
         void Pause();
 
