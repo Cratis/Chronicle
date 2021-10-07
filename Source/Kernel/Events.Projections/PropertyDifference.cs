@@ -75,7 +75,14 @@ namespace Cratis.Events.Projections
             {
                 if (obj is IDictionary<string, object> dictionary)
                 {
-                    current = dictionary[member];
+                    if (dictionary.ContainsKey(member))
+                    {
+                        current = dictionary[member];
+                    }
+                    else
+                    {
+                        current = default;
+                    }
                 }
                 else
                 {
@@ -83,7 +90,7 @@ namespace Cratis.Events.Projections
                     current = property?.GetValue(current) ?? default;
                 }
 
-                if( current == default ) break;
+                if (current == default) break;
             }
 
             return current;
