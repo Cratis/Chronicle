@@ -14,6 +14,11 @@ namespace Cratis.Events.Projections
         IProjectionEventProvider    EventProvider { get; }
 
         /// <summary>
+        /// Gets the <see cref="IProjection"/> the pipeline is for.
+        /// </summary>
+        IProjection Projection { get; }
+
+        /// <summary>
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
