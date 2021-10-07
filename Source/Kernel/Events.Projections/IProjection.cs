@@ -19,11 +19,5 @@ namespace Cratis.Events.Projections
         /// <param name="event"><see cref="Event"/> to provide.</param>
         /// <return>Async Task containing <see cref="Changeset"/> as result.</return>
         Task<Changeset> OnNext(Event @event);
-
-        /// <summary>
-        /// Adds a <see cref="IProjectionStorage"/> for storing results.
-        /// </summary>
-        /// <param name="storage"><see cref="IProjectionStorage"/> to use.</param>
-        void StoreIn(IProjectionStorage storage);
     }
 }
