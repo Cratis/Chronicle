@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the context of an event when being handled by a <see cref="IProjection"/>.
+    /// Represents the context of an event when being handled by a <see cref="IProjector"/>.
     /// </summary>
     /// <param name="Event">The <see cref="Event"/> that occurred.</param>
     /// <param name="Changeset">The <see cref="Changeset"/> to build on.</param>

@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+
 namespace Cratis.Events.Projections
 {
-    public interface IProjection
-    {
-        void StoreIn(IProjectionStorage storage);
-    }
+    public delegate void PropertyMapper(EventContext source, ExpandoObject destination);
 }

@@ -3,8 +3,8 @@
 
 namespace Cratis.Events.Projections
 {
-    public interface IProjection
-    {
-        void StoreIn(IProjectionStorage storage);
-    }
+    /// <summary>
+    /// Represents properties that has been changed.
+    /// </summary>
+    public record PropertiesChanged : IChange;
 }

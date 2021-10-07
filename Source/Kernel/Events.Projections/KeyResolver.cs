@@ -3,8 +3,5 @@
 
 namespace Cratis.Events.Projections
 {
-    public interface IProjection
-    {
-        void StoreIn(IProjectionStorage storage);
-    }
+    public delegate object KeyResolver(Event @event);
 }

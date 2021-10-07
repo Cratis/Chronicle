@@ -3,8 +3,9 @@
 
 namespace Cratis.Events.Projections
 {
-    public interface IProjection
-    {
-        void StoreIn(IProjectionStorage storage);
-    }
+    /// <summary>
+    /// Represents an entry being removed.
+    /// </summary>
+    /// <param name="Key"></param>
+    public record RemovePerformed(object Key) : IChange;
 }
