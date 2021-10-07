@@ -3,18 +3,26 @@
 
 using System.Dynamic;
 using System.Globalization;
-using System.Linq.Expressions;
 using System.Reflection;
 using ObjectsComparer;
 
 namespace Cratis.Events.Projections
 {
+    /// <summary>
+    /// Represents a value difference in a property of an object.
+    /// </summary>
     public class PropertyDifference
     {
         readonly Difference _difference;
         readonly ExpandoObject _original;
         readonly ExpandoObject _changed;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PropertyDifference"/> class.
+        /// </summary>
+        /// <param name="original">Original state.</param>
+        /// <param name="changed">Changed state.</param>
+        /// <param name="difference">Raw difference.</param>
         public PropertyDifference(ExpandoObject original, ExpandoObject changed, Difference difference)
         {
             _changed = changed;
@@ -37,9 +45,19 @@ namespace Cratis.Events.Projections
             }
         }
 
+        /// <summary>
+        /// Gets the full member path to the property that has changed.
+        /// </summary>
         public string MemberPath { get; }
 
+        /// <summary>
+        /// Gets the original value - possibly default.
+        /// </summary>
         public object? Original { get; }
+
+        /// <summary>
+        /// Gets the changed value - possibly default.
+        /// </summary>
         public object? Changed { get; }
 
         Type? GetValueType()
