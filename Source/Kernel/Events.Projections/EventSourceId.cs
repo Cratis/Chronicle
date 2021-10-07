@@ -9,5 +9,13 @@ namespace Cratis.Events.Projections
     /// Represents the unique identifier of an instance of an event source.
     /// </summary>
     /// <param name="Value">The value.</param>
-    public record EventSourceId(string Value) : ConceptAs<string>(Value);
+    public record EventSourceId(string Value) : ConceptAs<string>(Value)
+    {
+        /// <summary>
+        /// Implicitly convert from <see cref="string"/> to <see cref="EventSourceId"/>.
+        /// </summary>
+        /// <param name="Value">Value to convert from.</param>
+        /// <returns>A converted <see cref="EventSourceId"/>.</returns>;
+        public static implicit operator EventSourceId(string Value) => new (Value);
+    }
 }

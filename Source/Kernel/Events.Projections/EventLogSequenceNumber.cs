@@ -9,5 +9,13 @@ namespace Cratis.Events.Projections
     /// Represents the sequence number within an event log for an event.
     /// </summary>
     /// <param name="Value">The sequence number</param>
-    public record EventLogSequenceNumber(uint Value): ConceptAs<uint>(Value);
+    public record EventLogSequenceNumber(uint Value): ConceptAs<uint>(Value)
+    {
+        /// <summary>
+        /// Implicitly convert from <see cref="uint"/> to <see cref="EventLogSequenceNumber"/>.
+        /// </summary>
+        /// <param name="Value">Value to convert from.</param>
+        /// <returns>A converted <see cref="EventLogSequenceNumber"/>.</returns>;
+        public static implicit operator EventLogSequenceNumber(uint Value) => new (Value);
+    }
 }
