@@ -12,25 +12,25 @@ namespace Cratis.Events.Projections
     /// </summary>
     public class Changeset
     {
-        readonly EventContext _eventContext;
+        readonly Event _event;
         readonly ExpandoObject _initialState;
-        readonly List<IChange> _changes = new();
+        readonly List<Change> _changes = new();
 
         /// <summary>
         /// Initializes a new instance of <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="eventContext"><see cref="EventContext"/> that the changeset is for.</param>
+        /// <param name="event"><see cref="Event"/> that the changeset is for.</param>
         /// <param name="initialState">The initial state before any changes are applied.</param>
-        public Changeset(EventContext eventContext, ExpandoObject initialState)
+        public Changeset(Event @event, ExpandoObject initialState)
         {
-            _eventContext = eventContext;
+            _event = @event;
             _initialState = initialState;
         }
 
         /// <summary>
         /// Gets all the changes for the changeset.
         /// </summary>
-        public IEnumerable<IChange> Changes => _changes;
+        public IEnumerable<Change> Changes => _changes;
 
         /// <summary>
         /// Applies properties to the <see cref="Changeset"/>.
@@ -44,7 +44,7 @@ namespace Cratis.Events.Projections
             var workingState = _initialState.Clone();
             foreach (var propertyMapper in propertyMappers)
             {
-                propertyMapper(_eventContext, workingState);
+                propertyMapper(_event, workingState);
             }
         }
 

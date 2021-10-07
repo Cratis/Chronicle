@@ -27,7 +27,7 @@ namespace Cratis.Events.Projections
         public async Task<Changeset> OnNext(Event @event, IProjectionStorage storage)
         {
             var initialState = await storage.FindOrDefault("");
-            var context = new EventContext(@event, new Changeset(initialState));
+            var context = new EventContext(@event, new Changeset(@event, initialState));
             _subject.OnNext(context);
             return context.Changeset;
         }

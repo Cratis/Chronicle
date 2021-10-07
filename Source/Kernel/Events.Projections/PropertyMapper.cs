@@ -5,5 +5,5 @@ using System.Dynamic;
 
 namespace Cratis.Events.Projections
 {
-    public delegate void PropertyMapper(EventContext source, ExpandoObject destination);
+    public delegate void PropertyMapper(Event @event, ExpandoObject target);
 }
