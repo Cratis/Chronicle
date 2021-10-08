@@ -13,13 +13,17 @@ Known types:
 
 ```json
 {
+    "identifier": "565c2247-0ce4-4f25-8c5d-5afe1ca89113",
     "projectTo": {
         "modelName": "something",
-        "resource": "memory | mongodb"
+        "resource": "memory | mongodb | postgresql | elastic"
     },
     "from": {
         "25d74c03-2542-4d52-bb53-4dce6ada24c6": {
-            "$model.someProperty": "$event.someProperty"
+            "someProperty": "$event.someProperty",
+            "formattedProperty": "{{$event.firstName}} {{$event.lastName}}",
+            "incrementedProperty": "$increment",
+            "addedProperty": "$add($event.someValue)"
         },
         "f998e862-cac0-4ccc-86a1-cad0269db30e": {
             "key": "$event.id",    // Defaults to using the EventSourceId as the key, if not specified

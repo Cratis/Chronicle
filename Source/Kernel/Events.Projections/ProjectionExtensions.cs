@@ -42,7 +42,7 @@ namespace Cratis.Events.Projections
             return projection.Event;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, params PropertyMapper[] propertyMappers)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, IEnumerable<PropertyMapper> propertyMappers)
         {
             observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
             return observable;
