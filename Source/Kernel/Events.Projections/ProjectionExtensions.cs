@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using System.Linq.Expressions;
 using System.Reactive.Linq;
 
 namespace Cratis.Events.Projections
@@ -35,7 +33,7 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Children(this IProjection projection, Expression childrenPropertyAccessor)
+        public static IObservable<EventContext> Children(this IProjection projection, PropertyAccessor childrenPropertyAccessor, KeyResolver keyResolver)
         {
             // Create new projection for the child property... ??
             // Projection could take a source state / collection
@@ -44,9 +42,9 @@ namespace Cratis.Events.Projections
             return projection.Event;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, string prefix, KeyResolver keyResolver, params Expression[] expressions)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, params PropertyMapper[] propertyMappers)
         {
-            observable.Subscribe(_ => Console.WriteLine($"{prefix} - Event : {_.Event.Type}"));
+            observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
             return observable;
         }
     }
