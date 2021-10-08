@@ -18,7 +18,7 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public Task Upsert(object key, ExpandoObject model)
+        public Task ApplyChanges(object key, Changeset changeset)
         {
             return Task.CompletedTask;
         }
