@@ -21,8 +21,8 @@ namespace Cratis.Events.Projections
         /// Update or insert model based on key.
         /// </summary>
         /// <param name="key">Key of the model to upsert.</param>
-        /// <param name="model">Model with the properties to upsert.</param>
+        /// <param name="changeset">All changes in the form of a <see cref="Changeset"/>.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        Task Upsert(object key, ExpandoObject model);
+        Task ApplyChanges(object key, Changeset changeset);
     }
 }

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -22,8 +24,8 @@ namespace Cratis.Events.Projections
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
-        /// <param name="storage"><see cref="IProjectionStorage"/> to use.</param>
-        /// <return>Async Task containing <see cref="Changeset"/> as result.</return>
-        Task<Changeset> OnNext(Event @event, IProjectionStorage storage);
+        /// <param name="initialState"><see cref="ExpandoObject"/> holding the initial state before the event is applied.</param>
+        /// <return><see cref="Changeset"/> with all changes.</return>
+        Changeset OnNext(Event @event, ExpandoObject initialState);
     }
 }

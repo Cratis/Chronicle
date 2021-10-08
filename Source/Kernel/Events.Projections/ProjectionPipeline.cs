@@ -37,9 +37,11 @@ namespace Cratis.Events.Projections
             observable.Subscribe(@event =>
             {
                 var storageProviders = _storageProviders.ToArray();
-                Parallel.ForEach(storageProviders, (storage, _) =>
+                Parallel.ForEach(storageProviders, async (storage, _) =>
                 {
-                    Projection.OnNext(@event, storage).Wait();
+                    var initialState = await storage.FindOrDefault("");
+                    var changeset = Projection.OnNext(@event, initialState);
+                    await storage.ApplyChanges("", changeset);
                 });
             });
         }
@@ -51,6 +53,6 @@ namespace Cratis.Events.Projections
         public void Resume() => EventProvider.Resume(Projection);
 
         /// <inheritdoc/>
-        public void StoreIn(IProjectionStorage storage) => _storageProviders.Add(storage);
+        public void StoreIn(IProjectionStorage storageProvider) => _storageProviders.Add(storageProvider);
     }
 }

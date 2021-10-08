@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -31,9 +32,8 @@ namespace Cratis.Events.Projections
         public IObservable<EventContext> Event { get; }
 
         /// <inheritdoc/>
-        public async Task<Changeset> OnNext(Event @event, IProjectionStorage storage)
+        public Changeset OnNext(Event @event, ExpandoObject initialState)
         {
-            var initialState = await storage.FindOrDefault("");
             var context = new EventContext(@event, new Changeset(@event, initialState));
             _subject.OnNext(context);
             return context.Changeset;
