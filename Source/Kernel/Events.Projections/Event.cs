@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -11,5 +13,5 @@ namespace Cratis.Events.Projections
     /// <param name="Occurred">When the event occurred.</param>
     /// <param name="EventSourceId"><see cref="EventSourceId">Unique identifier for the event source</see>.</param>
     /// <param name="Content">The actual event content.</param>
-    public record Event(EventLogSequenceNumber SequenceNumber, EventType Type, DateTimeOffset Occurred, EventSourceId EventSourceId, dynamic Content);
+    public record Event(EventLogSequenceNumber SequenceNumber, EventType Type, DateTimeOffset Occurred, EventSourceId EventSourceId, ExpandoObject Content);
 }
