@@ -10,7 +10,7 @@ namespace Cratis.Events.Projections
     /// <summary>
     /// Extension methods for building up a projection.
     /// </summary>
-    public static class ProjectorExtensions
+    public static class ProjectionExtensions
     {
         public static IObservable<EventContext> From(this IObservable<EventContext> observable, EventType eventType)
         {
@@ -35,7 +35,7 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Children(this IProjector projection, Expression childrenPropertyAccessor)
+        public static IObservable<EventContext> Children(this IProjection projection, Expression childrenPropertyAccessor)
         {
             // Create new projection for the child property... ??
             // Projection could take a source state / collection

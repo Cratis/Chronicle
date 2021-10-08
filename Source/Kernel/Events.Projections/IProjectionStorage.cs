@@ -6,7 +6,7 @@ using System.Dynamic;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Defines the storage for <see cref="IProjector">projections</see>.
+    /// Defines the storage for <see cref="IProjection">projections</see>.
     /// </summary>
     public interface IProjectionStorage
     {

@@ -11,7 +11,12 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Gets the <see cref="IProjectionEventProvider"/> used in the pipeline.
         /// </summary>
-        IProjectionEventProvider    EventProvider { get; }
+        IProjectionEventProvider EventProvider { get; }
+
+        /// <summary>
+        /// Gets the <see cref="IProjectionStorage">storage providers</see> to use for output.
+        /// </summary>
+        IEnumerable<IProjectionStorage> StorageProviders { get; }
 
         /// <summary>
         /// Starts the pipeline.
@@ -31,19 +36,16 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Gets the <see cref="IProjection"/> the pipeline is for.
         /// </summary>
-        IProjection Projection { get; }
-
-        /// <summary>
-        /// Provides the projection with a new <see cref="Event"/>.
-        /// </summary>
-        /// <param name="event"><see cref="Event"/> to provide.</param>
-        /// <return>Async Task containing <see cref="Changeset"/> as result.</return>
-        Task<Changeset> OnNext(Event @event);
+        IProjection Projection { get; }
 
         /// <summary>
         /// Adds a <see cref="IProjectionStorage"/> for storing results.
         /// </summary>
-        /// <param name="storage"><see cref="IProjectionStorage"/> to use.</param>
-        void StoreIn(IProjectionStorage storage);
+        /// <param name="storageProvider"><see cref="IProjectionStorage">Storage provider</see> to add.</param>
+        /// <remarks>
+        /// One can have the output of a projection stored in multiple locations. It will treat every
+        /// location separately with regards to intermediate results and all.
+        /// </remarks>
+        void StoreIn(IProjectionStorage storageProvider);
     }
 }

@@ -8,7 +8,7 @@ using Cratis.Dynamic;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents a changeset - the consequence of an individual handling of a <see cref="IProjector"/>.
+    /// Represents a changeset - the consequence of an individual handling of a <see cref="IProjection"/>.
     /// </summary>
     public class Changeset
     {
