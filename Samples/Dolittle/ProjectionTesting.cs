@@ -5,8 +5,8 @@ using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reactive.Subjects;
 using Cratis.Boot;
+using Cratis.Dynamic;
 using Cratis.Events.Projections;
-using Microsoft.CSharp.RuntimeBinder;
 
 namespace Sample
 {
@@ -22,7 +22,7 @@ namespace Sample
             public IObservable<Event> ProvideFor(IProjection projection)
             {
                 var subject = new ReplaySubject<Event>();
-                subject.OnNext(new Event(0, EventTypeA, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { Integer = 42, String = "Forty Two" }));
+                subject.OnNext(new Event(0, EventTypeA, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { Integer = 42, String = "Forty Two" }.AsExpandoObject()));
                 return subject;
             }
 
@@ -44,54 +44,21 @@ namespace Sample
 
             var eventParameter = Expression.Parameter(typeof(Event));
             var targetParameter = Expression.Parameter(typeof(ExpandoObject));
-
-            var integerMember = Binder.GetMember(CSharpBinderFlags.None, "Integer", default, Array.Empty<CSharpArgumentInfo>());
-            var contentAccessor = Expression.Property(eventParameter, "Content");
-
-            dynamic instance = new ExpandoObject();
-            //instance.Integer = 0;
-            //var integerAccessor = Expression.Property(Expression.Constant(instance), "Integer");
-            var integerAccessor = Expression.Property(
-                Expression.Constant(instance, typeof(IDictionary<string, object>)),
-                "Item",
-                Expression.Constant("Integer"));
-
-            //Expression.Dynamic(integerMember, typeof(object), contentAccessor);
-            /*var dic = new Dictionary<string, object> {
-                {"KeyName", 1}
-            };*/
-            dynamic dic = new ExpandoObject();
-            dic.KeyName = 42;
-
-            // Setting
-            var objectParameter = Expression.Parameter(typeof(IDictionary<string, object>), "d");
-            var propertySetter = Expression.Assign(
-                Expression.Property(objectParameter, "Item", Expression.Constant("KeyName")),
-                Expression.Constant(43, typeof(object)));
-
-            var setter = Expression.Lambda<Action<IDictionary<string, object>>>(propertySetter, objectParameter).Compile();
-            setter(dic);
-
-            // Getting
-            var constant = Expression.Constant("KeyName");
-            var propertyGetter = Expression.Property(objectParameter, "Item", constant);
-
-            var expr = Expression.Lambda<Func<IDictionary<string, object>, object>>(propertyGetter, objectParameter).Compile();
-
-            Console.WriteLine(expr(dic));
+            var contentAccessor = Expression.Property(eventParameter, typeof(Event), "Content");
+            var itemProperty = typeof(IDictionary<string, object>).GetProperty("Item")!;
 
             var increaseExpression = Expression.Assign(
-                integerAccessor, Expression.Constant(1));
-
-
-
-
+                Expression.Property(targetParameter, itemProperty, Expression.Constant("Integer")),
+                Expression.Property(
+                    contentAccessor,
+                    itemProperty,
+                    Expression.Constant("Integer")));
 
             var propertyMapper = Expression.Lambda<PropertyMapper>(increaseExpression, new[] {
                 eventParameter,
                 targetParameter
             }).Compile();
-            //projection.Event.From(EventTypeA).Project(propertyMapper);
+            projection.Event.From(EventTypeA).Project(new PropertyMapper[] { propertyMapper });
             var provider = new TestProvider();
             var pipeline = new ProjectionPipeline(provider, projection);
             var storage = new InMemoryProjectionStorage();
