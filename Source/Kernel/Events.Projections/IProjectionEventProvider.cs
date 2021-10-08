@@ -12,23 +12,25 @@ namespace Cratis.Events.Projections
         /// Start providing events for a <see cref="IProjection"/>.
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to start providing for.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        /// <returns><see cref="IObservable{T}"/> of <see cref="Event">events</see>.</returns>
         /// <remarks>
         /// The provider will provide events from the current position it has recorded for the
         /// <see cref="IProjection"/>. It will be in a state of catching up till its at the
         /// head of the stream. Once at the head, it will provide events as they occur.
         /// </remarks>
-        Task ProvideFor(IProjection projection);
+        IObservable<Event> ProvideFor(IProjection projection);
 
         /// <summary>
         /// Resumes if paused - continues providing events from this point.
         /// </summary>
-        void Resume();
+        /// <param name="projection"><see cref="IProjection"/> to resume for.</param>
+        void Resume(IProjection projection);
 
         /// <summary>
         /// Pause - ceases providing events from this point.
         /// </summary>
-        void Pause();
+        /// <param name="projection"><see cref="IProjection"/> to pause for.</param>
+        void Pause(IProjection projection);
 
         /// <summary>
         /// Rewind for a <see cref="IProjection"/>.

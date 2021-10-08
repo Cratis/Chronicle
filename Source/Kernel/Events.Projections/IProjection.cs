@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents a projection in the system.
+    /// Defines a projection.
     /// </summary>
     public interface IProjection
     {
@@ -14,10 +14,16 @@ namespace Cratis.Events.Projections
         ProjectionId    Identifier { get; }
 
         /// <summary>
+        /// Gets the <see cref="IObservable{T}">observable</see> <see cref="EventContext">event</see>.
+        /// </summary>
+        IObservable<EventContext> Event { get; }
+
+        /// <summary>
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
+        /// <param name="storage"><see cref="IProjectionStorage"/> to use.</param>
         /// <return>Async Task containing <see cref="Changeset"/> as result.</return>
-        Task<Changeset> OnNext(Event @event);
+        Task<Changeset> OnNext(Event @event, IProjectionStorage storage);
     }
 }
