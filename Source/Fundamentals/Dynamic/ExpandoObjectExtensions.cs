@@ -64,5 +64,36 @@ namespace Cratis.Dynamic
 
             return expando;
         }
+
+        /// <summary>
+        /// Creates a clone of left and applies all content from right on top, overwriting any existing properties in left.
+        /// </summary>
+        /// <param name="left">The left <see cref="ExpandoObject"/>.</param>
+        /// <param name="right">The right <see cref="ExpandoObject"/>.</param>
+        /// <returns>A new <see cref="ExpandoObject"/>.</returns>
+        public static ExpandoObject OverwriteWith(this ExpandoObject left, ExpandoObject right)
+        {
+            var result = left.Clone();
+            var resultAsDictionary = result as IDictionary<string, object>;
+            var rightAsDictionary = right as IDictionary<string, object>;
+
+            foreach (var (key, value) in rightAsDictionary)
+            {
+                var rightValue = value;
+                if (resultAsDictionary.ContainsKey(key) && resultAsDictionary[key] is ExpandoObject leftValueExpandoObject &&
+                    value is ExpandoObject valueAsExpandoObject)
+                {
+                    rightValue = leftValueExpandoObject.OverwriteWith(valueAsExpandoObject);
+                }
+                else if (rightValue is ExpandoObject rightValueAsExpandoObject)
+                {
+                    rightValue = rightValueAsExpandoObject.Clone();
+                }
+
+                resultAsDictionary[key] = rightValue;
+            }
+
+            return result;
+        }
     }
 }
