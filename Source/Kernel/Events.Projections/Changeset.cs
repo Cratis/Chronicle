@@ -12,20 +12,35 @@ namespace Cratis.Events.Projections
     /// </summary>
     public class Changeset
     {
-        readonly Event _event;
-        readonly ExpandoObject _initialState;
         readonly List<Change> _changes = new();
 
         /// <summary>
         /// Initializes a new instance of <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="event"><see cref="Event"/> that the changeset is for.</param>
+        /// <param name="projection"><see cref="IProjection"/> the <see cref="Changeset"/> is for.</param>
+        /// <param name="event"><see cref="Event"/> that the <see cref="Changeset"/> is for.</param>
         /// <param name="initialState">The initial state before any changes are applied.</param>
-        public Changeset(Event @event, ExpandoObject initialState)
+        public Changeset(IProjection projection, Event @event, ExpandoObject initialState)
         {
-            _event = @event;
-            _initialState = initialState;
+            Projection = projection;
+            Event = @event;
+            InitialState = initialState;
         }
+
+        /// <summary>
+        /// Gets the <see cref="IProjection"/> the <see cref="Changeset"/> is for.
+        /// </summary>
+        public IProjection Projection { get; }
+
+        /// <summary>
+        /// Gets the <see cref="Event"/> the <see cref="Changeset"/> is for.
+        /// </summary>
+        public Event Event { get; }
+
+        /// <summary>
+        /// Gets the initial state of before changes in changeset occurred.
+        /// </summary>
+        public ExpandoObject InitialState { get; }
 
         /// <summary>
         /// Gets all the changes for the changeset.
@@ -41,16 +56,16 @@ namespace Cratis.Events.Projections
         /// </remarks>
         public void ApplyProperties(IEnumerable<PropertyMapper> propertyMappers)
         {
-            var workingState = _initialState.Clone();
+            var workingState = InitialState.Clone();
             foreach (var propertyMapper in propertyMappers)
             {
-                propertyMapper(_event, workingState);
+                propertyMapper(Event, workingState);
             }
 
             var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
-            if (!comparer.Compare(_initialState, workingState, out var differences))
+            if (!comparer.Compare(InitialState, workingState, out var differences))
             {
-                _changes.Add(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(_initialState, workingState, _))));
+                _changes.Add(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(InitialState, workingState, _))));
             }
         }
 
@@ -63,7 +78,7 @@ namespace Cratis.Events.Projections
         /// <param name="expressions"><see cref="Expression">Expressions</see> representing properties being manipulated.</param>
         public void ApplyChildProperties(PropertyAccessor childrenAccessor, Expression modelKey, object key, IEnumerable<Expression> expressions)
         {
-            var workingState = _initialState.Clone();
+            var workingState = InitialState.Clone();
         }
 
         /// <summary>

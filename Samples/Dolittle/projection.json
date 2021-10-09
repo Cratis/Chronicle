@@ -1,7 +1,7 @@
 {
     "identifier": "22368fab-ee3c-4cf3-9320-60cfd8f17536",
-    "projectTo": {
-        "modelName": "something"
+    "model": {
+        "name": "something"
     },
     "from": {
         "d3e83b35-c11e-46cc-91ca-58cd66d1aa9e": {

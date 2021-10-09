@@ -10,7 +10,9 @@ namespace Cratis.Events.Projections.Json
 {
     public class FromDefinition : Dictionary<string, string> { }
 
-    public record ProjectionDefinition(ProjectionId Identifier, IDictionary<EventType, FromDefinition> From);
+    public record ModelDefinition(string Name);
+
+    public record ProjectionDefinition(ProjectionId Identifier, ModelDefinition Model, IDictionary<EventType, FromDefinition> From);
 
     /// <summary>
     /// Represents a parser for JSON definition of a <see cref="IProjection"/>.
@@ -36,7 +38,9 @@ namespace Cratis.Events.Projections.Json
             var contentAccessor = Expression.Property(eventParameter, typeof(Event), "Content");
             var itemProperty = typeof(IDictionary<string, object>).GetProperty("Item")!;
 
-            var projection = new Projection(definition.Identifier, eventsForProjection);
+            var model = new Model(definition.Model.Name);
+
+            var projection = new Projection(definition.Identifier, model, eventsForProjection);
             foreach (var (eventType, definitions) in definition.From)
             {
                 var propertyMappers = new List<PropertyMapper>();

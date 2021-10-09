@@ -5,6 +5,7 @@ using System.Dynamic;
 
 namespace Cratis.Events.Projections
 {
+
     /// <summary>
     /// Defines a projection.
     /// </summary>
@@ -14,6 +15,11 @@ namespace Cratis.Events.Projections
         /// Gets the unique identifier of the <see cref="IProjection"/>.
         /// </summary>
         ProjectionId    Identifier { get; }
+
+        /// <summary>
+        /// Gets the <see cref="IModel"/> the projection targets.
+        /// </summary>
+        IModel Model { get; }
 
         /// <summary>
         /// Gets the <see cref="IObservable{T}">observable</see> <see cref="EventContext">event</see>.
