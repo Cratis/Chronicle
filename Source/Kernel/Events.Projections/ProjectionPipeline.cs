@@ -41,9 +41,9 @@ namespace Cratis.Events.Projections
                 {
                     var keyResolver = Projection.GetKeyResolverFor(@event.Type);
                     var key = keyResolver(@event);
-                    var initialState = await storage.FindOrDefault(key);
+                    var initialState = await storage.FindOrDefault(Projection.Model, key);
                     var changeset = Projection.OnNext(@event, initialState);
-                    await storage.ApplyChanges(key, changeset);
+                    await storage.ApplyChanges(Projection.Model, key, changeset);
                 });
             });
         }
