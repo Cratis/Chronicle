@@ -31,11 +31,6 @@ namespace Sample
             public Task Rewind(IProjection projection) => throw new NotImplementedException();
         }
 
-        public class Something
-        {
-            public int Integer { get; set; }
-        }
-
         public void Perform()
         {
             var parser = new JsonProjectionParser();
