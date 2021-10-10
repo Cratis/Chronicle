@@ -8,12 +8,6 @@ using Newtonsoft.Json;
 
 namespace Cratis.Events.Projections.Json
 {
-    public class FromDefinition : Dictionary<string, string> { }
-
-    public record ModelDefinition(string Name);
-
-    public record ProjectionDefinition(ProjectionId Identifier, ModelDefinition Model, IDictionary<EventType, FromDefinition> From);
-
     /// <summary>
     /// Represents a parser for JSON definition of a <see cref="IProjection"/>.
     /// </summary>
