@@ -25,17 +25,36 @@ namespace Cratis.Events.Projections
         /// <returns>A new <see cref="PropertyMapper"/>.</returns>
         public static PropertyMapper FromEventContent(string sourceProperty, string targetProperty)
         {
-            var propertyMapperExpression = Expression.Assign(
-                Expression.Property(_targetParameter, _itemProperty, Expression.Constant(targetProperty)),
-                Expression.Property(
-                    _contentMember,
-                    _itemProperty,
-                    Expression.Constant(sourceProperty)));
+            var sourcePath = sourceProperty.Split('.');
+            var targetPath = targetProperty.Split('.');
 
-            return Expression.Lambda<PropertyMapper>(propertyMapperExpression, new[] {
-                _eventParameter,
-                _targetParameter
-            }).Compile();
+            return (Event @event, ExpandoObject target) =>
+            {
+                var currentSource = @event.Content as IDictionary<string, object>;
+                object? sourceValue = null;
+                foreach (var property in sourcePath)
+                {
+                    sourceValue = currentSource![property];
+                    currentSource = sourceValue as IDictionary<string, object>;
+                }
+
+                var currentTarget = target as IDictionary<string, object>;
+                for (var propertyIndex = 0; propertyIndex < targetPath.Length - 1; propertyIndex++)
+                {
+                    var property = targetPath[propertyIndex];
+                    if (!currentTarget.ContainsKey(property))
+                    {
+                        var nested = new ExpandoObject();
+                        currentTarget[property] = nested;
+                        currentTarget = nested as IDictionary<string, object>;
+                    }
+                    else
+                    {
+                        currentTarget = ((ExpandoObject)currentTarget[property])!;
+                    }
+                }
+                currentTarget[targetPath[^1]] = sourceValue!;
+            };
         }
     }
 }
