@@ -15,25 +15,21 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
-        public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType, KeyResolver keyResolver)
+        public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
         {
             observable = observable.Where(_ => _.Event.Type == eventType);
-            observable.Subscribe(_ =>
-            {
-                var key = keyResolver(_.Event);
-                _.Changeset.ApplyRemove(key);
-            });
+            observable.Subscribe(_ => _.Changeset.ApplyRemove());
 
             return observable;
         }
 
-        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyAccessor propertyResolver, KeyResolver keyResolver)
+        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyAccessor propertyResolver)
         {
             observable = observable.Where(_ => _.Event.Type == eventType);
             return observable;
         }
 
-        public static IObservable<EventContext> Children(this IProjection projection, PropertyAccessor childrenPropertyAccessor, KeyResolver keyResolver)
+        public static IObservable<EventContext> Children(this IProjection projection, PropertyAccessor childrenPropertyAccessor)
         {
             // Create new projection for the child property... ??
             // Projection could take a source state / collection
