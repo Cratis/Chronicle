@@ -9,6 +9,21 @@ using Cratis.Events.Projections.Json;
 
 namespace Sample
 {
+    public class MyProjection : IProjectionDefinition
+    {
+        public record MyModel(int SomeInteger, string SomeString, int MoreStuff);
+        public record MyEvent(int Identifier, int Integer, string A_string);
+
+        public void Define(IProjectionDefinitionBuilder builder)
+        {
+            builder
+                .Model<MyModel>("my_model")
+                .From<MyEvent>(_ => _
+                    .UsingKey(_ => _.Identifier)
+                    .Set(_ => _.SomeInteger, _ => _.Integer)
+                    .Set(_ => _.SomeString, _ => _.A_string));
+        }
+    }
 
     public class ProjectionTesting : IPerformBootProcedure
     {
