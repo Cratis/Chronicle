@@ -39,36 +39,36 @@ Known types:
             "addedProperty": "$add($event.someValue)"
         },
         "f998e862-cac0-4ccc-86a1-cad0269db30e": {
-            "key": "$event.id",    // Defaults to using the EventSourceId as the key, if not specified
+            "$key": "id",    // Defaults to using the EventSourceId as the key, if not specified
             "someOtherProperty": "$event.someOtherProperty"
         }
     },
     "removedWith": {
         "cd9e4ab9-7f67-460b-a5f7-5830d4bb4716": {
-            "key": "$event.id"
+            "$key": "id"
         }
     },
     "join": {
         "52bd8b37-4811-4edc-9f6b-07e2d965c110": {
-            "$on": "$model.relationProperty",
-            "$key": "$event.id",
+            "$on": "relationProperty",
+            "$key": "id",
             "$properties": {
-                "thirdProperty": "$event.propertyFromTheThirdEvent"
+                "thirdProperty": "propertyFromTheThirdEvent"
             }
         }
     },
     "children": {
         "childrenProperty": {
-            "key": "id",
+            "$key": "id",
             "from": {
                 "3cf2b919-9102-4d05-86bf-94c39abc1224": {
-                    "key": "$event.id",
-                    "property": "$event.property"
+                    "$key": "id",
+                    "property": "property"
                 }
             },
             "removedWith": {
                 "1bcbc402-6930-4fbc-8e28-b86ecc0db2e8": {
-                    "key": "$event.id"
+                    "$key": "id"
                 }
             }
         }
@@ -102,10 +102,9 @@ public class MyProjection : IProjection
                 .IdentifiedBy(childModel => childModel.Id))
                 .From<ChildAdded>(cb => cb
                     .UsingKey(@event => @event.Id) // Default to using the EventSourceId as the key, if not specified
-                    cb.Set(childMOdel => childModel.Property).To(@event => @event.Property))
+                    .Set(childMOdel => childModel.Property).To(@event => @event.Property))
                 .RemovedWith<ChildRemoved>(cb => cb
                     .UsingKey(@event => @event.Id)) // Default to using the EventSourceId as the key, if not specified
-
     }
 }
 ```
