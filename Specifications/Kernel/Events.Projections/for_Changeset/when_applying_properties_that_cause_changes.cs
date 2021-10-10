@@ -11,10 +11,12 @@ namespace Cratis.Events.Projections
         ExpandoObject initial_state;
         Event @event;
         IEnumerable<PropertyMapper> property_mappers;
+        Mock<IProjection> projection;
 
         void Establish()
         {
             initial_state = new();
+            projection = new();
 
             ((dynamic)initial_state).Integer = 42;
             ((dynamic)initial_state).String = "Forty Two";
@@ -30,9 +32,9 @@ namespace Cratis.Events.Projections
                 (_, target) => ((dynamic)target).Nested.String = "Forty Five",
             };
 
-            @event = new Event(0, "some event", DateTimeOffset.UtcNow, string.Empty, new object());
+            @event = new Event(0, "some event", DateTimeOffset.UtcNow, string.Empty, new ExpandoObject());
 
-            changeset = new Changeset(@event, initial_state);
+            changeset = new Changeset(projection.Object, @event, initial_state);
         }
 
         void Because() => changeset.ApplyProperties(property_mappers);

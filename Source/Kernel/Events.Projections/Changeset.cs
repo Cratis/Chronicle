@@ -84,8 +84,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Apply a remove change to the <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="key">The key value.</param>
-        public void ApplyRemove(object key)
+        public void ApplyRemove()
         {
         }
 

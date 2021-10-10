@@ -39,9 +39,11 @@ namespace Cratis.Events.Projections
                 var storageProviders = _storageProviders.ToArray();
                 Parallel.ForEach(storageProviders, async (storage, _) =>
                 {
-                    var initialState = await storage.FindOrDefault("");
+                    var keyResolver = Projection.GetKeyResolverFor(@event.Type);
+                    var key = keyResolver(@event);
+                    var initialState = await storage.FindOrDefault(key);
                     var changeset = Projection.OnNext(@event, initialState);
-                    await storage.ApplyChanges("", changeset);
+                    await storage.ApplyChanges(key, changeset);
                 });
             });
         }

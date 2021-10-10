@@ -26,12 +26,12 @@ namespace Cratis.Events.Projections.Json
         /// <returns><see cref="IProjection"/> instance.</returns>
         public IProjection Parse(string json)
         {
-            var eventsForProjection = new List<EventType>();
+            var eventsForProjection = new List<EventTypeWithKeyResolver>();
             var definition = JsonConvert.DeserializeObject<ProjectionDefinition>(json,
                 new ConceptAsJsonConverter(),
                 new ConceptAsDictionaryJsonConverter())!;
 
-            eventsForProjection.AddRange(definition.From.Keys);
+            eventsForProjection.AddRange(definition.From.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)));
 
             var eventParameter = Expression.Parameter(typeof(Event));
             var targetParameter = Expression.Parameter(typeof(ExpandoObject));

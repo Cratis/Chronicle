@@ -33,5 +33,12 @@ namespace Cratis.Events.Projections
         /// <param name="initialState"><see cref="ExpandoObject"/> holding the initial state before the event is applied.</param>
         /// <return><see cref="Changeset"/> with all changes.</return>
         Changeset OnNext(Event @event, ExpandoObject initialState);
+
+        /// <summary>
+        /// Get the <see cref="KeyResolver"/> associated with a given <see cref="EventType"/>.
+        /// </summary>
+        /// <param name="eventType"><see cref="EventType"/> to get for.</param>
+        /// <returns>The <see cref="KeyResolver"/>.</returns>
+        KeyResolver GetKeyResolverFor(EventType eventType);
     }
 }
