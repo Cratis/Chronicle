@@ -22,6 +22,7 @@ namespace Sample
             {
                 var subject = new ReplaySubject<Event>();
                 subject.OnNext(new Event(0, EventTypeA, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { integer = 42, a_string = "Forty Two" }.AsExpandoObject()));
+                subject.OnNext(new Event(0, EventTypeB, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { moreStuff = 43 }.AsExpandoObject()));
                 return subject;
             }
 

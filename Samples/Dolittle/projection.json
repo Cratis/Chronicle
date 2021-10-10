@@ -7,6 +7,9 @@
         "d3e83b35-c11e-46cc-91ca-58cd66d1aa9e": {
             "someInteger": "integer",
             "someString": "a_string"
+        },
+        "5addd1d0-c270-4d86-87b5-13b7b97b1dde": {
+            "moreStuff": "moreStuff"
         }
     }
 }
