@@ -10,10 +10,21 @@ namespace Cratis.Extensions.MongoDB
     /// </summary>
     public class BootProcedure : IPerformBootProcedure
     {
+        readonly MongoDBDefaults _defaults;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BootProcedure"/> class.
+        /// </summary>
+        /// <param name="defaults"></param>
+        public BootProcedure(MongoDBDefaults defaults)
+        {
+            _defaults = defaults;
+        }
+
         /// <inheritdoc/>
         public void Perform()
         {
-            MongoDBDefaults.Initialize();
+            _defaults.Initialize();
         }
     }
 }

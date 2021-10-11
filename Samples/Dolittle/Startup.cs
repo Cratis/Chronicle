@@ -3,6 +3,7 @@
 
 using Cratis.Extensions.Dolittle;
 using Cratis.Types;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
 namespace Sample
 {
@@ -13,6 +14,7 @@ namespace Sample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
+            services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(typeof(Startup).Assembly));
             services.AddSingleton(Types)
                 .AddDolittleSchemaStore("localhost", 27017)
                 .AddCratisWorkbench(_ => _.UseDolittle());
