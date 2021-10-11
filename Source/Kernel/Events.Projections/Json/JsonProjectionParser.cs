@@ -18,11 +18,21 @@ namespace Cratis.Events.Projections.Json
         /// <returns><see cref="IProjection"/> instance.</returns>
         public IProjection Parse(string json)
         {
-            var eventsForProjection = new List<EventTypeWithKeyResolver>();
             var definition = JsonConvert.DeserializeObject<ProjectionDefinition>(json,
                 new ConceptAsJsonConverter(),
                 new ConceptAsDictionaryJsonConverter())!;
 
+            return CreateFrom(definition);
+        }
+
+        /// <summary>
+        /// Create a <see cref="IProjection"/> from <see cref="ProjectionDefinition"/>.
+        /// </summary>
+        /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
+        /// <returns><see cref="IProjection"/> instance.</returns>
+        public IProjection CreateFrom(ProjectionDefinition definition)
+        {
+            var eventsForProjection = new List<EventTypeWithKeyResolver>();
             eventsForProjection.AddRange(definition.From.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)));
 
             var model = new Model(definition.Model.Name);

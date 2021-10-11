@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Observation;
 using Microsoft.Extensions.Hosting;
 
-namespace Cratis.Hosting
+namespace Cratis.Events.Observation
 {
     /// <summary>
     /// Represents a <see cref="IHostedService"/> for working with observers.

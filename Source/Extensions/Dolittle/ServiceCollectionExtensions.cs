@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Extensions.Dolittle.Schemas;
+extern alias SDK;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -11,15 +11,13 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class ServiceCollectionExtensions
     {
         /// <summary>
-        /// Configure use of a SchemaStore built on top of Dolittle and how they define events in C#.
+        /// Configure use of Dolittle implementations of <see cref="SDK::Cratis.Events.IEventTypes"/>.
         /// </summary>
         /// <param name="services"><see cref="IServiceCollection"/> to build on.</param>
-        /// <param name="mongoDBHost">The MongoDB hostname.</param>
-        /// <param name="mongoDBPort">The MongoDB port.</param>
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
-        public static IServiceCollection AddDolittleSchemaStore(this IServiceCollection services, string mongoDBHost, int mongoDBPort)
+        public static IServiceCollection AddDolittleEventTypes(this IServiceCollection services)
         {
-            services.AddSingleton(new SchemaStoreConfiguration(mongoDBHost, mongoDBPort));
+            services.AddSingleton<SDK::Cratis.Events.IEventTypes, Cratis.Extensions.Dolittle.EventTypes>();
             return services;
         }
     }

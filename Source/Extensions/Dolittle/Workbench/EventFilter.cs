@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Cratis.Extensions.Dolittle
+namespace Cratis.Extensions.Dolittle.Workbench
 {
     /*
     {
