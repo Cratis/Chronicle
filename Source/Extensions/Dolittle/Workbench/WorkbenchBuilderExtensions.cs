@@ -3,7 +3,7 @@
 
 using Cratis.AspNetCore.Workbench;
 
-namespace Cratis.Extensions.Dolittle
+namespace Cratis.Extensions.Dolittle.Workbench
 {
     /// <summary>
     /// Extension methods for working with the <see cref="WorkbenchBuilder"/>.

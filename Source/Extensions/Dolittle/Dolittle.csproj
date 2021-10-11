@@ -16,6 +16,10 @@
     <ItemGroup>
         <ProjectReference Include="..//MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj">
+            <Aliases>SDK</Aliases>
+        </ProjectReference>
         <ProjectReference Include="../../Clients/AspNetCore.Workbench/AspNetCore.Workbench.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Projections/Events.Projections.csproj"/>
     </ItemGroup>
 </Project>

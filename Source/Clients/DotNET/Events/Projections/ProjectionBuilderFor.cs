@@ -10,6 +10,7 @@ namespace Cratis.Events.Projections
     public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     {
         readonly ProjectionId _identifier;
+        readonly IEventTypes _eventTypes;
         string _modelName;
         readonly Dictionary<string, FromDefinition> _fromDefintions = new();
 
@@ -17,9 +18,11 @@ namespace Cratis.Events.Projections
         /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
         /// </summary>
         /// <param name="identifier">The unique identifier for the projection.</param>
-        public ProjectionBuilderFor(ProjectionId identifier)
+        /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
+        public ProjectionBuilderFor(ProjectionId identifier, IEventTypes eventTypes)
         {
             _identifier = identifier;
+            _eventTypes = eventTypes;
             _modelName = typeof(TModel).Name;
         }
 
@@ -35,6 +38,8 @@ namespace Cratis.Events.Projections
         {
             var builder = new FromBuilder<TModel, TEvent>();
             builderCallback(builder);
+            var eventType = _eventTypes.GetEventTypeIdFor(typeof(TEvent));
+            _fromDefintions[eventType.ToString()] = builder.Build();
             return this;
         }
 
