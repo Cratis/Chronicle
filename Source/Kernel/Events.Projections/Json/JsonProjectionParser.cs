@@ -32,9 +32,7 @@ namespace Cratis.Events.Projections.Json
         /// <returns><see cref="IProjection"/> instance.</returns>
         public IProjection CreateFrom(ProjectionDefinition definition)
         {
-            var eventsForProjection = new List<EventTypeWithKeyResolver>();
-            eventsForProjection.AddRange(definition.From.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)));
-
+            var eventsForProjection = definition.From.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)).ToArray();
             var model = new Model(definition.Model.Name);
 
             var projection = new Projection(definition.Identifier, model, eventsForProjection);

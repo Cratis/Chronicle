@@ -28,6 +28,7 @@ namespace Sample
             app
                 .UseRouting()
                 .UseDolittleSchemaStore()
+                .UseDolittleProjections()
                 .UseCratisWorkbench();
         }
     }

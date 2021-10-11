@@ -27,6 +27,11 @@ namespace Cratis.Events.Projections
         IObservable<EventContext> Event { get; }
 
         /// <summary>
+        /// Gets the <see cref="EventType">event types</see> the projection can handle.
+        /// </summary>
+        IEnumerable<EventType> EventTypes { get; }
+
+        /// <summary>
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
