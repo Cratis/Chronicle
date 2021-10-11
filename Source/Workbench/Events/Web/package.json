@@ -5,7 +5,6 @@
     "private": true,
     "author": "Cratis",
     "license": "MIT",
-
     "scripts": {
         "build": "webpack --mode=production",
         "build:dev": "webpack --mode=development",
@@ -20,6 +19,8 @@
         "@cratis/react": "1.0.0",
         "@cratis/fundamentals": "1.0.0",
         "@cratis/workbench.styles": "1.0.0",
+        "@fluentui/react-experiments": "^8.3.21",
+        "@monaco-editor/react": "^4.3.1",
         "echarts": "^5.2.1",
         "handlebars": "^4.7.7"
     },

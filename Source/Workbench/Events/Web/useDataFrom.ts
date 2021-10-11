@@ -6,6 +6,7 @@ import Handlebars from 'handlebars';
 
 export type RefreshData = () => Promise<void>;
 export type Map<T = any> = (input: any) => T;
+export type DataReady<T = any> = (data: T[]) => void;
 
 export interface RouteInfo {
     template: string;
@@ -42,7 +43,7 @@ const areArgumentsEqual = (left: RouteInfo, right: RouteInfo): boolean => {
     return true;
 }
 
-export function useDataFrom<T = any>(route: string | RouteInfo, mapFunction?: Map<T>): [T[], RefreshData] {
+export function useDataFrom<T = any>(route: string | RouteInfo, mapFunction?: Map<T>, dataReadyCallback?: DataReady<T>): [T[], RefreshData] {
     const [data, setData] = useState<T[]>([]);
     const routeInfo = useRef<RouteInfo>();
     const template = useRef<Handlebars.TemplateDelegate>();
@@ -66,6 +67,7 @@ export function useDataFrom<T = any>(route: string | RouteInfo, mapFunction?: Ma
             }
         }
 
+        dataReadyCallback?.(result as T[]);
         setData(result as T[]);
     };
 
