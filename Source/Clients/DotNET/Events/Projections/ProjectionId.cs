@@ -6,7 +6,7 @@ using Cratis.Concepts;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the unique identifier of a <see cref="IProjectionDefinition"/>.
+    /// Represents the unique identifier of a <see cref="IProjectionFor{TModel}"/>.
     /// </summary>
     /// <param name="Value">The value.</param>
     public record ProjectionId(Guid Value) : ConceptAs<Guid>(Value)

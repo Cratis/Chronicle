@@ -6,13 +6,13 @@ namespace Cratis.Events.Projections
     /// <summary>
     /// Defines something that can define a projection.
     /// </summary>
-    public interface IProjectionDefinition
+    /// <typeparam name="TModel">Model type to target.</typeparam>
+    public interface IProjectionFor<TModel>
     {
         /// <summary>
         /// Defines the projection.
         /// </summary>
-        /// <param name="builder"><see cref="IProjectionDefinitionBuilder"/> to use for building the definition.</param>
-        void Define(IProjectionDefinitionBuilder builder);
+        /// <param name="builder"><see cref="IProjectionBuilderFor{TModel}"/> to use for building the definition.</param>
+        void Define(IProjectionBuilderFor<TModel> builder);
     }
-
 }

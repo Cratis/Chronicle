@@ -80,12 +80,12 @@ Known types:
 
 ```csharp
 [Projection("610bbd9c-4024-40db-8bd2-38ea1481904d)]
-public class MyProjection : IProjectionDefinition
+public class MyProjection : IProjectionFor<MyModel>
 {
-    public void Define(IProjectionDefinitionBuilder builder)
+    public void Define(IProjectionBuilderFor<MyModel> builder)
     {
         builder
-            .Model<MyModel>("<optional name>")
+            .ModelName("<optional name>")
             .From<SomeEvent>(_ => _
                 .UsingKey(@event => @event.Id)  // Default to using the EventSourceId as the key, if not specified
                 .Set(model => model.SomeProperty, @event => @event.SomeProperty))
