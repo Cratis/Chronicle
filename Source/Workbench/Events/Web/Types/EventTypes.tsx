@@ -69,18 +69,16 @@ export const EventTypes = () => {
             <div className={styles.eventDetails}>
                 <Pivot linkFormat="tabs" defaultSelectedKey="2">
                     {generationalSchemas.map((schema: EventTypeSchema) => {
-
-
                         const properties = Object.keys(schema.properties).map(_ => {
                             let type = schema.properties[_].type;
-                            if( Array.isArray(type)) {
+                            if (Array.isArray(type)) {
                                 type = type[0];
                             }
 
                             return {
                                 name: _,
                                 type
-                            }
+                            };
                         });
                         return (
 
@@ -89,7 +87,7 @@ export const EventTypes = () => {
                                     columns={eventSchemaColumns}
                                     selectionMode={SelectionMode.none} />
                             </PivotItem>
-                        )
+                        );
                     })}
                 </Pivot>
             </div>
