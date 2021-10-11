@@ -1,16 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-.container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.eventList {
-   flex: 1;
-}
-
-.eventDetails {
-    flex: 1;
+namespace Cratis.Extensions.Dolittle.EventStore
+{
+    public record Claim(string Name, string Value);
 }

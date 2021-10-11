@@ -84,11 +84,3 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           yarn publish-version ${{ steps.release.outputs.version }}
-
-      - name: Commit any updated packages
-        if: always()
-        run: |
-          git config "user.email" "build@cratis.io"
-          git config "user.name" "Cratis Build"
-          git commit --author="github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" -am "Bumping versions in packages to ${{ steps.release.outputs.version }}"
-          git push origin main

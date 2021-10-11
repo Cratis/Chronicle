@@ -2,15 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using Cratis.Reflection;
 using Cratis.Strings;
 using Cratis.Types;
 using Dolittle.SDK.Artifacts;
 using Dolittle.SDK.Events;
-using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Events;
 using Newtonsoft.Json.Schema;
 using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
@@ -20,6 +19,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
     /// <summary>
     /// Represents an implementation of <see cref="ISchemaStore"/>.
     /// </summary>
+    [Singleton]
     public class SchemaStore : ISchemaStore
     {
         const string DatabaseName = "schema_store";
@@ -29,6 +29,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
         readonly IMongoDatabase _database;
         readonly IMongoCollection<EventSchemaMongoDB> _collection;
         readonly ITypes _types;
+        Dictionary<EventTypeId, Dictionary<uint, EventSchema>> _schemasByTypeAndGeneration = new();
 
         static SchemaStore()
         {
@@ -73,6 +74,14 @@ namespace Cratis.Extensions.Dolittle.Schemas
                 var schema = GenerateFor(eventType);
                 await Save(schema);
             }
+
+            var findResult = await _collection.FindAsync(_ => true);
+            var allSchemas = findResult.ToList();
+
+            _schemasByTypeAndGeneration = allSchemas.GroupBy(_ => _.EventType)
+                .ToDictionary(
+                    _ => (EventTypeId)_.Key,
+                    _ => _.ToDictionary(es => es.Generation, es => es.ToEventSchema()));
         }
 
         /// <inheritdoc/>
@@ -114,18 +123,31 @@ namespace Cratis.Extensions.Dolittle.Schemas
         }
 
         /// <inheritdoc/>
-        public async Task<EventSchema> GetFor(global::Dolittle.SDK.Events.EventType type, Generation? generation = default)
+        public async Task<EventSchema> GetFor(EventTypeId type, Generation? generation = default)
         {
+            generation ??= Generation.First;
+            if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
+            {
+                return _schemasByTypeAndGeneration[type][generation];
+            }
+
             var filter = GetFilterForSpecificSchema(type, generation);
             var result = await _collection.FindAsync(filter);
             var schemas = await result.ToListAsync();
+            _schemasByTypeAndGeneration[type] = schemas.ToDictionary(_ => _.Generation, _ => _.ToEventSchema());
 
             return schemas[0].ToEventSchema();
         }
 
         /// <inheritdoc/>
-        public async Task<bool> HasFor(global::Dolittle.SDK.Events.EventType type, Generation? generation = default)
+        public async Task<bool> HasFor(EventTypeId type, Generation? generation = default)
         {
+            generation ??= Generation.First;
+            if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
+            {
+                return true;
+            }
+
             var filter = GetFilterForSpecificSchema(type, generation);
             var result = await _collection.FindAsync(filter);
             var schemas = await result.ToListAsync();
@@ -140,7 +162,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
             // If this is a new generation, there must be an upcaster and downcaster associated with the schema
             // .. do not allow generational gaps
 
-            if (await HasFor(eventSchema.EventType, eventSchema.EventType.Generation)) return;
+            if (await HasFor(eventSchema.EventType.Id, eventSchema.EventType.Generation)) return;
             await _collection.InsertOneAsync(eventSchema.ToMongoDB()).ConfigureAwait(false);
         }
 
@@ -162,9 +184,9 @@ namespace Cratis.Extensions.Dolittle.Schemas
             }
         }
 
-        FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(global::Dolittle.SDK.Events.EventType type, Generation? generation) => Builders<EventSchemaMongoDB>.Filter.And(
-                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Id.Value),
-                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? type.Generation).Value)
+        FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, Generation? generation) => Builders<EventSchemaMongoDB>.Filter.And(
+                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),
+                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? Generation.First).Value)
                    );
     }
 }
