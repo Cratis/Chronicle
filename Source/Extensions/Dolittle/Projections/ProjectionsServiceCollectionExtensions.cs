@@ -3,6 +3,8 @@
 
 extern alias SDK;
 
+using Cratis.Extensions.Dolittle.Projections;
+
 namespace Microsoft.Extensions.DependencyInjection
 {
     /// <summary>
@@ -17,7 +19,8 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
         public static IServiceCollection AddDolittleProjections(this IServiceCollection services)
         {
-            services.AddSingleton<SDK::Cratis.Events.Projections.IProjections, Cratis.Extensions.Dolittle.Projections.Projections>();
+            services.AddSingleton<SDK::Cratis.Events.Projections.IProjections, Projections>();
+            services.AddSingleton(new ProjectionsReady());
             return services;
         }
     }

@@ -30,6 +30,7 @@ namespace Cratis.Events.Projections
             Model = model;
             Event = _subject.Where(_ => eventTypesWithKeyResolver.Any(et => et.EventType == _.Event.Type));
             _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
         }
 
         /// <inheritdoc/>
@@ -40,6 +41,9 @@ namespace Cratis.Events.Projections
 
         /// <inheritdoc/>
         public IObservable<EventContext> Event { get; }
+
+        /// <inheritdoc/>
+        public IEnumerable<EventType> EventTypes { get; }
 
         /// <inheritdoc/>
         public Changeset OnNext(Event @event, ExpandoObject initialState)
