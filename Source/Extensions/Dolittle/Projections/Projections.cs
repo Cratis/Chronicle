@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using Cratis.Concepts;
 using Cratis.Events.Projections;
 using Cratis.Events.Projections.Json;
+using Cratis.Events.Projections.MongoDB;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using Cratis.Types;
@@ -62,7 +63,8 @@ namespace Cratis.Extensions.Dolittle.Projections
                 var projection = projectionParser.Parse(json);
                 var provider = new ProjectionEventProvider(_mongoDBClientFactory);
                 var pipeline = new ProjectionPipeline(provider, projection);
-                var storage = new InMemoryProjectionStorage();
+                //var storage = new InMemoryProjectionStorage();
+                var storage = new MongoDBProjectionStorage(_mongoDBClientFactory);
                 pipeline.StoreIn(storage);
                 pipeline.Start();
             }

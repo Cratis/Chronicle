@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Reflection;
+using Cratis.Concepts;
 using Cratis.Extensions.Dolittle.EventStore;
 using Cratis.Extensions.MongoDB;
 using Dolittle.SDK.Events;
@@ -67,10 +68,13 @@ namespace Sample
                 var account = random.Next() % accountGuids.Length;
                 var content = eventTypeCreators[random.Next() % eventTypeCreators.Length](account);
                 var eventType = content.GetType().GetCustomAttribute<EventTypeAttribute>()!;
-                var contentAsJson = JsonConvert.SerializeObject(content);
+                var contentAsJson = JsonConvert.SerializeObject(content, new JsonConverter[] {
+                    new ConceptAsJsonConverter(),
+                    new ConceptAsDictionaryJsonConverter()
+                });
                 var contentAsBson = BsonDocument.Parse(contentAsJson);
 
-                occurred = occurred.Add(TimeSpan.FromMinutes(random.Next()%240));
+                occurred = occurred.Add(TimeSpan.FromMinutes(random.Next() % 240));
                 var @event = new Event((uint)i,
                     new ExecutionContext(
                         Guid.NewGuid(),
