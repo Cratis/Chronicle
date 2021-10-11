@@ -10,12 +10,19 @@ using MongoDB.Driver;
 
 namespace Cratis.Extensions.Dolittle.Projections
 {
+    /// <summary>
+    /// Represents an implementation of <see cref="IProjectionEventProvider"/> for the Dolittle event store.
+    /// </summary>
     public class ProjectionEventProvider : IProjectionEventProvider
     {
         readonly IMongoClient _client;
         readonly IMongoDatabase _database;
         readonly IMongoCollection<EventStore.Event> _eventLogCollection;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ProjectionEventProvider"/>.
+        /// </summary>
+        /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for connecting to MongoDB.</param>
         public ProjectionEventProvider(IMongoDBClientFactory mongoDBClientFactory)
         {
             var mongoUrlBuilder = new MongoUrlBuilder
@@ -29,6 +36,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             _eventLogCollection = _database.GetCollection<EventStore.Event>("event-log");
         }
 
+        /// <inheritdoc/>
         public IObservable<Event> ProvideFor(IProjection projection)
         {
             var subject = new ReplaySubject<Event>();
@@ -53,8 +61,13 @@ namespace Cratis.Extensions.Dolittle.Projections
             return subject;
         }
 
+        /// <inheritdoc/>
         public void Pause(IProjection projection) => throw new NotImplementedException();
+
+        /// <inheritdoc/>
         public void Resume(IProjection projection) => throw new NotImplementedException();
+
+        /// <inheritdoc/>
         public Task Rewind(IProjection projection) => throw new NotImplementedException();
     }
 }
