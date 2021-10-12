@@ -19,11 +19,11 @@ namespace Cratis.Events.Projections
         /// Initializes a new instance of the <see cref="Projection"/> class.
         /// </summary>
         /// <param name="identifier">The unique identifier of the projection.</param>
-        /// <param name="model">The target <see cref="IModel"/>.</param>
+        /// <param name="model">The target <see cref="Model"/>.</param>
         /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
         public Projection(
             ProjectionId identifier,
-            IModel model,
+            Model model,
             IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver)
         {
             Identifier = identifier;
@@ -37,7 +37,7 @@ namespace Cratis.Events.Projections
         public ProjectionId Identifier { get; }
 
         /// <inheritdoc/>
-        public IModel Model { get; }
+        public Model Model { get; }
 
         /// <inheritdoc/>
         public IObservable<EventContext> Event { get; }

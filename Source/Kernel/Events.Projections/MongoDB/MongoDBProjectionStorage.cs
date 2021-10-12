@@ -23,7 +23,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task<ExpandoObject> FindOrDefault(IModel model, object key)
+        public async Task<ExpandoObject> FindOrDefault(Model model, object key)
         {
             var collection = _database.GetCollection<BsonDocument>(model.Name);
             var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.ToString()));
@@ -36,7 +36,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(IModel model, object key, Changeset changeset)
+        public async Task ApplyChanges(Model model, object key, Changeset changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;

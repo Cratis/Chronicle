@@ -17,9 +17,9 @@ namespace Cratis.Events.Projections
         ProjectionId    Identifier { get; }
 
         /// <summary>
-        /// Gets the <see cref="IModel"/> the projection targets.
+        /// Gets the <see cref="Model"/> the projection targets.
         /// </summary>
-        IModel Model { get; }
+        Model Model { get; }
 
         /// <summary>
         /// Gets the <see cref="IObservable{T}">observable</see> <see cref="EventContext">event</see>.
