@@ -19,7 +19,7 @@ import { default as styles } from './EventLogs.module.scss';
 import { useDataFrom } from '../useDataFrom';
 import { EventLogInformation } from './EventLogInformation';
 import { EventHistogram } from './EventHistogram';
-import { Guid } from '@cratis/rudiments';
+import { Guid } from '@cratis/fundamentals';
 import { useState } from 'react';
 import { FilterBuilder } from './FilterBuilder';
 import { EventList } from './EventList';
