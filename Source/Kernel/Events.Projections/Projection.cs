@@ -43,7 +43,7 @@ namespace Cratis.Events.Projections
         public IObservable<EventContext> Event { get; }
 
         /// <inheritdoc/>
-        public IEnumerable<EventType> EventTypes { get; }
+        public IEnumerable<EventType> EventTypes { get; }
 
         /// <inheritdoc/>
         public Changeset OnNext(Event @event, ExpandoObject initialState)
@@ -56,7 +56,16 @@ namespace Cratis.Events.Projections
         /// <inheritdoc/>
         public KeyResolver GetKeyResolverFor(EventType eventType)
         {
+            ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];
+        }
+
+        void ThrowIfMissingKeyResolverForEventType(EventType eventType)
+        {
+            if (!_eventTypesToKeyResolver.ContainsKey(eventType))
+            {
+                throw new MissingKeyResolverForEventType(eventType);
+            }
         }
     }
 }
