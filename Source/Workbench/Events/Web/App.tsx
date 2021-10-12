@@ -7,6 +7,7 @@ import { EventTypes } from './Types/EventTypes';
 
 import { default as styles } from './App.module.scss';
 import { EventLogs } from './Exploring/EventLogs';
+import { Projections } from './Programmatic/Projections';
 
 export const App = () => {
     return (
@@ -25,6 +26,10 @@ export const App = () => {
 
                     <Route path="/events/eventlogs">
                         <EventLogs />
+                    </Route>
+
+                    <Route path="/programmatic/projections">
+                        <Projections/>
                     </Route>
                 </div>
             </div>
