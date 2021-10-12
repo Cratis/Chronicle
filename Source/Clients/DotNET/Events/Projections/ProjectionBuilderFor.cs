@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Newtonsoft.Json.Schema.Generation;
+using Newtonsoft.Json.Serialization;
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -9,10 +12,20 @@ namespace Cratis.Events.Projections
     /// <typeparam name="TModel">Type of model.</typeparam>
     public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     {
+        static readonly JSchemaGenerator _generator;
         readonly ProjectionId _identifier;
         readonly IEventTypes _eventTypes;
         string _modelName;
         readonly Dictionary<string, FromDefinition> _fromDefintions = new();
+
+        static ProjectionBuilderFor()
+        {
+            _generator = new JSchemaGenerator
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
+            _generator.GenerationProviders.Add(new StringEnumGenerationProvider());
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -48,7 +61,7 @@ namespace Cratis.Events.Projections
         {
             return new ProjectionDefinition(
                 _identifier,
-                new ModelDefinition(_modelName),
+                new ModelDefinition(_modelName, _generator.Generate(typeof(TModel)).ToString()),
                 _fromDefintions);
         }
     }

@@ -3,6 +3,7 @@
 
 using Cratis.Concepts;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Schema;
 
 namespace Cratis.Events.Projections.Json
 {
@@ -33,7 +34,7 @@ namespace Cratis.Events.Projections.Json
         public IProjection CreateFrom(ProjectionDefinition definition)
         {
             var eventsForProjection = definition.From.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)).ToArray();
-            var model = new Model(definition.Model.Name);
+            var model = new Model(definition.Model.Name, JSchema.Parse(definition.Model.Schema));
 
             var projection = new Projection(definition.Identifier, model, eventsForProjection);
             foreach (var (eventType, definitions) in definition.From)

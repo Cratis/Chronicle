@@ -15,5 +15,6 @@
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+      <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
     </ItemGroup>
 </Project>

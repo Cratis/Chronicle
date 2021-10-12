@@ -7,5 +7,6 @@ namespace Cratis.Events.Projections
     /// Represents the definition of a model used by a projection.
     /// </summary>
     /// <param name="Name">Name of the model.</param>
-    public record ModelDefinition(string Name);
+    /// <param name="Schema">the JSON schema for the model.</param>
+    public record ModelDefinition(string Name, string Schema);
 }

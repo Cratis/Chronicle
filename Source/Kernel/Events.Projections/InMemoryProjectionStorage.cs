@@ -14,7 +14,7 @@ namespace Cratis.Events.Projections
         readonly Dictionary<string, Dictionary<object, ExpandoObject>> _collections = new();
 
         /// <inheritdoc/>
-        public Task<ExpandoObject> FindOrDefault(IModel model, object key)
+        public Task<ExpandoObject> FindOrDefault(Model model, object key)
         {
             var collection = GetCollectionFor(model);
 
@@ -32,7 +32,7 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public Task ApplyChanges(IModel model, object key, Changeset changeset)
+        public Task ApplyChanges(Model model, object key, Changeset changeset)
         {
             var state = changeset.InitialState.Clone();
 
@@ -47,7 +47,7 @@ namespace Cratis.Events.Projections
             return Task.CompletedTask;
         }
 
-        Dictionary<object, ExpandoObject> GetCollectionFor(IModel model)
+        Dictionary<object, ExpandoObject> GetCollectionFor(Model model)
         {
             Dictionary<object, ExpandoObject> collection;
             if (_collections.ContainsKey(model.Name))
