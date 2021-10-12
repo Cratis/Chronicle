@@ -54,6 +54,18 @@ const groups: INavLinkGroup[] = [
                         route: '/events/streams'
                     }
                 ]
+            },
+            {
+                name: "Programmatic",
+                url: '',
+                links: [
+                    {
+                        name: "Projections",
+                        key: 'projections',
+                        url: '',
+                        route: '/programmatic/projections'
+                    }
+                ]
             }
 
         ]
