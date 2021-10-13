@@ -16,13 +16,13 @@ namespace Cratis.Events.Projections
         readonly FromDefinition _propertyMaps = new();
 
         /// <inheritdoc/>
-        public IFromBuilder<TModel, TEvent> UsingKey(Expression<Func<TEvent, object>> keyAccessor)
+        public IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
         {
             return this;
         }
 
         /// <inheritdoc/>
-        public IFromBuilder<TModel, TEvent> Set(Expression<Func<TModel, object>> modelPropertyAccessor, Expression<Func<TEvent, object>> eventPropertyAccessor)
+        public IFromBuilder<TModel, TEvent> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor, Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
         {
             _propertyMaps[modelPropertyAccessor.GetPropertyInfo().Name] = eventPropertyAccessor.GetPropertyInfo().Name;
             return this;
