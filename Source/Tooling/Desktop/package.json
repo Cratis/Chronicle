@@ -20,7 +20,8 @@
         "test": "mocha",
         "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
         "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
-        "ci": "yarn clean && yarn lint:ci && tsc -b main && tsc -b renderer && yarn test"
+        "ci": "yarn clean && yarn lint:ci && tsc -b main && tsc -b renderer && yarn test",
+        "up": "ncu \\!'@cratis/*'"
     },
     "nodemonConfig": {
         "restartable": "rs",

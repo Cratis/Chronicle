@@ -20,7 +20,8 @@
         "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
         "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
         "test": "mocha",
-        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
+        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
+        "up": "ncu \\!'@cratis/*'"
     },
     "dependencies": {
         "@cratis/typescript": "1.0.0",
