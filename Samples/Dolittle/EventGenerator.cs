@@ -63,7 +63,7 @@ namespace Sample
                 (_) => new WithdrawalFromDebitAccountPerformed(41)
             };
 
-            for (var i = 0; i < 100; i++)
+            for (var i = 0; i < 1000; i++)
             {
                 var account = random.Next() % accountGuids.Length;
                 var content = eventTypeCreators[random.Next() % eventTypeCreators.Length](account);
