@@ -1,42 +1,54 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Extensions.Dolittle.Schemas;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Schema;
+extern alias SDK;
+
+using System.Reflection;
+using Cratis.Reflection;
+using Cratis.Types;
+using Dolittle.SDK.Events;
+using EventType = SDK::Cratis.Events.EventType;
+using EventTypeId = SDK::Cratis.Events.EventTypeId;
 
 namespace Cratis.Extensions.Dolittle
 {
-    [Route("/api/events/types")]
-    public class EventTypes : Controller
+    /// <summary>
+    /// Represents an implementation of <see cref="IEventTypes"/> for Dolittle.
+    /// </summary>
+    public class EventTypes : SDK::Cratis.Events.IEventTypes
     {
-        readonly ISchemaStore _schemaStore;
+        readonly IDictionary<EventType, Type> _typesByEventType;
 
-        public EventTypes(ISchemaStore schemaStore)
+        /// <summary>
+        /// Initializes a new instance of <see cref="EventTypes"/>.
+        /// </summary>
+        /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
+        public EventTypes(ITypes types)
         {
-            _schemaStore = schemaStore;
+            _typesByEventType = types.All
+                            .Where(_ => _.HasAttribute<EventTypeAttribute>())
+                            .ToDictionary(_ =>
+                            {
+                                var eventType = _.GetCustomAttribute<EventTypeAttribute>()!;
+                                return new EventType(eventType.EventType.Id.Value, eventType.EventType.Generation.Value);
+                            }, _ => _);
+
+            All = _typesByEventType.Keys.ToArray();
         }
 
-        [HttpGet]
-        public async Task<IEnumerable<EventType>> AllEvenTtypes()
-        {
-            var schemas = await _schemaStore.GetLatestForAllEventTypes();
+        /// <inheritdoc/>
+        public IEnumerable<EventType> All { get; }
 
-            return schemas.Select(_ =>
-                new EventType(
-                    _.EventType.Id.ToString(),
-                    _.Schema.GetDisplayName(),
-                    _.Schema.GetGeneration()));
-        }
+        /// <inheritdoc/>
+        public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.EventTypeId == eventTypeId);
 
-        [HttpGet("schemas/{eventTypeId}")]
-        public async Task<IEnumerable<JsonDocument>> GenerationSchemasForType(
-            [FromRoute] string eventTypeId)
-        {
-            var schemas = await _schemaStore.GetAllGenerationsForEventType(new global::Dolittle.SDK.Events.EventType(eventTypeId, 1));
-            return schemas.Select(_ => JsonDocument.Parse(_.Schema.ToString()));
-        }
+        /// <inheritdoc/>
+        public EventTypeId GetEventTypeIdFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key.EventTypeId;
+
+        /// <inheritdoc/>
+        public bool HasFor(Type clrType) => _typesByEventType.Any(_ => _.Value == clrType);
+
+        /// <inheritdoc/>
+        public Type GetClrTypeFor(EventTypeId eventTypeId) => _typesByEventType.Single(_ => _.Key.EventTypeId == eventTypeId).Value;
     }
 }

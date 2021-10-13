@@ -18,7 +18,14 @@ namespace Cratis.Extensions.Autofac
             var conventionBasedTypes = ContainerBuilderExtensions.Types!.All.Where(_ =>
             {
                 var interfaces = _.GetInterfaces();
-                if (interfaces.Length > 0) return interfaces.Any(i => i.Namespace == _.Namespace && i.Name == $"I{_.Name}");
+                if (interfaces.Length > 0)
+                {
+                    var conventionInterface = interfaces.SingleOrDefault(i => i.Namespace == _.Namespace && i.Name == $"I{_.Name}");
+                    if (conventionInterface != default)
+                    {
+                        return ContainerBuilderExtensions.Types!.All.Count(type => type.HasInterface(conventionInterface)) == 1;
+                    }
+                }
                 return false;
             });
 

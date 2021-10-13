@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-//new HostBuilder().ConfigureWebHostDefaults()
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Sample;
@@ -20,7 +19,7 @@ var builder = WebApplication.CreateBuilder(args)
                             .UseCratis()
                             .UseCratisWorkbench();
 var app = builder.Build();
-app.AddCratisWorkbench();
+app.UseCratisWorkbench();
 
 if (app.Environment.IsDevelopment())
 {
