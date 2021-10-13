@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Linq.Expressions;
 using System.Reactive.Subjects;
 using Cratis.Events.Projections;
 using Cratis.Extensions.MongoDB;
@@ -18,12 +19,16 @@ namespace Cratis.Extensions.Dolittle.Projections
         readonly IMongoClient _client;
         readonly IMongoDatabase _database;
         readonly IMongoCollection<EventStore.Event> _eventLogCollection;
+        readonly IProjectionPositions _projectionPositions;
 
         /// <summary>
         /// Initializes a new instance of <see cref="ProjectionEventProvider"/>.
         /// </summary>
         /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for connecting to MongoDB.</param>
-        public ProjectionEventProvider(IMongoDBClientFactory mongoDBClientFactory)
+        /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for maintaining positions.</param>
+        public ProjectionEventProvider(
+            IMongoDBClientFactory mongoDBClientFactory,
+            IProjectionPositions projectionPositions)
         {
             var mongoUrlBuilder = new MongoUrlBuilder
             {
@@ -34,30 +39,14 @@ namespace Cratis.Extensions.Dolittle.Projections
             _client = mongoDBClientFactory.Create(settings);
             _database = _client.GetDatabase("event_store");
             _eventLogCollection = _database.GetCollection<EventStore.Event>("event-log");
+            _projectionPositions = projectionPositions;
         }
 
         /// <inheritdoc/>
         public IObservable<Event> ProvideFor(IProjection projection)
         {
             var subject = new ReplaySubject<Event>();
-            var events = _eventLogCollection.Find(_ => true).ToList();
-            foreach (var @event in events)
-            {
-                var eventType = new EventType(@event.Metadata.TypeId.ToString());
-                if (!projection.EventTypes.Any(_ => _ == eventType))
-                {
-                    continue;
-                }
-
-                var content = BsonSerializer.Deserialize<ExpandoObject>(@event.Content);
-                subject.OnNext(
-                    new Event(
-                        @event.Id,
-                        eventType,
-                        @event.Metadata.Occurred,
-                        @event.Metadata.EventSource.ToString(),
-                        content));
-            }
+            Task.Run(() => StartProvidingFor(projection, subject));
             return subject;
         }
 
@@ -69,5 +58,48 @@ namespace Cratis.Extensions.Dolittle.Projections
 
         /// <inheritdoc/>
         public Task Rewind(IProjection projection) => throw new NotImplementedException();
+
+        async Task StartProvidingFor(IProjection projection, ReplaySubject<Event> subject)
+        {
+            try
+            {
+                var offset = await _projectionPositions.GetFor(projection);
+                var offsetFilter = Builders<EventStore.Event>.Filter.Gt(_ => _.Id, offset.Value);
+                var eventTypeFilters = projection.EventTypes.Select(_ => Builders<EventStore.Event>.Filter.Eq(_ => _.Metadata.TypeId, Guid.Parse(_.Value))).ToArray();
+                var filter = Builders<EventStore.Event>.Filter.And(
+                    offsetFilter,
+                    Builders<EventStore.Event>.Filter.Or(eventTypeFilters)
+                );
+
+                var cursor = await _eventLogCollection.FindAsync(
+                    filter,
+                    new()
+                    {
+                        Sort = Builders<EventStore.Event>.Sort.Ascending(_ => _.Id)
+                    });
+
+                while (await cursor.MoveNextAsync())
+                {
+                    foreach (var @event in cursor.Current)
+                    {
+                        var eventType = new EventType(@event.Metadata.TypeId.ToString());
+                        var content = BsonSerializer.Deserialize<ExpandoObject>(@event.Content);
+                        subject.OnNext(
+                            new Event(
+                                @event.Id,
+                                eventType,
+                                @event.Metadata.Occurred,
+                                @event.Metadata.EventSource.ToString(),
+                                content));
+
+                        await _projectionPositions.Save(projection, @event.Id);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
     }
 }

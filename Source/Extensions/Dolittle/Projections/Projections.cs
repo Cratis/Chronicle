@@ -61,7 +61,8 @@ namespace Cratis.Extensions.Dolittle.Projections
             {
                 var json = JsonConvert.SerializeObject(projectionDefinition, converters);
                 var projection = projectionParser.Parse(json);
-                var provider = new ProjectionEventProvider(_mongoDBClientFactory);
+                var projectionPositions = new ProjectionPositions(_mongoDBClientFactory);
+                var provider = new ProjectionEventProvider(_mongoDBClientFactory, projectionPositions);
                 var pipeline = new ProjectionPipeline(provider, projection);
                 //var storage = new InMemoryProjectionStorage();
                 var storage = new MongoDBProjectionStorage(_mongoDBClientFactory);
