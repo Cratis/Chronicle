@@ -1,0 +1,42 @@
+{
+    "identifier": "22368fab-ee3c-4cf3-9320-60cfd8f17536",
+    "model": {
+        "name": "debitAccount",
+        "schema": {
+            "title": "debitAccount",
+            "description": "",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description":""
+                },
+                "owner": {
+                    "type": "string",
+                    "description":""
+                },
+                "parent": {
+                    "type": "string",
+                    "description":""
+                },
+                "balance": {
+                    "type": "number",
+                    "description":""
+                }
+            }
+        }
+    },
+    "from": {
+        "8a109d92-aa6a-4aee-8852-f8f2528da1fc": {
+            "name": "name",
+            "owner": "owner",
+            "parent": "parent"
+        },
+        "adaab3e5-f797-4335-80d4-06758773f7e1": {
+            "balance": "amount"
+        },
+        "507a71d9-862f-4615-b8e8-2427d9568373": {
+            "balance": "amount"
+        }
+    }
+}

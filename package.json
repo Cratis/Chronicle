@@ -9,7 +9,8 @@
         "lint": "node ./run-task-on-workspaces.js lint",
         "test": "node ./run-task-on-workspaces.js test",
         "ci": "node ./run-task-on-workspaces.js ci",
-        "publish-version": "node ./run-task-on-workspaces.js publish-version $*"
+        "publish-version": "node ./run-task-on-workspaces.js publish-version $*",
+        "up": "node ./run-task-on-workspaces.js up"
     },
     "devDependencies": {
         "edit-json-file": "1.6.0",

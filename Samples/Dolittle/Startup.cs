@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Extensions.Dolittle;
+using Cratis.Extensions.Dolittle.Workbench;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
@@ -16,7 +16,10 @@ namespace Sample
             services.AddRazorPages();
             services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(typeof(Startup).Assembly));
             services.AddSingleton(Types)
+                .AddProjections()
+                .AddDolittleEventTypes()
                 .AddDolittleSchemaStore("localhost", 27017)
+                .AddDolittleProjections()
                 .AddCratisWorkbench(_ => _.UseDolittle());
         }
 
@@ -25,6 +28,7 @@ namespace Sample
             app
                 .UseRouting()
                 .UseDolittleSchemaStore()
+                .UseDolittleProjections()
                 .UseCratisWorkbench();
         }
     }
