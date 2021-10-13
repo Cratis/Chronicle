@@ -12,7 +12,8 @@
         "clean": "tsc -b --clean",
         "lint": "eslint '**/*.{js,ts,tsx}' --quiet --fix",
         "lint:ci": "eslint '**/*.{js,ts,tsx}' --quiet",
-        "ci": "yarn clean && yarn lint:ci && yarn build"
+        "ci": "yarn clean && yarn lint:ci && yarn build",
+        "up": "ncu \\!'@cratis/*'"
     },
     "dependencies": {
         "@cratis/fluentui": "1.0.0",

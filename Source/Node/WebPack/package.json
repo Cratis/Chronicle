@@ -24,7 +24,9 @@
     "files": [
         "**/*.js"
     ],
-    "scripts": {},
+    "scripts": {
+        "up": "ncu \\!'@cratis/*'"
+    },
     "dependencies": {
         "@cratis/typescript": "1.0.0",
         "clean-webpack-plugin": "4.0.0",
