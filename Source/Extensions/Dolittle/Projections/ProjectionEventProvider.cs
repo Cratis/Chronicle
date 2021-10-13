@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Linq.Expressions;
 using System.Reactive.Subjects;
 using Cratis.Events.Projections;
 using Cratis.Extensions.MongoDB;
