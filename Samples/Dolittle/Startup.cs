@@ -16,9 +16,9 @@ namespace Sample
             services.AddRazorPages();
             services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(typeof(Startup).Assembly));
             services.AddSingleton(Types)
+                .AddProjections()
                 .AddDolittleEventTypes()
                 .AddDolittleSchemaStore("localhost", 27017)
-                .AddProjections()
                 .AddDolittleProjections()
                 .AddCratisWorkbench(_ => _.UseDolittle());
         }
