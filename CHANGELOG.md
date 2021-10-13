@@ -1,3 +1,15 @@
+# [v2.8.0] - 2021-10-13 [PR: #34](https://github.com/Cratis/cratis/pull/34)
+
+### Added
+
+- Kernel projection engine supporting From statements and simple property mapping.
+- .NET Client support for describing projections.
+- JSON support for describing projections.
+- MongoDB support for materializing projections into documents.
+- InMemory support for materializing projections (completely black box for now - content not accessible).
+- Dolittle support for providing events from Dolittles MongoDB event-log .
+
+
 # [v2.7.0] - 2021-10-4 [PR: #32](https://github.com/Cratis/cratis/pull/32)
 
 ### Added
