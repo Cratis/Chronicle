@@ -42,5 +42,6 @@
         <ProtobufNet>3.0.101</ProtobufNet>
         <ProtobufNetGrpc>1.0.152</ProtobufNetGrpc>
         <ServiceModelPrimitives>4.8.1</ServiceModelPrimitives>
+        <Humanizer>2.11.10</Humanizer>
     </PropertyGroup>
 </Project>
