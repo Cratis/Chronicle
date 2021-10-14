@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Strings;
+using Humanizer;
 using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
 
@@ -36,7 +38,7 @@ namespace Cratis.Events.Projections
         {
             _identifier = identifier;
             _eventTypes = eventTypes;
-            _modelName = typeof(TModel).Name;
+            _modelName = typeof(TModel).Name.Pluralize().ToCamelCase();
         }
 
         /// <inheritdoc/>
