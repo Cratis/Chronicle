@@ -18,6 +18,36 @@ namespace Cratis.Events.Projections
         static readonly PropertyInfo _itemProperty = typeof(IDictionary<string, object>).GetProperty("Item")!;
 
         /// <summary>
+        /// Create a <see cref="PropertyMapper"/> that can copy the content of the events event source id from within the content of an event to a target property.
+        /// </summary>
+        /// <param name="targetProperty">Target property.</param>
+        /// <returns>A new <see cref="PropertyMapper"/>.</returns>
+        public static PropertyMapper FromEventSourceId(string targetProperty)
+        {
+            var targetPath = targetProperty.Split('.');
+
+            return (Event @event, ExpandoObject target) =>
+            {
+                var currentTarget = target as IDictionary<string, object>;
+                for (var propertyIndex = 0; propertyIndex < targetPath.Length - 1; propertyIndex++)
+                {
+                    var property = targetPath[propertyIndex];
+                    if (!currentTarget.ContainsKey(property))
+                    {
+                        var nested = new ExpandoObject();
+                        currentTarget[property] = nested;
+                        currentTarget = nested as IDictionary<string, object>;
+                    }
+                    else
+                    {
+                        currentTarget = ((ExpandoObject)currentTarget[property])!;
+                    }
+                }
+                currentTarget[targetPath[^1]] = @event.EventSourceId;
+            };
+        }
+
+        /// <summary>
         /// Create a <see cref="PropertyMapper"/> that can copy the content of a property from within the content of an event to a target property.
         /// </summary>
         /// <param name="sourceProperty">Source property.</param>
