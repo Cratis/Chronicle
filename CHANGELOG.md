@@ -1,3 +1,11 @@
+# [v2.8.2] - 2021-10-14 [PR: #38](https://github.com/Cratis/cratis/pull/38)
+
+### Fixed
+
+- Making naming convention consistent for MongoDB collections referenced by type. We need to improve this even more, as described in #37.
+
+
+
 # [v2.8.1] - 2021-10-14 [PR: #36](https://github.com/Cratis/cratis/pull/36)
 
 ### Fixed
