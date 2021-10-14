@@ -10,5 +10,6 @@
 
     <ItemGroup>
       <PackageReference Include="MongoDB.Driver" Version="$(MongoDB)" />
+      <PackageReference Include="Humanizer" Version="$(Humanizer)" />
     </ItemGroup>
 </Project>
