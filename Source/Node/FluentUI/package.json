@@ -12,7 +12,8 @@
         "**/*.ts"
     ],
     "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "module": "dist/index.js",
+    "typings": "dist/index.d.ts",
     "scripts": {
         "prepublish": "yarn build",
         "clean": "tsc -b --clean",
