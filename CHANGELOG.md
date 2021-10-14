@@ -1,3 +1,10 @@
+# [v2.9.1] - 2021-10-14 [PR: #41](https://github.com/Cratis/cratis/pull/41)
+
+### Fixed
+
+- Failsafe for the MongoDB serializer of ConceptAs<Guid> - if the Guid is stored as string, we'll try and parse it as a string representation of the Guid.
+
+
 # [v2.9.0] - 2021-10-14 [PR: #40](https://github.com/Cratis/cratis/pull/40)
 
 ### Added
