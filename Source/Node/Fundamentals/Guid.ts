@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { typeGuard } from '@cratis/fundamentals';
 import { IEquatable } from './IEquatable';
 
 const lookUpTable: string[] = [];
@@ -111,8 +110,7 @@ export class Guid implements IEquatable {
      * @inheritdoc
      */
     equals(other: any): boolean {
-        if (typeGuard(other, Guid) || typeGuard(other, 'string')) return Guid.as(other).toString() === this.toString();
-        return false;
+        return Guid.as(other).toString() === this.toString();
     }
 
     /**
