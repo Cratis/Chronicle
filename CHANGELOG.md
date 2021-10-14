@@ -1,3 +1,10 @@
+# [v2.8.1] - 2021-10-14 [PR: #36](https://github.com/Cratis/cratis/pull/36)
+
+### Fixed
+
+- [TS] Removing internal complexity that is not needed.
+
+
 # [v2.8.0] - 2021-10-13 [PR: #34](https://github.com/Cratis/cratis/pull/34)
 
 ### Added
