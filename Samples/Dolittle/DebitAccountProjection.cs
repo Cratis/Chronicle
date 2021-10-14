@@ -13,14 +13,13 @@ namespace Sample
             builder
                 .ModelName("my_model")
                 .From<DebitAccountOpened>(_ => _
-                    .Set(_ => _.Name, _ => _.Name)
-                    .Set(_ => _.Owner, _ => _.Owner)
-                    .Set(_ => _.Parent, _ => _.Parent))
+                    .Set(_ => _.Name).To(_ => _.Name)
+                    .Set(_ => _.Owner).To(_ => _.Owner)
+                    .Set(_ => _.Parent).To(_ => _.Parent))
                 .From<DepositToDebitAccountPerformed>(_ => _
-                    .Set(_ => _.Balance, _ => _.Amount));
+                    .Set(_ => _.Balance).To(_ => _.Amount));
         }
     }
-
 
     // public class ProjectionTesting : IPerformBootProcedure
     // {

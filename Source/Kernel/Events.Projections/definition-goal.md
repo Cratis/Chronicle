@@ -33,8 +33,9 @@ Known types:
     },
     "from": {
         "25d74c03-2542-4d52-bb53-4dce6ada24c6": {
-            "someProperty": "$event.someProperty",
-            "formattedProperty": "{{$event.firstName}} {{$event.lastName}}",
+            "id": "$eventSourceId",
+            "someProperty": "someProperty",
+            "formattedProperty": "{{firstName}} {{lastName}}",
             "incrementedProperty": "$increment",
             "addedProperty": "$add($event.someValue)"
         },
@@ -88,21 +89,22 @@ public class MyProjection : IProjectionFor<MyModel>
             .ModelName("<optional name>")
             .From<SomeEvent>(_ => _
                 .UsingKey(@event => @event.Id)  // Default to using the EventSourceId as the key, if not specified
-                .Set(model => model.SomeProperty, @event => @event.SomeProperty))
+                .Set(model => model.Id).ToEventSourceId()
+                .Set(model => model.SomeProperty).To(@event => @event.SomeProperty))
             .From<SomeOtherEvent>(_ => _
-                .Set(model => model.SomeOtherProperty, @event => @event.SomeOtherProperty))
+                .Set(model => model.SomeOtherProperty).To(@event => @event.SomeOtherProperty))
             .RemovedWith<SomeDeleteEvent>(_ => _
                 .UsingKey(@event => @event.Id)) // Default to using the EventSourceId as the key, if not specified
             .Join<ThirdEvent>(_ => _
                 .On(model => model.RelationProperty)
                 .UsingKey(@event => @event.Id) // Default to using the EventSourceId as the key, if not specified
-                .Set(model => model.ThirdProperty, @event => @event.PropertyFromTheThirdEvent))
+                .Set(model => model.ThirdProperty).To(@event => @event.PropertyFromTheThirdEvent))
             .Children<SomeChildModel>(_ => _
                 .StoredIn(model => model.Children)
                 .IdentifiedBy(childModel => childModel.Id))
                 .From<ChildAdded>(cb => cb
                     .UsingKey(@event => @event.Id) // Default to using the EventSourceId as the key, if not specified
-                    .Set(childMOdel => childModel.Property, @event => @event.Property))
+                    .Set(childMOdel => childModel.Property).To(@event => @event.Property))
                 .RemovedWith<ChildRemoved>(cb => cb
                     .UsingKey(@event => @event.Id)) // Default to using the EventSourceId as the key, if not specified
     }
