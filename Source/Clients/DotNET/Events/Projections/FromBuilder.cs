@@ -13,7 +13,8 @@ namespace Cratis.Events.Projections
     /// <typeparam name="TEvent">Event to build for.</typeparam>
     public class FromBuilder<TModel, TEvent> : IFromBuilder<TModel, TEvent>
     {
-        readonly FromDefinition _propertyMaps = new();
+        readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
+
 
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
@@ -22,16 +23,14 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IFromBuilder<TModel, TEvent> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor, Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
+        public ISetBuilder<TModel, TEvent, TProperty> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
         {
-            _propertyMaps[modelPropertyAccessor.GetPropertyInfo().Name] = eventPropertyAccessor.GetPropertyInfo().Name;
-            return this;
+            var setBuilder = new SetBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyInfo().Name);
+            _propertyExpressions.Add(setBuilder);
+            return setBuilder;
         }
 
         /// <inheritdoc/>
-        public FromDefinition Build()
-        {
-            return _propertyMaps;
-        }
+        public FromDefinition Build() => new(_propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()));
     }
 }

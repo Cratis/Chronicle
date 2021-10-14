@@ -60,6 +60,13 @@ namespace Sample
             _collection = database.GetCollection<Event>("event-log");
         }
 
+        [HttpGet("debitaccountopened")]
+        public async Task GenerateDebitAccountOpened()
+        {
+            var count = await _collection.CountDocumentsAsync(FilterDefinition<Event>.Empty);
+            await InsertNewEvent((uint)count + 1, DateTimeOffset.UtcNow, 0);
+        }
+
         [HttpGet("single")]
         public async Task GenerateSingle()
         {
@@ -81,10 +88,10 @@ namespace Sample
             }
         }
 
-        async Task InsertNewEvent(uint sequenceNumber, DateTimeOffset occurred)
+        async Task InsertNewEvent(uint sequenceNumber, DateTimeOffset occurred, int? eventTypeToCreate = default)
         {
             var account = _random.Next() % _accountGuids.Length;
-            var content = _eventTypeCreators[_random.Next() % _eventTypeCreators.Length](account);
+            var content = _eventTypeCreators[eventTypeToCreate ?? _random.Next() % _eventTypeCreators.Length](account);
             var eventType = content.GetType().GetCustomAttribute<EventTypeAttribute>()!;
             var contentAsJson = JsonConvert.SerializeObject(content, new JsonConverter[] {
                     new ConceptAsJsonConverter(),
