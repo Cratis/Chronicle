@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Extensions.MongoDB;
+using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -51,11 +52,11 @@ namespace Cratis.Events.Projections.MongoDB
                         Console.WriteLine($"Changes ; {propertyDifference.MemberPath} - '{propertyDifference.Changed}'");
                         if (updateBuilder != default)
                         {
-                            updateBuilder = updateBuilder.Set(propertyDifference.MemberPath, propertyDifference.Changed);
+                            updateBuilder = updateBuilder.Set(propertyDifference.MemberPath.ToCamelCase(), propertyDifference.Changed);
                         }
                         else
                         {
-                            updateBuilder = updateDefinitionBuilder.Set(propertyDifference.MemberPath, propertyDifference.Changed);
+                            updateBuilder = updateDefinitionBuilder.Set(propertyDifference.MemberPath.ToCamelCase(), propertyDifference.Changed);
                         }
                         hasChanges = true;
                     }
