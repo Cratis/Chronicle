@@ -1,3 +1,10 @@
+# [v2.8.3] - 2021-10-14 [PR: #39](https://github.com/Cratis/cratis/pull/39)
+
+### Fixed
+
+- NPM packages now have the correct **main**, **module** and **typings** reference set.
+- Fixing **tsconfig.json** files to have the correct **outDir**, making the typescript compiler output to the correct path structure within **dist** folder of the packages.
+
 # [v2.8.2] - 2021-10-14 [PR: #38](https://github.com/Cratis/cratis/pull/38)
 
 ### Fixed
