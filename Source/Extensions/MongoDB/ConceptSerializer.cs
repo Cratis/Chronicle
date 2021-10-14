@@ -132,6 +132,10 @@ namespace Cratis.Extensions.MongoDB
 
             if (valueType == typeof(Guid))
             {
+                if (bsonReader.GetCurrentBsonType() == BsonType.String)
+                {
+                    return Guid.Parse(bsonReader.ReadString());
+                }
                 var binaryData = bsonReader.ReadBinaryData();
                 return binaryData.ToGuid();
             }
