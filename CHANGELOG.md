@@ -1,3 +1,10 @@
+# [v2.9.0] - 2021-10-14 [PR: #40](https://github.com/Cratis/cratis/pull/40)
+
+### Added
+
+- Making the projection API a bit more flexible with regards to building set operations.
+- One can now map properties to the event source id.
+
 # [v2.8.3] - 2021-10-14 [PR: #39](https://github.com/Cratis/cratis/pull/39)
 
 ### Fixed
