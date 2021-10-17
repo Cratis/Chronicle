@@ -5,23 +5,28 @@ using System.Dynamic;
 
 namespace Cratis.Events.Projections.for_PropertyMappers
 {
-    public class when_mapping_from_event_content_top_level_property_to_target_top_level_property : Specification
+    public class when_mapping_to_a_deep_nested_property_from_an_event_value_provider : Specification
     {
         PropertyMapper property_mapper;
         Event @event;
         ExpandoObject result;
+        Event provided_event;
 
         void Establish()
         {
-            result = new();
             dynamic content = new ExpandoObject();
-            content.SourceString = "Forty two";
+            result = new();
             @event = new Event(0, "02405794-91e7-4e4f-8ad1-f043070ca297", DateTimeOffset.UtcNow, "2f005aaf-2f4e-4a47-92ea-63687ef74bd4", content);
-            property_mapper = PropertyMappers.FromEventContent("SourceString", "TargetString");
+            property_mapper = PropertyMappers.FromEventValueProvider("deep.nested.property", _ =>
+            {
+                provided_event = _;
+                return 42;
+            });
         }
 
         void Because() => property_mapper(@event, result);
 
-        [Fact] void should_copy_content_of_property_from_source_to_target() => ((string)((dynamic)result).TargetString).ShouldEqual("Forty two");
+        [Fact] void should_set_value_in_expected_property() => ((object)((dynamic)result).deep.nested.property).ShouldEqual(42);
+        [Fact] void should_pass_the_event_to_the_value_provider() => provided_event.ShouldEqual(@event);
     }
 }
