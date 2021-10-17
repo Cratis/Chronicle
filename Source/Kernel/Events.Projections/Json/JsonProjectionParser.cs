@@ -42,14 +42,18 @@ namespace Cratis.Events.Projections.Json
                 var propertyMappers = new List<PropertyMapper>();
                 foreach (var (target, source) in definitions)
                 {
+                    EventValueProvider? valueProvider = null;
+
                     if (source == "$eventSourceId")
                     {
-                        propertyMappers.Add(PropertyMappers.FromEventSourceId(target));
+                        valueProvider = EventValueProviders.FromEventSourceId();
                     }
                     else
                     {
-                        propertyMappers.Add(PropertyMappers.FromEventContent(source, target));
+                        valueProvider = EventValueProviders.FromEventContent(source);
                     }
+
+                    PropertyMappers.FromEventValueProvider(target, valueProvider);
                 }
 
                 projection.Event.From(eventType).Project(propertyMappers);
