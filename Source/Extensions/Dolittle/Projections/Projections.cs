@@ -23,6 +23,7 @@ namespace Cratis.Extensions.Dolittle.Projections
     public class Projections : SDK::Cratis.Events.Projections.Projections
     {
         readonly IMongoDBClientFactory _mongoDBClientFactory;
+        readonly JsonProjectionParser _projectionParser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -30,15 +31,17 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
         /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-        /// <param name="projectionsReady"></param>
+        /// <param name="projectionParser"><see cref="JsonProjectionParser"/> for parsing JSON projection definitions.</param>
+        /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
         public Projections(
             IEventTypes eventTypes,
             IMongoDBClientFactory mongoDBClientFactory,
             ITypes types,
+            JsonProjectionParser projectionParser,
             ProjectionsReady projectionsReady) : base(eventTypes, types)
         {
             _mongoDBClientFactory = mongoDBClientFactory;
-
+            _projectionParser = projectionParser;
             projectionsReady.IsReady.Subscribe(_ => ActualStartAll());
         }
 
@@ -49,8 +52,6 @@ namespace Cratis.Extensions.Dolittle.Projections
 
         void ActualStartAll()
         {
-            var projectionParser = new JsonProjectionParser();
-
             var converters = new JsonConverter[]
             {
                 new ConceptAsJsonConverter(),
@@ -60,7 +61,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             foreach (var projectionDefinition in _projections)
             {
                 var json = JsonConvert.SerializeObject(projectionDefinition, converters);
-                var projection = projectionParser.Parse(json);
+                var projection = _projectionParser.Parse(json);
                 var projectionPositions = new ProjectionPositions(_mongoDBClientFactory);
                 var provider = new ProjectionEventProvider(_mongoDBClientFactory, projectionPositions);
                 var pipeline = new ProjectionPipeline(provider, projection);
