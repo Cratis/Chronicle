@@ -3,15 +3,15 @@
 
 namespace Cratis.Events.Projections.Expressions.for_EventValueProviderExpressionResolvers
 {
-    public class when_asking_can_resolve_for_unknown_expression : Specification
+    public class when_trying_to_resolve_unknown_expression : Specification
     {
         EventValueProviderExpressionResolvers resolvers;
-        bool result;
+        Exception result;
 
         void Establish() => resolvers = new EventValueProviderExpressionResolvers();
 
-        void Because() => result = resolvers.CanResolve("$randomUnknownExpression");
+        void Because() => result = Catch.Exception(() => resolvers.Resolve("$randomUnknownExpression"));
 
-        [Fact] void should_not_be_able_to_resolve() => result.ShouldBeFalse();
+        [Fact] void should_throw_unsupported_event_value_expression() => result.ShouldBeOfExactType<UnsupportedEventValueExpression>();
     }
 }
