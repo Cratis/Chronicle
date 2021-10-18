@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Newtonsoft.Json.Schema;
 
-namespace Cratis.Events.Projections.for_Projections
+namespace Cratis.Events.Projections.for_Projection
 {
     public class when_next_event_is_of_interest : Specification
     {

@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json.Schema;
 
-namespace Cratis.Events.Projections.for_Projections
+namespace Cratis.Events.Projections.for_Projection
 {
     public class when_getting_key_resolver_for_unknown_event_type : Specification
     {
