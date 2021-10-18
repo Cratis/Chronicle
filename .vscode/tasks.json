@@ -31,6 +31,10 @@
             "label": "build dolittle sample",
             "command": "dotnet",
             "type": "process",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "args": [
                 "build",
                 "--no-restore",
