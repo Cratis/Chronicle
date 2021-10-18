@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Concepts;
+using Cratis.Events.Projections.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
 
@@ -12,6 +13,17 @@ namespace Cratis.Events.Projections.Json
     /// </summary>
     public class JsonProjectionParser
     {
+        readonly IEventValueProviderExpressionResolvers _eventValueExpressionResolvers;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JsonProjectionParser"/>.
+        /// </summary>
+        /// <param name="eventValueExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event value expressions.</param>
+        public JsonProjectionParser(IEventValueProviderExpressionResolvers eventValueExpressionResolvers)
+        {
+            _eventValueExpressionResolvers = eventValueExpressionResolvers;
+        }
+
         /// <summary>
         /// Parse a JSON string definition and produce a <see cref="IProjection"/>.
         /// </summary>
@@ -42,17 +54,7 @@ namespace Cratis.Events.Projections.Json
                 var propertyMappers = new List<PropertyMapper>();
                 foreach (var (target, source) in definitions)
                 {
-                    EventValueProvider? valueProvider = null;
-
-                    if (source == "$eventSourceId")
-                    {
-                        valueProvider = EventValueProviders.FromEventSourceId();
-                    }
-                    else
-                    {
-                        valueProvider = EventValueProviders.FromEventContent(source);
-                    }
-
+                    var valueProvider = _eventValueExpressionResolvers.Resolve(source);
                     PropertyMappers.FromEventValueProvider(target, valueProvider);
                 }
 
