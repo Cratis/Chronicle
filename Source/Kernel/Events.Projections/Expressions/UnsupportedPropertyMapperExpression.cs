@@ -6,12 +6,12 @@ namespace Cratis.Events.Projections.Expressions
     /// <summary>
     /// Exception that gets thrown when an event value expression is not supported.
     /// </summary>
-    public class UnsupportedEventValueExpression : Exception
+    public class UnsupportedPropertyMapperExpression : Exception
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="UnsupportedEventValueExpression"/> class.
+        /// Initializes a new instance of the <see cref="UnsupportedPropertyMapperExpression"/> class.
         /// </summary>
         /// <param name="expression">The unsupported expression.</param>
-        public UnsupportedEventValueExpression(string expression) : base($"Couldn't find an event value resolver for the expression '{expression}'") { }
+        public UnsupportedPropertyMapperExpression(string expression) : base($"Couldn't find an property mapper for the expression '{expression}'") { }
     }
 }

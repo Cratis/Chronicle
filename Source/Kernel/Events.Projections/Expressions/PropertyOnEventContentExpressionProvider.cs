@@ -4,14 +4,14 @@
 namespace Cratis.Events.Projections.Expressions
 {
     /// <summary>
-    /// Represents a <see cref="IEventValueProviderExpressionResolver"/> for resolving value from a property on the content of an <see cref="Event"/>.
+    /// Represents a <see cref="IPropertyMapperExpressionResolver"/> for resolving value from a property on the content of an <see cref="Event"/>.
     /// </summary>
-    public class PropertyOnEventContentExpressionProvider : IEventValueProviderExpressionResolver
+    public class PropertyOnEventContentExpressionProvider : IPropertyMapperExpressionResolver
     {
         /// <inheritdoc/>
-        public bool CanResolve(string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
+        public bool CanResolve(string targetProperty, string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
 
         /// <inheritdoc/>
-        public EventValueProvider Resolve(string expression) => EventValueProviders.FromEventContent(expression);
+        public PropertyMapper Resolve(string targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventContent(expression));
     }
 }

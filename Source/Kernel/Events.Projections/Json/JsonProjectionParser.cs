@@ -13,15 +13,15 @@ namespace Cratis.Events.Projections.Json
     /// </summary>
     public class JsonProjectionParser
     {
-        readonly IEventValueProviderExpressionResolvers _eventValueExpressionResolvers;
+        readonly IPropertyMapperExpressionResolvers _propertyMapperExpressionResolvers;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JsonProjectionParser"/>.
         /// </summary>
-        /// <param name="eventValueExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> for resolving event value expressions.</param>
-        public JsonProjectionParser(IEventValueProviderExpressionResolvers eventValueExpressionResolvers)
+        /// <param name="propertyMapperExpressionResolvers"><see cref="IPropertyMapperExpressionResolvers"/> for resolving event value expressions.</param>
+        public JsonProjectionParser(IPropertyMapperExpressionResolvers propertyMapperExpressionResolvers)
         {
-            _eventValueExpressionResolvers = eventValueExpressionResolvers;
+            _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         }
 
         /// <summary>
@@ -51,13 +51,7 @@ namespace Cratis.Events.Projections.Json
             var projection = new Projection(definition.Identifier, model, eventsForProjection);
             foreach (var (eventType, definitions) in definition.From)
             {
-                var propertyMappers = new List<PropertyMapper>();
-                foreach (var (target, source) in definitions)
-                {
-                    var valueProvider = _eventValueExpressionResolvers.Resolve(source);
-                    PropertyMappers.FromEventValueProvider(target, valueProvider);
-                }
-
+                var propertyMappers = definitions.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                 projection.Event.From(eventType).Project(propertyMappers);
             }
 

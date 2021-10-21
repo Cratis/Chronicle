@@ -10,8 +10,8 @@ namespace Cratis.Events.Projections.Expressions.for_EventValueProviderExpression
 
         void Establish() => resolvers = new EventValueProviderExpressionResolvers();
 
-        void Because() => result = Catch.Exception(() => resolvers.Resolve("$randomUnknownExpression"));
+        void Because() => result = Catch.Exception(() => resolvers.Resolve(string.Empty, "$randomUnknownExpression"));
 
-        [Fact] void should_throw_unsupported_event_value_expression() => result.ShouldBeOfExactType<UnsupportedEventValueExpression>();
+        [Fact] void should_throw_unsupported_event_value_expression() => result.ShouldBeOfExactType<UnsupportedPropertyMapperExpression>();
     }
 }

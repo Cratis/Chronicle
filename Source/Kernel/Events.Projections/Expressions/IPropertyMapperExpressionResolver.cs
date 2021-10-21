@@ -6,20 +6,22 @@ namespace Cratis.Events.Projections.Expressions
     /// <summary>
     /// Defines a resolver of string representations of <see cref="EventValueProvider"/>.
     /// </summary>
-    public interface IEventValueProviderExpressionResolver
+    public interface IPropertyMapperExpressionResolver
     {
         /// <summary>
         /// Called to verify if the resolver can resolve the expression.
         /// </summary>
+        /// <param name="targetProperty">The target property we're mapping to.</param>
         /// <param name="expression">Expression to resolve</param>
         /// <returns>True if it can resolve, false if not.</returns>
-        bool CanResolve(string expression);
+        bool CanResolve(string targetProperty, string expression);
 
         /// <summary>
         /// Called to resolve the expression.
         /// </summary>
+        /// <param name="targetProperty">The target property we're mapping to.</param>
         /// <param name="expression">Expression to resolve</param>
         /// <returns><see cref="EventValueProvider"/> it resolves to.</returns>
-        EventValueProvider Resolve(string expression);
+        PropertyMapper Resolve(string targetProperty, string expression);
     }
 }

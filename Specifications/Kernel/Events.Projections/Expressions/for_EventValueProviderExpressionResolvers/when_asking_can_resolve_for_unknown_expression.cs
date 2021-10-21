@@ -10,7 +10,7 @@ namespace Cratis.Events.Projections.Expressions.for_EventValueProviderExpression
 
         void Establish() => resolvers = new EventValueProviderExpressionResolvers();
 
-        void Because() => result = resolvers.CanResolve("$randomUnknownExpression");
+        void Because() => result = resolvers.CanResolve(string.Empty, "$randomUnknownExpression");
 
         [Fact] void should_not_be_able_to_resolve() => result.ShouldBeFalse();
     }
