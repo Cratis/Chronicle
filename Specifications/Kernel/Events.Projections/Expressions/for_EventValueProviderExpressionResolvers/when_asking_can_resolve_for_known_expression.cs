@@ -10,7 +10,7 @@ namespace Cratis.Events.Projections.Expressions.for_EventValueProviderExpression
 
         void Establish() => resolvers = new EventValueProviderExpressionResolvers();
 
-        void Because() => result = resolvers.CanResolve("$eventSourceId");
+        void Because() => result = resolvers.CanResolve(string.Empty, "$eventSourceId");
 
         [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
     }

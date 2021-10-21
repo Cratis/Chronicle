@@ -22,23 +22,30 @@ namespace Cratis.Events.Projections
 
             return (Event @event, ExpandoObject target) =>
             {
-                var currentTarget = target as IDictionary<string, object>;
-                for (var propertyIndex = 0; propertyIndex < targetPath.Length - 1; propertyIndex++)
-                {
-                    var property = targetPath[propertyIndex];
-                    if (!currentTarget.ContainsKey(property))
-                    {
-                        var nested = new ExpandoObject();
-                        currentTarget[property] = nested;
-                        currentTarget = nested as IDictionary<string, object>;
-                    }
-                    else
-                    {
-                        currentTarget = ((ExpandoObject)currentTarget[property])!;
-                    }
-                }
-                currentTarget[targetPath[^1]] = eventValueProvider(@event);
+                var actualTarget = GetActualTarget(target, targetPath);
+                actualTarget[targetPath[^1]] = eventValueProvider(@event);
             };
+        }
+
+        static IDictionary<string, object> GetActualTarget(ExpandoObject target, string[] targetPath)
+        {
+            var currentTarget = target as IDictionary<string, object>;
+            for (var propertyIndex = 0; propertyIndex < targetPath.Length - 1; propertyIndex++)
+            {
+                var property = targetPath[propertyIndex];
+                if (!currentTarget.ContainsKey(property))
+                {
+                    var nested = new ExpandoObject();
+                    currentTarget[property] = nested;
+                    currentTarget = nested as IDictionary<string, object>;
+                }
+                else
+                {
+                    currentTarget = ((ExpandoObject)currentTarget[property])!;
+                }
+            }
+
+            return currentTarget;
         }
     }
 }

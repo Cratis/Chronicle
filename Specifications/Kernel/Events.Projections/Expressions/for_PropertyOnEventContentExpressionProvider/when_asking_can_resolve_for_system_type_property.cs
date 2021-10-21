@@ -10,7 +10,7 @@ namespace Cratis.Events.Projections.Expressions.for_PropertyOnEventContentExpres
 
         void Establish() => resolvers = new PropertyOnEventContentExpressionProvider();
 
-        void Because() => result = resolvers.CanResolve("$someProperty");
+        void Because() => result = resolvers.CanResolve(string.Empty, "$someProperty");
 
         [Fact] void should_not_be_able_to_resolve() => result.ShouldBeFalse();
     }
