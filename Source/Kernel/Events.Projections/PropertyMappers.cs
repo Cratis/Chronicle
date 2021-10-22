@@ -11,7 +11,7 @@ namespace Cratis.Events.Projections
     public static class PropertyMappers
     {
         /// <summary>
-        /// Create a <see cref="PropertyMapper"/> that can copies content based on a <see cref="EventValueProvider"/> to a target property.
+        /// Create a <see cref="PropertyMapper"/> that can copies content provided by a <see cref="EventValueProvider"/> to a target property.
         /// </summary>
         /// <param name="targetProperty">Target property.</param>
         /// <param name="eventValueProvider"><see cref="EventValueProvider"/> to use as source.</param>
@@ -24,6 +24,29 @@ namespace Cratis.Events.Projections
             {
                 var actualTarget = GetActualTarget(target, targetPath);
                 actualTarget[targetPath[^1]] = eventValueProvider(@event);
+            };
+        }
+
+        /// <summary>
+        /// Create a <see cref="PropertyMapper"/> that can add a property with a value provided by a <see cref="EventValueProvider"/> onto a target property.
+        /// </summary>
+        /// <param name="targetProperty">Target property.</param>
+        /// <param name="eventValueProvider"><see cref="EventValueProvider"/> to use as source.</param>
+        /// <returns>A new <see cref="PropertyMapper"/>.</returns>
+        public static PropertyMapper AddWithEventValueProvider(string targetProperty, EventValueProvider eventValueProvider)
+        {
+            var targetPath = targetProperty.Split('.');
+
+            return (Event @event, ExpandoObject target) =>
+            {
+                var actualTarget = GetActualTarget(target, targetPath) as IDictionary<string, object>;
+                if (!actualTarget.ContainsKey(targetPath[^1]))
+                {
+                    actualTarget[targetPath[^1]] = (double)0;
+                }
+                var value = (double)actualTarget[targetPath[^1]];
+                value += (double)eventValueProvider(@event);
+                actualTarget[targetPath[^1]] = value;
             };
         }
 
