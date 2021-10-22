@@ -10,7 +10,7 @@ namespace Cratis.Events.Projections.Expressions
     /// </summary>
     public class AddExpressionResolver : IPropertyMapperExpressionResolver
     {
-        static Regex _regularExpression = new Regex("\\$add\\(([A-Za-z.]*)\\)", RegexOptions.Compiled);
+        static readonly Regex _regularExpression = new("\\$add\\(([A-Za-z.]*)\\)", RegexOptions.Compiled);
 
         /// <inheritdoc/>
         public bool CanResolve(string targetProperty, string expression) => _regularExpression.Match(expression).Success;
