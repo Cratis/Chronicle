@@ -113,17 +113,18 @@ namespace Cratis.Extensions.Dolittle.Projections
         async Task CatchUp(IProjection projection, ReplaySubject<Event> subject)
         {
             var offset = await _projectionPositions.GetFor(projection);
-            var offsetFilter = Builders<EventStore.Event>.Filter.Gt(_ => _.Id, offset.Value);
             var eventTypeFilters = projection.EventTypes.Select(_ => Builders<EventStore.Event>.Filter.Eq(_ => _.Metadata.TypeId, Guid.Parse(_.Value))).ToArray();
-            var filter = Builders<EventStore.Event>.Filter.And(
-                offsetFilter,
-                Builders<EventStore.Event>.Filter.Or(eventTypeFilters)
-            );
 
             var exhausted = false;
 
             while (!exhausted)
             {
+                var offsetFilter = Builders<EventStore.Event>.Filter.Gt(_ => _.Id, offset.Value);
+                var filter = Builders<EventStore.Event>.Filter.And(
+                    offsetFilter,
+                    Builders<EventStore.Event>.Filter.Or(eventTypeFilters)
+                );
+
                 var cursor = await _eventLogCollection.FindAsync(
                     filter,
                     new()
@@ -139,13 +140,14 @@ namespace Cratis.Extensions.Dolittle.Projections
                         break;
                     }
 
-                    await OnNext(projection, subject, cursor.Current);
+                    offset = await OnNext(projection, subject, cursor.Current);
                 }
             }
         }
 
-        async Task OnNext(IProjection projection, ReplaySubject<Event> subject, IEnumerable<EventStore.Event> events)
+        async Task<EventLogSequenceNumber> OnNext(IProjection projection, ReplaySubject<Event> subject, IEnumerable<EventStore.Event> events)
         {
+            EventLogSequenceNumber lastSavedPosition = 0;
             foreach (var @event in events)
             {
                 var eventType = new EventType(@event.Metadata.TypeId.ToString());
@@ -162,7 +164,10 @@ namespace Cratis.Extensions.Dolittle.Projections
                 }
 
                 await _projectionPositions.Save(projection, @event.Id);
+                lastSavedPosition = @event.Id;
             }
+
+            return lastSavedPosition;
         }
     }
 }
