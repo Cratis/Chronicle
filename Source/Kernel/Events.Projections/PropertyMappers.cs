@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Strings;
 
 namespace Cratis.Events.Projections
 {
@@ -18,7 +19,7 @@ namespace Cratis.Events.Projections
         /// <returns>A new <see cref="PropertyMapper"/>.</returns>
         public static PropertyMapper FromEventValueProvider(string targetProperty, EventValueProvider eventValueProvider)
         {
-            var targetPath = targetProperty.Split('.');
+            var targetPath = GetTargetPath(targetProperty);
 
             return (Event @event, ExpandoObject target) =>
             {
@@ -35,7 +36,7 @@ namespace Cratis.Events.Projections
         /// <returns>A new <see cref="PropertyMapper"/>.</returns>
         public static PropertyMapper AddWithEventValueProvider(string targetProperty, EventValueProvider eventValueProvider)
         {
-            var targetPath = targetProperty.Split('.');
+            var targetPath = GetTargetPath(targetProperty);
 
             return (Event @event, ExpandoObject target) =>
             {
@@ -49,6 +50,8 @@ namespace Cratis.Events.Projections
                 actualTarget[targetPath[^1]] = value;
             };
         }
+
+        static string[] GetTargetPath(string targetProperty) => targetProperty.Split('.').Select(_ => _.ToCamelCase()).ToArray();
 
         static IDictionary<string, object> GetActualTarget(ExpandoObject target, string[] targetPath)
         {
