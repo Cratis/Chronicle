@@ -14,8 +14,7 @@ namespace Sample
                 .ModelName("my_model")
                 .From<DebitAccountOpened>(_ => _
                     .Set(_ => _.Name).To(_ => _.Name)
-                    .Set(_ => _.Owner).To(_ => _.Owner)
-                    .Set(_ => _.Parent).To(_ => _.Parent))
+                    .Set(_ => _.Owner).To(_ => _.Owner))
                 .From<DepositToDebitAccountPerformed>(_ => _
                     .Add(_ => _.Balance).With(_ => _.Amount));
         }

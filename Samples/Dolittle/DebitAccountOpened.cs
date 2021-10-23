@@ -6,5 +6,5 @@ using Dolittle.SDK.Events;
 namespace Sample
 {
     [EventType("8a109d92-aa6a-4aee-8852-f8f2528da1fc")]
-    public record DebitAccountOpened(string Name, Person Owner, Guid Parent);
+    public record DebitAccountOpened(string Name, Person Owner);
 }

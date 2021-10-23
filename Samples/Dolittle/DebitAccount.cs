@@ -3,5 +3,5 @@
 
 namespace Sample
 {
-    public record DebitAccount(string Name, Person Owner, Guid Parent, double Balance);
+    public record DebitAccount(string Name, Person Owner, double Balance);
 }
