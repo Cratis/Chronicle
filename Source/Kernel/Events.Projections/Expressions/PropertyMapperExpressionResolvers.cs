@@ -6,22 +6,24 @@ namespace Cratis.Events.Projections.Expressions
     /// <summary>
     /// Represents an implementation of <see cref="IPropertyMapperExpressionResolvers"/>.
     /// </summary>
-    public class EventValueProviderExpressionResolvers : IPropertyMapperExpressionResolvers
+    public class PropertyMapperExpressionResolvers : IPropertyMapperExpressionResolvers
     {
-        readonly IPropertyMapperExpressionResolver[] _resolvers = new[]
+        readonly IPropertyMapperExpressionResolver[] _resolvers = new IPropertyMapperExpressionResolver[]
         {
-            new EventSourceIdExpressionResolver()
+            new EventSourceIdExpressionResolver(),
+            new AddExpressionResolver(),
+            new PropertyOnEventContentExpressionProvider()
         };
 
         /// <inheritdoc/>
-        public bool CanResolve(string targetPath, string expression) => _resolvers.Any(_ => _.CanResolve(targetPath, expression));
+        public bool CanResolve(string targetProperty, string expression) => _resolvers.Any(_ => _.CanResolve(targetProperty, expression));
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(string targetPath, string expression)
+        public PropertyMapper Resolve(string targetProperty, string expression)
         {
-            var resolver = Array.Find(_resolvers, _ => _.CanResolve(targetPath, expression));
+            var resolver = Array.Find(_resolvers, _ => _.CanResolve(targetProperty, expression));
             ThrowIfUnsupportedEventValueExpression(expression, resolver);
-            return resolver!.Resolve(targetPath, expression);
+            return resolver!.Resolve(targetProperty, expression);
         }
 
         void ThrowIfUnsupportedEventValueExpression(string expression, IPropertyMapperExpressionResolver? resolver)
