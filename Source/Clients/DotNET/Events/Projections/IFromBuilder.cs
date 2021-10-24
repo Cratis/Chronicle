@@ -29,6 +29,14 @@ namespace Cratis.Events.Projections
         IAddBuilder<TModel, TEvent, TProperty> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 
         /// <summary>
+        /// Start building the add operation to a target property on the model.
+        /// </summary>
+        /// <typeparam name="TProperty">Type of the property.</typeparam>
+        /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
+        /// <returns>Builder continuation</returns>
+        ISubtractBuilder<TModel, TEvent, TProperty> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+        /// <summary>
         /// Start building the set operation to a target property on the model.
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>

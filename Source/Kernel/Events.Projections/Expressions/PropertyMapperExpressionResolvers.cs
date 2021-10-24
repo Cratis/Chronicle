@@ -12,6 +12,7 @@ namespace Cratis.Events.Projections.Expressions
         {
             new EventSourceIdExpressionResolver(),
             new AddExpressionResolver(),
+            new SubtractExpressionResolver(),
             new PropertyOnEventContentExpressionProvider()
         };
 

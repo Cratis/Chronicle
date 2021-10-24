@@ -30,6 +30,14 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
+        public ISubtractBuilder<TModel, TEvent, TProperty> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+        {
+            var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyInfo().Name);
+            _propertyExpressions.Add(subtractBuilder);
+            return subtractBuilder;
+        }
+
+        /// <inheritdoc/>
         public ISetBuilder<TModel, TEvent, TProperty> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
         {
             var setBuilder = new SetBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyInfo().Name);

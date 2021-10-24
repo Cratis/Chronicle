@@ -16,7 +16,9 @@ namespace Sample
                     .Set(_ => _.Name).To(_ => _.Name)
                     .Set(_ => _.Owner).To(_ => _.Owner))
                 .From<DepositToDebitAccountPerformed>(_ => _
-                    .Add(_ => _.Balance).With(_ => _.Amount));
+                    .Add(_ => _.Balance).With(_ => _.Amount))
+                .From<WithdrawalFromDebitAccountPerformed>(_ => _
+                    .Subtract(_ => _.Balance).With(_ => _.Amount));
         }
     }
 
