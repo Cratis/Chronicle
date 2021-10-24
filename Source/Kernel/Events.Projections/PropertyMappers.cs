@@ -40,13 +40,36 @@ namespace Cratis.Events.Projections
 
             return (Event @event, ExpandoObject target) =>
             {
-                var actualTarget = GetActualTarget(target, targetPath) as IDictionary<string, object>;
+                var actualTarget = GetActualTarget(target, targetPath);
                 if (!actualTarget.ContainsKey(targetPath[^1]))
                 {
                     actualTarget[targetPath[^1]] = (double)0;
                 }
                 var value = (double)actualTarget[targetPath[^1]];
                 value += (double)eventValueProvider(@event);
+                actualTarget[targetPath[^1]] = value;
+            };
+        }
+
+        /// <summary>
+        /// Create a <see cref="PropertyMapper"/> that can add a property with a value provided by a <see cref="EventValueProvider"/> onto a target property.
+        /// </summary>
+        /// <param name="targetProperty">Target property.</param>
+        /// <param name="eventValueProvider"><see cref="EventValueProvider"/> to use as source.</param>
+        /// <returns>A new <see cref="PropertyMapper"/>.</returns>
+        public static PropertyMapper SubtractWithEventValueProvider(string targetProperty, EventValueProvider eventValueProvider)
+        {
+            var targetPath = GetTargetPath(targetProperty);
+
+            return (Event @event, ExpandoObject target) =>
+            {
+                var actualTarget = GetActualTarget(target, targetPath);
+                if (!actualTarget.ContainsKey(targetPath[^1]))
+                {
+                    actualTarget[targetPath[^1]] = (double)0;
+                }
+                var value = (double)actualTarget[targetPath[^1]];
+                value -= (double)eventValueProvider(@event);
                 actualTarget[targetPath[^1]] = value;
             };
         }
@@ -63,7 +86,7 @@ namespace Cratis.Events.Projections
                 {
                     var nested = new ExpandoObject();
                     currentTarget[property] = nested;
-                    currentTarget = nested as IDictionary<string, object>;
+                    currentTarget = nested!;
                 }
                 else
                 {

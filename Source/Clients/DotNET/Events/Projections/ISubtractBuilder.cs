@@ -6,12 +6,12 @@ using System.Linq.Expressions;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Defines a builder for building add operations for properties - represented as expressions.
+    /// Defines a builder for building subtract operations for properties - represented as expressions.
     /// </summary>
     /// <typeparam name="TModel">Model to build for.</typeparam>
     /// <typeparam name="TEvent">Event to build for.</typeparam>
     /// <typeparam name="TProperty">The type of the property we're targetting.</typeparam>
-    public interface IAddBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilder
+    public interface ISubtractBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilder
     {
         /// <summary>
         /// Add with a property on the event.
