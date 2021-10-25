@@ -47,7 +47,7 @@ namespace Sample
 
         readonly Func<int, object>[] _eventTypeCreators = new Func<int, object>[]
         {
-                (account) => new DebitAccountOpened(_accountNames[account], _accountOwner[account] , Guid.Empty),
+                (account) => new DebitAccountOpened(_accountNames[account], _accountOwner[account]),
                 (_) => new DepositToDebitAccountPerformed(42),
                 (_) => new WithdrawalFromDebitAccountPerformed(41)
         };
@@ -88,10 +88,12 @@ namespace Sample
             }
         }
 
-        async Task InsertNewEvent(uint sequenceNumber, DateTimeOffset occurred, int? eventTypeToCreate = default)
+        async Task InsertNewEvent(uint? sequenceNumber = default, DateTimeOffset? occurred = default, int? eventTypeToCreate = default, int? account = default)
         {
-            var account = _random.Next() % _accountGuids.Length;
-            var content = _eventTypeCreators[eventTypeToCreate ?? _random.Next() % _eventTypeCreators.Length](account);
+            sequenceNumber ??= (uint)_collection.CountDocuments(FilterDefinition<Event>.Empty) + 1;
+            occurred ??= DateTimeOffset.UtcNow;
+            account ??= _random.Next() % _accountGuids.Length;
+            var content = _eventTypeCreators[eventTypeToCreate ?? _random.Next() % _eventTypeCreators.Length](account.Value);
             var eventType = content.GetType().GetCustomAttribute<EventTypeAttribute>()!;
             var contentAsJson = JsonConvert.SerializeObject(content, new JsonConverter[] {
                     new ConceptAsJsonConverter(),
@@ -99,7 +101,7 @@ namespace Sample
                 });
             var contentAsBson = BsonDocument.Parse(contentAsJson);
 
-            var @event = new Event(sequenceNumber,
+            var @event = new Event(sequenceNumber.Value,
                 new ExecutionContext(
                     Guid.NewGuid(),
                     Guid.Parse("bbbca70b-9eb0-4262-af27-b24c6eaffeef"),
@@ -108,8 +110,8 @@ namespace Sample
                     "Development",
                     Array.Empty<Claim>()),
                 new EventMetadata(
-                    occurred,
-                    _accountGuids[account],
+                    occurred.Value,
+                    _accountGuids[account.Value],
                     eventType.EventType.Id,
                     eventType.EventType.Generation,
                     false),

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Concepts;
+using Cratis.Events.Projections.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
 
@@ -12,6 +13,17 @@ namespace Cratis.Events.Projections.Json
     /// </summary>
     public class JsonProjectionParser
     {
+        readonly IPropertyMapperExpressionResolvers _propertyMapperExpressionResolvers;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JsonProjectionParser"/>.
+        /// </summary>
+        /// <param name="propertyMapperExpressionResolvers"><see cref="IPropertyMapperExpressionResolvers"/> for resolving event value expressions.</param>
+        public JsonProjectionParser(IPropertyMapperExpressionResolvers propertyMapperExpressionResolvers)
+        {
+            _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
+        }
+
         /// <summary>
         /// Parse a JSON string definition and produce a <see cref="IProjection"/>.
         /// </summary>
@@ -39,23 +51,7 @@ namespace Cratis.Events.Projections.Json
             var projection = new Projection(definition.Identifier, model, eventsForProjection);
             foreach (var (eventType, definitions) in definition.From)
             {
-                var propertyMappers = new List<PropertyMapper>();
-                foreach (var (target, source) in definitions)
-                {
-                    EventValueProvider? valueProvider = null;
-
-                    if (source == "$eventSourceId")
-                    {
-                        valueProvider = EventValueProviders.FromEventSourceId();
-                    }
-                    else
-                    {
-                        valueProvider = EventValueProviders.FromEventContent(source);
-                    }
-
-                    PropertyMappers.FromEventValueProvider(target, valueProvider);
-                }
-
+                var propertyMappers = definitions.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                 projection.Event.From(eventType).Project(propertyMappers);
             }
 
