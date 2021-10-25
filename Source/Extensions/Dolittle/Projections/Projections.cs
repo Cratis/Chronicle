@@ -11,6 +11,7 @@ using Cratis.Events.Projections.MongoDB;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using Cratis.Types;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using IEventTypes = SDK::Cratis.Events.IEventTypes;
 
@@ -23,6 +24,8 @@ namespace Cratis.Extensions.Dolittle.Projections
     public class Projections : SDK::Cratis.Events.Projections.Projections
     {
         readonly IMongoDBClientFactory _mongoDBClientFactory;
+        readonly JsonProjectionParser _projectionParser;
+        readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -30,15 +33,20 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
         /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-        /// <param name="projectionsReady"></param>
+        /// <param name="projectionParser"><see cref="JsonProjectionParser"/> for parsing JSON projection definitions.</param>
+        /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
+        /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
         public Projections(
             IEventTypes eventTypes,
             IMongoDBClientFactory mongoDBClientFactory,
             ITypes types,
-            ProjectionsReady projectionsReady) : base(eventTypes, types)
+            JsonProjectionParser projectionParser,
+            ProjectionsReady projectionsReady,
+            ILoggerFactory loggerFactory) : base(eventTypes, types)
         {
             _mongoDBClientFactory = mongoDBClientFactory;
-
+            _projectionParser = projectionParser;
+            _loggerFactory = loggerFactory;
             projectionsReady.IsReady.Subscribe(_ => ActualStartAll());
         }
 
@@ -49,8 +57,6 @@ namespace Cratis.Extensions.Dolittle.Projections
 
         void ActualStartAll()
         {
-            var projectionParser = new JsonProjectionParser();
-
             var converters = new JsonConverter[]
             {
                 new ConceptAsJsonConverter(),
@@ -60,10 +66,10 @@ namespace Cratis.Extensions.Dolittle.Projections
             foreach (var projectionDefinition in _projections)
             {
                 var json = JsonConvert.SerializeObject(projectionDefinition, converters);
-                var projection = projectionParser.Parse(json);
+                var projection = _projectionParser.Parse(json);
                 var projectionPositions = new ProjectionPositions(_mongoDBClientFactory);
-                var provider = new ProjectionEventProvider(_mongoDBClientFactory, projectionPositions);
-                var pipeline = new ProjectionPipeline(provider, projection);
+                var provider = new ProjectionEventProvider(_mongoDBClientFactory, projectionPositions, _loggerFactory.CreateLogger<ProjectionEventProvider>());
+                var pipeline = new ProjectionPipeline(provider, projection, _loggerFactory.CreateLogger<ProjectionPipeline>());
                 //var storage = new InMemoryProjectionStorage();
                 var storage = new MongoDBProjectionStorage(_mongoDBClientFactory);
                 pipeline.StoreIn(storage);

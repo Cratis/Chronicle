@@ -21,7 +21,23 @@ namespace Cratis.Events.Projections
         IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
         /// <summary>
-        /// Set the target property on the model to the content of the source property on an event.
+        /// Start building the add operation to a target property on the model.
+        /// </summary>
+        /// <typeparam name="TProperty">Type of the property.</typeparam>
+        /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
+        /// <returns>Builder continuation</returns>
+        IAddBuilder<TModel, TEvent, TProperty> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+        /// <summary>
+        /// Start building the add operation to a target property on the model.
+        /// </summary>
+        /// <typeparam name="TProperty">Type of the property.</typeparam>
+        /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
+        /// <returns>Builder continuation</returns>
+        ISubtractBuilder<TModel, TEvent, TProperty> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+        /// <summary>
+        /// Start building the set operation to a target property on the model.
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>
         /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
