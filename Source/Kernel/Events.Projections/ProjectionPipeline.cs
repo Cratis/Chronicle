@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Microsoft.Extensions.Logging;
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -9,16 +11,19 @@ namespace Cratis.Events.Projections
     public class ProjectionPipeline : IProjectionPipeline
     {
         readonly List<IProjectionStorage> _storageProviders = new();
+        readonly ILogger<ProjectionPipeline> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
         /// </summary>
         /// <param name="eventProvider"><see cref="IProjectionEventProvider"/> to use.</param>
         /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
-        public ProjectionPipeline(IProjectionEventProvider eventProvider, IProjection projection)
+        /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+        public ProjectionPipeline(IProjectionEventProvider eventProvider, IProjection projection, ILogger<ProjectionPipeline> logger)
         {
             EventProvider = eventProvider;
             Projection = projection;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -36,15 +41,20 @@ namespace Cratis.Events.Projections
             var observable = EventProvider.ProvideFor(Projection);
             observable.Subscribe(@event =>
             {
-                var storageProviders = _storageProviders.ToArray();
-                Parallel.ForEach(storageProviders, async (storage, _) =>
+                _logger.HandlingEvent(@event.SequenceNumber);
+                var tasks = _storageProviders.Select(storage => Task.Run(async () =>
                 {
                     var keyResolver = Projection.GetKeyResolverFor(@event.Type);
                     var key = keyResolver(@event);
+                    _logger.GettingInitialValues(@event.SequenceNumber);
                     var initialState = await storage.FindOrDefault(Projection.Model, key);
+                    _logger.Projecting(@event.SequenceNumber);
                     var changeset = Projection.OnNext(@event, initialState);
+                    _logger.SavingResult(@event.SequenceNumber);
                     await storage.ApplyChanges(Projection.Model, key, changeset);
-                });
+                }));
+
+                Task.WaitAll(tasks.ToArray());
             });
         }
 
