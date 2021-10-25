@@ -1,3 +1,35 @@
+# [v2.10.0] - 2021-10-25 [PR: #47](https://github.com/Cratis/cratis/pull/47)
+
+### Added
+
+- Ability to add and subtract numbers. One limitation today; it assumes double for these right now, due to lack of Model schema and understanding of target types. This will be improved in a future version.
+
+```csharp
+[Projection("4ae2fd6d-0038-4066-8b6e-423c908deee5")]
+public class DebitAccountProjection : IProjectionFor<DebitAccount>
+{
+    public void Define(IProjectionBuilderFor<DebitAccount> builder)
+    {
+        builder
+            .ModelName("my_model")
+            .From<DebitAccountOpened>(_ => _
+                .Set(_ => _.Name).To(_ => _.Name)
+                .Set(_ => _.Owner).To(_ => _.Owner))
+            .From<DepositToDebitAccountPerformed>(_ => _
+                // NEW: Add balance with amound from event
+                .Add(_ => _.Balance).With(_ => _.Amount))
+            .From<WithdrawalFromDebitAccountPerformed>(_ => _
+                // NEW: Subtract balance with amound from event
+                .Subtract(_ => _.Balance).With(_ => _.Amount));
+    }
+}
+```
+
+### Fixed
+
+- Projections are now waiting per OnNext() to finish - guaranteeing order of operations.
+
+
 # [v2.9.1] - 2021-10-14 [PR: #41](https://github.com/Cratis/cratis/pull/41)
 
 ### Fixed
