@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.Reactive.Subjects;
 using Cratis.Events.Projections;
 using Cratis.Extensions.MongoDB;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
@@ -20,6 +21,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         readonly IMongoDatabase _database;
         readonly IMongoCollection<EventStore.Event> _eventLogCollection;
         readonly IProjectionPositions _projectionPositions;
+        readonly ILogger<ProjectionEventProvider> _logger;
         readonly ConcurrentDictionary<IProjection, ReplaySubject<Event>> _projectionsWithSubject = new();
         readonly ConcurrentDictionary<IProjection, ReplaySubject<Event>> _pausedProjectionsWithSubject = new();
 
@@ -28,9 +30,11 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// </summary>
         /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for connecting to MongoDB.</param>
         /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for maintaining positions.</param>
+        /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
         public ProjectionEventProvider(
             IMongoDBClientFactory mongoDBClientFactory,
-            IProjectionPositions projectionPositions)
+            IProjectionPositions projectionPositions,
+            ILogger<ProjectionEventProvider> logger)
         {
             var mongoUrlBuilder = new MongoUrlBuilder
             {
@@ -42,11 +46,14 @@ namespace Cratis.Extensions.Dolittle.Projections
             _database = _client.GetDatabase("event_store");
             _eventLogCollection = _database.GetCollection<EventStore.Event>("event-log");
             _projectionPositions = projectionPositions;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
         public IObservable<Event> ProvideFor(IProjection projection)
         {
+            _logger.ProvidingFor(projection.Identifier);
+
             var subject = new ReplaySubject<Event>();
             Task.Run(() => StartProvidingFor(projection, subject));
             return subject;
@@ -55,6 +62,8 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <inheritdoc/>
         public void Pause(IProjection projection)
         {
+            _logger.Pausing(projection.Identifier);
+
             if (_projectionsWithSubject.TryRemove(projection, out var subject))
             {
                 _pausedProjectionsWithSubject.TryAdd(projection, subject);
@@ -64,6 +73,8 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <inheritdoc/>
         public void Resume(IProjection projection)
         {
+            _logger.Resuming(projection.Identifier);
+
             if (_pausedProjectionsWithSubject.TryRemove(projection, out var subject))
             {
                 _projectionsWithSubject.TryAdd(projection, subject);
@@ -73,6 +84,8 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <inheritdoc/>
         public async Task Rewind(IProjection projection)
         {
+            _logger.Rewinding(projection.Identifier);
+
             await _projectionPositions.Reset(projection);
             await CatchUp(projection, _projectionsWithSubject[projection]);
         }
@@ -112,6 +125,7 @@ namespace Cratis.Extensions.Dolittle.Projections
 
         async Task CatchUp(IProjection projection, ReplaySubject<Event> subject)
         {
+            _logger.CatchingUp(projection.Identifier);
             var offset = await _projectionPositions.GetFor(projection);
             var eventTypeFilters = projection.EventTypes.Select(_ => Builders<EventStore.Event>.Filter.Eq(_ => _.Metadata.TypeId, Guid.Parse(_.Value))).ToArray();
 
@@ -124,6 +138,8 @@ namespace Cratis.Extensions.Dolittle.Projections
                     offsetFilter,
                     Builders<EventStore.Event>.Filter.Or(eventTypeFilters)
                 );
+
+                _logger.GettingEventsFromOffset(offset.Value);
 
                 var cursor = await _eventLogCollection.FindAsync(
                     filter,
@@ -154,6 +170,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 if (projection.EventTypes.Any(_ => _ == eventType))
                 {
                     var content = BsonSerializer.Deserialize<ExpandoObject>(@event.Content);
+                    _logger.ProvidingEvent(@event.Id);
                     subject.OnNext(
                         new Event(
                             @event.Id,
