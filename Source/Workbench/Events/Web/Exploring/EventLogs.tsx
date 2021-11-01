@@ -139,8 +139,8 @@ export const EventLogs = () => {
 
     return (
         <>
-            <Stack>
-                <Stack.Item disableShrink>
+            <Stack style={{ height: '100%' }}>
+                <Stack.Item>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">
                             <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" onRenderItemLink={pivotItemHeaderRenderer} />
@@ -149,14 +149,14 @@ export const EventLogs = () => {
                         <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
                     </Stack>
                 </Stack.Item>
-                <Stack.Item disableShrink>
+                <Stack.Item>
                     <CommandBar items={commandBarItems} />
                 </Stack.Item>
-                <Stack.Item disableShrink>
+                <Stack.Item>
                     {isTimelineOpen && <EventHistogram eventLog={eventLog} />}
                     {isFilterOpen && <FilterBuilder />}
                 </Stack.Item>
-                <Stack.Item grow verticalFill>
+                <Stack.Item grow={1}>
                     <EventList items={events} onEventSelected={eventSelected} />
                 </Stack.Item>
             </Stack>
