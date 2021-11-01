@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 
 import {
     IColumn,
@@ -14,6 +14,8 @@ import {
 import {
     Pagination
 } from '@fluentui/react-experiments';
+
+import { default as styles } from './EventList.module.scss';
 
 export type EventSelected = (item: any) => void;
 
@@ -47,9 +49,11 @@ const eventListColumns: IColumn[] = [
 
 const gridStyles: Partial<IDetailsListStyles> = {
     root: {
+        height: '100%',
         overflowX: 'scroll',
         selectors: {
             '& [role=grid]': {
+                height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'start'
@@ -81,10 +85,18 @@ export const EventList = (props: EventListProps) => {
             items: props.items
         }), [props.items]);
 
+    useEffect(() => {
+        const detailsList = document.querySelector('.ms-DetailsList.eventList');
+        if (detailsList) {
+            detailsList.parentElement!.style!.height = '100%';
+        }
+    }, []);
+
     return (
-        <Stack verticalFill>
-            <Stack.Item grow>
+        <Stack style={{ height: '100%' }}>
+            <Stack.Item grow={1} >
                 <DetailsList
+                    className="eventList"
                     styles={gridStyles}
                     columns={eventListColumns}
                     selection={selection}
