@@ -11,7 +11,6 @@ namespace Sample
         public void Define(IProjectionBuilderFor<DebitAccount> builder)
         {
             builder
-                .ModelName("my_model")
                 .From<DebitAccountOpened>(_ => _
                     .Set(_ => _.Name).To(_ => _.Name)
                     .Set(_ => _.Owner).To(_ => _.Owner))
