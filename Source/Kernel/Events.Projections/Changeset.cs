@@ -70,21 +70,32 @@ namespace Cratis.Events.Projections
         }
 
         /// <summary>
+        /// Apply a remove change to the <see cref="Changeset"/>.
+        /// </summary>
+        public void ApplyRemove()
+        {
+        }
+
+        /// <summary>
         /// Applies properties to the child in the model to the <see cref="Changeset"/>.
         /// </summary>
         /// <param name="childrenAccessor"><see cref="PropertyAccessor"/> for accessing the children collection.</param>
         /// <param name="modelKey"><see cref="Expression"/> for accessing the model key.</param>
         /// <param name="key">The key value.</param>
-        /// <param name="expressions"><see cref="Expression">Expressions</see> representing properties being manipulated.</param>
-        public void ApplyChildProperties(PropertyAccessor childrenAccessor, Expression modelKey, object key, IEnumerable<Expression> expressions)
+        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
+        public void ApplyChildProperties(PropertyAccessor childrenAccessor, Expression modelKey, object key, IEnumerable<PropertyMapper> propertyMappers)
         {
             var workingState = InitialState.Clone();
         }
 
         /// <summary>
-        /// Apply a remove change to the <see cref="Changeset"/>.
+        /// Adds a child with values from.
         /// </summary>
-        public void ApplyRemove()
+        /// <param name="childrenAccessor"><see cref="PropertyAccessor"/> for accessing the children collection.</param>
+        /// <param name="modelKey"><see cref="Expression"/> for accessing the model key.</param>
+        /// <param name="key">The key value.</param>
+        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
+        public void ApplyAddChild(Expression childrenAccessor, Expression modelKey, object key, IEnumerable<PropertyMapper> propertyMappers)
         {
         }
 
@@ -94,7 +105,7 @@ namespace Cratis.Events.Projections
         /// <param name="childrenAccessor"><see cref="Expression"/> for accessing the children collection.</param>
         /// <param name="modelKey"><see cref="Expression"/> for accessing the model key.</param>
         /// <param name="key">The key value.</param>
-        public void RemoveChild(Expression childrenAccessor, Expression modelKey, object key)
+        public void ApplyRemoveChild(Expression childrenAccessor, Expression modelKey, object key)
         {
         }
     }
