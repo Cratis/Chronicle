@@ -5,7 +5,7 @@ using System.Dynamic;
 using System.Linq.Expressions;
 using Cratis.Dynamic;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.Changes
 {
     /// <summary>
     /// Represents a changeset - the consequence of an individual handling of a <see cref="IProjection"/>.

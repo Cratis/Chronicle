@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Dynamic;
+using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections
 {

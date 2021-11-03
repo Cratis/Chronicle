@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections
 {

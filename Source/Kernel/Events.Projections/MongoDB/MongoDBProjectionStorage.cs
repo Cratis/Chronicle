@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Extensions.MongoDB;
 using Cratis.Strings;
+using Cratis.Events.Projections.Changes;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
