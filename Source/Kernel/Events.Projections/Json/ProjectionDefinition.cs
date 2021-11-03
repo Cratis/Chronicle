@@ -9,8 +9,10 @@ namespace Cratis.Events.Projections.Json
     /// <param name="Identifier"><see cref="ProjectionId">Identifier</see> of the projection.</param>
     /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
     /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
+    /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
     public record ProjectionDefinition(
         ProjectionId Identifier,
         ModelDefinition Model,
-        IDictionary<EventType, FromDefinition> From);
+        IDictionary<EventType, FromDefinition> From,
+        IDictionary<string, ChildrenDefinition> Children);
 }
