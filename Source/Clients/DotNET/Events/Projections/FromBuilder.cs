@@ -18,6 +18,7 @@ namespace Cratis.Events.Projections
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
         {
+            _propertyExpressions.Add(new ParentKeyPropertyExpressionBuilder(keyAccessor.GetPropertyInfo().Name));
             return this;
         }
 
