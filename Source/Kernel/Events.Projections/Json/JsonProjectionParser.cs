@@ -45,11 +45,35 @@ namespace Cratis.Events.Projections.Json
         /// <returns><see cref="IProjection"/> instance.</returns>
         public IProjection CreateFrom(ProjectionDefinition definition)
         {
-            var eventsForProjection = definition.From.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)).ToArray();
-            var model = new Model(definition.Model.Name, JSchema.Parse(definition.Model.Schema));
+            return CreateProjectionFrom(definition.Identifier, definition.Model, definition.From, definition.Children, _ => { });
+        }
 
-            var projection = new Projection(definition.Identifier, model, eventsForProjection);
-            foreach (var (eventType, definitions) in definition.From)
+        IProjection CreateProjectionFrom(
+            ProjectionId identifier,
+            ModelDefinition modelDefinition,
+            IDictionary<EventType, FromDefinition> fromDefinitions,
+            IDictionary<string, ChildrenDefinition> childrenDefinitions,
+            Action<IEnumerable<EventTypeWithKeyResolver>> addChildEvents)
+        {
+            var eventsForProjection = fromDefinitions.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)).ToList();
+            foreach (var (property, childrenDefinition) in childrenDefinitions)
+            {
+                var childrenProjection = CreateProjectionFrom(
+                    Guid.Empty,
+                    childrenDefinition.Model,
+                    childrenDefinition.From,
+                    new Dictionary<string, ChildrenDefinition>(),
+                    _ =>
+                    {
+                        eventsForProjection.AddRange(_);
+                        addChildEvents(_);
+                    });
+            }
+
+            var model = new Model(modelDefinition.Name, JSchema.Parse(modelDefinition.Schema));
+
+            var projection = new Projection(identifier, model, eventsForProjection);
+            foreach (var (eventType, definitions) in fromDefinitions)
             {
                 var propertyMappers = definitions.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                 projection.Event.From(eventType).Project(propertyMappers);
@@ -57,5 +81,7 @@ namespace Cratis.Events.Projections.Json
 
             return projection;
         }
+
+
     }
 }
