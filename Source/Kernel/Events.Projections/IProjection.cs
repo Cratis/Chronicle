@@ -32,6 +32,13 @@ namespace Cratis.Events.Projections
         IEnumerable<EventType> EventTypes { get; }
 
         /// <summary>
+        /// Apply a filter to an <see cref="IObservable{EventContext}"/> with the event types the <see cref="Projection"/> is interested in.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{EventContext}"/> to filter.</param>
+        /// <returns>Filtered <see cref="IObservable{EventContext}"/>.</returns>
+        IObservable<EventContext>  FilterEventTypes(IObservable<EventContext> observable);
+
+        /// <summary>
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>

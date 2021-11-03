@@ -28,10 +28,13 @@ namespace Cratis.Events.Projections
         {
             Identifier = identifier;
             Model = model;
-            Event = _subject.Where(_ => eventTypesWithKeyResolver.Any(et => et.EventType == _.Event.Type));
-            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
             EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
+            Event = FilterEventTypes(_subject);
+            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
         }
+
+        /// <inheritdoc/>
+        public IObservable<EventContext>  FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
 
         /// <inheritdoc/>
         public ProjectionId Identifier { get; }
