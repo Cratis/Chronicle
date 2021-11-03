@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.Changes
 {
     /// <summary>
     /// Represents properties that has been changed.

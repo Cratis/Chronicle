@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.Changes
 {
     /// <summary>
     /// Defines a change as part of a <see cref="Changeset"/>.
