@@ -60,10 +60,10 @@ Known types:
     },
     "children": {
         "childrenProperty": {
-            "$key": "id",
+            "$key": "id",   // By adding a key, we maintain uniqueness
             "from": {
                 "3cf2b919-9102-4d05-86bf-94c39abc1224": {
-                    "$key": "id",
+                    "$parentKey": "parentId",
                     "property": "property"
                 }
             },
@@ -99,8 +99,7 @@ public class MyProjection : IProjectionFor<MyModel>
                 .On(model => model.RelationProperty)
                 .UsingKey(@event => @event.Id) // Default to using the EventSourceId as the key, if not specified
                 .Set(model => model.ThirdProperty).To(@event => @event.PropertyFromTheThirdEvent))
-            .Children<SomeChildModel>(_ => _
-                .StoredIn(model => model.Children)
+            .Children(model => model.Children, _ => _
                 .IdentifiedBy(childModel => childModel.Id))
                 .From<ChildAdded>(cb => cb
                     .UsingKey(@event => @event.Id) // Default to using the EventSourceId as the key, if not specified
