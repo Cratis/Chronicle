@@ -81,7 +81,5 @@ namespace Cratis.Events.Projections.Json
 
             return projection;
         }
-
-
     }
 }
