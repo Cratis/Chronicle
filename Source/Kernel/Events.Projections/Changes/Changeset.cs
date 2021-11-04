@@ -17,20 +17,13 @@ namespace Cratis.Events.Projections.Changes
         /// <summary>
         /// Initializes a new instance of <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="projection"><see cref="IProjection"/> the <see cref="Changeset"/> is for.</param>
         /// <param name="event"><see cref="Event"/> that the <see cref="Changeset"/> is for.</param>
         /// <param name="initialState">The initial state before any changes are applied.</param>
-        public Changeset(IProjection projection, Event @event, ExpandoObject initialState)
+        public Changeset(Event @event, ExpandoObject initialState)
         {
-            Projection = projection;
             Event = @event;
             InitialState = initialState;
         }
-
-        /// <summary>
-        /// Gets the <see cref="IProjection"/> the <see cref="Changeset"/> is for.
-        /// </summary>
-        public IProjection Projection { get; }
 
         /// <summary>
         /// Gets the <see cref="Event"/> the <see cref="Changeset"/> is for.
