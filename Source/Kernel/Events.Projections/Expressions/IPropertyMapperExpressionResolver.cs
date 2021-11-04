@@ -14,7 +14,7 @@ namespace Cratis.Events.Projections.Expressions
         /// <param name="targetProperty">The target property we're mapping to.</param>
         /// <param name="expression">Expression to resolve</param>
         /// <returns>True if it can resolve, false if not.</returns>
-        bool CanResolve(string targetProperty, string expression);
+        bool CanResolve(Property targetProperty, string expression);
 
         /// <summary>
         /// Called to resolve the expression.
@@ -22,6 +22,6 @@ namespace Cratis.Events.Projections.Expressions
         /// <param name="targetProperty">The target property we're mapping to.</param>
         /// <param name="expression">Expression to resolve</param>
         /// <returns><see cref="EventValueProvider"/> it resolves to.</returns>
-        PropertyMapper Resolve(string targetProperty, string expression);
+        PropertyMapper Resolve(Property targetProperty, string expression);
     }
 }

@@ -19,9 +19,7 @@ namespace Cratis.Events.Projections
 
         public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
         {
-            observable = observable.Where(_ => _.Event.Type == eventType);
-            observable.Subscribe(_ => _.Changeset.ApplyRemove());
-
+            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.ApplyRemove());
             return observable;
         }
 
@@ -32,10 +30,6 @@ namespace Cratis.Events.Projections
 
         public static IObservable<EventContext> Children(this IObservable<EventContext> observable, PropertyAccessor childrenPropertyAccessor, IProjection projection)
         {
-            // Create new projection for the child property... ??
-            // Projection could take a source state / collection
-
-            // Changes should be done through changesets (Add, Remove, Update)
             return observable;
         }
 
