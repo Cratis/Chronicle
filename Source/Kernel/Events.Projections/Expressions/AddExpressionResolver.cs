@@ -13,10 +13,10 @@ namespace Cratis.Events.Projections.Expressions
         static readonly Regex _regularExpression = new("\\$add\\(([A-Za-z.]*)\\)", RegexOptions.Compiled);
 
         /// <inheritdoc/>
-        public bool CanResolve(string targetProperty, string expression) => _regularExpression.Match(expression).Success;
+        public bool CanResolve(Property targetProperty, string expression) => _regularExpression.Match(expression).Success;
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(string targetProperty, string expression)
+        public PropertyMapper Resolve(Property targetProperty, string expression)
         {
             var match = _regularExpression.Match(expression);
             return PropertyMappers.AddWithEventValueProvider(targetProperty, EventValueProviders.FromEventContent(match.Groups[1].Value));
