@@ -12,6 +12,6 @@ namespace Cratis.Events.Projections.Expressions
         public bool CanResolve(string targetProperty, string expression) => expression == "$eventSourceId";
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(string targetProperty, string _) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventSourceId());
+        public PropertyMapper Resolve(string targetProperty, string _) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventSourceId);
     }
 }

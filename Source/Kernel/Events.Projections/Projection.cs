@@ -14,7 +14,7 @@ namespace Cratis.Events.Projections
     public class Projection : IProjection
     {
         readonly ISubject<EventContext> _subject = new Subject<EventContext>();
-        readonly IDictionary<EventType, KeyResolver> _eventTypesToKeyResolver;
+        readonly IDictionary<EventType, EventValueProvider> _eventTypesToKeyResolver;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -63,7 +63,7 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public KeyResolver GetKeyResolverFor(EventType eventType)
+        public EventValueProvider GetKeyResolverFor(EventType eventType)
         {
             ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];

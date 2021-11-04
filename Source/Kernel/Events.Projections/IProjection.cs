@@ -51,10 +51,10 @@ namespace Cratis.Events.Projections
         void OnNext(Event @event, Changeset changeset);
 
         /// <summary>
-        /// Get the <see cref="KeyResolver"/> associated with a given <see cref="EventType"/>.
+        /// Get the <see cref="EventValueProvider"/> associated with a given <see cref="EventType"/>.
         /// </summary>
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-        /// <returns>The <see cref="KeyResolver"/>.</returns>
-        KeyResolver GetKeyResolverFor(EventType eventType);
+        /// <returns>The <see cref="EventValueProvider"/>.</returns>
+        EventValueProvider GetKeyResolverFor(EventType eventType);
     }
 }
