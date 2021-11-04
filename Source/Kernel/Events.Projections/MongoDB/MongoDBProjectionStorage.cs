@@ -18,6 +18,10 @@ namespace Cratis.Events.Projections.MongoDB
     {
         readonly IMongoDatabase _database;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MongoDBProjectionStorage"/> class.
+        /// </summary>
+        /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
         public MongoDBProjectionStorage(IMongoDBClientFactory clientFactory)
         {
             var client = clientFactory.Create(MongoUrl.Create("mongodb://localhost:27017"));
