@@ -43,10 +43,8 @@ namespace Cratis.Events.Projections.Json
         /// </summary>
         /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
         /// <returns><see cref="IProjection"/> instance.</returns>
-        public IProjection CreateFrom(ProjectionDefinition definition)
-        {
-            return CreateProjectionFrom(definition.Identifier, definition.Model, definition.From, definition.Children, _ => { });
-        }
+        public IProjection CreateFrom(ProjectionDefinition definition) =>
+            CreateProjectionFrom(definition.Identifier, definition.Model, definition.From, definition.Children, _ => { });
 
         IProjection CreateProjectionFrom(
             ProjectionId identifier,
@@ -55,7 +53,10 @@ namespace Cratis.Events.Projections.Json
             IDictionary<string, ChildrenDefinition> childrenDefinitions,
             Action<IEnumerable<EventTypeWithKeyResolver>> addChildEvents)
         {
-            var eventsForProjection = fromDefinitions.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)).ToList();
+            var eventsForProjection = fromDefinitions.Select(kvp => new EventTypeWithKeyResolver(kvp.Key, string.IsNullOrEmpty(kvp.Value.ParentKey) ?
+                    EventValueProviders.FromEventSourceId :
+                    EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
+
             var childProjections = childrenDefinitions.Select(kvp => CreateProjectionFrom(
                     Guid.Empty,
                     kvp.Value.Model,
