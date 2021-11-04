@@ -56,27 +56,29 @@ namespace Cratis.Events.Projections.Json
             Action<IEnumerable<EventTypeWithKeyResolver>> addChildEvents)
         {
             var eventsForProjection = fromDefinitions.Keys.Select(_ => new EventTypeWithKeyResolver(_, KeyResolvers.EventSourceId)).ToList();
-            foreach (var (property, childrenDefinition) in childrenDefinitions)
-            {
-                var childrenProjection = CreateProjectionFrom(
+            var childProjections = childrenDefinitions.Select(kvp => CreateProjectionFrom(
                     Guid.Empty,
-                    childrenDefinition.Model,
-                    childrenDefinition.From,
+                    kvp.Value.Model,
+                    kvp.Value.From,
                     new Dictionary<string, ChildrenDefinition>(),
                     _ =>
                     {
                         eventsForProjection.AddRange(_);
                         addChildEvents(_);
-                    });
-            }
+                    }));
 
             var model = new Model(modelDefinition.Name, JSchema.Parse(modelDefinition.Schema));
 
-            var projection = new Projection(identifier, model, eventsForProjection);
+            var projection = new Projection(identifier, model, eventsForProjection, childProjections);
             foreach (var (eventType, definitions) in fromDefinitions)
             {
-                var propertyMappers = definitions.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
+                var propertyMappers = definitions.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                 projection.Event.From(eventType).Project(propertyMappers);
+            }
+
+            foreach (var (property, definitions) in childrenDefinitions)
+            {
+                // Hook up child relationship extensions
             }
 
             return projection;

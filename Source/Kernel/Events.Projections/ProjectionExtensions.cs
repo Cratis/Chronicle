@@ -35,8 +35,6 @@ namespace Cratis.Events.Projections
             // Create new projection for the child property... ??
             // Projection could take a source state / collection
 
-            observable.Subscribe(_ => projection.OnNext(_.Event, new ExpandoObject()));
-
             // Changes should be done through changesets (Add, Remove, Update)
             return observable;
         }
