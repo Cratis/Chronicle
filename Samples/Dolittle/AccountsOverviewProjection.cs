@@ -14,7 +14,7 @@ namespace Sample
                 .Children(_ => _.DebitAccounts, _ => _
                     .IdentifiedBy(_ => _.Id)
                     .From<DebitAccountOpened>(_ => _
-                        .UsingKey(_ => _.Owner)
+                        .UsingParentKey(_ => _.Owner)
                         .Set(_ => _.Name).To(_ => _.Name)));
         }
     }
