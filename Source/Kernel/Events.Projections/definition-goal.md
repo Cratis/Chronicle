@@ -33,38 +33,46 @@ Known types:
     },
     "from": {
         "25d74c03-2542-4d52-bb53-4dce6ada24c6": {
-            "id": "$eventSourceId",
-            "someProperty": "someProperty",
-            "formattedProperty": "{{firstName}} {{lastName}}",
-            "incrementedProperty": "$increment",
-            "addedProperty": "$add($event.someValue)"
+            "key": "$eventSourceId",
+            "properties": {
+                "id": "$eventSourceId",
+                "someProperty": "someProperty",
+                "formattedProperty": "{{firstName}} {{lastName}}",
+                "incrementedProperty": "$increment",
+                "addedProperty": "$add($event.someValue)"
+            }
         },
         "f998e862-cac0-4ccc-86a1-cad0269db30e": {
-            "$key": "id",    // Defaults to using the EventSourceId as the key, if not specified
-            "someOtherProperty": "$event.someOtherProperty"
+            "key": "id",    // Defaults to using the EventSourceId as the key, if not specified
+            "properties": {
+                "someOtherProperty": "$event.someOtherProperty"
+            }
         }
     },
     "removedWith": {
         "cd9e4ab9-7f67-460b-a5f7-5830d4bb4716": {
-            "$key": "id"
+            "key": "id"
         }
     },
     "join": {
         "52bd8b37-4811-4edc-9f6b-07e2d965c110": {
-            "$on": "relationProperty",
-            "$key": "id",
-            "$properties": {
+            "on": "relationProperty",
+            "key": "id",
+            "properties": {
                 "thirdProperty": "propertyFromTheThirdEvent"
             }
         }
     },
     "children": {
         "childrenProperty": {
-            "$key": "id",   // By adding a key, we maintain uniqueness
+            "key": "id",   // By adding a key, we maintain uniqueness
             "from": {
                 "3cf2b919-9102-4d05-86bf-94c39abc1224": {
-                    "$parentKey": "parentId",
-                    "property": "property"
+                    "parentKey": "parentId",
+                    "key": "id", // Defaults to using the EventSourceId as the key, if not specified
+                    "properties": {
+                        "property": "property"
+                    }
                 }
             },
             "removedWith": {

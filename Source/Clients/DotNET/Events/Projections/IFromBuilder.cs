@@ -21,6 +21,15 @@ namespace Cratis.Events.Projections
         IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
         /// <summary>
+        /// Define what property on the event represents the parent key. This is typically used in child relationships to identify the parent model to
+        /// work with.
+        /// </summary>
+        /// <typeparam name="TProperty">Type of the property.</typeparam>
+        /// <param name="keyAccessor">Accessor for the property to use.</param>
+        /// <returns>Builder continuation</returns>
+        IFromBuilder<TModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
+
+        /// <summary>
         /// Start building the add operation to a target property on the model.
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>

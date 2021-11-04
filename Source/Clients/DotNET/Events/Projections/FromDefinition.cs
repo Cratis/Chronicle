@@ -6,17 +6,8 @@ namespace Cratis.Events.Projections
     /// <summary>
     /// Represents the definition from for a specific event.
     /// </summary>
-    public class FromDefinition : Dictionary<string, string>
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FromDefinition"/> class.
-        /// </summary>
-        public FromDefinition() { }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FromDefinition"/> class.
-        /// </summary>
-        /// <param name="dictionary">The <see cref="IDictionary{TKey, TValue}"/> whose values are copied into the <see cref="FromDefinition"/>.</param>
-        public FromDefinition(IDictionary<string, string> dictionary) : base(dictionary) { }
-    }
+    /// <param name="Properties">Properties and expressions for each property.</param>
+    /// <param name="Key">Optional key expression, represents the key to use for identifying the model instance. If not specified; eventSourceId will be used.</param>
+    /// <param name="ParentKey">Optional parent key expression, typically used in child relationships for identifying parent model.</param>
+    public record FromDefinition(IDictionary<string, string> Properties, string? Key, string? ParentKey);
 }

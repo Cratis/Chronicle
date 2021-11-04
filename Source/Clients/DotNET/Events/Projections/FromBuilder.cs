@@ -14,11 +14,20 @@ namespace Cratis.Events.Projections
     public class FromBuilder<TModel, TEvent> : IFromBuilder<TModel, TEvent>
     {
         readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
+        string? _parentKey;
+        string? _key;
 
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
         {
-            _propertyExpressions.Add(new ParentKeyPropertyExpressionBuilder(keyAccessor.GetPropertyInfo().Name));
+            _key = keyAccessor.GetPropertyInfo().Name;
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IFromBuilder<TModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
+        {
+            _parentKey = keyAccessor.GetPropertyInfo().Name;
             return this;
         }
 
@@ -47,6 +56,9 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public FromDefinition Build() => new(_propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()));
+        public FromDefinition Build() => new(
+            Properties: _propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()),
+            Key: _key,
+            ParentKey: _parentKey);
     }
 }

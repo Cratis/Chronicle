@@ -6,5 +6,8 @@ namespace Cratis.Events.Projections.Json
     /// <summary>
     /// Represents the definition from for a specific event.
     /// </summary>
-    public class FromDefinition : Dictionary<string, string> { }
+    /// <param name="Properties">Properties and expressions for each property.</param>
+    /// <param name="Key">Optional key expression, represents the key to use for identifying the model instance. If not specified; eventSourceId will be used.</param>
+    /// <param name="ParentKey">Optional parent key expression, typically used in child relationships for identifying parent model.</param>
+    public record FromDefinition(IDictionary<string, string> Properties, string? Key, string? ParentKey);
 }
