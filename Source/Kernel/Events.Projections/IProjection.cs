@@ -32,6 +32,11 @@ namespace Cratis.Events.Projections
         IEnumerable<EventType> EventTypes { get; }
 
         /// <summary>
+        /// Gets the collection of <see cref="IProjection">child projections</see>.
+        /// </summary>
+        IEnumerable<IProjection> ChildProjections { get; }
+
+        /// <summary>
         /// Apply a filter to an <see cref="IObservable{EventContext}"/> with the event types the <see cref="Projection"/> is interested in.
         /// </summary>
         /// <param name="observable"><see cref="IObservable{EventContext}"/> to filter.</param>
@@ -42,9 +47,8 @@ namespace Cratis.Events.Projections
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
-        /// <param name="initialState"><see cref="ExpandoObject"/> holding the initial state before the event is applied.</param>
-        /// <return><see cref="Changeset"/> with all changes.</return>
-        Changeset OnNext(Event @event, ExpandoObject initialState);
+        /// <param name="changeset"><see cref="Changeset"/> being worked on.</param>
+        void OnNext(Event @event, Changeset changeset);
 
         /// <summary>
         /// Get the <see cref="KeyResolver"/> associated with a given <see cref="EventType"/>.

@@ -69,7 +69,8 @@ namespace Cratis.Extensions.Dolittle.Projections
                 var projection = _projectionParser.Parse(json);
                 var projectionPositions = new ProjectionPositions(_mongoDBClientFactory);
                 var provider = new ProjectionEventProvider(_mongoDBClientFactory, projectionPositions, _loggerFactory.CreateLogger<ProjectionEventProvider>());
-                var pipeline = new ProjectionPipeline(provider, projection, _loggerFactory.CreateLogger<ProjectionPipeline>());
+                var changesetStorage = new MongoDBChangesetStorage(_mongoDBClientFactory);
+                var pipeline = new ProjectionPipeline(provider, projection, changesetStorage, _loggerFactory.CreateLogger<ProjectionPipeline>());
                 //var storage = new InMemoryProjectionStorage();
                 var storage = new MongoDBProjectionStorage(_mongoDBClientFactory);
                 pipeline.StoreIn(storage);

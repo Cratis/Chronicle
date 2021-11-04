@@ -22,16 +22,19 @@ namespace Cratis.Events.Projections
         /// <param name="identifier">The unique identifier of the projection.</param>
         /// <param name="model">The target <see cref="Model"/>.</param>
         /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
+        /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
         public Projection(
             ProjectionId identifier,
             Model model,
-            IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver)
+            IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
+            IEnumerable<IProjection> childProjections)
         {
             Identifier = identifier;
             Model = model;
             EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
             Event = FilterEventTypes(_subject);
             _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+            ChildProjections = childProjections;
         }
 
         /// <inheritdoc/>
@@ -50,11 +53,13 @@ namespace Cratis.Events.Projections
         public IEnumerable<EventType> EventTypes { get; }
 
         /// <inheritdoc/>
-        public Changeset OnNext(Event @event, ExpandoObject initialState)
+        public IEnumerable<IProjection> ChildProjections { get; }
+
+        /// <inheritdoc/>
+        public void OnNext(Event @event, Changeset changeset)
         {
-            var context = new EventContext(@event, new Changeset(this, @event, initialState));
+            var context = new EventContext(@event, changeset);
             _subject.OnNext(context);
-            return context.Changeset;
         }
 
         /// <inheritdoc/>
