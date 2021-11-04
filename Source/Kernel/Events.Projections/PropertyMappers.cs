@@ -20,7 +20,7 @@ namespace Cratis.Events.Projections
         {
             return (Event @event, ExpandoObject target) =>
             {
-                var actualTarget = GetActualTarget(target, targetProperty.Segments);
+                var actualTarget = target.GetOrCreateInstanceFor(targetProperty) as IDictionary<string, object>;
                 actualTarget[targetProperty.Segments[^1]] = eventValueProvider(@event);
             };
         }
@@ -36,7 +36,7 @@ namespace Cratis.Events.Projections
             return (Event @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.Segments[^1];
-                var actualTarget = GetActualTarget(target, targetProperty.Segments);
+                var actualTarget = target.GetOrCreateInstanceFor(targetProperty) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment))
                 {
                     actualTarget[lastSegment] = (double)0;
@@ -58,7 +58,7 @@ namespace Cratis.Events.Projections
             return (Event @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.Segments[^1];
-                var actualTarget = GetActualTarget(target, targetProperty.Segments);
+                var actualTarget = target.GetOrCreateInstanceFor(targetProperty) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment))
                 {
                     actualTarget[lastSegment] = (double)0;
@@ -67,27 +67,6 @@ namespace Cratis.Events.Projections
                 value -= (double)eventValueProvider(@event);
                 actualTarget[lastSegment] = value;
             };
-        }
-
-        static IDictionary<string, object> GetActualTarget(ExpandoObject target, string[] targetPath)
-        {
-            var currentTarget = target as IDictionary<string, object>;
-            for (var propertyIndex = 0; propertyIndex < targetPath.Length - 1; propertyIndex++)
-            {
-                var property = targetPath[propertyIndex];
-                if (!currentTarget.ContainsKey(property))
-                {
-                    var nested = new ExpandoObject();
-                    currentTarget[property] = nested;
-                    currentTarget = nested!;
-                }
-                else
-                {
-                    currentTarget = ((ExpandoObject)currentTarget[property])!;
-                }
-            }
-
-            return currentTarget;
         }
     }
 }
