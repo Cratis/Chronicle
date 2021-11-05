@@ -54,7 +54,6 @@ namespace Cratis.Events.Projections.MongoDB
                 {
                     foreach (var propertyDifference in propertiesChanged.Differences)
                     {
-                        Console.WriteLine($"Changes ; {propertyDifference.MemberPath} - '{propertyDifference.Changed}'");
                         if (updateBuilder != default)
                         {
                             updateBuilder = updateBuilder.Set(propertyDifference.MemberPath.ToCamelCase(), propertyDifference.Changed);
