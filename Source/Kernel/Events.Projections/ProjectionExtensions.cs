@@ -26,15 +26,15 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
-        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver)
         {
-            observable.Subscribe(_ => _.Changeset.ApplyChildWithProperties(childrenProperty, identifiedByProperty, keyResolver(_.Event), propertyMappers));
+            observable.Subscribe(_ => _.Changeset.ApplyChild(childrenProperty, identifiedByProperty, keyResolver(_.Event)));
             return observable;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, IEnumerable<PropertyMapper> propertyMappers)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, InstanceAccessor instanceAccessor, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
         {
-            observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
+            observable.Subscribe(_ => _.Changeset.ApplyProperties(instanceAccessor, keyResolver, propertyMappers));
             return observable;
         }
     }
