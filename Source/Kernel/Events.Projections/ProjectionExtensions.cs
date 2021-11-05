@@ -32,9 +32,16 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, InstanceAccessor instanceAccessor, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, InstanceAccessor instanceAccessor, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
         {
-            observable.Subscribe(_ => _.Changeset.ApplyProperties(instanceAccessor, keyResolver, propertyMappers));
+            if (childrenProperty.IsRoot)
+            {
+                observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
+            }
+            else
+            {
+                observable.Subscribe(_ => _.Changeset.ApplyChildProperties(instanceAccessor, childrenProperty, identifiedByProperty, keyResolver, propertyMappers));
+            }
             return observable;
         }
     }

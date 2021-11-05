@@ -43,13 +43,31 @@ namespace Cratis.Events.Projections.Changes
         /// <summary>
         /// Applies properties to the <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="instanceAccessor"><see cref="InstanceAccessor"/> for getting the actual instance to apply to.</param>
-        /// <param name="keyResolver"><see cref="EventValueProvider"/> for resolving the key.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
         /// <remarks>
         /// This will run a diff against the initial state and only produce changes that are new.
         /// </remarks>
-        public void ApplyProperties(InstanceAccessor instanceAccessor, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        public void ApplyProperties(IEnumerable<PropertyMapper> propertyMappers)
+        {
+            var workingState = InitialState.Clone();
+            foreach (var propertyMapper in propertyMappers)
+            {
+                propertyMapper(Event, workingState);
+            }
+
+            var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
+            if (!comparer.Compare(InitialState, workingState, out var differences))
+            {
+                _changes.Add(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(InitialState, workingState, _))));
+            }
+        }
+
+        public void ApplyChildProperties(
+            InstanceAccessor instanceAccessor,
+            Property childrenProperty,
+            Property identifiedByProperty,
+            EventValueProvider keyResolver,
+            IEnumerable<PropertyMapper> propertyMappers)
         {
             var workingState = InitialState.Clone();
             var workingInstance = instanceAccessor(workingState, Event, keyResolver);
@@ -62,7 +80,12 @@ namespace Cratis.Events.Projections.Changes
             var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
             if (!comparer.Compare(initialInstance, workingInstance, out var differences))
             {
-                _changes.Add(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(InitialState, workingState, _))));
+                _changes.Add(new ChildPropertiesChanged(
+                    workingInstance,
+                    childrenProperty,
+                    identifiedByProperty,
+                    keyResolver(Event),
+                    differences.Select(_ => new PropertyDifference(initialInstance, workingInstance, _))));
             }
         }
 
