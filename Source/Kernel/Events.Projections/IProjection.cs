@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections
@@ -15,6 +14,11 @@ namespace Cratis.Events.Projections
         /// Gets the unique identifier of the <see cref="IProjection"/>.
         /// </summary>
         ProjectionId    Identifier { get; }
+
+        /// <summary>
+        /// Gets the fully qualified path for the projection. Typically for child relationships, this will show the full path it applies to.
+        /// </summary>
+        ProjectionPath Path { get; }
 
         /// <summary>
         /// Gets the <see cref="Model"/> the projection targets.

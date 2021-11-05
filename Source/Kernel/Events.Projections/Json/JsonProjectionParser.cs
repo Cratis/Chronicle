@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Concepts;
 using Cratis.Events.Projections.Expressions;
 using Newtonsoft.Json;
@@ -47,14 +48,25 @@ namespace Cratis.Events.Projections.Json
         /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
         /// <returns><see cref="IProjection"/> instance.</returns>
         public IProjection CreateFrom(ProjectionDefinition definition) =>
-            CreateProjectionFrom(definition.Identifier, definition.Model, definition.From, definition.Children, _ => { });
+            CreateProjectionFrom(
+                definition.Identifier,
+                $"Root({definition.Identifier})",
+                definition.Model,
+                definition.From,
+                new Dictionary<Property, ChildrenDefinition>(),
+                definition.Children,
+                _ => { },
+                (initialState, _, __) => initialState);
 
         IProjection CreateProjectionFrom(
             ProjectionId identifier,
+            ProjectionPath path,
             ModelDefinition modelDefinition,
             IDictionary<EventType, FromDefinition> fromDefinitions,
+            IDictionary<Property, ChildrenDefinition> parentChildrenDefinitions,
             IDictionary<Property, ChildrenDefinition> childrenDefinitions,
-            Action<IEnumerable<EventTypeWithKeyResolver>> addChildEvents)
+            Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes,
+            InstanceAccessor instanceAccessor)
         {
             var eventsForProjection = fromDefinitions.Select(kvp => new EventTypeWithKeyResolver(kvp.Key, string.IsNullOrEmpty(kvp.Value.ParentKey) ?
                     EventValueProviders.FromEventSourceId :
@@ -62,32 +74,43 @@ namespace Cratis.Events.Projections.Json
 
             var childProjections = childrenDefinitions.Select(kvp => CreateProjectionFrom(
                     Guid.Empty,
+                    $"{path} -> ChildrenAt({kvp.Key.Path})",
                     kvp.Value.Model,
                     kvp.Value.From,
+                    childrenDefinitions,
                     new Dictionary<Property, ChildrenDefinition>(),
                     _ =>
                     {
                         eventsForProjection.AddRange(_);
-                        addChildEvents(_);
+                        addChildEventTypes(_);
+                    },
+                    (initialState, @event, keyResolver) =>
+                    {
+                        var children = kvp.Key.GetValue(initialState) as IEnumerable<ExpandoObject>;
+                        var key = keyResolver(@event);
+                        var instance = children!.FirstOrDefault((IDictionary<string, object> child) =>
+                            child.ContainsKey(kvp.Value.IdentifiedBy.Path) &&
+                            child[kvp.Value.IdentifiedBy.Path] == key) as ExpandoObject;
+                        return instance!;
                     })).ToArray();
 
             var model = new Model(modelDefinition.Name, JSchema.Parse(modelDefinition.Schema));
-            addChildEvents(eventsForProjection);
+            addChildEventTypes(eventsForProjection);
 
-            var projection = new Projection(identifier, model, eventsForProjection, childProjections);
-            foreach (var (eventType, fromDefinition) in fromDefinitions)
-            {
-                var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                projection.Event.From(eventType).Project(propertyMappers);
-            }
+            var projection = new Projection(identifier, path, model, eventsForProjection, childProjections);
 
-            foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
+            foreach (var (childrenProperty, childrenDefinition) in parentChildrenDefinitions)
             {
                 foreach (var (eventType, fromDefinition) in childrenDefinition.From)
                 {
-                    var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                    projection.Event.From(eventType).Child(childrenProperty, childrenDefinition.IdentifiedBy, EventValueProviders.FromEventSourceId, propertyMappers);
+                    projection.Event.From(eventType).Child(childrenProperty, childrenDefinition.IdentifiedBy, EventValueProviders.FromEventSourceId);
                 }
+            }
+
+            foreach (var (eventType, fromDefinition) in fromDefinitions)
+            {
+                var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
+                projection.Event.From(eventType).Project(instanceAccessor, EventValueProviders.FromEventSourceId, propertyMappers);
             }
 
             return projection;

@@ -77,7 +77,7 @@ namespace Cratis.Events.Projections
             // KeyResolver for child projections will be the ParentKey
             // Children of Children will point to the top level keyResolver
 
-            var keyResolver = Projection.GetKeyResolverFor(@event.Type);
+            var keyResolver = projection.GetKeyResolverFor(@event.Type);
             var key = keyResolver(@event);
             _logger.GettingInitialValues(@event.SequenceNumber);
             var initialState = await storage.FindOrDefault(Projection.Model, key);

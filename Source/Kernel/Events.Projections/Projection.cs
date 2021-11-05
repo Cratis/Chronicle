@@ -19,11 +19,13 @@ namespace Cratis.Events.Projections
         /// Initializes a new instance of the <see cref="Projection"/> class.
         /// </summary>
         /// <param name="identifier">The unique identifier of the projection.</param>
+        /// <param name="path">The qualified path of the projection.</param>
         /// <param name="model">The target <see cref="Model"/>.</param>
         /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
         /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
         public Projection(
             ProjectionId identifier,
+            ProjectionPath path,
             Model model,
             IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
             IEnumerable<IProjection> childProjections)
@@ -32,15 +34,19 @@ namespace Cratis.Events.Projections
             Model = model;
             EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
             Event = FilterEventTypes(_subject);
+            Path = path;
             _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
             ChildProjections = childProjections;
         }
 
         /// <inheritdoc/>
-        public IObservable<EventContext>  FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
+        public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
 
         /// <inheritdoc/>
         public ProjectionId Identifier { get; }
+
+        /// <inheritdoc/>
+        public ProjectionPath Path { get; }
 
         /// <inheritdoc/>
         public Model Model { get; }
@@ -52,7 +58,7 @@ namespace Cratis.Events.Projections
         public IEnumerable<EventType> EventTypes { get; }
 
         /// <inheritdoc/>
-        public IEnumerable<IProjection> ChildProjections { get; }
+        public IEnumerable<IProjection> ChildProjections { get; }
 
         /// <inheritdoc/>
         public void OnNext(Event @event, Changeset changeset)

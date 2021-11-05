@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Strings;
 
 namespace Cratis.Events.Projections
@@ -23,16 +24,38 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Gets the full path of the property.
         /// </summary>
-        public string Path { get; }
+        public string Path { get; }
 
         /// <summary>
         /// Gets the segments the full property path consists of.
         /// </summary>
-        public string[] Segments { get; }
+        public string[] Segments { get; }
 
         /// <summary>
         /// Gets the last segment of the path.
         /// </summary>
         public string LastSegment => Segments[^1];
+
+        /// <summary>
+        /// Gets the value at the path of the property.
+        /// </summary>
+        /// <param name="expandoObject"><see cref="ExpandoObject"/> to get from.</param>
+        /// <returns>Value, if any.</returns>
+        public object? GetValue(ExpandoObject expandoObject)
+        {
+            var inner = expandoObject.MakeSurePathIsFulfilled(this) as IDictionary<string, object>;
+            return inner.ContainsKey(LastSegment) ? inner[LastSegment] : null;
+        }
+
+        /// <summary>
+        /// Set a specific value at the path of the property.
+        /// </summary>
+        /// <param name="expandoObject"><see cref="ExpandoObject"/> to set to.</param>
+        /// <param name="value">Value to set.</param>
+        public void SetValue(ExpandoObject expandoObject, object value)
+        {
+            var inner = expandoObject.MakeSurePathIsFulfilled(this) as IDictionary<string, object>;
+            inner[LastSegment] = value;
+        }
     }
 }

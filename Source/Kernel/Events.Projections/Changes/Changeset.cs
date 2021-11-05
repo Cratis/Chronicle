@@ -33,7 +33,7 @@ namespace Cratis.Events.Projections.Changes
         /// <summary>
         /// Gets the initial state of before changes in changeset occurred.
         /// </summary>
-        public ExpandoObject InitialState { get; }
+        public ExpandoObject InitialState { get; private set; }
 
         /// <summary>
         /// Gets all the changes for the changeset.
@@ -43,20 +43,24 @@ namespace Cratis.Events.Projections.Changes
         /// <summary>
         /// Applies properties to the <see cref="Changeset"/>.
         /// </summary>
+        /// <param name="instanceAccessor"><see cref="InstanceAccessor"/> for getting the actual instance to apply to.</param>
+        /// <param name="keyResolver"><see cref="EventValueProvider"/> for resolving the key.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
         /// <remarks>
         /// This will run a diff against the initial state and only produce changes that are new.
         /// </remarks>
-        public void ApplyProperties(IEnumerable<PropertyMapper> propertyMappers)
+        public void ApplyProperties(InstanceAccessor instanceAccessor, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
         {
             var workingState = InitialState.Clone();
+            var workingInstance = instanceAccessor(workingState, Event, keyResolver);
+            var initialInstance = workingInstance.Clone();
             foreach (var propertyMapper in propertyMappers)
             {
-                propertyMapper(Event, workingState);
+                propertyMapper(Event, workingInstance);
             }
 
             var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
-            if (!comparer.Compare(InitialState, workingState, out var differences))
+            if (!comparer.Compare(initialInstance, workingInstance, out var differences))
             {
                 _changes.Add(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(InitialState, workingState, _))));
             }
@@ -75,9 +79,8 @@ namespace Cratis.Events.Projections.Changes
         /// <param name="childrenProperty"><see cref="Property"/> for accessing the children collection.</param>
         /// <param name="identifiedByProperty"><see cref="Property"/> that identifies the child.</param>
         /// <param name="key">Key value.</param>
-        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        public void ApplyChildWithProperties(Property childrenProperty, Property identifiedByProperty, object key, IEnumerable<PropertyMapper> propertyMappers)
+        public void ApplyChild(Property childrenProperty, Property identifiedByProperty, object key)
         {
             var workingState = InitialState.Clone();
             var inner = workingState.MakeSurePathIsFulfilled(childrenProperty) as IDictionary<string, object>;
@@ -96,23 +99,14 @@ namespace Cratis.Events.Projections.Changes
                 items = new List<ExpandoObject>(items);
             }
 
-            var item = items!.SingleOrDefault((IDictionary<string, object> _) => _.ContainsKey(identifiedByProperty.Path) && _[identifiedByProperty.Path] == key) as ExpandoObject;
-            if (item is not null)
+            if (!items!.Any((IDictionary<string, object> _) => _.ContainsKey(identifiedByProperty.Path) && _[identifiedByProperty.Path] == key))
             {
-                foreach (var propertyMapper in propertyMappers)
-                {
-                    propertyMapper(Event, item);
-                }
-            }
-            else
-            {
-                item = new ExpandoObject();
-                foreach (var propertyMapper in propertyMappers)
-                {
-                    propertyMapper(Event, item);
-                }
+                var item = new ExpandoObject();
+                identifiedByProperty.SetValue(item, key);
                 ((IList<ExpandoObject>)items).Add(item);
             }
+
+            InitialState = workingState;
         }
 
         /// <summary>
