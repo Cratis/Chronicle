@@ -28,7 +28,7 @@ namespace Cratis.Events.Projections
 
         public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver)
         {
-            observable.Subscribe(_ => _.Changeset.ApplyChild(childrenProperty, identifiedByProperty, keyResolver(_.Event)));
+            observable.Subscribe(_ => _.Changeset.ApplyAddChild(childrenProperty, identifiedByProperty, keyResolver(_.Event)));
             return observable;
         }
 

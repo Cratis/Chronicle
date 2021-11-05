@@ -63,6 +63,17 @@ namespace Cratis.Events.Projections.Changes
             }
         }
 
+        /// <summary>
+        /// Applies properties for a child to the <see cref="Changeset"/>.
+        /// </summary>
+        /// <param name="instanceAccessor"><see cref="InstanceAccessor"/> for accessing the actual instance to apply for.</param>
+        /// <param name="childrenProperty">The <see cref="Property"/> on the parent that holds the children.</param>
+        /// <param name="identifiedByProperty">The <see cref="Property"/> on the instance that identifies the child.</param>
+        /// <param name="keyResolver">The <see cref="EventValueProvider"/> for resolving the key on the event.</param>
+        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
+        /// <remarks>
+        /// This will run a diff against the initial state and only produce changes that are new.
+        /// </remarks>
         public void ApplyChildProperties(
             InstanceAccessor instanceAccessor,
             Property childrenProperty,
@@ -104,7 +115,7 @@ namespace Cratis.Events.Projections.Changes
         /// <param name="identifiedByProperty"><see cref="Property"/> that identifies the child.</param>
         /// <param name="key">Key value.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        public void ApplyChild(Property childrenProperty, Property identifiedByProperty, object key)
+        public void ApplyAddChild(Property childrenProperty, Property identifiedByProperty, object key)
         {
             var workingState = InitialState.Clone();
             var inner = workingState.MakeSurePathIsFulfilled(childrenProperty) as IDictionary<string, object>;
@@ -125,25 +136,16 @@ namespace Cratis.Events.Projections.Changes
             }
             inner[childrenProperty.LastSegment] = items;
 
-            if (!items!.Any((IDictionary<string, object> _) => _.ContainsKey(identifiedByProperty.Path) && _[identifiedByProperty.Path] == key))
+            if (!items!.Any((IDictionary<string, object> _) => _.ContainsKey(identifiedByProperty.Path) && _[identifiedByProperty.Path].Equals(key)))
             {
                 var item = new ExpandoObject();
                 identifiedByProperty.SetValue(item, key);
                 ((IList<ExpandoObject>)items).Add(item);
+
+                _changes.Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
             }
 
             InitialState = workingState;
-        }
-
-        /// <summary>
-        /// Adds a child with values from.
-        /// </summary>
-        /// <param name="childrenAccessor"><see cref="PropertyAccessor"/> for accessing the children collection.</param>
-        /// <param name="modelKey"><see cref="Expression"/> for accessing the model key.</param>
-        /// <param name="key">The key value.</param>
-        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
-        public void ApplyAddChild(Expression childrenAccessor, Expression modelKey, object key, IEnumerable<PropertyMapper> propertyMappers)
-        {
         }
 
         /// <summary>

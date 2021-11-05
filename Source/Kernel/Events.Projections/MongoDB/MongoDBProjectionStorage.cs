@@ -81,24 +81,34 @@ namespace Cratis.Events.Projections.MongoDB
                         hasChanges = true;
                     }
                 }
+                if (change is ChildAdded childAdded)
+                {
+                    // Nothing
+                }
                 if (change is ChildPropertiesChanged childPropertiesChanged)
                 {
-                    var childValue = Builders<BsonDocument>.Filter.Eq(
-                        $"{childPropertiesChanged.ChildrenProperty}.{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
-                    filter &= Builders<BsonDocument>.Filter.ElemMatch(childPropertiesChanged.ChildrenProperty.Path, childValue);
+                    if (changeset.Changes
+                                    .Select(_ => _ as ChildAdded)
+                                    .Any(_ => _ != null && _.ChildrenProperty == childPropertiesChanged.ChildrenProperty && _.Key == childPropertiesChanged.Key))
+                    {
+                        var document = childPropertiesChanged.State.ToBsonDocument();
+                        updateBuilder = updateDefinitionBuilder.AddToSet(childPropertiesChanged.ChildrenProperty.Path, document);
+                    }
+                    else
+                    {
+                        var childValue = Builders<BsonDocument>.Filter.Eq(
+                            $"{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
+                        filter &= Builders<BsonDocument>.Filter.ElemMatch(childPropertiesChanged.ChildrenProperty.Path, childValue);
 
-                    var prefix = $"{childPropertiesChanged.ChildrenProperty}.$";
+                        var prefix = $"{childPropertiesChanged.ChildrenProperty}.$";
+                        foreach (var propertyDifference in childPropertiesChanged!.Differences)
+                        {
+                            UpdateProperty($"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}", propertyDifference.Changed!);
+                            hasChanges = true;
+                        }
+                    }
 
-                    var document = childPropertiesChanged.State.ToBsonDocument();
-                    updateBuilder = updateDefinitionBuilder.AddToSet(childPropertiesChanged.ChildrenProperty.Path, document);
                     hasChanges = true;
-                    //UpdateProperty($"{prefix}.{childPropertiesChanged.IdentifiedByProperty.Path}", childPropertiesChanged?.Key?.ToString() ?? string.Empty);
-
-                    // foreach (var propertyDifference in childPropertiesChanged!.Differences)
-                    // {
-                    //     UpdateProperty($"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}", propertyDifference.Changed!);
-                    //     hasChanges = true;
-                    // }
                 }
             }
 
