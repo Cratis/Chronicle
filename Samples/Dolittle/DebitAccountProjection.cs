@@ -5,21 +5,21 @@ using Cratis.Events.Projections;
 
 namespace Sample
 {
-    [Projection("4ae2fd6d-0038-4066-8b6e-423c908deee5")]
-    public class DebitAccountProjection : IProjectionFor<DebitAccount>
-    {
-        public void Define(IProjectionBuilderFor<DebitAccount> builder)
-        {
-            builder
-                .From<DebitAccountOpened>(_ => _
-                    .Set(_ => _.Name).To(_ => _.Name)
-                    .Set(_ => _.Owner).To(_ => _.Owner))
-                .From<DepositToDebitAccountPerformed>(_ => _
-                    .Add(_ => _.Balance).With(_ => _.Amount))
-                .From<WithdrawalFromDebitAccountPerformed>(_ => _
-                    .Subtract(_ => _.Balance).With(_ => _.Amount));
-        }
-    }
+    // [Projection("4ae2fd6d-0038-4066-8b6e-423c908deee5")]
+    // public class DebitAccountProjection : IProjectionFor<DebitAccount>
+    // {
+    //     public void Define(IProjectionBuilderFor<DebitAccount> builder)
+    //     {
+    //         builder
+    //             .From<DebitAccountOpened>(_ => _
+    //                 .Set(_ => _.Name).To(_ => _.Name)
+    //                 .Set(_ => _.Owner).To(_ => _.Owner))
+    //             .From<DepositToDebitAccountPerformed>(_ => _
+    //                 .Add(_ => _.Balance).With(_ => _.Amount))
+    //             .From<WithdrawalFromDebitAccountPerformed>(_ => _
+    //                 .Subtract(_ => _.Balance).With(_ => _.Amount));
+    //     }
+    // }
 
     // public class ProjectionTesting : IPerformBootProcedure
     // {

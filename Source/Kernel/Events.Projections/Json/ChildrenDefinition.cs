@@ -10,5 +10,5 @@ namespace Cratis.Events.Projections.Json
     /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
     /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
     /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
-    public record ChildrenDefinition(string IdentifiedBy, ModelDefinition Model, IDictionary<EventType, FromDefinition> From, RemovedWithDefinition? RemovedWith);
+    public record ChildrenDefinition(Property IdentifiedBy, ModelDefinition Model, IDictionary<EventType, FromDefinition> From, RemovedWithDefinition? RemovedWith);
 }

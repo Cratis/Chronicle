@@ -33,7 +33,7 @@ namespace Cratis.Events.Projections.Changes
         /// <summary>
         /// Gets the initial state of before changes in changeset occurred.
         /// </summary>
-        public ExpandoObject InitialState { get; }
+        public ExpandoObject InitialState { get; }
 
         /// <summary>
         /// Gets all the changes for the changeset.
@@ -72,13 +72,47 @@ namespace Cratis.Events.Projections.Changes
         /// <summary>
         /// Applies properties to the child in the model to the <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="childrenAccessor"><see cref="PropertyAccessor"/> for accessing the children collection.</param>
-        /// <param name="modelKey"><see cref="Expression"/> for accessing the model key.</param>
-        /// <param name="key">The key value.</param>
+        /// <param name="childrenProperty"><see cref="Property"/> for accessing the children collection.</param>
+        /// <param name="identifiedByProperty"><see cref="Property"/> that identifies the child.</param>
+        /// <param name="key">Key value.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
-        public void ApplyChildProperties(PropertyAccessor childrenAccessor, Expression modelKey, object key, IEnumerable<PropertyMapper> propertyMappers)
+        /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
+        public void ApplyChildWithProperties(Property childrenProperty, Property identifiedByProperty, object key, IEnumerable<PropertyMapper> propertyMappers)
         {
             var workingState = InitialState.Clone();
+            var inner = workingState.MakeSurePathIsFulfilled(childrenProperty) as IDictionary<string, object>;
+            if (!inner.ContainsKey(childrenProperty.LastSegment))
+            {
+                inner[childrenProperty.LastSegment] = new List<ExpandoObject>();
+            }
+
+            if (!(inner[childrenProperty.LastSegment] is IEnumerable<ExpandoObject> items))
+            {
+                throw new ChildrenPropertyIsNotEnumerable(childrenProperty);
+            }
+
+            if (items is not IList<ExpandoObject>)
+            {
+                items = new List<ExpandoObject>(items);
+            }
+
+            var item = items!.SingleOrDefault((IDictionary<string, object> _) => _.ContainsKey(identifiedByProperty.Path) && _[identifiedByProperty.Path] == key) as ExpandoObject;
+            if (item is not null)
+            {
+                foreach (var propertyMapper in propertyMappers)
+                {
+                    propertyMapper(Event, item);
+                }
+            }
+            else
+            {
+                item = new ExpandoObject();
+                foreach (var propertyMapper in propertyMappers)
+                {
+                    propertyMapper(Event, item);
+                }
+                ((IList<ExpandoObject>)items).Add(item);
+            }
         }
 
         /// <summary>

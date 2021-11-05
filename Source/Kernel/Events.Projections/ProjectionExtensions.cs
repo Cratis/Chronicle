@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 
 namespace Cratis.Events.Projections
 {
@@ -28,8 +26,9 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
-        public static IObservable<EventContext> Children(this IObservable<EventContext> observable, PropertyAccessor childrenPropertyAccessor, IProjection projection)
+        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
         {
+            observable.Subscribe(_ => _.Changeset.ApplyChildWithProperties(childrenProperty, identifiedByProperty, keyResolver(_.Event), propertyMappers));
             return observable;
         }
 

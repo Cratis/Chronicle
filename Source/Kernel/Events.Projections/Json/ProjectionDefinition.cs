@@ -14,5 +14,5 @@ namespace Cratis.Events.Projections.Json
         ProjectionId Identifier,
         ModelDefinition Model,
         IDictionary<EventType, FromDefinition> From,
-        IDictionary<string, ChildrenDefinition> Children);
+        IDictionary<Property, ChildrenDefinition> Children);
 }

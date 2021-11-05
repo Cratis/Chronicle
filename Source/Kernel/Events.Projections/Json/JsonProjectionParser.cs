@@ -32,6 +32,9 @@ namespace Cratis.Events.Projections.Json
         public IProjection Parse(string json)
         {
             var definition = JsonConvert.DeserializeObject<ProjectionDefinition>(json,
+                new PropertyJsonConverter(),
+                new PropertyExpressionDictionaryJsonConverter(),
+                new PropertyChildrenDefinitionDictionaryJsonConverter(),
                 new ConceptAsJsonConverter(),
                 new ConceptAsDictionaryJsonConverter())!;
 
@@ -50,7 +53,7 @@ namespace Cratis.Events.Projections.Json
             ProjectionId identifier,
             ModelDefinition modelDefinition,
             IDictionary<EventType, FromDefinition> fromDefinitions,
-            IDictionary<string, ChildrenDefinition> childrenDefinitions,
+            IDictionary<Property, ChildrenDefinition> childrenDefinitions,
             Action<IEnumerable<EventTypeWithKeyResolver>> addChildEvents)
         {
             var eventsForProjection = fromDefinitions.Select(kvp => new EventTypeWithKeyResolver(kvp.Key, string.IsNullOrEmpty(kvp.Value.ParentKey) ?
@@ -61,25 +64,30 @@ namespace Cratis.Events.Projections.Json
                     Guid.Empty,
                     kvp.Value.Model,
                     kvp.Value.From,
-                    new Dictionary<string, ChildrenDefinition>(),
+                    new Dictionary<Property, ChildrenDefinition>(),
                     _ =>
                     {
                         eventsForProjection.AddRange(_);
                         addChildEvents(_);
-                    }));
+                    })).ToArray();
 
             var model = new Model(modelDefinition.Name, JSchema.Parse(modelDefinition.Schema));
+            addChildEvents(eventsForProjection);
 
             var projection = new Projection(identifier, model, eventsForProjection, childProjections);
-            foreach (var (eventType, definitions) in fromDefinitions)
+            foreach (var (eventType, fromDefinition) in fromDefinitions)
             {
-                var propertyMappers = definitions.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
+                var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                 projection.Event.From(eventType).Project(propertyMappers);
             }
 
-            foreach (var (property, definitions) in childrenDefinitions)
+            foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {
-                // Hook up child relationship extensions
+                foreach (var (eventType, fromDefinition) in childrenDefinition.From)
+                {
+                    var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
+                    projection.Event.From(eventType).Child(childrenProperty, childrenDefinition.IdentifiedBy, EventValueProviders.FromEventSourceId, propertyMappers);
+                }
             }
 
             return projection;
