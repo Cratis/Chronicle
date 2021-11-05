@@ -70,13 +70,6 @@ namespace Cratis.Events.Projections
 
         async Task HandleEventFor(IProjection projection, IProjectionStorage storage, Event @event, List<Changeset> changesets)
         {
-            // Handle projections recursively - starting with the projection we have
-            // Debugability: Changeset storage
-            // Merge Changesets before applying them to storage
-
-            // KeyResolver for child projections will be the ParentKey
-            // Children of Children will point to the top level keyResolver
-
             var keyResolver = projection.GetKeyResolverFor(@event.Type);
             var key = keyResolver(@event);
             _logger.GettingInitialValues(@event.SequenceNumber);

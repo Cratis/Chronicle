@@ -96,7 +96,7 @@ namespace Cratis.Events.Projections.Json
                         var key = keyResolver(@event);
                         var instance = children!.FirstOrDefault((IDictionary<string, object> child) =>
                             child.ContainsKey(kvp.Value.IdentifiedBy.Path) &&
-                            child[kvp.Value.IdentifiedBy.Path] == key) as ExpandoObject;
+                            child[kvp.Value.IdentifiedBy.Path].Equals(key)) as ExpandoObject;
                         return instance!;
                     })).ToArray();
 
