@@ -31,5 +31,11 @@ namespace Cratis.Extensions.Dolittle.Projections
 
         [LoggerMessage(6, LogLevel.Trace, "Providing event with sequence number {SequenceNumber}")]
         internal static partial void ProvidingEvent(this ILogger logger, uint sequenceNumber);
+
+        [LoggerMessage(7, LogLevel.Information, "Projection '{Projection}' is not interested in any event types, skipping catch up.")]
+        internal static partial void SkippingProvidingForProjectionDueToNoEventTypes(this ILogger logger, ProjectionId projection);
+
+        [LoggerMessage(8, LogLevel.Error, "Error during starting projection '{Projection}'")]
+        internal static partial void ErrorStartingProviding(this ILogger logger, ProjectionId projection, Exception exception);
     }
 }

@@ -111,6 +111,13 @@ namespace Cratis.Extensions.Dolittle.Projections
         {
             try
             {
+                if (!projection.EventTypes.Any())
+                {
+                    _logger.SkippingProvidingForProjectionDueToNoEventTypes(projection.Identifier);
+                    await Task.CompletedTask;
+                    return;
+                }
+
                 await CatchUp(projection, subject);
                 var tail = _eventLogCollection.CountDocuments(FilterDefinition<EventStore.Event>.Empty);
                 await _projectionPositions.Save(projection, (uint)tail);
@@ -119,7 +126,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                _logger.ErrorStartingProviding(projection.Identifier, ex);
             }
         }
 
