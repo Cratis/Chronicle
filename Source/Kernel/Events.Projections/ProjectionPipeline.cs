@@ -84,7 +84,7 @@ namespace Cratis.Events.Projections
             var changeset = new Changeset(@event, initialState);
             changesets.Add(changeset);
             _logger.Projecting(@event.SequenceNumber);
-            Projection.OnNext(@event, changeset);
+            projection.OnNext(@event, changeset);
             _logger.SavingResult(@event.SequenceNumber);
             await storage.ApplyChanges(Projection.Model, key, changeset);
 
