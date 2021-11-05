@@ -49,6 +49,8 @@ namespace Cratis.Events.Projections.Json
         /// <returns><see cref="IProjection"/> instance.</returns>
         public IProjection CreateFrom(ProjectionDefinition definition) =>
             CreateProjectionFrom(
+                Property.Root,
+                Property.Root,
                 definition.Identifier,
                 $"Root({definition.Identifier})",
                 definition.Model,
@@ -59,6 +61,8 @@ namespace Cratis.Events.Projections.Json
                 (initialState, _, __) => initialState);
 
         IProjection CreateProjectionFrom(
+            Property childrenAccessorProperty,
+            Property identifiedByProperty,
             ProjectionId identifier,
             ProjectionPath path,
             ModelDefinition modelDefinition,
@@ -73,6 +77,8 @@ namespace Cratis.Events.Projections.Json
                     EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
 
             var childProjections = childrenDefinitions.Select(kvp => CreateProjectionFrom(
+                    kvp.Key,
+                    kvp.Value.IdentifiedBy,
                     Guid.Empty,
                     $"{path} -> ChildrenAt({kvp.Key.Path})",
                     kvp.Value.Model,
@@ -110,7 +116,7 @@ namespace Cratis.Events.Projections.Json
             foreach (var (eventType, fromDefinition) in fromDefinitions)
             {
                 var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                projection.Event.From(eventType).Project(instanceAccessor, EventValueProviders.FromEventSourceId, propertyMappers);
+                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty, instanceAccessor, EventValueProviders.FromEventSourceId, propertyMappers);
             }
 
             return projection;

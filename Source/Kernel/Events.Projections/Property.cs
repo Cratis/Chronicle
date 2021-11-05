@@ -12,6 +12,11 @@ namespace Cratis.Events.Projections
     public class Property
     {
         /// <summary>
+        /// Represents the root path.
+        /// </summary>
+        public static readonly Property Root = new Property(string.Empty);
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Property"/> class.
         /// </summary>
         /// <param name="path">Path to the property relative within an object.</param>
@@ -35,6 +40,11 @@ namespace Cratis.Events.Projections
         /// Gets the last segment of the path.
         /// </summary>
         public string LastSegment => Segments[^1];
+
+        /// <summary>
+        /// Gets whether or not this is the root path.
+        /// </summary>
+        public bool IsRoot => Path?.Length == 0;
 
         /// <summary>
         /// Gets the value at the path of the property.
