@@ -29,5 +29,10 @@ namespace Cratis.Events.Projections
         /// Gets the segments the full property path consists of.
         /// </summary>
         public string[] Segments { get; }
+
+        /// <summary>
+        /// Gets the last segment of the path.
+        /// </summary>
+        public string LastSegment => Segments[^1];
     }
 }
