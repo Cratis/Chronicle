@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Events.Projections.Changes;
 using Cratis.Extensions.MongoDB;
 using Cratis.Strings;
-using Cratis.Events.Projections.Changes;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 
 namespace Cratis.Events.Projections.MongoDB
 {
@@ -24,7 +25,13 @@ namespace Cratis.Events.Projections.MongoDB
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
         public MongoDBProjectionStorage(IMongoDBClientFactory clientFactory)
         {
-            var client = clientFactory.Create(MongoUrl.Create("mongodb://localhost:27017"));
+            var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
+            settings.ClusterConfigurator = _ => _
+                .Subscribe<CommandStartedEvent>(ev => Console.WriteLine($"Start: {ev.CommandName} : {ev.Command}"))
+                .Subscribe<CommandSucceededEvent>(ev => Console.WriteLine($"Succeeded: {ev.CommandName} : {ev.Reply}"))
+                .Subscribe<CommandFailedEvent>(ev => Console.WriteLine($"Failed: {ev.CommandName} : {ev.Failure}"));
+
+            var client = clientFactory.Create(settings.Freeze());
             _database = client.GetDatabase("read-models");
         }
 
@@ -48,29 +55,56 @@ namespace Cratis.Events.Projections.MongoDB
             UpdateDefinition<BsonDocument>? updateBuilder = default;
             var hasChanges = false;
 
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", key.ToString());
+
+            UpdateDefinition<BsonDocument> UpdateProperty(string path, object value)
+            {
+                if (updateBuilder != default)
+                {
+                    updateBuilder = updateBuilder.Set(path, value);
+                }
+                else
+                {
+                    updateBuilder = updateDefinitionBuilder!.Set(path, value);
+                }
+
+                return updateBuilder;
+            }
+
             foreach (var change in changeset.Changes)
             {
                 if (change is PropertiesChanged propertiesChanged)
                 {
                     foreach (var propertyDifference in propertiesChanged.Differences)
                     {
-                        if (updateBuilder != default)
-                        {
-                            updateBuilder = updateBuilder.Set(propertyDifference.MemberPath.ToCamelCase(), propertyDifference.Changed);
-                        }
-                        else
-                        {
-                            updateBuilder = updateDefinitionBuilder.Set(propertyDifference.MemberPath.ToCamelCase(), propertyDifference.Changed);
-                        }
+                        UpdateProperty(propertyDifference.MemberPath.ToCamelCase(), propertyDifference.Changed!);
                         hasChanges = true;
                     }
+                }
+                if (change is ChildPropertiesChanged childPropertiesChanged)
+                {
+                    var childValue = Builders<BsonDocument>.Filter.Eq(
+                        $"{childPropertiesChanged.ChildrenProperty}.{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
+                    filter &= Builders<BsonDocument>.Filter.ElemMatch(childPropertiesChanged.ChildrenProperty.Path, childValue);
+
+                    var prefix = $"{childPropertiesChanged.ChildrenProperty}.$";
+
+                    var document = childPropertiesChanged.State.ToBsonDocument();
+                    updateBuilder = updateDefinitionBuilder.AddToSet(childPropertiesChanged.ChildrenProperty.Path, document);
+                    hasChanges = true;
+                    //UpdateProperty($"{prefix}.{childPropertiesChanged.IdentifiedByProperty.Path}", childPropertiesChanged?.Key?.ToString() ?? string.Empty);
+
+                    // foreach (var propertyDifference in childPropertiesChanged!.Differences)
+                    // {
+                    //     UpdateProperty($"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}", propertyDifference.Changed!);
+                    //     hasChanges = true;
+                    // }
                 }
             }
 
             if (!hasChanges) return;
 
             var collection = _database.GetCollection<BsonDocument>(model.Name);
-            var filter = Builders<BsonDocument>.Filter.Eq("_id", key.ToString());
             await collection.UpdateOneAsync(filter, updateBuilder, new UpdateOptions { IsUpsert = true });
 
             await Task.CompletedTask;

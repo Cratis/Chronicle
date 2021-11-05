@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using System.Linq.Expressions;
 using Cratis.Dynamic;
@@ -112,15 +113,17 @@ namespace Cratis.Events.Projections.Changes
                 inner[childrenProperty.LastSegment] = new List<ExpandoObject>();
             }
 
-            if (!(inner[childrenProperty.LastSegment] is IEnumerable<ExpandoObject> items))
+            if (!(inner[childrenProperty.LastSegment] is IEnumerable))
             {
                 throw new ChildrenPropertyIsNotEnumerable(childrenProperty);
             }
 
+            var items = (inner[childrenProperty.LastSegment] as IEnumerable)!.Cast<ExpandoObject>();
             if (items is not IList<ExpandoObject>)
             {
-                items = new List<ExpandoObject>(items);
+                items = new List<ExpandoObject>(items!);
             }
+            inner[childrenProperty.LastSegment] = items;
 
             if (!items!.Any((IDictionary<string, object> _) => _.ContainsKey(identifiedByProperty.Path) && _[identifiedByProperty.Path] == key))
             {
