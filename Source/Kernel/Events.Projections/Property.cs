@@ -14,7 +14,14 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Represents the root path.
         /// </summary>
-        public static readonly Property Root = new Property(string.Empty);
+        public static readonly Property Root = new(string.Empty);
+
+        /// <summary>
+        /// Implicitly convert from <see cref="Property"/> to <see cref="string"/>
+        /// </summary>
+        /// <param name="property"><see cref="Property"/> to convert from.</param>
+        /// <returns>Converted path.</returns>
+        public static implicit operator string(Property property) => property.Path;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Property"/> class.
@@ -67,5 +74,8 @@ namespace Cratis.Events.Projections
             var inner = expandoObject.MakeSurePathIsFulfilled(this) as IDictionary<string, object>;
             inner[LastSegment] = value;
         }
+
+        /// <inheritdoc/>
+        public override string ToString() => Path;
     }
 }
