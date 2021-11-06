@@ -91,9 +91,7 @@ namespace Cratis.Events.Projections.MongoDB
 
                     case ChildPropertiesChanged childPropertiesChanged:
                         {
-                            if (changeset.Changes
-                                            .Select(_ => _ as ChildAdded)
-                                            .Any(_ => _ != null && _.ChildrenProperty == childPropertiesChanged.ChildrenProperty && _.Key == childPropertiesChanged.Key))
+                            if (changeset.HasChildBeenAddedWithKey(childPropertiesChanged.ChildrenProperty, childPropertiesChanged.Key))
                             {
                                 var document = childPropertiesChanged.State.ToBsonDocument();
                                 updateBuilder = updateDefinitionBuilder.AddToSet(childPropertiesChanged.ChildrenProperty.Path, document);
