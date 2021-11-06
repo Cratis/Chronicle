@@ -66,5 +66,15 @@ namespace Cratis.Events.Projections
             inner[childrenProperty.LastSegment] = items;
             return (items as ICollection<ExpandoObject>)!;
         }
+
+        /// <summary>
+        /// Check if there is an item with a specific key in a collection of <see cref="ExpandoObject"/> items.
+        /// </summary>
+        /// <param name="items">Items to check.</param>
+        /// <param name="identityProperty"><see cref="Property"/> holding identity on each item.</param>
+        /// <param name="key">The key value to check for.</param>
+        /// <returns>True if there is an item, false if not</returns>
+        public static bool Contains(this IEnumerable<ExpandoObject> items, Property identityProperty, object key) =>
+            items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
     }
 }
