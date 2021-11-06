@@ -10,18 +10,13 @@ namespace Cratis.Events.Projections
     /// </summary>
     public static class ProjectionExtensions
     {
+        /// <summary>
+        /// Filter an observable for a specific <see cref="EventType"/>.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
+        /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
+        /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
         public static IObservable<EventContext> From(this IObservable<EventContext> observable, EventType eventType)
-        {
-            return observable.Where(_ => _.Event.Type == eventType);
-        }
-
-        public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
-        {
-            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.ApplyRemove());
-            return observable;
-        }
-
-        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyAccessor propertyResolver)
         {
             return observable.Where(_ => _.Event.Type == eventType);
         }
@@ -43,6 +38,17 @@ namespace Cratis.Events.Projections
                 observable.Subscribe(_ => _.Changeset.ApplyChildProperties(instanceAccessor, childrenProperty, identifiedByProperty, keyResolver, propertyMappers));
             }
             return observable;
+        }
+
+        public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
+        {
+            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.ApplyRemove());
+            return observable;
+        }
+
+        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyAccessor propertyResolver)
+        {
+            return observable.Where(_ => _.Event.Type == eventType);
         }
     }
 }
