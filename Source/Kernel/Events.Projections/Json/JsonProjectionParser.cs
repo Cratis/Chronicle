@@ -94,10 +94,7 @@ namespace Cratis.Events.Projections.Json
                     {
                         var children = kvp.Key.GetValue(initialState) as IEnumerable<ExpandoObject>;
                         var key = keyResolver(@event);
-                        var instance = children!.FirstOrDefault((IDictionary<string, object> child) =>
-                            child.ContainsKey(kvp.Value.IdentifiedBy.Path) &&
-                            child[kvp.Value.IdentifiedBy.Path].Equals(key)) as ExpandoObject;
-                        return instance!;
+                        return children!.FindByKey(kvp.Value.IdentifiedBy, key)!;
                     })).ToArray();
 
             var model = new Model(modelDefinition.Name, JSchema.Parse(modelDefinition.Schema));
