@@ -71,17 +71,26 @@ namespace Cratis.Events.Projections.MongoDB
                 return updateBuilder;
             }
 
+            bool UpdateChangedProperties(IEnumerable<PropertyDifference> differences, string? prefix = default)
+            {
+                foreach (var propertyDifference in differences)
+                {
+                    var propertyName = string.IsNullOrEmpty(prefix) ?
+                        propertyDifference.MemberPath.ToCamelCase() :
+                        $"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}";
+
+                    UpdateProperty(propertyName, propertyDifference.Changed!);
+                }
+                return differences.Any();
+            }
+
             foreach (var change in changeset.Changes)
             {
                 switch (change)
                 {
                     case PropertiesChanged propertiesChanged:
                         {
-                            foreach (var propertyDifference in propertiesChanged.Differences)
-                            {
-                                UpdateProperty(propertyDifference.MemberPath.ToCamelCase(), propertyDifference.Changed!);
-                                hasChanges = true;
-                            }
+                            hasChanges = UpdateChangedProperties(propertiesChanged.Differences);
                         }
                         break;
 
@@ -99,12 +108,7 @@ namespace Cratis.Events.Projections.MongoDB
                                 $"{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
                             filter &= Builders<BsonDocument>.Filter.ElemMatch(childPropertiesChanged.ChildrenProperty.Path, childValue);
 
-                            var prefix = $"{childPropertiesChanged.ChildrenProperty}.$";
-                            foreach (var propertyDifference in childPropertiesChanged!.Differences)
-                            {
-                                UpdateProperty($"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}", propertyDifference.Changed!);
-                                hasChanges = true;
-                            }
+                            hasChanges = UpdateChangedProperties(childPropertiesChanged.Differences, $"{childPropertiesChanged.ChildrenProperty}.$");
                         }
                         break;
                 }
