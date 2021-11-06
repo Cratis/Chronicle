@@ -120,7 +120,7 @@ namespace Cratis.Events.Projections.Changes
             var workingState = InitialState.Clone();
             var items = workingState.EnsureCollection(childrenProperty);
 
-            if (!items!.Any((IDictionary<string, object> _) => _.ContainsKey(identifiedByProperty.Path) && _[identifiedByProperty.Path].Equals(key)))
+            if (!items.Contains(identifiedByProperty, key))
             {
                 var item = new ExpandoObject();
                 identifiedByProperty.SetValue(item, key);
