@@ -16,7 +16,7 @@ namespace Cratis.Events.Projections
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
         /// <param name="property"><see cref="Property"/> to get or create for.</param>
         /// <returns><see cref="ExpandoObject"/> at property.</returns>
-        public static ExpandoObject MakeSurePathIsFulfilled(this ExpandoObject target, Property property)
+        public static ExpandoObject EnsurePath(this ExpandoObject target, Property property)
         {
             var currentTarget = target as IDictionary<string, object>;
             for (var propertyIndex = 0; propertyIndex < property.Segments.Length - 1; propertyIndex++)
