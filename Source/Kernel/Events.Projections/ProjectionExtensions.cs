@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections
 {
@@ -21,9 +22,17 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
-        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver)
+        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
         {
-            observable.Subscribe(_ => _.Changeset.ApplyAddChild(childrenProperty, identifiedByProperty, keyResolver(_.Event)));
+            observable.Subscribe(_ =>
+            {
+                var items = _.Changeset.InitialState.EnsureCollection(childrenProperty);
+                var key = keyResolver(_.Event);
+                if (!items.Contains(identifiedByProperty, key))
+                {
+                    _.Changeset.ApplyAddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
+                }
+            });
             return observable;
         }
 
@@ -35,7 +44,14 @@ namespace Cratis.Events.Projections
             }
             else
             {
-                observable.Subscribe(_ => _.Changeset.ApplyChildProperties(instanceAccessor, childrenProperty, identifiedByProperty, keyResolver, propertyMappers));
+                observable.Subscribe(_ =>
+                {
+                    var key = keyResolver(_.Event);
+                    if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
+                    {
+                        _.Changeset.ApplyChildProperties(instanceAccessor, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                    }
+                });
             }
             return observable;
         }
