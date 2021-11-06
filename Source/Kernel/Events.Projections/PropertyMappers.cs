@@ -20,7 +20,7 @@ namespace Cratis.Events.Projections
         {
             return (Event @event, ExpandoObject target) =>
             {
-                var actualTarget = target.MakeSurePathIsFulfilled(targetProperty) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
                 actualTarget[targetProperty.LastSegment] = eventValueProvider(@event);
             };
         }
@@ -36,7 +36,7 @@ namespace Cratis.Events.Projections
             return (Event @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.MakeSurePathIsFulfilled(targetProperty) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment))
                 {
                     actualTarget[lastSegment] = (double)0;
@@ -58,7 +58,7 @@ namespace Cratis.Events.Projections
             return (Event @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.MakeSurePathIsFulfilled(targetProperty) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment))
                 {
                     actualTarget[lastSegment] = (double)0;

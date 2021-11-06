@@ -60,7 +60,7 @@ namespace Cratis.Events.Projections
         /// <returns>Value, if any.</returns>
         public object? GetValue(ExpandoObject expandoObject)
         {
-            var inner = expandoObject.MakeSurePathIsFulfilled(this) as IDictionary<string, object>;
+            var inner = expandoObject.EnsurePath(this) as IDictionary<string, object>;
             return inner.ContainsKey(LastSegment) ? inner[LastSegment] : null;
         }
 
@@ -71,7 +71,7 @@ namespace Cratis.Events.Projections
         /// <param name="value">Value to set.</param>
         public void SetValue(ExpandoObject expandoObject, object value)
         {
-            var inner = expandoObject.MakeSurePathIsFulfilled(this) as IDictionary<string, object>;
+            var inner = expandoObject.EnsurePath(this) as IDictionary<string, object>;
             inner[LastSegment] = value;
         }
 

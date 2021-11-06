@@ -118,7 +118,7 @@ namespace Cratis.Events.Projections.Changes
         public void ApplyAddChild(Property childrenProperty, Property identifiedByProperty, object key)
         {
             var workingState = InitialState.Clone();
-            var inner = workingState.MakeSurePathIsFulfilled(childrenProperty) as IDictionary<string, object>;
+            var inner = workingState.EnsurePath(childrenProperty) as IDictionary<string, object>;
             if (!inner.ContainsKey(childrenProperty.LastSegment))
             {
                 inner[childrenProperty.LastSegment] = new List<ExpandoObject>();
