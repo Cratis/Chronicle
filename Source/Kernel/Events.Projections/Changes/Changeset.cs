@@ -113,8 +113,9 @@ namespace Cratis.Events.Projections.Changes
         /// <param name="childrenProperty"><see cref="Property"/> for accessing the children collection.</param>
         /// <param name="identifiedByProperty"><see cref="Property"/> that identifies the child.</param>
         /// <param name="key">Key value.</param>
+        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper">property mappers</see> that will manipulate properties on the target.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        public void ApplyAddChild(Property childrenProperty, Property identifiedByProperty, object key)
+        public void ApplyAddChild(Property childrenProperty, Property identifiedByProperty, object key, IEnumerable<PropertyMapper> propertyMappers)
         {
             var workingState = InitialState.Clone();
             var items = workingState.EnsureCollection(childrenProperty);
@@ -122,6 +123,12 @@ namespace Cratis.Events.Projections.Changes
             if (!items.Contains(identifiedByProperty, key))
             {
                 var item = new ExpandoObject();
+
+                foreach (var propertyMapper in propertyMappers)
+                {
+                    propertyMapper(Event, item);
+                }
+
                 identifiedByProperty.SetValue(item, key);
                 ((IList<ExpandoObject>)items).Add(item);
 

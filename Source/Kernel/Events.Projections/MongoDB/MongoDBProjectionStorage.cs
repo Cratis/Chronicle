@@ -84,31 +84,26 @@ namespace Cratis.Events.Projections.MongoDB
                             }
                         }
                         break;
+
                     case ChildAdded childAdded:
                         {
+                            var document = childAdded.State.ToBsonDocument();
+                            updateBuilder = updateDefinitionBuilder.AddToSet(childAdded.ChildrenProperty.Path, document);
+                            hasChanges = true;
                         }
                         break;
 
                     case ChildPropertiesChanged childPropertiesChanged:
                         {
-                            if (changeset.HasChildBeenAddedWithKey(childPropertiesChanged.ChildrenProperty, childPropertiesChanged.Key))
-                            {
-                                var document = childPropertiesChanged.State.ToBsonDocument();
-                                updateBuilder = updateDefinitionBuilder.AddToSet(childPropertiesChanged.ChildrenProperty.Path, document);
-                                hasChanges = true;
-                            }
-                            else
-                            {
-                                var childValue = Builders<BsonDocument>.Filter.Eq(
-                                    $"{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
-                                filter &= Builders<BsonDocument>.Filter.ElemMatch(childPropertiesChanged.ChildrenProperty.Path, childValue);
+                            var childValue = Builders<BsonDocument>.Filter.Eq(
+                                $"{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
+                            filter &= Builders<BsonDocument>.Filter.ElemMatch(childPropertiesChanged.ChildrenProperty.Path, childValue);
 
-                                var prefix = $"{childPropertiesChanged.ChildrenProperty}.$";
-                                foreach (var propertyDifference in childPropertiesChanged!.Differences)
-                                {
-                                    UpdateProperty($"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}", propertyDifference.Changed!);
-                                    hasChanges = true;
-                                }
+                            var prefix = $"{childPropertiesChanged.ChildrenProperty}.$";
+                            foreach (var propertyDifference in childPropertiesChanged!.Differences)
+                            {
+                                UpdateProperty($"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}", propertyDifference.Changed!);
+                                hasChanges = true;
                             }
                         }
                         break;
