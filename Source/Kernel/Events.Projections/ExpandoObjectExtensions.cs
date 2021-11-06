@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 
 namespace Cratis.Events.Projections
@@ -11,7 +12,7 @@ namespace Cratis.Events.Projections
     public static class ExpandoObjectExtensions
     {
         /// <summary>
-        /// Get or create instance at a specific <see cref="Property"/>.
+        /// Ensure a specific path for a <see cref="Property"/> exists on an <see cref="ExpandoObject"/>..
         /// </summary>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
         /// <param name="property"><see cref="Property"/> to get or create for.</param>
@@ -35,6 +36,35 @@ namespace Cratis.Events.Projections
             }
 
             return (currentTarget as ExpandoObject)!;
+        }
+
+        /// <summary>
+        /// Ensures that a collection exists for a specific <see cref="Property"/>.
+        /// </summary>
+        /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
+        /// <param name="childrenProperty"><see cref="Property"/> to ensure collection for.</param>
+        /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
+        /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
+        public static ICollection<ExpandoObject> EnsureCollection(this ExpandoObject target, Property childrenProperty)
+        {
+            var inner = target.EnsurePath(childrenProperty) as IDictionary<string, object>;
+            if (!inner.ContainsKey(childrenProperty.LastSegment))
+            {
+                inner[childrenProperty.LastSegment] = new List<ExpandoObject>();
+            }
+
+            if (!(inner[childrenProperty.LastSegment] is IEnumerable))
+            {
+                throw new ChildrenPropertyIsNotEnumerable(childrenProperty);
+            }
+
+            var items = (inner[childrenProperty.LastSegment] as IEnumerable)!.Cast<ExpandoObject>();
+            if (items is not IList<ExpandoObject>)
+            {
+                items = new List<ExpandoObject>(items!);
+            }
+            inner[childrenProperty.LastSegment] = items;
+            return (items as ICollection<ExpandoObject>)!;
         }
     }
 }
