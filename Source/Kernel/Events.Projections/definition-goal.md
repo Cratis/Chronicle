@@ -14,6 +14,7 @@ Known types:
 ```json
 {
     "identifier": "565c2247-0ce4-4f25-8c5d-5afe1ca89113",
+    "name": "MyProjection",
     "model": {
         "name": "something",
         "schema": {
