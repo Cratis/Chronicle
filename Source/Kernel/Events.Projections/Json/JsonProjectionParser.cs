@@ -52,7 +52,6 @@ namespace Cratis.Events.Projections.Json
                 definition,
                 Property.Root,
                 Property.Root,
-                definition.Identifier,
                 $"Root({definition.Identifier})",
                 definition.Model,
                 definition.From,
@@ -63,7 +62,6 @@ namespace Cratis.Events.Projections.Json
             ProjectionDefinition projectionDefinition,
             Property childrenAccessorProperty,
             Property identifiedByProperty,
-            ProjectionId identifier,
             ProjectionPath path,
             ModelDefinition modelDefinition,
             IDictionary<EventType, FromDefinition> fromDefinitions,
@@ -78,7 +76,6 @@ namespace Cratis.Events.Projections.Json
                     kvp.Value,
                     kvp.Key,
                     kvp.Value.IdentifiedBy,
-                    Guid.Empty,
                     $"{path} -> ChildrenAt({kvp.Key.Path})",
                     kvp.Value.Model,
                     kvp.Value.From,
@@ -92,7 +89,7 @@ namespace Cratis.Events.Projections.Json
             var model = new Model(modelDefinition.Name, JSchema.Parse(modelDefinition.Schema));
             addChildEventTypes(eventsForProjection);
 
-            var projection = new Projection(identifier, path, model, eventsForProjection, childProjections);
+            var projection = new Projection(projectionDefinition.Identifier, path, model, eventsForProjection, childProjections);
 
             foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {
