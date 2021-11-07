@@ -36,7 +36,7 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, InstanceAccessor instanceAccessor, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
@@ -49,7 +49,8 @@ namespace Cratis.Events.Projections
                     var key = keyResolver(_.Event);
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
-                        _.Changeset.ApplyChildProperties(instanceAccessor, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                        var child = _.Changeset.GetChildByKey(childrenProperty, identifiedByProperty, key);
+                        _.Changeset.ApplyChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
                     }
                 });
             }

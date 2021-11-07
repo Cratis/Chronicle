@@ -65,7 +65,7 @@ namespace Cratis.Events.Projections.Changes
         /// <summary>
         /// Applies properties for a child to the <see cref="Changeset"/>.
         /// </summary>
-        /// <param name="instanceAccessor"><see cref="InstanceAccessor"/> for accessing the actual instance to apply for.</param>
+        /// <param name="item">THe item to add from.</param>
         /// <param name="childrenProperty">The <see cref="Property"/> on the parent that holds the children.</param>
         /// <param name="identifiedByProperty">The <see cref="Property"/> on the instance that identifies the child.</param>
         /// <param name="keyResolver">The <see cref="EventValueProvider"/> for resolving the key on the event.</param>
@@ -74,29 +74,27 @@ namespace Cratis.Events.Projections.Changes
         /// This will run a diff against the initial state and only produce changes that are new.
         /// </remarks>
         public void ApplyChildProperties(
-            InstanceAccessor instanceAccessor,
+            ExpandoObject item,
             Property childrenProperty,
             Property identifiedByProperty,
             EventValueProvider keyResolver,
             IEnumerable<PropertyMapper> propertyMappers)
         {
-            var workingState = InitialState.Clone();
-            var workingInstance = instanceAccessor(workingState, Event, keyResolver);
-            var initialInstance = workingInstance.Clone();
+            var workingItem = item.Clone();
             foreach (var propertyMapper in propertyMappers)
             {
-                propertyMapper(Event, workingInstance);
+                propertyMapper(Event, workingItem);
             }
 
             var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
-            if (!comparer.Compare(initialInstance, workingInstance, out var differences))
+            if (!comparer.Compare(item, workingItem, out var differences))
             {
                 _changes.Add(new ChildPropertiesChanged(
-                    workingInstance,
+                    workingItem,
                     childrenProperty,
                     identifiedByProperty,
                     keyResolver(Event),
-                    differences.Select(_ => new PropertyDifference(initialInstance, workingInstance, _))));
+                    differences.Select(_ => new PropertyDifference(item, workingItem, _))));
             }
         }
 

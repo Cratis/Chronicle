@@ -57,8 +57,7 @@ namespace Cratis.Events.Projections.Json
                 definition.From,
                 new Dictionary<Property, ChildrenDefinition>(),
                 definition.Children,
-                _ => { },
-                (initialState, _, __) => initialState);
+                _ => { });
 
         IProjection CreateProjectionFrom(
             Property childrenAccessorProperty,
@@ -69,8 +68,7 @@ namespace Cratis.Events.Projections.Json
             IDictionary<EventType, FromDefinition> fromDefinitions,
             IDictionary<Property, ChildrenDefinition> parentChildrenDefinitions,
             IDictionary<Property, ChildrenDefinition> childrenDefinitions,
-            Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes,
-            InstanceAccessor instanceAccessor)
+            Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes)
         {
             var eventsForProjection = fromDefinitions.Select(kvp => new EventTypeWithKeyResolver(kvp.Key, string.IsNullOrEmpty(kvp.Value.ParentKey) ?
                     EventValueProviders.FromEventSourceId :
@@ -89,12 +87,6 @@ namespace Cratis.Events.Projections.Json
                     {
                         eventsForProjection.AddRange(_);
                         addChildEventTypes(_);
-                    },
-                    (initialState, @event, keyResolver) =>
-                    {
-                        var children = kvp.Key.GetValue(initialState) as IEnumerable<ExpandoObject>;
-                        var key = keyResolver(@event);
-                        return children!.FindByKey(kvp.Value.IdentifiedBy, key)!;
                     })).ToArray();
 
             var model = new Model(modelDefinition.Name, JSchema.Parse(modelDefinition.Schema));
@@ -114,7 +106,7 @@ namespace Cratis.Events.Projections.Json
             foreach (var (eventType, fromDefinition) in fromDefinitions)
             {
                 var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty, instanceAccessor, EventValueProviders.FromEventSourceId, propertyMappers);
+                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty,  EventValueProviders.FromEventSourceId, propertyMappers);
             }
 
             return projection;
