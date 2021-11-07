@@ -39,7 +39,7 @@ Known types:
                 "someProperty": "someProperty",
                 "formattedProperty": "{{firstName}} {{lastName}}",
                 "incrementedProperty": "$increment",
-                "addedProperty": "$add($event.someValue)"
+                "addedProperty": "$add(someValue)"
             }
         },
         "f998e862-cac0-4ccc-86a1-cad0269db30e": {
