@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Concepts;
+using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
