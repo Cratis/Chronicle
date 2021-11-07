@@ -7,12 +7,14 @@ namespace Cratis.Events.Projections.Json
     /// Represents the definition of a projection.
     /// </summary>
     /// <param name="Identifier"><see cref="ProjectionId">Identifier</see> of the projection.</param>
+    /// <param name="Name">Friendly displayname of the projection.</param>
     /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
     /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
     /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
     /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
     public record ProjectionDefinition(
         ProjectionId Identifier,
+        ProjectionName Name,
         ModelDefinition Model,
         IDictionary<EventType, FromDefinition> From,
         IDictionary<Property, ChildrenDefinition> Children,

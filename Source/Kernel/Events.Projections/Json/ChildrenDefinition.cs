@@ -16,5 +16,5 @@ namespace Cratis.Events.Projections.Json
         ModelDefinition Model,
         IDictionary<EventType, FromDefinition> From,
         IDictionary<Property, ChildrenDefinition> Children,
-        RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, Model, From, Children, RemovedWith);
+        RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, From, Children, RemovedWith);
 }
