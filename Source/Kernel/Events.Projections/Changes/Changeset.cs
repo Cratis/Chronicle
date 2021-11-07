@@ -39,10 +39,10 @@ namespace Cratis.Events.Projections.Changes
         public IEnumerable<Change> Changes => _changes;
 
         /// <summary>
-        /// Apply a change to the changeset.
+        /// Add a change to the changeset.
         /// </summary>
-        /// <param name="change"><see cref="Change"/> to apply.</param>
-        public void Apply(Change change)
+        /// <param name="change"><see cref="Change"/> to add.</param>
+        public void Add(Change change)
         {
             _changes.Add(change);
         }
