@@ -75,6 +75,7 @@ namespace Cratis.Events.Projections
         {
             return new ProjectionDefinition(
                 _identifier,
+                typeof(TModel).FullName ?? "[N/A]",
                 new ModelDefinition(_modelName, _generator.Generate(typeof(TModel)).ToString()),
                 _fromDefintions,
                 _childrenDefinitions);
