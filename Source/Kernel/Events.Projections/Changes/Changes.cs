@@ -30,7 +30,7 @@ namespace Cratis.Events.Projections.Changes
             var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
             if (!comparer.Compare(changeset.InitialState, workingState, out var differences))
             {
-                changeset.Apply(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(changeset.InitialState, workingState, _))));
+                changeset.Add(new PropertiesChanged(workingState, differences.Select(_ => new PropertyDifference(changeset.InitialState, workingState, _))));
             }
         }
 
@@ -63,7 +63,7 @@ namespace Cratis.Events.Projections.Changes
             var comparer = new ObjectsComparer.Comparer<ExpandoObject>();
             if (!comparer.Compare(item, workingItem, out var differences))
             {
-                changeset.Apply(new ChildPropertiesChanged(
+                changeset.Add(new ChildPropertiesChanged(
                     workingItem,
                     childrenProperty,
                     identifiedByProperty,
@@ -103,7 +103,7 @@ namespace Cratis.Events.Projections.Changes
                 identifiedByProperty.SetValue(item, key);
                 ((IList<ExpandoObject>)items).Add(item);
 
-                changeset.Apply(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
+                changeset.Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
             }
         }
 
