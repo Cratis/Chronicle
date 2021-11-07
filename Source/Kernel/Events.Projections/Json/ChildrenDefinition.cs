@@ -9,6 +9,12 @@ namespace Cratis.Events.Projections.Json
     /// <param name="IdentifiedBy">Property on model that identifies the unique object, typically the key - or id (event source id).</param>
     /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
     /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
+    /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
     /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
-    public record ChildrenDefinition(Property IdentifiedBy, ModelDefinition Model, IDictionary<EventType, FromDefinition> From, RemovedWithDefinition? RemovedWith);
+    public record ChildrenDefinition(
+        Property IdentifiedBy,
+        ModelDefinition Model,
+        IDictionary<EventType, FromDefinition> From,
+        IDictionary<Property, ChildrenDefinition> Children,
+        RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, Model, From, Children, RemovedWith);
 }

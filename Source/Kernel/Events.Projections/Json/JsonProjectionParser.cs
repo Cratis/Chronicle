@@ -49,6 +49,7 @@ namespace Cratis.Events.Projections.Json
         /// <returns><see cref="IProjection"/> instance.</returns>
         public IProjection CreateFrom(ProjectionDefinition definition) =>
             CreateProjectionFrom(
+                definition,
                 Property.Root,
                 Property.Root,
                 definition.Identifier,
@@ -56,17 +57,16 @@ namespace Cratis.Events.Projections.Json
                 definition.Model,
                 definition.From,
                 new Dictionary<Property, ChildrenDefinition>(),
-                definition.Children,
                 _ => { });
 
         IProjection CreateProjectionFrom(
+            ProjectionDefinition projectionDefinition,
             Property childrenAccessorProperty,
             Property identifiedByProperty,
             ProjectionId identifier,
             ProjectionPath path,
             ModelDefinition modelDefinition,
             IDictionary<EventType, FromDefinition> fromDefinitions,
-            IDictionary<Property, ChildrenDefinition> parentChildrenDefinitions,
             IDictionary<Property, ChildrenDefinition> childrenDefinitions,
             Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes)
         {
@@ -74,15 +74,15 @@ namespace Cratis.Events.Projections.Json
                     EventValueProviders.FromEventSourceId :
                     EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
 
-            var childProjections = childrenDefinitions.Select(kvp => CreateProjectionFrom(
+            var childProjections = projectionDefinition.Children.Select(kvp => CreateProjectionFrom(
+                    kvp.Value,
                     kvp.Key,
                     kvp.Value.IdentifiedBy,
                     Guid.Empty,
                     $"{path} -> ChildrenAt({kvp.Key.Path})",
                     kvp.Value.Model,
                     kvp.Value.From,
-                    childrenDefinitions,
-                    new Dictionary<Property, ChildrenDefinition>(),
+                    projectionDefinition.Children,
                     _ =>
                     {
                         eventsForProjection.AddRange(_);
@@ -94,7 +94,7 @@ namespace Cratis.Events.Projections.Json
 
             var projection = new Projection(identifier, path, model, eventsForProjection, childProjections);
 
-            foreach (var (childrenProperty, childrenDefinition) in parentChildrenDefinitions)
+            foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {
                 foreach (var (eventType, fromDefinition) in childrenDefinition.From)
                 {
