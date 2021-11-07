@@ -12,35 +12,45 @@ namespace Cratis.Events.Projections.Json
     /// <summary>
     /// Represents a parser for JSON definition of a <see cref="IProjection"/>.
     /// </summary>
-    public class JsonProjectionParser
+    public class JsonProjectionSerializer
     {
         readonly IPropertyMapperExpressionResolvers _propertyMapperExpressionResolvers;
+        readonly JsonSerializer _serializer;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="JsonProjectionParser"/>.
+        /// Initializes a new instance of the <see cref="JsonProjectionSerializer"/>.
         /// </summary>
         /// <param name="propertyMapperExpressionResolvers"><see cref="IPropertyMapperExpressionResolvers"/> for resolving event value expressions.</param>
-        public JsonProjectionParser(IPropertyMapperExpressionResolvers propertyMapperExpressionResolvers)
+        public JsonProjectionSerializer(IPropertyMapperExpressionResolvers propertyMapperExpressionResolvers)
         {
             _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
+
+            _serializer = new JsonSerializer();
+            _serializer.Converters.Add(new PropertyJsonConverter());
+            _serializer.Converters.Add(new PropertyExpressionDictionaryJsonConverter());
+            _serializer.Converters.Add(new PropertyChildrenDefinitionDictionaryJsonConverter());
+            _serializer.Converters.Add(new ConceptAsJsonConverter());
+            _serializer.Converters.Add(new ConceptAsDictionaryJsonConverter());
         }
 
         /// <summary>
-        /// Parse a JSON string definition and produce a <see cref="IProjection"/>.
+        /// Serialize a <see cref="ProjectionDefinition"/>.
+        /// </summary>
+        /// <param name="definition"><see cref="ProjectionDefinition"/> to serialize.</param>
+        /// <returns>JSON representation.</returns>
+        public string Serialize(ProjectionDefinition definition)
+        {
+            var writer = new StringWriter();
+            _serializer.Serialize(writer, definition);
+            return writer.ToString();
+        }
+
+        /// <summary>
+        /// Deserialize a JSON string definition into <see cref="ProjectionDefinition"/>.
         /// </summary>
         /// <param name="json">JSON to parse.</param>
-        /// <returns><see cref="IProjection"/> instance.</returns>
-        public IProjection Parse(string json)
-        {
-            var definition = JsonConvert.DeserializeObject<ProjectionDefinition>(json,
-                new PropertyJsonConverter(),
-                new PropertyExpressionDictionaryJsonConverter(),
-                new PropertyChildrenDefinitionDictionaryJsonConverter(),
-                new ConceptAsJsonConverter(),
-                new ConceptAsDictionaryJsonConverter())!;
-
-            return CreateFrom(definition);
-        }
+        /// <returns><see cref="ProjectionDefinition"/> instance.</returns>
+        public ProjectionDefinition Deserialize(string json) => _serializer.Deserialize<ProjectionDefinition>(new JsonTextReader(new StringReader(json)))!;
 
         /// <summary>
         /// Create a <see cref="IProjection"/> from <see cref="ProjectionDefinition"/>.
@@ -97,7 +107,7 @@ namespace Cratis.Events.Projections.Json
             foreach (var (eventType, fromDefinition) in projectionDefinition.From)
             {
                 var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty,  EventValueProviders.FromEventSourceId, propertyMappers);
+                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty, EventValueProviders.FromEventSourceId, propertyMappers);
             }
 
             return projection;

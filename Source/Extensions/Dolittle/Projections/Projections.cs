@@ -24,7 +24,7 @@ namespace Cratis.Extensions.Dolittle.Projections
     public class Projections : SDK::Cratis.Events.Projections.Projections
     {
         readonly IMongoDBClientFactory _mongoDBClientFactory;
-        readonly JsonProjectionParser _projectionParser;
+        readonly JsonProjectionSerializer _projectionSerializer;
         readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
@@ -33,19 +33,19 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
         /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-        /// <param name="projectionParser"><see cref="JsonProjectionParser"/> for parsing JSON projection definitions.</param>
+        /// <param name="projectionSerializer"><see cref="JsonProjectionSerializer"/> for serialization of projection definitions.</param>
         /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
         /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
         public Projections(
             IEventTypes eventTypes,
             IMongoDBClientFactory mongoDBClientFactory,
             ITypes types,
-            JsonProjectionParser projectionParser,
+            JsonProjectionSerializer projectionSerializer,
             ProjectionsReady projectionsReady,
             ILoggerFactory loggerFactory) : base(eventTypes, types)
         {
             _mongoDBClientFactory = mongoDBClientFactory;
-            _projectionParser = projectionParser;
+            _projectionSerializer = projectionSerializer;
             _loggerFactory = loggerFactory;
             projectionsReady.IsReady.Subscribe(_ => ActualStartAll());
         }
@@ -66,7 +66,12 @@ namespace Cratis.Extensions.Dolittle.Projections
             foreach (var projectionDefinition in _projections)
             {
                 var json = JsonConvert.SerializeObject(projectionDefinition, converters);
-                var projection = _projectionParser.Parse(json);
+                var parsed = _projectionSerializer.Deserialize(json);
+
+                var projectionDefinitions = new MongoDBProjectionDefinitions(_mongoDBClientFactory, _projectionSerializer);
+                projectionDefinitions.Save(parsed);
+
+                var projection = _projectionSerializer.CreateFrom(parsed);
                 var projectionPositions = new ProjectionPositions(_mongoDBClientFactory);
                 var provider = new ProjectionEventProvider(_mongoDBClientFactory, projectionPositions, _loggerFactory.CreateLogger<ProjectionEventProvider>());
                 var changesetStorage = new MongoDBChangesetStorage(_mongoDBClientFactory);
