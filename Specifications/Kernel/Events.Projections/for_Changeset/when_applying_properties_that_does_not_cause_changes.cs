@@ -2,16 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections
 {
     public class when_applying_properties_that_does_not_cause_changes : Specification
     {
-        Changeset   changeset;
+        Changeset<Event> changeset;
         ExpandoObject initial_state;
         Event @event;
-        IEnumerable<PropertyMapper> property_mappers;
+        IEnumerable<PropertyMapper<Event>> property_mappers;
         Mock<IProjection> projection;
 
         void Establish()
@@ -25,7 +26,7 @@ namespace Cratis.Events.Projections
             nested.Integer = 43;
             nested.String = "Forty Three";
 
-            property_mappers = new PropertyMapper[]
+            property_mappers = new PropertyMapper<Event>[]
             {
                 (_, target) => ((dynamic)target).Integer = 42,
                 (_, target) => ((dynamic)target).String = "Forty Two",
@@ -35,7 +36,7 @@ namespace Cratis.Events.Projections
 
             @event = new Event(0, "some event", DateTimeOffset.UtcNow, string.Empty, new ExpandoObject());
 
-            changeset = new Changeset(@event, initial_state);
+            changeset = new(@event, initial_state);
         }
 
         void Because() => changeset.ApplyProperties(property_mappers);

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections.for_PropertyMappers
 {
@@ -9,7 +10,7 @@ namespace Cratis.Events.Projections.for_PropertyMappers
     {
         static EventSourceId    eventSourceId = "2f005aaf-2f4e-4a47-92ea-63687ef74bd4";
 
-        EventValueProvider value_provider;
+        ValueProvider<Event> value_provider;
         Event @event;
         object result;
 
