@@ -82,7 +82,7 @@ export const EventLogs = () => {
             name: 'Timeline',
             iconProps: { iconName: 'Timeline' },
             onClick: () => {
-                toggleTimeline()
+                toggleTimeline();
                 if (isFilterOpen) toggleFilter();
             }
         },
