@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json;
 
-namespace Cratis.Events.Projections.Json
+namespace Cratis.Properties
 {
     /// <summary>
     /// Represents a <see cref="JsonConverter"/> for converting <see cref="Property"/>.

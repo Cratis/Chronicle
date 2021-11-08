@@ -2,21 +2,23 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Dynamic;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents utilities for creating <see cref="PropertyMapper"/> for different scenarios.
+    /// Represents utilities for creating <see cref="PropertyMapper{Event}"/> for different scenarios.
     /// </summary>
     public static class PropertyMappers
     {
         /// <summary>
-        /// Create a <see cref="PropertyMapper"/> that can copies content provided by a <see cref="EventValueProvider"/> to a target property.
+        /// Create a <see cref="PropertyMapper{Event}"/> that can copies content provided by a <see cref="ValueProvider{Event}"/> to a target property.
         /// </summary>
         /// <param name="targetProperty">Target property.</param>
-        /// <param name="eventValueProvider"><see cref="EventValueProvider"/> to use as source.</param>
-        /// <returns>A new <see cref="PropertyMapper"/>.</returns>
-        public static PropertyMapper FromEventValueProvider(Property targetProperty, EventValueProvider eventValueProvider)
+        /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
+        /// <returns>A new <see cref="PropertyMapper{Event}"/>.</returns>
+        public static PropertyMapper<Event> FromEventValueProvider(Property targetProperty, ValueProvider<Event> eventValueProvider)
         {
             return (Event @event, ExpandoObject target) =>
             {
@@ -26,12 +28,12 @@ namespace Cratis.Events.Projections
         }
 
         /// <summary>
-        /// Create a <see cref="PropertyMapper"/> that can add a property with a value provided by a <see cref="EventValueProvider"/> onto a target property.
+        /// Create a <see cref="PropertyMapper{Event}"/> that can add a property with a value provided by a <see cref="ValueProvider{Event}"/> onto a target property.
         /// </summary>
         /// <param name="targetProperty">Target property.</param>
-        /// <param name="eventValueProvider"><see cref="EventValueProvider"/> to use as source.</param>
-        /// <returns>A new <see cref="PropertyMapper"/>.</returns>
-        public static PropertyMapper AddWithEventValueProvider(Property targetProperty, EventValueProvider eventValueProvider)
+        /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
+        /// <returns>A new <see cref="PropertyMapper{Event}"/>.</returns>
+        public static PropertyMapper<Event> AddWithEventValueProvider(Property targetProperty, ValueProvider<Event> eventValueProvider)
         {
             return (Event @event, ExpandoObject target) =>
             {
@@ -48,12 +50,12 @@ namespace Cratis.Events.Projections
         }
 
         /// <summary>
-        /// Create a <see cref="PropertyMapper"/> that can add a property with a value provided by a <see cref="EventValueProvider"/> onto a target property.
+        /// Create a <see cref="PropertyMapper{Event}"/> that can add a property with a value provided by a <see cref="ValueProvider{Event}"/> onto a target property.
         /// </summary>
         /// <param name="targetProperty">Target property.</param>
-        /// <param name="eventValueProvider"><see cref="EventValueProvider"/> to use as source.</param>
-        /// <returns>A new <see cref="PropertyMapper"/>.</returns>
-        public static PropertyMapper SubtractWithEventValueProvider(Property targetProperty, EventValueProvider eventValueProvider)
+        /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
+        /// <returns>A new <see cref="PropertyMapper{Event}"/>.</returns>
+        public static PropertyMapper<Event> SubtractWithEventValueProvider(Property targetProperty, ValueProvider<Event> eventValueProvider)
         {
             return (Event @event, ExpandoObject target) =>
             {

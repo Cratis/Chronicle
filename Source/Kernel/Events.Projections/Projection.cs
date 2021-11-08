@@ -3,7 +3,8 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections
 {
@@ -13,7 +14,7 @@ namespace Cratis.Events.Projections
     public class Projection : IProjection
     {
         readonly ISubject<EventContext> _subject = new Subject<EventContext>();
-        readonly IDictionary<EventType, EventValueProvider> _eventTypesToKeyResolver;
+        readonly IDictionary<EventType, ValueProvider<Event>> _eventTypesToKeyResolver;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -61,14 +62,14 @@ namespace Cratis.Events.Projections
         public IEnumerable<IProjection> ChildProjections { get; }
 
         /// <inheritdoc/>
-        public void OnNext(Event @event, Changeset changeset)
+        public void OnNext(Event @event, Changeset<Event> changeset)
         {
             var context = new EventContext(@event, changeset);
             _subject.OnNext(context);
         }
 
         /// <inheritdoc/>
-        public EventValueProvider GetKeyResolverFor(EventType eventType)
+        public ValueProvider<Event> GetKeyResolverFor(EventType eventType)
         {
             ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];

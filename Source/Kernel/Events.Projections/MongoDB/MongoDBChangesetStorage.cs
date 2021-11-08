@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Changes;
 using Cratis.Events.Projections.Changes;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
@@ -24,7 +25,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<Changeset> associatedChangesets)
+        public Task Save(CorrelationId correlationId, IEnumerable<Changeset<Event>> associatedChangesets)
         {
             return Task.CompletedTask;
         }

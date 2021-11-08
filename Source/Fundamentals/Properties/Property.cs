@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Dynamic;
 using Cratis.Strings;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Properties
 {
     /// <summary>
     /// Represents an encapsulation of a property in the system - used for accessing properties on objects.

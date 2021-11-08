@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections
 {
@@ -51,14 +52,14 @@ namespace Cratis.Events.Projections
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
-        /// <param name="changeset"><see cref="Changeset"/> being worked on.</param>
-        void OnNext(Event @event, Changeset changeset);
+        /// <param name="changeset"><see cref="Changeset{Event}"/> being worked on.</param>
+        void OnNext(Event @event, Changeset<Event> changeset);
 
         /// <summary>
-        /// Get the <see cref="EventValueProvider"/> associated with a given <see cref="EventType"/>.
+        /// Get the <see cref="ValueProvider{Event}"/> associated with a given <see cref="EventType"/>.
         /// </summary>
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-        /// <returns>The <see cref="EventValueProvider"/>.</returns>
-        EventValueProvider GetKeyResolverFor(EventType eventType);
+        /// <returns>The <see cref="ValueProvider{Event}"/>.</returns>
+        ValueProvider<Event> GetKeyResolverFor(EventType eventType);
     }
 }

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
 using Cratis.Extensions.MongoDB;
 using Cratis.Strings;
 using MongoDB.Bson;
@@ -49,7 +49,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(Model model, object key, Changeset changeset)
+        public async Task ApplyChanges(Model model, object key, Changeset<Event> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;

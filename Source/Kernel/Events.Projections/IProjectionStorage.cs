@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
 
 namespace Cratis.Events.Projections
 {
@@ -24,8 +24,8 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="model"><see cref="Model"/> to apply for.</param>
         /// <param name="key">Key of the model to upsert.</param>
-        /// <param name="changeset">All changes in the form of a <see cref="Changeset"/>.</param>
+        /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event}"/>.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        Task ApplyChanges(Model model, object key, Changeset changeset);
+        Task ApplyChanges(Model model, object key, Changeset<Event> changeset);
     }
 }

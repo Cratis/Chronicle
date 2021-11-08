@@ -3,6 +3,7 @@
 
 using Newtonsoft.Json;
 using Cratis.Events.Projections.Definitions;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections.Json
 {
