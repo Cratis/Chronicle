@@ -1,3 +1,9 @@
+# [v2.12.0] - 2021-11-8 [PR: #57](https://github.com/Cratis/cratis/pull/57)
+
+### Added
+
+- Introducing a Changes API in Fundamentals for representing changes on any object instance. This is a formalization of what was very Event specific within the Projection engine.
+
 # [v2.11.0] - 2021-11-8 [PR: #56](https://github.com/Cratis/cratis/pull/56)
 
 ## Summary
