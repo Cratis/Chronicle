@@ -9,9 +9,9 @@ namespace Cratis.Events.Projections.Expressions
     public class PropertyOnEventContentExpressionProvider : IPropertyMapperExpressionResolver
     {
         /// <inheritdoc/>
-        public bool CanResolve(string targetProperty, string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
+        public bool CanResolve(Property targetProperty, string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(string targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventContent(expression));
+        public PropertyMapper Resolve(Property targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventContent(expression));
     }
 }

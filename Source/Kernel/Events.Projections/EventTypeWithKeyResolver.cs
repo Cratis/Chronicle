@@ -8,5 +8,5 @@ namespace Cratis.Events.Projections
     /// </summary>
     /// <param name="EventType">The <see cref="EventType"/>.</param>
     /// <param name="KeyResolver">The <see cref="KeyResolver"/>.</param>
-    public record EventTypeWithKeyResolver(EventType EventType, KeyResolver KeyResolver);
+    public record EventTypeWithKeyResolver(EventType EventType, EventValueProvider KeyResolver);
 }

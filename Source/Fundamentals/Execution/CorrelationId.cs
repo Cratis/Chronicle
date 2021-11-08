@@ -12,6 +12,11 @@ namespace Cratis.Execution
     public record CorrelationId(string Value) : ConceptAs<string>(Value)
     {
         /// <summary>
+        /// Create a new <see cref="CorrelationId"/> based on a new <see cref="Guid"/>.
+        /// </summary>
+        public static CorrelationId New() => new (Guid.NewGuid().ToString());
+
+        /// <summary>
         /// Implicitly convert from <see cref="string"/> to <see cref="CorrelationId"/>.
         /// </summary>
         /// <param name="id"><see cref="string"/> to convert from.</param>

@@ -17,10 +17,10 @@ namespace Cratis.Events.Projections.Expressions
         };
 
         /// <inheritdoc/>
-        public bool CanResolve(string targetProperty, string expression) => _resolvers.Any(_ => _.CanResolve(targetProperty, expression));
+        public bool CanResolve(Property targetProperty, string expression) => _resolvers.Any(_ => _.CanResolve(targetProperty, expression));
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(string targetProperty, string expression)
+        public PropertyMapper Resolve(Property targetProperty, string expression)
         {
             var resolver = Array.Find(_resolvers, _ => _.CanResolve(targetProperty, expression));
             ThrowIfUnsupportedEventValueExpression(expression, resolver);

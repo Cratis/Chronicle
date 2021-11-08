@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Projections.Api</AssemblyName>
+        <RootNamespace>Cratis.Events.Projections.Api</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events.Projections/Events.Projections.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -30,5 +30,4 @@ namespace Cratis.Events.Projections
         /// <returns>Asynchronous task.</returns>
         Task Reset(IProjection projection);
     }
-
 }

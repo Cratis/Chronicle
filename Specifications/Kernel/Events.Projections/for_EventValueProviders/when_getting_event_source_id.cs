@@ -11,17 +11,17 @@ namespace Cratis.Events.Projections.for_PropertyMappers
 
         EventValueProvider value_provider;
         Event @event;
-        EventSourceId result;
+        object result;
 
         void Establish()
         {
             dynamic content = new ExpandoObject();
             @event = new Event(0, "02405794-91e7-4e4f-8ad1-f043070ca297", DateTimeOffset.UtcNow, eventSourceId, content);
-            value_provider = EventValueProviders.FromEventSourceId();
+            value_provider = EventValueProviders.FromEventSourceId;
         }
 
-        void Because() => result = value_provider(@event) as EventSourceId;
+        void Because() => result = value_provider(@event).ToString();
 
-        [Fact] void should_return_the_event_source_id() => result.ShouldEqual(eventSourceId);
+        [Fact] void should_return_the_event_source_id() => result.ShouldEqual(eventSourceId.ToString());
     }
 }

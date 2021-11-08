@@ -1,11 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
+using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections
 {
-
     /// <summary>
     /// Defines a projection.
     /// </summary>
@@ -15,6 +14,11 @@ namespace Cratis.Events.Projections
         /// Gets the unique identifier of the <see cref="IProjection"/>.
         /// </summary>
         ProjectionId    Identifier { get; }
+
+        /// <summary>
+        /// Gets the fully qualified path for the projection. Typically for child relationships, this will show the full path it applies to.
+        /// </summary>
+        ProjectionPath Path { get; }
 
         /// <summary>
         /// Gets the <see cref="Model"/> the projection targets.
@@ -32,18 +36,29 @@ namespace Cratis.Events.Projections
         IEnumerable<EventType> EventTypes { get; }
 
         /// <summary>
+        /// Gets the collection of <see cref="IProjection">child projections</see>.
+        /// </summary>
+        IEnumerable<IProjection> ChildProjections { get; }
+
+        /// <summary>
+        /// Apply a filter to an <see cref="IObservable{EventContext}"/> with the event types the <see cref="Projection"/> is interested in.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{EventContext}"/> to filter.</param>
+        /// <returns>Filtered <see cref="IObservable{EventContext}"/>.</returns>
+        IObservable<EventContext>  FilterEventTypes(IObservable<EventContext> observable);
+
+        /// <summary>
         /// Provides the projection with a new <see cref="Event"/>.
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
-        /// <param name="initialState"><see cref="ExpandoObject"/> holding the initial state before the event is applied.</param>
-        /// <return><see cref="Changeset"/> with all changes.</return>
-        Changeset OnNext(Event @event, ExpandoObject initialState);
+        /// <param name="changeset"><see cref="Changeset"/> being worked on.</param>
+        void OnNext(Event @event, Changeset changeset);
 
         /// <summary>
-        /// Get the <see cref="KeyResolver"/> associated with a given <see cref="EventType"/>.
+        /// Get the <see cref="EventValueProvider"/> associated with a given <see cref="EventType"/>.
         /// </summary>
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-        /// <returns>The <see cref="KeyResolver"/>.</returns>
-        KeyResolver GetKeyResolverFor(EventType eventType);
+        /// <returns>The <see cref="EventValueProvider"/>.</returns>
+        EventValueProvider GetKeyResolverFor(EventType eventType);
     }
 }
