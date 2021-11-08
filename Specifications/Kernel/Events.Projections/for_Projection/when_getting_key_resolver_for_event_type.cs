@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Properties;
 using Newtonsoft.Json.Schema;
 
 namespace Cratis.Events.Projections.for_Projection
@@ -9,8 +10,8 @@ namespace Cratis.Events.Projections.for_Projection
     {
         static EventType event_type = "993888cc-a9c5-4d56-ae21-f732159feec7";
         Projection projection;
-        EventValueProvider expected;
-        EventValueProvider result;
+        ValueProvider<Event> expected;
+        ValueProvider<Event> result;
 
         void Establish()
         {

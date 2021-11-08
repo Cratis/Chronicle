@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections.for_PropertyMappers
 {
     public class when_getting_from_event_content_nested_property : Specification
     {
-        EventValueProvider value_provider;
+        ValueProvider<Event> value_provider;
         Event @event;
         object result;
 

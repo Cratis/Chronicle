@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
 using Newtonsoft.Json.Schema;
 
 namespace Cratis.Events.Projections.for_Projection
@@ -16,10 +16,10 @@ namespace Cratis.Events.Projections.for_Projection
         ExpandoObject initial_state;
 
         Event first_event;
-        Changeset first_changeset;
+        Changeset<Event> first_changeset;
 
         Event second_event;
-        Changeset second_changeset;
+        Changeset<Event> second_changeset;
 
         void Establish()
         {
@@ -42,7 +42,7 @@ namespace Cratis.Events.Projections.for_Projection
                     "30c1ebf5-cc30-4216-afed-e3e0aefa1316",
                     new());
 
-            first_changeset = new Changeset(first_event, new());
+            first_changeset = new(first_event, new());
 
             second_event = new Event(
                     0,
@@ -50,7 +50,7 @@ namespace Cratis.Events.Projections.for_Projection
                     DateTimeOffset.UtcNow,
                     "30c1ebf5-cc30-4216-afed-e3e0aefa1316",
                     new ());
-            second_changeset = new Changeset(second_event, initial_state);
+            second_changeset = new(second_event, initial_state);
 
             observed_events = new();
             projection.Event.Subscribe(_ => observed_events.Add(_));
