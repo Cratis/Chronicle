@@ -26,7 +26,7 @@ const getRouteInfoFrom = (route: string | RouteInfo) => {
     }
 
     return routeInfo;
-}
+};
 
 const areArgumentsEqual = (left: RouteInfo, right: RouteInfo): boolean => {
     const leftKeys = Object.keys(left.arguments);
@@ -41,7 +41,7 @@ const areArgumentsEqual = (left: RouteInfo, right: RouteInfo): boolean => {
     }
 
     return true;
-}
+};
 
 export function useDataFrom<T = any>(route: string | RouteInfo, mapFunction?: Map<T>, dataReadyCallback?: DataReady<T>): [T[], RefreshData] {
     const [data, setData] = useState<T[]>([]);
@@ -80,7 +80,7 @@ export function useDataFrom<T = any>(route: string | RouteInfo, mapFunction?: Ma
         routeInfo.current = getRouteInfoFrom(route);
         template.current = Handlebars.compile(routeInfo.current.template);
         getData();
-    }, [])
+    }, []);
 
     return [data, getData];
-};
+}
