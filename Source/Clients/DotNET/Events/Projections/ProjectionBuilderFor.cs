@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
+using Cratis.Reflection;
 using Cratis.Strings;
 using Humanizer;
 using Newtonsoft.Json.Schema.Generation;
@@ -19,6 +21,7 @@ namespace Cratis.Events.Projections
         readonly IEventTypes _eventTypes;
         string _modelName;
         readonly Dictionary<string, FromDefinition> _fromDefintions = new();
+        readonly Dictionary<string, ChildrenDefinition> _childrenDefinitions = new();
 
         static ProjectionBuilderFor()
         {
@@ -59,12 +62,23 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
+        public IProjectionBuilderFor<TModel> Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
+        {
+            var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes);
+            builderCallback(builder);
+            _childrenDefinitions[targetProperty.GetPropertyInfo().Name.ToCamelCase()] = builder.Build();
+            return this;
+        }
+
+        /// <inheritdoc/>
         public ProjectionDefinition Build()
         {
             return new ProjectionDefinition(
                 _identifier,
+                typeof(TModel).FullName ?? "[N/A]",
                 new ModelDefinition(_modelName, _generator.Generate(typeof(TModel)).ToString()),
-                _fromDefintions);
+                _fromDefintions,
+                _childrenDefinitions);
         }
     }
 }

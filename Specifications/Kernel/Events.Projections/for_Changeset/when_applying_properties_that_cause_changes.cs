@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections
 {
@@ -34,7 +35,7 @@ namespace Cratis.Events.Projections
 
             @event = new Event(0, "some event", DateTimeOffset.UtcNow, string.Empty, new ExpandoObject());
 
-            changeset = new Changeset(projection.Object, @event, initial_state);
+            changeset = new Changeset(@event, initial_state);
         }
 
         void Because() => changeset.ApplyProperties(property_mappers);

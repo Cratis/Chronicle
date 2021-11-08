@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
+
 namespace Cratis.Events.Projections
 {
+
     /// <summary>
     /// Defines the builder for building out a <see cref="IProjectionFor{TModel}"/>.
     /// </summary>
@@ -23,6 +26,15 @@ namespace Cratis.Events.Projections
         /// <typeparam name="TEvent">Type of event.</typeparam>
         /// <returns>Builder continuation."</returns>
         IProjectionBuilderFor<TModel> From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback);
+
+        /// <summary>
+        /// Start buildint the children projection for a specific child model.
+        /// </summary>
+        /// <param name="targetProperty">Expression for expressing the target property.</param>
+        /// <param name="builderCallback">Builder callback.</param>
+        /// <typeparam name="TChildModel">Type of child model.</typeparam>
+        /// <returns>Builder continuation."</returns>
+        IProjectionBuilderFor<TModel> Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback);
 
         /// <summary>
         /// Build a <see cref="ProjectionDefinition"/>.

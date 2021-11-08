@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections
 {
@@ -10,38 +11,61 @@ namespace Cratis.Events.Projections
     /// </summary>
     public static class ProjectionExtensions
     {
+        /// <summary>
+        /// Filter an observable for a specific <see cref="EventType"/>.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
+        /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
+        /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
         public static IObservable<EventContext> From(this IObservable<EventContext> observable, EventType eventType)
         {
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
+        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        {
+            observable.Subscribe(_ =>
+            {
+                var items = _.Changeset.InitialState.EnsureCollection(childrenProperty);
+                var key = keyResolver(_.Event);
+                if (!items.Contains(identifiedByProperty, key))
+                {
+                    _.Changeset.ApplyAddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
+                }
+            });
+            return observable;
+        }
+
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        {
+            if (childrenProperty.IsRoot)
+            {
+                observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
+            }
+            else
+            {
+                observable.Subscribe(_ =>
+                {
+                    var key = keyResolver(_.Event);
+                    if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
+                    {
+                        var child = _.Changeset.GetChildByKey(childrenProperty, identifiedByProperty, key);
+                        _.Changeset.ApplyChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                    }
+                });
+            }
+            return observable;
+        }
+
         public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
         {
-            observable = observable.Where(_ => _.Event.Type == eventType);
-            observable.Subscribe(_ => _.Changeset.ApplyRemove());
-
+            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.ApplyRemove());
             return observable;
         }
 
         public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyAccessor propertyResolver)
         {
-            observable = observable.Where(_ => _.Event.Type == eventType);
-            return observable;
-        }
-
-        public static IObservable<EventContext> Children(this IProjection projection, PropertyAccessor childrenPropertyAccessor)
-        {
-            // Create new projection for the child property... ??
-            // Projection could take a source state / collection
-
-            // Changes should be done through changesets (Add, Remove, Update)
-            return projection.Event;
-        }
-
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, IEnumerable<PropertyMapper> propertyMappers)
-        {
-            observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
-            return observable;
+            return observable.Where(_ => _.Event.Type == eventType);
         }
     }
 }

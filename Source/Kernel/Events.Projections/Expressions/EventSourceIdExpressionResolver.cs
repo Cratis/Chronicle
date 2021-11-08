@@ -9,9 +9,9 @@ namespace Cratis.Events.Projections.Expressions
     public class EventSourceIdExpressionResolver : IPropertyMapperExpressionResolver
     {
         /// <inheritdoc/>
-        public bool CanResolve(string targetProperty, string expression) => expression == "$eventSourceId";
+        public bool CanResolve(Property targetProperty, string expression) => expression == "$eventSourceId";
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(string targetProperty, string _) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventSourceId());
+        public PropertyMapper Resolve(Property targetProperty, string _) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventSourceId);
     }
 }

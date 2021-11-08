@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Exception that gets thrown when there is no <see cref="KeyResolver"/> for a specific <see cref="EventType"/>.
+    /// Exception that gets thrown when there is no <see cref="EventValueProvider"/> providing the key value for a specific <see cref="EventType"/>.
     /// </summary>
     public class MissingKeyResolverForEventType : Exception
     {
