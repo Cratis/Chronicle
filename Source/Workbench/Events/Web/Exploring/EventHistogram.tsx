@@ -72,7 +72,7 @@ export const EventHistogram = (props: EventHistogramProps) => {
 
     if (chartContainer.current) {
         const chart = getChart();
-        chart.setOption(getChartOption(dates, counts));
+        chart!.setOption(getChartOption(dates, counts));
     }
 
     useEffect(() => {
@@ -82,7 +82,7 @@ export const EventHistogram = (props: EventHistogramProps) => {
             chart.resize();
         }
 
-        const listener = () => getChart().resize();
+        const listener = () => getChart()!.resize();
         window.addEventListener('resize', listener);
         return () => window.removeEventListener('resize', listener);
     }, []);
@@ -90,4 +90,4 @@ export const EventHistogram = (props: EventHistogramProps) => {
     return (
         <div className={styles.eventSamplesContainer} ref={chartContainer} />
     );
-}
+};

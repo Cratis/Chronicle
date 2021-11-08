@@ -93,4 +93,4 @@ export const EventTypes = () => {
             </div>
         </div>
     );
-}
+};

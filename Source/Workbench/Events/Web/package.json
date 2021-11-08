@@ -10,8 +10,8 @@
         "build:dev": "webpack --mode=development",
         "start:dev": "webpack serve --mode=development --progress --hot",
         "clean": "tsc -b --clean",
-        "lint": "eslint '**/*.{js,ts,tsx}' --quiet --fix",
-        "lint:ci": "eslint '**/*.{js,ts,tsx}' --quiet",
+        "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
+        "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
         "ci": "yarn clean && yarn lint:ci && yarn build",
         "up": "ncu \\!'@cratis/*'"
     },
