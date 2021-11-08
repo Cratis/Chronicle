@@ -3,10 +3,10 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events.Projections.Changes
+namespace Cratis.Changes
 {
     /// <summary>
-    /// Defines a change as part of a <see cref="Changeset"/>.
+    /// Defines a change as part of a <see cref="Changeset{T}"/>.
     /// </summary>
     /// <param name="State">State after change applied.</param>
     public record Change(ExpandoObject State);

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Properties;
+
 namespace Cratis.Events.Projections.Expressions
 {
     /// <summary>
@@ -12,6 +14,6 @@ namespace Cratis.Events.Projections.Expressions
         public bool CanResolve(Property targetProperty, string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(Property targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventContent(expression));
+        public PropertyMapper<Event> Resolve(Property targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventContent(expression));
     }
 }
