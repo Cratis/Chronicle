@@ -4,6 +4,7 @@
 using Cratis.Concepts;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Expressions;
+using Cratis.Properties;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
 

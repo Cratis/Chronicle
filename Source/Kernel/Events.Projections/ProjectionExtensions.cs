@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
+using Cratis.Dynamic;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections
 {
@@ -22,7 +24,7 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
-        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event>> propertyMappers)
         {
             observable.Subscribe(_ =>
             {
@@ -36,7 +38,7 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, EventValueProvider keyResolver, IEnumerable<PropertyMapper> propertyMappers)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event>> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
@@ -63,7 +65,7 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType, PropertyAccessor propertyResolver)
+        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType)
         {
             return observable.Where(_ => _.Event.Type == eventType);
         }

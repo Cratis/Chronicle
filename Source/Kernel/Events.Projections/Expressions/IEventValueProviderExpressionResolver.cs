@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Properties;
+
 namespace Cratis.Events.Projections.Expressions
 {
     /// <summary>
@@ -19,7 +21,7 @@ namespace Cratis.Events.Projections.Expressions
         /// Called to resolve the expression.
         /// </summary>
         /// <param name="expression">Expression to resolve.</param>
-        /// <returns><see cref="EventValueProvider"/> it resolves to.</returns>
-        EventValueProvider Resolve(string expression);
+        /// <returns><see cref="ValueProvider{Event}"/> it resolves to.</returns>
+        ValueProvider<Event> Resolve(string expression);
     }
 }

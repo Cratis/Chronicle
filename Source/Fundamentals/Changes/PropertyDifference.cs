@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Reflection;
 using ObjectsComparer;
 
-namespace Cratis.Events.Projections.Changes
+namespace Cratis.Changes
 {
     /// <summary>
     /// Represents a value difference in a property of an object.

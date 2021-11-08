@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.RegularExpressions;
+using Cratis.Properties;
 
 namespace Cratis.Events.Projections.Expressions
 {
@@ -16,7 +17,7 @@ namespace Cratis.Events.Projections.Expressions
         public bool CanResolve(Property targetProperty, string expression) => _regularExpression.Match(expression).Success;
 
         /// <inheritdoc/>
-        public PropertyMapper Resolve(Property targetProperty, string expression)
+        public PropertyMapper<Event> Resolve(Property targetProperty, string expression)
         {
             var match = _regularExpression.Match(expression);
             return PropertyMappers.SubtractWithEventValueProvider(targetProperty, EventValueProviders.FromEventContent(match.Groups[1].Value));

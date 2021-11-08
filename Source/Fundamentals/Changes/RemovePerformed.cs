@@ -2,9 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Events.Projections.Changes;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Changes
 {
     /// <summary>
     /// Represents an entry being removed.

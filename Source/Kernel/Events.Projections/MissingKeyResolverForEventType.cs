@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Properties;
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Exception that gets thrown when there is no <see cref="EventValueProvider"/> providing the key value for a specific <see cref="EventType"/>.
+    /// Exception that gets thrown when there is no <see cref="ValueProvider{Event}"/> providing the key value for a specific <see cref="EventType"/>.
     /// </summary>
     public class MissingKeyResolverForEventType : Exception
     {
