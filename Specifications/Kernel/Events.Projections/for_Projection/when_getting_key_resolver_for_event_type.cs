@@ -9,18 +9,20 @@ namespace Cratis.Events.Projections.for_Projection
     {
         static EventType event_type = "993888cc-a9c5-4d56-ae21-f732159feec7";
         Projection projection;
-        KeyResolver expected;
-        KeyResolver result;
+        EventValueProvider expected;
+        EventValueProvider result;
 
         void Establish()
         {
-            expected = KeyResolvers.EventSourceId;
+            expected = EventValueProviders.FromEventSourceId;
             projection = new Projection(
                 "0b7325dd-7a25-4681-9ab7-c387a6073547",
+                string.Empty,
                 new Model(string.Empty, new JSchema()),
                 new[] {
                     new EventTypeWithKeyResolver(event_type, expected)
-                });
+                },
+                Array.Empty<IProjection>());
         }
 
         void Because() => result = projection.GetKeyResolverFor(event_type);

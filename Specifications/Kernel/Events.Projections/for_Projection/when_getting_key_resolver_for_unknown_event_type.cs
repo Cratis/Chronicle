@@ -14,8 +14,10 @@ namespace Cratis.Events.Projections.for_Projection
         {
             projection = new Projection(
                 "0b7325dd-7a25-4681-9ab7-c387a6073547",
+                string.Empty,
                 new Model(string.Empty, new JSchema()),
-                Array.Empty<EventTypeWithKeyResolver>());
+                Array.Empty<EventTypeWithKeyResolver>(),
+                Array.Empty<IProjection>());
         }
 
         void Because() => result = Catch.Exception(() => projection.GetKeyResolverFor("6ffcf259-2069-4e7b-bf60-006edbffaf8b"));
