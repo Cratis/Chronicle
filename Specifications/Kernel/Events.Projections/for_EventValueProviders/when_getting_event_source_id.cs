@@ -11,7 +11,7 @@ namespace Cratis.Events.Projections.for_PropertyMappers
 
         EventValueProvider value_provider;
         Event @event;
-        EventSourceId result;
+        object result;
 
         void Establish()
         {
@@ -20,8 +20,8 @@ namespace Cratis.Events.Projections.for_PropertyMappers
             value_provider = EventValueProviders.FromEventSourceId;
         }
 
-        void Because() => result = value_provider(@event) as EventSourceId;
+        void Because() => result = value_provider(@event).ToString();
 
-        [Fact] void should_return_the_event_source_id() => result.ShouldEqual(eventSourceId);
+        [Fact] void should_return_the_event_source_id() => result.ShouldEqual(eventSourceId.ToString());
     }
 }
