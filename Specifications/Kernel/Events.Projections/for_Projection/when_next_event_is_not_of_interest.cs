@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Changes;
+using Cratis.Changes;
 using Newtonsoft.Json.Schema;
 
 namespace Cratis.Events.Projections.for_Projection
@@ -11,7 +11,7 @@ namespace Cratis.Events.Projections.for_Projection
         Projection projection;
         bool observed;
         Event @event;
-        Changeset changeset;
+        Changeset<Event> changeset;
 
         void Establish()
         {
@@ -31,7 +31,7 @@ namespace Cratis.Events.Projections.for_Projection
                 "30c1ebf5-cc30-4216-afed-e3e0aefa1316",
                 new());
 
-            changeset = new Changeset(@event, new());
+            changeset = new(@event, new());
             projection.Event.Subscribe(_ => observed = true);
         }
 

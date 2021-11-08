@@ -3,30 +3,31 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events.Projections.Changes
+namespace Cratis.Changes
 {
     /// <summary>
-    /// Represents a changeset - the consequence of an individual handling of a <see cref="IProjection"/>.
+    /// Represents a changeset of changes that can occur to an object.
     /// </summary>
-    public class Changeset
+    /// <typeparam name="T">Type of object we're working on.</typeparam>
+    public class Changeset<T>
     {
         readonly List<Change> _changes = new();
 
         /// <summary>
-        /// Initializes a new instance of <see cref="Changeset"/>.
+        /// Initializes a new instance of <see cref="Changeset{T}"/>.
         /// </summary>
-        /// <param name="event"><see cref="Event"/> that the <see cref="Changeset"/> is for.</param>
+        /// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{T}"/> is for.</param>
         /// <param name="initialState">The initial state before any changes are applied.</param>
-        public Changeset(Event @event, ExpandoObject initialState)
+        public Changeset(T incoming, ExpandoObject initialState)
         {
-            Event = @event;
+            Incoming = incoming;
             InitialState = initialState;
         }
 
         /// <summary>
-        /// Gets the <see cref="Event"/> the <see cref="Changeset"/> is for.
+        /// Gets the <see cref="Incoming"/> the <see cref="Changeset{T}"/> is for.
         /// </summary>
-        public Event Event { get; }
+        public T Incoming { get; }
 
         /// <summary>
         /// Gets the initial state of before changes in changeset occurred.
