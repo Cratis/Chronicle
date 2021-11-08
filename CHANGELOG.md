@@ -1,3 +1,37 @@
+# [v2.11.0] - 2021-11-8 [PR: #56](https://github.com/Cratis/cratis/pull/56)
+
+## Summary
+
+This PR brings in the ability to have children on models based on events.
+When using the C# client API you'll find it as this:
+
+```csharp
+[Projection("8fdaaf0d-1291-47b7-b661-2eeba340a520")]
+public class AccountsOverviewProjection : IProjectionFor<AccountsOverview>
+{
+    public void Define(IProjectionBuilderFor<AccountsOverview> builder)
+    {
+        builder
+            .Children(_ => _.DebitAccounts, _ => _
+                .IdentifiedBy(_ => _.Id)
+                .From<DebitAccountOpened>(_ => _
+                    .UsingParentKey(_ => _.Owner)
+                    .Set(_ => _.Name).To(_ => _.Name)));
+    }
+}
+```
+
+You model the relationship by telling what is the property on the model that identifies every child, this is to be able to do the correct operation (Add, Remove, Update) on a child. The Event needs to have a property on it that identifies the parent object; the key. As a child relationship is considered a child projection, you have the same capabilities on a child as on a parent.
+
+### Added
+
+- Support for children on objects in projections.
+
+### Fixed
+
+- Internal restructuring for extensibility and improved maintainability across the board.
+
+
 # [v2.10.0] - 2021-10-25 [PR: #47](https://github.com/Cratis/cratis/pull/47)
 
 ### Added
