@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
+using Cratis.Events.Projections.Changes;
 using Newtonsoft.Json.Schema;
 
 namespace Cratis.Events.Projections.for_ProjectionPipeline
@@ -32,8 +33,7 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
             pipeline.Start();
             projection.Setup(_ => _.GetKeyResolverFor(IsAny<EventType>())).Returns((_) => key);
             @event = new Event(0, "8ccc9ac5-50bc-4791-97ca-8a03bc4a6ccf", DateTimeOffset.UtcNow, "14dea6ef-bc08-4fb3-86a3-21dedee157fd", new ExpandoObject());
-            changeset = new Changeset(projection.Object, @event, initial_state);
-            projection.Setup(_ => _.OnNext(@event, initial_state)).Returns(changeset);
+            changeset = new Changeset(@event, initial_state);
             model = new Model(string.Empty, new JSchema());
             projection.SetupGet(_ => _.Model).Returns(model);
         }
@@ -42,7 +42,7 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
 
         [Fact] void should_find_model_using_key_for_first_storage() => first_storage.Verify(_ => _.FindOrDefault(model, key), Once());
         [Fact] void should_find_model_using_key_for_second_storage() => second_storage.Verify(_ => _.FindOrDefault(model, key), Once());
-        [Fact] void should_call_projection_for_both_storages() => projection.Verify(_ => _.OnNext(@event, initial_state), Exactly(2));
+        [Fact] void should_call_projection_for_both_storages() => projection.Verify(_ => _.OnNext(@event, changeset), Exactly(2));
         [Fact] void should_apply_changes_for_first_storage() => first_storage.Verify(_ => _.ApplyChanges(model, key, changeset), Once());
         [Fact] void should_apply_changes_for_second_storage() => second_storage.Verify(_ => _.ApplyChanges(model, key, changeset), Once());
     }

@@ -24,6 +24,13 @@ namespace Cratis.Events.Projections
         public static implicit operator string(Property property) => property.Path;
 
         /// <summary>
+        /// Implicitly convert from <see cref="string"/> to a <see cref="Property"/>.
+        /// </summary>
+        /// <param name="path">The path of the property.</param>
+        /// <returns>Converted <see cref="Property"/>.</returns>
+        public static implicit operator Property(string path) => new(path);
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Property"/> class.
         /// </summary>
         /// <param name="path">Path to the property relative within an object.</param>
