@@ -99,12 +99,12 @@ namespace Cratis.Dynamic
         }
 
         /// <summary>
-        /// Ensure a specific path for a <see cref="Property"/> exists on an <see cref="ExpandoObject"/>..
+        /// Ensure a specific path for a <see cref="PropertyPath"/> exists on an <see cref="ExpandoObject"/>..
         /// </summary>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
-        /// <param name="property"><see cref="Property"/> to get or create for.</param>
+        /// <param name="property"><see cref="PropertyPath"/> to get or create for.</param>
         /// <returns><see cref="ExpandoObject"/> at property.</returns>
-        public static ExpandoObject EnsurePath(this ExpandoObject target, Property property)
+        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property)
         {
             var currentTarget = target as IDictionary<string, object>;
             for (var propertyIndex = 0; propertyIndex < property.Segments.Length - 1; propertyIndex++)
@@ -126,18 +126,19 @@ namespace Cratis.Dynamic
         }
 
         /// <summary>
-        /// Ensures that a collection exists for a specific <see cref="Property"/>.
+        /// Ensures that a collection exists for a specific <see cref="PropertyPath"/>.
         /// </summary>
+        /// <typeparam name="TChild">Type of child for the collection.</typeparam>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
-        /// <param name="childrenProperty"><see cref="Property"/> to ensure collection for.</param>
+        /// <param name="childrenProperty"><see cref="PropertyPath"/> to ensure collection for.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
-        public static ICollection<ExpandoObject> EnsureCollection(this ExpandoObject target, Property childrenProperty)
+        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty)
         {
             var inner = target.EnsurePath(childrenProperty) as IDictionary<string, object>;
             if (!inner.ContainsKey(childrenProperty.LastSegment))
             {
-                inner[childrenProperty.LastSegment] = new List<ExpandoObject>();
+                inner[childrenProperty.LastSegment] = new List<TChild>();
             }
 
             if (!(inner[childrenProperty.LastSegment] is IEnumerable))
@@ -145,33 +146,23 @@ namespace Cratis.Dynamic
                 throw new ChildrenPropertyIsNotEnumerable(childrenProperty);
             }
 
-            var items = (inner[childrenProperty.LastSegment] as IEnumerable)!.Cast<ExpandoObject>();
-            if (items is not IList<ExpandoObject>)
+            var items = (inner[childrenProperty.LastSegment] as IEnumerable)!.Cast<TChild>();
+            if (items is not IList<TChild>)
             {
-                items = new List<ExpandoObject>(items!);
+                items = new List<TChild>(items!);
             }
             inner[childrenProperty.LastSegment] = items;
-            return (items as ICollection<ExpandoObject>)!;
+            return (items as ICollection<TChild>)!;
         }
 
         /// <summary>
         /// Check if there is an item with a specific key in a collection of <see cref="ExpandoObject"/> items.
         /// </summary>
         /// <param name="items">Items to check.</param>
-        /// <param name="identityProperty"><see cref="Property"/> holding identity on each item.</param>
+        /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
         /// <param name="key">The key value to check for.</param>
         /// <returns>True if there is an item, false if not</returns>
-        public static bool Contains(this IEnumerable<ExpandoObject> items, Property identityProperty, object key) =>
+        public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
             items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
-
-        /// <summary>
-        /// Find an item in a collection by its identity.
-        /// </summary>
-        /// <param name="items">Items to find from.</param>
-        /// <param name="identityProperty"><see cref="Property"/> holding identity on each item.</param>
-        /// <param name="key">The key value to check for.</param>
-        /// <returns>The item or default if not found.</returns>
-        public static ExpandoObject? FindByKey(this IEnumerable<ExpandoObject> items, Property identityProperty, object key) =>
-            items!.FirstOrDefault((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key)) as ExpandoObject;
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Events.Projections.Changes;
 using Cratis.Execution;
@@ -53,7 +54,7 @@ namespace Cratis.Events.Projections
             {
                 _logger.HandlingEvent(@event.SequenceNumber);
                 var correlationId = CorrelationId.New();
-                var changesets = new List<Changeset<Event>>();
+                var changesets = new List<Changeset<Event, ExpandoObject>>();
                 var tasks = _storageProviders.Select(storage => Task.Run(async () => await HandleEventFor(Projection, storage, @event, changesets)));
                 Task.WaitAll(tasks.ToArray());
                 _changesetStorage.Save(correlationId, changesets).Wait();
@@ -69,13 +70,13 @@ namespace Cratis.Events.Projections
         /// <inheritdoc/>
         public void StoreIn(IProjectionStorage storageProvider) => _storageProviders.Add(storageProvider);
 
-        async Task HandleEventFor(IProjection projection, IProjectionStorage storage, Event @event, List<Changeset<Event>> changesets)
+        async Task HandleEventFor(IProjection projection, IProjectionStorage storage, Event @event, List<Changeset<Event, ExpandoObject>> changesets)
         {
             var keyResolver = projection.GetKeyResolverFor(@event.Type);
             var key = keyResolver(@event);
             _logger.GettingInitialValues(@event.SequenceNumber);
             var initialState = await storage.FindOrDefault(Projection.Model, key);
-            var changeset = new Changeset<Event>(@event, initialState);
+            var changeset = new Changeset<Event, ExpandoObject>(@event, initialState);
             changesets.Add(changeset);
             _logger.Projecting(@event.SequenceNumber);
             projection.OnNext(@event, changeset);

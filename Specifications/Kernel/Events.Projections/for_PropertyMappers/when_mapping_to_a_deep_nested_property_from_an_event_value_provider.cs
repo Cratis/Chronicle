@@ -8,7 +8,7 @@ namespace Cratis.Events.Projections.for_PropertyMappers
 {
     public class when_mapping_to_a_deep_nested_property_from_an_event_value_provider : Specification
     {
-        PropertyMapper<Event> property_mapper;
+        PropertyMapper<Event, ExpandoObject> property_mapper;
         Event @event;
         ExpandoObject result;
         Event provided_event;

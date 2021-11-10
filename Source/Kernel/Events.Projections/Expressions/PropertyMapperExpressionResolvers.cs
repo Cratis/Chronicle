@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Properties;
 
 namespace Cratis.Events.Projections.Expressions
@@ -19,10 +20,10 @@ namespace Cratis.Events.Projections.Expressions
         };
 
         /// <inheritdoc/>
-        public bool CanResolve(Property targetProperty, string expression) => _resolvers.Any(_ => _.CanResolve(targetProperty, expression));
+        public bool CanResolve(PropertyPath targetProperty, string expression) => _resolvers.Any(_ => _.CanResolve(targetProperty, expression));
 
         /// <inheritdoc/>
-        public PropertyMapper<Event> Resolve(Property targetProperty, string expression)
+        public PropertyMapper<Event, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
         {
             var resolver = Array.Find(_resolvers, _ => _.CanResolve(targetProperty, expression));
             ThrowIfUnsupportedEventValueExpression(expression, resolver);

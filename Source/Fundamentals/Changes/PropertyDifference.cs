@@ -11,22 +11,23 @@ namespace Cratis.Changes
     /// <summary>
     /// Represents a value difference in a property of an object.
     /// </summary>
-    public class PropertyDifference
+    /// <typeparam name="TTarget">Target type the property difference is for.</typeparam>
+    public class PropertyDifference<TTarget>
     {
         readonly Difference _difference;
-        readonly ExpandoObject _original;
-        readonly ExpandoObject _changed;
+        readonly TTarget _initialInstance;
+        readonly TTarget _modifiedInstance;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PropertyDifference"/> class.
+        /// Initializes a new instance of the <see cref="PropertyDifference{T}"/> class.
         /// </summary>
-        /// <param name="original">Original state.</param>
-        /// <param name="changed">Changed state.</param>
+        /// <param name="initialInstance">Original state.</param>
+        /// <param name="modifiedInstance">Changed state.</param>
         /// <param name="difference">Raw difference.</param>
-        public PropertyDifference(ExpandoObject original, ExpandoObject changed, Difference difference)
+        public PropertyDifference(TTarget initialInstance, TTarget modifiedInstance, Difference difference)
         {
-            _changed = changed;
-            _original = original;
+            _initialInstance = initialInstance;
+            _modifiedInstance = modifiedInstance;
             _difference = difference;
             MemberPath = difference.MemberPath;
 
@@ -62,12 +63,12 @@ namespace Cratis.Changes
 
         Type? GetValueType()
         {
-            var originalValue = GetValueFrom(_original, _difference.MemberPath);
-            var changedValue = GetValueFrom(_changed, _difference.MemberPath);
+            var originalValue = GetValueFrom(_initialInstance, _difference.MemberPath);
+            var changedValue = GetValueFrom(_modifiedInstance, _difference.MemberPath);
             return originalValue?.GetType() ?? changedValue?.GetType() ?? default;
         }
 
-        object? GetValueFrom(ExpandoObject obj, string memberPath)
+        object? GetValueFrom(TTarget obj, string memberPath)
         {
             object? current = obj;
 
@@ -86,7 +87,7 @@ namespace Cratis.Changes
                 }
                 else
                 {
-                    var property = obj.GetType().GetProperty(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    var property = obj!.GetType().GetProperty(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     current = property?.GetValue(current) ?? default;
                 }
 
