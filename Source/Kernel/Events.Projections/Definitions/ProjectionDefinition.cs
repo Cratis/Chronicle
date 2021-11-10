@@ -19,6 +19,6 @@ namespace Cratis.Events.Projections.Definitions
         ProjectionName Name,
         ModelDefinition Model,
         IDictionary<EventType, FromDefinition> From,
-        IDictionary<Property, ChildrenDefinition> Children,
+        IDictionary<PropertyPath, ChildrenDefinition> Children,
         RemovedWithDefinition? RemovedWith);
 }

@@ -11,8 +11,17 @@ namespace Cratis.Properties
         /// <summary>
         /// Initializes a new instance of the <see cref="ChildrenPropertyIsNotEnumerable"/> class.
         /// </summary>
-        /// <param name="property"><see cref="Property"/> that is wrong type.</param>
-        public ChildrenPropertyIsNotEnumerable(Property property) : base($"Property at '{property.Path}' is not of enumerable type.")
+        /// <param name="property"><see cref="PropertyPath"/> that is wrong type.</param>
+        public ChildrenPropertyIsNotEnumerable(PropertyPath property) : base($"Property at '{property.Path}' is not of enumerable type.")
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ChildrenPropertyIsNotEnumerable"/> class.
+        /// </summary>
+        /// <param name="type">Type that is the root of the <see cref="PropertyPath"/>.</param>
+        /// <param name="property"><see cref="PropertyPath"/> that is wrong type.</param>
+        public ChildrenPropertyIsNotEnumerable(Type type, PropertyPath property) : base($"Property at '{property.Path}' on '{type.FullName}' is not of enumerable type.")
         {
         }
     }

@@ -33,13 +33,13 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public Task ApplyChanges(Model model, object key, Changeset<Event> changeset)
+        public Task ApplyChanges(Model model, object key, Changeset<Event, ExpandoObject> changeset)
         {
             var state = changeset.InitialState.Clone();
 
             foreach (var change in changeset.Changes)
             {
-                state = state.OverwriteWith(change.State);
+                state = state.OverwriteWith((change.State as ExpandoObject)!);
             }
 
             var collection = GetCollectionFor(model);

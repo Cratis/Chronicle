@@ -27,9 +27,9 @@ namespace Cratis.Events.Projections.Json
             _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
 
             _serializer = new JsonSerializer();
-            _serializer.Converters.Add(new PropertyJsonConverter());
+            _serializer.Converters.Add(new PropertyPathJsonConverter());
             _serializer.Converters.Add(new PropertyExpressionDictionaryJsonConverter());
-            _serializer.Converters.Add(new PropertyChildrenDefinitionDictionaryJsonConverter());
+            _serializer.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());
             _serializer.Converters.Add(new ConceptAsJsonConverter());
             _serializer.Converters.Add(new ConceptAsDictionaryJsonConverter());
         }
@@ -61,18 +61,18 @@ namespace Cratis.Events.Projections.Json
         public IProjection CreateFrom(ProjectionDefinition definition) =>
             CreateProjectionFrom(
                 definition,
-                Property.Root,
-                Property.Root,
+                PropertyPath.Root,
+                PropertyPath.Root,
                 $"Root({definition.Identifier})",
-                new Dictionary<Property, ChildrenDefinition>(),
+                new Dictionary<PropertyPath, ChildrenDefinition>(),
                 _ => { });
 
         IProjection CreateProjectionFrom(
             ProjectionDefinition projectionDefinition,
-            Property childrenAccessorProperty,
-            Property identifiedByProperty,
+            PropertyPath childrenAccessorProperty,
+            PropertyPath identifiedByProperty,
             ProjectionPath path,
-            IDictionary<Property, ChildrenDefinition> childrenDefinitions,
+            IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions,
             Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes)
         {
             var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(kvp.Key, string.IsNullOrEmpty(kvp.Value.ParentKey) ?

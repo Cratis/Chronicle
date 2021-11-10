@@ -42,16 +42,18 @@ namespace Cratis.Events.Projections.MongoDB
         /// <inheritdoc/>
         public async Task Save(ProjectionDefinition definition)
         {
-            var json = _projectionSerializer.Serialize(definition);
-            var document = BsonDocument.Parse(json);
-            var id =  BsonBinaryData.Create(definition.Identifier.Value);
-            document["_id"] = id;
+            // var json = _projectionSerializer.Serialize(definition);
+            // var document = BsonDocument.Parse(json);
+            // var id =  BsonBinaryData.Create(definition.Identifier.Value);
+            // document["_id"] = id;
 
-            await _collection.ReplaceOneAsync(
-                filter: new BsonDocument("_id", id),
-                options: new ReplaceOptions { IsUpsert = true },
-                replacement: document
-            );
+            // await _collection.ReplaceOneAsync(
+            //     filter: new BsonDocument("_id", id),
+            //     options: new ReplaceOptions { IsUpsert = true },
+            //     replacement: document
+            // );
+
+            await Task.CompletedTask;
         }
     }
 }
