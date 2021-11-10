@@ -14,9 +14,9 @@ namespace Cratis.Events.Projections.Definitions
     /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
     /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
     public record ChildrenDefinition(
-        Property IdentifiedBy,
+        PropertyPath IdentifiedBy,
         ModelDefinition Model,
         IDictionary<EventType, FromDefinition> From,
-        IDictionary<Property, ChildrenDefinition> Children,
+        IDictionary<PropertyPath, ChildrenDefinition> Children,
         RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, From, Children, RemovedWith);
 }

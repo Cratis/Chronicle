@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Properties;
 
 namespace Cratis.Events.Projections.Expressions
@@ -11,9 +12,9 @@ namespace Cratis.Events.Projections.Expressions
     public class PropertyOnEventContentExpressionProvider : IPropertyMapperExpressionResolver
     {
         /// <inheritdoc/>
-        public bool CanResolve(Property targetProperty, string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
+        public bool CanResolve(PropertyPath targetProperty, string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
 
         /// <inheritdoc/>
-        public PropertyMapper<Event> Resolve(Property targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventContent(expression));
+        public PropertyMapper<Event, ExpandoObject> Resolve(PropertyPath targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventContent(expression));
     }
 }

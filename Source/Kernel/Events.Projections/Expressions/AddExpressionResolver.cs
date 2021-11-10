@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.RegularExpressions;
 using Cratis.Properties;
 
@@ -14,10 +15,10 @@ namespace Cratis.Events.Projections.Expressions
         static readonly Regex _regularExpression = new("\\$add\\(([A-Za-z.]*)\\)", RegexOptions.Compiled);
 
         /// <inheritdoc/>
-        public bool CanResolve(Property targetProperty, string expression) => _regularExpression.Match(expression).Success;
+        public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
 
         /// <inheritdoc/>
-        public PropertyMapper<Event> Resolve(Property targetProperty, string expression)
+        public PropertyMapper<Event, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
         {
             var match = _regularExpression.Match(expression);
             return PropertyMappers.AddWithEventValueProvider(targetProperty, EventValueProviders.FromEventContent(match.Groups[1].Value));

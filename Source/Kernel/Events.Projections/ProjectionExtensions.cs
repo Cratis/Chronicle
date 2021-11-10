@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reactive.Linq;
 using Cratis.Changes;
 using Cratis.Dynamic;
@@ -24,11 +25,11 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
-        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event>> propertyMappers)
+        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
         {
             observable.Subscribe(_ =>
             {
-                var items = _.Changeset.InitialState.EnsureCollection(childrenProperty);
+                var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty);
                 var key = keyResolver(_.Event);
                 if (!items.Contains(identifiedByProperty, key))
                 {
@@ -38,7 +39,7 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, Property childrenProperty, Property identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event>> propertyMappers)
+        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
@@ -51,7 +52,7 @@ namespace Cratis.Events.Projections
                     var key = keyResolver(_.Event);
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
-                        var child = _.Changeset.GetChildByKey(childrenProperty, identifiedByProperty, key);
+                        var child = _.Changeset.GetChildByKey<Event, ExpandoObject, ExpandoObject>(childrenProperty, identifiedByProperty, key);
                         _.Changeset.ApplyChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
                     }
                 });

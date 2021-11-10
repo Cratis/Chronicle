@@ -9,7 +9,7 @@ namespace Cratis.Events.Projections.for_PropertyDifference
 {
     public class when_changed_has_the_value_and_original_does_not : Specification
     {
-        PropertyDifference difference;
+        PropertyDifference<ExpandoObject> difference;
 
         ExpandoObject original;
         ExpandoObject changed;
@@ -23,7 +23,7 @@ namespace Cratis.Events.Projections.for_PropertyDifference
             raw_difference = new Difference("Integer", "", "42", DifferenceTypes.MissedMemberInSecondObject);
         }
 
-        void Because() => difference = new PropertyDifference(original, changed, raw_difference);
+        void Because() => difference = new PropertyDifference<ExpandoObject>(original, changed, raw_difference);
 
         [Fact] void should_hold_changed_value_as_correct_type() => difference.Changed.ShouldEqual(42);
     }

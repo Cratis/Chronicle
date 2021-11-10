@@ -40,8 +40,8 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
 
         [Fact] void should_find_model_using_key_for_first_storage() => first_storage.Verify(_ => _.FindOrDefault(model, key), Once());
         [Fact] void should_find_model_using_key_for_second_storage() => second_storage.Verify(_ => _.FindOrDefault(model, key), Once());
-        [Fact] void should_call_projection_for_both_storages() => projection.Verify(_ => _.OnNext(@event, IsAny<Changeset<Event>>()), Exactly(2));
-        [Fact] void should_apply_changes_for_first_storage() => first_storage.Verify(_ => _.ApplyChanges(model, key, IsAny<Changeset<Event>>()), Once());
-        [Fact] void should_apply_changes_for_second_storage() => second_storage.Verify(_ => _.ApplyChanges(model, key, IsAny<Changeset<Event>>()), Once());
+        [Fact] void should_call_projection_for_both_storages() => projection.Verify(_ => _.OnNext(@event, IsAny<Changeset<Event, ExpandoObject>>()), Exactly(2));
+        [Fact] void should_apply_changes_for_first_storage() => first_storage.Verify(_ => _.ApplyChanges(model, key, IsAny<Changeset<Event, ExpandoObject>>()), Once());
+        [Fact] void should_apply_changes_for_second_storage() => second_storage.Verify(_ => _.ApplyChanges(model, key, IsAny<Changeset<Event, ExpandoObject>>()), Once());
     }
 }
