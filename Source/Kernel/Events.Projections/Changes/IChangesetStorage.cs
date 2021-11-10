@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Execution;
 
@@ -15,8 +16,8 @@ namespace Cratis.Events.Projections.Changes
         /// Save changesets associated with a specific <see cref="CorrelationId"/>.
         /// </summary>
         /// <param name="correlationId"><see cref="CorrelationId"/> to save for.</param>
-        /// <param name="associatedChangesets">All the associated <see cref="Changeset{Event}">changesets</see>.</param>
+        /// <param name="associatedChangesets">All the associated <see cref="Changeset{Event, ExpandoObject}">changesets</see>.</param>
         /// <returns>Async task.</returns>
-        Task Save(CorrelationId correlationId, IEnumerable<Changeset<Event>> associatedChangesets);
+        Task Save(CorrelationId correlationId, IEnumerable<Changeset<Event, ExpandoObject>> associatedChangesets);
     }
 }

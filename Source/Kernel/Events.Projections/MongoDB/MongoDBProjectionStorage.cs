@@ -49,7 +49,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(Model model, object key, Changeset<Event> changeset)
+        public async Task ApplyChanges(Model model, object key, Changeset<Event, ExpandoObject> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;
@@ -71,7 +71,7 @@ namespace Cratis.Events.Projections.MongoDB
                 return updateBuilder;
             }
 
-            bool UpdateChangedProperties(IEnumerable<PropertyDifference> differences, string? prefix = default)
+            bool UpdateChangedProperties(IEnumerable<PropertyDifference<ExpandoObject>> differences, string? prefix = default)
             {
                 foreach (var propertyDifference in differences)
                 {
@@ -88,7 +88,7 @@ namespace Cratis.Events.Projections.MongoDB
             {
                 switch (change)
                 {
-                    case PropertiesChanged propertiesChanged:
+                    case PropertiesChanged<ExpandoObject> propertiesChanged:
                         {
                             hasChanges = UpdateChangedProperties(propertiesChanged.Differences);
                         }
@@ -102,7 +102,7 @@ namespace Cratis.Events.Projections.MongoDB
                         }
                         break;
 
-                    case ChildPropertiesChanged childPropertiesChanged:
+                    case ChildPropertiesChanged<ExpandoObject> childPropertiesChanged:
                         {
                             var childValue = Builders<BsonDocument>.Filter.Eq(
                                 $"{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
