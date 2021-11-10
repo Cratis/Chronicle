@@ -3,5 +3,5 @@
 
 namespace Cratis.Extensions.Dolittle.EventStore
 {
-    public record EventMetadata(DateTimeOffset Occurred, Guid EventSource, Guid TypeId, uint TypeGeneration, bool Public);
+    public record EventMetadata(DateTimeOffset Occurred, string EventSource, Guid TypeId, uint TypeGeneration, bool Public);
 }

@@ -48,8 +48,8 @@ namespace Sample
                 new EventMetadata(
                     DateTimeOffset.UtcNow,
                     eventSourceId,
-                    eventType!.EventType.Id,
-                    eventType!.EventType.Generation,
+                    eventType!.Identifier,
+                    eventType!.Generation,
                     false),
                 new Aggregate(false, Guid.Empty, 0, 0),
                 new EventHorizon(false, 0, DateTimeOffset.MinValue, Guid.Empty),

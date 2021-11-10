@@ -92,9 +92,9 @@ namespace Cratis.Extensions.Dolittle.Schemas
 
             var typeSchema = _generator.Generate(type);
             typeSchema.SetDisplayName(type.Name);
-            typeSchema.SetGeneration(eventTypeAttribute.EventType.Generation.Value);
+            typeSchema.SetGeneration(eventTypeAttribute.Generation.Value);
 
-            var eventSchema = new EventSchema(eventTypeAttribute.EventType, typeSchema);
+            var eventSchema = new EventSchema(new EventType(eventTypeAttribute.Identifier, eventTypeAttribute.Generation), typeSchema);
             ExtendSchema(type, eventSchema, typeSchema);
 
             return eventSchema;
@@ -111,7 +111,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(global::Dolittle.SDK.Events.EventType eventType)
+        public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
         {
             var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
             var all = _collection.Find(_ => _.EventType == eventType.Id.Value).ToList();
