@@ -9,10 +9,10 @@ namespace Cratis.Events.Projections
 {
     public class when_applying_properties_that_does_not_cause_changes : Specification
     {
-        Changeset<Event> changeset;
+        Changeset<Event, ExpandoObject> changeset;
         ExpandoObject initial_state;
         Event @event;
-        IEnumerable<PropertyMapper<Event>> property_mappers;
+        IEnumerable<PropertyMapper<Event, ExpandoObject>> property_mappers;
         Mock<IProjection> projection;
 
         void Establish()
@@ -26,7 +26,7 @@ namespace Cratis.Events.Projections
             nested.Integer = 43;
             nested.String = "Forty Three";
 
-            property_mappers = new PropertyMapper<Event>[]
+            property_mappers = new PropertyMapper<Event, ExpandoObject>[]
             {
                 (_, target) => ((dynamic)target).Integer = 42,
                 (_, target) => ((dynamic)target).String = "Forty Two",

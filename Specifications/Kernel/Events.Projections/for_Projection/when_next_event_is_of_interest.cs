@@ -16,10 +16,10 @@ namespace Cratis.Events.Projections.for_Projection
         ExpandoObject initial_state;
 
         Event first_event;
-        Changeset<Event> first_changeset;
+        Changeset<Event, ExpandoObject> first_changeset;
 
         Event second_event;
-        Changeset<Event> second_changeset;
+        Changeset<Event, ExpandoObject> second_changeset;
 
         void Establish()
         {
