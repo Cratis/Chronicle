@@ -10,7 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
-        <PackageReference Include="Dolittle.SDK" Version="9.2.0" />
+        <PackageReference Include="Dolittle.SDK" Version="11.0.0" />
     </ItemGroup>
 
     <ItemGroup>
