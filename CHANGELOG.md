@@ -1,3 +1,9 @@
+# [v2.12.1] - 2021-11-10 [PR: #59](https://github.com/Cratis/cratis/pull/59)
+
+### Fixed
+
+- Upgrading to version 11 of the Dolittle SDK - it had some breaking changes that won't affect the exterior from Cratis.
+
 # [v2.12.0] - 2021-11-8 [PR: #57](https://github.com/Cratis/cratis/pull/57)
 
 ### Added
