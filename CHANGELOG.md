@@ -1,3 +1,9 @@
+# [v2.12.2] - 2021-11-10 [PR: #60](https://github.com/Cratis/cratis/pull/60)
+
+### Fixed
+
+- Opening up Changeset and changes to be for other types than just ExpandoObject.  The abstract concept of changes can now be more widely applied.
+
 # [v2.12.1] - 2021-11-10 [PR: #59](https://github.com/Cratis/cratis/pull/59)
 
 ### Fixed
