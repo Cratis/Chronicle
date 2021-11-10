@@ -20,12 +20,12 @@ namespace Sample
     public class EventGenerator : Controller
     {
         static readonly Random _random = new();
-        static readonly Guid[] _accountGuids = new[]
+        static readonly string[] _accountGuids = new[]
         {
-                Guid.Parse("626fb1ab-e74d-4bd9-a519-0e4268499fd6"),
-                Guid.Parse("37e3c5b9-206c-435c-98f1-8971895c5059"),
-                Guid.Parse("43e659e9-3d45-4600-a6db-c4d5b9f0d2b0"),
-                Guid.Parse("200e206f-2796-4e96-952a-5fe64c49f430")
+                "626fb1ab-e74d-4bd9-a519-0e4268499fd6",
+                "37e3c5b9-206c-435c-98f1-8971895c5059",
+                "43e659e9-3d45-4600-a6db-c4d5b9f0d2b0",
+                "200e206f-2796-4e96-952a-5fe64c49f430"
         };
         static readonly string[] _accountNames = new[]
         {
@@ -112,8 +112,8 @@ namespace Sample
                 new EventMetadata(
                     occurred.Value,
                     _accountGuids[account.Value],
-                    eventType.EventType.Id,
-                    eventType.EventType.Generation,
+                    eventType.Identifier,
+                    eventType.Generation,
                     false),
                 new Aggregate(false, Guid.Empty, 0, 0),
                 new EventHorizon(false, 0, DateTimeOffset.MinValue, Guid.Empty),

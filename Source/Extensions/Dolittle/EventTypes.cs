@@ -30,7 +30,7 @@ namespace Cratis.Extensions.Dolittle
                             .ToDictionary(_ =>
                             {
                                 var eventType = _.GetCustomAttribute<EventTypeAttribute>()!;
-                                return new EventType(eventType.EventType.Id.Value, eventType.EventType.Generation.Value);
+                                return new EventType(eventType.Identifier.Value, eventType.Generation.Value);
                             }, _ => _);
 
             All = _typesByEventType.Keys.ToArray();
