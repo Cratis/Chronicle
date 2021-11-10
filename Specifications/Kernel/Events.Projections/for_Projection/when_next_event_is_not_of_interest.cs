@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Changes;
 using Newtonsoft.Json.Schema;
 
@@ -11,7 +12,7 @@ namespace Cratis.Events.Projections.for_Projection
         Projection projection;
         bool observed;
         Event @event;
-        Changeset<Event> changeset;
+        Changeset<Event, ExpandoObject> changeset;
 
         void Establish()
         {
