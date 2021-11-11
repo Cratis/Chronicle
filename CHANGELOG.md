@@ -1,3 +1,9 @@
+# [v2.13.1] - 2021-11-11 [PR: #62](https://github.com/Cratis/cratis/pull/62)
+
+### Fixed
+
+- Throw `TypeIsMissingEventType` if trying to get `EventTypeId` from a type not adorned with `[EventType]`.
+
 # [v2.13.0] - 2021-11-11 [PR: #61](https://github.com/Cratis/cratis/pull/61)
 
 ### Added
