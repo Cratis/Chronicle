@@ -1,3 +1,9 @@
+# [v2.13.0] - 2021-11-11 [PR: #61](https://github.com/Cratis/cratis/pull/61)
+
+### Added
+
+- Formalized `IEventStore` and `IEventStream` for the Dolittle extension - making it possible to work with these in other scenarios other than the internal projection event provider.
+
 # [v2.12.2] - 2021-11-10 [PR: #60](https://github.com/Cratis/cratis/pull/60)
 
 ### Fixed
