@@ -5,10 +5,11 @@ using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Subjects;
 using Cratis.Events.Projections;
-using Cratis.Extensions.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using IEventStore = Cratis.Extensions.Dolittle.EventStore.IEventStore;
+using IEventStream = Cratis.Extensions.Dolittle.EventStore.IEventStream;
 
 namespace Cratis.Extensions.Dolittle.Projections
 {
@@ -17,9 +18,8 @@ namespace Cratis.Extensions.Dolittle.Projections
     /// </summary>
     public class ProjectionEventProvider : IProjectionEventProvider
     {
-        readonly IMongoClient _client;
-        readonly IMongoDatabase _database;
-        readonly IMongoCollection<EventStore.Event> _eventLogCollection;
+        readonly IEventStore _eventStore;
+        readonly IEventStream _eventStream;
         readonly IProjectionPositions _projectionPositions;
         readonly ILogger<ProjectionEventProvider> _logger;
         readonly ConcurrentDictionary<IProjection, ReplaySubject<Event>> _projectionsWithSubject = new();
@@ -28,23 +28,16 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <summary>
         /// Initializes a new instance of <see cref="ProjectionEventProvider"/>.
         /// </summary>
-        /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for connecting to MongoDB.</param>
+        /// <param name="eventStore">The Dolittle <see cref="IEventStore"/>.</param>
         /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for maintaining positions.</param>
         /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
         public ProjectionEventProvider(
-            IMongoDBClientFactory mongoDBClientFactory,
+            IEventStore eventStore,
             IProjectionPositions projectionPositions,
             ILogger<ProjectionEventProvider> logger)
         {
-            var mongoUrlBuilder = new MongoUrlBuilder
-            {
-                Servers = new[] { new MongoServerAddress("localhost", 27017) }
-            };
-            var url = mongoUrlBuilder.ToMongoUrl();
-            var settings = MongoClientSettings.FromUrl(url);
-            _client = mongoDBClientFactory.Create(settings);
-            _database = _client.GetDatabase("event_store");
-            _eventLogCollection = _database.GetCollection<EventStore.Event>("event-log");
+            _eventStore = eventStore;
+            _eventStream = eventStore.GetStream(EventStore.EventStreamId.EventLog);
             _projectionPositions = projectionPositions;
             _logger = logger;
         }
@@ -94,7 +87,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         {
             Task.Run(async () =>
             {
-                var cursor = _eventLogCollection.Watch(options: new() { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
+                var cursor = _eventStream.Watch();
                 while (cursor.MoveNext())
                 {
                     if (!cursor.Current.Any()) continue;
@@ -119,7 +112,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 }
 
                 await CatchUp(projection, subject);
-                var tail = _eventLogCollection.CountDocuments(FilterDefinition<EventStore.Event>.Empty);
+                var tail = _eventStream.Count();
                 await _projectionPositions.Save(projection, (uint)tail);
                 _projectionsWithSubject.TryAdd(projection, subject);
                 WatchForEvents();
@@ -134,27 +127,13 @@ namespace Cratis.Extensions.Dolittle.Projections
         {
             _logger.CatchingUp(projection.Identifier);
             var offset = await _projectionPositions.GetFor(projection);
-            var eventTypeFilters = projection.EventTypes.Select(_ => Builders<EventStore.Event>.Filter.Eq(_ => _.Metadata.TypeId, Guid.Parse(_.Value))).ToArray();
+            var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(Guid.Parse(_.Value))).ToArray();
 
             var exhausted = false;
 
             while (!exhausted)
             {
-                var offsetFilter = Builders<EventStore.Event>.Filter.Gt(_ => _.Id, offset.Value);
-                var filter = Builders<EventStore.Event>.Filter.And(
-                    offsetFilter,
-                    Builders<EventStore.Event>.Filter.Or(eventTypeFilters)
-                );
-
-                _logger.GettingEventsFromOffset(offset.Value);
-
-                var cursor = await _eventLogCollection.FindAsync(
-                    filter,
-                    new()
-                    {
-                        Sort = Builders<EventStore.Event>.Sort.Ascending(_ => _.Id)
-                    });
-
+                var cursor = await _eventStream.GetFromPosition(offset.Value, eventTypes);
                 while (await cursor.MoveNextAsync())
                 {
                     if (!cursor.Current.Any())
@@ -183,7 +162,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                             @event.Id,
                             eventType,
                             @event.Metadata.Occurred,
-                            @event.Metadata.EventSource.ToString(),
+                            @event.Metadata.EventSource,
                             content));
                 }
 
