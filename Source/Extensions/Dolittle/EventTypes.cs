@@ -4,6 +4,7 @@
 extern alias SDK;
 
 using System.Reflection;
+using Cratis.Extensions.Dolittle.Schemas;
 using Cratis.Reflection;
 using Cratis.Types;
 using Dolittle.SDK.Events;
@@ -43,7 +44,11 @@ namespace Cratis.Extensions.Dolittle
         public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.EventTypeId == eventTypeId);
 
         /// <inheritdoc/>
-        public EventTypeId GetEventTypeIdFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key.EventTypeId;
+        public EventTypeId GetEventTypeIdFor(Type clrType)
+        {
+            TypeIsMissingEventType.ThrowIfMissingEventType(clrType);
+            return _typesByEventType.Single(_ => _.Value == clrType).Key.EventTypeId;
+        }
 
         /// <inheritdoc/>
         public bool HasFor(Type clrType) => _typesByEventType.Any(_ => _.Value == clrType);
