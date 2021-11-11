@@ -16,7 +16,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
         /// </summary>
         /// <param name="type">Type that is missing information.</param>
         public TypeIsMissingEventType(Type type)
-            : base($"Type '{type.AssemblyQualifiedName}' does not have any even type information associated with it.")
+            : base($"Type '{type.AssemblyQualifiedName}' does not have any event type information associated with it.")
         {
         }
 
