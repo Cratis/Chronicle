@@ -4,6 +4,7 @@
 using Cratis.Extensions.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 
 namespace Cratis.Extensions.Dolittle.EventStore
 {
@@ -29,6 +30,12 @@ namespace Cratis.Extensions.Dolittle.EventStore
             };
             var url = mongoUrlBuilder.ToMongoUrl();
             var settings = MongoClientSettings.FromUrl(url);
+            var logger = loggerFactory.CreateLogger<EventStore>();
+            settings.ClusterConfigurator = _ => _
+                .Subscribe<CommandStartedEvent>(ev => logger.MongoDBStarted(ev.CommandName, ev.Command))
+                .Subscribe<CommandSucceededEvent>(ev => logger.MongoDBSucceeded(ev.CommandName, ev.Reply))
+                .Subscribe<CommandFailedEvent>(ev => logger.MongoDBFailed(ev.CommandName, ev.Failure));
+
             _client = mongoDBClientFactory.Create(settings);
             _database = _client.GetDatabase("event_store");
             _loggerFactory = loggerFactory;
