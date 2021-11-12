@@ -1,3 +1,9 @@
+# [v2.13.2] - 2021-11-12 [PR: #63](https://github.com/Cratis/cratis/pull/63)
+
+### Added
+
+- Added trace log messages from the Dolittle EventStore implementation.
+
 # [v2.13.1] - 2021-11-11 [PR: #62](https://github.com/Cratis/cratis/pull/62)
 
 ### Fixed
