@@ -1,3 +1,9 @@
+# [v2.13.3] - 2021-11-12 [PR: #64](https://github.com/Cratis/cratis/pull/64)
+
+### Fixed
+
+- For the Dolittle EventStream implementation we had a **greater than** on the query for getting from a specific offset rather than **greater than or equal**. Meaning we wouldn't get the first event - ever.
+
 # [v2.13.2] - 2021-11-12 [PR: #63](https://github.com/Cratis/cratis/pull/63)
 
 ### Added
