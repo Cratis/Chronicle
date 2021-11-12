@@ -35,7 +35,7 @@ namespace Cratis.Extensions.Dolittle.EventStore
         /// <inheritdoc/>
         public async Task<IAsyncCursor<Event>> GetFromPosition(uint position, IEnumerable<EventType>? eventTypes = default, EventSourceId? eventSourceId = default)
         {
-            var offsetFilter = Builders<Event>.Filter.Gt(_ => _.Id, position);
+            var offsetFilter = Builders<Event>.Filter.Gte(_ => _.Id, position);
             var eventTypeFilters = eventTypes?.Select(_ => Builders<Event>.Filter.Eq(_ => _.Metadata.TypeId, _.Id.Value)).ToArray() ?? Array.Empty<FilterDefinition<Event>>();
             var eventSourceFilter = (eventSourceId is null) ? FilterDefinition<Event>.Empty : Builders<Event>.Filter.Eq(_ => _.Metadata.EventSource, eventSourceId.Value);
 
