@@ -166,8 +166,8 @@ namespace Cratis.Extensions.Dolittle.Projections
                             content));
                 }
 
-                await _projectionPositions.Save(projection, @event.Id);
-                lastSavedPosition = @event.Id;
+                await _projectionPositions.Save(projection, @event.Id + 1);
+                lastSavedPosition = @event.Id + 1;
             }
 
             return lastSavedPosition;
