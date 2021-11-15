@@ -1,3 +1,9 @@
+# [v2.13.4] - 2021-11-15 [PR: #65](https://github.com/Cratis/cratis/pull/65)
+
+### Fixed
+
+- Fixing so that we save the correct offset for the projection - it needs to be the next event offset it will start processing from.
+
 # [v2.13.3] - 2021-11-12 [PR: #64](https://github.com/Cratis/cratis/pull/64)
 
 ### Fixed
