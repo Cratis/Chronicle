@@ -24,7 +24,7 @@ namespace Cratis.Extensions.Dolittle.Projections
     public class Projections : SDK::Cratis.Events.Projections.Projections
     {
         readonly IMongoDBClientFactory _mongoDBClientFactory;
-        readonly JsonProjectionSerializer _projectionSerializer;
+        readonly IJsonProjectionSerializer _projectionSerializer;
         readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
@@ -33,14 +33,14 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
         /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-        /// <param name="projectionSerializer"><see cref="JsonProjectionSerializer"/> for serialization of projection definitions.</param>
+        /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization of projection definitions.</param>
         /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
         /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
         public Projections(
             IEventTypes eventTypes,
             IMongoDBClientFactory mongoDBClientFactory,
             ITypes types,
-            JsonProjectionSerializer projectionSerializer,
+            IJsonProjectionSerializer projectionSerializer,
             ProjectionsReady projectionsReady,
             ILoggerFactory loggerFactory) : base(eventTypes, types)
         {
