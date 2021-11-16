@@ -1,3 +1,10 @@
+# [v2.13.5] - 2021-11-16 [PR: #66](https://github.com/Cratis/cratis/pull/66)
+
+### Fixed
+
+- Extracting out the interface for the `JsonProjectionSerializer` - enabling mocking in specs internally and externally for anything leveraging custom pipelines.
+
+
 # [v2.13.4] - 2021-11-15 [PR: #65](https://github.com/Cratis/cratis/pull/65)
 
 ### Fixed
