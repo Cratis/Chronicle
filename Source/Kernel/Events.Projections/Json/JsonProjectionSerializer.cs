@@ -11,9 +11,9 @@ using Newtonsoft.Json.Schema;
 namespace Cratis.Events.Projections.Json
 {
     /// <summary>
-    /// Represents a parser for JSON definition of a <see cref="IProjection"/>.
+    /// Represents an implementation of <see cref="IJsonProjectionSerializer"/>.
     /// </summary>
-    public class JsonProjectionSerializer
+    public class JsonProjectionSerializer : IJsonProjectionSerializer
     {
         readonly IPropertyMapperExpressionResolvers _propertyMapperExpressionResolvers;
         readonly JsonSerializer _serializer;
@@ -34,11 +34,7 @@ namespace Cratis.Events.Projections.Json
             _serializer.Converters.Add(new ConceptAsDictionaryJsonConverter());
         }
 
-        /// <summary>
-        /// Serialize a <see cref="ProjectionDefinition"/>.
-        /// </summary>
-        /// <param name="definition"><see cref="ProjectionDefinition"/> to serialize.</param>
-        /// <returns>JSON representation.</returns>
+        /// <inheritdoc/>
         public string Serialize(ProjectionDefinition definition)
         {
             var writer = new StringWriter();
@@ -46,18 +42,10 @@ namespace Cratis.Events.Projections.Json
             return writer.ToString();
         }
 
-        /// <summary>
-        /// Deserialize a JSON string definition into <see cref="ProjectionDefinition"/>.
-        /// </summary>
-        /// <param name="json">JSON to parse.</param>
-        /// <returns><see cref="ProjectionDefinition"/> instance.</returns>
+        /// <inheritdoc/>
         public ProjectionDefinition Deserialize(string json) => _serializer.Deserialize<ProjectionDefinition>(new JsonTextReader(new StringReader(json)))!;
 
-        /// <summary>
-        /// Create a <see cref="IProjection"/> from <see cref="ProjectionDefinition"/>.
-        /// </summary>
-        /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
-        /// <returns><see cref="IProjection"/> instance.</returns>
+        /// <inheritdoc/>
         public IProjection CreateFrom(ProjectionDefinition definition) =>
             CreateProjectionFrom(
                 definition,

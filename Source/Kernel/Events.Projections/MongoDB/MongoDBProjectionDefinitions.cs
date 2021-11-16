@@ -14,7 +14,7 @@ namespace Cratis.Events.Projections.MongoDB
     /// </summary>
     public class MongoDBProjectionDefinitions : IProjectionDefinitions
     {
-        readonly JsonProjectionSerializer _projectionSerializer;
+        readonly IJsonProjectionSerializer _projectionSerializer;
         readonly IMongoCollection<BsonDocument> _collection;
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace Cratis.Events.Projections.MongoDB
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for connecting to mongo.</param>
         /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-        public MongoDBProjectionDefinitions(IMongoDBClientFactory clientFactory, JsonProjectionSerializer projectionSerializer)
+        public MongoDBProjectionDefinitions(IMongoDBClientFactory clientFactory, IJsonProjectionSerializer projectionSerializer)
         {
             var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
 
