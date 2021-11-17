@@ -8,7 +8,7 @@ namespace Cratis.Extensions.Dolittle.Projections
     /// <summary>
     /// Represents the stored position of a <see cref="IProjection"/>.
     /// </summary>
-    /// <param name="Id">The unique identifier - the <see cref="IProjection"/> identifier.</param>
+    /// <param name="Id">The unique identifier.</param>
     /// <param name="Position">The position.</param>
-    public record ProjectionPosition(Guid Id, uint Position);
+    public record ProjectionPosition(string Id, uint Position);
 }

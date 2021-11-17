@@ -75,13 +75,13 @@ namespace Cratis.Extensions.Dolittle.Projections
                 var projectionPositions = new MongoDBProjectionPositions(_mongoDBClientFactory);
 
                 var eventStore = new EventStore.EventStore(_mongoDBClientFactory, _loggerFactory);
-                var provider = new ProjectionEventProvider(eventStore, projectionPositions, _loggerFactory.CreateLogger<ProjectionEventProvider>());
+                var provider = new ProjectionEventProvider(eventStore, _loggerFactory.CreateLogger<ProjectionEventProvider>());
                 var changesetStorage = new MongoDBChangesetStorage(_mongoDBClientFactory);
-                var pipeline = new ProjectionPipeline(provider, projection, changesetStorage, _loggerFactory.CreateLogger<ProjectionPipeline>());
+                var pipeline = new ProjectionPipeline(projection, provider, projectionPositions, changesetStorage, _loggerFactory.CreateLogger<ProjectionPipeline>());
                 //var storage = new InMemoryProjectionStorage();
                 var resultStore = new MongoDBProjectionResultStore(_mongoDBClientFactory);
-                pipeline.StoreIn(resultStore);
-                pipeline.Start();
+                pipeline.StoreIn("12358239-a120-4392-96d4-2b48271b904c", resultStore);
+                await pipeline.Start();
             }
         }
     }
