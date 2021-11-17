@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Newtonsoft.Json;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Properties;
+using Newtonsoft.Json;
 
 namespace Cratis.Events.Projections.Json
 {
@@ -21,7 +21,17 @@ namespace Cratis.Events.Projections.Json
         }
 
         /// <inheritdoc/>
-        public override void WriteJson(JsonWriter writer, IDictionary<PropertyPath, ChildrenDefinition>? value, JsonSerializer serializer) => writer.WriteValue(value!.ToDictionary(kvp => kvp.Key.Path, kvp => kvp.Value));
-    }
+        public override void WriteJson(JsonWriter writer, IDictionary<PropertyPath, ChildrenDefinition>? value, JsonSerializer serializer)
+        {
+            if (value is null) return;
+            writer.WriteStartObject();
+            foreach (var (key, children) in value)
+            {
+                writer.WritePropertyName(key.ToString());
+                serializer.Serialize(writer, children);
+            }
 
+            writer.WriteEndObject();
+        }
+    }
 }

@@ -20,7 +20,17 @@ namespace Cratis.Events.Projections.Json
         }
 
         /// <inheritdoc/>
-        public override void WriteJson(JsonWriter writer, IDictionary<PropertyPath, string>? value, JsonSerializer serializer) => writer.WriteValue(value!.ToDictionary(kvp => kvp.Key.Path, kvp => kvp.Value));
-    }
+        public override void WriteJson(JsonWriter writer, IDictionary<PropertyPath, string>? value, JsonSerializer serializer)
+        {
+            if (value is null) return;
+            writer.WriteStartObject();
+            foreach (var (key, children) in value)
+            {
+                writer.WritePropertyName(key.ToString());
+                serializer.Serialize(writer, children);
+            }
 
+            writer.WriteEndObject();
+        }
+    }
 }
