@@ -14,7 +14,7 @@ namespace Cratis.Events.Projections
     /// </summary>
     public class ProjectionPipeline : IProjectionPipeline
     {
-        readonly List<IProjectionStorage> _storageProviders = new();
+        readonly List<IProjectionResultStore> _storageProviders = new();
         readonly IChangesetStorage _changesetStorage;
         readonly ILogger<ProjectionPipeline> _logger;
 
@@ -44,7 +44,7 @@ namespace Cratis.Events.Projections
         public IProjection Projection { get; }
 
         /// <inheritdoc/>
-        public IEnumerable<IProjectionStorage> StorageProviders => _storageProviders;
+        public IEnumerable<IProjectionResultStore> ResultStores => _storageProviders;
 
         /// <inheritdoc/>
         public void Start()
@@ -68,9 +68,9 @@ namespace Cratis.Events.Projections
         public void Resume() => EventProvider.Resume(Projection);
 
         /// <inheritdoc/>
-        public void StoreIn(IProjectionStorage storageProvider) => _storageProviders.Add(storageProvider);
+        public void StoreIn(IProjectionResultStore resultStore) => _storageProviders.Add(resultStore);
 
-        async Task HandleEventFor(IProjection projection, IProjectionStorage storage, Event @event, List<Changeset<Event, ExpandoObject>> changesets)
+        async Task HandleEventFor(IProjection projection, IProjectionResultStore storage, Event @event, List<Changeset<Event, ExpandoObject>> changesets)
         {
             var keyResolver = projection.GetKeyResolverFor(@event.Type);
             var key = keyResolver(@event);

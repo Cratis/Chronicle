@@ -13,17 +13,17 @@ using MongoDB.Driver.Core.Events;
 namespace Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionStorage"/> for working with projections in MongoDB.
+    /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in MongoDB.
     /// </summary>
-    public class MongoDBProjectionStorage : IProjectionStorage
+    public class MongoDBProjectionResultStore : IProjectionResultStore
     {
         readonly IMongoDatabase _database;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MongoDBProjectionStorage"/> class.
+        /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
-        public MongoDBProjectionStorage(IMongoDBClientFactory clientFactory)
+        public MongoDBProjectionResultStore(IMongoDBClientFactory clientFactory)
         {
             var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
             settings.ClusterConfigurator = _ => _

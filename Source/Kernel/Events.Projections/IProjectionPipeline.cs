@@ -14,9 +14,9 @@ namespace Cratis.Events.Projections
         IProjectionEventProvider EventProvider { get; }
 
         /// <summary>
-        /// Gets the <see cref="IProjectionStorage">storage providers</see> to use for output.
+        /// Gets the <see cref="IProjectionResultStore">result stores</see> to use for output.
         /// </summary>
-        IEnumerable<IProjectionStorage> StorageProviders { get; }
+        IEnumerable<IProjectionResultStore> ResultStores { get; }
 
         /// <summary>
         /// Starts the pipeline.
@@ -39,13 +39,13 @@ namespace Cratis.Events.Projections
         IProjection Projection { get; }
 
         /// <summary>
-        /// Adds a <see cref="IProjectionStorage"/> for storing results.
+        /// Adds a <see cref="IProjectionResultStore"/> for storing results.
         /// </summary>
-        /// <param name="storageProvider"><see cref="IProjectionStorage">Storage provider</see> to add.</param>
+        /// <param name="resultStore"><see cref="IProjectionResultStore">Storage provider</see> to add.</param>
         /// <remarks>
         /// One can have the output of a projection stored in multiple locations. It will treat every
         /// location separately with regards to intermediate results and all.
         /// </remarks>
-        void StoreIn(IProjectionStorage storageProvider);
+        void StoreIn(IProjectionResultStore resultStore);
     }
 }

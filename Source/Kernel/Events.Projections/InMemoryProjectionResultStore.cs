@@ -8,9 +8,9 @@ using Cratis.Dynamic;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionStorage"/> for working with projections in memory.
+    /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in memory.
     /// </summary>
-    public class InMemoryProjectionStorage : IProjectionStorage
+    public class InMemoryProjectionResultStore : IProjectionResultStore
     {
         readonly Dictionary<string, Dictionary<object, ExpandoObject>> _collections = new();
 
