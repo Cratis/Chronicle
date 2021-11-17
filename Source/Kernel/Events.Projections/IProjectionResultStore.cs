@@ -9,7 +9,7 @@ namespace Cratis.Events.Projections
     /// <summary>
     /// Defines the storage for <see cref="IProjection">projections</see>.
     /// </summary>
-    public interface IProjectionStorage
+    public interface IProjectionResultStore
     {
         /// <summary>
         /// Find a model by key, or return an empty object if not found.
