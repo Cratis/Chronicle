@@ -66,13 +66,19 @@ namespace Cratis.Extensions.Dolittle.Projections
 
             var projectionDefinitions = new MongoDBProjectionDefinitions(_mongoDBClientFactory, _projectionSerializer);
             var definitions = await projectionDefinitions.GetAll();
+            var definitionsAsJson = definitions.ToDictionary(_ => _.Identifier, _ => _projectionSerializer.Serialize(_));
+            var newDefinitionsAsJson = new Dictionary<ProjectionId, string>();
+            var newDefinitions = new Dictionary<ProjectionId, ProjectionDefinition>();
+
+            var pipelines = new Dictionary<ProjectionId, IProjectionPipeline>();
 
             foreach (var projectionDefinition in _projections)
             {
                 var json = JsonConvert.SerializeObject(projectionDefinition, converters);
                 var parsed = _projectionSerializer.Deserialize(json);
 
-                await projectionDefinitions.Save(parsed);
+                newDefinitionsAsJson[parsed.Identifier] = _projectionSerializer.Serialize(parsed);
+                newDefinitions[parsed.Identifier] = parsed;
 
                 var projection = _projectionSerializer.CreateFrom(parsed);
                 var projectionPositions = new MongoDBProjectionPositions(_mongoDBClientFactory);
@@ -84,7 +90,21 @@ namespace Cratis.Extensions.Dolittle.Projections
                 //var storage = new InMemoryProjectionStorage();
                 var resultStore = new MongoDBProjectionResultStore(_mongoDBClientFactory);
                 pipeline.StoreIn("12358239-a120-4392-96d4-2b48271b904c", resultStore);
+                pipelines[parsed.Identifier] = pipeline;
+            }
+
+            foreach (var (projectionId, definition) in newDefinitionsAsJson)
+            {
+                if (definitionsAsJson.ContainsKey(projectionId) && !definitionsAsJson[projectionId].Equals(definition))
+                {
+                    await pipelines[projectionId].Rewind();
+                }
+            }
+
+            foreach (var (projectionId, pipeline) in pipelines)
+            {
                 pipeline.Start();
+                await projectionDefinitions.Save(newDefinitions[projectionId]);
             }
         }
     }
