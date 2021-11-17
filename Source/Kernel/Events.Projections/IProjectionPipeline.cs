@@ -21,8 +21,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Starts the pipeline.
         /// </summary>
-        /// <returns>A Task for async operations.</returns>
-        Task Start();
+        void Start();
 
         /// <summary>
         /// Resumes the pipeline if paused.

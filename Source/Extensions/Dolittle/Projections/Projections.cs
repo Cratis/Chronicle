@@ -81,7 +81,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 //var storage = new InMemoryProjectionStorage();
                 var resultStore = new MongoDBProjectionResultStore(_mongoDBClientFactory);
                 pipeline.StoreIn("12358239-a120-4392-96d4-2b48271b904c", resultStore);
-                await pipeline.Start();
+                pipeline.Start();
             }
         }
     }
