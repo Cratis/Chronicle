@@ -53,22 +53,25 @@ namespace Cratis.Events.Projections
         public IEnumerable<IProjectionResultStore> ResultStores => _resultStores.Values;
 
         /// <inheritdoc/>
-        public async Task Start()
+        public void Start()
         {
-            try
+            foreach (var (configurationId, resultStore) in _resultStores)
             {
-                await CatchUp();
-
-                foreach (var (configurationId, resultStore) in _resultStores)
+                Task.Run(async () =>
                 {
-                    var subject = _subjectsPerConfiguration[configurationId];
-                    EventProvider.ProvideFor(Projection, subject);
-                    subject.Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.ErrorStartingProviding(Projection.Identifier, ex);
+                    try
+                    {
+                        await CatchUp(configurationId, resultStore);
+
+                        var subject = _subjectsPerConfiguration[configurationId];
+                        EventProvider.ProvideFor(Projection, subject);
+                        subject.Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.ErrorStartingProviding(Projection.Identifier, ex);
+                    }
+                });
             }
         }
 
@@ -101,33 +104,30 @@ namespace Cratis.Events.Projections
             _subjectsPerConfiguration[configurationId] = new ReplaySubject<Event>();
         }
 
-        async Task CatchUp()
+        async Task CatchUp(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
         {
-            _logger.CatchingUp(Projection.Identifier);
-            foreach (var (configurationId, resultStore) in _resultStores)
+            _logger.CatchingUp(Projection.Identifier, configurationId);
+            var offset = await _projectionPositions.GetFor(Projection, configurationId);
+
+            var exhausted = false;
+
+            while (!exhausted)
             {
-                var offset = await _projectionPositions.GetFor(Projection, configurationId);
-
-                var exhausted = false;
-
-                while (!exhausted)
+                var cursor = await EventProvider.GetFromPosition(Projection, offset);
+                while (await cursor.MoveNext())
                 {
-                    var cursor = await EventProvider.GetFromPosition(Projection, offset);
-                    while (await cursor.MoveNext())
+                    if (!cursor.Current.Any())
                     {
-                        if (!cursor.Current.Any())
-                        {
-                            exhausted = true;
-                            break;
-                        }
-
-                        foreach (var @event in cursor.Current)
-                        {
-                            offset = await OnNext(@event, resultStore, configurationId);
-                        }
+                        exhausted = true;
+                        break;
                     }
-                    if (!cursor.Current.Any()) exhausted = true;
+
+                    foreach (var @event in cursor.Current)
+                    {
+                        offset = await OnNext(@event, resultStore, configurationId);
+                    }
                 }
+                if (!cursor.Current.Any()) exhausted = true;
             }
         }
 
