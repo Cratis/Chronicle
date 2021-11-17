@@ -34,9 +34,17 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public Task<IEnumerable<ProjectionDefinition>> GetAll()
+        public async Task<IEnumerable<ProjectionDefinition>> GetAll()
         {
-            return Task.FromResult(Array.Empty<ProjectionDefinition>().AsEnumerable());
+            var result = await _collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
+            var definitionsAsBson = result.ToList();
+            return definitionsAsBson.Select(_ =>
+            {
+                _.Remove("_id");
+                var definitionAsJson = _.ToJson();
+                Console.WriteLine(definitionAsJson);
+                return _projectionSerializer.Deserialize(definitionAsJson);
+            }).ToArray();
         }
 
         /// <inheritdoc/>
