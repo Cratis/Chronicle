@@ -6,6 +6,7 @@ extern alias SDK;
 using System.Reactive.Linq;
 using Cratis.Concepts;
 using Cratis.Events.Projections;
+using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Json;
 using Cratis.Events.Projections.MongoDB;
 using Cratis.Execution;
@@ -63,12 +64,14 @@ namespace Cratis.Extensions.Dolittle.Projections
                 new ConceptAsDictionaryJsonConverter()
             };
 
+            var projectionDefinitions = new MongoDBProjectionDefinitions(_mongoDBClientFactory, _projectionSerializer);
+            var definitions = await projectionDefinitions.GetAll();
+
             foreach (var projectionDefinition in _projections)
             {
                 var json = JsonConvert.SerializeObject(projectionDefinition, converters);
                 var parsed = _projectionSerializer.Deserialize(json);
 
-                var projectionDefinitions = new MongoDBProjectionDefinitions(_mongoDBClientFactory, _projectionSerializer);
                 await projectionDefinitions.Save(parsed);
 
                 var projection = _projectionSerializer.CreateFrom(parsed);
