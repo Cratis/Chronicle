@@ -42,7 +42,6 @@ namespace Cratis.Events.Projections.MongoDB
             {
                 _.Remove("_id");
                 var definitionAsJson = _.ToJson();
-                Console.WriteLine(definitionAsJson);
                 return _projectionSerializer.Deserialize(definitionAsJson);
             }).ToArray();
         }
