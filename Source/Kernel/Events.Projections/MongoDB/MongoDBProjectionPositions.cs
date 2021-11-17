@@ -10,17 +10,17 @@ namespace Cratis.Extensions.Dolittle.Projections
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPositions"/> for Dolittle event store.
     /// </summary>
-    public class ProjectionPositions : IProjectionPositions
+    public class MongoDBProjectionPositions : IProjectionPositions
     {
         readonly IMongoClient _client;
         readonly IMongoDatabase _database;
         readonly IMongoCollection<ProjectionPosition> _projectionPositionsCollection;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ProjectionPositions"/> class.
+        /// Initializes a new instance of the <see cref="MongoDBProjectionPositions"/> class.
         /// </summary>
-        /// <param name="mongoDBClientFactory"></param>
-        public ProjectionPositions(IMongoDBClientFactory mongoDBClientFactory)
+        /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for accessing database.</param>
+        public MongoDBProjectionPositions(IMongoDBClientFactory mongoDBClientFactory)
         {
             var mongoUrlBuilder = new MongoUrlBuilder
             {

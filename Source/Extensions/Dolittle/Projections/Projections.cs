@@ -72,7 +72,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 await projectionDefinitions.Save(parsed);
 
                 var projection = _projectionSerializer.CreateFrom(parsed);
-                var projectionPositions = new ProjectionPositions(_mongoDBClientFactory);
+                var projectionPositions = new MongoDBProjectionPositions(_mongoDBClientFactory);
 
                 var eventStore = new EventStore.EventStore(_mongoDBClientFactory, _loggerFactory);
                 var provider = new ProjectionEventProvider(eventStore, projectionPositions, _loggerFactory.CreateLogger<ProjectionEventProvider>());
