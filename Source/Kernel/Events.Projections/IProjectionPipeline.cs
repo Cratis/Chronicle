@@ -21,7 +21,8 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Starts the pipeline.
         /// </summary>
-        void Start();
+        /// <returns>A Task for async operations.</returns>
+        Task Start();
 
         /// <summary>
         /// Resumes the pipeline if paused.
@@ -34,6 +35,19 @@ namespace Cratis.Events.Projections
         void Pause();
 
         /// <summary>
+        /// Rewind the entire pipeline for all the result stores.
+        /// </summary>
+        /// <returns>A Task for async operations.</returns>
+        Task Rewind();
+
+        /// <summary>
+        /// Rewind the entire pipeline for a specific result store based on the unique identifier.
+        /// </summary>
+        /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> to rewind.</param>
+        /// <returns>A Task for async operations.</returns>
+        Task Rewind(ProjectionResultStoreConfigurationId configurationId);
+
+        /// <summary>
         /// Gets the <see cref="IProjection"/> the pipeline is for.
         /// </summary>
         IProjection Projection { get; }
@@ -41,11 +55,13 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Adds a <see cref="IProjectionResultStore"/> for storing results.
         /// </summary>
+        /// <param name="configurationId">The unique configuration identifier.</param>
         /// <param name="resultStore"><see cref="IProjectionResultStore">Storage provider</see> to add.</param>
         /// <remarks>
         /// One can have the output of a projection stored in multiple locations. It will treat every
-        /// location separately with regards to intermediate results and all.
+        /// location separately with regards to intermediate results and all. The offset within the source is
+        /// also unique per configuration.
         /// </remarks>
-        void StoreIn(IProjectionResultStore resultStore);
+        void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore);
     }
 }

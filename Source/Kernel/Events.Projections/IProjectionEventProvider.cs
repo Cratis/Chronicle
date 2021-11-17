@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -12,36 +14,21 @@ namespace Cratis.Events.Projections
         /// Start providing events for a <see cref="IProjection"/>.
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to start providing for.</param>
+        /// <param name="subject"><see cref="ISubject{Event}"/> to provide into.</param>
         /// <returns><see cref="IObservable{T}"/> of <see cref="Event">events</see>.</returns>
         /// <remarks>
         /// The provider will provide events from the current position it has recorded for the
         /// <see cref="IProjection"/>. It will be in a state of catching up till its at the
         /// head of the stream. Once at the head, it will provide events as they occur.
         /// </remarks>
-        IObservable<Event> ProvideFor(IProjection projection);
+        void ProvideFor(IProjection projection, ISubject<Event> subject);
 
         /// <summary>
-        /// Resumes if paused - continues providing events from this point.
+        /// Get events from a specific sequence numbers.
         /// </summary>
-        /// <param name="projection"><see cref="IProjection"/> to resume for.</param>
-        void Resume(IProjection projection);
-
-        /// <summary>
-        /// Pause - ceases providing events from this point.
-        /// </summary>
-        /// <param name="projection"><see cref="IProjection"/> to pause for.</param>
-        void Pause(IProjection projection);
-
-        /// <summary>
-        /// Rewind for a <see cref="IProjection"/>.
-        /// </summary>
-        /// <param name="projection"><see cref="IProjection"/> to rewind for.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        /// <remarks>
-        /// Rewinding means setting the position within a stream of events back to the beginning of time.
-        /// Once the ProvideFor() method is called or already is called for a projection - it should then
-        /// start replaying.
-        /// </remarks>
-        Task Rewind(IProjection projection);
+        /// <param name="projection"><see cref="IProjection"/> to start get for.</param>
+        /// <param name="start">The start number to get from - inclusive.</param>
+        /// <returns><see cref="IEventCursor"/>.</returns>
+        Task<IEventCursor> GetFromPosition(IProjection projection, EventLogSequenceNumber start);
     }
 }

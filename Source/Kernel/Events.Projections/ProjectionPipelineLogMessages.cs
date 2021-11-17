@@ -21,5 +21,19 @@ namespace Cratis.Events.Projections
 
         [LoggerMessage(3, LogLevel.Trace, "Saving result for event with sequence number {SequenceNumber}")]
         internal static partial void SavingResult(this ILogger logger, uint sequenceNumber);
+        [LoggerMessage(4, LogLevel.Debug, "Pausing projection '{Projection}'")]
+        internal static partial void Pausing(this ILogger logger, ProjectionId projection);
+
+        [LoggerMessage(5, LogLevel.Debug, "Resuming projection '{Projection}'")]
+        internal static partial void Resuming(this ILogger logger, ProjectionId projection);
+
+        [LoggerMessage(6, LogLevel.Debug, "Rewinding projection '{Projection}'")]
+        internal static partial void Rewinding(this ILogger logger, ProjectionId projection);
+
+        [LoggerMessage(7, LogLevel.Debug, "Catching up projection '{Projection}'")]
+        internal static partial void CatchingUp(this ILogger logger, ProjectionId projection);
+
+        [LoggerMessage(8, LogLevel.Error, "Error starting projection '{Projection}'")]
+        internal static partial void ErrorStartingProviding(this ILogger logger, ProjectionId projection, Exception exception);
     }
 }

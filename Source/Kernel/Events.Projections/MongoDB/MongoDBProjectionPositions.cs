@@ -29,31 +29,35 @@ namespace Cratis.Extensions.Dolittle.Projections
             var url = mongoUrlBuilder.ToMongoUrl();
             var settings = MongoClientSettings.FromUrl(url);
             _client = mongoDBClientFactory.Create(settings);
-            _database = _client.GetDatabase("event_store");
+            _database = _client.GetDatabase("projections");
             _projectionPositionsCollection = _database.GetCollection<ProjectionPosition>("projection-positions");
         }
 
         /// <inheritdoc/>
-        public async Task<EventLogSequenceNumber> GetFor(IProjection projection)
+        public async Task<EventLogSequenceNumber> GetFor(IProjection projection, ProjectionResultStoreConfigurationId configurationId)
         {
-            var result = await _projectionPositionsCollection.FindAsync(_ => _.Id == projection.Identifier.Value);
+            var identifier = GetIdentifierFor(projection, configurationId);
+            var result = await _projectionPositionsCollection.FindAsync(_ => _.Id == identifier);
             var position = result.SingleOrDefault();
             return position?.Position ?? 0;
         }
 
         /// <inheritdoc/>
-        public async Task Save(IProjection projection, EventLogSequenceNumber position)
+        public async Task Save(IProjection projection, ProjectionResultStoreConfigurationId configurationId, EventLogSequenceNumber position)
         {
+            var identifier = GetIdentifierFor(projection, configurationId);
             await _projectionPositionsCollection.UpdateOneAsync(
-                _ => _.Id == projection.Identifier.Value,
+                _ => _.Id == identifier,
                 Builders<ProjectionPosition>.Update.Set(_ => _.Position, position.Value),
                 new() { IsUpsert = true });
         }
 
         /// <inheritdoc/>
-        public Task Reset(IProjection projection)
+        public Task Reset(IProjection projection, ProjectionResultStoreConfigurationId configurationId)
         {
-            return Save(projection, 0);
+            return Save(projection, configurationId, 0);
         }
+
+        string GetIdentifierFor(IProjection projection, ProjectionResultStoreConfigurationId configurationId) => $"{projection.Identifier}-{configurationId}";
     }
 }
