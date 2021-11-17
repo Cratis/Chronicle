@@ -47,7 +47,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             _mongoDBClientFactory = mongoDBClientFactory;
             _projectionSerializer = projectionSerializer;
             _loggerFactory = loggerFactory;
-            projectionsReady.IsReady.Subscribe(_ => ActualStartAll());
+            projectionsReady.IsReady.Subscribe(async _ => await ActualStartAll());
         }
 
         /// <inheritdoc/>
@@ -55,7 +55,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         {
         }
 
-        void ActualStartAll()
+        async Task ActualStartAll()
         {
             var converters = new JsonConverter[]
             {
@@ -69,7 +69,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 var parsed = _projectionSerializer.Deserialize(json);
 
                 var projectionDefinitions = new MongoDBProjectionDefinitions(_mongoDBClientFactory, _projectionSerializer);
-                projectionDefinitions.Save(parsed);
+                await projectionDefinitions.Save(parsed);
 
                 var projection = _projectionSerializer.CreateFrom(parsed);
                 var projectionPositions = new ProjectionPositions(_mongoDBClientFactory);
