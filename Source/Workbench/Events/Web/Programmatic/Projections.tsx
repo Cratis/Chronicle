@@ -58,7 +58,13 @@ const columns: IColumn[] = [
 
 export const Projections = () => {
     const [projections, refreshProjections] = useDataFrom('/api/events/projections');
-    const commandBarItems: ICommandBarItemProps[] = [];
+    const commandBarItems: ICommandBarItemProps[] = [
+        {
+            key: 'add',
+            name: 'Add',
+            iconProps: { iconName: 'Add' }
+        }
+    ];
     const [selected, setSelected] = useState(undefined);
 
 
