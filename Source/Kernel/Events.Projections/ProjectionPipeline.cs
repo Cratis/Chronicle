@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Subjects;
 using Cratis.Changes;
@@ -15,8 +16,10 @@ namespace Cratis.Events.Projections
     /// </summary>
     public class ProjectionPipeline : IProjectionPipeline
     {
-        readonly Dictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> _resultStores = new();
-        readonly Dictionary<ProjectionResultStoreConfigurationId, ISubject<Event>> _subjectsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> _resultStores = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<Event>> _subjectsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, CancellationTokenSource> _cancellationTokenSourcePerConfiguration = new();
         readonly IProjectionPositions _projectionPositions;
         readonly IChangesetStorage _changesetStorage;
         readonly ILogger<ProjectionPipeline> _logger;
@@ -57,21 +60,7 @@ namespace Cratis.Events.Projections
         {
             foreach (var (configurationId, resultStore) in _resultStores)
             {
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        await CatchUp(configurationId, resultStore);
-
-                        var subject = _subjectsPerConfiguration[configurationId];
-                        EventProvider.ProvideFor(Projection, subject);
-                        subject.Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.ErrorStartingProviding(Projection.Identifier, ex);
-                    }
-                });
+                StartForConfigurationAndResultStore(configurationId, resultStore);
             }
         }
 
@@ -88,20 +77,52 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public Task Rewind()
+        public async Task Rewind()
         {
-            _logger.Rewinding(Projection.Identifier);
-            return Task.CompletedTask;
+            foreach (var (configurationId, _) in _resultStores)
+            {
+                await Rewind(configurationId);
+            }
         }
 
         /// <inheritdoc/>
-        public Task Rewind(ProjectionResultStoreConfigurationId configurationId) => throw new NotImplementedException();
+        public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
+        {
+            _logger.Rewinding(Projection.Identifier);
+            var resultStore = _resultStores[configurationId];
+            await _projectionPositions.Reset(Projection, configurationId);
+            _subscriptionsPerConfiguration[configurationId].Dispose();
+            _cancellationTokenSourcePerConfiguration[configurationId].Cancel();
+            StartForConfigurationAndResultStore(configurationId, resultStore);
+        }
 
         /// <inheritdoc/>
         public void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
         {
             _resultStores[configurationId] = resultStore;
             _subjectsPerConfiguration[configurationId] = new ReplaySubject<Event>();
+        }
+
+        void StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
+        {
+            var cancellationTokenSource = new CancellationTokenSource();
+            _cancellationTokenSourcePerConfiguration[configurationId] = cancellationTokenSource;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await CatchUp(configurationId, resultStore);
+
+                    var subject = _subjectsPerConfiguration[configurationId];
+                    EventProvider.ProvideFor(Projection, subject);
+                    _subscriptionsPerConfiguration[configurationId] = subject.Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorStartingProviding(Projection.Identifier, ex);
+                }
+            }, cancellationTokenSource.Token);
         }
 
         async Task CatchUp(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
