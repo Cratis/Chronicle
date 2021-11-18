@@ -51,6 +51,13 @@ namespace Cratis.Events.Projections.InMemory
         /// <inheritdoc/>
         public IProjectionResultStoreRewindScope BeginRewindFor(Model model) => new InMemoryResultStoreRewindScope(model);
 
+        /// <inheritdoc/>
+        public Task PrepareInitialRun(Model model)
+        {
+            GetCollectionFor(model).Clear();
+            return Task.CompletedTask;
+        }
+
         Dictionary<object, ExpandoObject> GetCollectionFor(Model model)
         {
             Dictionary<object, ExpandoObject> collection;

@@ -132,6 +132,13 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
+        public Task PrepareInitialRun(Model model)
+        {
+            var collection = GetCollectionFor(model);
+            return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
+        }
+
+        /// <inheritdoc/>
         public IProjectionResultStoreRewindScope BeginRewindFor(Model model)
         {
             var scope = new MongoDBProjectionResultStoreRewindScope(
