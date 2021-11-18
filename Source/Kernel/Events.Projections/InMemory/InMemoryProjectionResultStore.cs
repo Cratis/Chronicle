@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Dynamic;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.InMemory
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in memory.
@@ -47,6 +47,9 @@ namespace Cratis.Events.Projections
 
             return Task.CompletedTask;
         }
+
+        /// <inheritdoc/>
+        public IProjectionResultStoreRewindScope BeginRewindFor(Model model) => new InMemoryResultStoreRewindScope(model);
 
         Dictionary<object, ExpandoObject> GetCollectionFor(Model model)
         {
