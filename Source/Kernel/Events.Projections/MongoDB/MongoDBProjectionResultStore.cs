@@ -37,6 +37,13 @@ namespace Cratis.Events.Projections.MongoDB
             _database = client.GetDatabase("read-models");
         }
 
+        /// <summary>
+        /// Get the rewind collection name.
+        /// </summary>
+        /// <param name="name">Name to get for.</param>
+        /// <returns>Formatted collection name for rewind purpose.</returns>
+        public static string GetRewindCollectionName(string name) => $"rewind-{name}";
+
         /// <inheritdoc/>
         public async Task<ExpandoObject> FindOrDefault(Model model, object key)
         {
@@ -127,7 +134,10 @@ namespace Cratis.Events.Projections.MongoDB
         /// <inheritdoc/>
         public IProjectionResultStoreRewindScope BeginRewindFor(Model model)
         {
-            var scope = new MongoDBProjectionResultStoreRewindScope(model, () => _modelsInRewind.Remove(model.Name, out _));
+            var scope = new MongoDBProjectionResultStoreRewindScope(
+                _database,
+                model,
+                () => _modelsInRewind.Remove(model.Name, out _));
             _modelsInRewind[model.Name] = scope;
             return scope;
         }
@@ -136,7 +146,7 @@ namespace Cratis.Events.Projections.MongoDB
         {
             if (_modelsInRewind.ContainsKey(model.Name))
             {
-                return _database.GetCollection<BsonDocument>($"rewind-{model.Name}");
+                return _database.GetCollection<BsonDocument>(GetRewindCollectionName(model.Name));
             }
             return _database.GetCollection<BsonDocument>(model.Name);
         }
