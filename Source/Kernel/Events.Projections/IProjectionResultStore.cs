@@ -27,5 +27,17 @@ namespace Cratis.Events.Projections
         /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task ApplyChanges(Model model, object key, Changeset<Event, ExpandoObject> changeset);
+
+        /// <summary>
+        /// Begins rewind mode for a specific <see cref="Model"/>.
+        /// </summary>
+        /// <param name="model"><see cref="Model"/> to set into rewind mode.</param>
+        /// <returns><see cref="IProjectionResultStoreRewindScope"/>.</returns>
+        /// <remarks>
+        /// The rewind scope returned is a disposable. When rewind is done, one should
+        /// dispose of this. Depending on the implementation of it, it will perform
+        /// necessary cleanup after a rewind has been performed.
+        /// </remarks>
+        IProjectionResultStoreRewindScope BeginRewindFor(Model model);
     }
 }

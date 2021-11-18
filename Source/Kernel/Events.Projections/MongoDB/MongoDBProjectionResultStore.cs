@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Extensions.MongoDB;
@@ -18,6 +19,7 @@ namespace Cratis.Events.Projections.MongoDB
     public class MongoDBProjectionResultStore : IProjectionResultStore
     {
         readonly IMongoDatabase _database;
+        readonly ConcurrentDictionary<string, IProjectionResultStoreRewindScope> _modelsInRewind = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
@@ -38,7 +40,7 @@ namespace Cratis.Events.Projections.MongoDB
         /// <inheritdoc/>
         public async Task<ExpandoObject> FindOrDefault(Model model, object key)
         {
-            var collection = _database.GetCollection<BsonDocument>(model.Name);
+            var collection = GetCollectionFor(model);
             var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.ToString()));
             var instance = result.SingleOrDefault();
             if (instance != default)
@@ -116,10 +118,27 @@ namespace Cratis.Events.Projections.MongoDB
 
             if (!hasChanges) return;
 
-            var collection = _database.GetCollection<BsonDocument>(model.Name);
+            var collection = GetCollectionFor(model);
             await collection.UpdateOneAsync(filter, updateBuilder, new UpdateOptions { IsUpsert = true });
 
             await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public IProjectionResultStoreRewindScope BeginRewindFor(Model model)
+        {
+            var scope = new MongoDBProjectionResultStoreRewindScope(model, () => _modelsInRewind.Remove(model.Name, out _));
+            _modelsInRewind[model.Name] = scope;
+            return scope;
+        }
+
+        IMongoCollection<BsonDocument> GetCollectionFor(Model model)
+        {
+            if (_modelsInRewind.ContainsKey(model.Name))
+            {
+                return _database.GetCollection<BsonDocument>($"rewind-{model.Name}");
+            }
+            return _database.GetCollection<BsonDocument>(model.Name);
         }
     }
 }

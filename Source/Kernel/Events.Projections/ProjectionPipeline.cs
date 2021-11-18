@@ -60,7 +60,7 @@ namespace Cratis.Events.Projections
         {
             foreach (var (configurationId, resultStore) in _resultStores)
             {
-                StartForConfigurationAndResultStore(configurationId, resultStore);
+                StartForConfigurationAndResultStore(configurationId, resultStore, () => { });
             }
         }
 
@@ -90,10 +90,11 @@ namespace Cratis.Events.Projections
         {
             _logger.Rewinding(Projection.Identifier);
             var resultStore = _resultStores[configurationId];
+            var scope = resultStore.BeginRewindFor(Projection.Model);
             await _projectionPositions.Reset(Projection, configurationId);
             _subscriptionsPerConfiguration[configurationId].Dispose();
             _cancellationTokenSourcePerConfiguration[configurationId].Cancel();
-            StartForConfigurationAndResultStore(configurationId, resultStore);
+            StartForConfigurationAndResultStore(configurationId, resultStore, () => scope.Dispose());
         }
 
         /// <inheritdoc/>
@@ -103,7 +104,7 @@ namespace Cratis.Events.Projections
             _subjectsPerConfiguration[configurationId] = new ReplaySubject<Event>();
         }
 
-        void StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
+        void StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore, Action caughtUp)
         {
             var cancellationTokenSource = new CancellationTokenSource();
             _cancellationTokenSourcePerConfiguration[configurationId] = cancellationTokenSource;
@@ -113,6 +114,8 @@ namespace Cratis.Events.Projections
                 try
                 {
                     await CatchUp(configurationId, resultStore);
+
+                    caughtUp();
 
                     var subject = _subjectsPerConfiguration[configurationId];
                     EventProvider.ProvideFor(Projection, subject);
