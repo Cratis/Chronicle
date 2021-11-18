@@ -29,6 +29,16 @@ namespace Cratis.Events.Projections
         Task ApplyChanges(Model model, object key, Changeset<Event, ExpandoObject> changeset);
 
         /// <summary>
+        /// Prepare the store for an initial run.
+        /// </summary>
+        /// <param name="model"><see cref="Model"/> to prepare for.</param>
+        /// <remarks>
+        /// Typically the store will clear out any existing data. This is to be able to guarantee
+        /// the idempotency of the projection.
+        /// </remarks>
+        Task PrepareInitialRun(Model model);
+
+        /// <summary>
         /// Begins rewind mode for a specific <see cref="Model"/>.
         /// </summary>
         /// <param name="model"><see cref="Model"/> to set into rewind mode.</param>

@@ -132,6 +132,10 @@ namespace Cratis.Events.Projections
         {
             _logger.CatchingUp(Projection.Identifier, configurationId);
             var offset = await _projectionPositions.GetFor(Projection, configurationId);
+            if( offset == 0 )
+            {
+                await resultStore.PrepareInitialRun(Projection.Model);
+            }
 
             var exhausted = false;
 
