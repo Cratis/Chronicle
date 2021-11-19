@@ -29,6 +29,11 @@ namespace Cratis.Events.Projections
         ProjectionState State { get; }
 
         /// <summary>
+        /// Gets the position within the event log for each result store configuration.
+        /// </summary>
+        IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> Positions { get; }
+
+        /// <summary>
         /// Starts the pipeline.
         /// </summary>
         void Start();

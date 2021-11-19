@@ -21,6 +21,7 @@ namespace Cratis.Events.Projections
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, CancellationTokenSource> _cancellationTokenSourcePerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _rewindsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> _positions = new();
         readonly IProjectionPositions _projectionPositions;
         readonly IChangesetStorage _changesetStorage;
         readonly ILogger<ProjectionPipeline> _logger;
@@ -59,6 +60,9 @@ namespace Cratis.Events.Projections
 
         /// <inheritdoc/>
         public ProjectionState State { get; private set; }
+
+        /// <inheritdoc/>
+        public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> Positions => _positions;
 
         /// <inheritdoc/>
         public void Start()
@@ -190,6 +194,7 @@ namespace Cratis.Events.Projections
             {
                 await resultStore.PrepareInitialRun(Projection.Model);
             }
+            _positions[configurationId] = offset;
 
             var exhausted = false;
             State = ProjectionState.CatchingUp;
@@ -209,6 +214,7 @@ namespace Cratis.Events.Projections
                     {
                         if (cancellationToken.IsCancellationRequested) return;
                         offset = await OnNext(@event, resultStore, configurationId);
+                        _positions[configurationId] = offset;
                     }
                 }
                 if (!cursor.Current.Any()) exhausted = true;
