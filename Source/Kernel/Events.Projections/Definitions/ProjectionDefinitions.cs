@@ -3,12 +3,14 @@
 
 using System.Collections.Concurrent;
 using Cratis.Events.Projections.Json;
+using Cratis.Execution;
 
 namespace Cratis.Events.Projections.Definitions
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionDefinitions"/>.
     /// </summary>
+    [Singleton]
     public class ProjectionDefinitions : IProjectionDefinitions
     {
         readonly IProjectionDefinitionsStorage _storage;
@@ -26,6 +28,12 @@ namespace Cratis.Events.Projections.Definitions
         {
             _storage = storage;
             _projectionSerializer = projectionSerializer;
+        }
+
+        public IEnumerable<ProjectionDefinition> GetAll()
+        {
+            PopulateIfEmpty().Wait();
+            return _definitions.Values;
         }
 
         /// <inheritdoc/>
@@ -66,17 +74,30 @@ namespace Cratis.Events.Projections.Definitions
         {
             if (!_definitions.ContainsKey(projectionId))
             {
-                var definitions = await _storage.GetAll();
-                foreach (var definition in definitions)
-                {
-                    _definitions[definition.Identifier] = definition;
-                }
+                await Populate();
             }
         }
 
         void ThrowIfMissingProjectionDefinition(ProjectionId identifier)
         {
             if (!_definitions.ContainsKey(identifier)) throw new MissingProjectionDefinition(identifier);
+        }
+
+        async Task PopulateIfEmpty()
+        {
+            if (_definitions.IsEmpty)
+            {
+                await Populate();
+            }
+        }
+
+        async Task Populate()
+        {
+            var definitions = await _storage.GetAll();
+            foreach (var definition in definitions)
+            {
+                _definitions[definition.Identifier] = definition;
+            }
         }
     }
 }

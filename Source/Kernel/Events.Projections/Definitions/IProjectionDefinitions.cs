@@ -9,6 +9,12 @@ namespace Cratis.Events.Projections.Definitions
     public interface IProjectionDefinitions
     {
         /// <summary>
+        /// Get all projection definitions.
+        /// </summary>
+        /// <returns>Collection of <see cref="ProjectionDefinition"/>.</returns>
+        IEnumerable<ProjectionDefinition>   GetAll();
+
+        /// <summary>
         /// Register <see cref="ProjectionDefinition"/> in the system.
         /// </summary>
         /// <param name="definition"><see cref="ProjectionDefinition"/> to register.</param>
