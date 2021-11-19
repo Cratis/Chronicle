@@ -5,6 +5,7 @@ using Cratis.Concepts;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Properties;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace Cratis.Events.Projections.Json
 {
@@ -20,7 +21,10 @@ namespace Cratis.Events.Projections.Json
         /// </summary>
         public JsonProjectionSerializer()
         {
-            _serializer = new JsonSerializer();
+            _serializer = new JsonSerializer
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
             _serializer.Converters.Add(new PropertyPathJsonConverter());
             _serializer.Converters.Add(new PropertyExpressionDictionaryJsonConverter());
             _serializer.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());

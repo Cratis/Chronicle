@@ -25,7 +25,6 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddDolittleProjections(this IServiceCollection services)
         {
             services.AddSingleton<SDK::Cratis.Events.Projections.IProjections, Cratis.Extensions.Dolittle.Projections.Projections>();
-            services.AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>();
             services.AddSingleton<IProjectionPositions, MongoDBProjectionPositions>();
             services.AddSingleton<IChangesetStorage, MongoDBChangesetStorage>();
             services.AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>();

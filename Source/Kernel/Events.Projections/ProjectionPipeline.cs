@@ -65,7 +65,7 @@ namespace Cratis.Events.Projections
         {
             foreach (var (configurationId, resultStore) in _resultStores)
             {
-                StartForConfigurationAndResultStore(configurationId, resultStore, _rewindsPerConfiguration[configurationId]);
+                StartForConfigurationAndResultStore(configurationId, resultStore, _rewindsPerConfiguration.ContainsKey(configurationId));
             }
         }
 
@@ -74,6 +74,10 @@ namespace Cratis.Events.Projections
         {
             _logger.Pausing(Projection.Identifier);
             State = ProjectionState.Paused;
+            foreach (var (configurationId, _) in _resultStores)
+            {
+                StopForConfiguration(configurationId);
+            }
         }
 
         /// <inheritdoc/>
@@ -81,6 +85,10 @@ namespace Cratis.Events.Projections
         {
             _logger.Resuming(Projection.Identifier);
             State = ProjectionState.Active;
+            foreach (var (configurationId, resultStore) in _resultStores)
+            {
+                StartForConfigurationAndResultStore(configurationId, resultStore, true);
+            }
         }
 
         /// <inheritdoc/>
@@ -119,10 +127,17 @@ namespace Cratis.Events.Projections
             _subjectsPerConfiguration[configurationId] = new ReplaySubject<Event>();
         }
 
+        void StopForConfiguration(ProjectionResultStoreConfigurationId configurationId)
+        {
+            if (_subscriptionsPerConfiguration.ContainsKey(configurationId)) _subscriptionsPerConfiguration[configurationId].Dispose();
+            if (_cancellationTokenSourcePerConfiguration.ContainsKey(configurationId)) _cancellationTokenSourcePerConfiguration[configurationId].Cancel();
+            _subscriptionsPerConfiguration.Remove(configurationId, out _);
+            _cancellationTokenSourcePerConfiguration.Remove(configurationId, out _);
+        }
+
         void StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore, bool rewind)
         {
-            _subscriptionsPerConfiguration[configurationId]?.Dispose();
-            _cancellationTokenSourcePerConfiguration[configurationId]?.Cancel();
+            StopForConfiguration(configurationId);
 
             var cancellationTokenSource = new CancellationTokenSource();
             _cancellationTokenSourcePerConfiguration[configurationId] = cancellationTokenSource;
@@ -145,6 +160,7 @@ namespace Cratis.Events.Projections
                     var subject = _subjectsPerConfiguration[configurationId];
                     EventProvider.ProvideFor(Projection, subject);
                     _subscriptionsPerConfiguration[configurationId] = subject.Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
+                    State = ProjectionState.Active;
                 }
                 catch (Exception ex)
                 {
@@ -176,6 +192,7 @@ namespace Cratis.Events.Projections
             }
 
             var exhausted = false;
+            State = ProjectionState.CatchingUp;
 
             while (!exhausted)
             {
