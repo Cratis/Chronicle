@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Projections.Definitions;
-
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -21,6 +20,12 @@ namespace Cratis.Events.Projections
         /// and possible set up the projection for rewind.
         /// </remarks>
         Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
+
+        /// <summary>
+        /// Get all <see cref="IProjectionPipeline">projection pipelines</see> in the system.
+        /// </summary>
+        /// <returns>Collection of <see cref="IProjectionPipeline"/>.</returns>
+        IEnumerable<IProjectionPipeline>  GetAll();
 
         /// <summary>
         /// Start the supervisor.
