@@ -57,7 +57,7 @@ namespace Cratis.Events.Projections
             var model = new Model(projectionDefinition.Model.Name, JSchema.Parse(projectionDefinition.Model.Schema));
             addChildEventTypes(eventsForProjection);
 
-            var projection = new Projection(projectionDefinition.Identifier, path, model, eventsForProjection, childProjections);
+            var projection = new Projection(projectionDefinition.Identifier, projectionDefinition.Name, path, model, eventsForProjection, childProjections);
 
             foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {
