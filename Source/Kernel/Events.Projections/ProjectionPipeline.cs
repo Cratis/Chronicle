@@ -20,6 +20,7 @@ namespace Cratis.Events.Projections
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<Event>> _subjectsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, CancellationTokenSource> _cancellationTokenSourcePerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _rewindsPerConfiguration = new();
         readonly IProjectionPositions _projectionPositions;
         readonly IChangesetStorage _changesetStorage;
         readonly ILogger<ProjectionPipeline> _logger;
@@ -44,23 +45,27 @@ namespace Cratis.Events.Projections
             Projection = projection;
             _changesetStorage = changesetStorage;
             _logger = logger;
+            State = ProjectionState.Registering;
         }
-
-        /// <inheritdoc/>
-        public IProjectionEventProvider EventProvider { get; }
 
         /// <inheritdoc/>
         public IProjection Projection { get; }
 
         /// <inheritdoc/>
+        public IProjectionEventProvider EventProvider { get; }
+
+        /// <inheritdoc/>
         public IEnumerable<IProjectionResultStore> ResultStores => _resultStores.Values;
+
+        /// <inheritdoc/>
+        public ProjectionState State { get; private set; }
 
         /// <inheritdoc/>
         public void Start()
         {
             foreach (var (configurationId, resultStore) in _resultStores)
             {
-                StartForConfigurationAndResultStore(configurationId, resultStore, () => { });
+                StartForConfigurationAndResultStore(configurationId, resultStore, _rewindsPerConfiguration[configurationId]);
             }
         }
 
@@ -68,33 +73,43 @@ namespace Cratis.Events.Projections
         public void Pause()
         {
             _logger.Pausing(Projection.Identifier);
+            State = ProjectionState.Paused;
         }
 
         /// <inheritdoc/>
         public void Resume()
         {
             _logger.Resuming(Projection.Identifier);
+            State = ProjectionState.Active;
         }
 
         /// <inheritdoc/>
-        public async Task Rewind()
+        public void Rewind()
         {
+            _logger.Rewinding(Projection.Identifier);
+            State = ProjectionState.Rewinding;
             foreach (var (configurationId, _) in _resultStores)
             {
-                await Rewind(configurationId);
+                Rewind(configurationId);
             }
         }
 
         /// <inheritdoc/>
-        public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
+        public void Rewind(ProjectionResultStoreConfigurationId configurationId)
         {
-            _logger.Rewinding(Projection.Identifier);
-            var resultStore = _resultStores[configurationId];
-            var scope = resultStore.BeginRewindFor(Projection.Model);
-            await _projectionPositions.Reset(Projection, configurationId);
-            _subscriptionsPerConfiguration[configurationId].Dispose();
-            _cancellationTokenSourcePerConfiguration[configurationId].Cancel();
-            StartForConfigurationAndResultStore(configurationId, resultStore, () => scope.Dispose());
+            _logger.RewindingForConfiguration(Projection.Identifier, configurationId);
+            _rewindsPerConfiguration[configurationId] = true;
+
+            if (State != ProjectionState.Rewinding)
+            {
+                State = ProjectionState.PartialRewinding;
+            }
+
+            if (State != ProjectionState.Registering)
+            {
+                var resultStore = _resultStores[configurationId];
+                StartForConfigurationAndResultStore(configurationId, resultStore, true);
+            }
         }
 
         /// <inheritdoc/>
@@ -104,8 +119,11 @@ namespace Cratis.Events.Projections
             _subjectsPerConfiguration[configurationId] = new ReplaySubject<Event>();
         }
 
-        void StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore, Action caughtUp)
+        void StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore, bool rewind)
         {
+            _subscriptionsPerConfiguration[configurationId]?.Dispose();
+            _cancellationTokenSourcePerConfiguration[configurationId]?.Cancel();
+
             var cancellationTokenSource = new CancellationTokenSource();
             _cancellationTokenSourcePerConfiguration[configurationId] = cancellationTokenSource;
 
@@ -113,9 +131,16 @@ namespace Cratis.Events.Projections
             {
                 try
                 {
-                    await CatchUp(configurationId, resultStore);
+                    IProjectionResultStoreRewindScope? rewindScope = null;
+                    if (rewind)
+                    {
+                        rewindScope = await PrepareRewind(configurationId);
+                    }
 
-                    caughtUp();
+                    await CatchUp(configurationId, resultStore, cancellationTokenSource.Token);
+
+                    rewindScope?.Dispose();
+                    _rewindsPerConfiguration.Remove(configurationId, out _);
 
                     var subject = _subjectsPerConfiguration[configurationId];
                     EventProvider.ProvideFor(Projection, subject);
@@ -124,15 +149,28 @@ namespace Cratis.Events.Projections
                 catch (Exception ex)
                 {
                     _logger.ErrorStartingProviding(Projection.Identifier, ex);
+                    State = ProjectionState.Failed;
                 }
             }, cancellationTokenSource.Token);
         }
 
-        async Task CatchUp(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
+        async Task<IProjectionResultStoreRewindScope> PrepareRewind(ProjectionResultStoreConfigurationId configurationId)
+        {
+            State = ProjectionState.Rewinding;
+            var resultStore = _resultStores[configurationId];
+            var scope = resultStore.BeginRewindFor(Projection.Model);
+            await _projectionPositions.Reset(Projection, configurationId);
+            return scope;
+        }
+
+        async Task CatchUp(
+            ProjectionResultStoreConfigurationId configurationId,
+            IProjectionResultStore resultStore,
+            CancellationToken cancellationToken)
         {
             _logger.CatchingUp(Projection.Identifier, configurationId);
             var offset = await _projectionPositions.GetFor(Projection, configurationId);
-            if( offset == 0 )
+            if (offset == 0)
             {
                 await resultStore.PrepareInitialRun(Projection.Model);
             }
@@ -152,6 +190,7 @@ namespace Cratis.Events.Projections
 
                     foreach (var @event in cursor.Current)
                     {
+                        if (cancellationToken.IsCancellationRequested) return;
                         offset = await OnNext(@event, resultStore, configurationId);
                     }
                 }

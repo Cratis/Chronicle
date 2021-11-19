@@ -4,21 +4,36 @@
 namespace Cratis.Events.Projections.Definitions
 {
     /// <summary>
-    /// Defines a system for working with <see cref="ProjectionDefinition"/>.
+    /// Defines a system for working with <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
     public interface IProjectionDefinitions
     {
         /// <summary>
-        /// Get all <see cref="ProjectionDefinition">definitions</see> registered.
+        /// Register <see cref="ProjectionDefinition"/> in the system.
         /// </summary>
-        /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
-        Task<IEnumerable<ProjectionDefinition>> GetAll();
+        /// <param name="definition"><see cref="ProjectionDefinition"/> to register.</param>
+        /// <returns>Async Task.</returns>
+        Task Register(ProjectionDefinition definition);
 
         /// <summary>
-        /// Save a <see cref="ProjectionDefinition"/>.
+        /// Check if a projection has a definition, based on its identifier.
         /// </summary>
-        /// <param name="definition">Definition to save.</param>
-        /// <returns>Async task.</returns>
-        Task Save(ProjectionDefinition definition);
+        /// <param name="projectionId"><see cref="ProjectionId"/> to check for.</param>
+        /// <returns>True if exists, false if not.</returns>
+        Task<bool> HasFor(ProjectionId projectionId);
+
+        /// <summary>
+        /// Get the <see cref="ProjectionDefinition"/> based on its identifier.
+        /// </summary>
+        /// <param name="projectionId"><see cref="ProjectionId"/> to get for.</param>
+        /// <returns><see cref="ProjectionDefinition"/> instance.</returns>
+        Task<ProjectionDefinition> GetFor(ProjectionId projectionId);
+
+        /// <summary>
+        /// Compare an incoming <see cref="ProjectionDefinition"/> to existing to see if the definition has changed.
+        /// </summary>
+        /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> to compare.</param>
+        /// <returns>True if it has changed, false if not.</returns>
+        Task<bool> HasChanged(ProjectionDefinition projectionDefinition);
     }
 }

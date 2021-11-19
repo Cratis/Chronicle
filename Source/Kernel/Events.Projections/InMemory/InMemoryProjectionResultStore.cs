@@ -15,6 +15,9 @@ namespace Cratis.Events.Projections.InMemory
         readonly Dictionary<string, Dictionary<object, ExpandoObject>> _collections = new();
 
         /// <inheritdoc/>
+        public ProjectionResultStoreTypeId TypeId => "8a23995d-da0b-4c4c-818b-f97992f26bbf";
+
+        /// <inheritdoc/>
         public Task<ExpandoObject> FindOrDefault(Model model, object key)
         {
             var collection = GetCollectionFor(model);

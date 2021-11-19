@@ -10,9 +10,9 @@ using MongoDB.Driver;
 namespace Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents a <see cref="IProjectionDefinitions"/> for projection definitions in MongoDB.
+    /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
     /// </summary>
-    public class MongoDBProjectionDefinitions : IProjectionDefinitions
+    public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
     {
         readonly IJsonProjectionSerializer _projectionSerializer;
         readonly IMongoCollection<BsonDocument> _collection;
@@ -22,7 +22,7 @@ namespace Cratis.Events.Projections.MongoDB
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for connecting to mongo.</param>
         /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-        public MongoDBProjectionDefinitions(IMongoDBClientFactory clientFactory, IJsonProjectionSerializer projectionSerializer)
+        public MongoDBProjectionDefinitionsStorage(IMongoDBClientFactory clientFactory, IJsonProjectionSerializer projectionSerializer)
         {
             var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
 

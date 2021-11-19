@@ -11,6 +11,11 @@ namespace Cratis.Events.Projections
     public interface IProjectionEventProvider
     {
         /// <summary>
+        /// Gets the unique type identifier.
+        /// </summary>
+        ProjectionEventProviderTypeId TypeId { get; }
+
+        /// <summary>
         /// Start providing events for a <see cref="IProjection"/>.
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to start providing for.</param>
