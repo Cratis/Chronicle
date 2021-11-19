@@ -9,6 +9,11 @@ namespace Cratis.Events.Projections
     public enum ProjectionState
     {
         /// <summary>
+        /// Projection is in an unknown state.
+        /// </summary>
+        Unknown = 0,
+
+        /// <summary>
         /// Projection is being registered.
         /// </summary>
         Registering = 1,
