@@ -87,6 +87,7 @@ namespace Cratis.Types
                                 .Where(_ => _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase) ||
                                             _assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm, StringComparison.InvariantCultureIgnoreCase)))
                                 .Select(_ => Assembly.Load(_.Name))
+                                .Distinct()
                                 .ToArray();
             _assemblies.AddRange(assemblies.Where(_ => !projectReferencedAssemblies.Any(p => p == _)).Select(_ => _));
 
