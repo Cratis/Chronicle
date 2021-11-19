@@ -9,21 +9,19 @@ namespace Cratis.Events.Projections.Api
     [Route("/api/events/projections")]
     public class Projections : Controller
     {
+        readonly IProjections _projections;
         readonly ILogger<Projections> _logger;
 
-        public Projections(ILogger<Projections> logger)
+        public Projections(IProjections projections, ILogger<Projections> logger)
         {
+            _projections = projections;
             _logger = logger;
         }
 
         [HttpGet]
-        public Task<IEnumerable<Projection>> GetAll()
+        public IEnumerable<Projection> GetAll()
         {
-            _logger.LogInformation($"Get all projections");
-            var projections = new Projection[] {
-                new Projection("Something", 0)
-            }.AsEnumerable();
-            return Task.FromResult(projections);
+            return _projections.GetAll().Select(_ => new Projection(_.Projection.Name, 0));
         }
     }
 }
