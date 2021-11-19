@@ -14,9 +14,14 @@ namespace Cratis.Events.Projections
         readonly IProjectionDefinitions _definitions;
         readonly IProjectionFactory _projectionFactory;
         readonly IProjectionPipelineFactory _pipelineFactory;
-
         readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Projections"/> class.
+        /// </summary>
+        /// <param name="definitions">The <see cref="IProjectionDefinitions"/> to use.</param>
+        /// <param name="projectionFactory">The <see cref="IProjectionFactory"/> for creating projection instances.</param>
+        /// <param name="pipelineFactory">The <see cref="IProjectionPipelineFactory"/> for creating projection pipeline instances.</param>
         public Projections(
             IProjectionDefinitions definitions,
             IProjectionFactory projectionFactory,
@@ -32,7 +37,7 @@ namespace Cratis.Events.Projections
         {
             var projection = _projectionFactory.CreateFrom(projectionDefinition);
             var pipeline = _pipelineFactory.CreateFrom(projection, pipelineDefinition);
-            var isNew = await _definitions.HasFor(projectionDefinition.Identifier);
+            var isNew = !await _definitions.HasFor(projectionDefinition.Identifier);
             var hasChanged = await _definitions.HasChanged(projectionDefinition);
 
             if (!isNew && hasChanged)

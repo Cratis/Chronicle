@@ -36,15 +36,16 @@ namespace Cratis.Events.Projections.MongoDB
         public void Dispose()
         {
             var rewindName = MongoDBProjectionResultStore.GetRewindCollectionName(Model.Name);
-            var oldCollectionsPrefix = $"{Model.Name}-";
+            var rewoundCollectionsPrefix = $"{Model.Name}-";
             var collectionNames = _database.ListCollectionNames().ToList();
             var nextCollectionSequenceNumber = 1;
-            if (collectionNames.Any(_ => _.StartsWith(oldCollectionsPrefix, StringComparison.InvariantCulture)))
+            var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
+            if (rewoundCollectionNames.Length > 0)
             {
-                nextCollectionSequenceNumber = collectionNames
+                nextCollectionSequenceNumber = rewoundCollectionNames
                     .Select(_ =>
                     {
-                        var postfix = _.Substring(oldCollectionsPrefix.Length);
+                        var postfix = _.Substring(rewoundCollectionsPrefix.Length);
                         if (int.TryParse(postfix, out var value))
                         {
                             return value;
@@ -55,10 +56,17 @@ namespace Cratis.Events.Projections.MongoDB
                     .OrderByDescending(_ => _)
                     .First() + 1;
             }
-            var oldCollectionName = $"{oldCollectionsPrefix}{nextCollectionSequenceNumber}";
+            var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
 
-            _database.RenameCollection(Model.Name, oldCollectionName);
-            _database.RenameCollection(rewindName, Model.Name);
+            if (collectionNames.Contains(Model.Name))
+            {
+                _database.RenameCollection(Model.Name, oldCollectionName);
+            }
+
+            if (collectionNames.Contains(rewindName))
+            {
+                _database.RenameCollection(rewindName, Model.Name);
+            }
 
             _onDispose();
         }
