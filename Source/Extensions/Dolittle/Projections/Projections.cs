@@ -52,7 +52,7 @@ namespace Cratis.Extensions.Dolittle.Projections
 
         async Task ActualStartAll()
         {
-            var projections = _serviceProvider.GetService<Events.Projections.Projections>()!;
+            var projections = _serviceProvider.GetService<Events.Projections.IProjections>()!;
 
             var converters = new JsonConverter[]
             {
