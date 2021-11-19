@@ -128,6 +128,12 @@ export const Projections = () => {
                     selection={selection}
                     styles={gridStyles} />
             </Stack.Item>
-        </Stack>
+            {selected &&
+                <Stack.Item grow={1}>
+                    Hello
+
+                </Stack.Item>
+            }
+        </Stack >
     );
 };
