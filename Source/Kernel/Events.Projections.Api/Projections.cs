@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.Api
 {
@@ -10,18 +9,27 @@ namespace Cratis.Events.Projections.Api
     public class Projections : Controller
     {
         readonly IProjections _projections;
-        readonly ILogger<Projections> _logger;
 
-        public Projections(IProjections projections, ILogger<Projections> logger)
+        public Projections(IProjections projections)
         {
             _projections = projections;
-            _logger = logger;
         }
 
         [HttpGet]
         public IEnumerable<Projection> GetAll()
         {
-            return _projections.GetAll().Select(_ => new Projection(_.Projection.Name, 0));
+            return _projections.GetAll().Select(_ =>
+                new Projection(
+                    _.Projection.Identifier,
+                    _.Projection.Name,
+                    Enum.GetName(typeof(ProjectionState), _.State) ?? "Unknown",
+                    string.Join("-", _.Positions.Values)));
+        }
+
+        [HttpPost("rewind/{projectionId}")]
+        public void Rewind([FromRoute] Guid projectionId)
+        {
+            _projections.GetById(projectionId).Rewind();
         }
     }
 }
