@@ -11,13 +11,6 @@ namespace Cratis.Events.Projections.Json
     public interface IJsonProjectionSerializer
     {
         /// <summary>
-        /// Create a <see cref="IProjection"/> from <see cref="ProjectionDefinition"/>.
-        /// </summary>
-        /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
-        /// <returns><see cref="IProjection"/> instance.</returns>
-        IProjection CreateFrom(ProjectionDefinition definition);
-
-        /// <summary>
         /// Deserialize a JSON string definition into <see cref="ProjectionDefinition"/>.
         /// </summary>
         /// <param name="json">JSON to parse.</param>

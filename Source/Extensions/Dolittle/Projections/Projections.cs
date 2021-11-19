@@ -12,7 +12,6 @@ using Cratis.Events.Projections.MongoDB;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using Cratis.Types;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using IEventTypes = SDK::Cratis.Events.IEventTypes;
 
@@ -26,8 +25,7 @@ namespace Cratis.Extensions.Dolittle.Projections
     {
         readonly IMongoDBClientFactory _mongoDBClientFactory;
         readonly IJsonProjectionSerializer _projectionSerializer;
-        readonly IProjectionsCoordinator _supervisor;
-        readonly ILoggerFactory _loggerFactory;
+        readonly IProjections _projectionsCoordinator;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -37,21 +35,18 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization of projection definitions.</param>
         /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
-        /// <param name="supervisor"><see cref="IProjectionsCoordinator"/> that supervises the projections.</param>
-        /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+        /// <param name="projections"><see cref="IProjections"/> that supervises the projections.</param>
         public Projections(
             IEventTypes eventTypes,
             IMongoDBClientFactory mongoDBClientFactory,
             ITypes types,
             IJsonProjectionSerializer projectionSerializer,
             ProjectionsReady projectionsReady,
-            IProjectionsCoordinator supervisor,
-            ILoggerFactory loggerFactory) : base(eventTypes, types)
+            IProjections projections) : base(eventTypes, types)
         {
             _mongoDBClientFactory = mongoDBClientFactory;
             _projectionSerializer = projectionSerializer;
-            _supervisor = supervisor;
-            _loggerFactory = loggerFactory;
+            _projectionsCoordinator = projections;
             projectionsReady.IsReady.Subscribe(async _ => await ActualStartAll());
         }
 
@@ -93,37 +88,10 @@ namespace Cratis.Extensions.Dolittle.Projections
                             MongoDBProjectionResultStore.ProjectionResultStoreTypeId)
                     });
 
-                await _supervisor.Register(parsed, pipelineDefinition);
-
-                /*
-                var projection = _projectionSerializer.CreateFrom(parsed);
-                var projectionPositions = new MongoDBProjectionPositions(_mongoDBClientFactory);
-
-                var eventStore = new EventStore.EventStore(_mongoDBClientFactory, _loggerFactory);
-                var provider = new ProjectionEventProvider(eventStore, _loggerFactory.CreateLogger<ProjectionEventProvider>());
-                var changesetStorage = new MongoDBChangesetStorage(_mongoDBClientFactory);
-                var pipeline = new ProjectionPipeline(projection, provider, projectionPositions, changesetStorage, _loggerFactory.CreateLogger<ProjectionPipeline>());
-                //var storage = new InMemoryProjectionStorage();
-                var resultStore = new MongoDBProjectionResultStore(_mongoDBClientFactory);
-                pipeline.StoreIn("12358239-a120-4392-96d4-2b48271b904c", resultStore);
-                pipelines[parsed.Identifier] = pipeline;
-                */
+                await _projectionsCoordinator.Register(parsed, pipelineDefinition);
             }
 
-            /*
-            foreach (var (projectionId, definition) in newDefinitionsAsJson)
-            {
-                if (definitionsAsJson.ContainsKey(projectionId) && !definitionsAsJson[projectionId].Equals(definition))
-                {
-                    await pipelines[projectionId].Rewind();
-                }
-            }
-
-            foreach (var (projectionId, pipeline) in pipelines)
-            {
-                pipeline.Start();
-                await projectionDefinitions.Save(newDefinitions[projectionId]);
-            }*/
+            _projectionsCoordinator.Start();
         }
     }
 }
