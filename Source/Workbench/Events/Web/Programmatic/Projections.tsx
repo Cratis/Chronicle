@@ -47,12 +47,17 @@ const columns: IColumn[] = [
         minWidth: 200
     },
     {
+        key: 'state',
+        name: 'State',
+        fieldName: 'state',
+        minWidth: 200
+    },
+    {
         key: 'position',
-        name: 'Position',
-        fieldName: 'position',
+        name: 'Positions',
+        fieldName: 'positions',
         minWidth: 200
     }
-
 ];
 
 
@@ -63,9 +68,17 @@ export const Projections = () => {
             key: 'add',
             name: 'Add',
             iconProps: { iconName: 'Add' }
+        },
+        {
+            key: 'refresh',
+            name: 'Refresh',
+            iconProps: { iconName: 'Refresh' },
+            onClick: () => {
+                refreshProjections();
+            }
         }
     ];
-    const [selected, setSelected] = useState(undefined);
+    const [selected, setSelected] = useState<any>(undefined);
 
 
     const selection = useMemo(
@@ -86,7 +99,20 @@ export const Projections = () => {
         commandBarItems.push({
             key: 'rewind',
             name: 'Rewind',
-            iconProps: { iconName: 'Rewind' }
+            iconProps: { iconName: 'Rewind' },
+            onClick: () => {
+                const id = selected.id;
+
+                (async () => {
+                    const response = await fetch(`/api/events/projections/rewind/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                })();
+            }
         });
     }
 
@@ -101,10 +127,7 @@ export const Projections = () => {
                     columns={columns}
                     selection={selection}
                     styles={gridStyles} />
-
-
             </Stack.Item>
-
         </Stack>
     );
 };
