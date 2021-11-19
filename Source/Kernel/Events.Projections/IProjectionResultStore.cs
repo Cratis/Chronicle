@@ -12,6 +12,11 @@ namespace Cratis.Events.Projections
     public interface IProjectionResultStore
     {
         /// <summary>
+        /// Gets the <see cref="ProjectionResultStoreTypeId"/> that identifies the store.
+        /// </summary>
+        ProjectionResultStoreTypeId TypeId { get; }
+
+        /// <summary>
         /// Find a model by key, or return an empty object if not found.
         /// </summary>
         /// <param name="model"><see cref="Model"/> to find for.</param>

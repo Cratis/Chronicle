@@ -22,6 +22,11 @@ namespace Cratis.Events.Projections.MongoDB
         readonly ConcurrentDictionary<string, IProjectionResultStoreRewindScope> _modelsInRewind = new();
 
         /// <summary>
+        /// Gets the identifier of the <see cref="MongoDBProjectionResultStore"/>.
+        /// </summary>
+        public static readonly ProjectionResultStoreTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
@@ -36,6 +41,9 @@ namespace Cratis.Events.Projections.MongoDB
             var client = clientFactory.Create(settings.Freeze());
             _database = client.GetDatabase("read-models");
         }
+
+        /// <inheritdoc/>
+        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
 
         /// <summary>
         /// Get the rewind collection name.

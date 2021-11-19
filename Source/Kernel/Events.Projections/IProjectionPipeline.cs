@@ -9,6 +9,11 @@ namespace Cratis.Events.Projections
     public interface IProjectionPipeline
     {
         /// <summary>
+        /// Gets the <see cref="IProjection"/> the pipeline is for.
+        /// </summary>
+        IProjection Projection { get; }
+
+        /// <summary>
         /// Gets the <see cref="IProjectionEventProvider"/> used in the pipeline.
         /// </summary>
         IProjectionEventProvider EventProvider { get; }
@@ -17,6 +22,11 @@ namespace Cratis.Events.Projections
         /// Gets the <see cref="IProjectionResultStore">result stores</see> to use for output.
         /// </summary>
         IEnumerable<IProjectionResultStore> ResultStores { get; }
+
+        /// <summary>
+        /// Gets the <see cref="ProjectionState">state</see> of the projection.
+        /// </summary>
+        ProjectionState State { get; }
 
         /// <summary>
         /// Starts the pipeline.
@@ -36,20 +46,14 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Rewind the entire pipeline for all the result stores.
         /// </summary>
-        /// <returns>A Task for async operations.</returns>
-        Task Rewind();
+        void Rewind();
 
         /// <summary>
         /// Rewind the entire pipeline for a specific result store based on the unique identifier.
         /// </summary>
         /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> to rewind.</param>
         /// <returns>A Task for async operations.</returns>
-        Task Rewind(ProjectionResultStoreConfigurationId configurationId);
-
-        /// <summary>
-        /// Gets the <see cref="IProjection"/> the pipeline is for.
-        /// </summary>
-        IProjection Projection { get; }
+        void Rewind(ProjectionResultStoreConfigurationId configurationId);
 
         /// <summary>
         /// Adds a <see cref="IProjectionResultStore"/> for storing results.

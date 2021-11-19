@@ -30,10 +30,13 @@ namespace Cratis.Events.Projections
         [LoggerMessage(6, LogLevel.Debug, "Rewinding projection '{Projection}'")]
         internal static partial void Rewinding(this ILogger logger, ProjectionId projection);
 
-        [LoggerMessage(7, LogLevel.Debug, "Catching up projection '{Projection}' for result store configuration '{ConfigurationId}'")]
+        [LoggerMessage(7, LogLevel.Debug, "Rewinding projection '{Projection}' for configuration '{Configuration}'")]
+        internal static partial void RewindingForConfiguration(this ILogger logger, ProjectionId projection, ProjectionResultStoreConfigurationId configuration);
+
+        [LoggerMessage(8, LogLevel.Debug, "Catching up projection '{Projection}' for result store configuration '{ConfigurationId}'")]
         internal static partial void CatchingUp(this ILogger logger, ProjectionId projection, ProjectionResultStoreConfigurationId configurationId);
 
-        [LoggerMessage(8, LogLevel.Error, "Error starting projection '{Projection}'")]
+        [LoggerMessage(9, LogLevel.Error, "Error starting projection '{Projection}'")]
         internal static partial void ErrorStartingProviding(this ILogger logger, ProjectionId projection, Exception exception);
     }
 }

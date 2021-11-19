@@ -21,6 +21,11 @@ namespace Cratis.Extensions.Dolittle.Projections
         readonly ConcurrentBag<ISubject<Event>> _subjects = new();
 
         /// <summary>
+        /// Gets the unique identifier of the provider.
+        /// </summary>
+        public static readonly ProjectionEventProviderTypeId ProjectionEventProviderTypeId = "965f8ad2-38d7-4d49-a3c5-b67dbaa17781";
+
+        /// <summary>
         /// Initializes a new instance of <see cref="ProjectionEventProvider"/>.
         /// </summary>
         /// <param name="eventStore">The Dolittle <see cref="IEventStore"/>.</param>
@@ -33,6 +38,9 @@ namespace Cratis.Extensions.Dolittle.Projections
             _logger = logger;
             Task.Run(() => WatchForEvents());
         }
+
+        /// <inheritdoc/>
+        public ProjectionEventProviderTypeId TypeId => ProjectionEventProviderTypeId;
 
         /// <inheritdoc/>
         public void ProvideFor(IProjection projection, ISubject<Event> subject)

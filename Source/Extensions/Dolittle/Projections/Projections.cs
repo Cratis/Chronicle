@@ -26,6 +26,7 @@ namespace Cratis.Extensions.Dolittle.Projections
     {
         readonly IMongoDBClientFactory _mongoDBClientFactory;
         readonly IJsonProjectionSerializer _projectionSerializer;
+        readonly IProjectionsCoordinator _supervisor;
         readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
@@ -36,6 +37,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization of projection definitions.</param>
         /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
+        /// <param name="supervisor"><see cref="IProjectionsCoordinator"/> that supervises the projections.</param>
         /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
         public Projections(
             IEventTypes eventTypes,
@@ -43,10 +45,12 @@ namespace Cratis.Extensions.Dolittle.Projections
             ITypes types,
             IJsonProjectionSerializer projectionSerializer,
             ProjectionsReady projectionsReady,
+            IProjectionsCoordinator supervisor,
             ILoggerFactory loggerFactory) : base(eventTypes, types)
         {
             _mongoDBClientFactory = mongoDBClientFactory;
             _projectionSerializer = projectionSerializer;
+            _supervisor = supervisor;
             _loggerFactory = loggerFactory;
             projectionsReady.IsReady.Subscribe(async _ => await ActualStartAll());
         }
@@ -64,7 +68,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 new ConceptAsDictionaryJsonConverter()
             };
 
-            var projectionDefinitions = new MongoDBProjectionDefinitions(_mongoDBClientFactory, _projectionSerializer);
+            var projectionDefinitions = new MongoDBProjectionDefinitionsStorage(_mongoDBClientFactory, _projectionSerializer);
             var definitions = await projectionDefinitions.GetAll();
             var definitionsAsJson = definitions.ToDictionary(_ => _.Identifier, _ => _projectionSerializer.Serialize(_));
             var newDefinitionsAsJson = new Dictionary<ProjectionId, string>();
@@ -80,6 +84,18 @@ namespace Cratis.Extensions.Dolittle.Projections
                 newDefinitionsAsJson[parsed.Identifier] = _projectionSerializer.Serialize(parsed);
                 newDefinitions[parsed.Identifier] = parsed;
 
+                var pipelineDefinition = new ProjectionPipelineDefinition(
+                    parsed.Identifier,
+                    ProjectionEventProvider.ProjectionEventProviderTypeId,
+                    new[] {
+                        new ProjectionResultStoreDefinition(
+                            "12358239-a120-4392-96d4-2b48271b904c",
+                            MongoDBProjectionResultStore.ProjectionResultStoreTypeId)
+                    });
+
+                await _supervisor.Register(parsed, pipelineDefinition);
+
+                /*
                 var projection = _projectionSerializer.CreateFrom(parsed);
                 var projectionPositions = new MongoDBProjectionPositions(_mongoDBClientFactory);
 
@@ -91,8 +107,10 @@ namespace Cratis.Extensions.Dolittle.Projections
                 var resultStore = new MongoDBProjectionResultStore(_mongoDBClientFactory);
                 pipeline.StoreIn("12358239-a120-4392-96d4-2b48271b904c", resultStore);
                 pipelines[parsed.Identifier] = pipeline;
+                */
             }
 
+            /*
             foreach (var (projectionId, definition) in newDefinitionsAsJson)
             {
                 if (definitionsAsJson.ContainsKey(projectionId) && !definitionsAsJson[projectionId].Equals(definition))
@@ -105,7 +123,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             {
                 pipeline.Start();
                 await projectionDefinitions.Save(newDefinitions[projectionId]);
-            }
+            }*/
         }
     }
 }
