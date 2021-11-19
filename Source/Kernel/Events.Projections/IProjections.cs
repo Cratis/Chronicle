@@ -8,7 +8,7 @@ namespace Cratis.Events.Projections
     /// <summary>
     /// Defines a system that is responsible for supervises projections in the system.
     /// </summary>
-    public interface IProjectionsCoordinator
+    public interface IProjections
     {
         /// <summary>
         /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.

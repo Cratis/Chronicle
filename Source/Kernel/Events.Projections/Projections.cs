@@ -7,9 +7,9 @@ using Cratis.Events.Projections.Definitions;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionsCoordinator"/>.
+    /// Represents an implementation of <see cref="IProjections"/>.
     /// </summary>
-    public class ProjectionsCoordinator : IProjectionsCoordinator
+    public class Projections : IProjections
     {
         readonly IProjectionDefinitions _definitions;
         readonly IProjectionFactory _projectionFactory;
@@ -17,7 +17,7 @@ namespace Cratis.Events.Projections
 
         readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
 
-        public ProjectionsCoordinator(
+        public Projections(
             IProjectionDefinitions definitions,
             IProjectionFactory projectionFactory,
             IProjectionPipelineFactory pipelineFactory)

@@ -3,7 +3,12 @@
 
 extern alias SDK;
 
+using Cratis.Events.Projections;
+using Cratis.Events.Projections.Changes;
+using Cratis.Events.Projections.Definitions;
+using Cratis.Events.Projections.MongoDB;
 using Cratis.Extensions.Dolittle.Projections;
+using Cratis.Extensions.MongoDB;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -19,7 +24,11 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
         public static IServiceCollection AddDolittleProjections(this IServiceCollection services)
         {
-            services.AddSingleton<SDK::Cratis.Events.Projections.IProjections, Projections>();
+            services.AddSingleton<SDK::Cratis.Events.Projections.IProjections, Cratis.Extensions.Dolittle.Projections.Projections>();
+            services.AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>();
+            services.AddSingleton<IProjectionPositions, MongoDBProjectionPositions>();
+            services.AddSingleton<IChangesetStorage, MongoDBChangesetStorage>();
+            services.AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>();
             services.AddSingleton(new ProjectionsReady());
             return services;
         }
