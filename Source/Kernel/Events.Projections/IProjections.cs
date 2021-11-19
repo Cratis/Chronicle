@@ -28,6 +28,13 @@ namespace Cratis.Events.Projections
         IEnumerable<IProjectionPipeline>  GetAll();
 
         /// <summary>
+        /// Get a specific <see cref="IProjectionPipeline"/> by the identifier.
+        /// </summary>
+        /// <param name="id"><see cref="ProjectionId"/> to get.</param>
+        /// <returns>The <see cref="IProjectionPipeline"/>.</returns>
+        IProjectionPipeline GetById(ProjectionId id);
+
+        /// <summary>
         /// Start the supervisor.
         /// </summary>
         void Start();

@@ -68,7 +68,10 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IEnumerable<IProjectionPipeline>  GetAll() => _pipelines.Values;
+        public IEnumerable<IProjectionPipeline> GetAll() => _pipelines.Values;
+
+        /// <inheritdoc/>
+        public IProjectionPipeline GetById(ProjectionId id) => _pipelines[id];
 
         async Task RegisterUnregisteredProjections()
         {
