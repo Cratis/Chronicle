@@ -27,6 +27,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton<IProjectionPositions, MongoDBProjectionPositions>();
             services.AddSingleton<IChangesetStorage, MongoDBChangesetStorage>();
             services.AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>();
+            services.AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>();
             services.AddSingleton(new ProjectionsReady());
             return services;
         }
