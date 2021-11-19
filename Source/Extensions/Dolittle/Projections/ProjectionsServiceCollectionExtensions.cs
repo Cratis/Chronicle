@@ -8,7 +8,6 @@ using Cratis.Events.Projections.Changes;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.MongoDB;
 using Cratis.Extensions.Dolittle.Projections;
-using Cratis.Extensions.MongoDB;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
