@@ -14,7 +14,10 @@ namespace Sample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(typeof(Startup).Assembly));
+            services.AddControllers()
+                    .PartManager
+                    .ApplicationParts
+                    .Add(new AssemblyPart(typeof(Startup).Assembly));
             services.AddSingleton(Types)
                 .AddProjections()
                 .AddDolittleEventTypes()

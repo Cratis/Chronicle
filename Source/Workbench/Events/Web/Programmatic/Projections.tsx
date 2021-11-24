@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useDataFrom } from '../useDataFrom';
 import { useMemo, useState } from 'react';
+import { AllProjections } from 'API/Events.Projections.Api/AllProjections';
+import { Projection } from 'API/Events.Projections.Api/Projection';
+
 
 import {
     CommandBar,
@@ -62,23 +64,15 @@ const columns: IColumn[] = [
 
 
 export const Projections = () => {
-    const [projections, refreshProjections] = useDataFrom('/api/events/projections');
+    const [projections] = AllProjections.use();
     const commandBarItems: ICommandBarItemProps[] = [
         {
             key: 'add',
             name: 'Add',
             iconProps: { iconName: 'Add' }
-        },
-        {
-            key: 'refresh',
-            name: 'Refresh',
-            iconProps: { iconName: 'Refresh' },
-            onClick: () => {
-                refreshProjections();
-            }
         }
     ];
-    const [selected, setSelected] = useState<any>(undefined);
+    const [selected, setSelected] = useState<Projection>();
 
 
     const selection = useMemo(
@@ -87,13 +81,12 @@ export const Projections = () => {
             onSelectionChanged: () => {
                 const selected = selection.getSelection();
                 if (selected.length === 1) {
-                    setSelected(selected[0]);
+                    setSelected(selected[0] as Projection);
                 } else {
                     setSelected(undefined);
                 }
             },
-            items: projections
-        }), [projections]);
+        }), [projections.data]);
 
     if (selected) {
         commandBarItems.push({
@@ -123,7 +116,7 @@ export const Projections = () => {
             </Stack.Item>
             <Stack.Item grow={1}>
                 <DetailsList
-                    items={projections}
+                    items={projections.data}
                     columns={columns}
                     selection={selection}
                     styles={gridStyles} />
