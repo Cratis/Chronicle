@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Queries;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Events.Projections.Api
 {
+
     [Route("/api/events/projections")]
     public class Projections : Controller
     {
@@ -16,14 +18,11 @@ namespace Cratis.Events.Projections.Api
         }
 
         [HttpGet]
-        public IEnumerable<Projection> GetAll()
+        public ClientObservable<IEnumerable<Projection>> AllProjections()
         {
-            return _projections.GetAll().Select(_ =>
-                new Projection(
-                    _.Projection.Identifier,
-                    _.Projection.Name,
-                    Enum.GetName(typeof(ProjectionState), _.State) ?? "Unknown",
-                    string.Join("-", _.Positions.Values)));
+            var observable = new ClientObservable<IEnumerable<Projection>>();
+            observable.OnNext(GetAllProjections());
+            return observable;
         }
 
         [HttpPost("rewind/{projectionId}")]
@@ -31,5 +30,13 @@ namespace Cratis.Events.Projections.Api
         {
             _projections.GetById(projectionId).Rewind();
         }
+
+        IEnumerable<Projection> GetAllProjections() =>
+            _projections.GetAll().Select(_ =>
+                new Projection(
+                    _.Projection.Identifier,
+                    _.Projection.Name,
+                    Enum.GetName(typeof(ProjectionState), _.State) ?? "Unknown",
+                    string.Join("-", _.Positions.Values)));
     }
 }

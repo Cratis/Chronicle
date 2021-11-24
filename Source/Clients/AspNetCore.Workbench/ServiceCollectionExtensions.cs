@@ -3,6 +3,7 @@
 
 using System.Text.Json.Serialization;
 using Cratis.AspNetCore.Workbench;
+using Cratis.Concepts.SystemJson;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -20,7 +21,8 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
         public static IServiceCollection AddCratisWorkbench(this IServiceCollection services, Action<WorkbenchBuilder>? workbenchBuilderCallback = null)
         {
-            var mvcBuilder = services.AddControllers();
+            var mvcBuilder = services.AddControllers(_ => _.AddCQRS())
+                                    .AddJsonOptions(_ => _.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory()));
             if (workbenchBuilderCallback != default)
             {
                 var workbenchBuilder = new WorkbenchBuilder();

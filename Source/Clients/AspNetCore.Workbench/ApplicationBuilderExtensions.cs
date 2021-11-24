@@ -19,6 +19,7 @@ namespace Microsoft.AspNetCore.Builder
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
         public static IApplicationBuilder UseCratisWorkbench(this IApplicationBuilder applicationBuilder)
         {
+            applicationBuilder.UseWebSockets();
             applicationBuilder.UseRouting();
             var filesOptions = new SharedOptions
             {
