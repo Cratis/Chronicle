@@ -24,7 +24,7 @@
         "@monaco-editor/react": "^4.3.1",
         "echarts": "^5.2.1",
         "handlebars": "^4.7.7",
-        "@aksio/frontend": "1.10.0"
+        "@aksio/frontend": "1.10.2"
     },
     "devDependencies": {
         "@cratis/webpack": "1.0.0"
