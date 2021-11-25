@@ -12,8 +12,8 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
     {
         static Guid key = Guid.NewGuid();
         ISubject<Event>   subject;
-        Mock<IProjectionStorage>    first_storage;
-        Mock<IProjectionStorage>    second_storage;
+        Mock<IProjectionResultStore>    first_storage;
+        Mock<IProjectionResultStore>    second_storage;
         ExpandoObject initial_state;
         Event @event;
         Model    model;

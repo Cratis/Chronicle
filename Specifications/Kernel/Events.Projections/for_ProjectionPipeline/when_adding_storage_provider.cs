@@ -5,12 +5,12 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
 {
     public class when_adding_storage_provider : given.a_pipeline
     {
-        Mock<IProjectionStorage> storage;
+        Mock<IProjectionResultStore> storage;
 
         void Establish() => storage = new();
 
-        void Because() => pipeline.StoreIn(storage.Object);
+        void Because() => pipeline.StoreIn("8a1e35ac-567c-4309-957d-61910eb0c581", storage.Object);
 
-        [Fact] void should_have_storage_provider_added() => pipeline.StorageProviders.First().ShouldEqual(storage.Object);
+        [Fact] void should_have_storage_provider_added() => pipeline.ResultStores.First().ShouldEqual(storage.Object);
     }
 }
