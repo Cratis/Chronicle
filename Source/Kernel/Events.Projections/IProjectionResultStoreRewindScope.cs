@@ -4,13 +4,13 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Defines a system that can provide <see cref="IProjection">projections</see>.
+    /// Defines the scope when doing rewind.
     /// </summary>
-    public interface IProjectionProvider
+    public interface IProjectionResultStoreRewindScope : IDisposable
     {
         /// <summary>
-        /// Gets all projections provided.
+        /// Gets the <see cref="Model"/> the scope is for.
         /// </summary>
-        IProjection All { get; }
+        Model Model { get; }
     }
 }

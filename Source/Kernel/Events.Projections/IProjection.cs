@@ -15,17 +15,22 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Gets the unique identifier of the <see cref="IProjection"/>.
         /// </summary>
-        ProjectionId    Identifier { get; }
+        ProjectionId Identifier { get; }
+
+        /// <summary>
+        /// Gets the name of the projection.
+        /// </summary>
+        ProjectionName Name { get; }
 
         /// <summary>
         /// Gets the fully qualified path for the projection. Typically for child relationships, this will show the full path it applies to.
         /// </summary>
-        ProjectionPath Path { get; }
+        ProjectionPath Path { get; }
 
         /// <summary>
         /// Gets the <see cref="Model"/> the projection targets.
         /// </summary>
-        Model Model { get; }
+        Model Model { get; }
 
         /// <summary>
         /// Gets the <see cref="IObservable{T}">observable</see> <see cref="EventContext">event</see>.
@@ -35,19 +40,19 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Gets the <see cref="EventType">event types</see> the projection can handle.
         /// </summary>
-        IEnumerable<EventType> EventTypes { get; }
+        IEnumerable<EventType> EventTypes { get; }
 
         /// <summary>
         /// Gets the collection of <see cref="IProjection">child projections</see>.
         /// </summary>
-        IEnumerable<IProjection> ChildProjections { get; }
+        IEnumerable<IProjection> ChildProjections { get; }
 
         /// <summary>
         /// Apply a filter to an <see cref="IObservable{EventContext}"/> with the event types the <see cref="Projection"/> is interested in.
         /// </summary>
         /// <param name="observable"><see cref="IObservable{EventContext}"/> to filter.</param>
         /// <returns>Filtered <see cref="IObservable{EventContext}"/>.</returns>
-        IObservable<EventContext>  FilterEventTypes(IObservable<EventContext> observable);
+        IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable);
 
         /// <summary>
         /// Provides the projection with a new <see cref="Event"/>.

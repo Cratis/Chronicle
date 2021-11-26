@@ -11,7 +11,11 @@ module.exports = (env, argv) => {
         config.devServer.port = 9000;
         config.devServer.proxy = {
             '/graphql': 'http://localhost:5000',
-            '/api': 'http://localhost:5000'
-        }
+            '/api': {
+                target: 'http://localhost:5000',
+                ws: true
+            }
+        };
+        config.resolve.alias.API = path.resolve('./API');
     }, 'Cratis Events Workbench');
 };

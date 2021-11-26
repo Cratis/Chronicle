@@ -12,12 +12,18 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline.given
         protected Mock<IChangesetStorage> changeset_storage;
         protected Mock<IProjection> projection;
 
+        protected Mock<IProjectionPositions> projection_positions;
+
+        protected Mock<ISubject<Event>> subject;
+
         void Establish()
         {
             event_provider = new();
             projection = new();
             changeset_storage = new();
-            event_provider.Setup(_ => _.ProvideFor(projection.Object)).Returns(new Subject<Event>());
+            projection_positions = new();
+            subject = new();
+            event_provider.Setup(_ => _.ProvideFor(projection.Object, subject.Object));
         }
     }
 }

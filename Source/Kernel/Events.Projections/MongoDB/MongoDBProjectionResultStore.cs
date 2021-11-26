@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Extensions.MongoDB;
@@ -13,17 +14,23 @@ using MongoDB.Driver.Core.Events;
 namespace Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionStorage"/> for working with projections in MongoDB.
+    /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in MongoDB.
     /// </summary>
-    public class MongoDBProjectionStorage : IProjectionStorage
+    public class MongoDBProjectionResultStore : IProjectionResultStore
     {
         readonly IMongoDatabase _database;
+        readonly ConcurrentDictionary<string, IProjectionResultStoreRewindScope> _modelsInRewind = new();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MongoDBProjectionStorage"/> class.
+        /// Gets the identifier of the <see cref="MongoDBProjectionResultStore"/>.
+        /// </summary>
+        public static readonly ProjectionResultStoreTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
-        public MongoDBProjectionStorage(IMongoDBClientFactory clientFactory)
+        public MongoDBProjectionResultStore(IMongoDBClientFactory clientFactory)
         {
             var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
             settings.ClusterConfigurator = _ => _
@@ -36,9 +43,19 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
+        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
+
+        /// <summary>
+        /// Get the rewind collection name.
+        /// </summary>
+        /// <param name="name">Name to get for.</param>
+        /// <returns>Formatted collection name for rewind purpose.</returns>
+        public static string GetRewindCollectionName(string name) => $"rewind-{name}";
+
+        /// <inheritdoc/>
         public async Task<ExpandoObject> FindOrDefault(Model model, object key)
         {
-            var collection = _database.GetCollection<BsonDocument>(model.Name);
+            var collection = GetCollectionFor(model);
             var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.ToString()));
             var instance = result.SingleOrDefault();
             if (instance != default)
@@ -116,10 +133,37 @@ namespace Cratis.Events.Projections.MongoDB
 
             if (!hasChanges) return;
 
-            var collection = _database.GetCollection<BsonDocument>(model.Name);
+            var collection = GetCollectionFor(model);
             await collection.UpdateOneAsync(filter, updateBuilder, new UpdateOptions { IsUpsert = true });
 
             await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public Task PrepareInitialRun(Model model)
+        {
+            var collection = GetCollectionFor(model);
+            return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
+        }
+
+        /// <inheritdoc/>
+        public IProjectionResultStoreRewindScope BeginRewindFor(Model model)
+        {
+            var scope = new MongoDBProjectionResultStoreRewindScope(
+                _database,
+                model,
+                () => _modelsInRewind.Remove(model.Name, out _));
+            _modelsInRewind[model.Name] = scope;
+            return scope;
+        }
+
+        IMongoCollection<BsonDocument> GetCollectionFor(Model model)
+        {
+            if (_modelsInRewind.ContainsKey(model.Name))
+            {
+                return _database.GetCollection<BsonDocument>(GetRewindCollectionName(model.Name));
+            }
+            return _database.GetCollection<BsonDocument>(model.Name);
         }
     }
 }

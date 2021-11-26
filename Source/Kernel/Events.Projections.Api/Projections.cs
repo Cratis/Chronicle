@@ -1,29 +1,42 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Queries;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.Api
 {
+
     [Route("/api/events/projections")]
     public class Projections : Controller
     {
-        readonly ILogger<Projections> _logger;
+        readonly IProjections _projections;
 
-        public Projections(ILogger<Projections> logger)
+        public Projections(IProjections projections)
         {
-            _logger = logger;
+            _projections = projections;
         }
 
         [HttpGet]
-        public Task<IEnumerable<Projection>> GetAll()
+        public ClientObservable<IEnumerable<Projection>> AllProjections()
         {
-            _logger.LogInformation($"Get all projections");
-            var projections = new Projection[] {
-                new Projection("Something", 0)
-            }.AsEnumerable();
-            return Task.FromResult(projections);
+            var observable = new ClientObservable<IEnumerable<Projection>>();
+            observable.OnNext(GetAllProjections());
+            return observable;
         }
+
+        [HttpPost("rewind/{projectionId}")]
+        public void Rewind([FromRoute] Guid projectionId)
+        {
+            _projections.GetById(projectionId).Rewind();
+        }
+
+        IEnumerable<Projection> GetAllProjections() =>
+            _projections.GetAll().Select(_ =>
+                new Projection(
+                    _.Projection.Identifier,
+                    _.Projection.Name,
+                    Enum.GetName(typeof(ProjectionState), _.CurrentState) ?? "Unknown",
+                    string.Join("-", _.Positions.Values)));
     }
 }
