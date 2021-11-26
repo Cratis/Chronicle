@@ -18,7 +18,7 @@ namespace Cratis.Extensions.Dolittle.Projections
     {
         readonly IEventStream _eventStream;
         readonly ILogger<ProjectionEventProvider> _logger;
-        readonly ConcurrentBag<ISubject<Event>> _subjects = new();
+        readonly ConcurrentDictionary<IProjectionPipeline, ConcurrentBag<ISubject<Event>>> _piplinesWithSubjects = new();
 
         /// <summary>
         /// Gets the unique identifier of the provider.
@@ -43,10 +43,15 @@ namespace Cratis.Extensions.Dolittle.Projections
         public ProjectionEventProviderTypeId TypeId => ProjectionEventProviderTypeId;
 
         /// <inheritdoc/>
-        public void ProvideFor(IProjection projection, ISubject<Event> subject)
+        public void ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject)
         {
-            _logger.ProvidingFor(projection.Identifier);
-            _subjects.Add(subject);
+            _logger.ProvidingFor(pipeline.Projection.Identifier);
+            if (!_piplinesWithSubjects.ContainsKey(pipeline))
+            {
+                _piplinesWithSubjects[pipeline] = new();
+            }
+
+            _piplinesWithSubjects[pipeline].Add(subject);
         }
 
         /// <inheritdoc/>
@@ -72,11 +77,21 @@ namespace Cratis.Extensions.Dolittle.Projections
                 {
                     if (!cursor.Current.Any()) continue;
 
-                    foreach (var subject in _subjects)
+                    foreach (var (projectionPipeline, subjects) in _piplinesWithSubjects)
                     {
-                        foreach (var @event in cursor.Current.Select(_ => _.FullDocument.ToCratis()))
+                        try
                         {
-                            subject.OnNext(@event);
+                            foreach (var subject in subjects)
+                            {
+                                foreach (var @event in cursor.Current.Select(_ => _.FullDocument.ToCratis()))
+                                {
+                                    subject.OnNext(@event);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            projectionPipeline.Suspend($"Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
                         }
                     }
                 }
