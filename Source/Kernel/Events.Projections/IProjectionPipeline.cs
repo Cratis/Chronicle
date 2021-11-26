@@ -46,22 +46,33 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Starts the pipeline.
         /// </summary>
+        /// <returns>A Task for async operations.</returns>
         Task Start();
 
         /// <summary>
         /// Resumes the pipeline if paused.
         /// </summary>
+        /// <returns>A Task for async operations.</returns>
         Task Resume();
 
         /// <summary>
         /// Pause the pipeline.
         /// </summary>
+        /// <returns>A Task for async operations.</returns>
         Task Pause();
 
         /// <summary>
         /// Rewind the entire pipeline for all the result stores.
         /// </summary>
+        /// <returns>A Task for async operations.</returns>
         Task Rewind();
+
+        /// <summary>
+        /// Suspend a pipeline with a reason.
+        /// </summary>
+        /// <param name="reason">The reason for the suspension.</param>
+        /// <returns>A Task for async operations.</returns>
+        Task Suspend(string reason);
 
         /// <summary>
         /// Rewind the entire pipeline for a specific result store based on the unique identifier.

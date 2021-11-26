@@ -136,6 +136,14 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
+        public Task Suspend(string reason)
+        {
+            _logger.Suspended(Projection.Identifier, reason);
+            _state.OnNext(ProjectionState.Suspended);
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
         public void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
         {
             _resultStores[configurationId] = resultStore;
@@ -175,8 +183,10 @@ namespace Cratis.Events.Projections
                     _rewindsPerConfiguration.Remove(configurationId, out _);
 
                     var subject = _subjectsPerConfiguration[configurationId];
-                    EventProvider.ProvideFor(Projection, subject);
-                    _subscriptionsPerConfiguration[configurationId] = subject.Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
+                    EventProvider.ProvideFor(this, subject);
+                    _subscriptionsPerConfiguration[configurationId] = Projection
+                        .FilterEventTypes(subject)
+                        .Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
 
                     if (_catchUpPerConfiguration.IsEmpty)
                     {
@@ -186,7 +196,7 @@ namespace Cratis.Events.Projections
                 catch (Exception ex)
                 {
                     _logger.ErrorStartingProviding(Projection.Identifier, ex);
-                    _state.OnNext(ProjectionState.Failed);
+                    _state.OnNext(ProjectionState.Suspended);
                 }
             }, cancellationTokenSource.Token);
 
@@ -245,18 +255,29 @@ namespace Cratis.Events.Projections
         async Task<EventLogSequenceNumber> OnNext(Event @event, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId)
         {
             _logger.HandlingEvent(@event.SequenceNumber);
-            var correlationId = CorrelationId.New();
-            var changesets = new List<Changeset<Event, ExpandoObject>>();
-            await HandleEventFor(Projection, resultStore, @event, changesets);
-            await _changesetStorage.Save(correlationId, changesets);
-            var nextSequenceNumber = @event.SequenceNumber + 1;
-            await _projectionPositions.Save(Projection, configurationId, nextSequenceNumber);
-            UpdatePositionFor(configurationId, nextSequenceNumber);
-            return nextSequenceNumber;
+
+            try
+            {
+                var correlationId = CorrelationId.New();
+                var changesets = new List<Changeset<Event, ExpandoObject>>();
+                await HandleEventFor(Projection, resultStore, @event, changesets);
+                await _changesetStorage.Save(correlationId, changesets);
+                var nextSequenceNumber = @event.SequenceNumber + 1;
+                await _projectionPositions.Save(Projection, configurationId, nextSequenceNumber);
+                UpdatePositionFor(configurationId, nextSequenceNumber);
+                return nextSequenceNumber;
+            }
+            catch (Exception ex)
+            {
+                await Suspend($"Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
+                return @event.SequenceNumber;
+            }
         }
 
         async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, Event @event, List<Changeset<Event, ExpandoObject>> changesets)
         {
+            if (CurrentState == ProjectionState.Suspended) return;
+
             var keyResolver = projection.GetKeyResolverFor(@event.Type);
             var key = keyResolver(@event);
             _logger.GettingInitialValues(@event.SequenceNumber);
