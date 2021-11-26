@@ -5,14 +5,17 @@ using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Dynamic;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.InMemory
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionStorage"/> for working with projections in memory.
+    /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in memory.
     /// </summary>
-    public class InMemoryProjectionStorage : IProjectionStorage
+    public class InMemoryProjectionResultStore : IProjectionResultStore
     {
         readonly Dictionary<string, Dictionary<object, ExpandoObject>> _collections = new();
+
+        /// <inheritdoc/>
+        public ProjectionResultStoreTypeId TypeId => "8a23995d-da0b-4c4c-818b-f97992f26bbf";
 
         /// <inheritdoc/>
         public Task<ExpandoObject> FindOrDefault(Model model, object key)
@@ -45,6 +48,16 @@ namespace Cratis.Events.Projections
             var collection = GetCollectionFor(model);
             collection[key] = state;
 
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public IProjectionResultStoreRewindScope BeginRewindFor(Model model) => new InMemoryResultStoreRewindScope(model);
+
+        /// <inheritdoc/>
+        public Task PrepareInitialRun(Model model)
+        {
+            GetCollectionFor(model).Clear();
             return Task.CompletedTask;
         }
 

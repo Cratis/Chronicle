@@ -12,6 +12,11 @@ namespace Cratis.Events.Projections
     public record EventLogSequenceNumber(uint Value): ConceptAs<uint>(Value)
     {
         /// <summary>
+        /// Gets the first sequence number.
+        /// </summary>
+        public static readonly EventLogSequenceNumber First = 0u;
+
+        /// <summary>
         /// Implicitly convert from <see cref="uint"/> to <see cref="EventLogSequenceNumber"/>.
         /// </summary>
         /// <param name="Value">Value to convert from.</param>

@@ -20,7 +20,5 @@
             <Aliases>SDK</Aliases>
         </ProjectReference>
         <ProjectReference Include="../../Clients/AspNetCore.Workbench/AspNetCore.Workbench.csproj"/>
-        <ProjectReference Include="../../Kernel/Events.Projections/Events.Projections.csproj"/>
-        <ProjectReference Include="../../Kernel/Events.Projections.Api/Events.Projections.Api.csproj"/>
     </ItemGroup>
 </Project>

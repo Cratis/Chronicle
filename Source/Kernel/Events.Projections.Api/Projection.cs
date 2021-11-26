@@ -3,5 +3,5 @@
 
 namespace Cratis.Events.Projections.Api
 {
-    public record Projection(string Name, uint Position);
+    public record Projection(Guid id, string Name, string State, string Positions);
 }

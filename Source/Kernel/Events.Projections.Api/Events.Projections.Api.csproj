@@ -5,6 +5,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aksio.CQRS.MongoDB" Version="$(Aksio)"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Events.Projections/Events.Projections.csproj" />
     </ItemGroup>
 

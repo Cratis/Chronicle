@@ -10,9 +10,9 @@ using MongoDB.Driver;
 namespace Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents a <see cref="IProjectionDefinitions"/> for projection definitions in MongoDB.
+    /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
     /// </summary>
-    public class MongoDBProjectionDefinitions : IProjectionDefinitions
+    public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
     {
         readonly IJsonProjectionSerializer _projectionSerializer;
         readonly IMongoCollection<BsonDocument> _collection;
@@ -22,7 +22,7 @@ namespace Cratis.Events.Projections.MongoDB
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for connecting to mongo.</param>
         /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-        public MongoDBProjectionDefinitions(IMongoDBClientFactory clientFactory, IJsonProjectionSerializer projectionSerializer)
+        public MongoDBProjectionDefinitionsStorage(IMongoDBClientFactory clientFactory, IJsonProjectionSerializer projectionSerializer)
         {
             var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
 
@@ -34,26 +34,31 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public Task<IEnumerable<ProjectionDefinition>> GetAll()
+        public async Task<IEnumerable<ProjectionDefinition>> GetAll()
         {
-            return Task.FromResult(Array.Empty<ProjectionDefinition>().AsEnumerable());
+            var result = await _collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
+            var definitionsAsBson = result.ToList();
+            return definitionsAsBson.Select(_ =>
+            {
+                _.Remove("_id");
+                var definitionAsJson = _.ToJson();
+                return _projectionSerializer.Deserialize(definitionAsJson);
+            }).ToArray();
         }
 
         /// <inheritdoc/>
         public async Task Save(ProjectionDefinition definition)
         {
-            // var json = _projectionSerializer.Serialize(definition);
-            // var document = BsonDocument.Parse(json);
-            // var id =  BsonBinaryData.Create(definition.Identifier.Value);
-            // document["_id"] = id;
+            var json = _projectionSerializer.Serialize(definition);
+            var document = BsonDocument.Parse(json);
+            var id = new BsonBinaryData(definition.Identifier.Value, GuidRepresentation.Standard);
+            document["_id"] = id;
 
-            // await _collection.ReplaceOneAsync(
-            //     filter: new BsonDocument("_id", id),
-            //     options: new ReplaceOptions { IsUpsert = true },
-            //     replacement: document
-            // );
-
-            await Task.CompletedTask;
+            await _collection.ReplaceOneAsync(
+                filter: new BsonDocument("_id", id),
+                options: new ReplaceOptions { IsUpsert = true },
+                replacement: document
+            );
         }
     }
 }

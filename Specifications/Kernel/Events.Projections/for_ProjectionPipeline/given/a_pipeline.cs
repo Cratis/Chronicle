@@ -9,6 +9,11 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline.given
     {
         protected ProjectionPipeline pipeline;
 
-        void Establish() => pipeline = new (event_provider.Object, projection.Object, changeset_storage.Object, Mock.Of<ILogger<ProjectionPipeline>>());
+        void Establish() => pipeline = new(
+            projection.Object,
+            event_provider.Object,
+            projection_positions.Object,
+            changeset_storage.Object,
+            Mock.Of<ILogger<ProjectionPipeline>>());
     }
 }

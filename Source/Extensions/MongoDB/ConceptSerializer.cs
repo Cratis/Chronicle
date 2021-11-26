@@ -76,10 +76,7 @@ namespace Cratis.Extensions.MongoDB
             if (underlyingValueType == typeof(Guid))
             {
                 var guid = (Guid)(underlyingValue ?? default(Guid));
-                var guidAsBytes = guid.ToByteArray();
-#pragma warning disable CS0618 // Obsolete - constructor is marked obsolete by the mongo driver - needs some investigation to make this correct.
-                bsonWriter.WriteBinaryData(new BsonBinaryData(guidAsBytes, BsonBinarySubType.UuidLegacy, GuidRepresentation.CSharpLegacy));
-#pragma warning restore
+                bsonWriter.WriteBinaryData(new BsonBinaryData(guid, GuidRepresentation.Standard));
             }
             else if (underlyingValueType == typeof(double))
             {

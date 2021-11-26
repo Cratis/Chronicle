@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useDataFrom } from '../useDataFrom';
 import { useMemo, useState } from 'react';
+import { AllProjections } from 'API/Events.Projections.Api/AllProjections';
+import { Projection } from 'API/Events.Projections.Api/Projection';
+
 
 import {
     CommandBar,
@@ -47,19 +49,30 @@ const columns: IColumn[] = [
         minWidth: 200
     },
     {
+        key: 'state',
+        name: 'State',
+        fieldName: 'state',
+        minWidth: 200
+    },
+    {
         key: 'position',
-        name: 'Position',
-        fieldName: 'position',
+        name: 'Positions',
+        fieldName: 'positions',
         minWidth: 200
     }
-
 ];
 
 
 export const Projections = () => {
-    const [projections, refreshProjections] = useDataFrom('/api/events/projections');
-    const commandBarItems: ICommandBarItemProps[] = [];
-    const [selected, setSelected] = useState(undefined);
+    const [projections] = AllProjections.use();
+    const commandBarItems: ICommandBarItemProps[] = [
+        {
+            key: 'add',
+            name: 'Add',
+            iconProps: { iconName: 'Add' }
+        }
+    ];
+    const [selected, setSelected] = useState<Projection>();
 
 
     const selection = useMemo(
@@ -68,19 +81,31 @@ export const Projections = () => {
             onSelectionChanged: () => {
                 const selected = selection.getSelection();
                 if (selected.length === 1) {
-                    setSelected(selected[0]);
+                    setSelected(selected[0] as Projection);
                 } else {
                     setSelected(undefined);
                 }
             },
-            items: projections
-        }), [projections]);
+        }), [projections.data]);
 
     if (selected) {
         commandBarItems.push({
             key: 'rewind',
             name: 'Rewind',
-            iconProps: { iconName: 'Rewind' }
+            iconProps: { iconName: 'Rewind' },
+            onClick: () => {
+                const id = selected.id;
+
+                (async () => {
+                    const response = await fetch(`/api/events/projections/rewind/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                })();
+            }
         });
     }
 
@@ -91,14 +116,17 @@ export const Projections = () => {
             </Stack.Item>
             <Stack.Item grow={1}>
                 <DetailsList
-                    items={projections}
+                    items={projections.data}
                     columns={columns}
                     selection={selection}
                     styles={gridStyles} />
-
-
             </Stack.Item>
+            {selected &&
+                <Stack.Item grow={1}>
+                    Hello
 
-        </Stack>
+                </Stack.Item>
+            }
+        </Stack >
     );
 };

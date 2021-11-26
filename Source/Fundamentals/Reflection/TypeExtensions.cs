@@ -207,7 +207,25 @@ namespace Cratis.Reflection
         /// <returns>True if the type implements the interface, false if not.</returns>
         public static bool HasInterface(this Type type, Type interfaceType)
         {
-            return type.GetTypeInfo().ImplementedInterfaces.Count(t => $"{t.Namespace}.{t.Name}" == $"{interfaceType.Namespace}.{interfaceType.Name}") == 1;
+            if (interfaceType.IsGenericTypeDefinition)
+            {
+                return type.GetTypeInfo()
+                            .ImplementedInterfaces
+                            .Count(t =>
+                            {
+                                if (t.IsGenericType &&
+                                    interfaceType.GetTypeInfo().GenericTypeParameters.Length == t.GetGenericArguments().Length)
+                                {
+                                    var genericType = interfaceType.MakeGenericType(t.GetGenericArguments());
+                                    return t.Equals(genericType);
+                                }
+                                return false;
+                            }) == 1;
+            }
+
+            return type.GetTypeInfo()
+                        .ImplementedInterfaces
+                        .Count(t => t.Equals(interfaceType)) == 1;
         }
 
         /// <summary>

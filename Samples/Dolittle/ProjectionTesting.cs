@@ -17,17 +17,16 @@ namespace Sample
 
         class TestProvider : IProjectionEventProvider
         {
-            public IObservable<Event> ProvideFor(IProjection projection)
+            public ProjectionEventProviderTypeId TypeId => "edc4e112-0a6f-4c68-86ca-646d789d0541";
+
+            public void ProvideFor(IProjection projection, ISubject<Event> subject)
             {
-                var subject = new ReplaySubject<Event>();
                 subject.OnNext(new Event(0, EventTypeA, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { integer = 42, a_string = "Forty Two" }.AsExpandoObject()));
                 subject.OnNext(new Event(0, EventTypeB, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { moreStuff = 43 }.AsExpandoObject()));
-                return subject;
             }
 
-            public void Pause(IProjection projection) => throw new NotImplementedException();
-            public void Resume(IProjection projection) => throw new NotImplementedException();
-            public Task Rewind(IProjection projection) => throw new NotImplementedException();
+            public Task<IEventCursor> GetFromPosition(IProjection projection, EventLogSequenceNumber start) => throw new NotImplementedException();
+
         }
 
         public void Perform()
