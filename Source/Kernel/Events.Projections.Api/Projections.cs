@@ -21,7 +21,8 @@ namespace Cratis.Events.Projections.Api
         public ClientObservable<IEnumerable<Projection>> AllProjections()
         {
             var observable = new ClientObservable<IEnumerable<Projection>>();
-            observable.OnNext(GetAllProjections());
+            var subscription = _projections.All.Subscribe(_ => observable.OnNext(Convert(_)));
+            observable.ClientDisconnected = () => subscription.Dispose();
             return observable;
         }
 
@@ -31,12 +32,12 @@ namespace Cratis.Events.Projections.Api
             _projections.GetById(projectionId).Rewind();
         }
 
-        IEnumerable<Projection> GetAllProjections() =>
-            _projections.GetAll().Select(_ =>
+        IEnumerable<Projection> Convert(IEnumerable<IProjectionPipeline> pipelines) =>
+            pipelines.Select(_ =>
                 new Projection(
                     _.Projection.Identifier,
                     _.Projection.Name,
                     Enum.GetName(typeof(ProjectionState), _.CurrentState) ?? "Unknown",
-                    string.Join("-", _.Positions.Values)));
+                    string.Join("-", _.CurrentPositions.Values)));
     }
 }
