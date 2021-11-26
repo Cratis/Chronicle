@@ -79,19 +79,12 @@ namespace Cratis.Extensions.Dolittle.Projections
 
                     foreach (var (projectionPipeline, subjects) in _piplinesWithSubjects)
                     {
-                        try
+                        foreach (var subject in subjects)
                         {
-                            foreach (var subject in subjects)
+                            foreach (var @event in cursor.Current.Select(_ => _.FullDocument.ToCratis()))
                             {
-                                foreach (var @event in cursor.Current.Select(_ => _.FullDocument.ToCratis()))
-                                {
-                                    subject.OnNext(@event);
-                                }
+                                subject.OnNext(@event);
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            projectionPipeline.Suspend($"Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
                         }
                     }
                 }

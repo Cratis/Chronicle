@@ -255,14 +255,23 @@ namespace Cratis.Events.Projections
         async Task<EventLogSequenceNumber> OnNext(Event @event, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId)
         {
             _logger.HandlingEvent(@event.SequenceNumber);
-            var correlationId = CorrelationId.New();
-            var changesets = new List<Changeset<Event, ExpandoObject>>();
-            await HandleEventFor(Projection, resultStore, @event, changesets);
-            await _changesetStorage.Save(correlationId, changesets);
-            var nextSequenceNumber = @event.SequenceNumber + 1;
-            await _projectionPositions.Save(Projection, configurationId, nextSequenceNumber);
-            UpdatePositionFor(configurationId, nextSequenceNumber);
-            return nextSequenceNumber;
+
+            try
+            {
+                var correlationId = CorrelationId.New();
+                var changesets = new List<Changeset<Event, ExpandoObject>>();
+                await HandleEventFor(Projection, resultStore, @event, changesets);
+                await _changesetStorage.Save(correlationId, changesets);
+                var nextSequenceNumber = @event.SequenceNumber + 1;
+                await _projectionPositions.Save(Projection, configurationId, nextSequenceNumber);
+                UpdatePositionFor(configurationId, nextSequenceNumber);
+                return nextSequenceNumber;
+            }
+            catch (Exception ex)
+            {
+                await Suspend($"Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
+                return @event.SequenceNumber;
+            }
         }
 
         async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, Event @event, List<Changeset<Event, ExpandoObject>> changesets)
