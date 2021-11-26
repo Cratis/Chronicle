@@ -27,8 +27,8 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
         async Task Establish()
         {
             var callCount = 0;
-            event_provider.Setup(_ => _.ProvideFor(projection.Object, IsAny<ISubject<Event>>())).Callback(
-                (IProjection _, ISubject<Event> sub) =>
+            event_provider.Setup(_ => _.ProvideFor(pipeline, IsAny<ISubject<Event>>())).Callback(
+                (IProjectionPipeline _, ISubject<Event> sub) =>
                 {
                     switch (callCount)
                     {
@@ -59,6 +59,7 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
             @event = new Event(0, "8ccc9ac5-50bc-4791-97ca-8a03bc4a6ccf", DateTimeOffset.UtcNow, "14dea6ef-bc08-4fb3-86a3-21dedee157fd", new ExpandoObject());
             model = new Model(string.Empty, new JSchema());
             projection.SetupGet(_ => _.Model).Returns(model);
+            projection.Setup(_ => _.FilterEventTypes(IsAny<IObservable<Event>>())).Returns((IObservable<Event> _) => _);
             projection_positions.Setup(_ => _.GetFor(projection.Object, first_configuration)).Returns(Task.FromResult(EventLogSequenceNumber.First));
             projection_positions.Setup(_ => _.GetFor(projection.Object, second_configuration)).Returns(Task.FromResult(EventLogSequenceNumber.First));
 
@@ -68,7 +69,7 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline
             event_provider.Setup(_ => _.GetFromPosition(projection.Object, EventLogSequenceNumber.First)).Returns(Task.FromResult(cursor.Object));
 
             var tcs = new TaskCompletionSource();
-            var subscription = pipeline.State.Where(_ => _ == ProjectionState.Active).Subscribe(_ =>
+            var subscription = pipeline.State.Where(_ => _ == ProjectionState.Active || _ == ProjectionState.Suspended).Subscribe(_ =>
             {
                 try
                 {

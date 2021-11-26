@@ -18,7 +18,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Start providing events for a <see cref="IProjection"/>.
         /// </summary>
-        /// <param name="projection"><see cref="IProjection"/> to start providing for.</param>
+        /// <param name="pipeline"><see cref="IProjectionPipeline"/> to start providing for.</param>
         /// <param name="subject"><see cref="ISubject{Event}"/> to provide into.</param>
         /// <returns><see cref="IObservable{T}"/> of <see cref="Event">events</see>.</returns>
         /// <remarks>
@@ -26,7 +26,7 @@ namespace Cratis.Events.Projections
         /// <see cref="IProjection"/>. It will be in a state of catching up till its at the
         /// head of the stream. Once at the head, it will provide events as they occur.
         /// </remarks>
-        void ProvideFor(IProjection projection, ISubject<Event> subject);
+        void ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject);
 
         /// <summary>
         /// Get events from a specific sequence numbers.

@@ -49,8 +49,8 @@ namespace Cratis.Events.Projections
         Stopped = 7,
 
         /// <summary>
-        /// Projection has failed.
+        /// Projection is suspended, most likely due to failure.
         /// </summary>
-        Failed = 8
+        Suspended = 8
     }
 }

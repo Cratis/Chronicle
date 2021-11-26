@@ -38,5 +38,8 @@ namespace Cratis.Events.Projections
 
         [LoggerMessage(9, LogLevel.Error, "Error starting projection '{Projection}'")]
         internal static partial void ErrorStartingProviding(this ILogger logger, ProjectionId projection, Exception exception);
+
+        [LoggerMessage(10, LogLevel.Warning, "Projection '{Projection}' is being suspended with the reason '{reason}'")]
+        internal static partial void Suspended(this ILogger logger, ProjectionId projection, string reason);
     }
 }
