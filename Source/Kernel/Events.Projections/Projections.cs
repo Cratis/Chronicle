@@ -48,7 +48,7 @@ namespace Cratis.Events.Projections
 
             if (!isNew && hasChanged)
             {
-                pipeline.Rewind();
+                await pipeline.Rewind();
             }
 
             await _projectionDefinitions.Register(projectionDefinition);
