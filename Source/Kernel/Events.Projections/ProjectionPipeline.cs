@@ -21,10 +21,12 @@ namespace Cratis.Events.Projections
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, CancellationTokenSource> _cancellationTokenSourcePerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _rewindsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _catchUpPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> _positions = new();
         readonly IProjectionPositions _projectionPositions;
         readonly IChangesetStorage _changesetStorage;
         readonly ILogger<ProjectionPipeline> _logger;
+        readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
@@ -46,7 +48,6 @@ namespace Cratis.Events.Projections
             Projection = projection;
             _changesetStorage = changesetStorage;
             _logger = logger;
-            State = ProjectionState.Registering;
         }
 
         /// <inheritdoc/>
@@ -59,68 +60,72 @@ namespace Cratis.Events.Projections
         public IEnumerable<IProjectionResultStore> ResultStores => _resultStores.Values;
 
         /// <inheritdoc/>
-        public ProjectionState State { get; private set; }
+        public IObservable<ProjectionState> State => _state;
+
+        /// <inheritdoc/>
+        public ProjectionState CurrentState => _state.Value;
 
         /// <inheritdoc/>
         public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> Positions => _positions;
 
         /// <inheritdoc/>
-        public void Start()
+        public async Task Start()
         {
             foreach (var (configurationId, resultStore) in _resultStores)
             {
-                StartForConfigurationAndResultStore(configurationId, resultStore, _rewindsPerConfiguration.ContainsKey(configurationId));
+                await StartForConfigurationAndResultStore(configurationId, resultStore, _rewindsPerConfiguration.ContainsKey(configurationId));
             }
         }
 
         /// <inheritdoc/>
-        public void Pause()
+        public Task Pause()
         {
             _logger.Pausing(Projection.Identifier);
-            State = ProjectionState.Paused;
+            _state.OnNext(ProjectionState.Paused);
             foreach (var (configurationId, _) in _resultStores)
             {
                 StopForConfiguration(configurationId);
             }
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public void Resume()
+        public async Task Resume()
         {
             _logger.Resuming(Projection.Identifier);
-            State = ProjectionState.Active;
             foreach (var (configurationId, resultStore) in _resultStores)
             {
-                StartForConfigurationAndResultStore(configurationId, resultStore, true);
+                await StartForConfigurationAndResultStore(configurationId, resultStore, true);
             }
         }
 
         /// <inheritdoc/>
-        public void Rewind()
+        public async Task Rewind()
         {
             _logger.Rewinding(Projection.Identifier);
-            State = ProjectionState.Rewinding;
+            _state.OnNext(ProjectionState.Rewinding);
             foreach (var (configurationId, _) in _resultStores)
             {
-                Rewind(configurationId);
+                await Rewind(configurationId);
             }
         }
 
         /// <inheritdoc/>
-        public void Rewind(ProjectionResultStoreConfigurationId configurationId)
+        public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
         {
             _logger.RewindingForConfiguration(Projection.Identifier, configurationId);
             _rewindsPerConfiguration[configurationId] = true;
 
-            if (State != ProjectionState.Rewinding)
+            if (CurrentState != ProjectionState.Rewinding)
             {
-                State = ProjectionState.PartialRewinding;
+                _state.OnNext(ProjectionState.PartialRewinding);
             }
 
-            if (State != ProjectionState.Registering)
+            if (CurrentState != ProjectionState.Registering)
             {
                 var resultStore = _resultStores[configurationId];
-                StartForConfigurationAndResultStore(configurationId, resultStore, true);
+                await StartForConfigurationAndResultStore(configurationId, resultStore, true);
             }
         }
 
@@ -139,8 +144,9 @@ namespace Cratis.Events.Projections
             _cancellationTokenSourcePerConfiguration.Remove(configurationId, out _);
         }
 
-        void StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore, bool rewind)
+        Task StartForConfigurationAndResultStore(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore, bool rewind)
         {
+            var startTaskCompletionSource = new TaskCompletionSource();
             StopForConfiguration(configurationId);
 
             var cancellationTokenSource = new CancellationTokenSource();
@@ -148,6 +154,7 @@ namespace Cratis.Events.Projections
 
             Task.Run(async () =>
             {
+                startTaskCompletionSource.SetResult();
                 try
                 {
                     IProjectionResultStoreRewindScope? rewindScope = null;
@@ -164,19 +171,25 @@ namespace Cratis.Events.Projections
                     var subject = _subjectsPerConfiguration[configurationId];
                     EventProvider.ProvideFor(Projection, subject);
                     _subscriptionsPerConfiguration[configurationId] = subject.Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
-                    State = ProjectionState.Active;
+
+                    if (_catchUpPerConfiguration.IsEmpty)
+                    {
+                        _state.OnNext(ProjectionState.Active);
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.ErrorStartingProviding(Projection.Identifier, ex);
-                    State = ProjectionState.Failed;
+                    _state.OnNext(ProjectionState.Failed);
                 }
             }, cancellationTokenSource.Token);
+
+            return startTaskCompletionSource.Task;
         }
 
         async Task<IProjectionResultStoreRewindScope> PrepareRewind(ProjectionResultStoreConfigurationId configurationId)
         {
-            State = ProjectionState.Rewinding;
+            _state.OnNext(ProjectionState.Rewinding);
             var resultStore = _resultStores[configurationId];
             var scope = resultStore.BeginRewindFor(Projection.Model);
             await _projectionPositions.Reset(Projection, configurationId);
@@ -189,6 +202,7 @@ namespace Cratis.Events.Projections
             CancellationToken cancellationToken)
         {
             _logger.CatchingUp(Projection.Identifier, configurationId);
+            _catchUpPerConfiguration[configurationId] = true;
             var offset = await _projectionPositions.GetFor(Projection, configurationId);
             if (offset == 0)
             {
@@ -197,7 +211,7 @@ namespace Cratis.Events.Projections
             _positions[configurationId] = offset;
 
             var exhausted = false;
-            State = ProjectionState.CatchingUp;
+            _state.OnNext(ProjectionState.CatchingUp);
 
             while (!exhausted)
             {
@@ -219,6 +233,8 @@ namespace Cratis.Events.Projections
                 }
                 if (!cursor.Current.Any()) exhausted = true;
             }
+
+            _catchUpPerConfiguration.Remove(configurationId, out _);
         }
 
         async Task<EventLogSequenceNumber> OnNext(Event @event, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId)
