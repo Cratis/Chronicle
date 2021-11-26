@@ -29,7 +29,7 @@ namespace Cratis.Events.Projections
         PartialRewinding = 3,
 
         /// <summary>
-        /// Projection is catching up due to being a new projection.
+        /// Projection is catching up due to being behind current sequence number in event log.
         /// </summary>
         CatchingUp = 4,
 
