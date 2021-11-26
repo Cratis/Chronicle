@@ -36,7 +36,7 @@ namespace Cratis.Events.Projections.Api
                 new Projection(
                     _.Projection.Identifier,
                     _.Projection.Name,
-                    Enum.GetName(typeof(ProjectionState), _.State) ?? "Unknown",
+                    Enum.GetName(typeof(ProjectionState), _.CurrentState) ?? "Unknown",
                     string.Join("-", _.Positions.Values)));
     }
 }
