@@ -23,7 +23,6 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline.given
             changeset_storage = new();
             projection_positions = new();
             subject = new();
-            event_provider.Setup(_ => _.ProvideFor(projection.Object, subject.Object));
         }
     }
 }

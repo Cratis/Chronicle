@@ -5,7 +5,6 @@ using System.Reactive.Subjects;
 using Cratis.Boot;
 using Cratis.Dynamic;
 using Cratis.Events.Projections;
-using Cratis.Events.Projections.Json;
 
 namespace Sample
 {
@@ -19,7 +18,7 @@ namespace Sample
         {
             public ProjectionEventProviderTypeId TypeId => "edc4e112-0a6f-4c68-86ca-646d789d0541";
 
-            public void ProvideFor(IProjection projection, ISubject<Event> subject)
+            public void ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject)
             {
                 subject.OnNext(new Event(0, EventTypeA, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { integer = 42, a_string = "Forty Two" }.AsExpandoObject()));
                 subject.OnNext(new Event(0, EventTypeB, DateTimeOffset.UtcNow, "d567f175-f940-4f4d-88ee-d96885a78c1a", new { moreStuff = 43 }.AsExpandoObject()));

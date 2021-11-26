@@ -48,6 +48,9 @@ namespace Cratis.Events.Projections
         public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
 
         /// <inheritdoc/>
+        public IObservable<Event> FilterEventTypes(IObservable<Event> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Type));
+
+        /// <inheritdoc/>
         public ProjectionId Identifier { get; }
 
         /// <inheritdoc/>
