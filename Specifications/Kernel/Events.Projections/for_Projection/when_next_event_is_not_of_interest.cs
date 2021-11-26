@@ -19,6 +19,7 @@ namespace Cratis.Events.Projections.for_Projection
             projection = new Projection(
                 "0b7325dd-7a25-4681-9ab7-c387a6073547",
                 string.Empty,
+                string.Empty,
                 new Model(string.Empty, new JSchema()),
                 new[] {
                     new EventTypeWithKeyResolver("aac3d310-ff2f-4809-a326-afe14dd9a3d6", EventValueProviders.FromEventSourceId)
