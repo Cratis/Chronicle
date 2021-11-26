@@ -1,3 +1,15 @@
+# [v2.15.1] - 2021-11-26 [PR: #69](https://github.com/Cratis/cratis/pull/69)
+
+### Added
+
+- Suspended state for a projection. Typically if a projection fails for some reason.
+
+### Fixed
+
+- Filter on event types per projection on the subjects created in the pipeline.
+- Error handling when providing events.
+
+
 # [v2.15.0] - 2021-11-26 [PR: #68](https://github.com/Cratis/cratis/pull/68)
 
 ### Added
