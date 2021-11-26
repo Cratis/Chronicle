@@ -31,12 +31,17 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Gets the current <see cref="ProjectionState"/>.
         /// </summary>
-        ProjectionState CurrentState { get; }
+        ProjectionState CurrentState { get; }
 
         /// <summary>
-        /// Gets the position within the event log for each result store configuration.
+        /// Gets an observable of the position within the event log for each result store configuration.
         /// </summary>
-        IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> Positions { get; }
+        IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions { get; }
+
+        /// <summary>
+        /// Gets the current positions within the event log for each result store configuration.
+        /// </summary>
+        IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> CurrentPositions { get; }
 
         /// <summary>
         /// Starts the pipeline.

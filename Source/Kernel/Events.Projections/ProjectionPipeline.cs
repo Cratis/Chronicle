@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Reactive.Subjects;
 using Cratis.Changes;
@@ -22,11 +23,13 @@ namespace Cratis.Events.Projections
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, CancellationTokenSource> _cancellationTokenSourcePerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _rewindsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _catchUpPerConfiguration = new();
-        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> _positions = new();
         readonly IProjectionPositions _projectionPositions;
         readonly IChangesetStorage _changesetStorage;
         readonly ILogger<ProjectionPipeline> _logger;
         readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
+
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> _positions = new();
+        readonly ReplaySubject<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> _observablePositions = new(1);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
@@ -66,7 +69,10 @@ namespace Cratis.Events.Projections
         public ProjectionState CurrentState => _state.Value;
 
         /// <inheritdoc/>
-        public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> Positions => _positions;
+        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _observablePositions;
+
+        /// <inheritdoc/>
+        public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> CurrentPositions => new ReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>(_positions);
 
         /// <inheritdoc/>
         public async Task Start()
@@ -208,7 +214,7 @@ namespace Cratis.Events.Projections
             {
                 await resultStore.PrepareInitialRun(Projection.Model);
             }
-            _positions[configurationId] = offset;
+            UpdatePositionFor(configurationId, offset);
 
             var exhausted = false;
             _state.OnNext(ProjectionState.CatchingUp);
@@ -228,7 +234,6 @@ namespace Cratis.Events.Projections
                     {
                         if (cancellationToken.IsCancellationRequested) return;
                         offset = await OnNext(@event, resultStore, configurationId);
-                        _positions[configurationId] = offset;
                     }
                 }
                 if (!cursor.Current.Any()) exhausted = true;
@@ -246,6 +251,7 @@ namespace Cratis.Events.Projections
             await _changesetStorage.Save(correlationId, changesets);
             var nextSequenceNumber = @event.SequenceNumber + 1;
             await _projectionPositions.Save(Projection, configurationId, nextSequenceNumber);
+            UpdatePositionFor(configurationId, nextSequenceNumber);
             return nextSequenceNumber;
         }
 
@@ -266,6 +272,12 @@ namespace Cratis.Events.Projections
             {
                 await HandleEventFor(child, resultStore, @event, changesets);
             }
+        }
+
+        void UpdatePositionFor(ProjectionResultStoreConfigurationId configurationId, EventLogSequenceNumber offset)
+        {
+            _positions[configurationId] = offset;
+            _observablePositions.OnNext(new ReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>(_positions));
         }
     }
 }
