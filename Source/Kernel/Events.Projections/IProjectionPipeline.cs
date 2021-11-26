@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -24,9 +26,14 @@ namespace Cratis.Events.Projections
         IEnumerable<IProjectionResultStore> ResultStores { get; }
 
         /// <summary>
-        /// Gets the <see cref="ProjectionState">state</see> of the projection.
+        /// Gets an <see cref="IObservable{T}"/> of <see cref="ProjectionState">state</see> of the projection.
         /// </summary>
-        ProjectionState State { get; }
+        IObservable<ProjectionState> State { get; }
+
+        /// <summary>
+        /// Gets the current <see cref="ProjectionState"/>.
+        /// </summary>
+        ProjectionState CurrentState { get; }
 
         /// <summary>
         /// Gets the position within the event log for each result store configuration.
@@ -36,29 +43,29 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Starts the pipeline.
         /// </summary>
-        void Start();
+        Task Start();
 
         /// <summary>
         /// Resumes the pipeline if paused.
         /// </summary>
-        void Resume();
+        Task Resume();
 
         /// <summary>
         /// Pause the pipeline.
         /// </summary>
-        void Pause();
+        Task Pause();
 
         /// <summary>
         /// Rewind the entire pipeline for all the result stores.
         /// </summary>
-        void Rewind();
+        Task Rewind();
 
         /// <summary>
         /// Rewind the entire pipeline for a specific result store based on the unique identifier.
         /// </summary>
         /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> to rewind.</param>
         /// <returns>A Task for async operations.</returns>
-        void Rewind(ProjectionResultStoreConfigurationId configurationId);
+        Task Rewind(ProjectionResultStoreConfigurationId configurationId);
 
         /// <summary>
         /// Adds a <see cref="IProjectionResultStore"/> for storing results.
