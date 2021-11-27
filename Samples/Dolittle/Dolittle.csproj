@@ -4,6 +4,7 @@
         <RootNamespace>Sample</RootNamespace>
 
         <IsPackable>false</IsPackable>
+        <AksioProxyOutput></AksioProxyOutput>
     </PropertyGroup>
 
     <ItemGroup>
