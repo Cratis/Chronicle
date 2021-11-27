@@ -16,14 +16,14 @@ import {
 import { useBoolean } from '@fluentui/react-hooks';
 
 import { default as styles } from './EventLogs.module.scss';
-import { useDataFrom } from '../useDataFrom';
-import { EventLogInformation } from './EventLogInformation';
 import { EventHistogram } from './EventHistogram';
 import { Guid } from '@cratis/fundamentals';
 import { useState } from 'react';
 import { FilterBuilder } from './FilterBuilder';
 import { EventList } from './EventList';
 
+import { AllEventLogs } from 'API/events/store/logs/AllEventLogs';
+import { FindFor } from 'API/events/store/log/FindFor';
 
 
 function pivotItemHeaderRenderer(
@@ -47,29 +47,25 @@ export const EventLogs = () => {
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
     const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
     const [eventLog, setEventLog] = useState(Guid.empty.toString());
-    const [eventLogs, refreshEventLogs] = useDataFrom<ICommandBarItemProps>('/api/events/store/logs', (_: EventLogInformation) => {
-        return {
-            key: _.id,
-            text: _.name
-        } as ICommandBarItemProps;
-    }, (data) => {
-        if (data.length == 1) {
-            setEventLog(data[0].key);
-        }
-    });
-    const [events, refreshEvents] = useDataFrom(`/api/events/store/log/${eventLog}`);
+    const [eventLogs, refreshEventLogs] = AllEventLogs.use();
+    const [events, refreshEvents] = FindFor.use({ eventLogId: eventLog });
     const [selectedEvent, setSelectedEvent] = useState<any>(undefined);
 
     let commandBarItems: ICommandBarItemProps[] = [];
 
-    if (eventLogs.length > 1) {
+    if (eventLogs.data.length > 1) {
         commandBarItems.push(
 
             {
                 key: 'eventLogs',
                 name: 'Event Log',
                 subMenuProps: {
-                    items: eventLogs,
+                    items: eventLogs.data.map(_ => {
+                        return {
+                            key: _.id,
+                            text: _.name
+                        } as ICommandBarItemProps;
+                    }),
                     onItemClick: (ev, item) => setEventLog(item?.key ?? Guid.empty.toString())
                 }
             }
@@ -157,7 +153,7 @@ export const EventLogs = () => {
                     {isFilterOpen && <FilterBuilder />}
                 </Stack.Item>
                 <Stack.Item grow={1}>
-                    <EventList items={events} onEventSelected={eventSelected} />
+                    <EventList items={events.data} onEventSelected={eventSelected} />
                 </Stack.Item>
             </Stack>
             <Panel
