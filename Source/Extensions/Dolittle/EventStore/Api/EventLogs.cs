@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.Extensions.Dolittle.Workbench
+namespace Cratis.Extensions.Dolittle.EventStore.Api
 {
     public record EventLogInformation(string id, string name);
 
