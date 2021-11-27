@@ -2,12 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Extensions.Dolittle.Schemas;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Schema;
 
-namespace Cratis.Extensions.Dolittle.Workbench
+namespace Cratis.Extensions.Dolittle.Schemas.Api
 {
     [Route("/api/events/types")]
     public class EventTypes : Controller

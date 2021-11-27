@@ -7,12 +7,11 @@ using Cratis.Extensions.MongoDB;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoEvent = Cratis.Extensions.Dolittle.EventStore.Event;
 
-namespace Cratis.Extensions.Dolittle.Workbench
+namespace Cratis.Extensions.Dolittle.EventStore.Api
 {
-    public record Event(uint Sequence, string Name, DateTimeOffset Occurred, JsonDocument Content);
-
-    [Route("/api/events/store/log/{eventLogId}")]
+    [Route("/api/events/store/log")]
     public class EventLog : Controller
     {
         readonly IMongoDatabase _database;
@@ -26,12 +25,12 @@ namespace Cratis.Extensions.Dolittle.Workbench
             _schemaStore = schemaStore;
         }
 
-        [HttpGet]
+        [HttpGet("{eventLogId}")]
         public async Task<IEnumerable<Event>> FindFor(
             [FromRoute] string eventLogId)
         {
             var collection = GetMongoCollection();
-            var findOptions = new FindOptions<EventStore.Event>
+            var findOptions = new FindOptions<MongoEvent>
             {
                 Limit = 20
             };
@@ -50,11 +49,10 @@ namespace Cratis.Extensions.Dolittle.Workbench
             }).Select(_ => _.Result).ToArray();
         }
 
-        [HttpGet("count")]
-        public Task<long> Count() => GetMongoCollection().CountDocumentsAsync(FilterDefinition<EventStore.Event>.Empty);
+        [HttpGet("{eventLogId}/count")]
+        public Task<long> Count() => GetMongoCollection().CountDocumentsAsync(FilterDefinition<MongoEvent>.Empty);
 
-
-        [HttpGet("histogram")]
+        [HttpGet("{eventLogId}/histogram")]
         public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] string eventLogId)
         {
             var collection = GetMongoCollection();
@@ -94,15 +92,16 @@ namespace Cratis.Extensions.Dolittle.Workbench
             return Task.FromResult(result as IEnumerable<EventHistogramEntry>);
         }
 
-        [HttpGet("types")]
+        [HttpGet("{eventLogId}/types")]
         public Task Types([FromRoute] string eventLogId)
         {
             return Task.CompletedTask;
         }
 
-        IMongoCollection<EventStore.Event> GetMongoCollection()
+
+        IMongoCollection<MongoEvent> GetMongoCollection()
         {
-            return _database.GetCollection<EventStore.Event>("event-log");
+            return _database.GetCollection<MongoEvent>("event-log");
         }
     }
 }
