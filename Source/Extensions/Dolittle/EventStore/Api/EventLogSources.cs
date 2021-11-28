@@ -14,5 +14,4 @@ namespace Cratis.Extensions.Dolittle.EventStore.Api
             return Task.FromResult(Array.Empty<string>() as IEnumerable<string>);
         }
     }
-
 }
