@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Extensions.Dolittle.EventStore.Api
 {
-    public record EventLogInformation(string id, string name);
-
     [Route("/api/events/store/logs")]
     public class EventLogs : Controller
     {
