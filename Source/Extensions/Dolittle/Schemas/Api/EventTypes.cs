@@ -17,7 +17,7 @@ namespace Cratis.Extensions.Dolittle.Schemas.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<EventType>> AllEvenTtypes()
+        public async Task<IEnumerable<EventType>> AllEventTypes()
         {
             var schemas = await _schemaStore.GetLatestForAllEventTypes();
 
