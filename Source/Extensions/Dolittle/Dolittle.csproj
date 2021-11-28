@@ -2,6 +2,10 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Extensions.Dolittle</AssemblyName>
         <RootNamespace>Cratis.Extensions.Dolittle</RootNamespace>
+
+        <AksioProxyOutput>$(MSBuildThisFileDirectory)API</AksioProxyOutput>
+        <AksioUseRouteAsPath>true</AksioUseRouteAsPath>
+
     </PropertyGroup>
 
     <ItemGroup>
