@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Defines a system that can coordinate the effort around projections.
@@ -37,11 +37,6 @@ namespace Cratis.Events.Projections
         /// Gets an observable of the position within the event log for each result store configuration.
         /// </summary>
         IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions { get; }
-
-        /// <summary>
-        /// Gets the current positions within the event log for each result store configuration.
-        /// </summary>
-        IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> CurrentPositions { get; }
 
         /// <summary>
         /// Starts the pipeline.
