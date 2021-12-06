@@ -5,7 +5,7 @@
 
 export type Projection = {
     id: string;
-    name: string[];
-    state: string[];
-    positions: string[];
+    name: string;
+    state: string;
+    positions: string;
 };

@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.Extensions.Dolittle.Workbench
+namespace Cratis.Extensions.Dolittle.EventStore.Api
 {
     [Route("/api/events/store/log/sources")]
     public class EventLogSources : Controller
@@ -14,5 +14,4 @@ namespace Cratis.Extensions.Dolittle.Workbench
             return Task.FromResult(Array.Empty<string>() as IEnumerable<string>);
         }
     }
-
 }
