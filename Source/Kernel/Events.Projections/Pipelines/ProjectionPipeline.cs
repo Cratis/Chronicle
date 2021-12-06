@@ -2,15 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
-using System.Dynamic;
 using System.Reactive.Subjects;
-using Cratis.Changes;
-using Cratis.Events.Projections.Changes;
-using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPipeline"/>.
@@ -23,33 +18,26 @@ namespace Cratis.Events.Projections
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, CancellationTokenSource> _cancellationTokenSourcePerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _rewindsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, bool> _catchUpPerConfiguration = new();
-        readonly IProjectionPositions _projectionPositions;
-        readonly IChangesetStorage _changesetStorage;
+        readonly IProjectionPipelineHandler _handler;
         readonly ILogger<ProjectionPipeline> _logger;
         readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
-
-        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> _positions = new();
-        readonly ReplaySubject<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> _observablePositions = new(1);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
         /// </summary>
         /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
         /// <param name="eventProvider"><see cref="IProjectionEventProvider"/> to use.</param>
-        /// <param name="projectionPositions"><see cref="IProjectionPositions"/> to use.</param>
-        /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
+        /// <param name="handler"><see cref="IProjectionPipelineHandler"/> to use.</param>
         /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
         public ProjectionPipeline(
             IProjection projection,
             IProjectionEventProvider eventProvider,
-            IProjectionPositions projectionPositions,
-            IChangesetStorage changesetStorage,
+            IProjectionPipelineHandler handler,
             ILogger<ProjectionPipeline> logger)
         {
             EventProvider = eventProvider;
-            _projectionPositions = projectionPositions;
+            _handler = handler;
             Projection = projection;
-            _changesetStorage = changesetStorage;
             _logger = logger;
         }
 
@@ -69,10 +57,7 @@ namespace Cratis.Events.Projections
         public ProjectionState CurrentState => _state.Value;
 
         /// <inheritdoc/>
-        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _observablePositions;
-
-        /// <inheritdoc/>
-        public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> CurrentPositions => new ReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>(_positions);
+        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
 
         /// <inheritdoc/>
         public async Task Start()
@@ -186,7 +171,7 @@ namespace Cratis.Events.Projections
                     EventProvider.ProvideFor(this, subject);
                     _subscriptionsPerConfiguration[configurationId] = Projection
                         .FilterEventTypes(subject)
-                        .Subscribe(@event => OnNext(@event, resultStore, configurationId).Wait());
+                        .Subscribe(@event => _handler.Handle(@event, this, resultStore, configurationId).Wait());
 
                     if (_catchUpPerConfiguration.IsEmpty)
                     {
@@ -203,13 +188,12 @@ namespace Cratis.Events.Projections
             return startTaskCompletionSource.Task;
         }
 
-        async Task<IProjectionResultStoreRewindScope> PrepareRewind(ProjectionResultStoreConfigurationId configurationId)
+        Task<IProjectionResultStoreRewindScope> PrepareRewind(ProjectionResultStoreConfigurationId configurationId)
         {
-            _state.OnNext(ProjectionState.Rewinding);
             var resultStore = _resultStores[configurationId];
             var scope = resultStore.BeginRewindFor(Projection.Model);
-            await _projectionPositions.Reset(Projection, configurationId);
-            return scope;
+            //await _projectionPositions.Reset(Projection, configurationId);
+            return Task.FromResult(scope);
         }
 
         async Task CatchUp(
@@ -219,12 +203,12 @@ namespace Cratis.Events.Projections
         {
             _logger.CatchingUp(Projection.Identifier, configurationId);
             _catchUpPerConfiguration[configurationId] = true;
-            var offset = await _projectionPositions.GetFor(Projection, configurationId);
+            var offset = 0U; //await _projectionPositions.GetFor(Projection, configurationId);
             if (offset == 0)
             {
                 await resultStore.PrepareInitialRun(Projection.Model);
             }
-            UpdatePositionFor(configurationId, offset);
+            //UpdatePositionFor(configurationId, offset);
 
             var exhausted = false;
             _state.OnNext(ProjectionState.CatchingUp);
@@ -243,62 +227,13 @@ namespace Cratis.Events.Projections
                     foreach (var @event in cursor.Current)
                     {
                         if (cancellationToken.IsCancellationRequested) return;
-                        offset = await OnNext(@event, resultStore, configurationId);
+                        offset = await _handler.Handle(@event, this, resultStore, configurationId);
                     }
                 }
                 if (!cursor.Current.Any()) exhausted = true;
             }
 
             _catchUpPerConfiguration.Remove(configurationId, out _);
-        }
-
-        async Task<EventLogSequenceNumber> OnNext(Event @event, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId)
-        {
-            _logger.HandlingEvent(@event.SequenceNumber);
-
-            try
-            {
-                var correlationId = CorrelationId.New();
-                var changesets = new List<Changeset<Event, ExpandoObject>>();
-                await HandleEventFor(Projection, resultStore, @event, changesets);
-                await _changesetStorage.Save(correlationId, changesets);
-                var nextSequenceNumber = @event.SequenceNumber + 1;
-                await _projectionPositions.Save(Projection, configurationId, nextSequenceNumber);
-                UpdatePositionFor(configurationId, nextSequenceNumber);
-                return nextSequenceNumber;
-            }
-            catch (Exception ex)
-            {
-                await Suspend($"Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                return @event.SequenceNumber;
-            }
-        }
-
-        async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, Event @event, List<Changeset<Event, ExpandoObject>> changesets)
-        {
-            if (CurrentState == ProjectionState.Suspended) return;
-
-            var keyResolver = projection.GetKeyResolverFor(@event.Type);
-            var key = keyResolver(@event);
-            _logger.GettingInitialValues(@event.SequenceNumber);
-            var initialState = await resultStore.FindOrDefault(Projection.Model, key);
-            var changeset = new Changeset<Event, ExpandoObject>(@event, initialState);
-            changesets.Add(changeset);
-            _logger.Projecting(@event.SequenceNumber);
-            projection.OnNext(@event, changeset);
-            _logger.SavingResult(@event.SequenceNumber);
-            await resultStore.ApplyChanges(Projection.Model, key, changeset);
-
-            foreach (var child in projection.ChildProjections)
-            {
-                await HandleEventFor(child, resultStore, @event, changesets);
-            }
-        }
-
-        void UpdatePositionFor(ProjectionResultStoreConfigurationId configurationId, EventLogSequenceNumber offset)
-        {
-            _positions[configurationId] = offset;
-            _observablePositions.OnNext(new ReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>(_positions));
         }
     }
 }

@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Events.Projections.Definitions;
+using Cratis.Events.Projections.Pipelines;
 using Cratis.Execution;
 
 namespace Cratis.Events.Projections

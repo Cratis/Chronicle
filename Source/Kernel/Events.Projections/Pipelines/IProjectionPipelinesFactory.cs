@@ -3,7 +3,7 @@
 
 using Cratis.Events.Projections.Definitions;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Defines a system for working with <see cref="IProjectionPipeline">projection pipelines</see>.

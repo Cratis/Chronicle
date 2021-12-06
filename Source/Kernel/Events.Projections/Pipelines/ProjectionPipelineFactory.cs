@@ -5,7 +5,7 @@ using Cratis.Events.Projections.Changes;
 using Cratis.Events.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPipelineFactory"/>.
@@ -47,8 +47,7 @@ namespace Cratis.Events.Projections
             var pipeline = new ProjectionPipeline(
                 projection,
                 eventProvider,
-                _projectionPositions,
-                _changesetStorage,
+                new ProjectionPipelineHandler(_projectionPositions, _changesetStorage, _loggerFactory.CreateLogger<ProjectionPipelineHandler>()),
                 _loggerFactory.CreateLogger<ProjectionPipeline>());
 
             foreach (var resultStoreDefinition in definition.ResultStores)
