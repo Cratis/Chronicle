@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useMemo, useState } from 'react';
-import { AllProjections } from 'API/Events.Projections.Api/AllProjections';
-import { Projection } from 'API/Events.Projections.Api/Projection';
+import { AllProjections } from 'API/events/projections/AllProjections';
+import { Projection } from 'API/events/projections/Projection';
 
 
 import {

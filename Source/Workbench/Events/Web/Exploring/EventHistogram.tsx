@@ -4,7 +4,7 @@
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
 import { default as styles } from './EventLogs.module.scss';
-import { useDataFrom } from '../useDataFrom';
+import { Histogram } from 'API/events/store/log/Histogram';
 
 type EChartsOption = echarts.EChartsOption;
 
@@ -61,12 +61,12 @@ export interface EventHistogramProps {
 export const EventHistogram = (props: EventHistogramProps) => {
     const chartContainer = useRef<HTMLDivElement>(null);
     const getChart = () => echarts.getInstanceByDom(chartContainer.current!);
-    const [entries, refreshEntries] = useDataFrom(`/api/events/store/log/${props.eventLog}/histogram`);
-    const dates = entries.map(_ => {
+    const [entries, refreshEntries] = Histogram.use({ eventLogId: props.eventLog });
+    const dates = entries.data.map(_ => {
         return echarts.format.formatTime('yyyy-MM-dd', _.date);
     });
 
-    const counts = entries.map(_ => {
+    const counts = entries.data.map(_ => {
         return _.count;
     });
 
