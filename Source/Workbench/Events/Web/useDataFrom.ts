@@ -59,6 +59,7 @@ export function useDataFrom<T = any>(route: string | RouteInfo, mapFunction?: Ma
         const url = template!.current!(routeInfo.current.arguments);
         const response = await fetch(url);
         let result = await response.json();
+        result = result.data;
         if (mapFunction) {
             if (Array.isArray(result)) {
                 result = result.map(mapFunction);
