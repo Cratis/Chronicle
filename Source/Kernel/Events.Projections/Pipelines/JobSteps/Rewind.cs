@@ -12,7 +12,6 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
     {
         readonly IProjectionPipeline _pipeline;
         readonly IProjectionPositions _projectionPositions;
-        readonly ProjectionResultStoreConfigurationId _configurationId;
         readonly ILogger<Rewind> _logger;
         IProjectionResultStoreRewindScope? _rewindScope;
 
@@ -31,21 +30,26 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
         {
             _pipeline = pipeline;
             _projectionPositions = projectionPositions;
-            _configurationId = configurationId;
+            ConfigurationId = configurationId;
             _logger = logger;
         }
 
         /// <inheritdoc/>
         public string Name => "Rewind";
 
+        /// <summary>
+        /// Gets the <see cref="ProjectionResultStoreConfigurationId"/> for the rewind.
+        /// </summary>
+        public ProjectionResultStoreConfigurationId ConfigurationId { get; }
+
         /// <inheritdoc/>
         public async Task Perform(ProjectionPipelineJobStatus jobStatus)
         {
-            _logger.Rewinding(_pipeline.Projection.Identifier, _configurationId);
-            var resultStore = _pipeline.ResultStores[_configurationId];
+            _logger.Rewinding(_pipeline.Projection.Identifier, ConfigurationId);
+            var resultStore = _pipeline.ResultStores[ConfigurationId];
             _rewindScope = resultStore.BeginRewindFor();
-            jobStatus.ReportTask($"Resetting positions for '{resultStore.Name}' with configuration id {_configurationId}");
-            await _projectionPositions.Reset(_pipeline.Projection, _configurationId);
+            jobStatus.ReportTask($"Resetting positions for '{resultStore.Name}' with configuration id {ConfigurationId}");
+            await _projectionPositions.Reset(_pipeline.Projection, ConfigurationId);
         }
 
         /// <inheritdoc/>
