@@ -20,7 +20,7 @@ namespace Cratis.Events.Projections
         readonly IProjectionFactory _projectionFactory;
         readonly IProjectionPipelineFactory _pipelineFactory;
         readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
-        readonly ReplaySubject<IEnumerable<IProjectionPipeline>> _allPipelines = new(1);
+        readonly ReplaySubject<IProjectionPipeline> _allPipelines = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -59,10 +59,7 @@ namespace Cratis.Events.Projections
 
             _pipelines[projection.Identifier] = pipeline;
 
-            _allPipelines.OnNext(_pipelines.Values);
-
-            pipeline.State.Subscribe(_ => _allPipelines.OnNext(_pipelines.Values));
-            pipeline.Positions.Subscribe(_ => _allPipelines.OnNext(_pipelines.Values));
+            _allPipelines.OnNext(pipeline);
         }
 
         /// <inheritdoc/>
@@ -76,10 +73,10 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IEnumerable<IProjectionPipeline> GetAll() => _pipelines.Values;
+        public IEnumerable<IProjectionPipeline> GetPipelines() => _pipelines.Values;
 
         /// <inheritdoc/>
-        public IObservable<IEnumerable<IProjectionPipeline>> All => _allPipelines;
+        public IObservable<IProjectionPipeline> Pipelines => _allPipelines;
 
         /// <inheritdoc/>
         public IProjectionPipeline GetById(ProjectionId id) => _pipelines[id];

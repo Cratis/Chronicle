@@ -19,7 +19,8 @@ namespace Cratis.Events.Projections
         /// Get a <see cref="IProjectionResultStore"/> of a specific <see cref="ProjectionResultStoreTypeId"/>.
         /// </summary>
         /// <param name="typeId"><see cref="ProjectionResultStoreTypeId"/> to get for.</param>
+        /// <param name="model"><see cref="Model"/> to get for.</param>
         /// <returns><see cref="IProjectionResultStore"/> instance.</returns>
-        IProjectionResultStore GetForType(ProjectionResultStoreTypeId typeId);
+        IProjectionResultStore GetForTypeAndModel(ProjectionResultStoreTypeId typeId, Model model);
     }
 }

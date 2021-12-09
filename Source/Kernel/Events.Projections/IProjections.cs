@@ -27,16 +27,12 @@ namespace Cratis.Events.Projections
         /// Get all <see cref="IProjectionPipeline">projection pipelines</see> in the system.
         /// </summary>
         /// <returns>Collection of <see cref="IProjectionPipeline"/>.</returns>
-        IEnumerable<IProjectionPipeline>  GetAll();
+        IEnumerable<IProjectionPipeline>  GetPipelines();
 
         /// <summary>
         /// Gets an observable of all <see cref="IProjectionPipeline"/> in the system.
         /// </summary>
-        /// <remarks>
-        /// This observable will update whenever there are new or removed pipelines, but also when there are
-        /// status changes on any of the pipelines.
-        /// </remarks>
-        IObservable<IEnumerable<IProjectionPipeline>> All { get; }
+        IObservable<IProjectionPipeline> Pipelines { get; }
 
         /// <summary>
         /// Get a specific <see cref="IProjectionPipeline"/> by the identifier.

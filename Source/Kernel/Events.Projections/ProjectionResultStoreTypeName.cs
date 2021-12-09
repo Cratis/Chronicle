@@ -6,16 +6,16 @@ using Cratis.Concepts;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the unique identifier of a type of <see cref="IProjectionResultStore"/>
+    /// Represents a friendly name for a type of <see cref="IProjectionResultStore"/>
     /// </summary>
     /// <param name="Value">Underlying value.</param>
-    public record ProjectionResultStoreTypeId(Guid Value) : ConceptAs<Guid>(Value)
+    public record ProjectionResultStoreTypeName(string Value) : ConceptAs<string>(Value)
     {
         /// <summary>
-        /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ProjectionResultStoreTypeId"/>.
+        /// Implicitly convert from <see cref="string"/>  to <see cref="ProjectionResultStoreTypeId"/>.
         /// </summary>
         /// <param name="value">String value to convert from.</param>
-        public static implicit operator ProjectionResultStoreTypeId(string value) => new(Guid.Parse(value));
+        public static implicit operator ProjectionResultStoreTypeName(string value) => new(value);
     }
 
 }

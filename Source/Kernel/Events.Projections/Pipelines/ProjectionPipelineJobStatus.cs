@@ -5,11 +5,15 @@ using System.Reactive.Subjects;
 
 namespace Cratis.Events.Projections.Pipelines
 {
-    public class PipelineJobStatus
+    /// <summary>
+    /// Represents the status of a <see cref="IProjectionPipelineJob"/>.
+    /// </summary>
+    public class ProjectionPipelineJobStatus
     {
         readonly BehaviorSubject<double> _progress = new(0);
         readonly BehaviorSubject<string> _task = new(string.Empty);
         readonly Subject<IProjectionPipelineJobStep> _step = new();
+        readonly BehaviorSubject<bool> _active = new(false);
 
         /// <summary>
         /// Gets the observable for current the step being worked on
@@ -25,6 +29,11 @@ namespace Cratis.Events.Projections.Pipelines
         /// Gets the observable for the current task being worked on.
         /// </summary>
         public IObservable<string> Task => _task;
+
+        /// <summary>
+        /// Gets the observable for the current state of the job (active or not).
+        /// </summary>
+        public IObservable<bool> Active => _active;
 
         /// <summary>
         /// Report progress for the status.
@@ -43,5 +52,22 @@ namespace Cratis.Events.Projections.Pipelines
         /// </summary>
         /// <param name="step">Current step to report.</param>
         public void ReportStep(IProjectionPipelineJobStep step) => _step.OnNext(step);
+
+        /// <summary>
+        /// Report that the job has started.
+        /// </summary>
+        public void ReportStarted()
+        {
+            _active.OnNext(true);
+        }
+
+        /// <summary>
+        /// Report that the job is stopped.
+        /// </summary>
+        public void ReportStopped()
+        {
+            _task.OnNext("Stopped");
+            _active.OnNext(false);
+        }
     }
 }

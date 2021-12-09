@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Boot;
 using Cratis.Dynamic;
 using Cratis.Events.Projections;
+using Cratis.Events.Projections.Pipelines;
 
 namespace Sample
 {
