@@ -3,12 +3,10 @@
 
 using System.Reactive.Linq;
 using Aksio.Queries;
-using Cratis.Events.Projections.Pipelines;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Events.Projections.Api
 {
-
     [Route("/api/events/projections")]
     public class Projections : Controller
     {
