@@ -41,10 +41,10 @@ namespace Cratis.Events.Projections.MongoDB
             _model = model;
 
             var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
-            settings.ClusterConfigurator = _ => _
-                .Subscribe<CommandStartedEvent>(ev => Console.WriteLine($"Start: {ev.CommandName} : {ev.Command}"))
-                .Subscribe<CommandSucceededEvent>(ev => Console.WriteLine($"Succeeded: {ev.CommandName} : {ev.Reply}"))
-                .Subscribe<CommandFailedEvent>(ev => Console.WriteLine($"Failed: {ev.CommandName} : {ev.Failure}"));
+            // settings.ClusterConfigurator = _ => _
+            //     .Subscribe<CommandStartedEvent>(ev => Console.WriteLine($"Start: {ev.CommandName} : {ev.Command}"))
+            //     .Subscribe<CommandSucceededEvent>(ev => Console.WriteLine($"Succeeded: {ev.CommandName} : {ev.Reply}"))
+            //     .Subscribe<CommandFailedEvent>(ev => Console.WriteLine($"Failed: {ev.CommandName} : {ev.Failure}"));
 
             var client = clientFactory.Create(settings.Freeze());
             _database = client.GetDatabase("read-models");
