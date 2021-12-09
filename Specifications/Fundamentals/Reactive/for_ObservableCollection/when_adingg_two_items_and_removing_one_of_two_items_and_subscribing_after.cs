@@ -32,6 +32,6 @@ namespace Cratis.Reactive.for_ObservableCollection
 
         [Fact] void should_have_both_items_added() => added.ShouldContainOnly(first_item, second_item);
         [Fact] void should_only_have_the_removed_items_removed() => removed.ShouldContainOnly(first_item);
-        [Fact] void should_contain_the_non_removed_item() => collection.ShouldContainOnly(second_item);
+        [Fact] void should_only_contain_the_non_removed_item() => collection.ShouldContainOnly(second_item);
     }
 }
