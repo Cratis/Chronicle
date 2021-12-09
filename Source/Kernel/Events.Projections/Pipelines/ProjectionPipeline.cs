@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.Pipelines
@@ -19,7 +20,7 @@ namespace Cratis.Events.Projections.Pipelines
         readonly IProjectionPipelineJobs _pipelineJobs;
         readonly ILogger<ProjectionPipeline> _logger;
         readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
-        readonly ReplaySubject<IEnumerable<IProjectionPipelineJob>> _jobs = new(1);
+        readonly ObservableCollection<IProjectionPipelineJob> _jobs = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
@@ -56,10 +57,13 @@ namespace Cratis.Events.Projections.Pipelines
         public IObservable<ProjectionState> State => _state;
 
         /// <inheritdoc/>
+        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
+
+        /// <inheritdoc/>
         public ProjectionState CurrentState => _state.Value;
 
         /// <inheritdoc/>
-        public IObservable<IEnumerable<IProjectionPipelineJob>> Jobs => _jobs;
+        public IObservableCollection<IProjectionPipelineJob> Jobs => _jobs;
 
         /// <inheritdoc/>
         public async Task Start()
@@ -69,36 +73,44 @@ namespace Cratis.Events.Projections.Pipelines
             await AddAndRunJobs(_pipelineJobs.Catchup(this));
             _state.OnNext(ProjectionState.Active);
 
-            foreach (var (configurationId, subject) in _subjectsPerConfiguration)
-            {
-                var resultStore = _resultStores[configurationId];
-                EventProvider.ProvideFor(this, subject);
-                _subscriptionsPerConfiguration[configurationId] = Projection
-                    .FilterEventTypes(subject)
-                    .Subscribe(@event => _handler.Handle(@event, this, resultStore, configurationId).Wait());
-            }
+            SetupHandling();
         }
 
         /// <inheritdoc/>
-        public Task Pause()
+        public async Task Pause()
         {
             _logger.Pausing(Projection.Identifier);
-            _state.OnNext(ProjectionState.Paused);
 
-            return Task.CompletedTask;
+            await StopAllJobs();
+            foreach (var (_, subscription) in _subscriptionsPerConfiguration)
+            {
+                subscription.Dispose();
+            }
+            _state.OnNext(ProjectionState.Paused);
         }
 
         /// <inheritdoc/>
-        public Task Resume()
+        public async Task Resume()
         {
-            _logger.Resuming(Projection.Identifier);
+            if (CurrentState == ProjectionState.Active ||
+                CurrentState == ProjectionState.CatchingUp ||
+                CurrentState == ProjectionState.Rewinding)
+            {
+                return;
+            }
 
-            return Task.CompletedTask;
+            _logger.Resuming(Projection.Identifier);
+            _state.OnNext(ProjectionState.CatchingUp);
+            await AddAndRunJobs(_pipelineJobs.Catchup(this));
+            SetupHandling();
+            _state.OnNext(ProjectionState.Active);
         }
 
         /// <inheritdoc/>
         public async Task Rewind()
         {
+            ThrowIfRewindAlreadyInProgress();
+
             _logger.Rewinding(Projection.Identifier);
             _state.OnNext(ProjectionState.Rewinding);
             await AddAndRunJobs(_pipelineJobs.Rewind(this));
@@ -118,11 +130,7 @@ namespace Cratis.Events.Projections.Pipelines
         public async Task Suspend(string reason)
         {
             _logger.Suspended(Projection.Identifier, reason);
-            foreach (var job in _jobs.Value)
-            {
-                await job.Stop();
-            }
-            _jobs.OnNext(Array.Empty<IProjectionPipelineJob>());
+            await StopAllJobs();
             _state.OnNext(ProjectionState.Suspended);
         }
 
@@ -136,12 +144,44 @@ namespace Cratis.Events.Projections.Pipelines
 
         async Task AddAndRunJobs(IEnumerable<IProjectionPipelineJob> jobs)
         {
-            _jobs.OnNext(_jobs.Value.Concat(jobs));
+            foreach (var job in jobs)
+            {
+                _jobs.Add(job);
+            }
 
             foreach (var job in jobs)
             {
                 await job.Run();
-                _jobs.OnNext(_jobs.Value.Where(_ => _ != job));
+                _jobs.Remove(job);
+            }
+        }
+
+        async Task StopAllJobs()
+        {
+            foreach (var job in _jobs)
+            {
+                await job.Stop();
+            }
+            _jobs.Clear();
+        }
+
+        void SetupHandling()
+        {
+            foreach (var (configurationId, subject) in _subjectsPerConfiguration)
+            {
+                var resultStore = _resultStores[configurationId];
+                EventProvider.ProvideFor(this, subject);
+                _subscriptionsPerConfiguration[configurationId] = Projection
+                    .FilterEventTypes(subject)
+                    .Subscribe(@event => _handler.Handle(@event, this, resultStore, configurationId).Wait());
+            }
+        }
+
+        void ThrowIfRewindAlreadyInProgress()
+        {
+            if (_jobs.Any(_ => _.Name.Equals(ProjectionPipelineJobs.RewindJob)))
+            {
+                throw new RewindAlreadyInProgress(this);
             }
         }
     }
