@@ -39,11 +39,6 @@ namespace Cratis.Events.Projections.Pipelines
         ProjectionState CurrentState { get; }
 
         /// <summary>
-        /// Gets an observable of the position within the event log for each result store configuration.
-        /// </summary>
-        IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions { get; }
-
-        /// <summary>
         /// Starts the pipeline.
         /// </summary>
         /// <returns>A Task for async operations.</returns>

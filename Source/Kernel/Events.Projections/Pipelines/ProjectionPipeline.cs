@@ -19,7 +19,7 @@ namespace Cratis.Events.Projections.Pipelines
         readonly IProjectionPipelineJobs _pipelineJobs;
         readonly ILogger<ProjectionPipeline> _logger;
         readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
-        readonly BehaviorSubject<IEnumerable<IProjectionPipelineJob>> _jobs = new(Array.Empty<IProjectionPipelineJob>());
+        readonly ReplaySubject<IEnumerable<IProjectionPipelineJob>> _jobs = new(1);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
@@ -57,9 +57,6 @@ namespace Cratis.Events.Projections.Pipelines
 
         /// <inheritdoc/>
         public ProjectionState CurrentState => _state.Value;
-
-        /// <inheritdoc/>
-        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
 
         /// <inheritdoc/>
         public IObservable<IEnumerable<IProjectionPipelineJob>> Jobs => _jobs;
