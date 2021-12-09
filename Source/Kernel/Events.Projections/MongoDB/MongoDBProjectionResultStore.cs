@@ -167,7 +167,11 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public void Dispose() => _rewindScope?.Dispose();
+        public void Dispose()
+        {
+            _rewindScope?.Dispose();
+            GC.SuppressFinalize(this);
+        }
 
         IMongoCollection<BsonDocument> GetCollection() => IsRewinding ? _rewindCollection : _collection;
 

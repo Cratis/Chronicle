@@ -82,7 +82,11 @@ namespace Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public void Dispose() => _rewindScope?.Dispose();
+        public void Dispose()
+        {
+            _rewindScope?.Dispose();
+            GC.SuppressFinalize(this);
+        }
 
         Dictionary<object, ExpandoObject> GetCollection() => IsRewinding ? _rewindCollection : _collection;
 
