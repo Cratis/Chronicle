@@ -21,12 +21,17 @@ namespace Cratis.Events.Projections.Pipelines
         /// <summary>
         /// Gets the <see cref="IProjectionResultStore">result stores</see> to use for output.
         /// </summary>
-        IEnumerable<IProjectionResultStore> ResultStores { get; }
+        IDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> ResultStores { get; }
 
         /// <summary>
         /// Gets an <see cref="IObservable{T}"/> of <see cref="ProjectionState">state</see> of the projection.
         /// </summary>
         IObservable<ProjectionState> State { get; }
+
+        /// <summary>
+        /// Gets an <see cref="IObservable{T}"/> of a collection of any <see cref="IProjectionPipelineJob"/> running.
+        /// </summary>
+        IObservable<IEnumerable<IProjectionPipelineJob>> Jobs { get; }
 
         /// <summary>
         /// Gets the current <see cref="ProjectionState"/>.

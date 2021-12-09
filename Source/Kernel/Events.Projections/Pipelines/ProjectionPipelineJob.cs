@@ -18,7 +18,7 @@ namespace Cratis.Events.Projections.Pipelines
         public string Name { get; }
 
         /// <inheritdoc/>
-        public PipelineJobStatus Status { get; } = new();
+        public ProjectionPipelineJobStatus Status { get; } = new();
 
         /// <inheritdoc/>
         public IEnumerable<IProjectionPipelineJobStep> Steps { get; }
@@ -26,15 +26,29 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Run()
         {
+            await Task.Run(async () =>
+            {
+                foreach (var step in Steps)
+                {
+                    await step.Perform(Status);
+                }
+
+                foreach (var step in Steps)
+                {
+                    await step.PerformPostJob(Status);
+                }
+            });
+        }
+
+        /// <inheritdoc/>
+        public async Task Stop()
+        {
             foreach (var step in Steps)
             {
-                await step.Perform(Status);
+                await step.Stop();
             }
 
-            foreach (var step in Steps)
-            {
-                await step.PerformPostJob(Status);
-            }
+            Status.ReportStopped();
         }
     }
 }

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Extensions.MongoDB;
@@ -16,22 +15,31 @@ namespace Cratis.Events.Projections.MongoDB
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in MongoDB.
     /// </summary>
-    public class MongoDBProjectionResultStore : IProjectionResultStore
+    public class MongoDBProjectionResultStore : IProjectionResultStore, IDisposable
     {
+        readonly IMongoCollection<BsonDocument> _collection;
+        readonly IMongoCollection<BsonDocument> _rewindCollection;
         readonly IMongoDatabase _database;
-        readonly ConcurrentDictionary<string, IProjectionResultStoreRewindScope> _modelsInRewind = new();
+        readonly Model _model;
+        IProjectionResultStoreRewindScope? _rewindScope;
 
         /// <summary>
         /// Gets the identifier of the <see cref="MongoDBProjectionResultStore"/>.
         /// </summary>
         public static readonly ProjectionResultStoreTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
 
+        /// <inheritdoc/>
+        public ProjectionResultStoreTypeName Name => "MongoDB";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
         /// </summary>
+        /// <param name="model"><see cref="Model"/> the store is for.</param>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
-        public MongoDBProjectionResultStore(IMongoDBClientFactory clientFactory)
+        public MongoDBProjectionResultStore(Model model, IMongoDBClientFactory clientFactory)
         {
+            _model = model;
+
             var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
             settings.ClusterConfigurator = _ => _
                 .Subscribe<CommandStartedEvent>(ev => Console.WriteLine($"Start: {ev.CommandName} : {ev.Command}"))
@@ -40,6 +48,8 @@ namespace Cratis.Events.Projections.MongoDB
 
             var client = clientFactory.Create(settings.Freeze());
             _database = client.GetDatabase("read-models");
+            _collection = _database.GetCollection<BsonDocument>(model.Name);
+            _rewindCollection = _database.GetCollection<BsonDocument>(GetRewindCollectionName(model.Name));
         }
 
         /// <inheritdoc/>
@@ -53,9 +63,9 @@ namespace Cratis.Events.Projections.MongoDB
         public static string GetRewindCollectionName(string name) => $"rewind-{name}";
 
         /// <inheritdoc/>
-        public async Task<ExpandoObject> FindOrDefault(Model model, object key)
+        public async Task<ExpandoObject> FindOrDefault(object key)
         {
-            var collection = GetCollectionFor(model);
+            var collection = GetCollection();
             var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.ToString()));
             var instance = result.SingleOrDefault();
             if (instance != default)
@@ -66,7 +76,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(Model model, object key, Changeset<Event, ExpandoObject> changeset)
+        public async Task ApplyChanges(object key, Changeset<Event, ExpandoObject> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;
@@ -133,37 +143,34 @@ namespace Cratis.Events.Projections.MongoDB
 
             if (!hasChanges) return;
 
-            var collection = GetCollectionFor(model);
+            var collection = GetCollection();
             await collection.UpdateOneAsync(filter, updateBuilder, new UpdateOptions { IsUpsert = true });
 
             await Task.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public Task PrepareInitialRun(Model model)
+        public Task PrepareInitialRun()
         {
-            var collection = GetCollectionFor(model);
+            var collection = GetCollection();
             return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
         }
 
         /// <inheritdoc/>
-        public IProjectionResultStoreRewindScope BeginRewindFor(Model model)
+        public IProjectionResultStoreRewindScope BeginRewindFor()
         {
-            var scope = new MongoDBProjectionResultStoreRewindScope(
+            _rewindScope = new MongoDBProjectionResultStoreRewindScope(
                 _database,
-                model,
-                () => _modelsInRewind.Remove(model.Name, out _));
-            _modelsInRewind[model.Name] = scope;
-            return scope;
+                _model,
+                () => _rewindScope = default);
+            return _rewindScope;
         }
 
-        IMongoCollection<BsonDocument> GetCollectionFor(Model model)
-        {
-            if (_modelsInRewind.ContainsKey(model.Name))
-            {
-                return _database.GetCollection<BsonDocument>(GetRewindCollectionName(model.Name));
-            }
-            return _database.GetCollection<BsonDocument>(model.Name);
-        }
+        /// <inheritdoc/>
+        public void Dispose() => _rewindScope?.Dispose();
+
+        IMongoCollection<BsonDocument> GetCollection() => IsRewinding ? _rewindCollection : _collection;
+
+        bool IsRewinding => _rewindScope != default;
     }
 }

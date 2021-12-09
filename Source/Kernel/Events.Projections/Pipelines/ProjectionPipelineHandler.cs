@@ -40,6 +40,13 @@ namespace Cratis.Events.Projections.Pipelines
         public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> CurrentPositions => new ReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>(_positions);
 
         /// <inheritdoc/>
+        public async Task InitializeFor(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId)
+        {
+            var offset = await _projectionPositions.GetFor(pipeline.Projection, configurationId);
+            UpdatePositionFor(configurationId, offset);
+        }
+
+        /// <inheritdoc/>
         public async Task<EventLogSequenceNumber> Handle(Event @event, IProjectionPipeline pipeline, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId)
         {
             _logger.HandlingEvent(@event.SequenceNumber);
@@ -66,13 +73,13 @@ namespace Cratis.Events.Projections.Pipelines
             var keyResolver = projection.GetKeyResolverFor(@event.Type);
             var key = keyResolver(@event);
             _logger.GettingInitialValues(@event.SequenceNumber);
-            var initialState = await resultStore.FindOrDefault(projection.Model, key);
+            var initialState = await resultStore.FindOrDefault(key);
             var changeset = new Changeset<Event, ExpandoObject>(@event, initialState);
             changesets.Add(changeset);
             _logger.Projecting(@event.SequenceNumber);
             projection.OnNext(@event, changeset);
             _logger.SavingResult(@event.SequenceNumber);
-            await resultStore.ApplyChanges(projection.Model, key, changeset);
+            await resultStore.ApplyChanges(key, changeset);
 
             foreach (var child in projection.ChildProjections)
             {

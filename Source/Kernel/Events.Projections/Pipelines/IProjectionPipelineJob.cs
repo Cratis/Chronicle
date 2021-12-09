@@ -14,9 +14,9 @@ namespace Cratis.Events.Projections.Pipelines
         string Name { get; }
 
         /// <summary>
-        /// Gets the <see cref="PipelineJobStatus"/>.
+        /// Gets the <see cref="ProjectionPipelineJobStatus"/>.
         /// </summary>
-        PipelineJobStatus Status { get; }
+        ProjectionPipelineJobStatus Status { get; }
 
         /// <summary>
         /// Gets the collection of <see cref="IProjectionPipelineJobStep">steps</see>.
@@ -28,5 +28,10 @@ namespace Cratis.Events.Projections.Pipelines
         /// </summary>
         /// <returns>Async continuation.</returns>
         Task Run();
+
+        /// <summary>
+        /// Stops a running job.
+        /// </summary>
+        Task Stop();
     }
 }

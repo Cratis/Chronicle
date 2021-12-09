@@ -24,33 +24,28 @@ namespace Cratis.Events.Projections
         Rewinding = 2,
 
         /// <summary>
-        /// Projection is in partial rewind mode for one or more of its result stores.
-        /// </summary>
-        PartialRewinding = 3,
-
-        /// <summary>
         /// Projection is catching up due to being behind current sequence number in event log.
         /// </summary>
-        CatchingUp = 4,
+        CatchingUp = 3,
 
         /// <summary>
         /// Projection is active and waiting for new events.
         /// </summary>
-        Active = 5,
+        Active = 4,
 
         /// <summary>
         /// Projection is paused.
         /// </summary>
-        Paused = 6,
+        Paused = 5,
 
         /// <summary>
         /// Projection is stopped.
         /// </summary>
-        Stopped = 7,
+        Stopped = 6,
 
         /// <summary>
         /// Projection is suspended, most likely due to failure.
         /// </summary>
-        Suspended = 8
+        Suspended = 7
     }
 }

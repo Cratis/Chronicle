@@ -44,15 +44,17 @@ namespace Cratis.Events.Projections.Pipelines
         public IProjectionPipeline CreateFrom(IProjection projection, ProjectionPipelineDefinition definition)
         {
             var eventProvider = _projectionEventProviders.GetForType(definition.ProjectionEventProviderTypeId);
+            var handler = new ProjectionPipelineHandler(_projectionPositions, _changesetStorage, _loggerFactory.CreateLogger<ProjectionPipelineHandler>());
             var pipeline = new ProjectionPipeline(
                 projection,
                 eventProvider,
-                new ProjectionPipelineHandler(_projectionPositions, _changesetStorage, _loggerFactory.CreateLogger<ProjectionPipelineHandler>()),
+                handler,
+                new ProjectionPipelineJobs(_projectionPositions, eventProvider, handler, _loggerFactory),
                 _loggerFactory.CreateLogger<ProjectionPipeline>());
 
             foreach (var resultStoreDefinition in definition.ResultStores)
             {
-                var resultStore = _projectionResultStores.GetForType(resultStoreDefinition.TypeId);
+                var resultStore = _projectionResultStores.GetForTypeAndModel(resultStoreDefinition.TypeId, projection.Model);
                 pipeline.StoreIn(resultStoreDefinition.ConfigurationId, resultStore);
             }
             return pipeline;
