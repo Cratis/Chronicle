@@ -86,6 +86,7 @@ namespace Cratis.Events.Projections.Pipelines
             {
                 subscription.Dispose();
             }
+            _subscriptionsPerConfiguration.Clear();
             _state.OnNext(ProjectionState.Paused);
         }
 
@@ -171,6 +172,12 @@ namespace Cratis.Events.Projections.Pipelines
             {
                 var resultStore = _resultStores[configurationId];
                 EventProvider.ProvideFor(this, subject);
+
+                if (_subscriptionsPerConfiguration.ContainsKey(configurationId))
+                {
+                    _subscriptionsPerConfiguration[configurationId].Dispose();
+                    _subscriptionsPerConfiguration.Remove(configurationId, out _);
+                }
                 _subscriptionsPerConfiguration[configurationId] = Projection
                     .FilterEventTypes(subject)
                     .Subscribe(@event => _handler.Handle(@event, this, resultStore, configurationId).Wait());
