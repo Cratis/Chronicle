@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.for_ProjectionPipeline.given
+namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 {
     public class a_pipeline : all_dependencies
     {
@@ -12,8 +12,8 @@ namespace Cratis.Events.Projections.for_ProjectionPipeline.given
         void Establish() => pipeline = new(
             projection.Object,
             event_provider.Object,
-            projection_positions.Object,
-            changeset_storage.Object,
+            pipeline_handler.Object,
+            jobs.Object,
             Mock.Of<ILogger<ProjectionPipeline>>());
     }
 }

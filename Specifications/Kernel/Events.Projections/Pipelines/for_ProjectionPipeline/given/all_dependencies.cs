@@ -4,24 +4,23 @@
 using System.Reactive.Subjects;
 using Cratis.Events.Projections.Changes;
 
-namespace Cratis.Events.Projections.for_ProjectionPipeline.given
+namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 {
     public class all_dependencies : Specification
     {
-        protected Mock<IProjectionEventProvider> event_provider;
-        protected Mock<IChangesetStorage> changeset_storage;
         protected Mock<IProjection> projection;
+        protected Mock<IProjectionEventProvider> event_provider;
 
-        protected Mock<IProjectionPositions> projection_positions;
-
+        protected Mock<IProjectionPipelineHandler> pipeline_handler;
+        protected Mock<IProjectionPipelineJobs> jobs;
         protected Mock<ISubject<Event>> subject;
 
         void Establish()
         {
             event_provider = new();
             projection = new();
-            changeset_storage = new();
-            projection_positions = new();
+            pipeline_handler = new();
+            jobs = new();
             subject = new();
         }
     }
