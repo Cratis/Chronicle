@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Reactive;
+
 namespace Cratis.Events.Projections.Pipelines
 {
     /// <summary>
@@ -29,9 +31,14 @@ namespace Cratis.Events.Projections.Pipelines
         IObservable<ProjectionState> State { get; }
 
         /// <summary>
-        /// Gets an <see cref="IObservable{T}"/> of a collection of any <see cref="IProjectionPipelineJob"/> running.
+        /// Gets an <see creF="IObservableCollection{T}"/> of any <see cref="IProjectionPipelineJob"/> running.
         /// </summary>
-        IObservable<IEnumerable<IProjectionPipelineJob>> Jobs { get; }
+        IObservableCollection<IProjectionPipelineJob> Jobs { get; }
+
+        /// <summary>
+        /// Gets an observable of the position within the event log for each result store configuration.
+        /// </summary>
+        IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions { get; }
 
         /// <summary>
         /// Gets the current <see cref="ProjectionState"/>.
