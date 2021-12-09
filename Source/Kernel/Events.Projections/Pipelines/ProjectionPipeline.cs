@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using Cratis.Events.Projections.Pipelines.JobSteps;
 using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 
@@ -121,6 +122,8 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
         {
+            ThrowIfRewindAlreadyInProgress(configurationId);
+
             _logger.RewindingForConfiguration(Projection.Identifier, configurationId);
             _state.OnNext(ProjectionState.Rewinding);
             await AddAndRunJobs(new[] { _pipelineJobs.Rewind(this, configurationId) });
@@ -189,6 +192,21 @@ namespace Cratis.Events.Projections.Pipelines
             if (_jobs.Any(_ => _.Name.Equals(ProjectionPipelineJobs.RewindJob)))
             {
                 throw new RewindAlreadyInProgress(this);
+            }
+        }
+
+        void ThrowIfRewindAlreadyInProgress(ProjectionResultStoreConfigurationId configurationId)
+        {
+            var rewindJob = _jobs.FirstOrDefault(_ => _.Name.Equals(ProjectionPipelineJobs.RewindJob));
+            if (rewindJob != default)
+            {
+                foreach (var step in rewindJob.Steps)
+                {
+                    if (step is Rewind rewind && rewind.ConfigurationId == configurationId)
+                    {
+                        throw new RewindAlreadyInProgress(this, configurationId);
+                    }
+                }
             }
         }
     }

@@ -3,7 +3,7 @@
 
 namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline
 {
-    public class when_rewinding_job_already_rewinding : given.a_pipeline
+    public class when_rewinding_and_already_rewinding : given.a_pipeline
     {
         List<IProjectionPipelineJob> started_jobs;
         Mock<IProjectionPipelineJob> job;
