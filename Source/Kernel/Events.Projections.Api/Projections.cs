@@ -26,9 +26,13 @@ namespace Cratis.Events.Projections.Api
             var projections = new List<Projection>();
             var merged = _projections.Pipelines
                 .Select(pipeline =>
-                    pipeline.Positions
-                        .Select(positions => string.Join("-", positions.Values))
-                        .Select(_ => new Projection(pipeline.Projection.Identifier, pipeline.Projection.Name, "", _))
+                    pipeline.State.CombineLatest(pipeline.Positions,
+                        (state, positions) =>
+                        {
+                            var stateString = Enum.GetName(typeof(ProjectionState), state) ?? "[N/A]";
+                            var positionsString = string.Join("-", positions.Values);
+                            return new Projection(pipeline.Projection.Identifier, pipeline.Projection.Name, stateString, positionsString);
+                        })
                 ).Merge();
             var subscription = merged.Subscribe(projection =>
             {
