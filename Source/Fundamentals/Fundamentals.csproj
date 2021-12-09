@@ -13,5 +13,6 @@
       <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="5.0.0" />
       <PackageReference Include="ObjectsComparer" Version="1.4.1" />
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+      <PackageReference Include="System.Reactive" Version="5.0.0" />
     </ItemGroup>
 </Project>
