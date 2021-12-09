@@ -37,7 +37,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         {
             _eventStream = eventStore.GetStream(EventStore.EventStreamId.EventLog);
             _logger = logger;
-            Task.Run(() => WatchForEvents());
+            WatchForEvents();
         }
 
         /// <inheritdoc/>
