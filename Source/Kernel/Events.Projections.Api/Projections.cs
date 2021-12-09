@@ -31,7 +31,7 @@ namespace Cratis.Events.Projections.Api
                             var positionsString = string.Join("-", positions.Values);
                             return new Projection(pipeline.Projection.Identifier, pipeline.Projection.Name, stateString, positionsString);
                         })
-                ).Merge();
+                ).Switch();
             var subscription = merged.Subscribe(projection =>
             {
                 var existing = projections.Find(_ => _.Id == projection.Id);
