@@ -11,6 +11,16 @@ namespace Cratis.Events.Projections.Pipelines
     /// </summary>
     public class ProjectionPipelineJobs : IProjectionPipelineJobs
     {
+        /// <summary>
+        /// Name of the rewind job.
+        /// </summary>
+        public const string RewindJob = "Rewind";
+
+        /// <summary>
+        /// Name of the catchup job.
+        /// </summary>
+        public const string CatchupJob = "Catchup";
+
         readonly IProjectionPositions _projectionPositions;
         readonly IProjectionEventProvider _projectionEventProvider;
         readonly IProjectionPipelineHandler _projectionPipelineHandler;
@@ -38,7 +48,7 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public IProjectionPipelineJob Catchup(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId) =>
             new ProjectionPipelineJob(
-                "Rewind",
+                CatchupJob,
                 new[] {
                     new Catchup(
                         pipeline,
@@ -53,7 +63,7 @@ namespace Cratis.Events.Projections.Pipelines
         public IEnumerable<IProjectionPipelineJob> Catchup(IProjectionPipeline pipeline) =>
             pipeline.ResultStores.Select(kvp =>
                 new ProjectionPipelineJob(
-                    "Rewind",
+                    CatchupJob,
                     new[] {
                         new Catchup(
                             pipeline,
@@ -62,12 +72,12 @@ namespace Cratis.Events.Projections.Pipelines
                             _projectionPipelineHandler,
                             kvp.Key,
                             _loggerFactory.CreateLogger<Catchup>())
-                    }));
+                    })).ToArray();
 
         /// <inheritdoc/>
         public IProjectionPipelineJob Rewind(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId) =>
             new ProjectionPipelineJob(
-                "Rewind",
+                RewindJob,
                 new IProjectionPipelineJobStep[] {
                     new Rewind(
                         pipeline,
@@ -86,7 +96,7 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public IEnumerable<IProjectionPipelineJob> Rewind(IProjectionPipeline pipeline) => pipeline.ResultStores.Select(kvp =>
             new ProjectionPipelineJob(
-                "Rewind",
+                RewindJob,
                 new IProjectionPipelineJobStep[] {
                     new Rewind(
                         pipeline,
@@ -100,6 +110,6 @@ namespace Cratis.Events.Projections.Pipelines
                         _projectionPipelineHandler,
                         kvp.Key,
                         _loggerFactory.CreateLogger<Catchup>())
-                }));
+                })).ToArray();
     }
 }
