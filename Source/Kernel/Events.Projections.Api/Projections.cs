@@ -23,7 +23,7 @@ namespace Cratis.Events.Projections.Api
             var observable = new ClientObservable<IEnumerable<Projection>>();
             var projections = new List<Projection>();
             var merged = _projections.Pipelines
-                .Select(pipeline =>
+                .SelectMany(pipeline =>
                     pipeline.State.CombineLatest(pipeline.Positions,
                         (state, positions) =>
                         {
@@ -31,7 +31,7 @@ namespace Cratis.Events.Projections.Api
                             var positionsString = string.Join("-", positions.Values);
                             return new Projection(pipeline.Projection.Identifier, pipeline.Projection.Name, stateString, positionsString);
                         })
-                ).Switch();
+                );
             var subscription = merged.Subscribe(projection =>
             {
                 var existing = projections.Find(_ => _.Id == projection.Id);
