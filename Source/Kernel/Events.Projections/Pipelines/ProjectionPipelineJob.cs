@@ -30,7 +30,9 @@ namespace Cratis.Events.Projections.Pipelines
             {
                 foreach (var step in Steps)
                 {
+                    Status.ReportStep(step);
                     await step.Perform(Status);
+                    Status.ReportProgress(1.0f);
                 }
 
                 foreach (var step in Steps)

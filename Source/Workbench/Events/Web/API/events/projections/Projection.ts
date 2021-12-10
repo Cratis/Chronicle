@@ -7,5 +7,6 @@ export type Projection = {
     id: string;
     name: string;
     state: string;
+    jobInformation: string;
     positions: string;
 };
