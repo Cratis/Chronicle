@@ -60,7 +60,7 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
 
             var exhausted = false;
 
-            jobStatus.ReportTask($"Start catchup from offset {offset} for '{resultStore.Name}' with configuration id {_configurationId}");
+            jobStatus.ReportTask($"Catching up from offset {offset} for '{resultStore.Name}' with configuration id {_configurationId}");
 
             while(!exhausted)
             {
