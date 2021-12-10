@@ -55,6 +55,8 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
         /// <inheritdoc/>
         public Task PerformPostJob(ProjectionPipelineJobStatus jobStatus)
         {
+            var resultStore = _pipeline.ResultStores[ConfigurationId];
+            jobStatus.ReportTask($"Ending rewind scope '{resultStore.Name}' with configuration id {ConfigurationId}");
             _rewindScope?.Dispose();
             return Task.CompletedTask;
         }
