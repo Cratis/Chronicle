@@ -50,13 +50,17 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
         {
             _logger.CatchingUp(_pipeline.Projection.Identifier, _configurationId);
             var resultStore = _pipeline.ResultStores[_configurationId];
+            jobStatus.ReportTask($"Getting positions for '{resultStore.Name}' with configuration id {_configurationId}");
             var offset = await _projectionPositions.GetFor(_pipeline.Projection, _configurationId);
             if( offset == 0 )
             {
+                jobStatus.ReportTask($"Prepare for initial run for '{resultStore.Name}' with configuration id {_configurationId}");
                 await resultStore.PrepareInitialRun();
             }
 
             var exhausted = false;
+
+            jobStatus.ReportTask($"Start catchup from offset {offset} for '{resultStore.Name}' with configuration id {_configurationId}");
 
             while(!exhausted)
             {
@@ -76,6 +80,8 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
                 }
                 if (!cursor.Current.Any()) exhausted = true;
             }
+
+            jobStatus.ReportTask($"Caught up for '{resultStore.Name}' with configuration id {_configurationId}");
         }
 
         /// <inheritdoc/>
