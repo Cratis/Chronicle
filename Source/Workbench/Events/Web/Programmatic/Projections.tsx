@@ -46,25 +46,29 @@ const columns: IColumn[] = [
         key: 'name',
         name: 'Name',
         fieldName: 'name',
-        minWidth: 200
+        minWidth: 200,
+        isResizable: true
     },
     {
         key: 'state',
         name: 'State',
         fieldName: 'state',
-        minWidth: 200
+        minWidth: 200,
+        isResizable: true
     },
     {
         key: 'jobInformation',
         name: 'Job Information',
         fieldName: 'jobInformation',
-        minWidth: 200
+        minWidth: 200,
+        isResizable: true
     },
     {
         key: 'position',
         name: 'Positions',
         fieldName: 'positions',
-        minWidth: 200
+        minWidth: 200,
+        isResizable: true
     }
 ];
 
