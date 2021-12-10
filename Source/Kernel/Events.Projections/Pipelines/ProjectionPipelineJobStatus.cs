@@ -10,10 +10,7 @@ namespace Cratis.Events.Projections.Pipelines
     /// </summary>
     public class ProjectionPipelineJobStatus
     {
-        readonly BehaviorSubject<double> _progress = new(0);
-        readonly BehaviorSubject<string> _task = new(string.Empty);
         readonly Subject<IProjectionPipelineJobStep> _step = new();
-        readonly BehaviorSubject<bool> _active = new(false);
 
         /// <summary>
         /// Gets the observable for current the step being worked on
@@ -23,29 +20,29 @@ namespace Cratis.Events.Projections.Pipelines
         /// <summary>
         /// Gets the observable for the current progress of the current step.
         /// </summary>
-        public IObservable<double> Progress => _progress;
+        public BehaviorSubject<float> Progress { get; } = new(0);
 
         /// <summary>
         /// Gets the observable for the current task being worked on.
         /// </summary>
-        public IObservable<string> Task => _task;
+        public BehaviorSubject<string> Task { get; } = new(string.Empty);
 
         /// <summary>
         /// Gets the observable for the current state of the job (active or not).
         /// </summary>
-        public IObservable<bool> Active => _active;
+        public BehaviorSubject<bool> Active { get; } = new(false);
 
         /// <summary>
         /// Report progress for the status.
         /// </summary>
         /// <param name="progress">Current progress to report.</param>
-        public void ReportProgress(double progress) => _progress.OnNext(progress);
+        public void ReportProgress(float progress) => Progress.OnNext(progress);
 
         /// <summary>
         /// Report task for the status.
         /// </summary>
         /// <param name="task">Current task to report</param>
-        public void ReportTask(string task) => _task.OnNext(task);
+        public void ReportTask(string task) => Task.OnNext(task);
 
         /// <summary>
         /// Report step for the status.
@@ -58,7 +55,7 @@ namespace Cratis.Events.Projections.Pipelines
         /// </summary>
         public void ReportStarted()
         {
-            _active.OnNext(true);
+            Active.OnNext(true);
         }
 
         /// <summary>
@@ -66,8 +63,8 @@ namespace Cratis.Events.Projections.Pipelines
         /// </summary>
         public void ReportStopped()
         {
-            _task.OnNext("Stopped");
-            _active.OnNext(false);
+            Task.OnNext("Stopped");
+            Active.OnNext(false);
         }
     }
 }

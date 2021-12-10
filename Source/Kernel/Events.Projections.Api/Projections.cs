@@ -24,14 +24,23 @@ namespace Cratis.Events.Projections.Api
             var projections = new List<Projection>();
             var merged = _projections.Pipelines
                 .SelectMany(pipeline =>
-                    pipeline.State.CombineLatest(pipeline.Positions,
-                        (state, positions) =>
+                    pipeline.State.CombineLatest(
+                        pipeline.Positions,
+                        pipeline.Jobs.Added,
+                        pipeline.Jobs.Removed,
+                        (state, positions, addedJob, removedJob) =>
                         {
                             var stateString = Enum.GetName(typeof(ProjectionState), state) ?? "[N/A]";
                             var positionsString = string.Join("-", positions.Values);
-                            return new Projection(pipeline.Projection.Identifier, pipeline.Projection.Name, stateString, positionsString);
-                        })
-                );
+
+                            return addedJob.Status.Progress.CombineLatest(
+                                addedJob.Status.Task,
+                                (_, __) =>
+                                {
+                                    var jobInformation = string.Join("\n", pipeline.Jobs.Select(_ => $"{_.Status.Progress.Value} - {_.Status.Task.Value}"));
+                                    return new Projection(pipeline.Projection.Identifier, pipeline.Projection.Name, stateString, jobInformation, positionsString);
+                                });
+                        })).Switch();
             var subscription = merged.Subscribe(projection =>
             {
                 var existing = projections.Find(_ => _.Id == projection.Id);
