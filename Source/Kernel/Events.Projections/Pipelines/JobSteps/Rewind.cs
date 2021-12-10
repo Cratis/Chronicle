@@ -47,7 +47,7 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
         {
             _logger.Rewinding(_pipeline.Projection.Identifier, ConfigurationId);
             var resultStore = _pipeline.ResultStores[ConfigurationId];
-            _rewindScope = resultStore.BeginRewindFor();
+            _rewindScope = resultStore.BeginRewind();
             jobStatus.ReportTask($"Resetting positions for '{resultStore.Name}' with configuration id {ConfigurationId}");
             await _projectionPositions.Reset(_pipeline.Projection, ConfigurationId);
         }
