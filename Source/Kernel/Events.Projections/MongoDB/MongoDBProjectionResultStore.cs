@@ -157,7 +157,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public IProjectionResultStoreRewindScope BeginRewindFor()
+        public IProjectionResultStoreRewindScope BeginRewind()
         {
             _rewindScope = new MongoDBProjectionResultStoreRewindScope(
                 _database,

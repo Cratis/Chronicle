@@ -72,7 +72,7 @@ namespace Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public IProjectionResultStoreRewindScope BeginRewindFor() => _rewindScope = new InMemoryResultStoreRewindScope(_model);
+        public IProjectionResultStoreRewindScope BeginRewind() => _rewindScope = new InMemoryResultStoreRewindScope(_model);
 
         /// <inheritdoc/>
         public Task PrepareInitialRun()

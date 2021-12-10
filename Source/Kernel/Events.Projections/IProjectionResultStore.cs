@@ -54,6 +54,6 @@ namespace Cratis.Events.Projections
         /// dispose of this. Depending on the implementation of it, it will perform
         /// necessary cleanup after a rewind has been performed.
         /// </remarks>
-        IProjectionResultStoreRewindScope BeginRewindFor();
+        IProjectionResultStoreRewindScope BeginRewind();
     }
 }
