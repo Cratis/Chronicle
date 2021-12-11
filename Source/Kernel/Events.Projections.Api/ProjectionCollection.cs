@@ -3,5 +3,5 @@
 
 namespace Cratis.Events.Projections.Api
 {
-    public record ProjectionCollection(string name, int documentCount);
+    public record ProjectionCollection(string Name, int DocumentCount);
 }
