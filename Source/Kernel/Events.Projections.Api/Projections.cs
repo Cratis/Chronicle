@@ -62,10 +62,18 @@ namespace Cratis.Events.Projections.Api
             return observable;
         }
 
-        [HttpPost("rewind/{projectionId}")]
+        [HttpPost("{projectionId}/rewind")]
         public void Rewind([FromRoute] Guid projectionId)
         {
             _projections.GetById(projectionId).Rewind();
+        }
+
+        [HttpGet("{projectionId}/collections")]
+        public IEnumerable<ProjectionCollection> Collections([FromRoute] Guid projectionId)
+        {
+            return new ProjectionCollection[] {
+                new("Something", 42)
+            };
         }
     }
 }
