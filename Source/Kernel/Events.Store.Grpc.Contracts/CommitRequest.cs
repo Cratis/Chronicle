@@ -3,7 +3,6 @@
 
 using ProtoBuf;
 
-
 namespace Cratis.Events.Store.Grpc.Contracts
 {
     /// <summary>
@@ -16,24 +15,24 @@ namespace Cratis.Events.Store.Grpc.Contracts
         /// Gets or inits the unique identifier for the event log to commit to.
         /// </summary>
         [ProtoMember(1)]
-        public Guid EventLogId { get; init; }
+        public Guid EventLogId { get; init; }
 
         /// <summary>
         /// Gets or inits the unique identifier of the event source - typically the primary key.
         /// </summary>
         [ProtoMember(2)]
-        public Guid EventSourceId { get; init; }
+        public Guid EventSourceId { get; init; }
 
         /// <summary>
         /// Gets or inits the <see cref="EventType">type of event</see>.
         /// </summary>
         [ProtoMember(3)]
-        public EventType EventType { get; init; }
+        public EventType EventType { get; init; }
 
         /// <summary>
         /// Gets or inits the payload in the form of a string representation of the JSON.
         /// </summary>
         [ProtoMember(4)]
-        public string Content { get; init; }
+        public string Content { get; init; }
     }
 }
