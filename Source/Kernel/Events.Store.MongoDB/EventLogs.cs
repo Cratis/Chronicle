@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.DependencyInversion;
+using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Cratis.DependencyInversion;
-using Cratis.Execution;
 
 namespace Cratis.Events.Store.MongoDB
 {
@@ -47,14 +47,17 @@ namespace Cratis.Events.Store.MongoDB
             try
             {
                 _logger.Committing(sequenceNumber);
-                var @event = new Event
-                {
-                    SequenceNumber = sequenceNumber,
-                    Type = eventType.EventTypeId,
-                    Occurred = DateTimeOffset.UtcNow,
-                    EventSourceId = eventSourceId,
-                };
-                @event.Content[eventType.Generation.ToString()] = BsonDocument.Parse(content);
+                var @event = new Event(
+                    sequenceNumber,
+                    eventType.EventTypeId,
+                    DateTimeOffset.UtcNow,
+                    eventSourceId,
+                    new Dictionary<EventGeneration, BsonDocument>
+                    {
+                        { eventType.Generation.Value, BsonDocument.Parse(content) }
+                    },
+                     Array.Empty<EventCompensation>()
+                );
                 await GetCollectionFor(eventLogId).InsertOneAsync(@event);
             }
             catch (Exception ex)
@@ -63,6 +66,9 @@ namespace Cratis.Events.Store.MongoDB
                 throw;
             }
         }
+
+        /// <inheritdoc/>
+        public Task Compensate(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventType eventType, string content) => throw new NotImplementedException();
 
         /// <inheritdoc/>
         public Task<IEventStoreFindResult> FindFor(EventLogId eventLogId, EventSourceId eventSourceId)
