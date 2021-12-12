@@ -64,5 +64,15 @@ namespace Cratis.Events.Store
             var observers = GrainFactory.GetGrain<IEventLogObservers>(_eventLogId, keyExtension: _tenantId.ToString());
             await observers.Next(committedEvent);
         }
+
+        /// <inheritdoc/>
+        public async Task Compensate(EventLogSequenceNumber sequenceNumber, EventType eventType, string content)
+        {
+            _logger.Compensating(eventType, sequenceNumber, _eventLogId);
+
+            await _eventLogsProvider().Compensate(_eventLogId, sequenceNumber, eventType, content);
+
+            // Notify observers
+        }
     }
 }

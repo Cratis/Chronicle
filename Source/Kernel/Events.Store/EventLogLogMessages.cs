@@ -12,5 +12,8 @@ namespace Cratis.Events.Store
     {
         [LoggerMessage(0, LogLevel.Information, "Committing '{EventType}' for EventSource '{EventSource}' with sequence number {SequenceNumber} to event log '{EventLog}")]
         internal static partial void Committing(this ILogger logger, EventType eventType, EventSourceId eventSource, uint sequenceNumber, EventLogId eventLog);
+
+        [LoggerMessage(1, LogLevel.Information, "Compensatin event @ {SequenceNumber} in event log '{EventLog}' - event type '{EventType}'")]
+        internal static partial void Compensating(this ILogger logger, EventType eventTYpe, uint sequenceNumber, EventLogId eventLog);
     }
 }

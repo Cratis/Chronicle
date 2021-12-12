@@ -20,6 +20,16 @@ namespace Cratis.Events.Store
         Task Commit(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, string content);
 
         /// <summary>
+        /// Compensate a single event to the event store.
+        /// </summary>
+        /// <param name="eventLogId">The <see cref="EventLogId"/> representing the event log to commit to.</param>
+        /// <param name="sequenceNumber">The unique <see cref="EventLogSequenceNumber">sequence number</see> within the event log.</param>
+        /// <param name="eventType">The <see cref="EventType">type of event</see> to commit.</param>
+        /// <param name="content">The JSON payload of the event.</param>
+        /// <returns>Awaitable <see cref="Task"/></returns>
+        Task Compensate(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventType eventType, string content);
+
+        /// <summary>
         /// Find <see cref="CommittedEvent">committed events</see> from the <see cref="IEventLog"/>.
         /// </summary>
         /// <param name="eventLogId">The <see cref="EventLogId"/> representing the event log to find from.</param>
