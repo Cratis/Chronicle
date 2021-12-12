@@ -14,7 +14,7 @@ namespace Cratis.Execution
         /// <summary>
         /// Create a new <see cref="CorrelationId"/> based on a new <see cref="Guid"/>.
         /// </summary>
-        public static CorrelationId New() => new (Guid.NewGuid().ToString());
+        public static CorrelationId New() => new(Guid.NewGuid().ToString());
 
         /// <summary>
         /// Implicitly convert from <see cref="string"/> to <see cref="CorrelationId"/>.
