@@ -13,7 +13,7 @@ namespace Cratis.Events.Projections.for_ProjectionExtensions.given
         protected List<EventContext> received = new();
         protected EventContext event_context;
         protected Event @event;
-        protected Changeset<Event, ExpandoObject> changeset;
+        protected Mock<IChangeset<Event, ExpandoObject>> changeset;
 
         void Establish()
         {
@@ -25,9 +25,9 @@ namespace Cratis.Events.Projections.for_ProjectionExtensions.given
                     DateTimeOffset.UtcNow,
                     "14b33c19-1311-4825-93f9-bedab9e7d5ee",
                     new ExpandoObject());
-            changeset = new(@event, new ExpandoObject());
+            changeset = new();
 
-            event_context = new(@event, changeset);
+            event_context = new(@event, changeset.Object);
         }
     }
 }

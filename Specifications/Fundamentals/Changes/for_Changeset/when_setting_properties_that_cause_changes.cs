@@ -6,7 +6,7 @@ using Cratis.Properties;
 
 namespace Cratis.Changes
 {
-    public class when_applying_properties_that_cause_changes : Specification
+    public class when_setting_properties_that_cause_changes : Specification
     {
         Changeset<ExpandoObject, ExpandoObject> changeset;
         ExpandoObject initial_state;
@@ -36,7 +36,7 @@ namespace Cratis.Changes
             changeset = new(source, initial_state);
         }
 
-        void Because() => changeset.ApplyProperties(property_mappers);
+        void Because() => changeset.SetProperties(property_mappers);
 
         [Fact] void should_add_one_change_of_correct_type() => changeset.Changes.First().ShouldBeOfExactType<PropertiesChanged<ExpandoObject>>();
         [Fact] void should_add_a_property_diff_for_top_level_integer() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[0].MemberPath.ShouldEqual("Integer");
