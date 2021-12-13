@@ -65,7 +65,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 return new EventCursor(null);
             }
 
-            var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(Guid.Parse(_.Value))).ToArray();
+            var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(_.EventTypeId.Value)).ToArray();
             var cursor = await _eventStream.GetFromPosition(start, eventTypes);
             return new EventCursor(cursor);
         }
