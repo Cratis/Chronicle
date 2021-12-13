@@ -10,7 +10,7 @@ namespace Cratis.Events.Projections
         Event @event;
         object result;
 
-        void Establish() => @event = new Event(0, "efd7d03b-21f3-4f09-99f3-355779eb5a11", DateTimeOffset.UtcNow, "463f43c9-16b7-4fd9-9f37-d4d340d89ce8", new ExpandoObject());
+        void Establish() => @event = new Event(0, new("efd7d03b-21f3-4f09-99f3-355779eb5a11", 1), DateTimeOffset.UtcNow, "463f43c9-16b7-4fd9-9f37-d4d340d89ce8", new ExpandoObject());
 
         void Because() => result = EventValueProviders.FromEventSourceId(@event);
 

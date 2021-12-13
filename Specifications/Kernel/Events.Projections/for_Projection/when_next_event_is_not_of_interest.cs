@@ -22,13 +22,13 @@ namespace Cratis.Events.Projections.for_Projection
                 string.Empty,
                 new Model(string.Empty, new JSchema()),
                 new[] {
-                    new EventTypeWithKeyResolver("aac3d310-ff2f-4809-a326-afe14dd9a3d6", EventValueProviders.FromEventSourceId)
+                    new EventTypeWithKeyResolver(new  EventType("aac3d310-ff2f-4809-a326-afe14dd9a3d6", 1), EventValueProviders.FromEventSourceId)
                 },
                 Array.Empty<IProjection>());
 
             @event = new Event(
                 0,
-                "5eb35b73-527b-47df-a6a0-20609930836f",
+                new  EventType("5eb35b73-527b-47df-a6a0-20609930836f", 1),
                 DateTimeOffset.UtcNow,
                 "30c1ebf5-cc30-4216-afed-e3e0aefa1316",
                 new());

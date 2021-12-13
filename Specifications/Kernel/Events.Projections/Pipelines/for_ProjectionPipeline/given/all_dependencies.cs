@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Events.Projections.Changes;
 
 namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 {
@@ -13,7 +12,7 @@ namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 
         protected Mock<IProjectionPipelineHandler> pipeline_handler;
         protected Mock<IProjectionPipelineJobs> jobs;
-        protected Mock<ISubject<Event>> subject;
+        protected ISubject<Event> subject;
 
         void Establish()
         {
@@ -21,7 +20,7 @@ namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
             projection = new();
             pipeline_handler = new();
             jobs = new();
-            subject = new();
+            subject = new Subject<Event>();
         }
     }
 }
