@@ -13,6 +13,6 @@ namespace Cratis.Events.Projections.Changes
     public class NullChangesetStorage : IChangesetStorage
     {
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<Changeset<Event, ExpandoObject>> associatedChangesets) => Task.CompletedTask;
+        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets) => Task.CompletedTask;
     }
 }

@@ -19,7 +19,7 @@ namespace Cratis.Changes
         /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
         /// <param name="key">The key of the item.</param>
         /// <returns>True if it has, false it not.</returns>
-        public static bool HasChildBeenAddedWithKey<TSource, TTarget>(this Changeset<TSource, TTarget> changeset, PropertyPath childrenProperty, object key)
+        public static bool HasChildBeenAddedWithKey<TSource, TTarget>(this IChangeset<TSource, TTarget> changeset, PropertyPath childrenProperty, object key)
         {
             return changeset.Changes
                             .Select(_ => _ as ChildAdded)
@@ -37,7 +37,7 @@ namespace Cratis.Changes
         /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies the child</param>
         /// <param name="key">The key of the item.</param>
         /// <returns>The added child.</returns>
-        public static TChild GetChildByKey<TSource, TTarget, TChild>(this Changeset<TSource, TTarget> changeset, PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key)
+        public static TChild GetChildByKey<TSource, TTarget, TChild>(this IChangeset<TSource, TTarget> changeset, PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key)
         {
             var items = childrenProperty.GetValue(changeset.InitialState!) as IEnumerable<TChild>;
             return items!.FindByKey(identifiedByProperty, key)!;
