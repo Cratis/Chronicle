@@ -25,6 +25,15 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
+        /// <summary>
+        /// Handle a child operation.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+        /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+        /// <param name="identifiedByProperty">The property that identifies a child.</param>
+        /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
+        /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
+        /// <returns>The observable for continuation.</returns>
         public static IObservable<EventContext> Child(this IObservable<EventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
         {
             observable.Subscribe(_ =>
