@@ -119,5 +119,20 @@ namespace Cratis.Changes
         public void RemoveChild()
         {
         }
+
+        /// <inheritdoc/>
+        public bool HasChildBeenAddedWithKey(PropertyPath childrenProperty, object key)
+        {
+            return Changes
+                    .Select(_ => _ as ChildAdded)
+                    .Any(_ => _ != null && _.ChildrenProperty == childrenProperty && _.Key == key);
+        }
+
+        /// <inheritdoc/>
+        public TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key)
+        {
+            var items = childrenProperty.GetValue(InitialState!) as IEnumerable<TChild>;
+            return items!.FindByKey(identifiedByProperty, key)!;
+        }
     }
 }
