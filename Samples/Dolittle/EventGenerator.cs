@@ -84,7 +84,6 @@ namespace Sample
             {
                 occurred = occurred.Add(TimeSpan.FromMinutes(_random.Next() % 240));
                 await InsertNewEvent((uint)count + 1 + (uint)i, occurred);
-                Console.Write(".");
             }
         }
 
