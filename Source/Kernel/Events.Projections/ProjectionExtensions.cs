@@ -42,7 +42,7 @@ namespace Cratis.Events.Projections
                 var key = keyResolver(_.Event);
                 if (!items.Contains(identifiedByProperty, key))
                 {
-                    _.Changeset.ApplyAddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
+                    _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
                 }
             });
             return observable;
@@ -52,7 +52,7 @@ namespace Cratis.Events.Projections
         {
             if (childrenProperty.IsRoot)
             {
-                observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
+                observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers));
             }
             else
             {
@@ -62,7 +62,7 @@ namespace Cratis.Events.Projections
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
                         var child = _.Changeset.GetChildByKey<Event, ExpandoObject, ExpandoObject>(childrenProperty, identifiedByProperty, key);
-                        _.Changeset.ApplyChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                        _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
                     }
                 });
             }
@@ -71,7 +71,7 @@ namespace Cratis.Events.Projections
 
         public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
         {
-            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.ApplyRemove());
+            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.Remove());
             return observable;
         }
 

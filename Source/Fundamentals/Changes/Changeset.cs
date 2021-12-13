@@ -42,7 +42,7 @@ namespace Cratis.Changes
         }
 
         /// <inheritdoc/>
-        public void ApplyProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers)
+        public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers)
         {
             var workingState = InitialState.Clone()!;
             foreach (var propertyMapper in propertyMappers)
@@ -58,7 +58,7 @@ namespace Cratis.Changes
         }
 
         /// <inheritdoc/>
-        public void ApplyChildProperties<TChild>(
+        public void SetChildProperties<TChild>(
             TChild item,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
@@ -84,7 +84,7 @@ namespace Cratis.Changes
         }
 
         /// <inheritdoc/>
-        public void ApplyAddChild<TChild>(
+        public void AddChild<TChild>(
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
             object key,
@@ -111,12 +111,12 @@ namespace Cratis.Changes
         }
 
         /// <inheritdoc/>
-        public void ApplyRemove()
+        public void Remove()
         {
         }
 
         /// <inheritdoc/>
-        public void ApplyRemoveChild()
+        public void RemoveChild()
         {
         }
     }

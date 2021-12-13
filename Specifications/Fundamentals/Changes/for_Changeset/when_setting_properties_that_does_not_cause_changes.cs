@@ -6,7 +6,7 @@ using Cratis.Properties;
 
 namespace Cratis.Changes
 {
-    public class when_applying_properties_that_does_not_cause_changes : Specification
+    public class when_setting_properties_that_does_not_cause_changes : Specification
     {
         Changeset<ExpandoObject, ExpandoObject> changeset;
         ExpandoObject initial_state;
@@ -36,7 +36,7 @@ namespace Cratis.Changes
             changeset = new(source, initial_state);
         }
 
-        void Because() => changeset.ApplyProperties(property_mappers);
+        void Because() => changeset.SetProperties(property_mappers);
 
         [Fact] void should_not_have_any_changes() => changeset.Changes.Count().ShouldEqual(0);
     }

@@ -40,7 +40,7 @@ namespace Cratis.Changes
         /// <remarks>
         /// This will run a diff against the initial state and only produce changes that are new.
         /// </remarks>
-        void ApplyProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers);
+        void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers);
 
         /// <summary>
         /// Applies properties for a child to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -54,7 +54,7 @@ namespace Cratis.Changes
         /// <remarks>
         /// This will run a diff against the initial state and only produce changes that are new.
         /// </remarks>
-        void ApplyChildProperties<TChild>(TChild item, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<TSource> keyResolver, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers);
+        void SetChildProperties<TChild>(TChild item, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<TSource> keyResolver, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers);
 
         /// <summary>
         /// Applies properties to the child in the model to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -65,16 +65,16 @@ namespace Cratis.Changes
         /// <param name="key">Key value.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        void ApplyAddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers) where TChild : new();
+        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers) where TChild : new();
 
         /// <summary>
         /// Apply a remove change to the <see cref="Changeset{TSource, TTarget}"/>.
         /// </summary>
-        void ApplyRemove();
+        void Remove();
 
         /// <summary>
         /// Apply a remove child change to the <see cref="Changeset{TSource, TTarget}"/>.
         /// </summary>
-        void ApplyRemoveChild();
+        void RemoveChild();
     }
 }
