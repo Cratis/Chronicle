@@ -8,7 +8,6 @@ using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Events;
 
 namespace Cratis.Events.Projections.MongoDB
 {
@@ -76,7 +75,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(object key, Changeset<Event, ExpandoObject> changeset)
+        public async Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;

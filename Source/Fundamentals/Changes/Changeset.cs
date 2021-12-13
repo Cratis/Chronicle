@@ -1,14 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Objects;
+using Cratis.Properties;
+
 namespace Cratis.Changes
 {
     /// <summary>
-    /// Represents a changeset of changes that can occur to an object.
+    /// Represents an implementation of <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     /// <typeparam name="TSource">Type of the source object we are working from.</typeparam>
     /// <typeparam name="TTarget">Type of target object we are applying changes to.</typeparam>
-    public class Changeset<TSource, TTarget>
+    public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     {
         readonly List<Change> _changes = new();
 
@@ -23,28 +26,98 @@ namespace Cratis.Changes
             InitialState = initialState;
         }
 
-        /// <summary>
-        /// Gets the <see cref="Incoming"/> the <see cref="Changeset{TSource, TTarget}"/> is for.
-        /// </summary>
+        /// <inheritdoc/>
         public TSource Incoming { get; }
 
-        /// <summary>
-        /// Gets the initial state of before changes in changeset occurred.
-        /// </summary>
+        /// <inheritdoc/>
         public TTarget InitialState { get; }
 
-        /// <summary>
-        /// Gets all the changes for the changeset.
-        /// </summary>
+        /// <inheritdoc/>
         public IEnumerable<Change> Changes => _changes;
 
-        /// <summary>
-        /// Add a change to the changeset.
-        /// </summary>
-        /// <param name="change"><see cref="Change"/> to add.</param>
+        /// <inheritdoc/>
         public void Add(Change change)
         {
             _changes.Add(change);
+        }
+
+        /// <inheritdoc/>
+        public void ApplyProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers)
+        {
+            var workingState = InitialState.Clone()!;
+            foreach (var propertyMapper in propertyMappers)
+            {
+                propertyMapper(Incoming, workingState);
+            }
+
+            var comparer = new ObjectsComparer.Comparer<TTarget>();
+            if (!comparer.Compare(InitialState, workingState, out var differences))
+            {
+                Add(new PropertiesChanged<TTarget>(workingState, differences.Select(_ => new PropertyDifference<TTarget>(InitialState, workingState, _))));
+            }
+        }
+
+        /// <inheritdoc/>
+        public void ApplyChildProperties<TChild>(
+            TChild item,
+            PropertyPath childrenProperty,
+            PropertyPath identifiedByProperty,
+            ValueProvider<TSource> keyResolver,
+            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
+        {
+            var workingItem = item.Clone()!;
+            foreach (var propertyMapper in propertyMappers)
+            {
+                propertyMapper(Incoming, workingItem);
+            }
+
+            var comparer = new ObjectsComparer.Comparer();
+            if (!comparer.Compare(item, workingItem, out var differences))
+            {
+                Add(new ChildPropertiesChanged<TChild>(
+                    workingItem,
+                    childrenProperty,
+                    identifiedByProperty,
+                    keyResolver(Incoming),
+                    differences.Select(_ => new PropertyDifference<TChild>(item, workingItem, _))));
+            }
+        }
+
+        /// <inheritdoc/>
+        public void ApplyAddChild<TChild>(
+            PropertyPath childrenProperty,
+            PropertyPath identifiedByProperty,
+            object key,
+            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
+            where TChild : new()
+        {
+            var workingState = InitialState.Clone()!;
+            var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty);
+
+            if (!items.Contains(identifiedByProperty, key))
+            {
+                var item = new TChild();
+
+                foreach (var propertyMapper in propertyMappers)
+                {
+                    propertyMapper(Incoming, item);
+                }
+
+                identifiedByProperty.SetValue(item, key);
+                ((IList<TChild>)items).Add(item);
+
+                Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
+            }
+        }
+
+        /// <inheritdoc/>
+        public void ApplyRemove()
+        {
+        }
+
+        /// <inheritdoc/>
+        public void ApplyRemoveChild()
+        {
         }
     }
 }
