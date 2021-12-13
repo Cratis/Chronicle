@@ -34,7 +34,12 @@ namespace Cratis.Events.Projections
         /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
         /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+        public static IObservable<EventContext> Child(
+            this IObservable<EventContext> observable,
+            PropertyPath childrenProperty,
+            PropertyPath identifiedByProperty,
+            ValueProvider<Event> keyResolver,
+            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
         {
             observable.Subscribe(_ =>
             {
