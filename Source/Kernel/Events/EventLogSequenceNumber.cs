@@ -3,7 +3,7 @@
 
 using Cratis.Concepts;
 
-namespace Cratis.Events.Projections
+namespace Cratis.Events
 {
     /// <summary>
     /// Represents the sequence number within an event log for an event.
