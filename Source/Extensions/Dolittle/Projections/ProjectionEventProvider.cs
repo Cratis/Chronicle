@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using Cratis.Events;
 using Cratis.Events.Projections;
 using Cratis.Events.Projections.Pipelines;
 using Microsoft.Extensions.Logging;

@@ -22,7 +22,7 @@ namespace Cratis.Events.Store.Grpc.Contracts
         /// Gets or inits the unique identifier of the event source - typically the primary key.
         /// </summary>
         [ProtoMember(2)]
-        public Guid EventSourceId { get; init; }
+        public string EventSourceId { get; init; }
 
         /// <summary>
         /// Gets or inits the <see cref="EventType">type of event</see>.
