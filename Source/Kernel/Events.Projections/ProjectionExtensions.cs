@@ -88,6 +88,12 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
+        /// <summary>
+        /// Remove item based on event.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+        /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
+        /// <returns>The observable for continuation.</returns>
         public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
         {
             observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.Remove());
