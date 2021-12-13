@@ -53,7 +53,21 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+        /// <summary>
+        /// Project properties from event onto model or child model.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+        /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+        /// <param name="identifiedByProperty">The property that identifies a child.</param>
+        /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
+        /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
+        /// <returns>The observable for continuation.</returns>
+        public static IObservable<EventContext> Project(
+            this IObservable<EventContext> observable,
+            PropertyPath childrenProperty,
+            PropertyPath identifiedByProperty,
+            ValueProvider<Event> keyResolver,
+            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
@@ -66,7 +80,7 @@ namespace Cratis.Events.Projections
                     var key = keyResolver(_.Event);
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
-                        var child = _.Changeset.GetChildByKey<Event, ExpandoObject, ExpandoObject>(childrenProperty, identifiedByProperty, key);
+                        var child = _.Changeset.GetChildByKey<ExpandoObject>(childrenProperty, identifiedByProperty, key);
                         _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
                     }
                 });
