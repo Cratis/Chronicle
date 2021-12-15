@@ -20,10 +20,7 @@
 
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
         <PackageReference Include="Machine.Specifications.Runner.VisualStudio" Version="2.10.2" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Aksio.Specifications" Version="1.*" />
+        <PackageReference Include="Aksio.Specifications" Version="2.0.0" />
     </ItemGroup>
 
     <ItemGroup>

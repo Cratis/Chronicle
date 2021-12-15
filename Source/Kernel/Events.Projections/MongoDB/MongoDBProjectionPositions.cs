@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Events;
 using Cratis.Events.Projections;
 using Cratis.Extensions.MongoDB;
 using MongoDB.Driver;
@@ -39,7 +40,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             var identifier = GetIdentifierFor(projection, configurationId);
             var result = await _projectionPositionsCollection.FindAsync(_ => _.Id == identifier);
             var position = result.SingleOrDefault();
-            return position?.Position ?? 0;
+            return position?.Position ?? 1;
         }
 
         /// <inheritdoc/>
@@ -55,7 +56,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <inheritdoc/>
         public Task Reset(IProjection projection, ProjectionResultStoreConfigurationId configurationId)
         {
-            return Save(projection, configurationId, 0);
+            return Save(projection, configurationId, 1);
         }
 
         string GetIdentifierFor(IProjection projection, ProjectionResultStoreConfigurationId configurationId) => $"{projection.Identifier}-{configurationId}";

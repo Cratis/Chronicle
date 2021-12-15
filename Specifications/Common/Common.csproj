@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Common.Specs</AssemblyName>
+        <RootNamespace>Cratis.Common</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Fundamentals/Fundamentals.csproj"/>
+    </ItemGroup>
+</Project>

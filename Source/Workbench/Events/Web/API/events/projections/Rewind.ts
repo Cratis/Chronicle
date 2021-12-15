@@ -5,6 +5,6 @@
 import { Command } from '@aksio/frontend/commands';
 
 export class Rewind extends Command {
-    readonly route: string = '/api/events/projections/rewind/{projectionId}';
+    readonly route: string = '/api/events/projections/{projectionId}/rewind';
 
 }

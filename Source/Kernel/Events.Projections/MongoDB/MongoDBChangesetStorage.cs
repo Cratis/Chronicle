@@ -26,7 +26,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<Changeset<Event, ExpandoObject>> associatedChangesets)
+        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets)
         {
             return Task.CompletedTask;
         }

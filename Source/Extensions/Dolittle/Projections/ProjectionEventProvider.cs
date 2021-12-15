@@ -3,7 +3,9 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using Cratis.Events;
 using Cratis.Events.Projections;
+using Cratis.Events.Projections.Pipelines;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using IEventStore = Cratis.Extensions.Dolittle.EventStore.IEventStore;
@@ -36,7 +38,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         {
             _eventStream = eventStore.GetStream(EventStore.EventStreamId.EventLog);
             _logger = logger;
-            Task.Run(() => WatchForEvents());
+            WatchForEvents();
         }
 
         /// <inheritdoc/>
@@ -63,7 +65,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 return new EventCursor(null);
             }
 
-            var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(Guid.Parse(_.Value))).ToArray();
+            var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(_.EventTypeId.Value)).ToArray();
             var cursor = await _eventStream.GetFromPosition(start, eventTypes);
             return new EventCursor(cursor);
         }

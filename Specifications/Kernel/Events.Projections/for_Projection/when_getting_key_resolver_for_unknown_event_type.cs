@@ -21,7 +21,7 @@ namespace Cratis.Events.Projections.for_Projection
                 Array.Empty<IProjection>());
         }
 
-        void Because() => result = Catch.Exception(() => projection.GetKeyResolverFor("6ffcf259-2069-4e7b-bf60-006edbffaf8b"));
+        void Because() => result = Catch.Exception(() => projection.GetKeyResolverFor(new("6ffcf259-2069-4e7b-bf60-006edbffaf8b", 1)));
 
         [Fact] void should_throw_missing_key_resolver_for_event_type() => result.ShouldBeOfExactType<MissingKeyResolverForEventType>();
     }

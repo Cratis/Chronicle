@@ -18,7 +18,7 @@ namespace Cratis.Events.Projections.Expressions.for_AddExpressionResolver
             var content = new ExpandoObject();
             dynamic contentAsDynamic = content;
             contentAsDynamic.sourceProperty = 42d;
-            @event = new Event(0, "f0b3b624-faa7-4358-ade4-24e89ad067ce", DateTimeOffset.UtcNow, "a258b980-b9e4-4b99-b44b-7c72f8633af7", content);
+            @event = new Event(0, new("f0b3b624-faa7-4358-ade4-24e89ad067ce", 1), DateTimeOffset.UtcNow, "a258b980-b9e4-4b99-b44b-7c72f8633af7", content);
             resolver = new();
         }
 

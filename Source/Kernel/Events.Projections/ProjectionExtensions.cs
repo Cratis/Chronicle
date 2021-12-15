@@ -25,7 +25,21 @@ namespace Cratis.Events.Projections
             return observable.Where(_ => _.Event.Type == eventType);
         }
 
-        public static IObservable<EventContext> Child(this IObservable<EventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+        /// <summary>
+        /// Handle a child operation.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+        /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+        /// <param name="identifiedByProperty">The property that identifies a child.</param>
+        /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
+        /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
+        /// <returns>The observable for continuation.</returns>
+        public static IObservable<EventContext> Child(
+            this IObservable<EventContext> observable,
+            PropertyPath childrenProperty,
+            PropertyPath identifiedByProperty,
+            ValueProvider<Event> keyResolver,
+            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
         {
             observable.Subscribe(_ =>
             {
@@ -33,17 +47,31 @@ namespace Cratis.Events.Projections
                 var key = keyResolver(_.Event);
                 if (!items.Contains(identifiedByProperty, key))
                 {
-                    _.Changeset.ApplyAddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
+                    _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
                 }
             });
             return observable;
         }
 
-        public static IObservable<EventContext> Project(this IObservable<EventContext> observable, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<Event> keyResolver, IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+        /// <summary>
+        /// Project properties from event onto model or child model.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+        /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+        /// <param name="identifiedByProperty">The property that identifies a child.</param>
+        /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
+        /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
+        /// <returns>The observable for continuation.</returns>
+        public static IObservable<EventContext> Project(
+            this IObservable<EventContext> observable,
+            PropertyPath childrenProperty,
+            PropertyPath identifiedByProperty,
+            ValueProvider<Event> keyResolver,
+            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
-                observable.Subscribe(_ => _.Changeset.ApplyProperties(propertyMappers));
+                observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers));
             }
             else
             {
@@ -52,17 +80,23 @@ namespace Cratis.Events.Projections
                     var key = keyResolver(_.Event);
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
-                        var child = _.Changeset.GetChildByKey<Event, ExpandoObject, ExpandoObject>(childrenProperty, identifiedByProperty, key);
-                        _.Changeset.ApplyChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                        var child = _.Changeset.GetChildByKey<ExpandoObject>(childrenProperty, identifiedByProperty, key);
+                        _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
                     }
                 });
             }
             return observable;
         }
 
+        /// <summary>
+        /// Remove item based on event.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+        /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
+        /// <returns>The observable for continuation.</returns>
         public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
         {
-            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.ApplyRemove());
+            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.Remove());
             return observable;
         }
 
