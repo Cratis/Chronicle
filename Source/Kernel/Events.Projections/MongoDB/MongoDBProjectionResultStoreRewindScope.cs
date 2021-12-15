@@ -69,6 +69,8 @@ namespace Cratis.Events.Projections.MongoDB
             }
 
             _onDispose();
+
+            GC.SuppressFinalize(this);
         }
     }
 }

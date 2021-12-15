@@ -10,6 +10,6 @@ namespace Cratis.Events.Projections
     /// Represents the context of an event when being handled by a <see cref="IProjection"/>.
     /// </summary>
     /// <param name="Event">The <see cref="Event"/> that occurred.</param>
-    /// <param name="Changeset">The <see cref="Changeset{Event, ExpandoObject}"/> to build on.</param>
-    public record EventContext(Event Event, Changeset<Event, ExpandoObject> Changeset);
+    /// <param name="Changeset">The <see cref="IChangeset{Event, ExpandoObject}"/> to build on.</param>
+    public record EventContext(Event Event, IChangeset<Event, ExpandoObject> Changeset);
 }

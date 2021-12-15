@@ -25,6 +25,7 @@ namespace Cratis.Events.Projections.Json
             {
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
+            _serializer.Converters.Add(new FromDefinitionsConverter());
             _serializer.Converters.Add(new PropertyPathJsonConverter());
             _serializer.Converters.Add(new PropertyExpressionDictionaryJsonConverter());
             _serializer.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());

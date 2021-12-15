@@ -66,7 +66,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="event"><see cref="Event"/> to provide.</param>
         /// <param name="changeset"><see cref="Changeset{Event, ExpandoObject}"/> being worked on.</param>
-        void OnNext(Event @event, Changeset<Event, ExpandoObject> changeset);
+        void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset);
 
         /// <summary>
         /// Get the <see cref="ValueProvider{Event}"/> associated with a given <see cref="EventType"/>.

@@ -8,7 +8,7 @@ namespace Cratis.Events.Projections.for_Projection
 {
     public class when_getting_key_resolver_for_event_type : Specification
     {
-        static EventType event_type = "993888cc-a9c5-4d56-ae21-f732159feec7";
+        static EventType event_type = new("993888cc-a9c5-4d56-ae21-f732159feec7", 1);
         Projection projection;
         ValueProvider<Event> expected;
         ValueProvider<Event> result;

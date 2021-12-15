@@ -20,6 +20,7 @@ namespace Cratis.Events.Projections.InMemory
         /// <inheritdoc/>
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
         }
     }
 }

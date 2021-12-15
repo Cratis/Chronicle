@@ -12,10 +12,13 @@ import {
     IColumn,
     ICommandBarItemProps,
     IDetailsListStyles,
+    Pivot,
+    PivotItem,
     Selection,
     SelectionMode,
     Stack
 } from '@fluentui/react';
+import { Collections } from './Collections';
 
 const gridStyles: Partial<IDetailsListStyles> = {
     root: {
@@ -46,21 +49,43 @@ const columns: IColumn[] = [
         key: 'name',
         name: 'Name',
         fieldName: 'name',
-        minWidth: 200
+        minWidth: 200,
+        isResizable: true
     },
     {
         key: 'state',
         name: 'State',
         fieldName: 'state',
-        minWidth: 200
+        minWidth: 200,
+        isResizable: true
+    },
+    {
+        key: 'jobInformation',
+        name: 'Job Information',
+        fieldName: 'jobInformation',
+        minWidth: 200,
+        isResizable: true
     },
     {
         key: 'position',
         name: 'Positions',
         fieldName: 'positions',
-        minWidth: 200
+        minWidth: 200,
+        isResizable: true
     }
 ];
+
+const rewind = (id: string) => {
+    (async () => {
+        const response = await fetch(`/api/events/projections/${id}/rewind`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+    })();
+};
 
 
 export const Projections = () => {
@@ -73,7 +98,6 @@ export const Projections = () => {
         }
     ];
     const [selected, setSelected] = useState<Projection>();
-
 
     const selection = useMemo(
         () => new Selection({
@@ -93,19 +117,7 @@ export const Projections = () => {
             key: 'rewind',
             name: 'Rewind',
             iconProps: { iconName: 'Rewind' },
-            onClick: () => {
-                const id = selected.id;
-
-                (async () => {
-                    const response = await fetch(`/api/events/projections/rewind/${id}`, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                })();
-            }
+            onClick: () => rewind(selected.id)
         });
     }
 
@@ -123,8 +135,11 @@ export const Projections = () => {
             </Stack.Item>
             {selected &&
                 <Stack.Item grow={1}>
-                    Hello
-
+                    <Pivot linkFormat="links">
+                        <PivotItem headerText="Collections">
+                            <Collections projectionId={selected.id}/>
+                        </PivotItem>
+                    </Pivot>
                 </Stack.Item>
             }
         </Stack >
