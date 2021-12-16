@@ -24,6 +24,8 @@ namespace Cratis.Events.Schemas
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
             };
             _generator.GenerationProviders.Add(new StringEnumGenerationProvider());
+            _generator.GenerationProviders.Add(new ConceptAsGenerationProvider());
+            _generator.GenerationProviders.Add(new FormatSchemaGenerationProvider());
             _generator.GenerationProviders.Add(new PIISchemaGenerationProvider());
         }
 
