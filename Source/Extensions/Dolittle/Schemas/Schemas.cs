@@ -4,6 +4,7 @@
 extern alias SDK;
 
 using Cratis.Events.Schemas;
+using SDK::Cratis.Compliance;
 
 namespace Cratis.Extensions.Dolittle.Schemas
 {
@@ -15,10 +16,12 @@ namespace Cratis.Extensions.Dolittle.Schemas
         /// Initializes a new instance of the <see cref="Schemas"/> class.
         /// </summary>
         /// <param name="eventTypes"><see cref="SDK::Cratis.Events.IEventTypes"/> to use.</param>
+        /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata for compliance.</param>
         /// <param name="schemaStore">The underlying <see cref="ISchemaStore"/>.</param>
         public Schemas(
             SDK::Cratis.Events.IEventTypes eventTypes,
-            ISchemaStore schemaStore) : base(eventTypes)
+            IComplianceMetadataResolver metadataResolver,
+            ISchemaStore schemaStore) : base(eventTypes, metadataResolver)
         {
             _schemaStore = schemaStore;
         }
@@ -30,6 +33,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
             {
                 _schemaStore.Register(
                     new Events.EventType(schemaDefinition.Type.EventTypeId.Value, schemaDefinition.Type.Generation.Value),
+                    schemaDefinition.FriendlyName,
                     schemaDefinition.Schema);
             }
         }

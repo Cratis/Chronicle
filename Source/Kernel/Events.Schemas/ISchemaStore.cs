@@ -14,9 +14,10 @@ namespace Cratis.Events.Schemas
         /// Register a <see cref="JSchema"/> for a specific <see cref="EventType"/>.
         /// </summary>
         /// <param name="type"><see cref="EventType"/> to register for.</param>
+        /// <param name="friendlyName">A friendly name to identify the event with.</param>
         /// <param name="schema"><see cref="JSchema"/> to register.</param>
         /// <returns>Async task.</returns>
-        Task Register(EventType type, JSchema schema);
+        Task Register(EventType type, string friendlyName, JSchema schema);
 
         /// <summary>
         /// Get the latest <see cref="EventSchema">event schema</see> for all registered <see cref="EventType">event types</see>.
