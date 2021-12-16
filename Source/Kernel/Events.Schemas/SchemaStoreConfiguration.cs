@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Extensions.Dolittle.Schemas
+namespace Cratis.Events.Schemas
 {
     /// <summary>
     /// Represents the configuration for <see cref="ISchemaStore"/>.

@@ -3,7 +3,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Cratis.Extensions.Dolittle.Schemas
+namespace Cratis.Events.Schemas
 {
     /// <summary>
     /// Represents the <see cref="EventSchema"/> for MongoDB storage purpose.
@@ -25,12 +25,12 @@ namespace Cratis.Extensions.Dolittle.Schemas
         /// <summary>
         /// Gets the identifier part of <see cref="EventType"/>.
         /// </summary>
-        public Guid EventType { get; init; } = Guid.Empty;
+        public Guid EventType { get; init; } = EventTypeId.Unknown.Value;
 
         /// <summary>
         /// Gets the generation part of the <see cref="EventType"/>>.
         /// </summary>
-        public uint Generation { get; init; } = 1;
+        public uint Generation { get; init; } = EventGeneration.First.Value;
 
         /// <summary>
         /// Gets the actual schema as JSON.
