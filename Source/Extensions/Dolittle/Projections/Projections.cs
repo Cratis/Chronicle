@@ -32,7 +32,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization of projection definitions.</param>
         /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
-        /// <param name="serviceProvider"></param>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> used for getting instances from the IoC.</param>
         public Projections(
             IEventTypes eventTypes,
             ITypes types,

@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json.Schema;
 
-namespace Cratis.Extensions.Dolittle.Schemas
+namespace Cratis.Events.Schemas
 {
     /// <summary>
     /// Extension methods for working with <see cref="EventSchema"/>.
@@ -19,8 +19,8 @@ namespace Cratis.Extensions.Dolittle.Schemas
         {
             return new EventSchemaMongoDB
             {
-                EventType = schema.EventType.Id,
-                Generation = schema.EventType.Generation,
+                EventType = schema.Type.Id,
+                Generation = schema.Type.Generation,
                 Schema = schema.Schema.ToString()
             };
         }
@@ -33,7 +33,7 @@ namespace Cratis.Extensions.Dolittle.Schemas
         public static EventSchema ToEventSchema(this EventSchemaMongoDB schema)
         {
             return new EventSchema(
-               new global::Dolittle.SDK.Events.EventType(
+               new EventType(
                    schema.EventType,
                    schema.Generation),
                JSchema.Parse(schema.Schema));

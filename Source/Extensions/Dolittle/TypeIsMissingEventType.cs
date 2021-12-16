@@ -4,7 +4,7 @@
 using Cratis.Reflection;
 using Dolittle.SDK.Events;
 
-namespace Cratis.Extensions.Dolittle.Schemas
+namespace Cratis.Extensions.Dolittle
 {
     /// <summary>
     /// Exception that gets thrown when a <see cref="Type"/> does not have any <see cref="EventType"/> information available.

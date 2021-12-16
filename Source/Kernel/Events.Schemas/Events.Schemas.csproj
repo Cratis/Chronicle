@@ -6,6 +6,8 @@
 
     <ItemGroup>
         <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+        <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
     </ItemGroup>
 
     <ItemGroup>

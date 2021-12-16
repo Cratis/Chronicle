@@ -4,7 +4,7 @@
 using System.Globalization;
 using Newtonsoft.Json.Schema;
 
-namespace Cratis.Extensions.Dolittle.Schemas
+namespace Cratis.Events.Schemas
 {
     /// <summary>
     /// Extension methods for working with <see cref="JSchema"/> and specific metadata.

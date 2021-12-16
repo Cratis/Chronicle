@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Extensions.Dolittle.Schemas;
+extern alias SDK;
+
 using Cratis.Extensions.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,13 +18,10 @@ namespace Microsoft.AspNetCore.Builder
         /// /// </summary>
         /// <param name="applicationBuilder"><see cref="IApplicationBuilder"/> to add to.</param>
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
-        public static IApplicationBuilder UseDolittleSchemaStore(this IApplicationBuilder applicationBuilder)
+        public static IApplicationBuilder UseDolittleSchemas(this IApplicationBuilder applicationBuilder)
         {
             applicationBuilder.ApplicationServices.GetService<MongoDBDefaults>()!.Initialize();
-            applicationBuilder
-                .ApplicationServices
-                .GetService<ISchemaStore>()?
-                .DiscoverGenerateAndConsolidate();
+            applicationBuilder.ApplicationServices.GetService<SDK::Cratis.Events.Schemas.ISchemas>()!.RegisterAll();
             return applicationBuilder;
         }
     }
