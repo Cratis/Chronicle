@@ -5,8 +5,6 @@ using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using MongoDB.Driver;
 using Newtonsoft.Json.Schema;
-using Newtonsoft.Json.Schema.Generation;
-using Newtonsoft.Json.Serialization;
 
 namespace Cratis.Events.Schemas
 {
@@ -18,19 +16,9 @@ namespace Cratis.Events.Schemas
     {
         const string DatabaseName = "schema_store";
         const string SchemasCollection = "schemas";
-        static readonly JSchemaGenerator _generator;
         readonly IMongoDatabase _database;
         readonly IMongoCollection<EventSchemaMongoDB> _collection;
         Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
-
-        static SchemaStore()
-        {
-            _generator = new JSchemaGenerator
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            };
-            _generator.GenerationProviders.Add(new StringEnumGenerationProvider());
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SchemaStore"/> class.
@@ -53,7 +41,7 @@ namespace Cratis.Events.Schemas
         }
 
         /// <inheritdoc/>
-        public async Task Register(EventType type, JSchema schema)
+        public async Task Register(EventType type, string friendlyName, JSchema schema)
         {
             await PopulateIfNotPopulated();
 
@@ -63,6 +51,9 @@ namespace Cratis.Events.Schemas
             // .. do not allow generational gaps
 
             // if (await HasFor(type.Id, type.Generation)) return;
+
+            schema.SetDisplayName(friendlyName);
+            schema.SetGeneration(type.Generation);
 
             var eventSchema =  new EventSchema(type, schema).ToMongoDB();
 

@@ -9,6 +9,7 @@ namespace Cratis.Events.Schemas
     /// Represents the schema of an event.
     /// </summary>
     /// <param name="Type">The <see cref="EventType">type of event</see>-</param>
+    /// <param name="FriendlyName">A friendly name for the event.</param>
     /// <param name="Schema">The <see cref="JSchema">JSON schema</see>.</param>
-    public record EventSchemaDefinition(EventType Type, JSchema Schema);
+    public record EventSchemaDefinition(EventType Type, string FriendlyName, JSchema Schema);
 }
