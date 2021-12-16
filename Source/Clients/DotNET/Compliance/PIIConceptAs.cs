@@ -10,5 +10,9 @@ namespace Cratis.Compliance
     /// </summary>
     /// <param name="Value">Underlying value.</param>
     /// <typeparam name="T">Type of the underlying value.</typeparam>
-    public record PIIConceptAs<T>(T Value) : ConceptAs<T>(Value), IHoldPII;
+    public record PIIConceptAs<T>(T Value) : ConceptAs<T>(Value), IHoldPII
+    {
+        /// <inheritdoc/>
+        public virtual string Details => string.Empty;
+    }
 }
