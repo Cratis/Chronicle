@@ -4,7 +4,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.Extensions.Dolittle.Schemas.Api
+namespace Cratis.Events.Schemas.API
 {
     [Route("/api/events/types")]
     public class EventTypes : Controller
@@ -23,7 +23,7 @@ namespace Cratis.Extensions.Dolittle.Schemas.Api
 
             return schemas.Select(_ =>
                 new EventType(
-                    _.EventType.Id.ToString(),
+                    _.Type.Id.ToString(),
                     _.Schema.GetDisplayName(),
                     _.Schema.GetGeneration()));
         }
@@ -32,8 +32,8 @@ namespace Cratis.Extensions.Dolittle.Schemas.Api
         public async Task<IEnumerable<JsonDocument>> GenerationSchemasForType(
             [FromRoute] string eventTypeId)
         {
-            var schemas = await _schemaStore.GetAllGenerationsForEventType(new global::Dolittle.SDK.Events.EventType(eventTypeId, 1));
-            return schemas.Select(_ => JsonDocument.Parse(_.Schema.ToString()));
+            var schemas = await _schemaStore.GetAllGenerationsForEventType(new (eventTypeId, 1));
+            return schemas.Select(_ => JsonDocument.Parse(_.Schema.ToJson()));
         }
     }
 }

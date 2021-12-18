@@ -4,7 +4,7 @@
 extern alias SDK;
 
 using Cratis.Events.Schemas;
-using SDK::Cratis.Compliance;
+using Cratis.Schemas;
 
 namespace Cratis.Extensions.Dolittle.Schemas
 {
@@ -16,12 +16,12 @@ namespace Cratis.Extensions.Dolittle.Schemas
         /// Initializes a new instance of the <see cref="Schemas"/> class.
         /// </summary>
         /// <param name="eventTypes"><see cref="SDK::Cratis.Events.IEventTypes"/> to use.</param>
-        /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata for compliance.</param>
+        /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas..</param>
         /// <param name="schemaStore">The underlying <see cref="ISchemaStore"/>.</param>
         public Schemas(
             SDK::Cratis.Events.IEventTypes eventTypes,
-            IComplianceMetadataResolver metadataResolver,
-            ISchemaStore schemaStore) : base(eventTypes, metadataResolver)
+            IJsonSchemaGenerator schemaGenerator,
+            ISchemaStore schemaStore) : base(eventTypes, schemaGenerator)
         {
             _schemaStore = schemaStore;
         }

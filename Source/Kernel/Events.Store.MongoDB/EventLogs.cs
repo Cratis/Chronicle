@@ -1,16 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.DependencyInversion;
+using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Cratis.DependencyInversion;
-using Cratis.Execution;
 
 namespace Cratis.Events.Store.MongoDB
 {
-
     /// <summary>
     /// Represents an implementation of <see cref="IEventLogs"/> for MongoDB.
     /// </summary>
@@ -50,7 +49,7 @@ namespace Cratis.Events.Store.MongoDB
                 var @event = new Event
                 {
                     SequenceNumber = sequenceNumber,
-                    Type = eventType.EventTypeId,
+                    Type = eventType.Id,
                     Occurred = DateTimeOffset.UtcNow,
                     EventSourceId = eventSourceId,
                 };
