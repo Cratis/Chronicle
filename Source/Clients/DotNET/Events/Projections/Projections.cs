@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Reflection;
+using Cratis.Schemas;
 using Cratis.Types;
 
 namespace Cratis.Events.Projections
@@ -14,10 +15,10 @@ namespace Cratis.Events.Projections
     {
         static class ProjectionDefinitionCreator<TModel>
         {
-            public static ProjectionDefinition CreateAndDefine(Type type, ProjectionId identifier, IEventTypes eventTypes)
+            public static ProjectionDefinition CreateAndDefine(Type type, ProjectionId identifier, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator)
             {
                 var instance = (Activator.CreateInstance(type) as IProjectionFor<TModel>)!;
-                var builder = new ProjectionBuilderFor<TModel>(identifier, eventTypes);
+                var builder = new ProjectionBuilderFor<TModel>(identifier, eventTypes, schemaGenerator);
                 instance.Define(builder);
                 return builder.Build();
             }
@@ -30,7 +31,8 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-        public Projections(IEventTypes eventTypes, ITypes types)
+        /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+        public Projections(IEventTypes eventTypes, ITypes types, IJsonSchemaGenerator schemaGenerator)
         {
             _projections = types.All
                     .Where(_ => _.HasAttribute<ProjectionAttribute>() && _.HasInterface(typeof(IProjectionFor<>)))
@@ -40,7 +42,7 @@ namespace Cratis.Events.Projections
                         var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
                         var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
                         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                        return (method.Invoke(null, new object[] { _, projection.Identifier, eventTypes }) as ProjectionDefinition)!;
+                        return (method.Invoke(null, new object[] { _, projection.Identifier, eventTypes, schemaGenerator }) as ProjectionDefinition)!;
                     }).ToArray();
         }
 

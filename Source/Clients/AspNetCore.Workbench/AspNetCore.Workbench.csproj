@@ -10,10 +10,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
         <ProjectReference Include="../../Kernel/Events.Projections.Api/Events.Projections.Api.csproj" />
     </ItemGroup>

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Newtonsoft.Json.Schema;
+using NJsonSchema;
 
 namespace Cratis.Events.Schemas
 {
@@ -21,7 +21,7 @@ namespace Cratis.Events.Schemas
             {
                 EventType = schema.Type.Id,
                 Generation = schema.Type.Generation,
-                Schema = schema.Schema.ToString()
+                Schema = schema.Schema.ToJson()
             };
         }
 
@@ -32,11 +32,13 @@ namespace Cratis.Events.Schemas
         /// <returns>Converted <see cref="EventSchema"/>.</returns>
         public static EventSchema ToEventSchema(this EventSchemaMongoDB schema)
         {
+            var task = JsonSchema.FromJsonAsync(schema.Schema);
+            task.Wait();
+
             return new EventSchema(
                new EventType(
                    schema.EventType,
-                   schema.Generation),
-               JSchema.Parse(schema.Schema));
+                   schema.Generation), task.Result);
         }
     }
 }

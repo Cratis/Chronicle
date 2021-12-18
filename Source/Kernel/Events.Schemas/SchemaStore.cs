@@ -4,7 +4,7 @@
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using MongoDB.Driver;
-using Newtonsoft.Json.Schema;
+using NJsonSchema;
 
 namespace Cratis.Events.Schemas
 {
@@ -41,7 +41,7 @@ namespace Cratis.Events.Schemas
         }
 
         /// <inheritdoc/>
-        public async Task Register(EventType type, string friendlyName, JSchema schema)
+        public async Task Register(EventType type, string friendlyName, JsonSchema schema)
         {
             await PopulateIfNotPopulated();
 

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Newtonsoft.Json.Schema;
+using NJsonSchema;
 
 namespace Cratis.Events.Schemas
 {
@@ -10,6 +10,6 @@ namespace Cratis.Events.Schemas
     /// </summary>
     /// <param name="Type">The <see cref="EventType">type of event</see>-</param>
     /// <param name="FriendlyName">A friendly name for the event.</param>
-    /// <param name="Schema">The <see cref="JSchema">JSON schema</see>.</param>
-    public record EventSchemaDefinition(EventType Type, string FriendlyName, JSchema Schema);
+    /// <param name="Schema">The <see cref="JsonSchema">JSON schema</see>.</param>
+    public record EventSchemaDefinition(EventType Type, string FriendlyName, JsonSchema Schema);
 }

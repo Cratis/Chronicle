@@ -12,6 +12,5 @@
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
-      <PackageReference Include="Newtonsoft.Json.Schema" Version="$(NewtonsoftJsonSchema)" />
     </ItemGroup>
 </Project>

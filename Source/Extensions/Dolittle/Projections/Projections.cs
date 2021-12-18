@@ -9,6 +9,7 @@ using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Json;
 using Cratis.Events.Projections.MongoDB;
 using Cratis.Execution;
+using Cratis.Schemas;
 using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
@@ -32,13 +33,15 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serialization of projection definitions.</param>
         /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
+        /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
         /// <param name="serviceProvider"><see cref="IServiceProvider"/> used for getting instances from the IoC.</param>
         public Projections(
             IEventTypes eventTypes,
             ITypes types,
             IJsonProjectionSerializer projectionSerializer,
             ProjectionsReady projectionsReady,
-            IServiceProvider serviceProvider) : base(eventTypes, types)
+            IJsonSchemaGenerator schemaGenerator,
+            IServiceProvider serviceProvider) : base(eventTypes, types, schemaGenerator)
         {
             _projectionSerializer = projectionSerializer;
             _serviceProvider = serviceProvider;
