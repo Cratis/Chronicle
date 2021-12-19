@@ -25,6 +25,7 @@ namespace Cratis.Compliance
         public static string GetComplianceMetadataDetails(this PropertyInfo property) =>
             property.GetCustomAttribute<ComplianceDetailsAttribute>()?.Details ??
             property.DeclaringType?.GetCustomAttribute<ComplianceDetailsAttribute>()?.Details ??
+            property.PropertyType.GetComplianceMetadataDetails() ??
             string.Empty;
     }
 }
