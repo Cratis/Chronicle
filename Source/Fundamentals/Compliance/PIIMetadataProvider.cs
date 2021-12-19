@@ -15,7 +15,10 @@ namespace Cratis.Compliance
         public bool CanProvide(Type type) => type.Implements(typeof(IHoldPII)) || type.GetCustomAttribute<PIIAttribute>() != default;
 
         /// <inheritdoc/>
-        public bool CanProvide(PropertyInfo property) => property.GetCustomAttribute<PIIAttribute>() != default || property.DeclaringType?.GetCustomAttribute<PIIAttribute>() != default;
+        public bool CanProvide(PropertyInfo property) =>
+            property.GetCustomAttribute<PIIAttribute>() != default ||
+            property.DeclaringType?.GetCustomAttribute<PIIAttribute>() != default ||
+            CanProvide(property.PropertyType);
 
         /// <inheritdoc/>
         public ComplianceMetadata Provide(Type type)
