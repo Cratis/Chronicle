@@ -1,10 +1,12 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System.Reflection;
 
 namespace Cratis.Compliance.for_ComplianceDetailsExtensions
 {
     public class when_getting_details_from_property_not_holding_details : Specification
     {
-
         class MyClass
         {
             public string Something { get; set; }
