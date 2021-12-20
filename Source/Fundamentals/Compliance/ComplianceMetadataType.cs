@@ -15,5 +15,11 @@ namespace Cratis.Compliance
         /// Personal Identifiable Information according to the definition in GDPR.
         /// </summary>
         public static readonly ComplianceMetadataType PII = new(Guid.Parse("cae5580e-83d6-44dc-9d7a-a72e8a2f17d7"));
+
+        /// <summary>
+        /// Convert from a <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ComplianceMetadataType"/>.
+        /// </summary>
+        /// <param name="value"><see cref="string"/> representation.</param>
+        public static implicit operator ComplianceMetadataType(string value) => new(Guid.Parse(value));
     }
 }
