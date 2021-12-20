@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using ExecutionContext = Cratis.Execution.ExecutionContext;
 
 namespace Cratis.Events.Store.MongoDB
 {
@@ -18,6 +19,7 @@ namespace Cratis.Events.Store.MongoDB
     {
         const string BaseCollectionName = "event-log";
         readonly ILogger<EventLogs> _logger;
+        readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
 
         static EventLogs()
@@ -34,10 +36,12 @@ namespace Cratis.Events.Store.MongoDB
         /// </summary>
         /// <param name="mongoDatabaseProvider"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
         /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-        public EventLogs(ProviderFor<IMongoDatabase> mongoDatabaseProvider, ILogger<EventLogs> logger)
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
+        public EventLogs(ProviderFor<IMongoDatabase> mongoDatabaseProvider, ILogger<EventLogs> logger, IExecutionContextManager executionContextManager)
         {
             _mongoDatabaseProvider = mongoDatabaseProvider;
             _logger = logger;
+            _executionContextManager = executionContextManager;
         }
 
         /// <inheritdoc/>
@@ -46,14 +50,19 @@ namespace Cratis.Events.Store.MongoDB
             try
             {
                 _logger.Committing(sequenceNumber);
-                var @event = new Event
-                {
-                    SequenceNumber = sequenceNumber,
-                    Type = eventType.Id,
-                    Occurred = DateTimeOffset.UtcNow,
-                    EventSourceId = eventSourceId,
-                };
-                @event.Content[eventType.Generation.ToString()] = BsonDocument.Parse(content);
+                var @event = new Event(
+                    sequenceNumber,
+                    _executionContextManager.Current.CorrelationId,
+                    _executionContextManager.Current.CausationId,
+                    _executionContextManager.Current.CausedBy,
+                    eventType.Id,
+                    DateTimeOffset.UtcNow,
+                    eventSourceId,
+                    new Dictionary<EventGeneration, BsonDocument>
+                    {
+                        { eventType.Generation, BsonDocument.Parse(content) }
+                    },
+                     Array.Empty<EventCompensation>());
                 await GetCollectionFor(eventLogId).InsertOneAsync(@event);
             }
             catch (Exception ex)
