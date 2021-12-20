@@ -66,7 +66,7 @@ namespace Cratis.Events.Store
         }
 
         /// <inheritdoc/>
-        public async Task Compensate(EventLogSequenceNumber sequenceNumber, EventType eventType, string content)
+        public async Task Compensate(EventLogSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default)
         {
             _logger.Compensating(eventType, sequenceNumber, _eventLogId);
 
