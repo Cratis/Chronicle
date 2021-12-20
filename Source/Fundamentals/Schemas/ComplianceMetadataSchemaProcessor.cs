@@ -29,7 +29,7 @@ namespace Cratis.Schemas
         /// <inheritdoc/>
         public void Process(SchemaProcessorContext context)
         {
-            if (_metadataResolver.HasMetadata(context.Type))
+            if (_metadataResolver.HasMetadataFor(context.Type))
             {
                 AddMetadataToSchema(context.Schema, _metadataResolver.GetMetadataFor(context.Type));
             }
@@ -38,7 +38,7 @@ namespace Cratis.Schemas
             {
                 var propertyName = key.ToPascalCase();
                 var clrProperty = context.Type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                if (clrProperty != default && _metadataResolver.HasMetadata(clrProperty))
+                if (clrProperty != default && _metadataResolver.HasMetadataFor(clrProperty))
                 {
                     AddMetadataToSchema(property, _metadataResolver.GetMetadataFor(clrProperty));
                 }

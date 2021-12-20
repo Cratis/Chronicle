@@ -15,14 +15,14 @@ namespace Cratis.Compliance
         /// </summary>
         /// <param name="type"><see cref="Type"/> to check.</param>
         /// <returns>True if it has, false if not.</returns>
-        bool HasMetadata(Type type);
+        bool HasMetadataFor(Type type);
 
         /// <summary>
         /// Check whether or not a specific <see cref="PropertyInfo"/> has any <see cref="ComplianceMetadata"/> associated with it.
         /// </summary>
         /// <param name="property"><see cref="PropertyInfo"/> to check.</param>
         /// <returns>True if it has, false if not.</returns>
-        bool HasMetadata(PropertyInfo property);
+        bool HasMetadataFor(PropertyInfo property);
 
         /// <summary>
         /// Get the <see cref="ComplianceMetadata"/> associated with a <see cref="Type"/>.

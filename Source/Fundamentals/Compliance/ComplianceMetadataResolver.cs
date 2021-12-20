@@ -28,10 +28,10 @@ namespace Cratis.Compliance
         }
 
         /// <inheritdoc/>
-        public bool HasMetadata(Type type) => _typeProviders.Any(_ => _.CanProvide(type));
+        public bool HasMetadataFor(Type type) => _typeProviders.Any(_ => _.CanProvide(type));
 
         /// <inheritdoc/>
-        public bool HasMetadata(PropertyInfo property) => _propertyProviders.Any(_ => _.CanProvide(property));
+        public bool HasMetadataFor(PropertyInfo property) => _propertyProviders.Any(_ => _.CanProvide(property));
 
         /// <inheritdoc/>
         public ComplianceMetadata GetMetadataFor(Type type)
@@ -49,7 +49,7 @@ namespace Cratis.Compliance
 
         void ThrowIfNoComplianceMetadataForType(Type type)
         {
-            if (!HasMetadata(type))
+            if (!HasMetadataFor(type))
             {
                 throw new NoComplianceMetadataForType(type);
             }
@@ -57,7 +57,7 @@ namespace Cratis.Compliance
 
         void ThrowIfNoComplianceMetadataForProperty(PropertyInfo property)
         {
-            if (!HasMetadata(property))
+            if (!HasMetadataFor(property))
             {
                 throw new NoComplianceMetadataForProperty(property);
             }
