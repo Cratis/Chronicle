@@ -38,7 +38,8 @@ namespace Cratis.Execution
             _currentExecutionContext.Value = new ExecutionContext(
                 tenantId,
                 correlationId,
-                string.Empty);
+                string.Empty,
+                Guid.Empty);
 
             return _currentExecutionContext.Value;
         }

@@ -9,5 +9,6 @@ namespace Cratis.Execution
     /// <param name="TenantId">The <see cref="TenantId"/>.</param>
     /// <param name="CorrelationId">The <see cref="CorrelationId"/>.</param>
     /// <param name="CausationId">The <see cref="CausationId"/>.</param>
-    public record ExecutionContext(TenantId TenantId, CorrelationId CorrelationId, CausationId CausationId);
+    /// <param name="CausedBy">The person or system that is the cause.</param>
+    public record ExecutionContext(TenantId TenantId, CorrelationId CorrelationId, CausationId CausationId, CausedBy CausedBy);
 }
