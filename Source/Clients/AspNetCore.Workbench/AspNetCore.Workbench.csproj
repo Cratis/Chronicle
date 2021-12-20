@@ -11,6 +11,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+        <ProjectReference Include="../../Kernel/Events.Schemas.Api/Events.Schemas.Api.csproj" />
         <ProjectReference Include="../../Kernel/Events.Projections.Api/Events.Projections.Api.csproj" />
     </ItemGroup>
 
