@@ -57,13 +57,13 @@ namespace Cratis.Server
             app.UseSwaggerUI();
 
             app.UseRouting();
-            // app.UseEndpoints(endpoints =>
-            // {
-            //     endpoints.MapControllers();
-            //     endpoints.MapGrpcService<EventLogService>();
-            //     endpoints.MapGrpcService<ObserversService>();
-            //     endpoints.MapCodeFirstGrpcReflectionService();
-            // });
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                endpoints.MapGrpcService<EventLogService>();
+                endpoints.MapGrpcService<ObserversService>();
+                endpoints.MapCodeFirstGrpcReflectionService();
+            });
         }
     }
 }
