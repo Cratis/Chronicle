@@ -9,6 +9,12 @@ namespace Cratis.Execution
     /// Represents an identifier of an identity that was the root of a cause.
     /// </summary>
     /// <param name="Value">Actual value.</param>
-    public record CausedBy(Guid Value) : ConceptAs<Guid>(Value);
-
+    public record CausedBy(Guid Value) : ConceptAs<Guid>(Value)
+    {
+        /// <summary>
+        /// Implicitly convert from <see cref="Guid"/> to <see cref="CausedBy"/>.
+        /// </summary>
+        /// <param name="value"><see cref="Guid"/> to convert from.</param>
+        public static implicit operator CausedBy(Guid value) => new(value);
+    }
 }
