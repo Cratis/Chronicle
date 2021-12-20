@@ -61,6 +61,7 @@
         "Expando",
         "fluentui",
         "Grpc",
+        "Namotion",
         "Proto",
         "protobuf",
         "tinycolor"

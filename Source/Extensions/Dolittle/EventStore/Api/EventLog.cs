@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Extensions.Dolittle.Schemas;
+using Cratis.Events.Schemas;
 using Cratis.Extensions.MongoDB;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;

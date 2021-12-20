@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Schemas.Api</AssemblyName>
+        <RootNamespace>Cratis.Events.Schemas.Api</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
+    </ItemGroup>
+</Project>

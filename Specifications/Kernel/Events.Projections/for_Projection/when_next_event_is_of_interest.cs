@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Changes;
-using Newtonsoft.Json.Schema;
+using NJsonSchema;
 
 namespace Cratis.Events.Projections.for_Projection
 {
@@ -27,7 +27,7 @@ namespace Cratis.Events.Projections.for_Projection
                 "0b7325dd-7a25-4681-9ab7-c387a6073547",
                 string.Empty,
                 string.Empty,
-                new Model(string.Empty, new JSchema()),
+                new Model(string.Empty, new JsonSchema()),
                 new[] {
                     new EventTypeWithKeyResolver(event_b, EventValueProviders.FromEventSourceId)
                 },
