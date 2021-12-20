@@ -4,10 +4,14 @@
         <RootNamespace>Sample</RootNamespace>
 
         <IsPackable>false</IsPackable>
+        <AksioProxyOutput></AksioProxyOutput>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
-        <ProjectReference Include="../../Source/Clients/AspNetCore.Workbench/AspNetCore.Workbench.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
     </ItemGroup>
 </Project>

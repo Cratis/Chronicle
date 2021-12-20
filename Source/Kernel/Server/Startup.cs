@@ -31,6 +31,8 @@ namespace Cratis.Server
 
             services.AddCodeFirstGrpc(config => config.ResponseCompressionLevel = CompressionLevel.Optimal);
             services.AddCodeFirstGrpcReflection();
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
             services.TryAddSingleton(BinderConfiguration.Create(binder: new ServiceBinderWithServiceResolutionFromServiceCollection(services)));
         }
 
@@ -51,19 +53,17 @@ namespace Cratis.Server
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
             app.UseRouting();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-
-                if (env.IsDevelopment())
-                {
-                }
-
-                endpoints.MapGrpcService<EventLogService>();
-                endpoints.MapGrpcService<ObserversService>();
-                endpoints.MapCodeFirstGrpcReflectionService();
-            });
+            // app.UseEndpoints(endpoints =>
+            // {
+            //     endpoints.MapControllers();
+            //     endpoints.MapGrpcService<EventLogService>();
+            //     endpoints.MapGrpcService<ObserversService>();
+            //     endpoints.MapCodeFirstGrpcReflectionService();
+            // });
         }
     }
 }

@@ -3,7 +3,7 @@
 
 //new HostBuilder().ConfigureWebHostDefaults()
 
-using AspNetCore;
+using Sample;
 
 var builder = Host.CreateDefaultBuilder()
                     .UseCratis()

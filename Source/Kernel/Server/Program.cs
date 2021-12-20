@@ -43,10 +43,11 @@ namespace Cratis.Server
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _
                     .UseStartup<Startup>()
-                    .ConfigureKestrel(options => {
-                        options.Listen(IPAddress.Any, 5000, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
-                        options.Listen(IPAddress.Any, 5002, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-                    }));
+                    // .ConfigureKestrel(options => {
+                    //     options.Listen(IPAddress.Any, 5000, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
+                    //     options.Listen(IPAddress.Any, 5002, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+                    // })
+                    );
 
         static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
         {
