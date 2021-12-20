@@ -45,7 +45,7 @@ namespace Cratis.Events.Store.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task Commit(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, string content)
+        public async Task Append(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, string content)
         {
             try
             {
