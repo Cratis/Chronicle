@@ -14,7 +14,9 @@ namespace Cratis.Schemas
     /// </summary>
     public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
     {
-        const string ComplianceKey = "compliance";
+        public record Metadata(Guid type, string details);
+
+        public const string ComplianceKey = "compliance";
         readonly IComplianceMetadataResolver _metadataResolver;
 
         /// <summary>
@@ -45,18 +47,18 @@ namespace Cratis.Schemas
             }
         }
 
-        void AddMetadataToSchema(JsonSchema schema, ComplianceMetadata metadata) => EnsureMetadata(schema).Add(new { type = metadata.Type.Value, details = metadata.Details });
+        void AddMetadataToSchema(JsonSchema schema, ComplianceMetadata metadata) => EnsureMetadata(schema).Add(new Metadata(metadata.Type.Value, metadata.Details));
 
-        List<object> EnsureMetadata(JsonSchema schema)
+        List<Metadata> EnsureMetadata(JsonSchema schema)
         {
             EnsureExtensionData(schema);
 
             if (!schema.ExtensionData.ContainsKey(ComplianceKey))
             {
-                schema.ExtensionData[ComplianceKey] = new List<object>();
+                schema.ExtensionData[ComplianceKey] = new List<Metadata>();
             }
 
-            return (schema.ExtensionData[ComplianceKey] as List<object>)!;
+            return (schema.ExtensionData[ComplianceKey] as List<Metadata>)!;
         }
 
         void EnsureExtensionData(JsonSchema schema)
