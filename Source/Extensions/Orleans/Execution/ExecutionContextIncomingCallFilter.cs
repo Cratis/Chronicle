@@ -21,7 +21,7 @@ namespace Cratis.Extensions.Orleans.Execution
                 var tenantId = Guid.Parse(RequestContext.Get(RequestContextKeys.TenantId)?.ToString() ?? TenantId.NotSet.ToString());
                 var correlationId = RequestContext.Get(RequestContextKeys.CorrelationId) as CorrelationId ?? string.Empty;
 
-                ExecutionContextManager.SetCurrent(new ExecutionContext(tenantId, correlationId, string.Empty));
+                ExecutionContextManager.SetCurrent(new ExecutionContext(tenantId, correlationId, string.Empty, Guid.Empty));
             }
 
             await context.Invoke();
