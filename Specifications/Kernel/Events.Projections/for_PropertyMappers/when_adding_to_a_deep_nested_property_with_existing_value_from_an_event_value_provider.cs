@@ -17,7 +17,7 @@ namespace Cratis.Events.Projections.for_PropertyMappers
         {
             dynamic content = new ExpandoObject();
             result = new();
-            @event = new Event(0, "02405794-91e7-4e4f-8ad1-f043070ca297", DateTimeOffset.UtcNow, "2f005aaf-2f4e-4a47-92ea-63687ef74bd4", content);
+            @event = new Event(0, new EventType("02405794-91e7-4e4f-8ad1-f043070ca297", 1), DateTimeOffset.UtcNow, "2f005aaf-2f4e-4a47-92ea-63687ef74bd4", content);
 
             dynamic target = result;
             target.deep = new ExpandoObject();

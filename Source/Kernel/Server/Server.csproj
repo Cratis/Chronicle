@@ -23,12 +23,11 @@
         <ProjectReference Include="../Events.Observation/Events.Observation.csproj" />
         <ProjectReference Include="../Events.Observation.Grpc/Events.Observation.Grpc.csproj" />
         <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
-        <ProjectReference Include="../Events.Schemas.GraphQL/Events.Schemas.GraphQL.csproj" />
+        <ProjectReference Include="../Events.Schemas.Api/Events.Schemas.Api.csproj" />
         <ProjectReference Include="../Events.Store/Events.Store.csproj" />
         <ProjectReference Include="../Events.Store.Api/Events.Store.Api.csproj" />
         <ProjectReference Include="../Events.Store.Grpc/Events.Store.Grpc.csproj" />
         <ProjectReference Include="../Events.Store.MongoDB/Events.Store.MongoDB.csproj" />
-        <ProjectReference Include="../Events.Store.GraphQL/Events.Store.GraphQL.csproj" />
         <ProjectReference Include="../Events.Projections.Api/Events.Projections.Api.csproj" />
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />

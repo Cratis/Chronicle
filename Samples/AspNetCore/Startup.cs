@@ -1,19 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace AspNetCore
+namespace Sample
 {
     public class Startup
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCratisWorkbench();
+            services.AddControllers();
         }
 
         public void Configure(IApplicationBuilder app)
         {
             app.UseRouting();
-            app.UseCratisWorkbench();
+            app.UseEndpoints(_ => _.MapControllers());
         }
     }
 }

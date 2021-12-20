@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Newtonsoft.Json.Schema;
+using NJsonSchema;
 
 namespace Cratis.Events.Projections.for_Projection
 {
@@ -16,12 +16,12 @@ namespace Cratis.Events.Projections.for_Projection
                 "0b7325dd-7a25-4681-9ab7-c387a6073547",
                 string.Empty,
                 string.Empty,
-                new Model(string.Empty, new JSchema()),
+                new Model(string.Empty, new JsonSchema()),
                 Array.Empty<EventTypeWithKeyResolver>(),
                 Array.Empty<IProjection>());
         }
 
-        void Because() => result = Catch.Exception(() => projection.GetKeyResolverFor("6ffcf259-2069-4e7b-bf60-006edbffaf8b"));
+        void Because() => result = Catch.Exception(() => projection.GetKeyResolverFor(new("6ffcf259-2069-4e7b-bf60-006edbffaf8b", 1)));
 
         [Fact] void should_throw_missing_key_resolver_for_event_type() => result.ShouldBeOfExactType<MissingKeyResolverForEventType>();
     }

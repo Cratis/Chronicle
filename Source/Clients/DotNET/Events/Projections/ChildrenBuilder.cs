@@ -3,10 +3,9 @@
 
 using System.Linq.Expressions;
 using Cratis.Reflection;
+using Cratis.Schemas;
 using Cratis.Strings;
 using Humanizer;
-using Newtonsoft.Json.Schema.Generation;
-using Newtonsoft.Json.Serialization;
 
 namespace Cratis.Events.Projections
 {
@@ -17,29 +16,24 @@ namespace Cratis.Events.Projections
     /// <typeparam name="TChildModel">Child model type.</typeparam>
     public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TParentModel, TChildModel>
     {
-        static readonly JSchemaGenerator _generator;
         readonly IEventTypes _eventTypes;
+        readonly IJsonSchemaGenerator _schemaGenerator;
         readonly Dictionary<string, FromDefinition> _fromDefintions = new();
         readonly string _modelName;
         string _identifiedBy = string.Empty;
         string _removedWithEvent = string.Empty;
 
-        static ChildrenBuilder()
-        {
-            _generator = new JSchemaGenerator
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            };
-            _generator.GenerationProviders.Add(new StringEnumGenerationProvider());
-        }
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
+        /// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
         /// </summary>
         /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-        public ChildrenBuilder(IEventTypes eventTypes)
+        /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+        public ChildrenBuilder(
+            IEventTypes eventTypes,
+            IJsonSchemaGenerator schemaGenerator)
         {
             _eventTypes = eventTypes;
+            _schemaGenerator = schemaGenerator;
             _modelName = typeof(TChildModel).Name.Pluralize().ToCamelCase();
         }
 
@@ -72,7 +66,7 @@ namespace Cratis.Events.Projections
         {
             return new ChildrenDefinition(
                 _identifiedBy,
-                new ModelDefinition(_modelName, _generator.Generate(typeof(TChildModel)).ToString()),
+                new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
                 _fromDefintions,
                 new Dictionary<string, ChildrenDefinition>(),
                 string.IsNullOrEmpty(_removedWithEvent) ? default : new RemovedWithDefinition(_removedWithEvent)

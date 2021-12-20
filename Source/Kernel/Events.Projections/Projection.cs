@@ -72,7 +72,7 @@ namespace Cratis.Events.Projections
         public IEnumerable<IProjection> ChildProjections { get; }
 
         /// <inheritdoc/>
-        public void OnNext(Event @event, Changeset<Event, ExpandoObject> changeset)
+        public void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset)
         {
             var context = new EventContext(@event, changeset);
             _subject.OnNext(context);

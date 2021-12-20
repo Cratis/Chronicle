@@ -34,7 +34,7 @@ namespace Cratis.Events.Projections
         /// <param name="key">Key of the model to upsert.</param>
         /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        Task ApplyChanges(object key, Changeset<Event, ExpandoObject> changeset);
+        Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset);
 
         /// <summary>
         /// Prepare the store for an initial run.

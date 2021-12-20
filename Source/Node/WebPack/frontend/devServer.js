@@ -17,8 +17,7 @@ module.exports = (basePath, port) => {
         liveReload: false,
 
         proxy: {
-            '/api': 'http://localhost:5000',
-            '/graphql': 'http://localhost:5000',
+            '/api': 'http://localhost:5000'
         },
         onAfterSetupMiddleware: (devServer) => {
             devServer.app.get('*', (req, res, next) => {
