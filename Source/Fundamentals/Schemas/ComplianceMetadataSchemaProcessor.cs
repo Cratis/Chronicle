@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Collections;
 using Cratis.Compliance;
 using Cratis.Strings;
 using NJsonSchema;
@@ -47,7 +48,7 @@ namespace Cratis.Schemas
             }
         }
 
-        void AddMetadataToSchema(JsonSchema schema, ComplianceMetadata metadata) => EnsureMetadata(schema).Add(new Metadata(metadata.Type.Value, metadata.Details));
+        void AddMetadataToSchema(JsonSchema schema, IEnumerable<ComplianceMetadata> metadata) => metadata.ForEach(_ => EnsureMetadata(schema).Add(new Metadata(_.Type.Value, _.Details)));
 
         List<Metadata> EnsureMetadata(JsonSchema schema)
         {

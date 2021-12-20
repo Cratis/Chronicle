@@ -34,17 +34,23 @@ namespace Cratis.Compliance
         public bool HasMetadataFor(PropertyInfo property) => _propertyProviders.Any(_ => _.CanProvide(property));
 
         /// <inheritdoc/>
-        public ComplianceMetadata GetMetadataFor(Type type)
+        public IEnumerable<ComplianceMetadata> GetMetadataFor(Type type)
         {
             ThrowIfNoComplianceMetadataForType(type);
-            return _typeProviders.Single(_ => _.CanProvide(type)).Provide(type);
+            return _typeProviders
+                .Where(_ => _.CanProvide(type))
+                .Select(_ => _.Provide(type))
+                .ToArray();
         }
 
         /// <inheritdoc/>
-        public ComplianceMetadata GetMetadataFor(PropertyInfo property)
+        public IEnumerable<ComplianceMetadata> GetMetadataFor(PropertyInfo property)
         {
             ThrowIfNoComplianceMetadataForProperty(property);
-            return _propertyProviders.Single(_ => _.CanProvide(property)).Provide(property);
+            return _propertyProviders
+                .Where(_ => _.CanProvide(property))
+                .Select(_ => _.Provide(property))
+                .ToArray();
         }
 
         void ThrowIfNoComplianceMetadataForType(Type type)
