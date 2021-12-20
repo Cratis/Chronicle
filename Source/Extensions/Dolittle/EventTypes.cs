@@ -4,7 +4,6 @@
 extern alias SDK;
 
 using System.Reflection;
-using Cratis.Extensions.Dolittle.Schemas;
 using Cratis.Reflection;
 using Cratis.Types;
 using Dolittle.SDK.Events;

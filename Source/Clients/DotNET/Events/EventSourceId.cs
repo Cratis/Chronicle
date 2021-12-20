@@ -9,7 +9,7 @@ namespace Cratis.Events
     /// Represents the concept of an event source unique identifier.
     /// </summary>
     /// <param name="Value">Actual value.</param>
-    public record EventSourceId(Guid Value) : ConceptAs<Guid>(Value)
+    public record EventSourceId(string Value) : ConceptAs<string>(Value)
     {
         /// <summary>
         /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="EventSourceId"/>.

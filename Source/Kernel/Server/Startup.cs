@@ -5,10 +5,7 @@ using System.IO.Compression;
 using Autofac;
 using Cratis.Events.Observation.Grpc;
 using Cratis.Events.Store.Grpc;
-using Cratis.Extensions.GraphQL;
 using Cratis.Types;
-using GraphQL.Server.Ui.Playground;
-using HotChocolate.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -21,73 +18,52 @@ namespace Cratis.Server
     {
         internal static readonly ITypes Types = new Types.Types();
         internal static ILifetimeScope? AutofacContainer;
-        readonly IWebHostEnvironment _environment;
-
-        public Startup(IWebHostEnvironment environment)
-        {
-            _environment = environment;
-        }
 
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton(Types);
-            services.AddGraphQL(_environment, Types);
             services.AddMvc();
 
-            foreach( var controllerAssembly in Types.FindMultiple<Controller>().Select(_ => _.Assembly).Distinct() )
+            foreach (var controllerAssembly in Types.FindMultiple<Controller>().Select(_ => _.Assembly).Distinct())
             {
                 services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(controllerAssembly));
             }
 
             services.AddCodeFirstGrpc(config => config.ResponseCompressionLevel = CompressionLevel.Optimal);
             services.AddCodeFirstGrpcReflection();
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
             services.TryAddSingleton(BinderConfiguration.Create(binder: new ServiceBinderWithServiceResolutionFromServiceCollection(services)));
         }
 
         public void ConfigureContainer(ContainerBuilder containerBuilder)
         {
-            containerBuilder.RegisterDefaults(Types);
-            containerBuilder.RegisterBuildCallback(_ => AutofacContainer = _);
+            containerBuilder
+                .RegisterDefaults(Types)
+                .RegisterBuildCallback(_ => AutofacContainer = _);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseExecutionContext();
 
-            SchemaRoute.ServiceProvider = app.ApplicationServices;
             ContainerBuilderExtensions.ServiceProvider = app.ApplicationServices;
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
             app.UseRouting();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-
-                if (env.IsDevelopment())
-                {
-                    endpoints.MapGraphQLPlayground(
-                        new PlaygroundOptions
-                        {
-                            GraphQLEndPoint = "/graphql",
-                            SubscriptionsEndPoint = "/graphql"
-                        }, "/graphql/ui");
-                }
-
-                endpoints
-                    .MapGraphQL("/graphql")
-                    .WithOptions(new GraphQLServerOptions()
-                    {
-                        EnableSchemaRequests = _environment.IsDevelopment(),
-                        Tool = { Enable = false }
-                    });
-
-                endpoints.MapGrpcService<EventLogService>();
-                endpoints.MapGrpcService<ObserversService>();
-                endpoints.MapCodeFirstGrpcReflectionService();
-            });
+            // app.UseEndpoints(endpoints =>
+            // {
+            //     endpoints.MapControllers();
+            //     endpoints.MapGrpcService<EventLogService>();
+            //     endpoints.MapGrpcService<ObserversService>();
+            //     endpoints.MapCodeFirstGrpcReflectionService();
+            // });
         }
     }
 }

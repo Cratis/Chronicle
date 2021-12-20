@@ -21,7 +21,7 @@ namespace Sample
             services.AddSingleton(Types)
                 .AddProjections()
                 .AddDolittleEventTypes()
-                .AddDolittleSchemaStore("localhost", 27017)
+                .AddDolittleSchemas()
                 .AddDolittleProjections()
                 .AddCratisWorkbench(_ => _.UseDolittle());
         }
@@ -30,7 +30,7 @@ namespace Sample
         {
             app
                 .UseRouting()
-                .UseDolittleSchemaStore()
+                .UseDolittleSchemas()
                 .UseDolittleProjections()
                 .UseCratisWorkbench();
         }

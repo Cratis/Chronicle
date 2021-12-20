@@ -53,7 +53,7 @@ namespace Cratis.Events.Projections.Pipelines
             try
             {
                 var correlationId = CorrelationId.New();
-                var changesets = new List<Changeset<Event, ExpandoObject>>();
+                var changesets = new List<IChangeset<Event, ExpandoObject>>();
                 await HandleEventFor(pipeline.Projection, resultStore, @event, changesets);
                 await _changesetStorage.Save(correlationId, changesets);
                 var nextSequenceNumber = @event.SequenceNumber + 1;
@@ -68,7 +68,7 @@ namespace Cratis.Events.Projections.Pipelines
             }
         }
 
-        async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, Event @event, List<Changeset<Event, ExpandoObject>> changesets)
+        async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, Event @event, List<IChangeset<Event, ExpandoObject>> changesets)
         {
             var keyResolver = projection.GetKeyResolverFor(@event.Type);
             var key = keyResolver(@event);

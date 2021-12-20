@@ -14,7 +14,7 @@ namespace Cratis.Events
         /// </summary>
         /// <param name="idAsGuid"><see cref="EventTypeId">Identifier</see> as string representation of a <see cref="Guid"/>.</param>
         /// <param name="generation"><see cref="EventGeneration"/> represented as <see cref="uint"/>.</param>
-        public EventTypeAttribute(string idAsGuid, uint generation)
+        public EventTypeAttribute(string idAsGuid, uint generation = EventGeneration.FirstValue)
         {
             Type = new(Guid.Parse(idAsGuid), generation);
         }

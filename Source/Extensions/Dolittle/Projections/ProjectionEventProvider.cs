@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using Cratis.Events;
 using Cratis.Events.Projections;
 using Cratis.Events.Projections.Pipelines;
 using Microsoft.Extensions.Logging;
@@ -64,7 +65,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 return new EventCursor(null);
             }
 
-            var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(Guid.Parse(_.Value))).ToArray();
+            var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(_.Id.Value)).ToArray();
             var cursor = await _eventStream.GetFromPosition(start, eventTypes);
             return new EventCursor(cursor);
         }

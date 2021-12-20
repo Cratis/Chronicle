@@ -44,7 +44,6 @@
     <PropertyGroup>
         <HotChocolateVersion>11.3.0</HotChocolateVersion>
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
-        <NewtonsoftJsonSchema>3.0.14</NewtonsoftJsonSchema>
         <Autofac>6.2.0</Autofac>
         <AutofacExtensions>7.1.0</AutofacExtensions>
         <Aksio>1.12.6</Aksio>

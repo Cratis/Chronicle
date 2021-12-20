@@ -10,7 +10,6 @@ using MongoDB.Driver;
 
 namespace Cratis.Events.Store.MongoDB
 {
-
     /// <summary>
     /// Represents an implementation of <see cref="IEventLogs"/> for MongoDB.
     /// </summary>
@@ -47,17 +46,14 @@ namespace Cratis.Events.Store.MongoDB
             try
             {
                 _logger.Committing(sequenceNumber);
-                var @event = new Event(
-                    sequenceNumber,
-                    eventType.EventTypeId,
-                    DateTimeOffset.UtcNow,
-                    eventSourceId,
-                    new Dictionary<EventGeneration, BsonDocument>
-                    {
-                        { eventType.Generation.Value, BsonDocument.Parse(content) }
-                    },
-                     Array.Empty<EventCompensation>()
-                );
+                var @event = new Event
+                {
+                    SequenceNumber = sequenceNumber,
+                    Type = eventType.Id,
+                    Occurred = DateTimeOffset.UtcNow,
+                    EventSourceId = eventSourceId,
+                };
+                @event.Content[eventType.Generation.ToString()] = BsonDocument.Parse(content);
                 await GetCollectionFor(eventLogId).InsertOneAsync(@event);
             }
             catch (Exception ex)

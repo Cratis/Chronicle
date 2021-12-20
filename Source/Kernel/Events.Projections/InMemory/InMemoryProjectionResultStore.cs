@@ -56,7 +56,7 @@ namespace Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public Task ApplyChanges(object key, Changeset<Event, ExpandoObject> changeset)
+        public Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset)
         {
             var state = changeset.InitialState.Clone();
 
