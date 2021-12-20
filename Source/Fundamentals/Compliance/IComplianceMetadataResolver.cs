@@ -28,14 +28,14 @@ namespace Cratis.Compliance
         /// Get the <see cref="ComplianceMetadata"/> associated with a <see cref="Type"/>.
         /// </summary>
         /// <param name="type"><see cref="Type"/> to get for.</param>
-        /// <returns><see cref="ComplianceMetadata"/> associated with the type.</returns>
-        ComplianceMetadata GetMetadataFor(Type type);
+        /// <returns>Collection of <see cref="ComplianceMetadata"/> associated with the type.</returns>
+        IEnumerable<ComplianceMetadata> GetMetadataFor(Type type);
 
         /// <summary>
         /// Get the <see cref="ComplianceMetadata"/> associated with a <see cref="PropertyInfo"/>.
         /// </summary>
         /// <param name="property"><see cref="PropertyInfo"/> to get for.</param>
-        /// <returns><see cref="ComplianceMetadata"/> associated with the type.</returns>
-        ComplianceMetadata GetMetadataFor(PropertyInfo property);
+        /// <returns>Collection of <see cref="ComplianceMetadata"/> associated with the type.</returns>
+        IEnumerable<ComplianceMetadata> GetMetadataFor(PropertyInfo property);
     }
 }
