@@ -27,7 +27,7 @@ namespace Cratis.Events
         /// <inheritdoc/>
         public async Task Append(EventSourceId eventSourceId, object content)
         {
-            var request = new CommitRequest
+            var request = new AppendRequest
             {
                 EventLogId = _eventLogId,
                 EventSourceId = eventSourceId,
@@ -39,7 +39,7 @@ namespace Cratis.Events
                 Content = JsonConvert.SerializeObject(content)
             };
 
-            var response = await _eventLogService.Commit(request);
+            var response = await _eventLogService.Append(request);
             Console.WriteLine($"Result : {response.Success}");
         }
     }

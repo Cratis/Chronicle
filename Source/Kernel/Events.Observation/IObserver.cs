@@ -13,6 +13,6 @@ namespace Cratis.Events.Observation
     /// </summary>
     public interface IObserver
     {
-        Task Next(CommittedEvent @event);
+        Task Next(AppendedEvent @event);
     }
 }

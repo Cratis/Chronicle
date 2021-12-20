@@ -13,10 +13,10 @@ namespace Cratis.Events.Store
     public interface IEventLogObservers : IGrainWithGuidCompoundKey
     {
         /// <summary>
-        /// Handle next <see cref="CommittedEvent"/>.
+        /// Handle next <see cref="AppendedEvent"/>.
         /// </summary>
-        /// <param name="event"><see cref="CommittedEvent"/> to handle.</param>
-        Task Next(CommittedEvent @event);
+        /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
+        Task Next(AppendedEvent @event);
 
         /// <summary>
         /// Add an <see cref="IEventLogObserver">observer</see> of the <see cref="IEventLog"/>.

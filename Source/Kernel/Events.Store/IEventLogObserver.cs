@@ -11,9 +11,9 @@ namespace Cratis.Events.Store
     public interface IEventLogObserver : IGrainObserver
     {
         /// <summary>
-        /// Handle next <see cref="CommittedEvent"/>.
+        /// Handle next <see cref="AppendedEvent"/>.
         /// </summary>
-        /// <param name="event"><see cref="CommittedEvent"/> to handle.</param>
-        void Next(CommittedEvent @event);
+        /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
+        void Next(AppendedEvent @event);
     }
 }

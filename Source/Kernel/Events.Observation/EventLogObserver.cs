@@ -7,7 +7,7 @@ namespace Cratis.Events.Observation
 {
     public class EventLogObserver : IEventLogObserver
     {
-        public void Next(CommittedEvent @event)
+        public void Next(AppendedEvent @event)
         {
             // Deal with the actual client call
             // gRPC bi-directional call

@@ -18,20 +18,20 @@ namespace Cratis.Events.Store.Grpc
             _executionContextManager = executionContextManager;
         }
 
-        public async ValueTask<CommitResult> Commit(CommitRequest request, CallContext callContext = default)
+        public async ValueTask<AppendResult> Append(AppendRequest request, CallContext callContext = default)
         {
             _executionContextManager.Establish(
                 Guid.Parse("f455c031-630e-450d-a75b-ca050c441708"),
                 Guid.NewGuid().ToString()
             );
 
-            await _eventStore.GetEventLog(request.EventLogId).Commit(
+            await _eventStore.GetEventLog(request.EventLogId).Append(
                 request.EventSourceId,
                 new EventType(request.EventType.EventTypeId, request.EventType.Generation),
                 request.Content
             );
 
-            return new CommitResult { Success = true };
+            return new AppendResult { Success = true };
         }
     }
 }

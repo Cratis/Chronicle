@@ -13,13 +13,13 @@ namespace Cratis.Events.Store
     public interface IEventLog : IGrainWithGuidCompoundKey
     {
         /// <summary>
-        /// Commit a single event to the event store.
+        /// Append a single event to the event store.
         /// </summary>
-        /// <param name="eventSourceId">The <see cref="EventSourceId"/> to commit for.</param>
-        /// <param name="eventType">The <see cref="EventType">type of event</see> to commit.</param>
+        /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
+        /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
         /// <param name="content">The JSON payload of the event.</param>
         /// <returns>Awaitable <see cref="Task"/></returns>
-        Task Commit(EventSourceId eventSourceId, EventType eventType, string content);
+        Task Append(EventSourceId eventSourceId, EventType eventType, string content);
 
         /// <summary>
         /// Compensate a specific event in the event store.

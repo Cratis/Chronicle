@@ -6,13 +6,13 @@ using ProtoBuf;
 namespace Cratis.Events.Store.Grpc.Contracts
 {
     /// <summary>
-    /// Represents the protobuf message contract for the commit result from <see cref="IEventLogService"/>.
+    /// Represents the protobuf message contract for the append result from <see cref="IEventLogService"/>.
     /// </summary>
     [ProtoContract]
-    public class CommitResult
+    public class AppendResult
     {
         /// <summary>
-        /// Gets or inits whether or not the commit was successful.
+        /// Gets or inits whether or not the append was successful.
         /// </summary>
         [ProtoMember(1)]
         public bool Success { get; init; }

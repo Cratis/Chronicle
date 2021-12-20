@@ -8,6 +8,6 @@ namespace Cratis.Events.Observation
 {
     public class ClientObserver : Grain, IObserver
     {
-        public Task Next(CommittedEvent @event) => throw new NotImplementedException();
+        public Task Next(AppendedEvent @event) => throw new NotImplementedException();
     }
 }

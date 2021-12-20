@@ -12,6 +12,11 @@ namespace Cratis.Events
     public record EventLogId(Guid Value) : ConceptAs<Guid>(Value)
     {
         /// <summary>
+        /// The <see cref="EventLogId"/> representing the default <see cref="IEventLog"/>.
+        /// </summary>
+        public static readonly EventLogId Default = Guid.Empty;
+
+        /// <summary>
         /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="EventLogId"/>.
         /// </summary>
         /// <param name="id">String representation of a <see cref="Guid"/> to convert from.</param>

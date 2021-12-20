@@ -13,7 +13,7 @@ namespace Cratis.Events.Store
         readonly List<IEventLogObserver> _subscriptions = new();
 
         /// <inheritdoc/>
-        public Task Next(CommittedEvent @event)
+        public Task Next(AppendedEvent @event)
         {
             // Thoughts:
             // - What if we have a Grain the an observer - identified by its observer identifier and the partition key

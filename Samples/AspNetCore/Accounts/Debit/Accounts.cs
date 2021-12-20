@@ -9,17 +9,17 @@ namespace Sample.Accounts.Debit
     [Route("/api/accounts/debit")]
     public class Accounts : Controller
     {
-        readonly IEventLog _eventLog;
+        readonly IEventStore _eventStore;
 
-        public Accounts(IEventLog eventLog) => _eventLog = eventLog;
+        public Accounts(IEventStore eventStore) => _eventStore = eventStore;
 
         [HttpPost]
-        public Task Create([FromBody] OpenDebitAccount create) => _eventLog.Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
+        public Task Create([FromBody] OpenDebitAccount create) => _eventStore.EventLog(EventLogId.Default).Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
 
         [HttpPost("deposit")]
-        public Task Deposit([FromBody] DepositToAccount deposit) => _eventLog.Append(deposit.AccountId, new DepositToDebitAccountPerformed(deposit.Amount));
+        public Task Deposit([FromBody] DepositToAccount deposit) => _eventStore.EventLog(EventLogId.Default).Append(deposit.AccountId, new DepositToDebitAccountPerformed(deposit.Amount));
 
         [HttpPost("withdraw")]
-        public Task Withdraw([FromBody] WithdrawFromAccount deposit) => _eventLog.Append(deposit.AccountId, new WithdrawalFromDebitAccountPerformed(deposit.Amount));
+        public Task Withdraw([FromBody] WithdrawFromAccount deposit) => _eventStore.EventLog(EventLogId.Default).Append(deposit.AccountId, new WithdrawalFromDebitAccountPerformed(deposit.Amount));
     }
 }
