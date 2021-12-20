@@ -1,29 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-//new HostBuilder().ConfigureWebHostDefaults()
+var builder = WebApplication
+                .CreateBuilder(args)
+                .UseCratis();
 
-using Sample;
-
-var builder = Host.CreateDefaultBuilder()
-                    .UseCratis()
-                    .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
+builder.Services.AddControllers();
 
 var app = builder.Build();
-
-app.Run();
-
-/*
-var builder = WebApplication.CreateBuilder(args)
-                            .UseCratis()
-                            .UseCratisWorkbench();
-var app = builder.Build();
-app.AddCratisWorkbench();
 
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
 
+app.UseRouting();
+app.UseEndpoints(_ => _.MapControllers());
 app.Run();
-*/
