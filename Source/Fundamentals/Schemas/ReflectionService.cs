@@ -17,6 +17,7 @@ namespace Cratis.Schemas
         {
             if (contextualType.Type.IsConcept())
             {
+                defaultReferenceTypeNullHandling = ReferenceTypeNullHandling.NotNull;
                 contextualType = contextualType.Type.GetConceptValueType().ToContextualType();
             }
 
