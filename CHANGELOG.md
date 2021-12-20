@@ -1,3 +1,21 @@
+# [v2.16.0] - 2021-12-20 [PR: #74](https://github.com/Cratis/cratis/pull/74)
+
+## Summary
+
+This release focuses on compliance and schemas. Providing a mechanism for adding metadata on types and/or properties for compliance information, specifically GDPR and PII right now.
+
+### Added
+
+- Fundamentals system for capturing necessary compliance metadata related to types.
+- Schema support for compliance extensions.
+
+
+### Changed
+
+- Changing from Newtonsoft JSON Schema generator - it has a limit of 10 generations per hour on its free license model.
+- Moving Schema system, management and APIs to Kernel - its not a Dolittle extension.
+
+
 # [v2.15.1] - 2021-11-26 [PR: #69](https://github.com/Cratis/cratis/pull/69)
 
 ### Added
