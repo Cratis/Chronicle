@@ -58,9 +58,9 @@ namespace Cratis.Events.Store.MongoDB
                     eventType.Id,
                     DateTimeOffset.UtcNow,
                     eventSourceId,
-                    new Dictionary<EventGeneration, BsonDocument>
+                    new Dictionary<string, BsonDocument>
                     {
-                        { eventType.Generation, BsonDocument.Parse(content) }
+                        { eventType.Generation.ToString(), BsonDocument.Parse(content) }
                     },
                      Array.Empty<EventCompensation>());
                 await GetCollectionFor(eventLogId).InsertOneAsync(@event);
