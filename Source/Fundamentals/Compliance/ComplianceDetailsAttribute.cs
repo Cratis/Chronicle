@@ -6,7 +6,7 @@ namespace Cratis.Compliance
     /// <summary>
     /// Attribute to adorn for providing the details as to why or to what purpose/extent the type or property marked is classified as PII.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
     public class ComplianceDetailsAttribute : Attribute
     {
         /// <summary>
@@ -21,6 +21,6 @@ namespace Cratis.Compliance
         /// <summary>
         /// Gets the details as to why or to what purpose/extent the type or property marked is classified as PII.
         /// </summary>
-        public string Details{ get; }
+        public string Details { get; }
     }
 }
