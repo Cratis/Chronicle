@@ -25,7 +25,7 @@ namespace Cratis.Events
         }
 
         /// <inheritdoc/>
-        public async Task Commit(EventSourceId eventSourceId, object content)
+        public async Task Append(EventSourceId eventSourceId, object content)
         {
             var request = new CommitRequest
             {

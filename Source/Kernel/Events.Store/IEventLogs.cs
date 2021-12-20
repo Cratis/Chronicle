@@ -17,7 +17,7 @@ namespace Cratis.Events.Store
         /// <param name="eventType">The <see cref="EventType">type of event</see> to commit.</param>
         /// <param name="content">The JSON payload of the event.</param>
         /// <returns>Awaitable <see cref="Task"/></returns>
-        Task Commit(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, string content);
+        Task Append(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, string content);
 
         /// <summary>
         /// Compensate a single event to the event store.

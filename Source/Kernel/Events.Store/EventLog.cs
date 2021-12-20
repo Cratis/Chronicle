@@ -50,7 +50,7 @@ namespace Cratis.Events.Store
         {
             _logger.Committing(eventType, eventSourceId, _state.State.SequenceNumber, _eventLogId);
 
-            await _eventLogsProvider().Commit(_eventLogId, _state.State.SequenceNumber, eventSourceId, eventType, content);
+            await _eventLogsProvider().Append(_eventLogId, _state.State.SequenceNumber, eventSourceId, eventType, content);
 
             var committedEvent = new CommittedEvent(
                 new EventMetadata(_state.State.SequenceNumber, eventType),

@@ -14,6 +14,6 @@ namespace Cratis.Events
         /// <param name="eventSourceId"><see cref="EventSourceId"/> to commit for.</param>
         /// <param name="content">Content of the event.</param>
         /// <returns>Async task.</returns>
-        Task Commit(EventSourceId eventSourceId, object content);
+        Task Append(EventSourceId eventSourceId, object content);
     }
 }
