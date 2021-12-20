@@ -26,7 +26,7 @@ namespace Cratis.Events.Projections.Json
             writer.WriteStartObject();
             foreach (var (key, children) in value)
             {
-                writer.WritePropertyName(key.EventTypeId.Value.ToString());
+                writer.WritePropertyName(key.Id.Value.ToString());
                 serializer.Serialize(writer, children);
             }
 

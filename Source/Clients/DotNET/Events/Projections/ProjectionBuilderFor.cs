@@ -3,10 +3,9 @@
 
 using System.Linq.Expressions;
 using Cratis.Reflection;
+using Cratis.Schemas;
 using Cratis.Strings;
 using Humanizer;
-using Newtonsoft.Json.Schema.Generation;
-using Newtonsoft.Json.Serialization;
 
 namespace Cratis.Events.Projections
 {
@@ -16,31 +15,27 @@ namespace Cratis.Events.Projections
     /// <typeparam name="TModel">Type of model.</typeparam>
     public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     {
-        static readonly JSchemaGenerator _generator;
         readonly ProjectionId _identifier;
         readonly IEventTypes _eventTypes;
+        readonly IJsonSchemaGenerator _schemaGenerator;
         string _modelName;
         readonly Dictionary<string, FromDefinition> _fromDefintions = new();
         readonly Dictionary<string, ChildrenDefinition> _childrenDefinitions = new();
-
-        static ProjectionBuilderFor()
-        {
-            _generator = new JSchemaGenerator
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            };
-            _generator.GenerationProviders.Add(new StringEnumGenerationProvider());
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
         /// </summary>
         /// <param name="identifier">The unique identifier for the projection.</param>
         /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
-        public ProjectionBuilderFor(ProjectionId identifier, IEventTypes eventTypes)
+        /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+        public ProjectionBuilderFor(
+            ProjectionId identifier,
+            IEventTypes eventTypes,
+            IJsonSchemaGenerator schemaGenerator)
         {
             _identifier = identifier;
             _eventTypes = eventTypes;
+            _schemaGenerator = schemaGenerator;
             _modelName = typeof(TModel).Name.Pluralize().ToCamelCase();
         }
 
@@ -64,7 +59,7 @@ namespace Cratis.Events.Projections
         /// <inheritdoc/>
         public IProjectionBuilderFor<TModel> Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
         {
-            var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes);
+            var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes, _schemaGenerator);
             builderCallback(builder);
             _childrenDefinitions[targetProperty.GetPropertyInfo().Name.ToCamelCase()] = builder.Build();
             return this;
@@ -76,7 +71,7 @@ namespace Cratis.Events.Projections
             return new ProjectionDefinition(
                 _identifier,
                 typeof(TModel).FullName ?? "[N/A]",
-                new ModelDefinition(_modelName, _generator.Generate(typeof(TModel)).ToString()),
+                new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TModel)).ToJson()),
                 _fromDefintions,
                 _childrenDefinitions);
         }

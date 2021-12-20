@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Common;
-
 namespace Cratis.Events.Projections.for_ProjectionEventProviders
 {
     public class when_asking_for_known_type : Specification

@@ -4,7 +4,7 @@
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Expressions;
 using Cratis.Properties;
-using Newtonsoft.Json.Schema;
+using NJsonSchema;
 
 namespace Cratis.Events.Projections
 {
@@ -54,7 +54,10 @@ namespace Cratis.Events.Projections
                         addChildEventTypes(_);
                     })).ToArray();
 
-            var model = new Model(projectionDefinition.Model.Name, JSchema.Parse(projectionDefinition.Model.Schema));
+            var task = JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
+            task.Wait();
+
+            var model = new Model(projectionDefinition.Model.Name, task.Result);
             addChildEventTypes(eventsForProjection);
 
             var projection = new Projection(projectionDefinition.Identifier, projectionDefinition.Name, path, model, eventsForProjection, childProjections);
