@@ -13,11 +13,11 @@ namespace Cratis.Events.Store.Grpc.Contracts
     public interface IEventLogService
     {
         /// <summary>
-        /// Commit an event to a specific event log.
+        /// Append an event to a specific event log.
         /// </summary>
-        /// <param name="request">The <see cref="CommitRequest">request</see> payload</param>
+        /// <param name="request">The <see cref="AppendRequest">request</see> payload</param>
         /// <param name="context">Grpc <see cref="CallContext"/>.</param>
-        /// <returns>The <see cref="CommitResult">result</see> of the commit.</returns>
-        ValueTask<CommitResult> Commit(CommitRequest request, CallContext context = default);
+        /// <returns>The <see cref="AppendResult">result</see> of the append.</returns>
+        ValueTask<AppendResult> Append(AppendRequest request, CallContext context = default);
     }
 }

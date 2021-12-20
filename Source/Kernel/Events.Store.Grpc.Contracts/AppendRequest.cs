@@ -6,13 +6,13 @@ using ProtoBuf;
 namespace Cratis.Events.Store.Grpc.Contracts
 {
     /// <summary>
-    /// Represents the protobuf message contract for committing events through the <see cref="IEventLogService"/>.
+    /// Represents the protobuf message contract for appending events through the <see cref="IEventLogService"/>.
     /// </summary>
     [ProtoContract]
-    public class CommitRequest
+    public class AppendRequest
     {
         /// <summary>
-        /// Gets or inits the unique identifier for the event log to commit to.
+        /// Gets or inits the unique identifier for the event log to append to.
         /// </summary>
         [ProtoMember(1)]
         public Guid EventLogId { get; init; }
@@ -21,7 +21,7 @@ namespace Cratis.Events.Store.Grpc.Contracts
         /// Gets or inits the unique identifier of the event source - typically the primary key.
         /// </summary>
         [ProtoMember(2)]
-        public string EventSourceId { get; init; }
+        public string EventSourceId { get; init; }
 
         /// <summary>
         /// Gets or inits the <see cref="EventType">type of event</see>.

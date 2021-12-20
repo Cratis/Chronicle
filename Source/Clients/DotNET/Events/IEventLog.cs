@@ -9,9 +9,9 @@ namespace Cratis.Events
     public interface IEventLog
     {
         /// <summary>
-        /// Commit an event to the event log.
+        /// Append an event to the event log.
         /// </summary>
-        /// <param name="eventSourceId"><see cref="EventSourceId"/> to commit for.</param>
+        /// <param name="eventSourceId"><see cref="EventSourceId"/> to append for.</param>
         /// <param name="content">Content of the event.</param>
         /// <returns>Async task.</returns>
         Task Append(EventSourceId eventSourceId, object content);

@@ -46,13 +46,13 @@ namespace Cratis.Events.Store
         }
 
         /// <inheritdoc/>
-        public async Task Commit(EventSourceId eventSourceId, EventType eventType, string content)
+        public async Task Append(EventSourceId eventSourceId, EventType eventType, string content)
         {
-            _logger.Committing(eventType, eventSourceId, _state.State.SequenceNumber, _eventLogId);
+            _logger.Appending(eventType, eventSourceId, _state.State.SequenceNumber, _eventLogId);
 
             await _eventLogsProvider().Append(_eventLogId, _state.State.SequenceNumber, eventSourceId, eventType, content);
 
-            var committedEvent = new CommittedEvent(
+            var appendedEvent = new AppendedEvent(
                 new EventMetadata(_state.State.SequenceNumber, eventType),
                 new EventContext(eventSourceId, DateTimeOffset.UtcNow),
                 content
@@ -62,7 +62,7 @@ namespace Cratis.Events.Store
             await _state.WriteStateAsync();
 
             var observers = GrainFactory.GetGrain<IEventLogObservers>(_eventLogId, keyExtension: _tenantId.ToString());
-            await observers.Next(committedEvent);
+            await observers.Next(appendedEvent);
         }
 
         /// <inheritdoc/>
