@@ -28,6 +28,6 @@ namespace Cratis.Events.Store.MongoDB
         EventTypeId Type,
         DateTimeOffset Occurred,
         EventSourceId EventSourceId,
-        Dictionary<EventGeneration, BsonDocument> Content,
+        Dictionary<string, BsonDocument> Content,
         IEnumerable<EventCompensation> Compensations);
 }
