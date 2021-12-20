@@ -1,3 +1,11 @@
+# [v2.16.1] - 2021-12-20 [PR: #75](https://github.com/Cratis/cratis/pull/75)
+
+### Fixed
+
+- Event Type workbench working again - it was not referenced in the output.
+- Generating correct type info for concept types. Showing the underlying type.
+
+
 # [v2.16.0] - 2021-12-20 [PR: #74](https://github.com/Cratis/cratis/pull/74)
 
 ## Summary
