@@ -49,7 +49,7 @@ namespace Cratis.Events.Store.MongoDB
         {
             try
             {
-                _logger.Committing(sequenceNumber);
+                _logger.Appending(sequenceNumber);
                 var @event = new Event(
                     sequenceNumber,
                     _executionContextManager.Current.CorrelationId,
@@ -67,7 +67,7 @@ namespace Cratis.Events.Store.MongoDB
             }
             catch (Exception ex)
             {
-                _logger.CommitFailure(ex);
+                _logger.AppendFailure(ex);
                 throw;
             }
         }
