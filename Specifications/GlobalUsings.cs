@@ -6,3 +6,4 @@ global using static Moq.It;
 global using static Moq.Times;
 global using Xunit;
 global using Aksio.Specifications;
+global using Cratis.Common;
