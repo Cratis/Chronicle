@@ -32,9 +32,9 @@ namespace Cratis.Events.Observation.Grpc
                 }
                 yield return new ObserverServerToClient
                 {
-                    EventTypeId = Guid.Parse("bca45a99-5f56-4f4e-acf7-f086de4dd72b"),
+                    EventTypeId = Guid.Parse("8a109d92-aa6a-4aee-8852-f8f2528da1fc"),
                     Occurred = DateTime.UtcNow,
-                    Content = "{ \"theString\": \"Hello world\", \"theInt\": 42 }"
+                    Content = "{ \"ma,e\": \"Hello world\", \"owner\": \"94c7de3b-732a-4843-a764-db885bbdb360\" }"
                 };
             }
 
