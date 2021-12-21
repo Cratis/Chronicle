@@ -5,12 +5,12 @@ using Cratis.Events.Observation;
 
 namespace Sample.Accounts.Debit
 {
-    // [Observer("4680f4dc-5731-4fde-9b3c-a0f59b7713d9")]
-    // public class AccountObserver
-    // {
-    //     public Task DebitAccountOpened(DebitAccountOpened @event)
-    //     {
-    //         return Task.CompletedTask;
-    //     }
-    // }
+    [Observer("4680f4dc-5731-4fde-9b3c-a0f59b7713d9")]
+    public class AccountObserver
+    {
+        public Task DebitAccountOpened(DebitAccountOpened @event)
+        {
+            return Task.CompletedTask;
+        }
+    }
 }
