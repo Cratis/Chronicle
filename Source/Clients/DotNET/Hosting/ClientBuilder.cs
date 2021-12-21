@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Collections;
 using Cratis.Events;
 using Cratis.Events.Observation;
 using Cratis.Grpc;
@@ -43,7 +44,10 @@ namespace Cratis.Hosting
             services.AddSingleton<IEventStore, EventStore>();
             services.AddSingleton<IObservers, Observers>();
             services.AddSingleton<IEventTypes, EventTypes>();
+            services.AddSingleton<IEventSerializer, EventSerializer>();
             services.AddSingleton<IHostedService, ObserversService>();
+
+            types.AllObservers().ForEach(_ => services.AddTransient(_));
         }
     }
 }
