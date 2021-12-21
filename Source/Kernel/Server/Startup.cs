@@ -56,6 +56,8 @@ namespace Cratis.Server
             app.UseSwagger();
             app.UseSwaggerUI();
 
+            app.PerformBootProcedures();
+
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
