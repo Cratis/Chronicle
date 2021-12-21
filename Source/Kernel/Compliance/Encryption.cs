@@ -3,7 +3,7 @@
 
 using System.Security.Cryptography;
 
-namespace Cratis.Compliance
+namespace Cratis.Compliance.InMemory
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEncryption"/>.
