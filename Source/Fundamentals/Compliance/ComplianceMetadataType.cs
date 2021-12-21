@@ -21,5 +21,11 @@ namespace Cratis.Compliance
         /// </summary>
         /// <param name="value"><see cref="string"/> representation.</param>
         public static implicit operator ComplianceMetadataType(string value) => new(Guid.Parse(value));
+
+        /// <summary>
+        /// Convert from <see cref="Guid"/> to <see cref="ComplianceMetadataType"/>.
+        /// </summary>
+        /// <param name="value)"><see cref="Guid"/> to convert from.</param>
+        public static implicit operator ComplianceMetadataType(Guid value) => new (value);
     }
 }

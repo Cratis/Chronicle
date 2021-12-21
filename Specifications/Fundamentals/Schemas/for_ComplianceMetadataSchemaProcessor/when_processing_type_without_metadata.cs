@@ -7,6 +7,6 @@ namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
     {
         void Because() => processor.Process(context);
 
-        [Fact] void should_contain_compliance_info() => context.Schema.ExtensionData?.Keys.ShouldNotContain(ComplianceMetadataSchemaProcessor.ComplianceKey);
+        [Fact] void should_contain_compliance_info() => context.Schema.ExtensionData?.Keys.ShouldNotContain(JsonSchemaGenerator.ComplianceKey);
     }
 }
