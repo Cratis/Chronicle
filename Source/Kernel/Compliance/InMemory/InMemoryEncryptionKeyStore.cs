@@ -32,6 +32,5 @@ namespace Cratis.Compliance.InMemory
             _keys.Remove(identifier);
             return Task.CompletedTask;
         }
-
     }
 }
