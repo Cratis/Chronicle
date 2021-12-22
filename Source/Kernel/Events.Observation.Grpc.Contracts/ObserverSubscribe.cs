@@ -22,5 +22,11 @@ namespace Cratis.Events.Observation.Grpc.Contracts
         /// </summary>
         [ProtoMember(2)]
         public Guid Id { get; init; }
+
+        /// <summary>
+        /// Gets or inits the name of the observer.
+        /// </summary>
+        [ProtoMember(3)]
+        public string Name { get; init; }
     }
 }
