@@ -1,3 +1,18 @@
+# [v2.17.0] - 2021-12-22 [PR: #76](https://github.com/Cratis/cratis/pull/76)
+
+## Summary
+
+This release focuses on compliance and dealing with it for JSON objects.
+
+### Added
+
+- Encryption service for symmetric key generation, encryption and decryption - using AES-256.
+- InMemory Encryption Key Store
+- MongoDB Ecryption Key Store
+- Composite Encryption Key Store that enables creating a chain of resonsibilities for stores.
+- JSON compliance manager that works with schemas and applies compliance value handlers according to metadata in the schema.
+- PII value handler that will encrypt and decrypt values leveraging the encryption and encryption key store.
+
 # [v2.16.1] - 2021-12-20 [PR: #75](https://github.com/Cratis/cratis/pull/75)
 
 ### Fixed
