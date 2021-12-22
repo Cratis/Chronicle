@@ -3,8 +3,11 @@
 
 using Cratis.Compliance;
 
-namespace Dolittle.Customers
+namespace Sample.Customers
 {
     [ComplianceDetails("Needs special handling")]
-    public record FirstName(string Value) : PIIConceptAs<string>(Value);
+    public record FirstName(string Value) : PIIConceptAs<string>(Value)
+    {
+        public static implicit operator FirstName(string value) => new(value);
+    }
 }
