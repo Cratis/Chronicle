@@ -4,6 +4,10 @@
 
 extern alias SDK;
 
+using Cratis.Compliance;
+using Cratis.Compliance.InMemory;
+using Cratis.Compliance.MongoDB;
+
 namespace Microsoft.Extensions.DependencyInjection
 {
     /// <summary>
@@ -19,6 +23,12 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddDolittleEventTypes(this IServiceCollection services)
         {
             services.AddSingleton<SDK::Cratis.Events.IEventTypes, Cratis.Extensions.Dolittle.EventTypes>();
+            services.AddSingleton<IEncryptionKeyStore>((sp) =>
+                new CompositeEncryptionKeyStore(
+                    sp.GetService<InMemoryEncryptionKeyStore>()!,
+                    sp.GetService<MongoDBEncryptionKeyStore>()!
+                ));
+
             return services;
         }
     }
