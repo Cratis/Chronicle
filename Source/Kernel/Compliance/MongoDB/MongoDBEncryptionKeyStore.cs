@@ -65,5 +65,8 @@ namespace Cratis.Compliance.MongoDB
             var result = await _encryptionKeysCollection.FindAsync(_ => _.Identifier == identifier);
             return result.Single().Key;
         }
+
+        /// <inheritdoc/>
+        public async Task DeleteFor(EncryptionKeyIdentifier identifier) => await _encryptionKeysCollection.DeleteOneAsync(_ => _.Identifier == identifier);
     }
 }

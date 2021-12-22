@@ -29,5 +29,13 @@ namespace Cratis.Compliance
         /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to get for.</param>
         /// <returns>The <see cref="EncryptionKey"/>.</returns>
         Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier);
+
+
+        /// <summary>
+        /// Delete an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
+        /// </summary>
+        /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to delete for.</param>
+        /// <returns>Async task.</returns>
+        Task DeleteFor(EncryptionKeyIdentifier identifier);
     }
 }
