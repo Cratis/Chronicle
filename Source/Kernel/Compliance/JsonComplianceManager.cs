@@ -41,16 +41,19 @@ namespace Cratis.Compliance
             var complianceMetadataForContainer = GetMetadata(schema);
             foreach (var property in json.Children().Where(_ => _.Type == JTokenType.Property).Cast<JProperty>())
             {
-                var propertySchema = schema.Properties.Single(_ => _.Key == property.Name).Value;
-                foreach (var metadata in GetMetadata(propertySchema).Concat(complianceMetadataForContainer).DistinctBy(_ => _.type))
+                if (schema.Properties != default)
                 {
-                    if (_propertyValueHandlers.ContainsKey(metadata.type))
+                    var propertySchema = schema.Properties.Single(_ => _.Key == property.Name).Value;
+                    foreach (var metadata in GetMetadata(propertySchema).Concat(complianceMetadataForContainer).DistinctBy(_ => _.type))
                     {
-                        property.Value = await action(_propertyValueHandlers[metadata.type], identifier, property.Value);
+                        if (_propertyValueHandlers.ContainsKey(metadata.type))
+                        {
+                            property.Value = await action(_propertyValueHandlers[metadata.type], identifier, property.Value);
+                        }
                     }
-                }
 
-                await HandleActionFor(propertySchema, identifier, property, action);
+                    await HandleActionFor(propertySchema, identifier, property, action);
+                }
             }
         }
 
