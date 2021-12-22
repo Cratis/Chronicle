@@ -3,7 +3,6 @@
 
 using ProtoBuf;
 
-
 namespace Cratis.Events.Observation.Grpc.Contracts
 {
     /// <summary>
