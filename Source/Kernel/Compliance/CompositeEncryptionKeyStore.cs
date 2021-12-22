@@ -22,12 +22,25 @@ namespace Cratis.Compliance
         /// <inheritdoc/>
         public async Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier)
         {
+            IEncryptionKeyStore? store = default;
+
             foreach (var innerStore in _inner)
             {
                 if (await innerStore.HasFor(identifier))
                 {
-                    return await innerStore.GetFor(identifier);
+                    store = innerStore;
                 }
+            }
+
+            if (store != default)
+            {
+                var key = await store.GetFor(identifier);
+                foreach (var storeToSaveIn in _inner.Where(_ => _ != store))
+                {
+                    await storeToSaveIn.SaveFor(identifier, key);
+                }
+
+                return key;
             }
 
             throw new MissingEncryptionKey(identifier);
