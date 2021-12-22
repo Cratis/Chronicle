@@ -4,7 +4,6 @@
 using System.Threading.Channels;
 using Cratis.Events.Observation.Grpc.Contracts;
 using Cratis.Grpc;
-using Newtonsoft.Json;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Events.Observation
