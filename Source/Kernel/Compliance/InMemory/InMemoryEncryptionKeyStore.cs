@@ -25,5 +25,13 @@ namespace Cratis.Compliance.InMemory
 
         /// <inheritdoc/>
         public Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier) => Task.FromResult(_keys[identifier]);
+
+        /// <inheritdoc/>
+        public Task DeleteFor(EncryptionKeyIdentifier identifier)
+        {
+            _keys.Remove(identifier);
+            return Task.CompletedTask;
+        }
+
     }
 }

@@ -68,5 +68,14 @@ namespace Cratis.Compliance
                 await innerStore.SaveFor(identifier, key);
             }
         }
+
+        /// <inheritdoc/>
+        public async Task DeleteFor(EncryptionKeyIdentifier identifier)
+        {
+            foreach (var innerStore in _inner)
+            {
+                await innerStore.DeleteFor(identifier);
+            }
+        }
     }
 }
