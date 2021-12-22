@@ -21,6 +21,22 @@ namespace Cratis.Common
         /// <summary>
         /// Initializes a new instance of the <see cref="KnownInstancesOf{T}"/> class.
         /// </summary>
+        public KnownInstancesOf() : this(Array.Empty<T>())
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="KnownInstancesOf{T}"/> class.
+        /// </summary>
+        /// <param name="instances">The known instances.</param>
+        public KnownInstancesOf(params T[] instances)
+        {
+            _instances = instances;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="KnownInstancesOf{T}"/> class.
+        /// </summary>
         /// <param name="instances">The known instances.</param>
         public KnownInstancesOf(IEnumerable<T> instances)
         {

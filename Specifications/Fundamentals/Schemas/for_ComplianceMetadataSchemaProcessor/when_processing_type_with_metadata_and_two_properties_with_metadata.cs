@@ -48,11 +48,11 @@ namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
         [Fact] void should_add_second_property_second_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[1].type.ShouldEqual(second_property_second_metadata.Type.Value);
         [Fact] void should_add_second_property_second_type_metadata_with_correct_details() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[1].details.ShouldEqual(second_property_second_metadata.Details);
 
-        ComplianceMetadataSchemaProcessor.Metadata[] GetMetadata() => ((IEnumerable<ComplianceMetadataSchemaProcessor.Metadata>)context.Schema.ExtensionData[ComplianceMetadataSchemaProcessor.ComplianceKey]).ToArray();
-        ComplianceMetadataSchemaProcessor.Metadata[] GetMetadataForProperty(string property)
+        ComplianceSchemaMetadata[] GetMetadata() => ((IEnumerable<ComplianceSchemaMetadata>)context.Schema.ExtensionData[JsonSchemaGenerator.ComplianceKey]).ToArray();
+        ComplianceSchemaMetadata[] GetMetadataForProperty(string property)
         {
             var propertySchema = context.Schema.Properties.Single(_ => _.Key == property.ToCamelCase()).Value;
-            return ((IEnumerable<ComplianceMetadataSchemaProcessor.Metadata>)propertySchema.ExtensionData[ComplianceMetadataSchemaProcessor.ComplianceKey]).ToArray();
+            return ((IEnumerable<ComplianceSchemaMetadata>)propertySchema.ExtensionData[JsonSchemaGenerator.ComplianceKey]).ToArray();
         }
     }
 }
