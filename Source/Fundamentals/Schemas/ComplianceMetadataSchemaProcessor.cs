@@ -10,14 +10,12 @@ using NJsonSchema.Generation;
 
 namespace Cratis.Schemas
 {
+
     /// <summary>
     /// Represents an implementation of <see cref="ISchemaProcessor"/> for handling compliance metadata.
     /// </summary>
     public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
     {
-        public record Metadata(Guid type, string details);
-
-        public const string ComplianceKey = "compliance";
         readonly IComplianceMetadataResolver _metadataResolver;
 
         /// <summary>
@@ -48,18 +46,18 @@ namespace Cratis.Schemas
             }
         }
 
-        void AddMetadataToSchema(JsonSchema schema, IEnumerable<ComplianceMetadata> metadata) => metadata.ForEach(_ => EnsureMetadata(schema).Add(new Metadata(_.Type.Value, _.Details)));
+        void AddMetadataToSchema(JsonSchema schema, IEnumerable<ComplianceMetadata> metadata) => metadata.ForEach(_ => EnsureMetadata(schema).Add(new ComplianceSchemaMetadata(_.Type.Value, _.Details)));
 
-        List<Metadata> EnsureMetadata(JsonSchema schema)
+        List<ComplianceSchemaMetadata> EnsureMetadata(JsonSchema schema)
         {
             EnsureExtensionData(schema);
 
-            if (!schema.ExtensionData.ContainsKey(ComplianceKey))
+            if (!schema.ExtensionData.ContainsKey(JsonSchemaGenerator.ComplianceKey))
             {
-                schema.ExtensionData[ComplianceKey] = new List<Metadata>();
+                schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = new List<ComplianceSchemaMetadata>();
             }
 
-            return (schema.ExtensionData[ComplianceKey] as List<Metadata>)!;
+            return (schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] as List<ComplianceSchemaMetadata>)!;
         }
 
         void EnsureExtensionData(JsonSchema schema)

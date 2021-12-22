@@ -3,7 +3,10 @@
 
 using Cratis.Compliance;
 
-namespace Dolittle.Customers
+namespace Sample.Customers
 {
-    public record SocialSecurityNumber(string Value) : PIIConceptAs<string>(Value);
+    public record SocialSecurityNumber(string Value) : PIIConceptAs<string>(Value)
+    {
+        public static implicit operator SocialSecurityNumber(string value) => new(value);
+    }
 }

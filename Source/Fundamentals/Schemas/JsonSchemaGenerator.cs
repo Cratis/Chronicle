@@ -17,6 +17,11 @@ namespace Cratis.Schemas
     [Singleton]
     public class JsonSchemaGenerator : IJsonSchemaGenerator
     {
+        /// <summary>
+        /// The key of the compliance extension data.
+        /// </summary>
+        public const string ComplianceKey = "compliance";
+
         readonly NJsonSchemaGenerator _generator;
 
         /// <summary>

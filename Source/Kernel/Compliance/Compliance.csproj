@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Compliance</AssemblyName>
+        <RootNamespace>Cratis.Compliance</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
+    </ItemGroup>
+</Project>
