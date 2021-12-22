@@ -11,7 +11,6 @@ namespace Cratis.Events.Observation.Grpc
         public async IAsyncEnumerable<ObserverServerToClient> Subscribe(IAsyncEnumerable<ObserverClientToServer> request, CallContext context = default)
         {
             Console.WriteLine("Subscribe");
-
             while (!context.CancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1), context.CancellationToken);
@@ -22,7 +21,7 @@ namespace Cratis.Events.Observation.Grpc
                     var observerRequest = enumerator.Current;
                     if (observerRequest.Subscription != null)
                     {
-                        Console.WriteLine($"Subscriber {observerRequest.Subscription.Id} - {observerRequest.Subscription.EventLogId}");
+                        Console.WriteLine($"Subscriber {observerRequest.Subscription.Id} - {observerRequest.Subscription.Name} - {observerRequest.Subscription.EventLogId}");
                     }
                     else
                     {
