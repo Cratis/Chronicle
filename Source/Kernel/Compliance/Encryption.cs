@@ -3,7 +3,7 @@
 
 using System.Security.Cryptography;
 
-namespace Cratis.Compliance.InMemory
+namespace Cratis.Compliance
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEncryption"/>.
@@ -34,6 +34,7 @@ namespace Cratis.Compliance.InMemory
         {
             var aes = CreateAes();
             aes.IV = bytes[..16];
+            aes.Key = key.Value;
             using var decryptor = aes.CreateDecryptor();
             return decryptor.TransformFinalBlock(bytes, aes.IV.Length, bytes.Length - aes.IV.Length);
         }
