@@ -30,6 +30,7 @@ namespace Cratis.Events.Observation
                                     var observer = _.GetCustomAttribute<ObserverAttribute>()!;
                                     return new Observer(
                                         observer.ObserverId,
+                                        _.FullName ?? $"{_.Namespace}.{_.Name}",
                                         observer.EventLogId,
                                         eventTypes,
                                         new ObserverInvoker(serviceProvider, eventTypes, _),
