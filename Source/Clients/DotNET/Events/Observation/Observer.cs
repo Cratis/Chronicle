@@ -15,6 +15,7 @@ namespace Cratis.Events.Observation
     public class Observer : IObserver
     {
         readonly ObserverId _observerId;
+        readonly ObserverName _name;
         readonly EventLogId _eventLogId;
         readonly IEventTypes _eventTypes;
         readonly IObserverInvoker _observerInvoker;
@@ -24,6 +25,7 @@ namespace Cratis.Events.Observation
 
         public Observer(
             ObserverId observerId,
+            ObserverName name,
             EventLogId eventLogId,
             IEventTypes eventTypes,
             IObserverInvoker observerInvoker,
@@ -31,6 +33,7 @@ namespace Cratis.Events.Observation
             IGrpcChannel channel)
         {
             _observerId = observerId;
+            _name = name;
             _eventLogId = eventLogId;
             _eventTypes = eventTypes;
             _observerInvoker = observerInvoker;
@@ -50,24 +53,41 @@ namespace Cratis.Events.Observation
                     Subscription = new()
                     {
                         EventLogId = _eventLogId,
-                        Id = _observerId
+                        Id = _observerId,
+                        Name = _name
                     }
                 });
 
                 await foreach (var request in result)
                 {
-                    var clrType = _eventTypes.GetClrTypeFor(request.EventTypeId);
-                    var content = _eventSerializer.Deserialize(clrType, request.Content);
-                    await _observerInvoker.Invoke(content, null!);
-
-                    await stream.Writer.WriteAsync(new ObserverClientToServer
+                    ObserverClientToServer response;
+                    try
                     {
-                        Result = new()
+                        var clrType = _eventTypes.GetClrTypeFor(request.EventTypeId);
+                        var content = _eventSerializer.Deserialize(clrType, request.Content);
+                        await _observerInvoker.Invoke(content, null!);
+                        response = new()
                         {
-                            Failed = true,
-                            Reason = $"Because we can - {request.Occurred}"
-                        }
-                    });
+                            Result = new()
+                            {
+                                Failed = false,
+                                Reason = string.Empty
+                            }
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        response = new()
+                        {
+                            Result = new()
+                            {
+                                Failed = true,
+                                Reason = ex.Message
+                            }
+                        };
+                    }
+
+                    await stream.Writer.WriteAsync(response);
                 }
             });
         }
