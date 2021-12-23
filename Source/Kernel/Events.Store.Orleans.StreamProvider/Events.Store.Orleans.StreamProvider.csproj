@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Store.Orleans.StreamProvider</AssemblyName>
+        <RootNamespace>Cratis.Events.Store.Orleans.StreamProvider</RootNamespace>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
+    </ItemGroup>
+</Project>
