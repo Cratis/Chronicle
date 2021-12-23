@@ -2,12 +2,28 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Observation.Grpc.Contracts;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Events.Observation.Grpc
 {
+    /// <summary>
+    /// Represents an implementation of <see cref="IObserversService"/>.
+    /// </summary>
     public class ObserversService : IObserversService
     {
+        readonly ILogger<ObserversService> _logger;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserversService"/> class.
+        /// </summary>
+        /// <param name="logger">Logger for logging.</param>
+        public ObserversService(ILogger<ObserversService> logger)
+        {
+            _logger = logger;
+        }
+
+        /// <inheritdoc/>
         public async IAsyncEnumerable<ObserverServerToClient> Subscribe(IAsyncEnumerable<ObserverClientToServer> request, CallContext context = default)
         {
             Console.WriteLine("Subscribe");
