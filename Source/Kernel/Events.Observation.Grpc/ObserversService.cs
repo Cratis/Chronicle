@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Observation.Grpc.Contracts;
+using Cratis.Events.Store;
 using Microsoft.Extensions.Logging;
+using Orleans.Streams;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Events.Observation.Grpc
@@ -13,20 +15,33 @@ namespace Cratis.Events.Observation.Grpc
     public class ObserversService : IObserversService
     {
         readonly ILogger<ObserversService> _logger;
+        readonly GetClusterClient _getClusterClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserversService"/> class.
         /// </summary>
         /// <param name="logger">Logger for logging.</param>
-        public ObserversService(ILogger<ObserversService> logger)
+        /// <param name="getClusterClient"></param>
+        public ObserversService(ILogger<ObserversService> logger, GetClusterClient getClusterClient)
         {
             _logger = logger;
+            _getClusterClient = getClusterClient;
         }
 
         /// <inheritdoc/>
         public async IAsyncEnumerable<ObserverServerToClient> Subscribe(IAsyncEnumerable<ObserverClientToServer> request, CallContext context = default)
         {
             Console.WriteLine("Subscribe");
+
+            var streamProvider = _getClusterClient().GetStreamProvider("event-log");
+            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "main-event-log");
+            await stream.SubscribeAsync(
+                (@event, st) =>
+                {
+                    Console.WriteLine("Event received");
+                    return Task.CompletedTask;
+                });
+
             while (!context.CancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1), context.CancellationToken);

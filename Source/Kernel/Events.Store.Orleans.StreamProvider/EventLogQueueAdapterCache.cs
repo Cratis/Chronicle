@@ -7,6 +7,6 @@ namespace Events.Store.Orleans.Streams
 {
     public class EventLogQueueAdapterCache : IQueueAdapterCache
     {
-        public IQueueCache CreateQueueCache(QueueId queueId) => throw new NotImplementedException();
+        public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache();
     }
 }

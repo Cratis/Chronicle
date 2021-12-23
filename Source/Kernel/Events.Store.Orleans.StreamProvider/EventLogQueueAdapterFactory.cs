@@ -17,6 +17,6 @@ namespace Events.Store.Orleans.Streams
         public IQueueAdapterCache GetQueueAdapterCache() => new EventLogQueueAdapterCache();
 
         /// <inheritdoc/>
-        public IStreamQueueMapper GetStreamQueueMapper() => new EventLogStreamQueueMapper();
+        public IStreamQueueMapper GetStreamQueueMapper() => new EventLogStreamQueueMapper(new(), "prefix");
     }
 }

@@ -19,6 +19,7 @@ namespace Cratis.Server
                 var clientBuilder = new ClientBuilder()
                                             .UseLocalhostClustering()
                                             //.UseServiceProviderFactory(new ClientServiceProviderFactory())
+                                            .AddEventLogStream()
                                             .ConfigureServices(services =>
                                             {
                                                 services.AddSingleton<IExecutionContextManager, ExecutionContextManager>();
