@@ -5,15 +5,18 @@ using Orleans.Streams;
 
 namespace Events.Store.Orleans.Streams
 {
-    /// <summary>
-    /// Represents a <see cref="IQueueAdapter"/> for event log.
-    /// </summary>
     public class EventLogQueueAdapter : IQueueAdapter
     {
-        public const string StreamName = "event-log";
+        readonly IStreamQueueMapper _mapper;
+
+        public EventLogQueueAdapter(string name, IStreamQueueMapper mapper)
+        {
+            Name = name;
+            _mapper = mapper;
+        }
 
         /// <inheritdoc/>
-        public string Name => StreamName;
+        public string Name { get; }
 
         /// <inheritdoc/>
         public bool IsRewindable => true;
@@ -22,11 +25,13 @@ namespace Events.Store.Orleans.Streams
         public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
 
         /// <inheritdoc/>
-        public IQueueAdapterReceiver CreateReceiver(QueueId queueId) => new EventLogQueueAdapterReceiver();
+        public IQueueAdapterReceiver CreateReceiver(QueueId queueId) => new EventLogQueueAdapterReceiver(queueId);
 
         /// <inheritdoc/>
         public Task QueueMessageBatchAsync<T>(Guid streamGuid, string streamNamespace, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
         {
+            var queue = _mapper.GetQueueForStream(streamGuid, streamNamespace);
+
             return Task.CompletedTask;
         }
     }

@@ -62,8 +62,9 @@ namespace Cratis.Events.Store
             await _state.WriteStateAsync();
 
             var streamProvider = GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty,"main-event-log");
-            await stream.OnNextAsync(appendedEvent, new EventSequenceToken(_state.State.SequenceNumber));
+            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "event-log");
+            var handlers = await stream.GetAllSubscriptionHandles();
+            await stream.OnNextAsync(appendedEvent); //, new EventSequenceToken(_state.State.SequenceNumber));
 
             var observers = GrainFactory.GetGrain<IEventLogObservers>(_eventLogId, keyExtension: _tenantId.ToString());
             await observers.Next(appendedEvent);

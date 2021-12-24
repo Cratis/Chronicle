@@ -4,6 +4,7 @@
 using Cratis.Events.Observation.Grpc.Contracts;
 using Cratis.Events.Store;
 using Microsoft.Extensions.Logging;
+using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 
@@ -34,17 +35,20 @@ namespace Cratis.Events.Observation.Grpc
             Console.WriteLine("Subscribe");
 
             var streamProvider = _getClusterClient().GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "main-event-log");
-            await stream.SubscribeAsync(
+            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "event-log");
+            var subscriptionHandle = await stream.SubscribeAsync(
                 (@event, st) =>
                 {
                     Console.WriteLine("Event received");
                     return Task.CompletedTask;
-                });
+                }); //, new EventSequenceToken(0));
+            var handlers = await stream.GetAllSubscriptionHandles();
+
+            Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
 
             while (!context.CancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1), context.CancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(60), context.CancellationToken);
 
                 var enumerator = request.GetAsyncEnumerator();
                 while (await enumerator.MoveNextAsync())
@@ -67,6 +71,7 @@ namespace Cratis.Events.Observation.Grpc
                     Content = "{ \"ma,e\": \"Hello world\", \"owner\": \"94c7de3b-732a-4843-a764-db885bbdb360\" }"
                 };
             }
+
 
             Console.WriteLine("Unsubsribe");
         }

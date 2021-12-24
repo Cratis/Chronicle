@@ -8,9 +8,20 @@ namespace Events.Store.Orleans.Streams
 {
     public class EventLogStreamFailureHandler : IStreamFailureHandler
     {
-        public bool ShouldFaultSubsriptionOnError => throw new NotImplementedException();
+        public EventLogStreamFailureHandler(QueueId queueId)
+        {
+        }
 
-        public Task OnDeliveryFailure(GuidId subscriptionId, string streamProviderName, IStreamIdentity streamIdentity, StreamSequenceToken sequenceToken) => throw new NotImplementedException();
-        public Task OnSubscriptionFailure(GuidId subscriptionId, string streamProviderName, IStreamIdentity streamIdentity, StreamSequenceToken sequenceToken) => throw new NotImplementedException();
+        public bool ShouldFaultSubsriptionOnError => true;
+
+        public Task OnDeliveryFailure(GuidId subscriptionId, string streamProviderName, IStreamIdentity streamIdentity, StreamSequenceToken sequenceToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task OnSubscriptionFailure(GuidId subscriptionId, string streamProviderName, IStreamIdentity streamIdentity, StreamSequenceToken sequenceToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

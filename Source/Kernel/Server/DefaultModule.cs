@@ -6,7 +6,7 @@ using Cratis.Events.Store;
 using Cratis.Execution;
 using Cratis.Extensions.Orleans.Execution;
 using Orleans;
-using Orleans.Configuration;
+using Orleans.Hosting;
 
 namespace Cratis.Server
 {
@@ -19,18 +19,14 @@ namespace Cratis.Server
                 var clientBuilder = new ClientBuilder()
                                             .UseLocalhostClustering()
                                             //.UseServiceProviderFactory(new ClientServiceProviderFactory())
+                                            //.AddSimpleMessageStreamProvider("event-log")
                                             .AddEventLogStream()
                                             .ConfigureServices(services =>
                                             {
                                                 services.AddSingleton<IExecutionContextManager, ExecutionContextManager>();
                                                 services.AddSingleton<IRequestContextManager, RequestContextManager>();
                                             })
-                                            .UseExecutionContext()
-                                            .Configure<ClusterOptions>(options =>
-                                            {
-                                                options.ClusterId = "dev";
-                                                options.ServiceId = "Cratis Kernel";
-                                            });
+                                            .UseExecutionContext();
 
                 var rr = _.ComponentRegistry.Registrations.Where(r => r.Services.Any(s => s.Description.Contains("ExecutionContextManager"))).ToArray();
                 var client = clientBuilder.Build();

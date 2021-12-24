@@ -5,11 +5,15 @@ using Orleans.Streams;
 
 namespace Events.Store.Orleans.Streams
 {
-    /// <summary>
-    /// Represents a <see cref="IQueueAdapterReceiver"/> for event log.
-    /// </summary>
     public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
     {
+        readonly QueueId _queueId;
+
+        public EventLogQueueAdapterReceiver(QueueId queueId)
+        {
+            _queueId = queueId;
+        }
+
         /// <inheritdoc/>
         public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
         {
