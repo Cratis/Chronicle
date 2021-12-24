@@ -33,11 +33,11 @@ namespace Cratis.Server
                 services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(controllerAssembly));
             }
 
-            // services.AddCodeFirstGrpc(config => config.ResponseCompressionLevel = CompressionLevel.Optimal);
-            // services.AddCodeFirstGrpcReflection();
-            // services.AddEndpointsApiExplorer();
-            // services.AddSwaggerGen();
-            //services.TryAddSingleton(BinderConfiguration.Create(binder: new ServiceBinderWithServiceResolutionFromServiceCollection(services)));
+            services.AddCodeFirstGrpc(config => config.ResponseCompressionLevel = CompressionLevel.Optimal);
+            services.AddCodeFirstGrpcReflection();
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
+            services.TryAddSingleton(BinderConfiguration.Create(binder: new ServiceBinderWithServiceResolutionFromServiceCollection(services)));
         }
 
         public void ConfigureContainer(ContainerBuilder containerBuilder)
@@ -66,9 +66,9 @@ namespace Cratis.Server
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                // endpoints.MapGrpcService<EventLogService>();
-                // endpoints.MapGrpcService<ObserversService>();
-                // endpoints.MapCodeFirstGrpcReflectionService();
+                endpoints.MapGrpcService<EventLogService>();
+                endpoints.MapGrpcService<ObserversService>();
+                endpoints.MapCodeFirstGrpcReflectionService();
             });
 
             var streamProvider = app.ApplicationServices.GetService<GetClusterClient>()!().GetStreamProvider("event-log");

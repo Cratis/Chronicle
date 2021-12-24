@@ -49,7 +49,7 @@ namespace Cratis.Events.Store
         {
             _logger.Appending(eventType, eventSourceId, _state.State.SequenceNumber, _eventLogId);
 
-            //await _eventLogsProvider().Append(_eventLogId, _state.State.SequenceNumber, eventSourceId, eventType, content);
+            await _eventLogsProvider().Append(_eventLogId, _state.State.SequenceNumber, eventSourceId, eventType, content);
 
             var appendedEvent = new AppendedEvent(
                 new EventMetadata(_state.State.SequenceNumber, eventType),
@@ -58,7 +58,7 @@ namespace Cratis.Events.Store
             );
 
             _state.State.SequenceNumber++;
-            //await _state.WriteStateAsync();
+            await _state.WriteStateAsync();
 
             var streamProvider = GetStreamProvider("event-log");
             var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "greetings");

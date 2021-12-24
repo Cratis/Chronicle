@@ -23,8 +23,8 @@ namespace Cratis.Server
                                             {
                                                 services.AddSingleton<IExecutionContextManager, ExecutionContextManager>();
                                                 services.AddSingleton<IRequestContextManager, RequestContextManager>();
-                                            });
-                                            //.UseExecutionContext();
+                                            })
+                                            .UseExecutionContext();
 
                 var client = clientBuilder.Build();
                 client.Connect().Wait();
