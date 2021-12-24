@@ -26,9 +26,12 @@ namespace Cratis.Extensions.Orleans.Execution
         /// <inheritdoc/>
         public async Task Invoke(IOutgoingGrainCallContext context)
         {
-            var executionContext = _executionContextManager.Current;
-            _requestContextManager.Set(RequestContextKeys.TenantId, executionContext.TenantId.ToString());
-            _requestContextManager.Set(RequestContextKeys.CorrelationId, executionContext.CorrelationId);
+            if (_executionContextManager.IsInContext)
+            {
+                var executionContext = _executionContextManager.Current;
+                _requestContextManager.Set(RequestContextKeys.TenantId, executionContext.TenantId.ToString());
+                _requestContextManager.Set(RequestContextKeys.CorrelationId, executionContext.CorrelationId);
+            }
             await context.Invoke();
         }
     }

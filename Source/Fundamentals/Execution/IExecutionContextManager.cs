@@ -9,6 +9,11 @@ namespace Cratis.Execution
     public interface IExecutionContextManager
     {
         /// <summary>
+        /// Gets whether or not we're in context.
+        /// </summary>
+        bool IsInContext { get; }
+
+        /// <summary>
         /// Get the current <see cref="ExecutionContext"/> for the current call path.
         /// </summary>
         ExecutionContext Current { get; }
