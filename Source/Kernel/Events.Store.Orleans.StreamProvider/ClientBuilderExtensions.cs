@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Events.Store.Orleans.Streams;
-using Microsoft.Extensions.DependencyInjection;
 using Orleans.Hosting;
+using Orleans.Streams;
 
 namespace Orleans
 {
@@ -11,13 +11,26 @@ namespace Orleans
     {
         public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
         {
-            builder.ConfigureServices(_ => _.AddSingleton<EventLogQueueAdapterFactory>());
+            // var configurator = new EventLogClusterClientPersistentStreamConfigurator(
+            //     "event-log",
+            //     builder);
 
-            var configurator = new ClusterClientPersistentStreamConfigurator(
-                EventLogQueueAdapter.StreamName,
-                builder,
-                (sp, name) => sp.GetService<EventLogQueueAdapterFactory>());
+            builder.AddPersistentStreams(
+                "event-log",
+                EventLogQueueAdapterFactory.Create,
+                _ =>
+                {
+                });
             return builder;
+        }
+    }
+
+
+    public class EventLogClusterClientPersistentStreamConfigurator : ClusterClientPersistentStreamConfigurator
+    {
+        public EventLogClusterClientPersistentStreamConfigurator(string name, IClientBuilder clientBuilder) : base(name, clientBuilder, EventLogQueueAdapterFactory.Create)
+        {
+            this.ConfigureComponent(EventLogQueueAdapterFactory.Create);
         }
     }
 }

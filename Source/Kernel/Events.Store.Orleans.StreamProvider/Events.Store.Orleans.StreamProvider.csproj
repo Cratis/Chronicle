@@ -10,4 +10,8 @@
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.OrleansProviders" Version="$(Orleans)" />
+    </ItemGroup>
 </Project>
