@@ -4,7 +4,6 @@
 using Cratis.Events.Observation.Grpc.Contracts;
 using Cratis.Events.Store;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 
@@ -35,7 +34,7 @@ namespace Cratis.Events.Observation.Grpc
             Console.WriteLine("Subscribe");
 
             var streamProvider = _getClusterClient().GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "event-log");
+            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, null);
             var subscriptionHandle = await stream.SubscribeAsync(
                 (@event, st) =>
                 {

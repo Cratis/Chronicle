@@ -5,7 +5,6 @@ using Cratis.DependencyInversion;
 using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans;
-using Orleans.Providers.Streams.Common;
 using Orleans.Runtime;
 
 namespace Cratis.Events.Store
@@ -62,7 +61,7 @@ namespace Cratis.Events.Store
             await _state.WriteStateAsync();
 
             var streamProvider = GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "event-log");
+            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, null);
             var handlers = await stream.GetAllSubscriptionHandles();
             await stream.OnNextAsync(appendedEvent); //, new EventSequenceToken(_state.State.SequenceNumber));
 

@@ -3,39 +3,43 @@
 
 using Orleans.Streams;
 
-namespace Events.Store.Orleans.Streams
+namespace Cratis.Events.Store.Orleans.StreamProvider
 {
     public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
     {
         readonly QueueId _queueId;
+        readonly List<IBatchContainer> _events = new();
 
         public EventLogQueueAdapterReceiver(QueueId queueId)
         {
             _queueId = queueId;
         }
 
-        /// <inheritdoc/>
         public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
         {
-            return Task.FromResult<IList<IBatchContainer>>(new List<IBatchContainer>());
+            var result = _events.ToArray().ToList();
+            _events.Clear();
+            return Task.FromResult<IList<IBatchContainer>>(result);
         }
 
-        /// <inheritdoc/>
         public Task Initialize(TimeSpan timeout)
         {
             return Task.CompletedTask;
         }
 
-        /// <inheritdoc/>
         public Task MessagesDeliveredAsync(IList<IBatchContainer> messages)
         {
             return Task.CompletedTask;
         }
 
-        /// <inheritdoc/>
         public Task Shutdown(TimeSpan timeout)
         {
             return Task.CompletedTask;
+        }
+
+        public void AddMessage(IEnumerable<object> events)
+        {
+            _events.Add(new EventLogBatchContainer(Guid.Empty, events));
         }
     }
 }
