@@ -18,8 +18,6 @@ namespace Cratis.Server
             {
                 var clientBuilder = new ClientBuilder()
                                             .UseLocalhostClustering()
-                                            //.UseServiceProviderFactory(new ClientServiceProviderFactory())
-                                            //.AddSimpleMessageStreamProvider("event-log")
                                             .AddEventLogStream()
                                             .ConfigureServices(services =>
                                             {
