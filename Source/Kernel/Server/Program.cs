@@ -36,11 +36,11 @@ namespace Cratis.Server
             Host.CreateDefaultBuilder(args)
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
-                    .AddMemoryGrainStorageAsDefault()
+                    //.AddMemoryGrainStorageAsDefault()
                     .AddMemoryGrainStorage("PubSubStore")
                     //.AddSimpleMessageStreamProvider("event-log")
                     .AddEventLogStream()
-                    .AddExecutionContext()
+                    //.AddExecutionContext()
                     .ConfigureServices(services => services.AddSingletonNamedService(EventLogState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService(typeof(EventLogStorageProvider)) as IGrainStorage)))
                 .UseSerilog()
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
