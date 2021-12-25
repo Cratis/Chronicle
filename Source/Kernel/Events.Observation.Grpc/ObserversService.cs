@@ -4,6 +4,7 @@
 using Cratis.Events.Observation.Grpc.Contracts;
 using Cratis.Events.Store;
 using Microsoft.Extensions.Logging;
+using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 
@@ -35,19 +36,24 @@ namespace Cratis.Events.Observation.Grpc
 
             var streamProvider = _getClusterClient().GetStreamProvider("event-log");
             var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "greetings");
+
             var subscriptionHandle = await stream.SubscribeAsync(
                 (@event, st) =>
                 {
                     Console.WriteLine("Event received");
                     return Task.CompletedTask;
-                }); //, new EventSequenceToken(0));
+                }, new EventSequenceToken(0));
             var handlers = await stream.GetAllSubscriptionHandles();
 
             Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
 
             while (!context.CancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(60), context.CancellationToken);
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(60), context.CancellationToken);
+                }
+                catch { break; }
 
                 var enumerator = request.GetAsyncEnumerator();
                 while (await enumerator.MoveNextAsync())
@@ -71,6 +77,7 @@ namespace Cratis.Events.Observation.Grpc
                 };
             }
 
+            await subscriptionHandle.UnsubscribeAsync();
 
             Console.WriteLine("Unsubsribe");
         }

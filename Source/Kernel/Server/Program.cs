@@ -5,6 +5,7 @@ using System.Net;
 using Autofac.Extensions.DependencyInjection;
 using Cratis.Events.Store;
 using Cratis.Events.Store.MongoDB;
+using Cratis.Events.Store.Orleans.StreamProvider;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Orleans;
 using Orleans.Hosting;
@@ -37,19 +38,20 @@ namespace Cratis.Server
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
                     //.AddMemoryGrainStorageAsDefault()
-                    .AddMemoryGrainStorage("PubSubStore")
+                    //.AddMemoryGrainStorage("PubSubStore")
+                    .ConfigureServices(services => services.AddSingletonNamedService<IGrainStorage>("PubSubStore", (serviceProvider, _) => serviceProvider.GetService<EventLogPubSubStore>()!))
                     .AddEventLogStream()
                     .AddExecutionContext()
-                    .ConfigureServices(services => services.AddSingletonNamedService(EventLogState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService(typeof(EventLogStorageProvider)) as IGrainStorage)))
+                    .ConfigureServices(services => services.AddSingletonNamedService<IGrainStorage>(EventLogState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<EventLogStorageProvider>()!)))
                 .UseSerilog()
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _
                     .UseStartup<Startup>()
                     .ConfigureKestrel(options =>
                     {
-                        options.Listen(IPAddress.Any, 5003, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
-                        options.Listen(IPAddress.Any, 5002, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-                    })
+            options.Listen(IPAddress.Any, 5003, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
+            options.Listen(IPAddress.Any, 5002, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+        })
                     );
 
         static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
