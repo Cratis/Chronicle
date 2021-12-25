@@ -30,6 +30,5 @@ namespace Cratis.Events.Store.Orleans.StreamProvider
         public bool ImportRequestContext() => true;
 
         public bool ShouldDeliver(IStreamIdentity stream, object filterData, StreamFilterPredicate shouldReceiveFunc) => true;
-
     }
 }

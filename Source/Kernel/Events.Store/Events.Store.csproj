@@ -12,13 +12,11 @@
 
     <ItemGroup>
       <PackageReference Include="System.Reactive" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
-    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
-    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
-    <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="$(Orleans)" />
-    <PackageReference Include="Microsoft.Orleans.Client" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Orleans.Server" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Client" Version="$(Orleans)" />
     </ItemGroup>
 </Project>

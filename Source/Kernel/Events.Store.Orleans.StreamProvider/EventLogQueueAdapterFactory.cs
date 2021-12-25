@@ -3,7 +3,6 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
 namespace Cratis.Events.Store.Orleans.StreamProvider
@@ -17,7 +16,7 @@ namespace Cratis.Events.Store.Orleans.StreamProvider
         public EventLogQueueAdapterFactory(string name, ILoggerFactory loggerFactory)
         {
             _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-            _cache = new SimpleQueueAdapterCache(new(), name, loggerFactory);
+            _cache = new EventLogQueueAdapterCache();
             _name = name;
         }
 

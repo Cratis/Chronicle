@@ -71,14 +71,14 @@ namespace Cratis.Server
                 endpoints.MapCodeFirstGrpcReflectionService();
             });
 
-            var streamProvider = app.ApplicationServices.GetService<GetClusterClient>()!().GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "greetings");
-            stream.SubscribeAsync(
-                (@event, st) =>
-                {
-                    Console.WriteLine("Event received");
-                    return Task.CompletedTask;
-                }); //, new EventSequenceToken(0));
+            // var streamProvider = app.ApplicationServices.GetService<GetClusterClient>()!().GetStreamProvider("event-log");
+            // var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "greetings");
+            // stream.SubscribeAsync(
+            //     (@event, st) =>
+            //     {
+            //         Console.WriteLine("Event received");
+            //         return Task.CompletedTask;
+            //     }); //, new EventSequenceToken(0));
         }
     }
 
