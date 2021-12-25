@@ -11,9 +11,9 @@ namespace Cratis.Events.Store
     public static partial class EventLogLogMessages
     {
         [LoggerMessage(0, LogLevel.Information, "Appending '{EventType}' for EventSource '{EventSource}' with sequence number {SequenceNumber} to event log '{EventLog}")]
-        internal static partial void Appending(this ILogger logger, EventType eventType, EventSourceId eventSource, uint sequenceNumber, EventLogId eventLog);
+        internal static partial void Appending(this ILogger logger, EventType eventType, EventSourceId eventSource, ulong sequenceNumber, EventLogId eventLog);
 
         [LoggerMessage(1, LogLevel.Information, "Compensatin event @ {SequenceNumber} in event log '{EventLog}' - event type '{EventType}'")]
-        internal static partial void Compensating(this ILogger logger, EventType eventTYpe, uint sequenceNumber, EventLogId eventLog);
+        internal static partial void Compensating(this ILogger logger, EventType eventTYpe, ulong sequenceNumber, EventLogId eventLog);
     }
 }

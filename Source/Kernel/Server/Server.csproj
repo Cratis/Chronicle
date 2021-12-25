@@ -28,7 +28,6 @@
         <ProjectReference Include="../Events.Store.Api/Events.Store.Api.csproj" />
         <ProjectReference Include="../Events.Store.Grpc/Events.Store.Grpc.csproj" />
         <ProjectReference Include="../Events.Store.MongoDB/Events.Store.MongoDB.csproj" />
-        <ProjectReference Include="../Events.Store.Orleans.StreamProvider/Events.Store.Orleans.StreamProvider.csproj" />
         <ProjectReference Include="../Events.Projections.Api/Events.Projections.Api.csproj" />
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
