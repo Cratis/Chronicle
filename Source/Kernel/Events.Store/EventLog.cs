@@ -14,10 +14,11 @@ namespace Cratis.Events.Store
     /// </summary>
     public class EventLog : Grain, IEventLog
     {
+        public const string StorageProvider = "event-log";
+
         readonly IPersistentState<EventLogState> _state;
         readonly ILogger<EventLog> _logger;
         EventLogId _eventLogId = EventLogId.Unspecified;
-        TenantId _tenantId = TenantId.NotSet;
 
         /// <summary>
         /// Initializes a new instance of <see cref="EventLog"/>.
@@ -35,8 +36,7 @@ namespace Cratis.Events.Store
         /// <inheritdoc/>
         public override Task OnActivateAsync()
         {
-            _eventLogId = this.GetPrimaryKey(out var tenantIdAsString);
-            _tenantId = Guid.Parse(tenantIdAsString);
+            _eventLogId = this.GetPrimaryKey(out var _);
             return base.OnActivateAsync();
         }
 
@@ -54,12 +54,9 @@ namespace Cratis.Events.Store
             _state.State.SequenceNumber++;
             await _state.WriteStateAsync();
 
-            var streamProvider = GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, null);
+            var streamProvider = GetStreamProvider(StorageProvider);
+            var stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, null);
             await stream.OnNextAsync(appendedEvent, new EventSequenceToken(_state.State.SequenceNumber));
-
-            var observers = GrainFactory.GetGrain<IEventLogObservers>(_eventLogId, keyExtension: _tenantId.ToString());
-            await observers.Next(appendedEvent);
         }
 
         /// <inheritdoc/>
