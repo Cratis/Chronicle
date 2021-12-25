@@ -7,7 +7,7 @@ using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Storage;
 
-namespace Cratis.Events.Store.Orleans.StreamProvider
+namespace Cratis.Events.Store.MongoDB
 {
     public class EventLogPubSubStore : IGrainStorage
     {

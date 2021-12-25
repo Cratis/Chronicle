@@ -3,16 +3,12 @@
 
 using System.IO.Compression;
 using Autofac;
-using Cratis.Events;
 using Cratis.Events.Observation.Grpc;
-using Cratis.Events.Store;
 using Cratis.Events.Store.Grpc;
-using Cratis.Execution;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Orleans.Streams;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -57,8 +53,8 @@ namespace Cratis.Server
                 app.UseDeveloperExceptionPage();
             }
 
-            // app.UseSwagger();
-            // app.UseSwaggerUI();
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             app.PerformBootProcedures();
 
@@ -70,43 +66,6 @@ namespace Cratis.Server
                 endpoints.MapGrpcService<ObserversService>();
                 endpoints.MapCodeFirstGrpcReflectionService();
             });
-
-            // var streamProvider = app.ApplicationServices.GetService<GetClusterClient>()!().GetStreamProvider("event-log");
-            // var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "greetings");
-            // stream.SubscribeAsync(
-            //     (@event, st) =>
-            //     {
-            //         Console.WriteLine("Event received");
-            //         return Task.CompletedTask;
-            //     }); //, new EventSequenceToken(0));
-        }
-    }
-
-    [Route("/api/test")]
-    public class TestController : Controller
-    {
-        readonly IEventStore _eventStore;
-        readonly IExecutionContextManager _executionContextManager;
-
-        public TestController(IEventStore eventStore, IExecutionContextManager executionContextManager)
-        {
-            _eventStore = eventStore;
-            _executionContextManager = executionContextManager;
-        }
-
-        [HttpGet]
-        public async Task DoStuff()
-        {
-            _executionContextManager.Establish(
-                Guid.Parse("f455c031-630e-450d-a75b-ca050c441708"),
-                Guid.NewGuid().ToString()
-            );
-
-            await _eventStore.GetEventLog(Guid.Empty).Append(
-                Guid.NewGuid().ToString(),
-                new EventType(Guid.NewGuid(), 1),
-                "{ \"blah\": 42 }"
-            );
         }
     }
 }

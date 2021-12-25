@@ -1,8 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store.Orleans.StreamProvider;
+using Cratis.Events.Store;
+using Cratis.Events.Store.MongoDB;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.Configuration;
+using Orleans.Runtime;
+using Orleans.Storage;
 
 namespace Orleans.Hosting
 {
@@ -18,6 +22,12 @@ namespace Orleans.Hosting
         /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
         public static ISiloBuilder AddEventLogStream(this ISiloBuilder builder)
         {
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingletonNamedService<IGrainStorage>("PubSubStore", (serviceProvider, _) => serviceProvider.GetService<EventLogPubSubStore>()!);
+                services.AddSingletonNamedService<IGrainStorage>(EventLogState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<EventLogStorageProvider>()!);
+            });
+
             builder.AddPersistentStreams(
                 "event-log",
                 EventLogQueueAdapterFactory.Create,

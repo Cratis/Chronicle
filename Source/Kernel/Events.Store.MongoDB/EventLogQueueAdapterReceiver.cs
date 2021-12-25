@@ -3,7 +3,7 @@
 
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Orleans.StreamProvider
+namespace Cratis.Events.Store.MongoDB
 {
     public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
     {
@@ -37,9 +37,9 @@ namespace Cratis.Events.Store.Orleans.StreamProvider
             return Task.CompletedTask;
         }
 
-        public void AddMessage(IEnumerable<object> events)
+        public void AddMessage(StreamSequenceToken token, IEnumerable<object> events, IDictionary<string, object> requestContext)
         {
-            _events.Add(new EventLogBatchContainer(Guid.Empty, events));
+            _events.Add(new EventLogBatchContainer(token, Guid.Empty, events, requestContext));
         }
     }
 }
