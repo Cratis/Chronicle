@@ -1,61 +1,60 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Providers;
 using Orleans.Providers.Streams.Common;
-using Orleans.Runtime;
 
 namespace Cratis.Events.Store
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventLog"/>.
     /// </summary>
-    public class EventLog : Grain, IEventLog
+    [StorageProvider(ProviderName = EventLogState.StorageProvider)]
+    public class EventLog : Grain<EventLogState>, IEventLog
     {
-        public const string StorageProvider = "event-log";
-
-        readonly IPersistentState<EventLogState> _state;
+        public const string StreamProvider = "event-log";
         readonly ILogger<EventLog> _logger;
         EventLogId _eventLogId = EventLogId.Unspecified;
+        TenantId _tenantId = TenantId.NotSet;
 
         /// <summary>
         /// Initializes a new instance of <see cref="EventLog"/>.
         /// </summary>
-        /// <param name="state">State of the grain.</param>
         /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
         public EventLog(
-            [PersistentState("EventLog", EventLogState.StorageProvider)] IPersistentState<EventLogState> state,
             ILogger<EventLog> logger)
         {
-            _state = state;
             _logger = logger;
         }
 
         /// <inheritdoc/>
         public override Task OnActivateAsync()
         {
-            _eventLogId = this.GetPrimaryKey(out var _);
+            _eventLogId = this.GetPrimaryKey(out var tenantId);
+            _tenantId = tenantId;
             return base.OnActivateAsync();
         }
 
         /// <inheritdoc/>
         public async Task Append(EventSourceId eventSourceId, EventType eventType, string content)
         {
-            _logger.Appending(eventType, eventSourceId, _state.State.SequenceNumber, _eventLogId);
+            _logger.Appending(eventType, eventSourceId, State.SequenceNumber, _eventLogId);
 
             var appendedEvent = new AppendedEvent(
-                new EventMetadata(_state.State.SequenceNumber, eventType),
+                new EventMetadata(State.SequenceNumber, eventType),
                 new EventContext(eventSourceId, DateTimeOffset.UtcNow),
                 content
             );
 
-            _state.State.SequenceNumber++;
-            await _state.WriteStateAsync();
+            State.SequenceNumber++;
+            await WriteStateAsync();
 
-            var streamProvider = GetStreamProvider(StorageProvider);
-            var stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, null);
-            await stream.OnNextAsync(appendedEvent, new EventSequenceToken(_state.State.SequenceNumber));
+            var streamProvider = GetStreamProvider(StreamProvider);
+            var stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
+            await stream.OnNextAsync(appendedEvent, new EventSequenceToken(State.SequenceNumber));
         }
 
         /// <inheritdoc/>

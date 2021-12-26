@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.DependencyInversion;
+using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 using Orleans.Streams;
 
 namespace Cratis.Events.Store.MongoDB
@@ -14,10 +16,14 @@ namespace Cratis.Events.Store.MongoDB
         readonly string _name;
         readonly ProviderFor<IEventLogs> _eventLogsProvder;
 
-        public EventLogQueueAdapterFactory(string name, ProviderFor<IEventLogs> eventLogsProvder)
+        public EventLogQueueAdapterFactory(
+            string name,
+            ProviderFor<IEventLogs> eventLogsProvder,
+            IExecutionContextManager executionContextManager,
+            ProviderFor<IMongoDatabase> mongoDatabaseProvider)
         {
             _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-            _cache = new EventLogQueueAdapterCache();
+            _cache = new EventLogQueueAdapterCache(executionContextManager, mongoDatabaseProvider);
             _name = name;
             _eventLogsProvder = eventLogsProvder;
         }
@@ -32,7 +38,11 @@ namespace Cratis.Events.Store.MongoDB
 
         public static EventLogQueueAdapterFactory Create(IServiceProvider serviceProvider, string name)
         {
-            return new(name, serviceProvider.GetService<ProviderFor<IEventLogs>>()!);
+            return new(
+                name,
+                serviceProvider.GetService<ProviderFor<IEventLogs>>()!,
+                serviceProvider.GetService<IExecutionContextManager>()!,
+                serviceProvider.GetService<ProviderFor<IMongoDatabase>>()!);
         }
     }
 }

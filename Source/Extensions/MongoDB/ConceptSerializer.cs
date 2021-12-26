@@ -159,9 +159,14 @@ namespace Cratis.Extensions.MongoDB
             {
                 return bsonReader.ReadInt32();
             }
-            else if (valueType == typeof(long))
+            else if (valueType == typeof(long) || valueType == typeof(ulong))
             {
-                return bsonReader.ReadInt64();
+                var value = bsonReader.ReadInt64();
+                if( valueType == typeof(ulong) )
+                {
+                    return Convert.ChangeType(value, typeof(ulong), CultureInfo.InvariantCulture)!;
+                }
+                return value;
             }
             else if (valueType == typeof(bool))
             {

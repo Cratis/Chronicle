@@ -3,7 +3,6 @@
 
 using Cratis.Execution;
 using Orleans;
-using Orleans.Runtime;
 
 namespace Cratis.Extensions.Orleans.Execution
 {
@@ -13,15 +12,25 @@ namespace Cratis.Extensions.Orleans.Execution
     /// </summary>
     public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
     {
+        readonly IRequestContextManager _requestContextManager;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExecutionContextIncomingCallFilter"/> class.
+        /// </summary>
+        /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with state in requests.</param>
+        public ExecutionContextIncomingCallFilter(IRequestContextManager requestContextManager)
+        {
+            _requestContextManager = requestContextManager;
+        }
+
         /// <inheritdoc/>
         public async Task Invoke(IIncomingGrainCallContext context)
         {
-            if (context.ImplementationMethod?.DeclaringType?.Namespace?.StartsWith("Cratis", StringComparison.InvariantCulture) == true)
+            var tenantId = _requestContextManager.Get(RequestContextKeys.TenantId);
+            if (tenantId != null)
             {
-                var tenantId = Guid.Parse(RequestContext.Get(RequestContextKeys.TenantId)?.ToString() ?? TenantId.NotSet.ToString());
-                var correlationId = RequestContext.Get(RequestContextKeys.CorrelationId) as CorrelationId ?? string.Empty;
-
-                ExecutionContextManager.SetCurrent(new ExecutionContext(tenantId, correlationId, string.Empty, Guid.Empty));
+                var correlationId = _requestContextManager.Get(RequestContextKeys.CorrelationId) ?? "[N/A]";
+                ExecutionContextManager.SetCurrent(new ExecutionContext(tenantId!.ToString()!, correlationId!.ToString()!, string.Empty, Guid.Empty));
             }
 
             await context.Invoke();
