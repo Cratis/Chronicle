@@ -15,6 +15,11 @@ namespace Cratis.Extensions.Orleans.Execution
         readonly IExecutionContextManager _executionContextManager;
         readonly IRequestContextManager _requestContextManager;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExecutionContextOutgoingCallFilter"/> class.
+        /// </summary>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
+        /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with state in requests.</param>
         public ExecutionContextOutgoingCallFilter(
             IExecutionContextManager executionContextManager,
             IRequestContextManager requestContextManager)
@@ -30,7 +35,7 @@ namespace Cratis.Extensions.Orleans.Execution
             {
                 var executionContext = _executionContextManager.Current;
                 _requestContextManager.Set(RequestContextKeys.TenantId, executionContext.TenantId.ToString());
-                _requestContextManager.Set(RequestContextKeys.CorrelationId, executionContext.CorrelationId);
+                _requestContextManager.Set(RequestContextKeys.CorrelationId, executionContext.CorrelationId.ToString());
             }
             await context.Invoke();
         }

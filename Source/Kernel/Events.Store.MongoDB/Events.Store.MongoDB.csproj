@@ -7,9 +7,16 @@
     <ItemGroup>
         <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Events.Store/Events.Store.csproj" />
+        <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="MongoDB.Driver" Version="$(MongoDB)" />
+        <PackageReference Include="MongoDB.Driver" Version="$(MongoDB)" />
+
+        <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+
     </ItemGroup>
 </Project>

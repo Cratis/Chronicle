@@ -1,36 +1,56 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Execution;
 using Orleans.Providers.Streams.Common;
 using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Cratis.Events.Store.MongoDB
 {
+    /// <summary>
+    /// Represents an implementation of <see cref="IBatchContainer"/> for MongoDB event log events.
+    /// </summary>
+    [Serializable]
     public class EventLogBatchContainer : IBatchContainer
     {
-        readonly IEnumerable<object> _events;
+        readonly IEnumerable<AppendedEvent> _events;
         readonly IDictionary<string, object> _requestContext;
 
-        public EventLogBatchContainer(StreamSequenceToken token, Guid streamGuid, IEnumerable<object> events, IDictionary<string, object> requestContext)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventLogBatchContainer"/> class.
+        /// </summary>
+        /// <param name="events">The <see cref="AppendedEvent"/>.</param>
+        /// <param name="streamGuid">The identifier of the stream.</param>
+        /// <param name="tenantId"><see cref="TenantId"/> the batch is for.</param>
+        /// <param name="requestContext">The request context.</param>
+        public EventLogBatchContainer(
+            IEnumerable<AppendedEvent> events,
+            Guid streamGuid,
+            TenantId tenantId,
+            IDictionary<string, object> requestContext)
         {
-            StreamGuid = streamGuid;
             _events = events;
+            StreamGuid = streamGuid;
             _requestContext = requestContext;
-            SequenceToken = token;
+            StreamNamespace = tenantId.ToString();
+            SequenceToken = new EventSequenceToken((long)_events.First().Metadata.SequenceNumber.Value);
         }
 
+        /// <inheritdoc/>
         public Guid StreamGuid { get; }
 
-        public string StreamNamespace => null!;
+        /// <inheritdoc/>
+        public string StreamNamespace { get; }
 
-        public StreamSequenceToken SequenceToken { get; }
+        /// <inheritdoc/>
+        public StreamSequenceToken SequenceToken { get; }
 
-        public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>()
-        {
-            return _events.Cast<T>().Select(_ => new Tuple<T, StreamSequenceToken>(_, new EventSequenceToken(0))).ToArray();
-        }
+        /// <inheritdoc/>
+        public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>() =>
+            _events.Select(_ => new Tuple<T, StreamSequenceToken>((T)(object)_, new EventSequenceToken((long)_.Metadata.SequenceNumber.Value))).ToArray();
 
+        /// <inheritdoc/>
         public bool ImportRequestContext()
         {
             foreach (var (key, value) in _requestContext)
@@ -40,6 +60,7 @@ namespace Cratis.Events.Store.MongoDB
             return true;
         }
 
+        /// <inheritdoc/>
         public bool ShouldDeliver(IStreamIdentity stream, object filterData, StreamFilterPredicate shouldReceiveFunc) => true;
     }
 }

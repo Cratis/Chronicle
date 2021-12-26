@@ -17,7 +17,6 @@ namespace Cratis.Events.Store.MongoDB
     [SingletonPerTenant]
     public class EventLogs : IEventLogs
     {
-        const string BaseCollectionName = "event-log";
         readonly ILogger<EventLogs> _logger;
         readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
@@ -81,22 +80,6 @@ namespace Cratis.Events.Store.MongoDB
             return Task.FromResult<IEventStoreFindResult>(null!);
         }
 
-        IMongoCollection<Event> GetCollectionFor(EventLogId eventLogId)
-        {
-            var collectionName = BaseCollectionName;
-            if (!eventLogId.IsDefault)
-            {
-                if (eventLogId.IsPublic)
-                {
-                    collectionName = $"{BaseCollectionName}-public";
-                }
-                else
-                {
-                    collectionName = $"{BaseCollectionName}-{eventLogId}";
-                }
-            }
-
-            return _mongoDatabaseProvider().GetCollection<Event>(collectionName);
-        }
+        IMongoCollection<Event> GetCollectionFor(EventLogId eventLogId) => _mongoDatabaseProvider().GetEventLogCollectionFor(eventLogId);
     }
 }

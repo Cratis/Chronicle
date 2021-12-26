@@ -35,7 +35,7 @@ namespace Cratis.Events.Observation.Grpc
             Console.WriteLine("Subscribe");
 
             var streamProvider = _getClusterClient().GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, null);
+            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "f455c031-630e-450d-a75b-ca050c441708");
 
             var subscriptionHandle = await stream.SubscribeAsync(
                 (@event, st) =>
