@@ -4,7 +4,9 @@
 using Cratis.Events.Observation.Grpc.Contracts;
 using Cratis.Events.Store;
 using Cratis.Events.Store.Observers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Orleans;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 
@@ -17,16 +19,19 @@ namespace Cratis.Events.Observation.Grpc
     {
         readonly ILogger<ObserversService> _logger;
         readonly GetClusterClient _getClusterClient;
+        readonly IServiceProvider _serviceProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserversService"/> class.
         /// </summary>
         /// <param name="logger">Logger for logging.</param>
         /// <param name="getClusterClient"></param>
-        public ObserversService(ILogger<ObserversService> logger, GetClusterClient getClusterClient)
+        /// <param name="serviceProvider"></param>
+        public ObserversService(ILogger<ObserversService> logger, GetClusterClient getClusterClient, IServiceProvider serviceProvider)
         {
             _logger = logger;
             _getClusterClient = getClusterClient;
+            _serviceProvider = serviceProvider;
         }
 
         /// <inheritdoc/>
@@ -37,7 +42,7 @@ namespace Cratis.Events.Observation.Grpc
 
             var observer = client.GetGrain<IObserver>(EventLogId.Default, keyExtension: "f455c031-630e-450d-a75b-ca050c441708");
 
-            var actualObserver = new ActualObserver();
+            var actualObserver = new ActualObserver(_serviceProvider.GetService<IGrainFactory>()!);
             var obj = await client.CreateObjectReference<IActualObserver>(actualObserver);
             var streamId = await observer.Observe(obj);
             var stream = streamProvider.GetStream<AppendedEvent>(streamId, "f455c031-630e-450d-a75b-ca050c441708");

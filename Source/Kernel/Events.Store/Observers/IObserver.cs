@@ -3,6 +3,7 @@
 
 using Cratis.Execution;
 using Orleans;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Cratis.Events.Store.Observers
@@ -17,18 +18,50 @@ namespace Cratis.Events.Store.Observers
 
     public interface IActualObserver : IGrainObserver
     {
-        void DoStuff();
+        void OnNext(AppendedEvent @event, Guid id, string tenantId);
     }
 
     public class ActualObserver : IActualObserver
     {
-        public void DoStuff()
+        readonly IGrainFactory _grainFactory;
+
+        public ActualObserver(IGrainFactory grainFactory)
         {
+            _grainFactory = grainFactory;
+        }
+
+        public void OnNext(AppendedEvent @event, Guid id, string tenantId)
+        {
+            var grain = _grainFactory.GetGrain<IPartitionedObserver>(id, keyExtension: tenantId);
+            grain.ReportStatus().Wait();
+
             Console.WriteLine("Do stuff");
-            throw new ArgumentException("Hello");
         }
     }
 
+
+    public interface IPartitionedObserver : IGrainWithGuidCompoundKey
+    {
+        Task<bool> OnNext(IActualObserver observer, AppendedEvent @event);
+        Task ReportStatus();
+    }
+
+    public class PartitionedObserver : Grain, IPartitionedObserver
+    {
+        public Task<bool> OnNext(IActualObserver observer, AppendedEvent @event)
+        {
+            var id = this.GetPrimaryKey(out var tenantId);
+
+            observer.OnNext(@event, id, tenantId);
+
+            return Task.FromResult(true);
+        }
+
+        public Task ReportStatus()
+        {
+            return Task.CompletedTask;
+        }
+    }
 
     public class Observer : Grain, IObserver
     {
@@ -44,40 +77,28 @@ namespace Cratis.Events.Store.Observers
             var streamProvider = GetStreamProvider(EventLog.StreamProvider);
             _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
 
-
-            // var subscription = await _manager.AddSubscription(
-            //     EventLog.StreamProvider,
-            //     new StreamIdentity(_eventLogId, _tenantId.ToString()),
-            //     GrainReference);
-
             await base.OnActivateAsync();
         }
 
         public async Task<Guid> Observe(IActualObserver actualObserver)
         {
             var first = new[] { new EventType("9b864474-51eb-4c95-840c-029ee45f3968", EventGeneration.First) };
-            var subscriptionHandle = await _stream.SubscribeAsync(
-                (@event, st) =>
+            var subscriptionHandle = await _stream!.SubscribeAsync(
+                async (@event, st) =>
                 {
+                    var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(Guid.Parse("9fd4ce1a-1d68-439c-9e4b-0edd45e00445"), keyExtension: @event.EventContext.EventSourceId);
+                    await partitionedObserver.OnNext(actualObserver, @event);
+
                     Console.WriteLine("Event received");
-                    try
-                    {
-                        actualObserver.DoStuff();
-                    }
-                    catch(Exception ex)
-                    {
-                        Console.WriteLine($"Observer failed - {ex.Message} - {ex.StackTrace}");
-
-                    }
-                    return Task.CompletedTask;
+                    // try
+                    // {
+                    //     actualObserver.OnNext();
+                    // }
+                    // catch (Exception ex)
+                    // {
+                    //     Console.WriteLine($"Observer failed - {ex.Message} - {ex.StackTrace}");
+                    // }
                 }, new ObserverStreamSequenceToken(0, first));
-
-            // var resumedSubscriptionHandle = subscriptionHandle.ResumeAsync(
-            //     (@event, st) =>
-            //     {
-            //         Console.WriteLine("Resumed event received");
-            //         return Task.CompletedTask;
-            //     }, new ObserverStreamSequenceToken(0, first));
 
             return Guid.Empty;
         }
