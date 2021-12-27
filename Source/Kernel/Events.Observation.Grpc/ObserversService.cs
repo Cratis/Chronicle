@@ -35,20 +35,21 @@ namespace Cratis.Events.Observation.Grpc
             var client = _getClusterClient();
             var streamProvider = client.GetStreamProvider("event-log");
 
-            // var observer = client.GetGrain<IObserver>(EventLogId.Default, keyExtension: "f455c031-630e-450d-a75b-ca050c441708");
-            // var streamId = await observer.Observe();
-            // var stream = streamProvider.GetStream<AppendedEvent>(streamId, "f455c031-630e-450d-a75b-ca050c441708");
+            var observer = client.GetGrain<IObserver>(EventLogId.Default, keyExtension: "f455c031-630e-450d-a75b-ca050c441708");
 
-            var stream = streamProvider.GetStream<AppendedEvent>(EventLogId.Default, "f455c031-630e-450d-a75b-ca050c441708");
+            var actualObserver = new ActualObserver();
+            var obj = await client.CreateObjectReference<IActualObserver>(actualObserver);
+            var streamId = await observer.Observe(obj);
+            var stream = streamProvider.GetStream<AppendedEvent>(streamId, "f455c031-630e-450d-a75b-ca050c441708");
 
             var first = new[] { new EventType("9b864474-51eb-4c95-840c-029ee45f3968", EventGeneration.First) };
 
-            var subscriptionHandle = await stream.SubscribeAsync(
-                (@event, st) =>
-                {
-                    Console.WriteLine("Event received");
-                    return Task.CompletedTask;
-                }, new ObserverStreamSequenceToken(0, first));
+            // var subscriptionHandle = await stream.SubscribeAsync(
+            //     (@event, st) =>
+            //     {
+            //         Console.WriteLine("Event received");
+            //         return Task.CompletedTask;
+            //     }, new ObserverStreamSequenceToken(0, first));
 
             // var resumedSubscriptionHandle = subscriptionHandle.ResumeAsync(
             //     (@event, st) =>
@@ -88,7 +89,7 @@ namespace Cratis.Events.Observation.Grpc
                 };
             }
 
-            await subscriptionHandle.UnsubscribeAsync();
+            //await subscriptionHandle.UnsubscribeAsync();
 
             Console.WriteLine("Unsubsribe");
         }

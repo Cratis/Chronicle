@@ -6,6 +6,7 @@ using Cratis.Extensions.Orleans.Execution;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Orleans.Streams;
+using Orleans.Streams.Core;
 
 namespace Cratis.Events.Store.MongoDB
 {
@@ -23,12 +24,23 @@ namespace Cratis.Events.Store.MongoDB
         /// Initializes a new instance of the <see cref="EventLogQueueCacheCursor"/>.
         /// </summary>
         /// <param name="collection"><see cref="IMongoCollection{T}"/> to use for getting events from the event log.</param>
+        /// <param name="streamSubscriptionManager"></param>
         /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
         /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
-        public EventLogQueueCacheCursor(IMongoCollection<Event> collection, IStreamIdentity streamIdentity, StreamSequenceToken token)
+        public EventLogQueueCacheCursor(
+            IMongoCollection<Event> collection,
+            IStreamSubscriptionManager streamSubscriptionManager,
+            IStreamIdentity streamIdentity,
+            StreamSequenceToken token)
         {
             _collection = collection;
             _streamIdentity = streamIdentity;
+            streamSubscriptionManager.GetSubscriptions(EventLog.StreamProvider, streamIdentity).ContinueWith(_ =>
+            {
+                if (_.Result.Any())
+                {
+                }
+            });
             FindEventsFrom(token);
         }
 

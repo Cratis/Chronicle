@@ -4,7 +4,6 @@
 using Cratis.Execution;
 using Orleans;
 using Orleans.Streams;
-using Orleans.Streams.Core;
 
 namespace Cratis.Events.Store.Observers
 {
@@ -13,21 +12,29 @@ namespace Cratis.Events.Store.Observers
     /// </summary>
     public interface IObserver : IGrainWithGuidCompoundKey
     {
-        Task<Guid> Observe();
+        Task<Guid> Observe(IActualObserver actualObserver);
     }
 
-    [ImplicitStreamSubscription]
-    public class Observer : Grain, IObserver, IStreamSubscriptionObserver
+    public interface IActualObserver : IGrainObserver
     {
-        IAsyncStream<AppendedEvent>? _stream;
+        void DoStuff();
+    }
+
+    public class ActualObserver : IActualObserver
+    {
+        public void DoStuff()
+        {
+            Console.WriteLine("Do stuff");
+            throw new ArgumentException("Hello");
+        }
+    }
+
+
+    public class Observer : Grain, IObserver
+    {
+        IAsyncStream<AppendedEvent>? _stream = null;
         EventLogId _eventLogId = EventLogId.Unspecified;
         TenantId _tenantId = TenantId.NotSet;
-        IStreamSubscriptionManager _manager;
-
-        public Observer(IStreamSubscriptionManagerAdmin subMan)
-        {
-            _manager = subMan.GetStreamSubscriptionManager(StreamSubscriptionManagerType.ExplicitSubscribeOnly);
-        }
 
         public override async Task OnActivateAsync()
         {
@@ -37,19 +44,33 @@ namespace Cratis.Events.Store.Observers
             var streamProvider = GetStreamProvider(EventLog.StreamProvider);
             _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
 
-            var first = new[] { new EventType("9b864474-51eb-4c95-840c-029ee45f3968", EventGeneration.First) };
 
             // var subscription = await _manager.AddSubscription(
             //     EventLog.StreamProvider,
             //     new StreamIdentity(_eventLogId, _tenantId.ToString()),
             //     GrainReference);
 
-            // var subscriptionHandle = await _stream.SubscribeAsync(
-            //     (@event, st) =>
-            //     {
-            //         Console.WriteLine("Event received");
-            //         return Task.CompletedTask;
-            //     }, new ObserverStreamSequenceToken(0, first));
+            await base.OnActivateAsync();
+        }
+
+        public async Task<Guid> Observe(IActualObserver actualObserver)
+        {
+            var first = new[] { new EventType("9b864474-51eb-4c95-840c-029ee45f3968", EventGeneration.First) };
+            var subscriptionHandle = await _stream.SubscribeAsync(
+                (@event, st) =>
+                {
+                    Console.WriteLine("Event received");
+                    try
+                    {
+                        actualObserver.DoStuff();
+                    }
+                    catch(Exception ex)
+                    {
+                        Console.WriteLine($"Observer failed - {ex.Message} - {ex.StackTrace}");
+
+                    }
+                    return Task.CompletedTask;
+                }, new ObserverStreamSequenceToken(0, first));
 
             // var resumedSubscriptionHandle = subscriptionHandle.ResumeAsync(
             //     (@event, st) =>
@@ -58,17 +79,7 @@ namespace Cratis.Events.Store.Observers
             //         return Task.CompletedTask;
             //     }, new ObserverStreamSequenceToken(0, first));
 
-            await base.OnActivateAsync();
-        }
-
-        public Task<Guid> Observe()
-        {
-            return Task.FromResult(_stream?.Guid ?? Guid.Empty);
-        }
-
-        public Task OnSubscribed(IStreamSubscriptionHandleFactory handleFactory)
-        {
-            return Task.CompletedTask;
+            return Guid.Empty;
         }
     }
 }
