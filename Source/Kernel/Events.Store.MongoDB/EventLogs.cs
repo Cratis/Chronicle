@@ -5,7 +5,6 @@ using Cratis.DependencyInversion;
 using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using ExecutionContext = Cratis.Execution.ExecutionContext;
 
@@ -20,15 +19,6 @@ namespace Cratis.Events.Store.MongoDB
         readonly ILogger<EventLogs> _logger;
         readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
-
-        static EventLogs()
-        {
-            BsonClassMap.RegisterClassMap<Event>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapIdProperty(_ => _.SequenceNumber);
-            });
-        }
 
         /// <summary>
         /// Initializes a new instance of <see cref="EventLogs"/>.
