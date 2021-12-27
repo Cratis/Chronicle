@@ -3,7 +3,6 @@
 
 using Cratis.DependencyInversion;
 using Cratis.Execution;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
@@ -17,15 +16,6 @@ namespace Cratis.Events.Store.MongoDB
     public class EventLogStorageProvider : IGrainStorage
     {
         const string CollectionName = "event-logs";
-
-        static EventLogStorageProvider()
-        {
-            BsonClassMap.RegisterClassMap<EventLogState>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapIdProperty(_ => _.EventLog);
-            });
-        }
 
         readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
