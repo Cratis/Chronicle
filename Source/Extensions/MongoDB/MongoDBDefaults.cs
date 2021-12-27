@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
+using System.Reflection;
 using Cratis.Execution;
+using Cratis.Reflection;
 using Cratis.Types;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -17,15 +20,21 @@ namespace Cratis.Extensions.MongoDB
     public class MongoDBDefaults
     {
         readonly IInstancesOf<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
+        readonly ITypes _types;
+        readonly IServiceProvider _serviceProvider;
         bool _initialized;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBDefaults"/> class.
         /// </summary>
         /// <param name="conventionPackFilters"><see cref="IInstancesOf{T}"/> <see cref="ICanFilterMongoDBConventionPacksForType"/>.</param>
-        public MongoDBDefaults(IInstancesOf<ICanFilterMongoDBConventionPacksForType> conventionPackFilters)
+        /// <param name="types"><see cref="ITypes"/> for general type discovery.</param>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing instances of types.</param>
+        public MongoDBDefaults(IInstancesOf<ICanFilterMongoDBConventionPacksForType> conventionPackFilters, ITypes types, IServiceProvider serviceProvider)
         {
             _conventionPackFilters = conventionPackFilters;
+            _types = types;
+            _serviceProvider = serviceProvider;
         }
 
         /// <summary>
@@ -58,6 +67,37 @@ namespace Cratis.Extensions.MongoDB
 
             RegisterConventionAsPack(ConventionPacks.CamelCase, new CamelCaseElementNameConvention());
             RegisterConventionAsPack(ConventionPacks.IgnoreExtraElements, new IgnoreExtraElementsConvention(true));
+
+            RegisterClassMaps();
+        }
+
+        void RegisterClassMaps()
+        {
+            foreach (var classMapType in _types.FindMultiple(typeof(IBsonClassMapFor<>)))
+            {
+                var classMapProvider = _serviceProvider.GetService(classMapType);
+                var typeInterfaces = classMapType.GetInterfaces().Where(_ =>
+                {
+                    var args = _.GetGenericArguments();
+                    if (args.Length == 1)
+                    {
+                        return _ == typeof(IBsonClassMapFor<>).MakeGenericType(args[0]);
+                    }
+                    return false;
+                });
+
+                var method = typeof(MongoDBDefaults).GetMethod(nameof(Register), BindingFlags.Instance | BindingFlags.NonPublic)!;
+                foreach (var type in typeInterfaces)
+                {
+                    var genericMethod = method.MakeGenericMethod(type.GenericTypeArguments[0]);
+                    genericMethod.Invoke(this, new[] { classMapProvider });
+                }
+            }
+        }
+
+        void Register<T>(IBsonClassMapFor<T> classMapProvider)
+        {
+            BsonClassMap.RegisterClassMap<T>(_ => classMapProvider.Configure(_));
         }
 
         void RegisterConventionAsPack(string name, IConvention convention)
