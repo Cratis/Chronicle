@@ -3,8 +3,8 @@
 
 using Cratis.Events.Observation.Grpc.Contracts;
 using Cratis.Events.Store;
+using Cratis.Events.Store.Observers;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 
@@ -32,17 +32,35 @@ namespace Cratis.Events.Observation.Grpc
         /// <inheritdoc/>
         public async IAsyncEnumerable<ObserverServerToClient> Subscribe(IAsyncEnumerable<ObserverClientToServer> request, CallContext context = default)
         {
-            Console.WriteLine("Subscribe");
-
             var streamProvider = _getClusterClient().GetStreamProvider("event-log");
             var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "f455c031-630e-450d-a75b-ca050c441708");
+
+            var first = new[] { new EventType("9b864474-51eb-4c95-840c-029ee45f3968", EventGeneration.First) };
+            var second = new[] { new EventType("90882b74-a5a5-47c7-aabe-f19926080bd0", EventGeneration.First) };
+            var third = new[] { new EventType("9f60c9ce-136e-4609-8ed1-ab5cabdf6128", EventGeneration.First) };
 
             var subscriptionHandle = await stream.SubscribeAsync(
                 (@event, st) =>
                 {
                     Console.WriteLine("Event received");
                     return Task.CompletedTask;
-                }, new EventSequenceToken(0));
+                }, new ObserverStreamSequenceToken(0, first));
+            Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
+
+            subscriptionHandle = await stream.SubscribeAsync(
+                (@event, st) =>
+                {
+                    Console.WriteLine("Event received");
+                    return Task.CompletedTask;
+                }, new ObserverStreamSequenceToken(0, second));
+            Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
+
+            subscriptionHandle = await stream.SubscribeAsync(
+                (@event, st) =>
+                {
+                    Console.WriteLine("Event received");
+                    return Task.CompletedTask;
+                }, new ObserverStreamSequenceToken(0, third));
             Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
 
             while (!context.CancellationToken.IsCancellationRequested)
