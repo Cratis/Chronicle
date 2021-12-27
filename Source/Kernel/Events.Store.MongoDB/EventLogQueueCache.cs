@@ -17,25 +17,21 @@ namespace Cratis.Events.Store.MongoDB
         readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
         readonly QueueId _queueId;
-        readonly IStreamSubscriptionManager _streamSubscriptionManager;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueCache"/> class.
         /// </summary>
         /// <param name="queueId"><see cref="QueueId"/> the cache is for.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-        /// <param name="streamSubscriptionManager"><see cref="IStreamSubscriptionManager"/> for getting subscriptions.</param>
         /// <param name="mongoDatabaseProvider">Provider for <see cref="IMongoDatabase"/>.</param>
         public EventLogQueueCache(
             QueueId queueId,
             IExecutionContextManager executionContextManager,
-            IStreamSubscriptionManager streamSubscriptionManager,
             ProviderFor<IMongoDatabase> mongoDatabaseProvider)
         {
             _executionContextManager = executionContextManager;
             _mongoDatabaseProvider = mongoDatabaseProvider;
             _queueId = queueId;
-            _streamSubscriptionManager = streamSubscriptionManager;
         }
 
         /// <inheritdoc/>
@@ -49,7 +45,7 @@ namespace Cratis.Events.Store.MongoDB
             var tenantId = (TenantId)streamIdentity.Namespace;
             _executionContextManager.Establish(tenantId, CorrelationId.New());
             var collection = _mongoDatabaseProvider().GetEventLogCollectionFor(streamIdentity.Guid);
-            return new EventLogQueueCacheCursor(collection, _streamSubscriptionManager, streamIdentity, token);
+            return new EventLogQueueCacheCursor(collection, streamIdentity, token);
         }
 
         /// <inheritdoc/>
