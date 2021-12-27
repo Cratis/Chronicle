@@ -17,7 +17,6 @@ namespace Cratis.Events.Store.MongoDB
         readonly IMongoCollection<Event> _collection;
         readonly IStreamIdentity _streamIdentity;
         readonly IEnumerable<EventType> _filter;
-        readonly bool _partitioned;
         IAsyncCursor<Event>? _cursor;
 
         /// <summary>
@@ -27,18 +26,15 @@ namespace Cratis.Events.Store.MongoDB
         /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
         /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
         /// <param name="filter">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
-        /// <param name="partitioned"></param>
         public EventLogQueueCacheCursor(
             IMongoCollection<Event> collection,
             IStreamIdentity streamIdentity,
             StreamSequenceToken token,
-            IEnumerable<EventType>? filter = default,
-            bool partitioned = true)
+            IEnumerable<EventType>? filter = default)
         {
             _collection = collection;
             _streamIdentity = streamIdentity;
             _filter = filter ?? Array.Empty<EventType>();
-            _partitioned = partitioned;
             FindEventsFrom(token);
         }
 
