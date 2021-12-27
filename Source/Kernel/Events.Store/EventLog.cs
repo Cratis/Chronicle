@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Providers.Streams.Common;
+using Orleans.Streams;
 
 namespace Cratis.Events.Store
 {
@@ -19,23 +20,40 @@ namespace Cratis.Events.Store
         readonly ILogger<EventLog> _logger;
         EventLogId _eventLogId = EventLogId.Unspecified;
         TenantId _tenantId = TenantId.NotSet;
+        IAsyncStream<AppendedEvent>? _stream;
 
         /// <summary>
         /// Initializes a new instance of <see cref="EventLog"/>.
         /// </summary>
         /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-        public EventLog(
-            ILogger<EventLog> logger)
+        public EventLog(ILogger<EventLog> logger)
         {
             _logger = logger;
         }
 
         /// <inheritdoc/>
-        public override Task OnActivateAsync()
+        public override async Task OnActivateAsync()
         {
             _eventLogId = this.GetPrimaryKey(out var tenantId);
             _tenantId = tenantId;
-            return base.OnActivateAsync();
+
+            var streamProvider = GetStreamProvider(StreamProvider);
+            _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
+
+            await base.OnActivateAsync();
+        }
+
+        /// <inheritdoc/>
+        public async Task WarmUp()
+        {
+            var appendedEvent = new AppendedEvent(
+                new EventMetadata(0, new EventType(Guid.Empty, EventGeneration.First)),
+                new EventContext(string.Empty, DateTimeOffset.UtcNow),
+                "{}"
+            );
+
+            await _stream!.OnNextAsync(appendedEvent, new EventSequenceToken(-1));
+            await WriteStateAsync();
         }
 
         /// <inheritdoc/>
@@ -49,12 +67,10 @@ namespace Cratis.Events.Store
                 content
             );
 
+            await _stream!.OnNextAsync(appendedEvent, new EventSequenceToken(State.SequenceNumber));
+
             State.SequenceNumber++;
             await WriteStateAsync();
-
-            var streamProvider = GetStreamProvider(StreamProvider);
-            var stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
-            await stream.OnNextAsync(appendedEvent, new EventSequenceToken(State.SequenceNumber));
         }
 
         /// <inheritdoc/>
