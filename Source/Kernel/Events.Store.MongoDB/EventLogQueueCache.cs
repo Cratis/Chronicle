@@ -48,7 +48,7 @@ namespace Cratis.Events.Store.MongoDB
         }
 
         /// <inheritdoc/>
-        public int GetMaxAddCount() => 42;
+        public int GetMaxAddCount() => int.MaxValue;
 
         /// <inheritdoc/>
         public bool IsUnderPressure() => false;
