@@ -21,11 +21,10 @@ namespace Cratis.Events.Store.MongoDB
             string name,
             ProviderFor<IEventLogs> eventLogsProvder,
             IExecutionContextManager executionContextManager,
-            IStreamSubscriptionManager streamSubscriptionManager,
             ProviderFor<IMongoDatabase> mongoDatabaseProvider)
         {
             _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-            _cache = new EventLogQueueAdapterCache(executionContextManager, streamSubscriptionManager, mongoDatabaseProvider);
+            _cache = new EventLogQueueAdapterCache(executionContextManager, mongoDatabaseProvider);
             _name = name;
             _eventLogsProvder = eventLogsProvder;
         }
@@ -44,7 +43,6 @@ namespace Cratis.Events.Store.MongoDB
                 name,
                 serviceProvider.GetService<ProviderFor<IEventLogs>>()!,
                 serviceProvider.GetService<IExecutionContextManager>()!,
-                serviceProvider.GetService<IStreamSubscriptionManagerAdmin>()!.GetStreamSubscriptionManager(StreamSubscriptionManagerType.ExplicitSubscribeOnly),
                 serviceProvider.GetService<ProviderFor<IMongoDatabase>>()!);
         }
     }
