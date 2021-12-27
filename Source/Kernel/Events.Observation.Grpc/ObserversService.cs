@@ -32,12 +32,16 @@ namespace Cratis.Events.Observation.Grpc
         /// <inheritdoc/>
         public async IAsyncEnumerable<ObserverServerToClient> Subscribe(IAsyncEnumerable<ObserverClientToServer> request, CallContext context = default)
         {
-            var streamProvider = _getClusterClient().GetStreamProvider("event-log");
-            var stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, "f455c031-630e-450d-a75b-ca050c441708");
+            var client = _getClusterClient();
+            var streamProvider = client.GetStreamProvider("event-log");
+
+            // var observer = client.GetGrain<IObserver>(EventLogId.Default, keyExtension: "f455c031-630e-450d-a75b-ca050c441708");
+            // var streamId = await observer.Observe();
+            // var stream = streamProvider.GetStream<AppendedEvent>(streamId, "f455c031-630e-450d-a75b-ca050c441708");
+
+            var stream = streamProvider.GetStream<AppendedEvent>(EventLogId.Default, "f455c031-630e-450d-a75b-ca050c441708");
 
             var first = new[] { new EventType("9b864474-51eb-4c95-840c-029ee45f3968", EventGeneration.First) };
-            var second = new[] { new EventType("90882b74-a5a5-47c7-aabe-f19926080bd0", EventGeneration.First) };
-            var third = new[] { new EventType("9f60c9ce-136e-4609-8ed1-ab5cabdf6128", EventGeneration.First) };
 
             var subscriptionHandle = await stream.SubscribeAsync(
                 (@event, st) =>
@@ -45,23 +49,14 @@ namespace Cratis.Events.Observation.Grpc
                     Console.WriteLine("Event received");
                     return Task.CompletedTask;
                 }, new ObserverStreamSequenceToken(0, first));
-            Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
 
-            subscriptionHandle = await stream.SubscribeAsync(
-                (@event, st) =>
-                {
-                    Console.WriteLine("Event received");
-                    return Task.CompletedTask;
-                }, new ObserverStreamSequenceToken(0, second));
-            Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
-
-            subscriptionHandle = await stream.SubscribeAsync(
-                (@event, st) =>
-                {
-                    Console.WriteLine("Event received");
-                    return Task.CompletedTask;
-                }, new ObserverStreamSequenceToken(0, third));
-            Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
+            // var resumedSubscriptionHandle = subscriptionHandle.ResumeAsync(
+            //     (@event, st) =>
+            //     {
+            //         Console.WriteLine("Resumed event received");
+            //         return Task.CompletedTask;
+            //     }, new ObserverStreamSequenceToken(0, first));
+            //Console.WriteLine($"{subscriptionHandle.ProviderName} - {subscriptionHandle.HandleId} - {subscriptionHandle.StreamIdentity}");
 
             while (!context.CancellationToken.IsCancellationRequested)
             {

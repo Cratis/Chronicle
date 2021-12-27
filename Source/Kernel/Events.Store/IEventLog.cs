@@ -13,6 +13,12 @@ namespace Cratis.Events.Store
     public interface IEventLog : IGrainWithGuidCompoundKey
     {
         /// <summary>
+        /// Warm up the event log.
+        /// </summary>
+        /// <returns>Awaitable <see cref="Task"/></returns>
+        Task WarmUp();
+
+        /// <summary>
         /// Append a single event to the event store.
         /// </summary>
         /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>

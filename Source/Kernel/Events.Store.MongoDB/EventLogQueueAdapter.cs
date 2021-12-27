@@ -54,11 +54,15 @@ namespace Cratis.Events.Store.MongoDB
         public async Task QueueMessageBatchAsync<T>(Guid streamGuid, string streamNamespace, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
         {
             var queueId = _mapper.GetQueueForStream(streamGuid, streamNamespace);
-            foreach (var @event in events)
+            if (token.SequenceNumber != -1)
             {
-                var appendedEvent = (@event as AppendedEvent)!;
-                await _eventLogsProvider().Append(streamGuid, appendedEvent.Metadata.SequenceNumber, appendedEvent.EventContext.EventSourceId, appendedEvent.Metadata.EventType, appendedEvent.Content);
+                foreach (var @event in events)
+                {
+                    var appendedEvent = (@event as AppendedEvent)!;
+                    await _eventLogsProvider().Append(streamGuid, appendedEvent.Metadata.SequenceNumber, appendedEvent.EventContext.EventSourceId, appendedEvent.Metadata.EventType, appendedEvent.Content);
+                }
             }
+
             _receivers[queueId].AddAppendedEvent(streamGuid, events.Cast<AppendedEvent>().ToArray(), requestContext);
         }
     }

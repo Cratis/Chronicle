@@ -34,7 +34,14 @@ namespace Cratis.Events.Store.MongoDB
             StreamGuid = streamGuid;
             _requestContext = requestContext;
             StreamNamespace = tenantId.ToString();
-            SequenceToken = new EventSequenceToken((long)_events.First().Metadata.SequenceNumber.Value);
+            if (_events.Any())
+            {
+                SequenceToken = new EventSequenceToken((long)_events.First().Metadata.SequenceNumber.Value);
+            }
+            else
+            {
+                SequenceToken = new EventSequenceToken(-1);
+            }
         }
 
         /// <inheritdoc/>
