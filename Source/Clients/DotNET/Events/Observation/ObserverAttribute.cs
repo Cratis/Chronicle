@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Store;
+using Cratis.Events.Store.Observation;
 
 namespace Cratis.Events.Observation
 {

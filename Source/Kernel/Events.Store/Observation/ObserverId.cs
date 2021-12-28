@@ -3,7 +3,7 @@
 
 using Cratis.Concepts;
 
-namespace Cratis.Events.Observation
+namespace Cratis.Events.Store.Observation
 {
     /// <summary>
     /// Concept that represents the unique identifier of an observer.

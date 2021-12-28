@@ -2,7 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Events.Store.Grains.Observation;
+using Cratis.Execution;
 using Cratis.Types;
+using Orleans;
 
 namespace Cratis.Events.Observation
 {
@@ -11,22 +14,32 @@ namespace Cratis.Events.Observation
     /// </summary>
     public class Observers : IObservers
     {
-        readonly IEnumerable<IObserver> _observers;
+        readonly IEnumerable<ObserverHandler> _observerHandlers;
+        readonly IClusterClient _clusterClient;
+        readonly IExecutionContextManager _executionContextManager;
 
         /// <summary>
         /// Initializes a new instance of <see cref="Observers"/>.
         /// </summary>
-        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to work with instances of <see cref="IObserver"/> types.</param>
+        /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to work with instances of <see cref="IObserverHandler"/> types.</param>
         /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
         /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-        public Observers(IServiceProvider serviceProvider, IEventTypes eventTypes, IEventSerializer eventSerializer, ITypes types)
+        public Observers(
+            IClusterClient clusterClient,
+            IExecutionContextManager executionContextManager,
+            IServiceProvider serviceProvider,
+            IEventTypes eventTypes,
+            IEventSerializer eventSerializer,
+            ITypes types)
         {
-            _observers = types.AllObservers()
+            _observerHandlers = types.AllObservers()
                                 .Select(_ =>
                                 {
                                     var observer = _.GetCustomAttribute<ObserverAttribute>()!;
-                                    return new Observer(
+                                    return new ObserverHandler(
                                         observer.ObserverId,
                                         _.FullName ?? $"{_.Namespace}.{_.Name}",
                                         observer.EventLogId,
@@ -34,14 +47,20 @@ namespace Cratis.Events.Observation
                                         new ObserverInvoker(serviceProvider, eventTypes, _),
                                         eventSerializer);
                                 });
+            _clusterClient = clusterClient;
+            _executionContextManager = executionContextManager;
         }
 
         /// <inheritdoc/>
-        public void StartObserving()
+        public async Task StartObserving()
         {
-            foreach (var observer in _observers)
+            _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
+
+            foreach (var handler in _observerHandlers)
             {
-                observer.StartObserving();
+                var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
+                var observerHandler = await _clusterClient.CreateObjectReference<IObserverHandler>(handler);
+                await observer.Subscribe(Array.Empty<EventType>(), observerHandler);
             }
         }
     }

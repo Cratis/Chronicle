@@ -1,0 +1,28 @@
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) Cratis. All rights reserved.
+
+using Orleans;
+
+namespace Cratis.Events.Store.Grains.Observation
+{
+    /// <summary>
+    /// Defines an observer of an event log.
+    /// </summary>
+    public interface IObserver : IGrainWithGuidCompoundKey
+    {
+        /// <summary>
+        /// Subscribe to observer.
+        /// </summary>
+        /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
+        /// <param name="handler">The <see cref="IObserverHandler"/> that will be called.</param>
+        /// <returns>The subscription identifier.</returns>
+        Task<Guid> Subscribe(IEnumerable<EventType> eventTypes, IObserverHandler handler);
+
+        /// <summary>
+        /// Unsubscribe from the observer.
+        /// </summary>
+        /// <param name="subscriptionId">Subscription to unsubscribe.</param>
+        /// <returns>Awaitable task.</returns>
+        Task Unsubscribe(Guid subscriptionId);
+    }
+}

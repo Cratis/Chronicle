@@ -18,10 +18,9 @@ namespace Cratis.Events.Observation
         }
 
         /// <inheritdoc/>
-        public Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _observers.StartObserving();
-            return Task.CompletedTask;
+            await _observers.StartObserving();
         }
 
         /// <inheritdoc/>
