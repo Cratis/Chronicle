@@ -10,8 +10,8 @@ namespace Sample.Accounts.Debit
     {
         public Task DebitAccountOpened(DebitAccountOpened @event)
         {
-            throw new Exception("Something went wrong");
-            //return Task.CompletedTask;
+
+            return Task.CompletedTask;
         }
     }
 }
