@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Events.Store.Grains.Observation;
+
 namespace Cratis.Events.Observation
 {
     /// <summary>
-    /// Defines the invoker for an <see cref="IObserver"/>.
+    /// Defines the invoker for an <see cref="IObserverHandler"/>.
     /// </summary>
     public interface IObserverInvoker
     {

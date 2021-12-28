@@ -11,6 +11,6 @@ namespace Cratis.Events.Observation
         /// <summary>
         /// Start observing for all observers.
         /// </summary>
-        void StartObserving();
+        Task StartObserving();
     }
 }
