@@ -30,7 +30,7 @@ namespace Cratis.Events.Store
         Task Compensate(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventType eventType, string content);
 
         /// <summary>
-        /// Find <see cref="AppendedEvent">appended events</see> from the <see cref="IEventLog"/>.
+        /// Find <see cref="AppendedEvent">appended events</see> from the event log.
         /// </summary>
         /// <param name="eventLogId">The <see cref="EventLogId"/> representing the event log to find from.</param>
         /// <param name="eventSourceId"><see cref="EventSourceId"/> to find for.</param>

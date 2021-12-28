@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.DependencyInversion;
 using Cratis.Execution;
 using MongoDB.Driver;
 using Orleans;
@@ -18,17 +17,17 @@ namespace Cratis.Events.Store.MongoDB
         const string CollectionName = "event-logs";
 
         readonly IExecutionContextManager _executionContextManager;
-        readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
+        readonly IEventStoreDatabase _eventStoreDatabase;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogStorageProvider"/> class.
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-        /// <param name="mongoDatabaseProvider">Provider for <see cref="IMongoDatabase"/>.</param>
-        public EventLogStorageProvider(IExecutionContextManager executionContextManager, ProviderFor<IMongoDatabase> mongoDatabaseProvider)
+        /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
+        public EventLogStorageProvider(IExecutionContextManager executionContextManager, IEventStoreDatabase eventStoreDatabase)
         {
             _executionContextManager = executionContextManager;
-            _mongoDatabaseProvider = mongoDatabaseProvider;
+            _eventStoreDatabase = eventStoreDatabase;
         }
 
         /// <inheritdoc/>
@@ -59,6 +58,6 @@ namespace Cratis.Events.Store.MongoDB
                 new() { IsUpsert = true });
         }
 
-        IMongoCollection<EventLogState> Collection => _mongoDatabaseProvider().GetCollection<EventLogState>(CollectionName);
+        IMongoCollection<EventLogState> Collection => _eventStoreDatabase.GetCollection<EventLogState>(CollectionName);
     }
 }

@@ -15,5 +15,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseCratis();
 app.UseEndpoints(_ => _.MapControllers());
 app.Run();

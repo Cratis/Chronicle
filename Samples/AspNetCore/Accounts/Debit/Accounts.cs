@@ -14,12 +14,12 @@ namespace Sample.Accounts.Debit
         public Accounts(IEventStore eventStore) => _eventStore = eventStore;
 
         [HttpPost]
-        public Task Create([FromBody] OpenDebitAccount create) => _eventStore.EventLog(EventLogId.Default).Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
+        public Task Create([FromBody] OpenDebitAccount create) => _eventStore.DefaultEventLog.Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
 
         [HttpPost("deposit")]
-        public Task Deposit([FromBody] DepositToAccount deposit) => _eventStore.EventLog(EventLogId.Default).Append(deposit.AccountId, new DepositToDebitAccountPerformed(deposit.Amount));
+        public Task Deposit([FromBody] DepositToAccount deposit) => _eventStore.DefaultEventLog.Append(deposit.AccountId, new DepositToDebitAccountPerformed(deposit.Amount));
 
         [HttpPost("withdraw")]
-        public Task Withdraw([FromBody] WithdrawFromAccount deposit) => _eventStore.EventLog(EventLogId.Default).Append(deposit.AccountId, new WithdrawalFromDebitAccountPerformed(deposit.Amount));
+        public Task Withdraw([FromBody] WithdrawFromAccount deposit) => _eventStore.DefaultEventLog.Append(deposit.AccountId, new WithdrawalFromDebitAccountPerformed(deposit.Amount));
     }
 }

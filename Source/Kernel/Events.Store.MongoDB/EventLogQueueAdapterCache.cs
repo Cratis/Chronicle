@@ -1,11 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.DependencyInversion;
 using Cratis.Execution;
-using MongoDB.Driver;
 using Orleans.Streams;
-using Orleans.Streams.Core;
 
 namespace Cratis.Events.Store.MongoDB
 {
@@ -15,22 +12,22 @@ namespace Cratis.Events.Store.MongoDB
     public class EventLogQueueAdapterCache : IQueueAdapterCache
     {
         readonly IExecutionContextManager _executionContextManager;
-        readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
+        readonly IEventStoreDatabase _eventStoreDatabase;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueAdapterCache"/> class.
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-        /// <param name="mongoDatabaseProvider">Provider for <see cref="IMongoDatabase"/>.</param>
+        /// <param name="eventStoreDatabase">The <see cref="IEventStoreDatabase"/> to use.</param>
         public EventLogQueueAdapterCache(
             IExecutionContextManager executionContextManager,
-            ProviderFor<IMongoDatabase> mongoDatabaseProvider)
+            IEventStoreDatabase eventStoreDatabase)
         {
             _executionContextManager = executionContextManager;
-            _mongoDatabaseProvider = mongoDatabaseProvider;
+            _eventStoreDatabase = eventStoreDatabase;
         }
 
         /// <inheritdoc/>
-        public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache(queueId, _executionContextManager, _mongoDatabaseProvider);
+        public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache(queueId, _executionContextManager, _eventStoreDatabase);
     }
 }

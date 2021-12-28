@@ -4,7 +4,7 @@
 using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store
+namespace Cratis.Events.Store.Grains
 {
     /// <summary>
     /// Represents a <see cref="StreamSequenceToken"/> for observers.

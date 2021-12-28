@@ -6,12 +6,15 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Store.MongoDB/Events.Store.MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
-      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+      <PackageReference Include="Microsoft.Orleans.Client" Version="$(Orleans)" />
       <PackageReference Include="Humanizer" Version="$(Humanizer)" />
     </ItemGroup>
 </Project>

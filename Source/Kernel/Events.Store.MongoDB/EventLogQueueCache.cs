@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.DependencyInversion;
 using Cratis.Execution;
 using MongoDB.Driver;
 using Orleans.Streams;
-using Orleans.Streams.Core;
 
 namespace Cratis.Events.Store.MongoDB
 {
@@ -15,7 +13,7 @@ namespace Cratis.Events.Store.MongoDB
     public class EventLogQueueCache : IQueueCache
     {
         readonly IExecutionContextManager _executionContextManager;
-        readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
+        readonly IEventStoreDatabase _eventStoreDatabase;
         readonly QueueId _queueId;
 
         /// <summary>
@@ -23,14 +21,14 @@ namespace Cratis.Events.Store.MongoDB
         /// </summary>
         /// <param name="queueId"><see cref="QueueId"/> the cache is for.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-        /// <param name="mongoDatabaseProvider">Provider for <see cref="IMongoDatabase"/>.</param>
+        /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
         public EventLogQueueCache(
             QueueId queueId,
             IExecutionContextManager executionContextManager,
-            ProviderFor<IMongoDatabase> mongoDatabaseProvider)
+            IEventStoreDatabase eventStoreDatabase)
         {
             _executionContextManager = executionContextManager;
-            _mongoDatabaseProvider = mongoDatabaseProvider;
+            _eventStoreDatabase = eventStoreDatabase;
             _queueId = queueId;
         }
 
@@ -44,7 +42,7 @@ namespace Cratis.Events.Store.MongoDB
         {
             var tenantId = (TenantId)streamIdentity.Namespace;
             _executionContextManager.Establish(tenantId, CorrelationId.New());
-            var collection = _mongoDatabaseProvider().GetEventLogCollectionFor(streamIdentity.Guid);
+            var collection = _eventStoreDatabase.GetEventLogCollectionFor(streamIdentity.Guid);
             return new EventLogQueueCacheCursor(collection, streamIdentity, token);
         }
 

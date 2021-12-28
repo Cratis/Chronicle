@@ -3,7 +3,7 @@
 
 using Orleans;
 
-namespace Cratis.Events.Store
+namespace Cratis.Events.Store.Grains
 {
     /// <summary>
     /// Defines an observer of <see cref="IEventLog"/>.

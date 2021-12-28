@@ -14,6 +14,13 @@ namespace Cratis.Events
         /// <summary>
         /// Implicitly convert from <see cref="Guid"/> to <see cref="EventSourceId"/>.
         /// </summary>
+        /// <param name="id"><see cref="Guid"/> to convert from.</param>
+        /// <returns>A converted <see cref="EventSourceId"/>.</returns>;
+        public static implicit operator EventSourceId(Guid id) => new(id.ToString());
+
+        /// <summary>
+        /// Implicitly convert from <see cref="string"/> to <see cref="EventSourceId"/>.
+        /// </summary>
         /// <param name="id"><see cref="string"/> to convert from.</param>
         /// <returns>A converted <see cref="EventSourceId"/>.</returns>;
         public static implicit operator EventSourceId(string id) => new(id);

@@ -6,16 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Autofac" Version="$(Autofac)" />
-        <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
     </ItemGroup>
 
 </Project>

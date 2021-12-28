@@ -59,7 +59,14 @@ namespace Cratis.Events.Store.MongoDB
                 foreach (var @event in events)
                 {
                     var appendedEvent = (@event as AppendedEvent)!;
-                    await _eventLogsProvider().Append(streamGuid, appendedEvent.Metadata.SequenceNumber, appendedEvent.EventContext.EventSourceId, appendedEvent.Metadata.EventType, appendedEvent.Content);
+                    try
+                    {
+                        await _eventLogsProvider().Append(streamGuid, appendedEvent.Metadata.SequenceNumber, appendedEvent.EventContext.EventSourceId, appendedEvent.Metadata.EventType, appendedEvent.Content);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new UnableToAppendToEventLog(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.EventContext.EventSourceId, ex);
+                    }
                 }
             }
 

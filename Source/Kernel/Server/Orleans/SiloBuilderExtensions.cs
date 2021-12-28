@@ -17,6 +17,7 @@ namespace Orleans.Hosting
         /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
         public static ISiloBuilder AddExecutionContext(this ISiloBuilder builder)
         {
+            builder.AddOutgoingGrainCallFilter<ExecutionContextOutgoingCallFilter>();
             builder.AddIncomingGrainCallFilter<ExecutionContextIncomingCallFilter>();
             return builder;
         }

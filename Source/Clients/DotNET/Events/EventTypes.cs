@@ -31,15 +31,15 @@ namespace Cratis.Events
         public IEnumerable<EventType> All { get; }
 
         /// <inheritdoc/>
-        public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.EventTypeId == eventTypeId);
+        public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);
 
         /// <inheritdoc/>
-        public EventTypeId GetEventTypeIdFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key.EventTypeId;
+        public EventType GetEventTypeFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key;
 
         /// <inheritdoc/>
         public bool HasFor(Type clrType) => _typesByEventType.Any(_ => _.Value == clrType);
 
         /// <inheritdoc/>
-        public Type GetClrTypeFor(EventTypeId eventTypeId) => _typesByEventType.Single(_ => _.Key.EventTypeId == eventTypeId).Value;
+        public Type GetClrTypeFor(EventTypeId eventTypeId) => _typesByEventType.Single(_ => _.Key.Id == eventTypeId).Value;
     }
 }

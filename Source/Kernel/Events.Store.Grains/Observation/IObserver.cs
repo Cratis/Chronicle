@@ -1,11 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) Cratis. All rights reserved.
 
 using Cratis.Execution;
 using Orleans;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Observation
+namespace Cratis.Events.Store.Grains.Observation
 {
     /// <summary>
     /// Defines an observer of an event log.

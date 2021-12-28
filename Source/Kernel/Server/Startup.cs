@@ -15,7 +15,9 @@ namespace Cratis.Server
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(Types);
+            services
+                .AddSingleton(Types)
+                .AddConfigurationObjects(Types);
             services.AddMvc();
 
             foreach (var controllerAssembly in Types.FindMultiple<Controller>().Select(_ => _.Assembly).Distinct())

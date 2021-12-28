@@ -4,8 +4,12 @@
 using Cratis.Collections;
 using Cratis.Events;
 using Cratis.Events.Observation;
+using Cratis.Execution;
+using Cratis.Extensions.Orleans.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Orleans;
+using OrleansClientBuilder = Orleans.ClientBuilder;
 
 namespace Cratis.Hosting
 {
@@ -34,14 +38,30 @@ namespace Cratis.Hosting
         {
             var types = new Types.Types();
 
-            services.AddSingleton<Types.ITypes>(types);
-            services.AddSingleton<IEventStore, EventStore>();
-            services.AddSingleton<IObservers, Observers>();
-            services.AddSingleton<IEventTypes, EventTypes>();
-            services.AddSingleton<IEventSerializer, EventSerializer>();
-            services.AddSingleton<IHostedService, ObserversService>();
-
+            services
+                .AddSingleton<Types.ITypes>(types)
+                .AddSingleton<IEventStore, EventStore>()
+                .AddSingleton<IObservers, Observers>()
+                .AddSingleton<IEventTypes, EventTypes>()
+                .AddSingleton<IEventSerializer, EventSerializer>()
+                .AddSingleton<IHostedService, ObserversService>()
+                .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                .AddSingleton<IRequestContextManager, RequestContextManager>();
             types.AllObservers().ForEach(_ => services.AddTransient(_));
+
+            var orleansBuilder = new OrleansClientBuilder()
+                .UseLocalhostClustering()
+                .AddEventLogStream()
+                .UseExecutionContext()
+                .ConfigureServices(services => services
+                    .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                    .AddSingleton<IRequestContextManager, RequestContextManager>());
+
+            var orleansClient = orleansBuilder.Build();
+
+            services.AddSingleton(orleansClient);
+
+            orleansClient.Connect().Wait();
         }
     }
 }

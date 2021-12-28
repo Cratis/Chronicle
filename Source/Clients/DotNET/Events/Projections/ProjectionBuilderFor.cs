@@ -51,7 +51,7 @@ namespace Cratis.Events.Projections
         {
             var builder = new FromBuilder<TModel, TEvent>();
             builderCallback(builder);
-            var eventType = _eventTypes.GetEventTypeIdFor(typeof(TEvent));
+            var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
             _fromDefintions[eventType.ToString()] = builder.Build();
             return this;
         }

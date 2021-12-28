@@ -18,17 +18,17 @@ namespace Cratis.Events.Store.MongoDB
     {
         readonly ILogger<EventLogs> _logger;
         readonly IExecutionContextManager _executionContextManager;
-        readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
+        readonly IEventStoreDatabase _eventStoreDatabase;
 
         /// <summary>
         /// Initializes a new instance of <see cref="EventLogs"/>.
         /// </summary>
-        /// <param name="mongoDatabaseProvider"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
+        /// <param name="eventStoreDatabase"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
         /// <param name="logger"><see cref="ILogger"/> for logging.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
-        public EventLogs(ProviderFor<IMongoDatabase> mongoDatabaseProvider, ILogger<EventLogs> logger, IExecutionContextManager executionContextManager)
+        public EventLogs(IEventStoreDatabase eventStoreDatabase, ILogger<EventLogs> logger, IExecutionContextManager executionContextManager)
         {
-            _mongoDatabaseProvider = mongoDatabaseProvider;
+            _eventStoreDatabase = eventStoreDatabase;
             _logger = logger;
             _executionContextManager = executionContextManager;
         }
@@ -70,6 +70,6 @@ namespace Cratis.Events.Store.MongoDB
             return Task.FromResult<IEventStoreFindResult>(null!);
         }
 
-        IMongoCollection<Event> GetCollectionFor(EventLogId eventLogId) => _mongoDatabaseProvider().GetEventLogCollectionFor(eventLogId);
+        IMongoCollection<Event> GetCollectionFor(EventLogId eventLogId) => _eventStoreDatabase.GetEventLogCollectionFor(eventLogId);
     }
 }

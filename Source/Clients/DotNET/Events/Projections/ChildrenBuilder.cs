@@ -42,7 +42,7 @@ namespace Cratis.Events.Projections
         {
             var builder = new FromBuilder<TChildModel, TEvent>();
             builderCallback(builder);
-            var eventType = _eventTypes.GetEventTypeIdFor(typeof(TEvent));
+            var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
             _fromDefintions[eventType.ToString()] = builder.Build();
             return this;
         }
@@ -57,7 +57,7 @@ namespace Cratis.Events.Projections
         /// <inheritdoc/>
         public IChildrenBuilder<TParentModel, TChildModel> RemovedWith<TEvent>()
         {
-            _removedWithEvent = _eventTypes.GetEventTypeIdFor(typeof(TEvent)).ToString();
+            _removedWithEvent = _eventTypes.GetEventTypeFor(typeof(TEvent)).ToString();
             return this;
         }
 
