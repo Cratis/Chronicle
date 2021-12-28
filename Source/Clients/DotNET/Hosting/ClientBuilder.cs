@@ -4,10 +4,8 @@
 using Cratis.Collections;
 using Cratis.Events;
 using Cratis.Events.Observation;
-using Cratis.Grpc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProtoBuf.Grpc.Client;
 
 namespace Cratis.Hosting
 {
@@ -34,13 +32,9 @@ namespace Cratis.Hosting
 
         public void Build(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
-            GrpcClientFactory.AllowUnencryptedHttp2 = true;
-
-            var channel = new GrpcChannel("http://localhost:5002");
             var types = new Types.Types();
 
             services.AddSingleton<Types.ITypes>(types);
-            services.AddSingleton<IGrpcChannel>(channel);
             services.AddSingleton<IEventStore, EventStore>();
             services.AddSingleton<IObservers, Observers>();
             services.AddSingleton<IEventTypes, EventTypes>();

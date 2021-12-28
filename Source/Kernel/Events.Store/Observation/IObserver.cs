@@ -3,10 +3,9 @@
 
 using Cratis.Execution;
 using Orleans;
-using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Observers
+namespace Cratis.Events.Store.Observation
 {
     /// <summary>
     /// Defines an observer of an event log.
@@ -98,7 +97,7 @@ namespace Cratis.Events.Store.Observers
                     // {
                     //     Console.WriteLine($"Observer failed - {ex.Message} - {ex.StackTrace}");
                     // }
-                }, new ObserverStreamSequenceToken(0, first));
+                }, new EventTypeFilteredStreamSequenceToken(0, first));
 
             return Guid.Empty;
         }

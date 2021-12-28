@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Grpc;
-
 namespace Cratis.Events
 {
     /// <summary>
@@ -10,15 +8,8 @@ namespace Cratis.Events
     /// </summary>
     public class EventStore : IEventStore
     {
-        readonly IGrpcChannel _channel;
-
-        public EventStore(IGrpcChannel channel)
-        {
-            _channel = channel;
-        }
-
         /// <inheritdoc/>
-        public IEventLog EventLog(EventLogId eventLogId) => new EventLog(_channel, eventLogId);
+        public IEventLog EventLog(EventLogId eventLogId) => new EventLog(eventLogId);
 
         /// <inheritdoc/>
         public Task Append(EventSourceId eventSourceId, object content)

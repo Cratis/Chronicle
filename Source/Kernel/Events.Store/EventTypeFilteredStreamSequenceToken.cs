@@ -4,20 +4,20 @@
 using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Observers
+namespace Cratis.Events.Store
 {
     /// <summary>
     /// Represents a <see cref="StreamSequenceToken"/> for observers.
     /// </summary>
     [Serializable]
-    public class ObserverStreamSequenceToken : EventSequenceToken
+    public class EventTypeFilteredStreamSequenceToken : EventSequenceToken
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverStreamSequenceToken"/> class.
+        /// Initializes a new instance of the <see cref="EventTypeFilteredStreamSequenceToken"/> class.
         /// </summary>
         /// <param name="sequenceNumber"><see cref="EventLogSequenceNumber"/></param>
         /// <param name="eventTypes"><see cref="EventType">event types</see> the observer is interested in.</param>
-        public ObserverStreamSequenceToken(EventLogSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes) : base((long)sequenceNumber.Value)
+        public EventTypeFilteredStreamSequenceToken(EventLogSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes) : base((long)sequenceNumber.Value)
         {
             EventTypes = eventTypes;
         }
@@ -30,7 +30,7 @@ namespace Cratis.Events.Store.Observers
         /// <inheritdoc/>
         public override bool Equals(StreamSequenceToken other)
         {
-            if (other is ObserverStreamSequenceToken observerToken)
+            if (other is EventTypeFilteredStreamSequenceToken observerToken)
             {
                 return observerToken.EventTypes.SequenceEqual(EventTypes) && base.Equals(other);
             }
