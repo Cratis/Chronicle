@@ -1,16 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.IO.Compression;
 using Autofac;
-using Cratis.Events.Observation.Grpc;
-using Cratis.Events.Store.Grpc;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using ProtoBuf.Grpc.Configuration;
-using ProtoBuf.Grpc.Server;
 
 namespace Cratis.Server
 {
@@ -29,11 +23,8 @@ namespace Cratis.Server
                 services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(controllerAssembly));
             }
 
-            services.AddCodeFirstGrpc(config => config.ResponseCompressionLevel = CompressionLevel.Optimal);
-            services.AddCodeFirstGrpcReflection();
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
-            services.TryAddSingleton(BinderConfiguration.Create(binder: new ServiceBinderWithServiceResolutionFromServiceCollection(services)));
         }
 
         public void ConfigureContainer(ContainerBuilder containerBuilder)
@@ -59,13 +50,7 @@ namespace Cratis.Server
             app.PerformBootProcedures();
 
             app.UseRouting();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-                endpoints.MapGrpcService<EventLogService>();
-                endpoints.MapGrpcService<ObserversService>();
-                endpoints.MapCodeFirstGrpcReflectionService();
-            });
+            app.UseEndpoints(endpoints => endpoints.MapControllers());
         }
     }
 }
