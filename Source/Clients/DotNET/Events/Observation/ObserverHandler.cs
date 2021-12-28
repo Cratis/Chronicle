@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Store;
-using Cratis.Events.Store.Observation;
 using Cratis.Events.Store.Grains.Observation;
+using Cratis.Events.Store.Observation;
 
 namespace Cratis.Events.Observation
 {
@@ -32,16 +32,15 @@ namespace Cratis.Events.Observation
             _eventSerializer = eventSerializer;
         }
 
-        public ObserverId ObserverId { get; }
-        public ObserverName Name { get; }
-        public EventLogId EventLogId { get; }
-
+        public ObserverId ObserverId { get; }
+        public ObserverName Name { get; }
+        public EventLogId EventLogId { get; }
 
         public void OnNext(ObserverContext context, AppendedEvent @event)
         {
-            var i=0;
-            i++;
-
+            var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.EventType.Id);
+            var content = _eventSerializer.Deserialize(eventType, @event.Content);
+            _observerInvoker.Invoke(content, null!);
         }
 
         public void StartObserving()
