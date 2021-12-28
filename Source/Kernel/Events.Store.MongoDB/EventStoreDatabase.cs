@@ -4,6 +4,7 @@
 using Cratis.Events.Store.Configuration;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using ExecutionContext = Cratis.Execution.ExecutionContext;
 
@@ -16,24 +17,20 @@ namespace Cratis.Events.Store.MongoDB
     public class EventStoreDatabase : IEventStoreDatabase
     {
         const string BaseCollectionName = "event-log";
-        readonly Dictionary<TenantId, IMongoDatabase> _databases;
+        readonly IServiceProvider _serviceProvider;
         readonly IExecutionContextManager _executionContextManager;
+        Dictionary<TenantId, IMongoDatabase> _databases = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
         /// </summary>
-        /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> as a service locator.</param>
         /// <param name="executionContextManager"><see cref="ExecutionContext"/> the database is for.</param>
-        /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-        public EventStoreDatabase(IMongoDBClientFactory mongoDBClientFactory, IExecutionContextManager executionContextManager, Storage configuration)
+        public EventStoreDatabase(
+            IServiceProvider serviceProvider,
+            IExecutionContextManager executionContextManager)
         {
-            _databases = configuration.EventStore.Configuration.ToDictionary(_ => (TenantId)_.Key, _ =>
-            {
-                var url = new MongoUrl(_.Value.ToString());
-                var client = mongoDBClientFactory.Create(url);
-                return client.GetDatabase(url.DatabaseName);
-            });
-
+            _serviceProvider = serviceProvider;
             _executionContextManager = executionContextManager;
         }
 
@@ -59,6 +56,24 @@ namespace Cratis.Events.Store.MongoDB
             return Database.GetCollection<Event>(collectionName);
         }
 
-        IMongoDatabase Database => _databases[_executionContextManager.Current.TenantId];
+        IMongoDatabase Database
+        {
+            get
+            {
+                if (_databases.Count == 0)
+                {
+                    var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
+                    var configuration = _serviceProvider.GetService<Storage>()!;
+                    _databases = configuration.EventStore.Configuration.ToDictionary(_ => (TenantId)_.Key, _ =>
+                    {
+                        var url = new MongoUrl(_.Value.ToString());
+                        var client = mongoDBClientFactory.Create(url);
+                        return client.GetDatabase(url.DatabaseName);
+                    });
+                }
+
+                return _databases[_executionContextManager.Current.TenantId];
+            }
+        }
     }
 }
