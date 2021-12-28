@@ -34,6 +34,7 @@ namespace Cratis.Events
             _eventLog = eventLog;
         }
 
+        /// <inheritdoc/>
         public async Task Append(EventSourceId eventSourceId, object @event)
         {
             var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
