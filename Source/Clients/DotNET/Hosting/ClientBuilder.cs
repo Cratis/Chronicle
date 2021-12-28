@@ -5,6 +5,7 @@ using Cratis.Collections;
 using Cratis.Events;
 using Cratis.Events.Observation;
 using Cratis.Execution;
+using Cratis.Extensions.MongoDB;
 using Cratis.Extensions.Orleans.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -46,6 +47,7 @@ namespace Cratis.Hosting
                 .AddSingleton<IEventSerializer, EventSerializer>()
                 .AddSingleton<IHostedService, ObserversService>()
                 .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
                 .AddSingleton<IRequestContextManager, RequestContextManager>();
             types.AllObservers().ForEach(_ => services.AddTransient(_));
 
@@ -55,7 +57,8 @@ namespace Cratis.Hosting
                 .UseExecutionContext()
                 .ConfigureServices(services => services
                     .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-                    .AddSingleton<IRequestContextManager, RequestContextManager>());
+                    .AddSingleton<IRequestContextManager, RequestContextManager>()
+                    .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
 
             var orleansClient = orleansBuilder.Build();
 
