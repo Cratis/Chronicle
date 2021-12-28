@@ -8,7 +8,7 @@ using Orleans.Providers;
 using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store
+namespace Cratis.Events.Store.Grains
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventLog"/>.
@@ -67,10 +67,31 @@ namespace Cratis.Events.Store
                 content
             );
 
-            await _stream!.OnNextAsync(appendedEvent, new EventSequenceToken(State.SequenceNumber));
+            var updateSequenceNumber = true;
 
-            State.SequenceNumber++;
-            await WriteStateAsync();
+            try
+            {
+                await _stream!.OnNextAsync(appendedEvent, new EventSequenceToken(State.SequenceNumber));
+            }
+            catch (UnableToAppendToEventLog ex)
+            {
+                _logger.FailedAppending(
+                    ex.StreamId,
+                    ex.SequenceNumber,
+                    ex.TenantId,
+                    ex.EventSourceId,
+                    ex
+                );
+
+                updateSequenceNumber = false;
+            }
+            catch { }
+
+            if (updateSequenceNumber)
+            {
+                State.SequenceNumber++;
+                await WriteStateAsync();
+            }
         }
 
         /// <inheritdoc/>

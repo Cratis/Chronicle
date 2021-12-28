@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Events.Store.Configuration;
 using Cratis.Extensions.MongoDB;
 using MongoDB.Driver;
 
@@ -17,10 +18,12 @@ namespace Cratis.Events.Store.MongoDB
         /// Initializes a new instance of the <see cref="CommonEventStoreDatabase"/> class.
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
-        public CommonEventStoreDatabase(IMongoDBClientFactory clientFactory)
+        /// <param name="configuration"></param>
+        public CommonEventStoreDatabase(IMongoDBClientFactory clientFactory, Storage configuration)
         {
-            var client = clientFactory.Create(new MongoUrl("mongodb://localhost:27017"));
-            _database = client.GetDatabase("event-store-common");
+            var url = new MongoUrl(configuration.EventStore.Common.ToString());
+            var client = clientFactory.Create(url);
+            _database = client.GetDatabase(url.DatabaseName);
         }
 
         /// <inheritdoc/>

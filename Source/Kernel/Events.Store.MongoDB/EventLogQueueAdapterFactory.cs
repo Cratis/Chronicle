@@ -4,9 +4,7 @@
 using Cratis.DependencyInversion;
 using Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
-using MongoDB.Driver;
 using Orleans.Streams;
-using Orleans.Streams.Core;
 
 namespace Cratis.Events.Store.MongoDB
 {
@@ -21,10 +19,10 @@ namespace Cratis.Events.Store.MongoDB
             string name,
             ProviderFor<IEventLogs> eventLogsProvder,
             IExecutionContextManager executionContextManager,
-            ProviderFor<IMongoDatabase> mongoDatabaseProvider)
+            IEventStoreDatabase eventStoreDatabase)
         {
             _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-            _cache = new EventLogQueueAdapterCache(executionContextManager, mongoDatabaseProvider);
+            _cache = new EventLogQueueAdapterCache(executionContextManager, eventStoreDatabase);
             _name = name;
             _eventLogsProvder = eventLogsProvder;
         }
@@ -43,7 +41,7 @@ namespace Cratis.Events.Store.MongoDB
                 name,
                 serviceProvider.GetService<ProviderFor<IEventLogs>>()!,
                 serviceProvider.GetService<IExecutionContextManager>()!,
-                serviceProvider.GetService<ProviderFor<IMongoDatabase>>()!);
+                serviceProvider.GetService<IEventStoreDatabase>()!);
         }
     }
 }

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Events.Store.Grains</AssemblyName>
+        <RootNamespace>Cratis.Events.Store.Grains</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Events.Store/Events.Store.csproj" />
+        <ProjectReference Include="../Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Orleans.Server" Version="$(Orleans)" />
+    </ItemGroup>
+</Project>

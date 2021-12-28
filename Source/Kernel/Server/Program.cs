@@ -34,6 +34,7 @@ namespace Cratis.Server
                     .UseLocalhostClustering()
                     .AddEventLogStream()
                     .AddExecutionContext())
+
                 .UseSerilog()
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _

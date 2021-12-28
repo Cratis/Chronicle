@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Store
+namespace Cratis.Events.Store.Grains
 {
     /// <summary>
     /// Holds log messages for <see cref="EventLog"/>.
@@ -15,5 +15,8 @@ namespace Cratis.Events.Store
 
         [LoggerMessage(1, LogLevel.Information, "Compensatin event @ {SequenceNumber} in event log '{EventLog}' - event type '{EventType}'")]
         internal static partial void Compensating(this ILogger logger, EventType eventTYpe, ulong sequenceNumber, EventLogId eventLog);
+
+        [LoggerMessage(2, LogLevel.Error, "Failed appending event at sequence {SequenceNumber} for event source {EventSourceId} on tenant {TenantId} from stream {StreamId}")]
+        internal static partial void FailedAppending(this ILogger logger, Guid streamId, ulong sequenceNumber, Guid tenantId, string eventSourceId, Exception exception);
     }
 }

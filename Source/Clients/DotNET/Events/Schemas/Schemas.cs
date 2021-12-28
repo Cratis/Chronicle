@@ -25,7 +25,7 @@ namespace Cratis.Events.Schemas
             _eventTypes = eventTypes;
             _definitions = eventTypes.All.Select(_ =>
             {
-                var type = _eventTypes.GetClrTypeFor(_.EventTypeId)!;
+                var type = _eventTypes.GetClrTypeFor(_.Id)!;
                 return new EventSchemaDefinition(
                     _,
                     type.Name,

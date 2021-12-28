@@ -35,5 +35,16 @@ namespace Microsoft.AspNetCore.Builder
             webApplicationBuilder.Host.UseCratis(microserviceId, configureDelegate);
             return webApplicationBuilder;
         }
+
+        /// <summary>
+        /// Configures the usage of Cratis for the app.
+        /// </summary>
+        /// <param name="app"><see cref="IApplicationBuilder"/> to extend.</param>
+        /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
+        public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
+        {
+            app.UseExecutionContext();
+            return app;
+        }
     }
 }

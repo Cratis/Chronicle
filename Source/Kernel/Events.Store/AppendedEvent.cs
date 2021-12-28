@@ -4,7 +4,7 @@
 namespace Cratis.Events.Store
 {
     /// <summary>
-    /// Represents an event that has been appended to an <see cref="IEventLog"/>.
+    /// Represents an event that has been appended to an event log.
     /// </summary>
     /// <param name="Metadata">The <see cref="EventMetadata"/>.</param>
     /// <param name="EventContext">The <see cref="EventContext"/>.</param>

@@ -35,10 +35,10 @@ namespace Cratis.Events
         bool HasFor(Type clrType);
 
         /// <summary>
-        /// Get a <see cref="EventTypeId"/> for a specific <see cref="Type">Clr Type</see>.
+        /// Get a <see cref="EventType"/> for a specific <see cref="Type">Clr Type</see>.
         /// </summary>
         /// <param name="clrType"><see cref="Type">Clr Type</see> to get for.</param>
-        /// <returns>The <see cref="EventTypeId"/>.</returns>
-        EventTypeId GetEventTypeIdFor(Type clrType);
+        /// <returns>The <see cref="EventType"/>.</returns>
+        EventType GetEventTypeFor(Type clrType);
     }
 }
