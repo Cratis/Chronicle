@@ -3,7 +3,6 @@
 
 using Orleans;
 using Orleans.Streams;
-using Orleans.Streams.Core;
 
 namespace Cratis.Events.Store.Grains.Observation
 {
@@ -14,11 +13,9 @@ namespace Cratis.Events.Store.Grains.Observation
     {
         IAsyncStream<AppendedEvent>? _stream;
 
-
+        /// <inheritdoc/>
         public override async Task OnActivateAsync()
         {
-            var id = this.GetPrimaryKey(out var tenantId);
-
             var streamProvider = GetStreamProvider("observer-handlers");
             _stream = streamProvider.GetStream<AppendedEvent>(Guid.Parse("4680f4dc-5731-4fde-9b3c-a0f59b7713d9"), null); //"f455c031-630e-450d-a75b-ca050c441708");
 
@@ -28,8 +25,6 @@ namespace Cratis.Events.Store.Grains.Observation
         /// <inheritdoc/>
         public async Task<bool> OnNext(AppendedEvent @event)
         {
-            var id = this.GetPrimaryKey(out var tenantId);
-
             try
             {
                 await _stream!.OnNextAsync(@event);
