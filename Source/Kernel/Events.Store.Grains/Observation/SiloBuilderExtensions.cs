@@ -23,9 +23,9 @@ namespace Orleans.Hosting
                         var connectedClients = connectionBuilder.ApplicationServices.GetService<IConnectedClients>()!;
                         return async context =>
                         {
-                            await connectedClients.ClientConnected(context);
+                            await connectedClients.OnClientConnected(context);
                             await next(context);
-                            await connectedClients.ClientDisconnected(context);
+                            await connectedClients.OnClientDisconnected(context);
                         };
                     });
                 });

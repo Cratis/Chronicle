@@ -22,14 +22,17 @@ namespace Cratis.Events.Store.Grains.Observation
         public bool AnyConnectedClients => !_connectedClients.IsEmpty;
 
         /// <inheritdoc/>
-        public Task ClientConnected(ConnectionContext context)
+        public event ClientDisconnected ClientDisconnected = (_) => Task.CompletedTask;
+
+        /// <inheritdoc/>
+        public Task OnClientConnected(ConnectionContext context)
         {
             _connectedClients.Add(context);
             return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public Task ClientDisconnected(ConnectionContext context)
+        public async Task OnClientDisconnected(ConnectionContext context)
         {
             var remaining = _connectedClients.Except(new[] { context }).ToArray();
             _connectedClients.Clear();
@@ -37,7 +40,7 @@ namespace Cratis.Events.Store.Grains.Observation
             {
                 _connectedClients.Add(remainingClient);
             }
-            return Task.CompletedTask;
+            await ClientDisconnected(context);
         }
     }
 }

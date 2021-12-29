@@ -33,6 +33,13 @@ namespace Cratis.Events.Store.Grains.Observation
         {
             _requestContextManager = requestContextManager;
             _connectedObservers = connectedObservers;
+            _connectedObservers.ClientDisconnected += async (_) =>
+            {
+                foreach (var (subscriptionId, handler) in _subscriptions)
+                {
+                    await Unsubscribe(subscriptionId);
+                }
+            };
         }
 
         /// <inheritdoc/>
@@ -61,8 +68,6 @@ namespace Cratis.Events.Store.Grains.Observation
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: @event.EventContext.EventSourceId);
                     await partitionedObserver.OnNext(@event);
                 }, new EventTypeFilteredStreamSequenceToken(0, eventTypes));
-
-            // TODO: Client disconnected - clean up subscription.
 
             _subscriptions[subscriptionHandle.HandleId] = subscriptionHandle;
 
