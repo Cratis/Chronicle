@@ -5,7 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Events.Store/Events.Store.csproj" />
         <ProjectReference Include="../Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj" />
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />
