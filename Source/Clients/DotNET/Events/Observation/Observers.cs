@@ -62,18 +62,7 @@ namespace Cratis.Events.Observation
             foreach (var handler in _observerHandlers)
             {
                 var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, null); //"f455c031-630e-450d-a75b-ca050c441708");
-                await stream.SubscribeAsync(
-                    (@event, _) =>
-                    {
-                        var i=0;
-                        i++;
-
-                        //stream.OnErrorAsync(new NotImplementedException());
-                        //throw new NotImplementedException();
-
-                        return Task.CompletedTask;
-                    }
-                );
+                await stream.SubscribeAsync(async (@event, _) => await handler.OnNext(@event));
 
                 var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
                 await observer.Subscribe(Array.Empty<EventType>());
