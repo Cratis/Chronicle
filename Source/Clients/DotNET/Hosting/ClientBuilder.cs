@@ -10,6 +10,8 @@ using Cratis.Extensions.Orleans.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
+using Orleans.Hosting;
+using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
 using OrleansClientBuilder = Orleans.ClientBuilder;
 
 namespace Cratis.Hosting
@@ -53,7 +55,9 @@ namespace Cratis.Hosting
 
             var orleansBuilder = new OrleansClientBuilder()
                 .UseLocalhostClustering()
+                // TODO: .AddClusterConnectionLostHandler()
                 .AddEventLogStream()
+                .AddSimpleMessageStreamProvider("observer-handlers")
                 .UseExecutionContext()
                 .ConfigureServices(services => services
                     .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
@@ -64,7 +68,11 @@ namespace Cratis.Hosting
 
             services.AddSingleton(orleansClient);
 
-            orleansClient.Connect().Wait();
+            orleansClient.Connect(async (_) =>
+            {
+                await Task.Delay(1000);
+                return true;
+            }).Wait();
         }
     }
 }

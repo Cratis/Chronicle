@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
+
 namespace Cratis.Server
 {
     public static class Program
@@ -29,10 +30,12 @@ namespace Cratis.Server
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
+             Host.CreateDefaultBuilder(args)
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
+                    .AddConnectedClientsTracking()
                     .AddEventLogStream()
+                    .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
                     .AddExecutionContext())
 
                 .UseSerilog()

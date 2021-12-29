@@ -17,6 +17,7 @@ namespace Cratis.Events.Store.Grains.Observation
     {
         readonly ConcurrentDictionary<Guid, StreamSubscriptionHandle<AppendedEvent>> _subscriptions = new();
         readonly IRequestContextManager _requestContextManager;
+        readonly IConnectedClients _connectedObservers;
         IAsyncStream<AppendedEvent>? _stream;
         ObserverId _observerId = Guid.Empty;
         TenantId _tenantId = TenantId.NotSet;
@@ -25,9 +26,13 @@ namespace Cratis.Events.Store.Grains.Observation
         /// Initializes a new instance of the <see cref="Observer"/> class.
         /// </summary>
         /// <param name="requestContextManager"></param>
-        public Observer(IRequestContextManager requestContextManager)
+        /// <param name="connectedObservers"></param>
+        public Observer(
+            IRequestContextManager requestContextManager,
+            IConnectedClients connectedObservers)
         {
             _requestContextManager = requestContextManager;
+            _connectedObservers = connectedObservers;
         }
 
         /// <inheritdoc/>
@@ -44,17 +49,20 @@ namespace Cratis.Events.Store.Grains.Observation
         }
 
         /// <inheritdoc/>
-        public async Task<Guid> Subscribe(IEnumerable<EventType> eventTypes, IObserverHandler handler)
+        public async Task<Guid> Subscribe(IEnumerable<EventType> eventTypes)
         {
             var subscriptionHandle = await _stream!.SubscribeAsync(
                 async (@event, _) =>
                 {
+                    if (_connectedObservers.AnyConnectedClients)
+                    {
+                        return;
+                    }
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: @event.EventContext.EventSourceId);
-                    Console.WriteLine("*****************************");
-                    Console.WriteLine("********** EVENT ************");
-                    Console.WriteLine("*****************************");
-                    await partitionedObserver.OnNext(handler, @event);
+                    await partitionedObserver.OnNext(@event);
                 }, new EventTypeFilteredStreamSequenceToken(0, eventTypes));
+
+            // TODO: Client disconnected - clean up subscription.
 
             _subscriptions[subscriptionHandle.HandleId] = subscriptionHandle;
 

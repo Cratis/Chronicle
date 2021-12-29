@@ -13,9 +13,7 @@ namespace Cratis.Events.Store.Grains.Observation
         /// <summary>
         /// Handle the next event.
         /// </summary>
-        /// <param name="observer"><see cref="IObserverHandler"/> that will be handling each event.</param>
         /// <param name="event">The actual event.</param>
-        Task<bool> OnNext(IObserverHandler observer, AppendedEvent @event);
-        Task ReportStatus();
+        Task<bool> OnNext(AppendedEvent @event);
     }
 }
