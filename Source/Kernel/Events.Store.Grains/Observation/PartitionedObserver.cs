@@ -12,13 +12,7 @@ namespace Cratis.Events.Store.Grains.Observation
     /// </summary>
     public class PartitionedObserver : Grain, IPartitionedObserver
     {
-        readonly IStreamSubscriptionManager _subscriptionManager;
         IAsyncStream<AppendedEvent>? _stream;
-
-        public PartitionedObserver(IStreamSubscriptionManagerAdmin subscriptionManagerAdmin)
-        {
-            _subscriptionManager = subscriptionManagerAdmin.GetStreamSubscriptionManager(StreamSubscriptionManagerType.ExplicitSubscribeOnly);
-        }
 
 
         public override async Task OnActivateAsync()
@@ -36,14 +30,8 @@ namespace Cratis.Events.Store.Grains.Observation
         {
             var id = this.GetPrimaryKey(out var tenantId);
 
-            var context = new ObserverContext(Guid.NewGuid(), Guid.NewGuid());
-            //observer.OnNext(context, @event);
-
             try
             {
-                //var subscribers =  await _stream!.GetAllSubscriptionHandles();
-                var subscribers = await _subscriptionManager.GetSubscriptions("observer-handlers", new StreamIdentity(_stream!.Guid, _stream!.Namespace));
-
                 await _stream!.OnNextAsync(@event);
             }
             catch (Exception)

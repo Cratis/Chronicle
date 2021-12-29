@@ -10,7 +10,6 @@ namespace Sample.Accounts.Debit
     {
         public Task DebitAccountOpened(DebitAccountOpened @event)
         {
-
             return Task.CompletedTask;
         }
     }

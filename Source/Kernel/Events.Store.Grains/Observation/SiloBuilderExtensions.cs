@@ -12,6 +12,11 @@ namespace Orleans.Hosting
     /// </summary>
     public static class SiloBuilderExtensions
     {
+        /// <summary>
+        /// Add a tracker of connected clients.
+        /// </summary>
+        /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
+        /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
         public static ISiloBuilder AddConnectedClientsTracking(this ISiloBuilder builder)
         {
             builder.Configure<SiloConnectionOptions>(options =>

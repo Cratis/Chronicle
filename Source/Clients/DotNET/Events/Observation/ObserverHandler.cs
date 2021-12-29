@@ -36,61 +36,11 @@ namespace Cratis.Events.Observation
         public ObserverName Name { get; }
         public EventLogId EventLogId { get; }
 
-        public void OnNext(ObserverContext context, AppendedEvent @event)
+        public async Task OnNext(AppendedEvent @event)
         {
             var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.EventType.Id);
             var content = _eventSerializer.Deserialize(eventType, @event.Content);
-            _observerInvoker.Invoke(content, null!);
-        }
-
-        public void StartObserving()
-        {
-            Task.Run(() =>
-            {
-                // var stream = Channel.CreateUnbounded<ObserverClientToServer>();
-                // var result = _service.Subscribe(stream.AsAsyncEnumerable());
-                // await stream.Writer.WriteAsync(new ObserverClientToServer
-                // {
-                //     Subscription = new()
-                //     {
-                //         EventLogId = _eventLogId,
-                //         Id = _observerId,
-                //         Name = _name
-                //     }
-                // });
-
-                // await foreach (var request in result)
-                // {
-                //     ObserverClientToServer response;
-                //     try
-                //     {
-                //         var clrType = _eventTypes.GetClrTypeFor(request.EventTypeId);
-                //         var content = _eventSerializer.Deserialize(clrType, request.Content);
-                //         await _observerInvoker.Invoke(content, null!);
-                //         response = new()
-                //         {
-                //             Result = new()
-                //             {
-                //                 Failed = false,
-                //                 Reason = string.Empty
-                //             }
-                //         };
-                //     }
-                //     catch (Exception ex)
-                //     {
-                //         response = new()
-                //         {
-                //             Result = new()
-                //             {
-                //                 Failed = true,
-                //                 Reason = ex.Message
-                //             }
-                //         };
-                //     }
-
-                //     await stream.Writer.WriteAsync(response);
-                // }
-            });
+            await _observerInvoker.Invoke(content, null!);
         }
     }
 }

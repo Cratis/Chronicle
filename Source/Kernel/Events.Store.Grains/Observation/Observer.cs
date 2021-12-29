@@ -61,7 +61,7 @@ namespace Cratis.Events.Store.Grains.Observation
             var subscriptionHandle = await _stream!.SubscribeAsync(
                 async (@event, _) =>
                 {
-                    if (_connectedObservers.AnyConnectedClients)
+                    if (!_connectedObservers.AnyConnectedClients)
                     {
                         return;
                     }
