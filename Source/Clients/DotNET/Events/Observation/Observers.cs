@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Events.Store;
 using Cratis.Events.Store.Grains.Observation;
 using Cratis.Execution;
 using Cratis.Types;
 using Orleans;
+using Orleans.Streams;
 
 namespace Cratis.Events.Observation
 {
@@ -23,7 +25,7 @@ namespace Cratis.Events.Observation
         /// </summary>
         /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
-        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to work with instances of <see cref="IObserverHandler"/> types.</param>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
         /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
         /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
@@ -55,12 +57,26 @@ namespace Cratis.Events.Observation
         public async Task StartObserving()
         {
             _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
+            var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
 
             foreach (var handler in _observerHandlers)
             {
+                var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, null); //"f455c031-630e-450d-a75b-ca050c441708");
+                await stream.SubscribeAsync(
+                    (@event, _) =>
+                    {
+                        var i=0;
+                        i++;
+
+                        //stream.OnErrorAsync(new NotImplementedException());
+                        //throw new NotImplementedException();
+
+                        return Task.CompletedTask;
+                    }
+                );
+
                 var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
-                var observerHandler = await _clusterClient.CreateObjectReference<IObserverHandler>(handler);
-                await observer.Subscribe(Array.Empty<EventType>(), observerHandler);
+                await observer.Subscribe(Array.Empty<EventType>());
             }
         }
     }

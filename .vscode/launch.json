@@ -72,5 +72,14 @@
             "type": "coreclr",
             "request": "attach"
         }
+    ],
+    "compounds": [
+        {
+            "name": "Server and Client",
+            "configurations": [
+                ".NET Core Launch (Server)",
+                ".NET Core Launch (AspNetCore Sample)"
+            ]
+        }
     ]
 }

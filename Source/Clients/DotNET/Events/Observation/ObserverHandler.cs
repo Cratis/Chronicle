@@ -10,7 +10,7 @@ namespace Cratis.Events.Observation
     /// <summary>
     /// Represents an implementation of <see cref="IObserver"/>.
     /// </summary>
-    public class ObserverHandler : IObserverHandler
+    public class ObserverHandler
     {
         readonly IEventTypes _eventTypes;
         readonly IObserverInvoker _observerInvoker;

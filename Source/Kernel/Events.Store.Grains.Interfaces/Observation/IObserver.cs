@@ -14,9 +14,8 @@ namespace Cratis.Events.Store.Grains.Observation
         /// Subscribe to observer.
         /// </summary>
         /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
-        /// <param name="handler">The <see cref="IObserverHandler"/> that will be called.</param>
         /// <returns>The subscription identifier.</returns>
-        Task<Guid> Subscribe(IEnumerable<EventType> eventTypes, IObserverHandler handler);
+        Task<Guid> Subscribe(IEnumerable<EventType> eventTypes);
 
         /// <summary>
         /// Unsubscribe from the observer.
