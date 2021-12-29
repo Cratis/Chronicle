@@ -85,7 +85,16 @@ namespace Cratis.Events.Store.Grains
 
                 updateSequenceNumber = false;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.ErrorAppending(
+                    _eventLogId,
+                    State.SequenceNumber,
+                    _tenantId,
+                    eventSourceId,
+                    ex
+                );
+            }
 
             if (updateSequenceNumber)
             {
