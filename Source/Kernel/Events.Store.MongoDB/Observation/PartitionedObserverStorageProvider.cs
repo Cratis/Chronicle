@@ -16,7 +16,7 @@ namespace Cratis.Events.Store.MongoDB.Observation
     /// </summary>
     public class PartitionedObserverStorageProvider : IGrainStorage
     {
-        const string CollectionName = "failed-observer-partitions";
+        const string CollectionName = "failed-observers";
         readonly IRequestContextManager _requestContextManager;
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
