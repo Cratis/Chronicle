@@ -12,6 +12,11 @@ namespace Cratis.Events.Store.Observation
     public record ObserverId(Guid Value) : ConceptAs<Guid>(Value)
     {
         /// <summary>
+        /// Gets the representation of an unspecified <see cref="EventSourceId"/>.
+        /// </summary>
+        public static readonly ObserverId Unspecified = new(Guid.Empty);
+
+        /// <summary>
         /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="ObserverId"/>.
         /// </summary>
         /// <param name="id">String representation of a <see cref="Guid"/> to convert from.</param>

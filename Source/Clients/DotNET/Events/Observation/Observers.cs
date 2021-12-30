@@ -42,6 +42,7 @@ namespace Cratis.Events.Observation
                                 {
                                     var observer = _.GetCustomAttribute<ObserverAttribute>()!;
                                     return new ObserverHandler(
+                                        clusterClient,
                                         observer.ObserverId,
                                         _.FullName ?? $"{_.Namespace}.{_.Name}",
                                         observer.EventLogId,
