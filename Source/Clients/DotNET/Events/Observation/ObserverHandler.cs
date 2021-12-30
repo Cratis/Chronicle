@@ -4,6 +4,7 @@
 using Cratis.Events.Store;
 using Cratis.Events.Store.Grains.Observation;
 using Cratis.Events.Store.Observation;
+using Orleans;
 
 namespace Cratis.Events.Observation
 {
@@ -12,11 +13,13 @@ namespace Cratis.Events.Observation
     /// </summary>
     public class ObserverHandler
     {
+        readonly IClusterClient _clusterClient;
         readonly IEventTypes _eventTypes;
         readonly IObserverInvoker _observerInvoker;
         readonly IEventSerializer _eventSerializer;
 
         public ObserverHandler(
+            IClusterClient clusterClient,
             ObserverId observerId,
             ObserverName name,
             EventLogId eventLogId,
@@ -24,6 +27,7 @@ namespace Cratis.Events.Observation
             IObserverInvoker observerInvoker,
             IEventSerializer eventSerializer)
         {
+            _clusterClient = clusterClient;
             ObserverId = observerId;
             Name = name;
             EventLogId = eventLogId;

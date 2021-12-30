@@ -17,11 +17,6 @@ namespace Cratis.Events.Store
         public const string StorageProvider = "event-log-state";
 
         /// <summary>
-        /// Gets or sets the <see cref="EventLogId"/> for the state.
-        /// </summary>
-        public EventLogId EventLog { get; set; }
-
-        /// <summary>
         /// Gets or sets the next sequencenumber (tail).
         /// </summary>
         public EventLogSequenceNumber SequenceNumber { get; set; }

@@ -14,6 +14,7 @@ namespace Cratis.Events.Store.Grains.Observation
         /// Handle the next event.
         /// </summary>
         /// <param name="event">The actual event.</param>
-        Task<bool> OnNext(AppendedEvent @event);
+        /// <returns>Awaitable task</returns>
+        Task OnNext(AppendedEvent @event);
     }
 }

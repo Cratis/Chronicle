@@ -23,8 +23,6 @@ namespace Cratis.Events.Store.Grains.Observation
         IAsyncStream<AppendedEvent>? _stream;
         ObserverId _observerId = Guid.Empty;
         TenantId _tenantId = TenantId.NotSet;
-        EventLogId _eventLogId = EventLogId.Unspecified;
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -50,7 +48,6 @@ namespace Cratis.Events.Store.Grains.Observation
         public override async Task OnActivateAsync()
         {
             _observerId = this.GetPrimaryKey(out var eventLogId);
-            _eventLogId = eventLogId;
             var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString();
             _tenantId = tenantIdAsString!;
 
@@ -71,12 +68,19 @@ namespace Cratis.Events.Store.Grains.Observation
                         return;
                     }
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: @event.EventContext.EventSourceId);
+                    try
+                    {
+                        await partitionedObserver.OnNext(@event);
 
-                    await partitionedObserver.OnNext(@event);
-
-                    State.Offset = @event.Metadata.SequenceNumber + 1;
-                    State.LastHandled = @event.Metadata.SequenceNumber + 1;
-                    await WriteStateAsync();
+                        State.Offset = @event.Metadata.SequenceNumber + 1;
+                        State.LastHandled = @event.Metadata.SequenceNumber + 1;
+                        await WriteStateAsync();
+                    }
+                    catch (Exception)
+                    {
+                        var i = 0;
+                        i++;
+                    }
                 }, new EventTypeFilteredStreamSequenceToken(State.Offset, eventTypes));
 
             _subscriptions[subscriptionHandle.HandleId] = subscriptionHandle;
