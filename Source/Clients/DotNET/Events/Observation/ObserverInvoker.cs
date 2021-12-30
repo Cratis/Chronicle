@@ -10,7 +10,7 @@ namespace Cratis.Events.Observation
     /// </summary>
     public class ObserverInvoker : IObserverInvoker
     {
-        readonly Dictionary<Type, MethodInfo> _methodsByEventTypeId;
+        readonly Dictionary<EventType, MethodInfo> _methodsByEventTypeId;
         readonly IServiceProvider _serviceProvider;
         readonly IEventTypes _eventTypes;
         readonly Type _targetType;
@@ -25,17 +25,22 @@ namespace Cratis.Events.Observation
             // if so, make this either throw an exception if duplicates, or array of methods if allowed
             _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                                             .Where(_ => IsObservingMethod(_))
-                                            .ToDictionary(_ => _.GetParameters()[0].ParameterType, _ => _);
+                                            .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
         }
+
+        /// <inheritdoc/>
+        public IEnumerable<EventType> EventTypes => _methodsByEventTypeId.Keys;
 
         /// <inheritdoc/>
         public Task Invoke(object content, EventContext eventContext)
         {
             var actualObserver = _serviceProvider.GetService(_targetType);
+            var eventType = _eventTypes.GetEventTypeFor(content.GetType());
+
             object returnValue = null!;
-            if (_methodsByEventTypeId.ContainsKey(content.GetType()))
+            if (_methodsByEventTypeId.ContainsKey(eventType))
             {
-                var method = _methodsByEventTypeId[content.GetType()];
+                var method = _methodsByEventTypeId[eventType];
                 var parameters = method.GetParameters();
 
                 if (parameters.Length == 2)

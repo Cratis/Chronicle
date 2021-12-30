@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Events.Store.Grains;
 using Cratis.Execution;
-using Orleans.Providers.Streams.Common;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -36,11 +36,11 @@ namespace Cratis.Events.Store.MongoDB
             StreamNamespace = tenantId.ToString();
             if (_events.Any())
             {
-                SequenceToken = new EventSequenceToken((long)_events.First().Metadata.SequenceNumber.Value);
+                SequenceToken = new EventLogSequenceNumberToken(_events.First().Metadata.SequenceNumber);
             }
             else
             {
-                SequenceToken = new EventSequenceToken(-1);
+                SequenceToken = new EventLogSequenceNumberToken();
             }
         }
 
@@ -55,7 +55,7 @@ namespace Cratis.Events.Store.MongoDB
 
         /// <inheritdoc/>
         public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>() =>
-            _events.Select(_ => new Tuple<T, StreamSequenceToken>((T)(object)_, new EventSequenceToken((long)_.Metadata.SequenceNumber.Value))).ToArray();
+            _events.Select(_ => new Tuple<T, StreamSequenceToken>((T)(object)_, new EventLogSequenceNumberToken(_.Metadata.SequenceNumber))).ToArray();
 
         /// <inheritdoc/>
         public bool ImportRequestContext()

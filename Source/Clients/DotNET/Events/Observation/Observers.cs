@@ -42,7 +42,6 @@ namespace Cratis.Events.Observation
                                 {
                                     var observer = _.GetCustomAttribute<ObserverAttribute>()!;
                                     return new ObserverHandler(
-                                        clusterClient,
                                         observer.ObserverId,
                                         _.FullName ?? $"{_.Namespace}.{_.Name}",
                                         observer.EventLogId,
@@ -57,16 +56,18 @@ namespace Cratis.Events.Observation
         /// <inheritdoc/>
         public async Task StartObserving()
         {
+            // TODO: Observe for all tenants
             _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
             var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
 
             foreach (var handler in _observerHandlers)
             {
-                var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, null); //"f455c031-630e-450d-a75b-ca050c441708");
+                var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, null);
                 await stream.SubscribeAsync(async (@event, _) => await handler.OnNext(@event));
 
                 var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
-                await observer.Subscribe(Array.Empty<EventType>());
+                var eventTypes = handler.EventTypes.ToArray();
+                await observer.Subscribe(eventTypes);
             }
         }
     }

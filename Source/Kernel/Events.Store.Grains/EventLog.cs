@@ -52,7 +52,7 @@ namespace Cratis.Events.Store.Grains
                 "{}"
             );
 
-            await _stream!.OnNextAsync(appendedEvent, new EventSequenceToken(-1));
+            await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken());
             await WriteStateAsync();
         }
 
@@ -71,7 +71,7 @@ namespace Cratis.Events.Store.Grains
 
             try
             {
-                await _stream!.OnNextAsync(appendedEvent, new EventSequenceToken((long)State.SequenceNumber.Value));
+                await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));
             }
             catch (UnableToAppendToEventLog ex)
             {

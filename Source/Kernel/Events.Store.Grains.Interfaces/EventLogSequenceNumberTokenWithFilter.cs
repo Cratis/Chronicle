@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
 namespace Cratis.Events.Store.Grains
@@ -10,16 +9,18 @@ namespace Cratis.Events.Store.Grains
     /// Represents a <see cref="StreamSequenceToken"/> for observers.
     /// </summary>
     [Serializable]
-    public class EventTypeFilteredStreamSequenceToken : EventSequenceToken
+    public class EventLogSequenceNumberTokenWithFilter : EventLogSequenceNumberToken
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="EventTypeFilteredStreamSequenceToken"/> class.
+        /// Initializes a new instance of the <see cref="EventLogSequenceNumberTokenWithFilter"/> class.
         /// </summary>
         /// <param name="sequenceNumber"><see cref="EventLogSequenceNumber"/></param>
         /// <param name="eventTypes"><see cref="EventType">event types</see> the observer is interested in.</param>
-        public EventTypeFilteredStreamSequenceToken(EventLogSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes) : base((long)sequenceNumber.Value)
+        /// <param name="partition">Optional <see cref="EventSourceId"/> partition.</param>
+        public EventLogSequenceNumberTokenWithFilter(EventLogSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSourceId? partition = default) : base(sequenceNumber)
         {
             EventTypes = eventTypes;
+            Partition = partition ?? EventSourceId.Unspecified;
         }
 
         /// <summary>
@@ -27,12 +28,20 @@ namespace Cratis.Events.Store.Grains
         /// </summary>
         public IEnumerable<EventType> EventTypes { get; }
 
+        /// <summary>
+        /// Gets the <see cref="EventSourceId"/> partition.
+        /// </summary>
+        public EventSourceId Partition { get; }
+
         /// <inheritdoc/>
         public override bool Equals(StreamSequenceToken other)
         {
-            if (other is EventTypeFilteredStreamSequenceToken observerToken)
+            if (other is EventLogSequenceNumberTokenWithFilter observerToken)
             {
-                return observerToken.EventTypes.SequenceEqual(EventTypes) && base.Equals(other);
+                return
+                    observerToken.EventTypes.SequenceEqual(EventTypes) &&
+                    observerToken.Partition.Equals(Partition) &&
+                    base.Equals(other);
             }
 
             return base.Equals(other);

@@ -29,5 +29,10 @@ namespace Cratis.Events
         /// <param name="id"><see cref="string"/> to convert from.</param>
         /// <returns>A converted <see cref="EventSourceId"/>.</returns>;
         public static implicit operator EventSourceId(string id) => new(id);
+
+        /// <summary>
+        /// Check whether or not the <see cref="EventSourceId"/> is specified.
+        /// </summary>
+        public bool IsSpecified => this != Unspecified;
     }
 }

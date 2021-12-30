@@ -81,7 +81,7 @@ namespace Cratis.Events.Store.Grains.Observation
                         var i = 0;
                         i++;
                     }
-                }, new EventTypeFilteredStreamSequenceToken(State.Offset, eventTypes));
+                }, new EventLogSequenceNumberTokenWithFilter(State.Offset, eventTypes));
 
             _subscriptions[subscriptionHandle.HandleId] = subscriptionHandle;
 

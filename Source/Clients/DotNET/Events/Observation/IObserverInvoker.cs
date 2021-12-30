@@ -15,5 +15,10 @@ namespace Cratis.Events.Observation
         /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
         /// <returns>Awaitable <see cref="Task"/>.</returns>
         Task Invoke(object content, EventContext eventContext);
+
+        /// <summary>
+        /// Gets the supported <see cref="EventType">event types</see>.
+        /// </summary>
+        IEnumerable<EventType>  EventTypes { get; }
     }
 }
