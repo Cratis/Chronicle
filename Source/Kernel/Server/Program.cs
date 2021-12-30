@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Net;
 using Autofac.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
@@ -41,12 +39,7 @@ namespace Cratis.Server
                 .UseSerilog()
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _
-                    .UseStartup<Startup>()
-                    .ConfigureKestrel(options =>
-                    {
-                        options.Listen(IPAddress.Any, 5003, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
-                        options.Listen(IPAddress.Any, 5002, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-                    }));
+                    .UseStartup<Startup>());
 
         static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
         {
