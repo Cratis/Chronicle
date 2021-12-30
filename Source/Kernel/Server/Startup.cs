@@ -46,6 +46,10 @@ namespace Cratis.Server
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseWebSockets();
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+
             app.UseSwagger();
             app.UseSwaggerUI();
 
@@ -53,6 +57,8 @@ namespace Cratis.Server
 
             app.UseRouting();
             app.UseEndpoints(endpoints => endpoints.MapControllers());
+
+            app.RunAsSinglePageApplication();
         }
     }
 }
