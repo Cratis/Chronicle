@@ -13,13 +13,11 @@ namespace Cratis.Events.Observation
     /// </summary>
     public class ObserverHandler
     {
-        readonly IClusterClient _clusterClient;
         readonly IEventTypes _eventTypes;
         readonly IObserverInvoker _observerInvoker;
         readonly IEventSerializer _eventSerializer;
 
         public ObserverHandler(
-            IClusterClient clusterClient,
             ObserverId observerId,
             ObserverName name,
             EventLogId eventLogId,
@@ -27,7 +25,6 @@ namespace Cratis.Events.Observation
             IObserverInvoker observerInvoker,
             IEventSerializer eventSerializer)
         {
-            _clusterClient = clusterClient;
             ObserverId = observerId;
             Name = name;
             EventLogId = eventLogId;
@@ -39,6 +36,8 @@ namespace Cratis.Events.Observation
         public ObserverId ObserverId { get; }
         public ObserverName Name { get; }
         public EventLogId EventLogId { get; }
+
+        public IEnumerable<EventType> EventTypes => _observerInvoker.EventTypes;
 
         public async Task OnNext(AppendedEvent @event)
         {

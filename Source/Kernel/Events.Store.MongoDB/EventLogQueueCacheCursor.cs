@@ -16,7 +16,8 @@ namespace Cratis.Events.Store.MongoDB
     {
         readonly IMongoCollection<Event> _collection;
         readonly IStreamIdentity _streamIdentity;
-        readonly IEnumerable<EventType> _filter;
+        readonly IEnumerable<EventType> _eventTypes;
+        readonly EventSourceId? _partition;
         IAsyncCursor<Event>? _cursor;
 
         /// <summary>
@@ -25,16 +26,19 @@ namespace Cratis.Events.Store.MongoDB
         /// <param name="collection"><see cref="IMongoCollection{T}"/> to use for getting events from the event log.</param>
         /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
         /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
-        /// <param name="filter">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
+        /// <param name="eventTypes">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
+        /// <param name="partition">Optional <see cref="EventSourceId"/> partition to filter for.</param>
         public EventLogQueueCacheCursor(
             IMongoCollection<Event> collection,
             IStreamIdentity streamIdentity,
             StreamSequenceToken token,
-            IEnumerable<EventType>? filter = default)
+            IEnumerable<EventType>? eventTypes = default,
+            EventSourceId? partition = default)
         {
             _collection = collection;
             _streamIdentity = streamIdentity;
-            _filter = filter ?? Array.Empty<EventType>();
+            _eventTypes = eventTypes ?? Array.Empty<EventType>();
+            _partition = partition;
             FindEventsFrom(token);
         }
 
@@ -53,6 +57,11 @@ namespace Cratis.Events.Store.MongoDB
                     var content = _.Content[EventGeneration.First.Value.ToString(CultureInfo.InvariantCulture)].ToJson();
                     return new AppendedEvent(metadata, context, content);
                 }).ToArray();
+
+                if (appendedEvents.Length == 0)
+                {
+                    return null!;
+                }
 
                 return new EventLogBatchContainer(
                     appendedEvents,
@@ -92,7 +101,23 @@ namespace Cratis.Events.Store.MongoDB
         void FindEventsFrom(StreamSequenceToken token)
         {
             var from = (ulong)token.SequenceNumber;
-            _cursor = _collection.Find(_ => _.SequenceNumber >= from).ToCursor();
+            var filters = new List<FilterDefinition<Event>>
+            {
+                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, from)
+            };
+
+            if (_partition?.IsSpecified == true)
+            {
+                filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, _partition));
+            }
+
+            if (_eventTypes.Any())
+            {
+                filters.Add(Builders<Event>.Filter.Or(_eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+            }
+
+            var filter = Builders<Event>.Filter.And(filters.ToArray());
+            _cursor = _collection.Find(filter).ToCursor();
         }
     }
 }
