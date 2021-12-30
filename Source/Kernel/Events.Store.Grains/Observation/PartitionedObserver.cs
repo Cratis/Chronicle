@@ -1,7 +1,6 @@
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text;
 using Cratis.Events.Store.Observation;
 using Orleans;
 using Orleans.Providers;
@@ -67,6 +66,16 @@ namespace Cratis.Events.Store.Grains.Observation
                 // TODO: Add a reminder to try to recover from the failure
                 await WriteStateAsync();
             }
+        }
+
+        public async Task TryResume()
+        {
+            // Get the event log stream for this tenant
+            // Use a stream sequence token that has partition in it
+            // Subscribe to the stream with this token
+            // When stream is at the edge - unsubscribe to the stream
+
+            await Task.CompletedTask;
         }
     }
 }
