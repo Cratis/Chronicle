@@ -29,10 +29,10 @@ namespace Cratis.Events
             _clusterClient = clusterClient;
 
             var defaultEventLog = _clusterClient.GetGrain<IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
-            DefaultEventLog = new ClientEventLog(eventTypes, defaultEventLog);
+            EventLog = new ClientEventLog(eventTypes, defaultEventLog);
         }
 
         /// <inheritdoc/>
-        public IClientEventLog DefaultEventLog { get; }
+        public IClientEventLog EventLog { get; }
     }
 }

@@ -13,6 +13,6 @@ namespace Cratis.Events
         /// <summary>
         /// Gets the default <see cref="IEventLog"/>.
         /// </summary>
-        IClientEventLog DefaultEventLog { get; }
+        IClientEventLog EventLog { get; }
     }
 }
