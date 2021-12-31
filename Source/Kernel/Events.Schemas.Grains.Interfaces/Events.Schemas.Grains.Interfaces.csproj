@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Events.Store.Grains.Interfaces</AssemblyName>
-        <RootNamespace>Cratis.Events.Store.Grains</RootNamespace>
+        <AssemblyName>Cratis.Events.Schemas.Grains.Interfaces</AssemblyName>
+        <RootNamespace>Cratis.Events.Schemas.Grains</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Events.Store/Events.Store.csproj" />
+        <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
     </ItemGroup>
 
     <ItemGroup>

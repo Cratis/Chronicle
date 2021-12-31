@@ -42,13 +42,13 @@ namespace Cratis.Events.Schemas
             schema.SetDisplayName(friendlyName);
             schema.SetGeneration(type.Generation);
 
-            var eventSchema =  new EventSchema(type, schema).ToMongoDB();
+            var eventSchema = new EventSchema(type, schema).ToMongoDB();
 
             await _collection.ReplaceOneAsync(
 
                 _ => _.Id == eventSchema.Id,
                 eventSchema,
-                new ReplaceOptions { IsUpsert = true}
+                new ReplaceOptions { IsUpsert = true }
             );
         }
 

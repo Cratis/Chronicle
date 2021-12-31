@@ -7,6 +7,7 @@
     <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Schemas.Grains.Interfaces/Events.Schemas.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Events.Store.MongoDB/Events.Store.MongoDB.csproj"/>
     </ItemGroup>
