@@ -2,11 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Collections;
+using Cratis.Compliance;
 using Cratis.Events;
 using Cratis.Events.Observation;
+using Cratis.Events.Schemas;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using Cratis.Extensions.Orleans.Execution;
+using Cratis.Schemas;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
@@ -42,9 +46,14 @@ namespace Cratis.Hosting
             var types = new Types.Types();
 
             services
-                .AddSingleton<Types.ITypes>(types)
+                .AddSingleton<ITypes>(types)
+                .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
+                .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
                 .AddSingleton<IEventStore, EventStore>()
                 .AddSingleton<IObservers, Observers>()
+                .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
+                .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
+                .AddSingleton<ISchemas, Events.Schemas.Schemas>()
                 .AddSingleton<IEventTypes, EventTypes>()
                 .AddSingleton<IEventSerializer, EventSerializer>()
                 .AddSingleton<IHostedService, ObserversService>()
@@ -52,6 +61,13 @@ namespace Cratis.Hosting
                 .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
                 .AddSingleton<IRequestContextManager, RequestContextManager>();
             types.AllObservers().ForEach(_ => services.AddTransient(_));
+
+            types.All.Where(_ =>
+                _ != typeof(ICanProvideComplianceMetadataForType) &&
+                _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
+            types.All.Where(_ =>
+                _ != typeof(ICanProvideComplianceMetadataForProperty) &&
+                _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
 
             var orleansBuilder = new OrleansClientBuilder()
                 .UseLocalhostClustering()

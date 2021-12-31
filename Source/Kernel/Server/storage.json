@@ -1,6 +1,6 @@
 {
     "type": "MongoDB",
-    "shared": "mongodb://localhost:27017/event-store-common",
+    "shared": "mongodb://localhost:27017/event-store-shared",
     "eventStore": {
         "f455c031-630e-450d-a75b-ca050c441708": "mongodb://localhost:27017/tenant-1-event-store",
         "1c51e03c-680e-4c38-92a0-0f1b96c57d3f": "mongodb://localhost:27017/tenant-2-event-store"

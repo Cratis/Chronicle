@@ -19,6 +19,7 @@
     <ItemGroup>
         <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
         <ProjectReference Include="../Events.Schemas.Api/Events.Schemas.Api.csproj" />
+        <ProjectReference Include="../Events.Schemas.Grains/Events.Schemas.Grains.csproj" />
         <ProjectReference Include="../Events.Store/Events.Store.csproj" />
         <ProjectReference Include="../Events.Store.Api/Events.Store.Api.csproj" />
         <ProjectReference Include="../Events.Store.Grains/Events.Store.Grains.csproj" />
