@@ -5,14 +5,13 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../Events.Store/Events.Store.csproj" />
         <ProjectReference Include="../Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj" />
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="MongoDB.Driver" Version="$(MongoDB)" />
-
         <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>

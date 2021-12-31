@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store.Configuration;
+using Cratis.Configuration;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,7 +64,7 @@ namespace Cratis.Events.Store.MongoDB
                 {
                     var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
                     var configuration = _serviceProvider.GetService<Storage>()!;
-                    _databases = configuration.EventStore.Configuration.ToDictionary(_ => (TenantId)_.Key, _ =>
+                    _databases = configuration.EventStore.ToDictionary(_ => (TenantId)_.Key, _ =>
                     {
                         var url = new MongoUrl(_.Value.ToString());
                         var client = mongoDBClientFactory.Create(url);

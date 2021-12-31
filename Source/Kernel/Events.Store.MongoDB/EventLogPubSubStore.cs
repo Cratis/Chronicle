@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -20,18 +21,18 @@ namespace Cratis.Events.Store.MongoDB
     {
         const string CollectionName = "pub-sub-state";
         readonly JsonSerializerSettings _serializerSettings;
-        readonly ICommonEventStoreDatabase _database;
+        readonly ISharedDatabase _database;
         readonly ILogger<EventLogPubSubStore> _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogPubSubStore"/> class.
         /// </summary>
-        /// <param name="database"><see cref="ICommonEventStoreDatabase"/> to keep state in.</param>
+        /// <param name="database"><see cref="ISharedDatabase"/> to keep state in.</param>
         /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types-</param>
         /// <param name="grainFactory"><see cref="IGrainFactory"/> for resolving grains during serialization.</param>
         /// <param name="logger">Logger for logging.</param>
         public EventLogPubSubStore(
-            ICommonEventStoreDatabase database,
+            ISharedDatabase database,
             ITypeResolver typeResolver,
             IGrainFactory grainFactory,
             ILogger<EventLogPubSubStore> logger)
