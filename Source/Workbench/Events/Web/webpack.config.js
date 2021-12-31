@@ -13,6 +13,10 @@ module.exports = (env, argv) => {
             '/api': {
                 target: 'http://localhost:5000',
                 ws: true
+            },
+            '/swagger': {
+                target: 'http://localhost:5000',
+                ws: true
             }
         };
         config.resolve.alias.API = path.resolve('./API');
