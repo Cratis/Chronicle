@@ -3,12 +3,12 @@
 
 using MongoDB.Driver;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Cratis.MongoDB
 {
     /// <summary>
     /// Defines the common database for event store that goes across all tenants.
     /// </summary>
-    public interface ICommonEventStoreDatabase
+    public interface ISharedDatabase
     {
         /// <summary>
         /// Gets a <see cref="IMongoCollection{T}"/> for a specific type of document.

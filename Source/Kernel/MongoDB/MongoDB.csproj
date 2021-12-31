@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.MongoDB</AssemblyName>
+        <RootNamespace>Cratis.MongoDB</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Configuration/Configuration.csproj" />
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+        <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
+    </ItemGroup>
+</Project>

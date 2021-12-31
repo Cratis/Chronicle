@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Execution;
-using Cratis.Extensions.MongoDB;
+using Cratis.MongoDB;
 using MongoDB.Driver;
 using NJsonSchema;
 
@@ -14,30 +14,17 @@ namespace Cratis.Events.Schemas
     [Singleton]
     public class SchemaStore : ISchemaStore
     {
-        const string DatabaseName = "schema_store";
         const string SchemasCollection = "schemas";
-        readonly IMongoDatabase _database;
         readonly IMongoCollection<EventSchemaMongoDB> _collection;
         Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SchemaStore"/> class.
         /// </summary>
-        /// <param name="configuration">The <see cref="SchemaStoreConfiguration"/>.</param>
-        /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> for creating MongoDB clients.</param>
-        public SchemaStore(
-            SchemaStoreConfiguration configuration,
-            IMongoDBClientFactory mongoDBClientFactory)
+        /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
+        public SchemaStore(ISharedDatabase sharedDatabase)
         {
-            var mongoUrlBuilder = new MongoUrlBuilder
-            {
-                Servers = new[] { new MongoServerAddress(configuration.Host, configuration.Port) }
-            };
-            var url = mongoUrlBuilder.ToMongoUrl();
-            var settings = MongoClientSettings.FromUrl(url);
-            var client = mongoDBClientFactory.Create(settings);
-            _database = client.GetDatabase(DatabaseName);
-            _collection = _database.GetCollection<EventSchemaMongoDB>(SchemasCollection);
+            _collection = sharedDatabase.GetCollection<EventSchemaMongoDB>(SchemasCollection);
         }
 
         /// <inheritdoc/>

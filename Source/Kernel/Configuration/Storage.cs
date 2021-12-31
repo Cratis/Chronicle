@@ -1,26 +1,27 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Store.Configuration
+namespace Cratis.Configuration
 {
     /// <summary>
-    /// Represents the configuration for an event store.
+    /// Represents the configuration for storage.
     /// </summary>
-    public record EventStore
+    [Configuration]
+    public record Storage
     {
         /// <summary>
-        /// The type of event store.
+        /// The type of storage used.
         /// </summary>
         public string Type { get; init; } = "Not Configured";
 
         /// <summary>
-        /// The common event store connection configuration.
+        /// The shared database connection configuration.
         /// </summary>
-        public object Common { get; init; } = "";
+        public object Shared { get; init; } = "";
 
         /// <summary>
         /// The event store connection configuration per tenant.
         /// </summary>
-        public IDictionary<string, object> Configuration { get; init; } = new Dictionary<string, object>();
-    }
+        public IDictionary<string, object> EventStore { get; init; } = new Dictionary<string, object>();
+    };
 }
