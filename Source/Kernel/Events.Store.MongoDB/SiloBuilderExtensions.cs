@@ -24,9 +24,10 @@ namespace Orleans.Hosting
         /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
         public static ISiloBuilder AddEventLogStream(this ISiloBuilder builder)
         {
+            builder.AddMemoryGrainStorage("PubSubStore");
             builder.ConfigureServices(services =>
             {
-                services.AddSingletonNamedService<IGrainStorage>("PubSubStore", (serviceProvider, _) => serviceProvider.GetService<EventLogPubSubStore>()!);
+                //services.AddSingletonNamedService<IGrainStorage>("PubSubStore", (serviceProvider, _) => serviceProvider.GetService<EventLogPubSubStore>()!);
                 services.AddSingletonNamedService<IGrainStorage>(EventLogState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<EventLogStorageProvider>()!);
                 services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<ObserverStorageProvider>()!);
                 services.AddSingletonNamedService<IGrainStorage>(PartitionedObserverState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<PartitionedObserverStorageProvider>()!);
