@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using Autofac.Extensions.DependencyInjection;
 using Orleans;
+using Orleans.Configuration;
 using Orleans.Hosting;
 using Serilog;
 
@@ -31,6 +33,13 @@ namespace Cratis.Server
              Host.CreateDefaultBuilder(args)
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
+                    .Configure<EndpointOptions>(options =>
+                    {
+                        options.SiloPort = 11111;
+                        options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Any, 11111);
+                        options.GatewayPort = 30000;
+                        options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, 30000);
+                    })
                     .AddConnectedClientsTracking()
                     .AddEventLogStream()
                     .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
