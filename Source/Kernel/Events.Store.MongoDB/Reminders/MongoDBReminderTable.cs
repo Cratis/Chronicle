@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Extensions.Orleans.Execution;
 using Cratis.MongoDB;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -63,7 +64,9 @@ namespace Cratis.Events.Store.MongoDB.Reminders
             _logger.ReadingSpecificReminderForGrain(grainRef.ToShortKeyString(), reminderName);
 
             var result = await GetCollection().FindAsync(filter);
-            return result.ToList().Select(_ => JsonConvert.DeserializeObject<ReminderEntry>(_.ToJson())).Single()!;
+            var entries = result.ToList();
+            if (entries.Count != 1) return null!;
+            return entries.Select(Deserialize).Single()!;
         }
 
         /// <inheritdoc/>
@@ -76,7 +79,7 @@ namespace Cratis.Events.Store.MongoDB.Reminders
                 Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(GrainKeyProperty), key.ToShortKeyString()));
 
             var result = await GetCollection().FindAsync(filter);
-            var entries = result.ToList().Select(_ => JsonConvert.DeserializeObject<ReminderEntry>(_.ToJson()));
+            var entries = result.ToList().Select(Deserialize);
             return new ReminderTableData(entries);
         }
 
@@ -92,7 +95,7 @@ namespace Cratis.Events.Store.MongoDB.Reminders
             );
 
             var result = await GetCollection().FindAsync(filter);
-            var entries = result.ToList().Select(_ => JsonConvert.DeserializeObject<ReminderEntry>(_.ToJson()));
+            var entries = result.ToList().Select(Deserialize);
             return new ReminderTableData(entries);
         }
 
@@ -128,10 +131,11 @@ namespace Cratis.Events.Store.MongoDB.Reminders
             try
             {
                 var json = JsonConvert.SerializeObject(entry, _serializerSettings);
+                json = json.Replace("\"$", "\"__");
                 var filter = GetKeyFilterFor(key);
                 var bson = BsonDocument.Parse(json);
                 var hash = (long)entry.GrainRef.GetUniformHashCode();
-                bson[ETagProperty] = entry.ETag;
+                bson[ETagProperty] = "1"; // TODO: What do we do with ETag ??
                 bson[GrainKeyProperty] = entry.GrainRef.ToShortKeyString();
                 bson[GrainHashProperty] = hash;
                 bson[ServiceIdProperty] = _clusterOptions.Value.ServiceId;
@@ -146,6 +150,14 @@ namespace Cratis.Events.Store.MongoDB.Reminders
                 _logger.FailedUpserting(key, ex);
                 return null!;
             }
+        }
+
+        ReminderEntry Deserialize(BsonDocument document)
+        {
+            document.Remove(GrainHashProperty);
+            var json = document.ToJson();
+            json = json.Replace("\"__", "\"$");
+            return JsonConvert.DeserializeObject<ReminderEntry>(json, _serializerSettings)!;
         }
 
         IMongoCollection<BsonDocument> GetCollection() => _database.GetCollection<BsonDocument>(CollectionName);
