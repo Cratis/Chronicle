@@ -42,6 +42,7 @@ namespace Cratis.Server
                     })
                     .AddConnectedClientsTracking()
                     .AddEventLogStream()
+                    .UseMongoDBReminderService()
                     .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
                     .AddExecutionContext())
 
