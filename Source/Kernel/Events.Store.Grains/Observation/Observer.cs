@@ -67,7 +67,9 @@ namespace Cratis.Events.Store.Grains.Observation
                     {
                         return;
                     }
-                    var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: @event.EventContext.EventSourceId);
+
+                    var key = PartitionedObserverKeyHelper.Create(_tenantId, @event.EventContext.EventSourceId);
+                    var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
                     try
                     {
                         await partitionedObserver.OnNext(@event);
