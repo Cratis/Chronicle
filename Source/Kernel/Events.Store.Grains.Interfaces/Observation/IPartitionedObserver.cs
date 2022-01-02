@@ -11,6 +11,12 @@ namespace Cratis.Events.Store.Grains.Observation
     public interface IPartitionedObserver : IGrainWithGuidCompoundKey
     {
         /// <summary>
+        /// Try to resume the partition.
+        /// </summary>
+        /// <returns>Awaitable task.</returns>
+        Task TryResume();
+
+        /// <summary>
         /// Handle the next event.
         /// </summary>
         /// <param name="event">The actual event.</param>

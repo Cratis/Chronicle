@@ -16,7 +16,6 @@ namespace Cratis.Events.Store.MongoDB.Observation
     /// </summary>
     public class ObserverStorageProvider : IGrainStorage
     {
-        const string CollectionName = "observers";
         readonly IRequestContextManager _requestContextManager;
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
@@ -82,6 +81,6 @@ namespace Cratis.Events.Store.MongoDB.Observation
 
         string GetKeyFrom(EventLogId eventLogId, ObserverId observerId) => $"{eventLogId} : {observerId}";
 
-        IMongoCollection<ObserverState> Collection => _eventStoreDatabase.GetCollection<ObserverState>(CollectionName);
+        IMongoCollection<ObserverState> Collection => _eventStoreDatabase.GetCollection<ObserverState>(CollectionNames.Observers);
     }
 }

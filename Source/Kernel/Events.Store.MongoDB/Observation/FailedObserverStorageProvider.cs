@@ -13,9 +13,8 @@ namespace Cratis.Events.Store.MongoDB.Observation
     /// <summary>
     /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.
     /// </summary>
-    public class FailedPartitionedObserverStorageProvider : IGrainStorage
+    public class FailedObserverStorageProvider : IGrainStorage
     {
-        const string CollectionName = "failed-observers";
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
 
@@ -23,8 +22,8 @@ namespace Cratis.Events.Store.MongoDB.Observation
         /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-        /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
-        public FailedPartitionedObserverStorageProvider(
+        /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to work with.</param>
+        public FailedObserverStorageProvider(
             IExecutionContextManager executionContextManager,
             IEventStoreDatabase eventStoreDatabase)
         {
@@ -47,7 +46,7 @@ namespace Cratis.Events.Store.MongoDB.Observation
 
             var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
             var cursor = await Collection.FindAsync(filter);
-            grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedPartitionedObserverState();
+            grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedObserverState() { Id = FailedObserverState.CreateKeyFrom(eventLogId, observerId, eventSourceId) };
         }
 
         /// <inheritdoc/>
@@ -59,7 +58,7 @@ namespace Cratis.Events.Store.MongoDB.Observation
 
             var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
 
-            var state = (grainState.State as FailedPartitionedObserverState)!;
+            var state = (grainState.State as FailedObserverState)!;
             if (state.IsFailed)
             {
                 await Collection.ReplaceOneAsync(
@@ -73,14 +72,14 @@ namespace Cratis.Events.Store.MongoDB.Observation
             }
         }
 
-        FilterDefinition<FailedPartitionedObserverState> GetFilterFor(Guid eventLogId, Guid observerId, string? eventSourceId)
+        FilterDefinition<FailedObserverState> GetFilterFor(Guid eventLogId, Guid observerId, string? eventSourceId)
         {
             var key = $"{eventLogId}+{observerId}+{eventSourceId}";
-            return Builders<FailedPartitionedObserverState>.Filter.Eq(
-                new StringFieldDefinition<FailedPartitionedObserverState, string>("_id"), key
+            return Builders<FailedObserverState>.Filter.Eq(
+                new StringFieldDefinition<FailedObserverState, string>("_id"), key
             );
         }
 
-        IMongoCollection<FailedPartitionedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedPartitionedObserverState>(CollectionName);
+        IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
     }
 }
