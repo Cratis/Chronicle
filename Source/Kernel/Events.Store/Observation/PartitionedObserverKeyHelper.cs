@@ -14,21 +14,24 @@ namespace Cratis.Events.Store.Observation
         /// Create the key.
         /// </summary>
         /// <param name="tenantId">Tenant component.</param>
+        /// <param name="eventLogId">The event log it is for.</param>
         /// <param name="eventSourceId">Event source component.</param>
         /// <returns>Key.</returns>
-        public static string Create(TenantId tenantId, EventSourceId eventSourceId) => $"{tenantId}+{eventSourceId}";
+        public static string Create(TenantId tenantId, EventLogId eventLogId, EventSourceId eventSourceId) => $"{tenantId}+{eventLogId}+{eventSourceId}";
 
         /// <summary>
         /// Parse a key into its components.
         /// </summary>
         /// <param name="key">Key to parse.</param>
-        /// <returns>Tuple with tenant and event source.</returns>
-        public static (TenantId tenantId, EventSourceId eventSourceId) Parse(string key)
+        /// <returns>Tuple with tenant, event log and event source.</returns>
+        public static (TenantId tenantId, EventLogId eventLogId, EventSourceId eventSourceId) Parse(string key)
         {
-            var index = key.IndexOf("+", StringComparison.InvariantCulture);
-            var tenantId = (TenantId)key.Substring(0, index);
-            var eventSourceId = (EventSourceId)key.Substring(index + 1);
-            return (tenantId, eventSourceId);
+            var elements = key.Split('+');
+
+            var tenantId = (TenantId)elements[0];
+            var eventLogId = (EventLogId)elements[1];
+            var eventSourceId = (EventSourceId)elements[2];
+            return (tenantId, eventLogId, eventSourceId);
         }
     }
 }

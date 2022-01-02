@@ -13,7 +13,7 @@ namespace Cratis.Events.Store.MongoDB.Observation
     /// <summary>
     /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.
     /// </summary>
-    public class PartitionedObserverStorageProvider : IGrainStorage
+    public class FailedPartitionedObserverStorageProvider : IGrainStorage
     {
         const string CollectionName = "failed-observers";
         readonly IExecutionContextManager _executionContextManager;
@@ -24,7 +24,7 @@ namespace Cratis.Events.Store.MongoDB.Observation
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
         /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
-        public PartitionedObserverStorageProvider(
+        public FailedPartitionedObserverStorageProvider(
             IExecutionContextManager executionContextManager,
             IEventStoreDatabase eventStoreDatabase)
         {
@@ -42,39 +42,45 @@ namespace Cratis.Events.Store.MongoDB.Observation
         public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
             var observerId = grainReference.GetPrimaryKey(out var key);
-            var (tenantId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+            var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
             _executionContextManager.Establish(tenantId, string.Empty);
 
-            var filter = GetFilterFor(observerId, eventSourceId);
+            var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
             var cursor = await Collection.FindAsync(filter);
-            grainState.State = await cursor.FirstOrDefaultAsync() ?? new PartitionedObserverState();
+            grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedPartitionedObserverState();
         }
 
         /// <inheritdoc/>
         public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
             var observerId = grainReference.GetPrimaryKey(out var key);
-            var (tenantId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+            var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
             _executionContextManager.Establish(tenantId, string.Empty);
 
-            var filter = GetFilterFor(observerId, eventSourceId);
+            var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
 
-            var state = grainState.State as PartitionedObserverState;
-
-            await Collection.ReplaceOneAsync(
-                filter,
-                state!,
-                new ReplaceOptions { IsUpsert = true });
+            var state = (grainState.State as FailedPartitionedObserverState)!;
+            if (state.IsFailed)
+            {
+                await Collection.ReplaceOneAsync(
+                    filter,
+                    state!,
+                    new ReplaceOptions { IsUpsert = true });
+            }
+            else
+            {
+                await Collection.FindOneAndDeleteAsync(filter);
+            }
         }
 
-        FilterDefinition<PartitionedObserverState> GetFilterFor(Guid observerId, string? eventSourceId)
+        FilterDefinition<FailedPartitionedObserverState> GetFilterFor(Guid eventLogId, Guid observerId, string? eventSourceId)
         {
-            var key = $"{observerId} : {eventSourceId}";
-            return Builders<PartitionedObserverState>.Filter.Eq(
-                new StringFieldDefinition<PartitionedObserverState, string>("_id"), key
+            var key = $"{eventLogId}+{observerId}+{eventSourceId}";
+            return Builders<FailedPartitionedObserverState>.Filter.Eq(
+                new StringFieldDefinition<FailedPartitionedObserverState, string>("_id"), key
             );
         }
 
-        IMongoCollection<PartitionedObserverState> Collection => _eventStoreDatabase.GetCollection<PartitionedObserverState>(CollectionName);
+        IMongoCollection<FailedPartitionedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedPartitionedObserverState>(CollectionName);
     }
 }
