@@ -23,6 +23,7 @@ namespace Cratis.Events.Store.Grains.Observation
         IAsyncStream<AppendedEvent>? _stream;
         ObserverId _observerId = Guid.Empty;
         TenantId _tenantId = TenantId.NotSet;
+        EventLogId _eventLogId = EventLogId.Unspecified;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -47,12 +48,13 @@ namespace Cratis.Events.Store.Grains.Observation
         /// <inheritdoc/>
         public override async Task OnActivateAsync()
         {
-            _observerId = this.GetPrimaryKey(out var eventLogId);
+            _observerId = this.GetPrimaryKey(out var eventLogIdAsString);
             var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString();
             _tenantId = tenantIdAsString!;
+            _eventLogId = eventLogIdAsString;
 
             var streamProvider = GetStreamProvider(EventLog.StreamProvider);
-            _stream = streamProvider.GetStream<AppendedEvent>(Guid.Parse(eventLogId), _tenantId.ToString());
+            _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
 
             await base.OnActivateAsync();
         }
@@ -68,11 +70,11 @@ namespace Cratis.Events.Store.Grains.Observation
                         return;
                     }
 
-                    var key = PartitionedObserverKeyHelper.Create(_tenantId, @event.EventContext.EventSourceId);
+                    var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.EventContext.EventSourceId);
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
                     try
                     {
-                        await partitionedObserver.OnNext(@event);
+                        await partitionedObserver.OnNext(@event, eventTypes);
 
                         State.Offset = @event.Metadata.SequenceNumber + 1;
                         State.LastHandled = @event.Metadata.SequenceNumber + 1;

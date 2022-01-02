@@ -13,8 +13,8 @@ namespace Cratis.Events.Store.Grains.Observation
     /// <summary>
     /// Represents an implementation of <see cref="IPartitionedObserver"/>.
     /// </summary>
-    [StorageProvider(ProviderName = PartitionedObserverState.StorageProvider)]
-    public class PartitionedObserver : Grain<PartitionedObserverState>, IPartitionedObserver, IRemindable
+    [StorageProvider(ProviderName = FailedPartitionedObserverState.StorageProvider)]
+    public class PartitionedObserver : Grain<FailedPartitionedObserverState>, IPartitionedObserver, IRemindable
     {
         const string RecoverReminder = "partitioned-observer-failure-recovery";
 
@@ -23,13 +23,15 @@ namespace Cratis.Events.Store.Grains.Observation
         IGrainReminder? _recoverReminder;
         TenantId _tenantId = TenantId.NotSet;
         EventSourceId _eventSourceId = EventSourceId.Unspecified;
+        EventLogId _eventLogId = EventLogId.Unspecified;
 
         /// <inheritdoc/>
         public override async Task OnActivateAsync()
         {
             _observerId = this.GetPrimaryKey(out var key);
-            var (tenantId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+            var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
             _tenantId = tenantId;
+            _eventLogId = eventLogId;
             _eventSourceId = eventSourceId;
 
             var streamProvider = GetStreamProvider("observer-handlers");
@@ -45,50 +47,18 @@ namespace Cratis.Events.Store.Grains.Observation
         }
 
         /// <inheritdoc/>
-        public Task SetEventTypes(IEnumerable<EventType> eventTypes)
-        {
-            return Task.CompletedTask;
-        }
-
-        /// <inheritdoc/>
-        public async Task OnNext(AppendedEvent @event)
+        public async Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes)
         {
             if (State.IsFailed)
             {
                 return;
             }
 
-            try
-            {
-                await _stream!.OnNextAsync(@event);
-            }
-            catch (Exception ex)
-            {
-                State.IsFailed = true;
-                State.Occurred = DateTimeOffset.UtcNow;
-                State.SequenceNumber = @event.Metadata.SequenceNumber;
-                State.StackTrace = ex.StackTrace ?? string.Empty;
-
-                var messages = new List<string>
-                {
-                    ex.Message
-                };
-
-                while (ex.InnerException != null)
-                {
-                    messages.Insert(0, ex.InnerException.Message);
-                    ex = ex.InnerException;
-                }
-
-                State.Messages = messages.ToArray();
-                await WriteStateAsync();
-                _recoverReminder = await RegisterOrUpdateReminder(RecoverReminder, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60));
-            }
+            await HandleEvent(@event, eventTypes);
         }
 
         public async Task ReceiveReminder(string reminderName, TickStatus status)
         {
-            // TODO: Create a back off type reminder and stop after X number of attempts.
             if (reminderName == RecoverReminder)
             {
                 var reminder = await GetReminder(RecoverReminder);
@@ -98,26 +68,26 @@ namespace Cratis.Events.Store.Grains.Observation
                     return;
                 }
 
+                await UnregisterReminder(reminder);
+
                 var streamProvider = GetStreamProvider(EventLog.StreamProvider);
 
-                // TODO: Put event log id as part of grain identity
-                _stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, _tenantId.ToString());
+                var eventLogStream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
+                StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
 
-                await _stream.SubscribeAsync(
+                subscriptionId = await eventLogStream.SubscribeAsync(
                     async (@event, _) =>
                     {
-                        State.IsFailed = false;
-                        await OnNext(@event);
+                        await HandleEvent(@event, State.EventTypes);
 
-                        // TODO: If we've failed and a reminder has been added, break this subscription and unsubscribe
                         if (!State.IsFailed)
                         {
                             State.IsFailed = false;
                             await WriteStateAsync();
+                            await subscriptionId!.UnsubscribeAsync();
                         }
-                    }, new EventLogSequenceNumberTokenWithFilter(State.SequenceNumber, Array.Empty<EventType>(), _eventSourceId));
-
-                // TODO: Track subscription handle - when recovered, unsubscribe.
+                    },
+                    new EventLogSequenceNumberTokenWithFilter(State.SequenceNumber, State.EventTypes, _eventSourceId));
             }
         }
 
@@ -129,6 +99,59 @@ namespace Cratis.Events.Store.Grains.Observation
             // When stream is at the edge - unsubscribe to the stream
 
             await Task.CompletedTask;
+        }
+
+        async Task HandleEvent(AppendedEvent @event, IEnumerable<EventType> eventTypes)
+        {
+            try
+            {
+                await _stream!.OnNextAsync(@event);
+                State.IsFailed = false;
+                await WriteStateAsync();
+            }
+            catch (Exception ex)
+            {
+                State.IsFailed = true;
+                State.Occurred = DateTimeOffset.UtcNow;
+                State.SequenceNumber = @event.Metadata.SequenceNumber;
+                State.StackTrace = ex.StackTrace ?? string.Empty;
+                State.EventTypes = eventTypes;
+                State.Messages = GetMessagesFromException(ex);
+                State.Attempts++;
+                await WriteStateAsync();
+
+                if (State.Attempts <= 10)
+                {
+                    _recoverReminder = await RegisterOrUpdateReminder(
+                        RecoverReminder,
+                        TimeSpan.FromSeconds(1),
+                        TimeSpan.FromSeconds(60) * State.Attempts);
+                }
+                else
+                {
+                    var reminder = await GetReminder(RecoverReminder);
+                    if (reminder != null)
+                    {
+                        await UnregisterReminder(reminder);
+                    }
+                }
+            }
+        }
+
+        string[] GetMessagesFromException(Exception ex)
+        {
+            var messages = new List<string>
+                {
+                    ex.Message
+                };
+
+            while (ex.InnerException != null)
+            {
+                messages.Insert(0, ex.InnerException.Message);
+                ex = ex.InnerException;
+            }
+
+            return messages.ToArray();
         }
     }
 }

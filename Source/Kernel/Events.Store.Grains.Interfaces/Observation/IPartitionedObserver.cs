@@ -11,17 +11,11 @@ namespace Cratis.Events.Store.Grains.Observation
     public interface IPartitionedObserver : IGrainWithGuidCompoundKey
     {
         /// <summary>
-        /// Set event types for the observer.
-        /// </summary>
-        /// <param name="eventTypes">Event types to set.</param>
-        /// <returns>Awaitable task</returns>
-        Task SetEventTypes(IEnumerable<EventType> eventTypes);
-
-        /// <summary>
         /// Handle the next event.
         /// </summary>
         /// <param name="event">The actual event.</param>
+        /// <param name="eventTypes">Event types to set.</param>
         /// <returns>Awaitable task</returns>
-        Task OnNext(AppendedEvent @event);
+        Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes);
     }
 }
