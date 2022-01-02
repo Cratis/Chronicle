@@ -13,8 +13,8 @@ namespace Cratis.Events.Store.Grains.Observation
     /// <summary>
     /// Represents an implementation of <see cref="IPartitionedObserver"/>.
     /// </summary>
-    [StorageProvider(ProviderName = FailedPartitionedObserverState.StorageProvider)]
-    public class PartitionedObserver : Grain<FailedPartitionedObserverState>, IPartitionedObserver, IRemindable
+    [StorageProvider(ProviderName = FailedObserverState.StorageProvider)]
+    public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObserver, IRemindable
     {
         const string RecoverReminder = "partitioned-observer-failure-recovery";
 
@@ -38,7 +38,14 @@ namespace Cratis.Events.Store.Grains.Observation
             _stream = streamProvider.GetStream<AppendedEvent>(_observerId, null);
 
             _recoverReminder = await GetReminder(RecoverReminder);
-            if (_recoverReminder != default && !State.IsFailed)
+            if (State.IsFailed)
+            {
+                if (_recoverReminder == default)
+                {
+                    await HandleReminderRegistration();
+                }
+            }
+            else if (_recoverReminder != default)
             {
                 await UnregisterReminder(_recoverReminder);
             }
@@ -120,20 +127,25 @@ namespace Cratis.Events.Store.Grains.Observation
                 State.Attempts++;
                 await WriteStateAsync();
 
-                if (State.Attempts <= 10)
+                await HandleReminderRegistration();
+            }
+        }
+
+        async Task HandleReminderRegistration()
+        {
+            if (State.Attempts <= 10)
+            {
+                _recoverReminder = await RegisterOrUpdateReminder(
+                    RecoverReminder,
+                    TimeSpan.FromSeconds(60),
+                    TimeSpan.FromSeconds(60) * State.Attempts);
+            }
+            else
+            {
+                var reminder = await GetReminder(RecoverReminder);
+                if (reminder != null)
                 {
-                    _recoverReminder = await RegisterOrUpdateReminder(
-                        RecoverReminder,
-                        TimeSpan.FromSeconds(1),
-                        TimeSpan.FromSeconds(60) * State.Attempts);
-                }
-                else
-                {
-                    var reminder = await GetReminder(RecoverReminder);
-                    if (reminder != null)
-                    {
-                        await UnregisterReminder(reminder);
-                    }
+                    await UnregisterReminder(reminder);
                 }
             }
         }

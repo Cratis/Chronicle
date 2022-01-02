@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Extensions.Orleans.Execution;
 using Cratis.MongoDB;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,7 +19,6 @@ namespace Cratis.Events.Store.MongoDB.Reminders
     /// </summary>
     public class MongoDBReminderTable : IReminderTable
     {
-        const string CollectionName = "reminders";
         const string ETagProperty = "eTag";
         const string GrainKeyProperty = "grainKey";
         const string GrainHashProperty = "grainHash";
@@ -160,7 +158,7 @@ namespace Cratis.Events.Store.MongoDB.Reminders
             return JsonConvert.DeserializeObject<ReminderEntry>(json, _serializerSettings)!;
         }
 
-        IMongoCollection<BsonDocument> GetCollection() => _database.GetCollection<BsonDocument>(CollectionName);
+        IMongoCollection<BsonDocument> GetCollection() => _database.GetCollection<BsonDocument>(CollectionNames.Reminders);
 
         FilterDefinition<BsonDocument> GetKeyFilterFor(string key) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>("_id"), key);
 

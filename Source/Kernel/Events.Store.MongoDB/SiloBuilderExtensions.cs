@@ -30,7 +30,8 @@ namespace Orleans.Hosting
                 //services.AddSingletonNamedService<IGrainStorage>("PubSubStore", (serviceProvider, _) => serviceProvider.GetService<EventLogPubSubStore>()!);
                 services.AddSingletonNamedService<IGrainStorage>(EventLogState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<EventLogStorageProvider>()!);
                 services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<ObserverStorageProvider>()!);
-                services.AddSingletonNamedService<IGrainStorage>(FailedPartitionedObserverState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<FailedPartitionedObserverStorageProvider>()!);
+                services.AddSingletonNamedService<IGrainStorage>(FailedObserverState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService<FailedObserverStorageProvider>()!);
+                services.AddSingleton<IFailedObservers, FailedObservers>();
             });
 
             builder.AddPersistentStreams(
