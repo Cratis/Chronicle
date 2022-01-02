@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Store.Observation;
+using Cratis.Execution;
 using Orleans;
 using Orleans.Providers;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Cratis.Events.Store.Grains.Observation
@@ -12,23 +14,40 @@ namespace Cratis.Events.Store.Grains.Observation
     /// Represents an implementation of <see cref="IPartitionedObserver"/>.
     /// </summary>
     [StorageProvider(ProviderName = PartitionedObserverState.StorageProvider)]
-    public class PartitionedObserver : Grain<PartitionedObserverState>, IPartitionedObserver
+    public class PartitionedObserver : Grain<PartitionedObserverState>, IPartitionedObserver, IRemindable
     {
+        const string RecoverReminder = "partitioned-observer-failure-recovery";
+
         ObserverId _observerId = ObserverId.Unspecified;
         IAsyncStream<AppendedEvent>? _stream;
+        IGrainReminder? _recoverReminder;
+        TenantId _tenantId = TenantId.NotSet;
+        EventSourceId _eventSourceId = EventSourceId.Unspecified;
 
         /// <inheritdoc/>
         public override async Task OnActivateAsync()
         {
-            // Key extension holds the event source id - for now we discard it as we don't need the information here,
-            // its just to used for now to have a composite key of the observer and each partitioned identified by the
-            // event source id.
-            _observerId = this.GetPrimaryKey(out var _);
+            _observerId = this.GetPrimaryKey(out var key);
+            var (tenantId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+            _tenantId = tenantId;
+            _eventSourceId = eventSourceId;
 
             var streamProvider = GetStreamProvider("observer-handlers");
             _stream = streamProvider.GetStream<AppendedEvent>(_observerId, null);
 
+            _recoverReminder = await GetReminder(RecoverReminder);
+            if (_recoverReminder != default && !State.IsFailed)
+            {
+                await UnregisterReminder(_recoverReminder);
+            }
+
             await base.OnActivateAsync();
+        }
+
+        /// <inheritdoc/>
+        public Task SetEventTypes(IEnumerable<EventType> eventTypes)
+        {
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
@@ -62,9 +81,43 @@ namespace Cratis.Events.Store.Grains.Observation
                 }
 
                 State.Messages = messages.ToArray();
-
-                // TODO: Add a reminder to try to recover from the failure
                 await WriteStateAsync();
+                _recoverReminder = await RegisterOrUpdateReminder(RecoverReminder, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60));
+            }
+        }
+
+        public async Task ReceiveReminder(string reminderName, TickStatus status)
+        {
+            // TODO: Create a back off type reminder and stop after X number of attempts.
+            if (reminderName == RecoverReminder)
+            {
+                var reminder = await GetReminder(RecoverReminder);
+
+                if (reminder == default)
+                {
+                    return;
+                }
+
+                var streamProvider = GetStreamProvider(EventLog.StreamProvider);
+
+                // TODO: Put event log id as part of grain identity
+                _stream = streamProvider.GetStream<AppendedEvent>(Guid.Empty, _tenantId.ToString());
+
+                await _stream.SubscribeAsync(
+                    async (@event, _) =>
+                    {
+                        State.IsFailed = false;
+                        await OnNext(@event);
+
+                        // TODO: If we've failed and a reminder has been added, break this subscription and unsubscribe
+                        if (!State.IsFailed)
+                        {
+                            State.IsFailed = false;
+                            await WriteStateAsync();
+                        }
+                    }, new EventLogSequenceNumberTokenWithFilter(State.SequenceNumber, Array.Empty<EventType>(), _eventSourceId));
+
+                // TODO: Track subscription handle - when recovered, unsubscribe.
             }
         }
 
