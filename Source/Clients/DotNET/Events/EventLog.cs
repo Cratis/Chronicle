@@ -34,9 +34,9 @@ namespace Cratis.Events
         }
 
         /// <inheritdoc/>
-        public async Task Append(EventSourceId eventSourceId, object @event)
+        public async Task Append<T>(EventSourceId eventSourceId, T @event)
         {
-            var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
+            var eventType = _eventTypes.GetEventTypeFor(typeof(T));
             var json = JsonSerializer.Serialize(@event, _serializerOptions);
             await _eventLog.Append(eventSourceId, eventType, json);
         }
