@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Workbench.Compliance.Events.Microservices;
+
 namespace Cratis.Workbench.Domain.Microservices
 {
     [Route("/api/compliance/microservices")]
@@ -14,6 +16,6 @@ namespace Cratis.Workbench.Domain.Microservices
         }
 
         [HttpPost]
-        public Task AddMicroservice(AddMicroservice command) => Task.CompletedTask;
+        public Task AddMicroservice([FromBody] AddMicroservice command) => _eventLog.Append(command.MicroserviceId.Value, new MicroserviceAdded(command.Name));
     }
 }
