@@ -50,6 +50,7 @@ namespace Cratis.Hosting
                 .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
                 .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
                 .AddSingleton<IEventStore, EventStore>()
+                .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
                 .AddSingleton<IObservers, Observers>()
                 .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
                 .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
