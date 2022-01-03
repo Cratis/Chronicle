@@ -11,6 +11,7 @@ services:
     image: einari/cratis
     volumes:
       - ./storage.json:/app/storage.json
+      - ./appsettings.json:/app/appsettings.json
     ports:
       - 8080:80
       - 11111:11111
