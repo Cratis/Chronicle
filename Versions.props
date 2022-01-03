@@ -9,5 +9,6 @@
         <MongoDB>2.13.1</MongoDB>
         <ServiceModelPrimitives>4.8.1</ServiceModelPrimitives>
         <Humanizer>2.11.10</Humanizer>
+        <Swashbuckle>6.2.3</Swashbuckle>
     </PropertyGroup>
 </Project>
