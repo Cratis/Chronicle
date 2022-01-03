@@ -3,25 +3,24 @@
 
 using System.Text.Json;
 using Cratis.Concepts.SystemJson;
-using Cratis.Events.Store.Grains;
 
 namespace Cratis.Events
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IClientEventLog"/>.
+    /// Represents an implementation of <see cref="IEventLog"/>.
     /// </summary>
-    public class ClientEventLog : IClientEventLog
+    public class EventLog : IEventLog
     {
         readonly JsonSerializerOptions _serializerOptions;
         readonly IEventTypes _eventTypes;
-        readonly IEventLog _eventLog;
+        readonly Store.Grains.IEventLog _eventLog;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ClientEventLog"/> class.
+        /// Initializes a new instance of the <see cref="EventLog"/> class.
         /// </summary>
         /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving the types of events.</param>
-        /// <param name="eventLog">The actual <see cref="IEventLog"/>.</param>
-        public ClientEventLog(IEventTypes eventTypes, IEventLog eventLog)
+        /// <param name="eventLog">The actual <see cref="Store.Grains.IEventLog"/>.</param>
+        public EventLog(IEventTypes eventTypes, Store.Grains.IEventLog eventLog)
         {
             _serializerOptions = new()
             {

@@ -6,7 +6,7 @@ namespace Cratis.Events
     /// <summary>
     /// Defines the client event log.
     /// </summary>
-    public interface IClientEventLog
+    public interface IEventLog
     {
         /// <summary>
         /// Append a single event to the event store.
