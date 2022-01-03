@@ -3,6 +3,7 @@
 
 using Cratis.Extensions.Autofac;
 using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Autofac
 {
@@ -20,15 +21,18 @@ namespace Autofac
         /// </summary>
         /// <param name="containerBuilder"><see cref="ContainerBuilder"/> to register into.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
+        /// <param name="services">Optional services, if configured - will prevent double registrations.</param>
         /// <returns><see cref="ContainerBuilder"/> for build continuation.</returns>
-        public static ContainerBuilder RegisterDefaults(this ContainerBuilder containerBuilder, ITypes types)
+        public static ContainerBuilder RegisterDefaults(this ContainerBuilder containerBuilder, ITypes types, IServiceCollection? services = default)
         {
             Types = types;
+            services ??= new ServiceCollection();
             containerBuilder.RegisterInstance(types).As<ITypes>();
-            foreach (var moduleType in types.FindMultiple<Module>())
+            foreach (var moduleType in types.FindMultiple<Module>().Where(_ => _ != typeof(DefaultConventionModule)))
             {
                 containerBuilder.RegisterModule((Module)Activator.CreateInstance(moduleType)!);
             }
+            containerBuilder.RegisterModule(new DefaultConventionModule(services));
 
             containerBuilder.RegisterSource<SelfBindingRegistrationSource>();
             containerBuilder.Register(_ => Container!).As<IContainer>().SingleInstance();
