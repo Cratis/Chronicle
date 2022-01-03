@@ -13,6 +13,8 @@ namespace Cratis.Workbench.Compliance.Main
         internal static readonly ITypes Types = new Types.Types();
         internal static ILifetimeScope? AutofacContainer;
 
+        IServiceCollection? _services;
+
         public void ConfigureServices(IServiceCollection services)
         {
             services
@@ -31,12 +33,14 @@ namespace Cratis.Workbench.Compliance.Main
 
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
+
+            _services = services;
         }
 
         public void ConfigureContainer(ContainerBuilder containerBuilder)
         {
             containerBuilder
-                .RegisterDefaults(Types)
+                .RegisterDefaults(Types, _services)
                 .RegisterBuildCallback(_ => AutofacContainer = _);
         }
 
@@ -46,14 +50,13 @@ namespace Cratis.Workbench.Compliance.Main
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI();
             }
 
             app.UseWebSockets();
             app.UseDefaultFiles();
             app.UseStaticFiles();
-
-            app.UseSwagger();
-            app.UseSwaggerUI();
 
             app.PerformBootProcedures();
 
