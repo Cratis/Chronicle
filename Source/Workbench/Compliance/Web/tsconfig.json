@@ -1,0 +1,20 @@
+{
+    "extends": "../../../../tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "rootDir": ".",
+        "paths": {
+            "API/*": [
+                "./API/*"
+            ]
+        },
+    },
+    "references": [
+        {
+            "path": "../../../Node/Fundamentals/tsconfig.json"
+        },
+        {
+            "path": "../../Styles/tsconfig.json"
+        }
+    ]
+}
