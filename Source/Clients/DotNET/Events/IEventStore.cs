@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store.Grains;
-
 namespace Cratis.Events
 {
     /// <summary>
@@ -11,8 +9,8 @@ namespace Cratis.Events
     public interface IEventStore
     {
         /// <summary>
-        /// Gets the default <see cref="IEventLog"/>.
+        /// Gets the default event log.
         /// </summary>
-        IClientEventLog EventLog { get; }
+        IEventLog EventLog { get; }
     }
 }
