@@ -12,6 +12,11 @@ namespace Cratis
     public record MicroserviceId(Guid Value) : ConceptAs<Guid>(Value)
     {
         /// <summary>
+        /// The value when microservice identifier is not specified.
+        /// </summary>
+        public static readonly MicroserviceId Unspecified = new(Guid.Empty);
+
+        /// <summary>
         /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="MicroserviceId"/>.
         /// </summary>
         /// <param name="id">String representation of a <see cref="Guid"/> to convert from.</param>

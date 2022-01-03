@@ -27,11 +27,18 @@ namespace Microsoft.Extensions.DependencyInjection
             foreach (var configurationObject in types.All.Where(_ => _.HasAttribute<ConfigurationAttribute>()))
             {
                 var attribute = configurationObject.GetCustomAttribute<ConfigurationAttribute>()!;
+                var basePath = Path.Combine(Directory.GetCurrentDirectory(), baseRelativePath);
 
                 var fileName = attribute.FileNameSet ? attribute.FileName : configurationObject.Name.ToLowerInvariant();
                 fileName = Path.HasExtension(fileName) ? fileName : $"{fileName}.json";
+
+                if (!attribute.Optional && !File.Exists(Path.Combine(basePath, fileName)))
+                {
+                    continue;
+                }
+
                 var configuration = new ConfigurationBuilder()
-                    .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), baseRelativePath))
+                    .SetBasePath(basePath)
                     .AddJsonFile(fileName, attribute.Optional)
                     .Build();
 

@@ -22,6 +22,15 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../../Clients/AspNetCore/AspNetCore.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Aksio.ProxyGenerator" Version="$(Aksio)"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+    </ItemGroup>
+
 </Project>
