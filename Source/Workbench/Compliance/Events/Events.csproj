@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Workbench.Compliance.Events</AssemblyName>
+        <RootNamespace>Cratis.Workbench.Compliance.Events</RootNamespace>
+    </PropertyGroup>
+</Project>
