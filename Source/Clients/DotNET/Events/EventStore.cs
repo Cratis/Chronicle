@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Store;
-using Cratis.Events.Store.Grains;
 using Cratis.Execution;
 using Orleans;
 
@@ -28,11 +27,11 @@ namespace Cratis.Events
         {
             _clusterClient = clusterClient;
 
-            var defaultEventLog = _clusterClient.GetGrain<IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
-            EventLog = new ClientEventLog(eventTypes, defaultEventLog);
+            var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
+            EventLog = new EventLog(eventTypes, defaultEventLog);
         }
 
         /// <inheritdoc/>
-        public IClientEventLog EventLog { get; }
+        public IEventLog EventLog { get; }
     }
 }
