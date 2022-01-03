@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Domain/Domain.csproj"/>
+        <ProjectReference Include="../Events/Events.csproj"/>
         <ProjectReference Include="../../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../../Extensions/Autofac/Autofac.csproj" />
