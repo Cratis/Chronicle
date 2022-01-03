@@ -71,7 +71,7 @@
             "name": ".NET Core Launch (Compliance)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build aspnetcore sample",
+            "preLaunchTask": "build compliance",
             "program": "${workspaceFolder}/Source/Workbench/Compliance/Main/bin/Debug/net6.0/Cratis.Workbench.Compliance.Main.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Source/Workbench/Compliance/Main",
