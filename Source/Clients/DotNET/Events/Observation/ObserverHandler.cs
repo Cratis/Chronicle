@@ -4,7 +4,6 @@
 using Cratis.Events.Store;
 using Cratis.Events.Store.Grains.Observation;
 using Cratis.Events.Store.Observation;
-using Orleans;
 
 namespace Cratis.Events.Observation
 {
