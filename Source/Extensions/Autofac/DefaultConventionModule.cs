@@ -4,6 +4,7 @@
 using Autofac;
 using Cratis.Execution;
 using Cratis.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Extensions.Autofac
 {
@@ -12,6 +13,17 @@ namespace Cratis.Extensions.Autofac
     /// </summary>
     public class DefaultConventionModule : Module
     {
+        readonly IServiceCollection _services;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DefaultConventionModule"/> class.
+        /// </summary>
+        /// <param name="services"><see cref="IServiceCollection"/> to prevent registering already registered services.</param>
+        public DefaultConventionModule(IServiceCollection services)
+        {
+            _services = services;
+        }
+
         /// <inheritdoc/>
         protected override void Load(ContainerBuilder builder)
         {
@@ -32,6 +44,11 @@ namespace Cratis.Extensions.Autofac
             foreach (var conventionBasedType in conventionBasedTypes)
             {
                 var interfaceToBind = conventionBasedType.GetInterfaces().Single(_ => _.Name == $"I{conventionBasedType.Name}");
+                if (_services.Any(_ => _.ServiceType == interfaceToBind))
+                {
+                    continue;
+                }
+
                 if (interfaceToBind.IsGenericType)
                 {
                     var result = builder.RegisterGeneric(conventionBasedType).As(interfaceToBind);
