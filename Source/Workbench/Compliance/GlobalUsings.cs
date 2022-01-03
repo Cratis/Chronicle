@@ -6,3 +6,4 @@
 global using Microsoft.AspNetCore.Mvc;
 global using Cratis.Events;
 global using Cratis.Events.Store;
+global using Cratis.Events.Observation;
