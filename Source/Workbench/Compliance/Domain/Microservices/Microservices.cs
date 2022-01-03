@@ -6,5 +6,14 @@ namespace Cratis.Workbench.Domain.Microservices
     [Route("/api/compliance/microservices")]
     public class Microservices : Controller
     {
+        readonly IEventLog _eventLog;
+
+        public Microservices(IEventLog eventLog)
+        {
+            _eventLog = eventLog;
+        }
+
+        [HttpPost]
+        public Task AddMicroservice(AddMicroservice command) => Task.CompletedTask;
     }
 }
