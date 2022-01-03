@@ -2,16 +2,26 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Workbench.Compliance.Main</AssemblyName>
         <RootNamespace>Cratis.Workbench.Compliance.Main</RootNamespace>
-
-        <IsPackable>false</IsPackable>
-        <AksioProxyOutput>../Web/</AksioProxyOutput>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Clients/AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../Domain/Domain.csproj"/>
+        <ProjectReference Include="../../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../../Extensions/MongoDB/MongoDB.csproj" />
+        <ProjectReference Include="../../../Extensions/Autofac/Autofac.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
+        <PackageReference Include="serilog.aspnetcore" Version="4.0.0" />
+        <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
+        <PackageReference Include="Serilog" Version="2.10.0" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+        <PackageReference Include="Serilog.Sinks.PeriodicBatching" Version="2.3.0" />
+        <PackageReference Include="Aksio.CQRS" Version="$(Aksio)"/>
+        <PackageReference Include="Aksio.CQRS.MongoDB" Version="$(Aksio)"/>
+
         <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
     </ItemGroup>
 </Project>

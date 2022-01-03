@@ -4,6 +4,7 @@
 using Cratis;
 using Cratis.Events.Schemas;
 using Cratis.Hosting;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -18,11 +19,15 @@ namespace Microsoft.AspNetCore.Builder
         /// Configures the <see cref="IClientBuilder"/> for a non-microservice oriented scenario.
         /// </summary>
         /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
+        /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
         /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
         /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
-        public static WebApplicationBuilder UseCratis(this WebApplicationBuilder webApplicationBuilder, Action<IClientBuilder>? configureDelegate = null)
+        public static WebApplicationBuilder UseCratis(
+            this WebApplicationBuilder webApplicationBuilder,
+            ITypes? types = default,
+            Action<IClientBuilder>? configureDelegate = null)
         {
-            return webApplicationBuilder.UseCratis(Guid.Empty, configureDelegate);
+            return webApplicationBuilder.UseCratis(MicroserviceId.Unspecified, types, configureDelegate);
         }
 
         /// <summary>
@@ -30,11 +35,16 @@ namespace Microsoft.AspNetCore.Builder
         /// </summary>
         /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
         /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
+        /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
         /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
         /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
-        public static WebApplicationBuilder UseCratis(this WebApplicationBuilder webApplicationBuilder, MicroserviceId microserviceId, Action<IClientBuilder>? configureDelegate = null)
+        public static WebApplicationBuilder UseCratis(
+            this WebApplicationBuilder webApplicationBuilder,
+            MicroserviceId microserviceId,
+            ITypes? types = default,
+            Action<IClientBuilder>? configureDelegate = default)
         {
-            webApplicationBuilder.Host.UseCratis(microserviceId, configureDelegate);
+            webApplicationBuilder.Host.UseCratis(microserviceId, types, configureDelegate);
             return webApplicationBuilder;
         }
 
