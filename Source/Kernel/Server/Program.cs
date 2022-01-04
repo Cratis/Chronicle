@@ -3,6 +3,11 @@
 
 using System.Net;
 using Autofac.Extensions.DependencyInjection;
+using Cratis.Events.Projections;
+using Cratis.Events.Projections.Changes;
+using Cratis.Events.Projections.Definitions;
+using Cratis.Events.Projections.MongoDB;
+using Cratis.Extensions.Dolittle.Projections;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -33,6 +38,12 @@ namespace Cratis.Server
              Host.CreateDefaultBuilder(args)
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
+                    .ConfigureServices(_ => _
+                        .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
+                        .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
+                        .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
+                        .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
+                        .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
                     .Configure<EndpointOptions>(options =>
                     {
                         options.SiloPort = 11111;

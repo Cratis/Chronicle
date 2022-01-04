@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Cratis.Events.Projections.Definitions;
+using Cratis.Properties;
 using Cratis.Reflection;
 using Cratis.Schemas;
 using Cratis.Strings;
@@ -18,7 +20,7 @@ namespace Cratis.Events.Projections
     {
         readonly IEventTypes _eventTypes;
         readonly IJsonSchemaGenerator _schemaGenerator;
-        readonly Dictionary<string, FromDefinition> _fromDefintions = new();
+        readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
         readonly string _modelName;
         string _identifiedBy = string.Empty;
         string _removedWithEvent = string.Empty;
@@ -43,7 +45,7 @@ namespace Cratis.Events.Projections
             var builder = new FromBuilder<TChildModel, TEvent>();
             builderCallback(builder);
             var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-            _fromDefintions[eventType.ToString()] = builder.Build();
+            _fromDefintions[eventType] = builder.Build();
             return this;
         }
 
@@ -68,7 +70,7 @@ namespace Cratis.Events.Projections
                 _identifiedBy,
                 new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
                 _fromDefintions,
-                new Dictionary<string, ChildrenDefinition>(),
+                new Dictionary<PropertyPath, ChildrenDefinition>(),
                 string.IsNullOrEmpty(_removedWithEvent) ? default : new RemovedWithDefinition(_removedWithEvent)
             );
         }

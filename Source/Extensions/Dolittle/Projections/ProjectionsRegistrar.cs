@@ -5,6 +5,7 @@ extern alias SDK;
 
 using System.Reactive.Linq;
 using Cratis.Concepts;
+using Cratis.Events.Projections;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Json;
 using Cratis.Events.Projections.MongoDB;
@@ -18,13 +19,14 @@ using IEventTypes = SDK::Cratis.Events.IEventTypes;
 namespace Cratis.Extensions.Dolittle.Projections
 {
     /// <summary>
-    /// Represents an implementation of <see cref="SDK::Cratis.Events.Projections.Projections"/>.
+    /// Represents an implementation of <see cref="IProjectionsRegistrar"/>.
     /// </summary>
     [Singleton]
-    public class Projections : SDK::Cratis.Events.Projections.Projections
+    public class ProjectionsRegistrar : IProjectionsRegistrar
     {
         readonly IJsonProjectionSerializer _projectionSerializer;
         readonly IServiceProvider _serviceProvider;
+        readonly IEnumerable<ProjectionDefinition> _projections;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -35,27 +37,26 @@ namespace Cratis.Extensions.Dolittle.Projections
         /// <param name="projectionsReady"><see cref="ProjectionsReady"/> observable for being notified when projections are ready.</param>
         /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
         /// <param name="serviceProvider"><see cref="IServiceProvider"/> used for getting instances from the IoC.</param>
-        public Projections(
+        public ProjectionsRegistrar(
             IEventTypes eventTypes,
             ITypes types,
             IJsonProjectionSerializer projectionSerializer,
             ProjectionsReady projectionsReady,
             IJsonSchemaGenerator schemaGenerator,
-            IServiceProvider serviceProvider) : base(eventTypes, types, schemaGenerator)
+            IServiceProvider serviceProvider)
         {
+            _projections = ProjectionsRegistrar.FindAllProjectionDefinitions(eventTypes, types, schemaGenerator);
             _projectionSerializer = projectionSerializer;
             _serviceProvider = serviceProvider;
             projectionsReady.IsReady.Subscribe(async _ => await ActualStartAll());
         }
 
         /// <inheritdoc/>
-        public override void StartAll()
-        {
-        }
+        public Task StartAll() => Task.CompletedTask;
 
         async Task ActualStartAll()
         {
-            var projections = _serviceProvider.GetService<Events.Projections.IProjections>()!;
+            var projections = _serviceProvider.GetService<IProjections>()!;
 
             var converters = new JsonConverter[]
             {

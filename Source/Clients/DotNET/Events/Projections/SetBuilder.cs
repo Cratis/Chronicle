@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Cratis.Properties;
 using Cratis.Reflection;
 
 namespace Cratis.Events.Projections
@@ -22,14 +23,14 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="parent">Parent builder.</param>
         /// <param name="targetProperty">Target property we're building for.</param>
-        public SetBuilder(IFromBuilder<TModel, TEvent> parent, string targetProperty)
+        public SetBuilder(IFromBuilder<TModel, TEvent> parent, PropertyPath targetProperty)
         {
             _parent = parent;
             TargetProperty = targetProperty;
         }
 
         /// <inheritdoc/>
-        public string TargetProperty { get; }
+        public PropertyPath TargetProperty { get; }
 
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
