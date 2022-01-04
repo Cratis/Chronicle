@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Globalization;
 using Cratis.Dynamic;
 using Cratis.Properties;
 
@@ -43,8 +44,8 @@ namespace Cratis.Events.Projections
                 {
                     actualTarget[lastSegment] = (double)0;
                 }
-                var value = (double)actualTarget[lastSegment];
-                value += (double)eventValueProvider(@event);
+                var value = (double)Convert.ChangeType(actualTarget[lastSegment], typeof(double), CultureInfo.InvariantCulture);
+                value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);
                 actualTarget[lastSegment] = value;
             };
         }
@@ -65,8 +66,8 @@ namespace Cratis.Events.Projections
                 {
                     actualTarget[lastSegment] = (double)0;
                 }
-                var value = (double)actualTarget[lastSegment];
-                value -= (double)eventValueProvider(@event);
+                var value = (double)Convert.ChangeType(actualTarget[lastSegment], typeof(double), CultureInfo.InvariantCulture);
+                value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);
                 actualTarget[lastSegment] = value;
             };
         }

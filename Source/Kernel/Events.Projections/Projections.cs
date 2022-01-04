@@ -68,7 +68,7 @@ namespace Cratis.Events.Projections
             RegisterUnregisteredProjections().Wait();
             foreach (var (_, pipeline) in _pipelines)
             {
-                pipeline.Start();
+                Task.Run(() => pipeline.Start());
             }
         }
 

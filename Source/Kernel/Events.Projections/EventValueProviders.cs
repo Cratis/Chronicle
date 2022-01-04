@@ -21,15 +21,13 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="sourceProperty">Source property.</param>
         /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-        public static ValueProvider<Event> FromEventContent(string sourceProperty)
+        public static ValueProvider<Event> FromEventContent(PropertyPath sourceProperty)
         {
-            var sourcePath = sourceProperty.Split('.');
-
             return (Event @event) =>
             {
                 var currentSource = @event.Content as IDictionary<string, object>;
                 object? sourceValue = null;
-                foreach (var property in sourcePath)
+                foreach (var property in sourceProperty.Segments)
                 {
                     sourceValue = currentSource![property];
                     currentSource = sourceValue as IDictionary<string, object>;
