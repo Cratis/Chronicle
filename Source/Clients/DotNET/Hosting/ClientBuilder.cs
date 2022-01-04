@@ -5,6 +5,7 @@ using Cratis.Collections;
 using Cratis.Compliance;
 using Cratis.Events;
 using Cratis.Events.Observation;
+using Cratis.Events.Projections;
 using Cratis.Events.Schemas;
 using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
@@ -51,6 +52,8 @@ namespace Cratis.Hosting
                 .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
                 .AddSingleton<IEventStore, EventStore>()
                 .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
+                .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
+                .AddProjections()
                 .AddSingleton<IObservers, Observers>()
                 .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
                 .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()

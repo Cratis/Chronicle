@@ -6,11 +6,11 @@ namespace Cratis.Events.Projections
     /// <summary>
     /// Defines the system for working with projections.
     /// </summary>
-    public interface IProjections
+    public interface IProjectionsRegistrar
     {
         /// <summary>
         /// Start all projections.
         /// </summary>
-        void StartAll();
+        Task StartAll();
     }
 }

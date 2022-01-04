@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Cratis.Events.Projections.Definitions;
+using Cratis.Properties;
 using Cratis.Reflection;
 using Cratis.Schemas;
 using Cratis.Strings;
@@ -19,8 +21,8 @@ namespace Cratis.Events.Projections
         readonly IEventTypes _eventTypes;
         readonly IJsonSchemaGenerator _schemaGenerator;
         string _modelName;
-        readonly Dictionary<string, FromDefinition> _fromDefintions = new();
-        readonly Dictionary<string, ChildrenDefinition> _childrenDefinitions = new();
+        readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
+        readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -52,7 +54,7 @@ namespace Cratis.Events.Projections
             var builder = new FromBuilder<TModel, TEvent>();
             builderCallback(builder);
             var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-            _fromDefintions[eventType.ToString()] = builder.Build();
+            _fromDefintions[eventType] = builder.Build();
             return this;
         }
 
