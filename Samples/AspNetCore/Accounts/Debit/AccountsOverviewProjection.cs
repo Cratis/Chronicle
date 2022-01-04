@@ -5,8 +5,8 @@ using Cratis.Events.Projections;
 
 namespace Sample.Accounts.Debit
 {
-    [Projection("8fdaaf0d-1291-47b7-b661-2eeba340a520")]
-    public class AccountsOverviewProjection : IProjectionFor<AccountsOverview>
+    //[Projection("8fdaaf0d-1291-47b7-b661-2eeba340a520")]
+    public class AccountsOverviewProjection //: IProjectionFor<AccountsOverview>
     {
         public void Define(IProjectionBuilderFor<AccountsOverview> builder)
         {
