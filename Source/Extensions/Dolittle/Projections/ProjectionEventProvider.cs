@@ -45,7 +45,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         public ProjectionEventProviderTypeId TypeId => ProjectionEventProviderTypeId;
 
         /// <inheritdoc/>
-        public void ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject)
+        public Task ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject)
         {
             _logger.ProvidingFor(pipeline.Projection.Identifier);
             if (!_piplinesWithSubjects.ContainsKey(pipeline))
@@ -54,6 +54,8 @@ namespace Cratis.Extensions.Dolittle.Projections
             }
 
             _piplinesWithSubjects[pipeline].Add(subject);
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>

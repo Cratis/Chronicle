@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Events.Projections.Definitions;
+using Cratis.Execution;
 using Cratis.Reflection;
 using Cratis.Schemas;
 using Cratis.Types;
@@ -28,27 +29,34 @@ namespace Cratis.Events.Projections
 
         readonly IEnumerable<ProjectionDefinition> _projections;
         readonly IClusterClient _clusterClient;
+        readonly IExecutionContextManager _executionContextManager;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
         /// </summary>
         /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
         /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
         public ProjectionsRegistrar(
             IClusterClient clusterClient,
+            IExecutionContextManager executionContextManager,
             IEventTypes eventTypes,
             ITypes types,
             IJsonSchemaGenerator schemaGenerator)
         {
             _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator);
             _clusterClient = clusterClient;
+            _executionContextManager = executionContextManager;
         }
 
         /// <inheritdoc/>
         public async Task StartAll()
         {
+            // TODO: Observe for all tenants
+            _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
+
             var projections = _clusterClient.GetGrain<Grains.IProjections>(Guid.Empty);
             foreach (var projectionDefinition in _projections)
             {
@@ -62,6 +70,8 @@ namespace Cratis.Events.Projections
                     });
                 await projections.Register(projectionDefinition, pipelineDefinition);
             }
+
+            await projections.Start();
         }
 
         /// <summary>

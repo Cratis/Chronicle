@@ -20,5 +20,12 @@ namespace Cratis.Events.Projections.Grains
 
         /// <inheritdoc/>
         public Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition) => _projections.Register(projectionDefinition, pipelineDefinition);
+
+        /// <inheritdoc/>
+        public Task Start()
+        {
+            _projections.Start();
+            return Task.CompletedTask;
+        }
     }
 }

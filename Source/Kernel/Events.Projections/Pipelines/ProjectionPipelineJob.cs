@@ -26,20 +26,17 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Run()
         {
-            await Task.Run(async () =>
+            foreach (var step in Steps)
             {
-                foreach (var step in Steps)
-                {
-                    Status.ReportStep(step);
-                    await step.Perform(Status);
-                    Status.ReportProgress(1.0f);
-                }
+                Status.ReportStep(step);
+                await step.Perform(Status);
+                Status.ReportProgress(1.0f);
+            }
 
-                foreach (var step in Steps)
-                {
-                    await step.PerformPostJob(Status);
-                }
-            });
+            foreach (var step in Steps)
+            {
+                await step.PerformPostJob(Status);
+            }
         }
 
         /// <inheritdoc/>

@@ -22,5 +22,10 @@ namespace Cratis.Events.Projections.Grains
         /// and possible set up the projection for rewind.
         /// </remarks>
         Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
+
+        /// <summary>
+        /// Start the supervisor.
+        /// </summary>
+        Task Start();
     }
 }
