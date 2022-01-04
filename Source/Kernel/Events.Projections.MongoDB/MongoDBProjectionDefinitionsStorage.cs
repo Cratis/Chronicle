@@ -4,6 +4,7 @@
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Json;
 using Cratis.Extensions.MongoDB;
+using Cratis.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -20,17 +21,12 @@ namespace Cratis.Events.Projections.MongoDB
         /// <summary>
         /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
         /// </summary>
-        /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for connecting to mongo.</param>
+        /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
         /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
-        public MongoDBProjectionDefinitionsStorage(IMongoDBClientFactory clientFactory, IJsonProjectionSerializer projectionSerializer)
+        public MongoDBProjectionDefinitionsStorage(ISharedDatabase sharedDatabase, IJsonProjectionSerializer projectionSerializer)
         {
-            var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
-
             _projectionSerializer = projectionSerializer;
-
-            var client = clientFactory.Create(settings.Freeze());
-            var database = client.GetDatabase("projections");
-            _collection = database.GetCollection<BsonDocument>("definitions");
+            _collection = sharedDatabase.GetCollection<BsonDocument>("projection-definitions");
         }
 
         /// <inheritdoc/>
