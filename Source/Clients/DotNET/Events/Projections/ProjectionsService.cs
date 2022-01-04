@@ -10,22 +10,21 @@ namespace Cratis.Events.Projections
     /// </summary>
     public class ProjectionsService : IHostedService
     {
-        readonly IProjections _projections;
+        readonly IProjectionsRegistrar _projectionsRegistrar;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionsService"/> class.
         /// </summary>
-        /// <param name="projections">The <see cref="IProjections"/> system.</param>
-        public ProjectionsService(IProjections projections)
+        /// <param name="projectionsRegistrar">The <see cref="IProjections"/> system.</param>
+        public ProjectionsService(IProjectionsRegistrar projectionsRegistrar)
         {
-            _projections = projections;
+            _projectionsRegistrar = projectionsRegistrar;
         }
 
         /// <inheritdoc/>
-        public Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _projections.StartAll();
-            return Task.CompletedTask;
+            await _projectionsRegistrar.StartAll();
         }
 
         /// <inheritdoc/>
