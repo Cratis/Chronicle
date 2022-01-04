@@ -74,7 +74,7 @@ namespace Cratis.Events.Projections.Pipelines
             await AddAndRunJobs(_pipelineJobs.Catchup(this));
             _state.OnNext(ProjectionState.Active);
 
-            SetupHandling();
+            await SetupHandling();
         }
 
         /// <inheritdoc/>
@@ -104,7 +104,7 @@ namespace Cratis.Events.Projections.Pipelines
             _logger.Resuming(Projection.Identifier);
             _state.OnNext(ProjectionState.CatchingUp);
             await AddAndRunJobs(_pipelineJobs.Catchup(this));
-            SetupHandling();
+            await SetupHandling();
             _state.OnNext(ProjectionState.Active);
         }
 
@@ -174,12 +174,12 @@ namespace Cratis.Events.Projections.Pipelines
             _jobs.Clear();
         }
 
-        void SetupHandling()
+        async Task SetupHandling()
         {
             foreach (var (configurationId, subject) in _subjectsPerConfiguration)
             {
                 var resultStore = _resultStores[configurationId];
-                EventProvider.ProvideFor(this, subject);
+                await EventProvider.ProvideFor(this, subject);
 
                 if (_subscriptionsPerConfiguration.ContainsKey(configurationId))
                 {

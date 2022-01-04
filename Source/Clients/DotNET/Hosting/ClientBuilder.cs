@@ -50,7 +50,7 @@ namespace Cratis.Hosting
                 .AddSingleton<ITypes>(types)
                 .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
                 .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
-                .AddSingleton<IEventStore, EventStore>()
+                .AddTransient<IEventStore, EventStore>()
                 .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
                 .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
                 .AddProjections()
