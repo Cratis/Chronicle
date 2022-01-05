@@ -44,6 +44,6 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Start the supervisor.
         /// </summary>
-        void Start();
+        Task Start();
     }
 }

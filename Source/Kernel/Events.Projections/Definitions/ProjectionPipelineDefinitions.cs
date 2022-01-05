@@ -25,9 +25,10 @@ namespace Cratis.Events.Projections.Definitions
             _storage = storage;
         }
 
-        public IEnumerable<ProjectionPipelineDefinition> GetAll()
+        /// <inheritdoc/>
+        public async Task<IEnumerable<ProjectionPipelineDefinition>> GetAll()
         {
-            PopulateIfEmpty().Wait();
+            await PopulateIfEmpty();
             return _definitions.Values;
         }
 
