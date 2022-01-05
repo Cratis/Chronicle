@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
-        <AssemblyName>Cratis.Workbench.Compliance.Main</AssemblyName>
-        <RootNamespace>Cratis.Workbench.Compliance.Main</RootNamespace>
+        <AssemblyName>Cratis.Compliance.Main</AssemblyName>
+        <RootNamespace>Cratis.Compliance.Main</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

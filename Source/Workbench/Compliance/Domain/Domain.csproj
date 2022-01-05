@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Workbench.Compliance.Domain</AssemblyName>
-        <RootNamespace>Cratis.Workbench.Compliance.Domain</RootNamespace>
+        <AssemblyName>Cratis.Compliance.Domain</AssemblyName>
+        <RootNamespace>Cratis.Compliance.Domain</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
