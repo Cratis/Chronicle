@@ -93,6 +93,14 @@
                 ".NET Core Launch (Server)",
                 ".NET Core Launch (AspNetCore Sample)"
             ]
+        },
+        {
+            "name": "Server and Compliance",
+            "configurations": [
+                ".NET Core Launch (Server)",
+                ".NET Core Launch (Compliance)"
+            ]
         }
+
     ]
 }
