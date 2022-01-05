@@ -15,6 +15,10 @@
         },
         {
             "path": "../../Styles/tsconfig.json"
+        },
+        {
+            "path": "../../../Node/FluentUI/tsconfig.json"
         }
+
     ]
 }
