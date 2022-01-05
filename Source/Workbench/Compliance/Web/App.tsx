@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Route } from 'react-router-dom';
 import { Navigation } from './Navigation';
 
 import { default as styles } from './App.module.scss';
+import { Microservices } from './microservices/Microservices';
+
 
 export const App = () => {
     return (
@@ -16,6 +18,9 @@ export const App = () => {
                 <div style={{ width: '100%' }}>
                     <Route exact path="/">
                         Home
+                    </Route>
+                    <Route path="/microservices">
+                        <Microservices/>
                     </Route>
                 </div>
             </div>
