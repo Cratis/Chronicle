@@ -11,11 +11,11 @@ module.exports = (env, argv) => {
         config.devServer.port = 9000;
         config.devServer.proxy = {
             '/api': {
-                target: 'http://localhost:5000',
+                target: 'http://localhost:5001',
                 ws: true
             },
             '/swagger': {
-                target: 'http://localhost:5000',
+                target: 'http://localhost:5001',
                 ws: true
             }
         };
