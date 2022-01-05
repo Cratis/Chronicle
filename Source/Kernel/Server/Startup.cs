@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Autofac;
+using Cratis.Concepts;
 using Cratis.Concepts.SystemJson;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,8 @@ namespace Cratis.Server
 
         public void ConfigureServices(IServiceCollection services)
         {
+            Types.RegisterTypeConvertersForConcepts();
+
             services
                 .AddSingleton(Types)
                 .AddConfigurationObjects(Types);
