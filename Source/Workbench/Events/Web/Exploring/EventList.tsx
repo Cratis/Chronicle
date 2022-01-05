@@ -5,17 +5,12 @@ import { useMemo, useRef, useEffect } from 'react';
 
 import {
     IColumn,
-    IDetailsListStyles,
-    DetailsList,
     Selection,
     SelectionMode,
-    Stack
 } from '@fluentui/react';
-import {
-    Pagination
-} from '@fluentui/react-experiments';
 
 import { default as styles } from './EventList.module.scss';
+import { ScrollableDetailsList } from '@cratis/fluentui';
 
 export type EventSelected = (item: any) => void;
 
@@ -47,31 +42,6 @@ const eventListColumns: IColumn[] = [
     }
 ];
 
-const gridStyles: Partial<IDetailsListStyles> = {
-    root: {
-        height: '100%',
-        overflowX: 'scroll',
-        selectors: {
-            '& [role=grid]': {
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'start'
-            },
-        },
-    },
-    headerWrapper: {
-        flex: '0 0 auto',
-    },
-    contentWrapper: {
-        flex: '1 1 auto',
-        overflowX: 'hidden',
-        overflowY: 'auto',
-        height: '300px'
-    },
-};
-
-
 export const EventList = (props: EventListProps) => {
     const selection = useMemo(
         () => new Selection({
@@ -93,24 +63,10 @@ export const EventList = (props: EventListProps) => {
     }, []);
 
     return (
-        <Stack style={{ height: '100%' }}>
-            <Stack.Item grow={1} >
-                <DetailsList
-                    className="eventList"
-                    styles={gridStyles}
-                    columns={eventListColumns}
-                    selection={selection}
-                    items={props.items}
-                />
-            </Stack.Item>
-            <Stack.Item>
-                {/* https://codepen.io/micahgodbolt/pen/jXNLvB */}
-                <Pagination
-                    format="buttons"
-                    pageCount={4}
-                    itemsPerPage={20} />
-            </Stack.Item>
-
-        </Stack>
+        <ScrollableDetailsList
+            columns={eventListColumns}
+            selection={selection}
+            items={props.items}
+        />
     );
 };
