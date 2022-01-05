@@ -3,4 +3,8 @@
         <AssemblyName>Cratis.Compliance.Events</AssemblyName>
         <RootNamespace>CratisCompliance.Events</RootNamespace>
     </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+    </ItemGroup>
 </Project>
