@@ -80,7 +80,7 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public void Start()
+        public async Task Start()
         {
             await RegisterUnregisteredProjections();
         }
@@ -109,7 +109,7 @@ namespace Cratis.Events.Projections
 
         async Task RegisterUnregisteredProjections()
         {
-            var projectionPipelineDefinitions = _projectionPipelineDefinitions.GetAll();
+            var projectionPipelineDefinitions = await _projectionPipelineDefinitions.GetAll();
             foreach (var pipeline in projectionPipelineDefinitions.Where(pipeline => !_pipelines.Any(kvp => kvp.Key.Equals(pipeline.ProjectionId))))
             {
                 if (await _projectionDefinitions.HasFor(pipeline.ProjectionId))
