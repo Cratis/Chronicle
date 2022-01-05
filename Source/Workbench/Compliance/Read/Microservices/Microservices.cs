@@ -6,7 +6,7 @@ using Cratis.Extensions.MongoDB;
 using MongoDB.Driver;
 using Aksio.Queries.MongoDB;
 
-namespace Cratis.Workbench.Compliance.Read.Microservices
+namespace Cratis.Compliance.Read.Microservices
 {
     [Route("/api/compliance/microservices")]
     public class Microservices : Controller

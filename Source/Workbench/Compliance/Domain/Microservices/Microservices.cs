@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Workbench.Compliance.Events.Microservices;
+using Cratis.Compliance.Events.Microservices;
 
-namespace Cratis.Workbench.Domain.Microservices
+namespace Cratis.Compliance.Domain.Microservices
 {
     [Route("/api/compliance/microservices")]
     public class Microservices : Controller

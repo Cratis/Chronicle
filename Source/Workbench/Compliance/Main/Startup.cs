@@ -6,7 +6,7 @@ using Cratis.Concepts.SystemJson;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
-namespace Cratis.Workbench.Compliance.Main
+namespace Cratis.Compliance.Main
 {
     public class Startup
     {

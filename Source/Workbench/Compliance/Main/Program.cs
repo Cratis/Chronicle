@@ -4,7 +4,7 @@
 using Autofac.Extensions.DependencyInjection;
 using Serilog;
 
-namespace Cratis.Workbench.Compliance.Main
+namespace Cratis.Compliance.Main
 {
     public static class Program
     {

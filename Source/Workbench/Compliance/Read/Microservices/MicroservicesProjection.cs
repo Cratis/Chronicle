@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Events.Projections;
-using Cratis.Workbench.Compliance.Events.Microservices;
+using Cratis.Compliance.Events.Microservices;
 
-namespace Cratis.Workbench.Compliance.Read.Microservices
+namespace Cratis.Compliance.Read.Microservices
 {
     [Projection("afcdf3df-53ab-4c35-94ab-07be4500b2ec")]
     public class MicroservicesProjection : IProjectionFor<Microservice>
