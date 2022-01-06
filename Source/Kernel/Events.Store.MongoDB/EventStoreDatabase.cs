@@ -64,7 +64,7 @@ namespace Cratis.Events.Store.MongoDB
                 {
                     var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
                     var configuration = _serviceProvider.GetService<Storage>()!;
-                    _databases = configuration.EventStore.ToDictionary(_ => (TenantId)_.Key, _ =>
+                    _databases = configuration.Get(WellKnownStorageTypes.EventStore).EventStore.ToDictionary(_ => (TenantId)_.Key, _ =>
                     {
                         var url = new MongoUrl(_.Value.ToString());
                         var client = mongoDBClientFactory.Create(url);
