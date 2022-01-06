@@ -18,10 +18,10 @@ namespace Cratis.MongoDB
         /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
         /// </summary>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
-        /// <param name="configuration"></param>
+        /// <param name="configuration"><see cref="Storage"/> configuration.</param>
         public SharedDatabase(IMongoDBClientFactory clientFactory, Storage configuration)
         {
-            var url = new MongoUrl(configuration.Shared.ToString());
+            var url = new MongoUrl(configuration.Get(WellKnownStorageTypes.EventStore).Shared.ToString());
             var client = clientFactory.Create(url);
             _database = client.GetDatabase(url.DatabaseName);
         }

@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Changes;
+using Cratis.Configuration;
 using Cratis.Extensions.MongoDB;
 using Cratis.Strings;
 using MongoDB.Bson;
@@ -35,18 +36,14 @@ namespace Cratis.Events.Projections.MongoDB
         /// </summary>
         /// <param name="model"><see cref="Model"/> the store is for.</param>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
-        public MongoDBProjectionResultStore(Model model, IMongoDBClientFactory clientFactory)
+        /// <param name="configuration"><see cref="Storage"/> configuration.</param>
+        public MongoDBProjectionResultStore(Model model, IMongoDBClientFactory clientFactory, Storage configuration)
         {
             _model = model;
 
-            var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
-            // settings.ClusterConfigurator = _ => _
-            //     .Subscribe<CommandStartedEvent>(ev => Console.WriteLine($"Start: {ev.CommandName} : {ev.Command}"))
-            //     .Subscribe<CommandSucceededEvent>(ev => Console.WriteLine($"Succeeded: {ev.CommandName} : {ev.Reply}"))
-            //     .Subscribe<CommandFailedEvent>(ev => Console.WriteLine($"Failed: {ev.CommandName} : {ev.Failure}"));
-
-            var client = clientFactory.Create(settings.Freeze());
-            _database = client.GetDatabase("read-models");
+            var url = new MongoUrl(configuration.Get(WellKnownStorageTypes.EventStore).Shared.ToString());
+            var client = clientFactory.Create(url);
+            _database = client.GetDatabase(url.DatabaseName);
             _collection = _database.GetCollection<BsonDocument>(model.Name);
             _rewindCollection = _database.GetCollection<BsonDocument>(GetRewindCollectionName(model.Name));
         }
