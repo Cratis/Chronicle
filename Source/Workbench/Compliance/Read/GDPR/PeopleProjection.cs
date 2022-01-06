@@ -18,6 +18,10 @@ namespace Cratis.Compliance.Read.GDPR
                 .Set(m => m.Address).To(e => e.Address)
                 .Set(m => m.City).To(e => e.City)
                 .Set(m => m.PostalCode).To(e => e.PostalCode)
-                .Set(m => m.Country).To(e => e.Country));
+                .Set(m => m.Country).To(e => e.Country))
+            .Children(_ => _.PersonalInformation, c => c
+                .From<PersonalInformationRegistered>(_ => _
+                    .Set(m => m.Type).To(e => e.Type)
+                    .Set(m => m.Value).To(e => e.Value)));
     }
 }
