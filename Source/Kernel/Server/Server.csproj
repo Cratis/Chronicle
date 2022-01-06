@@ -18,6 +18,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../Configuration/Configuration.csproj" />
+        <ProjectReference Include="../Configuration.Grains/Configuration.Grains.csproj" />
+        <ProjectReference Include="../Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj" />
         <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
         <ProjectReference Include="../Events.Schemas.Api/Events.Schemas.Api.csproj" />
         <ProjectReference Include="../Events.Schemas.Grains/Events.Schemas.Grains.csproj" />

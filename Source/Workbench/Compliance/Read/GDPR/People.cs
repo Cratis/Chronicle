@@ -3,7 +3,6 @@
 
 using Aksio.Queries;
 using Aksio.Queries.MongoDB;
-using Cratis.Extensions.MongoDB;
 using MongoDB.Driver;
 
 namespace Cratis.Compliance.Read.GDPR
@@ -13,12 +12,7 @@ namespace Cratis.Compliance.Read.GDPR
     {
         readonly IMongoCollection<Person> _collection;
 
-        public People(IMongoDBClientFactory mongoDBClientFactory)
-        {
-            var client = mongoDBClientFactory.Create(new MongoUrl("mongodb://localhost:27017"));
-            var database = client.GetDatabase("read-models");
-            _collection = database.GetCollection<Person>();
-        }
+        public People(IMongoCollection<Person> collection) => _collection = collection;
 
         [HttpGet]
         public Task<ClientObservable<IEnumerable<Person>>> AllPeople() => _collection.Observe();
