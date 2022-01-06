@@ -1,11 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult, useDialog } from '@aksio/frontend/dialogs';
-import { ScrollableDetailsList } from '@cratis/fluentui';
+import { ScrollableDetailsList, useModal, ModalButtons, ModalResult } from '@cratis/fluentui';
 import { CommandBar, IColumn, ICommandBarItemProps, Stack } from '@fluentui/react';
 import { AllMicroservices } from 'API/compliance/microservices/AllMicroservices';
-import { AddMicroserviceDialog, AddMicroserviceDialogInput, AddMicroserviceDialogResult } from './AddMicroserviceDialog';
+import { AddMicroserviceDialog, AddMicroserviceDialogResult } from './AddMicroserviceDialog';
 import { AddMicroservice } from 'API/compliance/microservices/AddMicroservice';
 import { Guid } from '@cratis/fundamentals';
 
@@ -29,21 +28,25 @@ const columns: IColumn[] = [
 export const Microservices = () => {
 
     const [allMicroservices] = AllMicroservices.use();
-    const [showAddMicroservicesDialog, addMicroserviceDialogProps] = useDialog<AddMicroserviceDialogInput, AddMicroserviceDialogResult>(async (result, output?) => {
-        if (result == DialogResult.Success && output) {
-            const command = new AddMicroservice();
-            command.microserviceId = Guid.create().toString();
-            command.name = output.name;
-            await command.execute();
-        }
-    });
+
+    const [showAddMicroservicesDialog] = useModal<{}, AddMicroserviceDialogResult>(
+        "Add Microservice",
+        ModalButtons.OkCancel,
+        AddMicroserviceDialog, async (result, output) => {
+            if (result == ModalResult.Success && output) {
+                const command = new AddMicroservice();
+                command.microserviceId = Guid.create().toString();
+                command.name = output.name;
+                await command.execute();
+            }
+        });
 
     const commandBarItems: ICommandBarItemProps[] = [
         {
             key: 'add',
             name: 'Add',
             iconProps: { iconName: 'Add' },
-            onClick: showAddMicroservicesDialog
+            onClick: () => showAddMicroservicesDialog()
         }
     ];
 
@@ -59,8 +62,6 @@ export const Microservices = () => {
                         items={allMicroservices.data} />
                 </Stack.Item>
             </Stack>
-
-            <AddMicroserviceDialog {...addMicroserviceDialogProps} />
         </>
     );
 };
