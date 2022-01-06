@@ -72,7 +72,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build compliance",
-            "program": "${workspaceFolder}/Source/Workbench/Compliance/Main/bin/Debug/net6.0/Cratis.Workbench.Compliance.Main.dll",
+            "program": "${workspaceFolder}/Source/Workbench/Compliance/Main/bin/Debug/net6.0/Cratis.Compliance.Main.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Source/Workbench/Compliance/Main",
             "stopAtEntry": false,
