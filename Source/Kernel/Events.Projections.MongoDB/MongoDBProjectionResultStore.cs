@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Changes;
 using Cratis.Configuration;
+using Cratis.Execution;
 using Cratis.Extensions.MongoDB;
 using Cratis.Strings;
 using MongoDB.Bson;
@@ -17,10 +18,10 @@ namespace Cratis.Events.Projections.MongoDB
     /// </summary>
     public class MongoDBProjectionResultStore : IProjectionResultStore, IDisposable
     {
-        readonly IMongoCollection<BsonDocument> _collection;
-        readonly IMongoCollection<BsonDocument> _rewindCollection;
-        readonly IMongoDatabase _database;
         readonly Model _model;
+        readonly IExecutionContextManager _executionContextManager;
+        readonly IMongoDBClientFactory _clientFactory;
+        readonly Storage _configuration;
         IProjectionResultStoreRewindScope? _rewindScope;
 
         /// <summary>
@@ -35,17 +36,19 @@ namespace Cratis.Events.Projections.MongoDB
         /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
         /// </summary>
         /// <param name="model"><see cref="Model"/> the store is for.</param>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
         /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-        public MongoDBProjectionResultStore(Model model, IMongoDBClientFactory clientFactory, Storage configuration)
+        public MongoDBProjectionResultStore(
+            Model model,
+            IExecutionContextManager executionContextManager,
+            IMongoDBClientFactory clientFactory,
+            Storage configuration)
         {
             _model = model;
-
-            var url = new MongoUrl(configuration.Get(WellKnownStorageTypes.EventStore).Shared.ToString());
-            var client = clientFactory.Create(url);
-            _database = client.GetDatabase(url.DatabaseName);
-            _collection = _database.GetCollection<BsonDocument>(model.Name);
-            _rewindCollection = _database.GetCollection<BsonDocument>(GetRewindCollectionName(model.Name));
+            _executionContextManager = executionContextManager;
+            _clientFactory = clientFactory;
+            _configuration = configuration;
         }
 
         /// <inheritdoc/>
@@ -156,7 +159,7 @@ namespace Cratis.Events.Projections.MongoDB
         public IProjectionResultStoreRewindScope BeginRewind()
         {
             _rewindScope = new MongoDBProjectionResultStoreRewindScope(
-                _database,
+                GetDatabase(),
                 _model,
                 () => _rewindScope = default);
             return _rewindScope;
@@ -169,7 +172,21 @@ namespace Cratis.Events.Projections.MongoDB
             GC.SuppressFinalize(this);
         }
 
-        IMongoCollection<BsonDocument> GetCollection() => IsRewinding ? _rewindCollection : _collection;
+        IMongoDatabase GetDatabase()
+        {
+            // TODO: Improve this! - Perhaps create a read model repository wrapper that caches per tenant.
+            var eventStoreConfig = _configuration.Get(WellKnownStorageTypes.ReadModels);
+            var tenantId = _executionContextManager.Current.TenantId.ToString()!;
+            var url = new MongoUrl(eventStoreConfig.Tenants[tenantId].ToString());
+            var client = _clientFactory.Create(url);
+            return client.GetDatabase(url.DatabaseName);
+        }
+
+        IMongoCollection<BsonDocument> GetCollection()
+        {
+            var database = GetDatabase();
+            return IsRewinding ? database.GetCollection<BsonDocument>(GetRewindCollectionName(_model.Name)) : database.GetCollection<BsonDocument>(_model.Name);
+        }
 
         bool IsRewinding => _rewindScope != default;
     }
