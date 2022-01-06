@@ -4,24 +4,16 @@
 namespace Cratis.Configuration
 {
     /// <summary>
-    /// Represents the configuration for storage.
+    /// Represents the storage configuration for all <see cref="StorageType">storage types</see>.
     /// </summary>
     [Configuration]
-    public record Storage
+    public class Storage : Dictionary<string, StorageType>
     {
         /// <summary>
-        /// The type of storage used.
+        /// Get a specific <see cref="StorageType"/>.
         /// </summary>
-        public string Type { get; init; } = "Not Configured";
-
-        /// <summary>
-        /// The shared database connection configuration.
-        /// </summary>
-        public object Shared { get; init; } = "";
-
-        /// <summary>
-        /// The event store connection configuration per tenant.
-        /// </summary>
-        public IDictionary<string, object> EventStore { get; init; } = new Dictionary<string, object>();
-    };
+        /// <param name="storageType">Type of storage to get.</param>
+        /// <returns><see cref="StorageType"/> instance.</returns>
+        public StorageType Get(string storageType) => this[storageType];
+    }
 }
