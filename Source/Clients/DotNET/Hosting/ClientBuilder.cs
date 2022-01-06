@@ -57,6 +57,7 @@ namespace Cratis.Hosting
                 .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
                 .AddTransient<IEventStore, EventStore>()
                 .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
+                .AddMongoDBReadModels(types)
                 .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
                 .AddProjections()
                 .AddSingleton<IObservers, Observers>()

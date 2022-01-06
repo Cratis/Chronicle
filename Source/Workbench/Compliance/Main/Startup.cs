@@ -3,6 +3,7 @@
 
 using Autofac;
 using Cratis.Concepts.SystemJson;
+using Cratis.Hosting;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
@@ -47,6 +48,8 @@ namespace Cratis.Compliance.Main
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             ContainerBuilderExtensions.ServiceProvider = app.ApplicationServices;
+            MongoDBReadModels.ConfigureReadModels(app.ApplicationServices).Wait();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
