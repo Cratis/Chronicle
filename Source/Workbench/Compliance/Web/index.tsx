@@ -8,8 +8,11 @@ import './index.scss';
 import '@cratis/workbench.styles/theme';
 
 import { App } from './App';
+import { ModalProvider } from '@cratis/fluentui';
 
 ReactDOM.render(
-    <App />,
+    <ModalProvider>
+        <App />
+    </ModalProvider>,
     document.getElementById('root')
 );
