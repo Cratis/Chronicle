@@ -91,6 +91,8 @@ export const People = () => {
                 const selected = selection.getSelection();
                 if (selected.length === 1) {
                     setSelectedPerson(selected[0] as Person);
+                } else {
+                    setSelectedPerson(undefined);
                 }
             },
             items: people.data as any
