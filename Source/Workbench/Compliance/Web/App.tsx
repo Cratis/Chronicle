@@ -6,6 +6,7 @@ import { Navigation } from './Navigation';
 
 import { default as styles } from './App.module.scss';
 import { Microservices } from './microservices/Microservices';
+import { People } from './GDPR/People';
 
 
 export const App = () => {
@@ -21,6 +22,9 @@ export const App = () => {
                     </Route>
                     <Route path="/microservices">
                         <Microservices/>
+                    </Route>
+                    <Route path="/gdpr/people">
+                        <People/>
                     </Route>
                 </div>
             </div>

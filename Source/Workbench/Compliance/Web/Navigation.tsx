@@ -35,10 +35,10 @@ const groups: INavLinkGroup[] = [
                 url: '',
                 links: [
                     {
-                        name: 'Persons',
-                        key: 'persons',
+                        name: 'People',
+                        key: 'people',
                         url: '',
-                        route: '/gdpr/persons'
+                        route: '/gdpr/people'
                     }
                 ]
             }
