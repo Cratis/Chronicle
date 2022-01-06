@@ -12,5 +12,6 @@ namespace Cratis.Compliance.Read.GDPR
         Address Address,
         City City,
         PostalCode PostalCode,
-        Country Country);
+        Country Country,
+        IEnumerable<PersonalInformation> PersonalInformation);
 }
