@@ -19,6 +19,6 @@ namespace Cratis.Events.Store
         /// <summary>
         /// Gets or sets the next sequencenumber (tail).
         /// </summary>
-        public EventLogSequenceNumber SequenceNumber { get; set; }
+        public EventLogSequenceNumber SequenceNumber { get; set; } = EventLogSequenceNumber.First;
     }
 }
