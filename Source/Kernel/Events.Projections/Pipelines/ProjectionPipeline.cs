@@ -135,6 +135,11 @@ namespace Cratis.Events.Projections.Pipelines
         {
             _logger.Suspended(Projection.Identifier, reason);
             await StopAllJobs();
+            foreach (var (_, subscription) in _subscriptionsPerConfiguration)
+            {
+                subscription.Dispose();
+            }
+            _subscriptionsPerConfiguration.Clear();
             _state.OnNext(ProjectionState.Suspended);
         }
 

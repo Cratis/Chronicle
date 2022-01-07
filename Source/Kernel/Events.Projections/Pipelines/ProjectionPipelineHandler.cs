@@ -70,16 +70,26 @@ namespace Cratis.Events.Projections.Pipelines
 
         async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, Event @event, List<IChangeset<Event, ExpandoObject>> changesets)
         {
-            var keyResolver = projection.GetKeyResolverFor(@event.Type);
-            var key = keyResolver(@event);
-            _logger.GettingInitialValues(@event.SequenceNumber);
-            var initialState = await resultStore.FindOrDefault(key);
-            var changeset = new Changeset<Event, ExpandoObject>(@event, initialState);
-            changesets.Add(changeset);
-            _logger.Projecting(@event.SequenceNumber);
-            projection.OnNext(@event, changeset);
-            _logger.SavingResult(@event.SequenceNumber);
-            await resultStore.ApplyChanges(key, changeset);
+            if (projection.Accepts(@event.Type))
+            {
+                var keyResolver = projection.GetKeyResolverFor(@event.Type);
+                var key = keyResolver(@event);
+                _logger.GettingInitialValues(@event.SequenceNumber);
+                var initialState = await resultStore.FindOrDefault(key);
+                var changeset = new Changeset<Event, ExpandoObject>(@event, initialState);
+                changesets.Add(changeset);
+                _logger.Projecting(@event.SequenceNumber);
+                projection.OnNext(@event, changeset);
+                _logger.SavingResult(@event.SequenceNumber);
+                if (changeset.HasChanges)
+                {
+                    await resultStore.ApplyChanges(key, changeset);
+                }
+            }
+            else
+            {
+                _logger.EventNotAccepted(@event.SequenceNumber, projection.Name, projection.Path, @event.Type);
+            }
 
             foreach (var child in projection.ChildProjections)
             {
