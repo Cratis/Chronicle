@@ -11,5 +11,7 @@
     <ItemGroup>
         <ProjectReference Include="../Events/Events.csproj"/>
         <ProjectReference Include="../Concepts/Concepts.csproj"/>
+
+        <ProjectReference Include="../../../Kernel/Compliance.Grains.Interfaces/Compliance.Grains.Interfaces.csproj"/>
     </ItemGroup>
 </Project>
