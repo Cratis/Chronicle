@@ -23,6 +23,7 @@ namespace Cratis.Events.Projections
         /// <inheritdoc/>
         public IProjection CreateFrom(ProjectionDefinition definition) =>
             CreateProjectionFrom(
+                definition.Name,
                 definition,
                 PropertyPath.Root,
                 PropertyPath.Root,
@@ -31,6 +32,7 @@ namespace Cratis.Events.Projections
                 _ => { });
 
         IProjection CreateProjectionFrom(
+            ProjectionName name,
             ProjectionDefinition projectionDefinition,
             PropertyPath childrenAccessorProperty,
             PropertyPath identifiedByProperty,
@@ -43,6 +45,7 @@ namespace Cratis.Events.Projections
                     EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
 
             var childProjections = projectionDefinition.Children.Select(kvp => CreateProjectionFrom(
+                    name,
                     kvp.Value,
                     kvp.Key,
                     kvp.Value.IdentifiedBy,
@@ -60,7 +63,7 @@ namespace Cratis.Events.Projections
             var model = new Model(projectionDefinition.Model.Name, task.Result);
             addChildEventTypes(eventsForProjection);
 
-            var projection = new Projection(projectionDefinition.Identifier, projectionDefinition.Name, path, model, eventsForProjection, childProjections);
+            var projection = new Projection(projectionDefinition.Identifier, name, path, model, eventsForProjection, childProjections);
 
             foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {
