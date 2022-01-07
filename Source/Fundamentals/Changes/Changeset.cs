@@ -36,6 +36,9 @@ namespace Cratis.Changes
         public IEnumerable<Change> Changes => _changes;
 
         /// <inheritdoc/>
+        public bool HasChanges => _changes.Count > 0;
+
+        /// <inheritdoc/>
         public void Add(Change change)
         {
             _changes.Add(change);
