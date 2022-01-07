@@ -5,7 +5,7 @@ using Cratis.Boot;
 using Cratis.Execution;
 using Orleans;
 
-namespace Cratis.Events.Store.Grains
+namespace Cratis.Events.Projections.Grains
 {
     /// <summary>
     /// Represents a <see cref="IPerformBootProcedure"/> for the event store.
@@ -35,8 +35,8 @@ namespace Cratis.Events.Store.Grains
                 Guid.NewGuid().ToString()
             );
 
-            var eventLog = _grainFactory.GetGrain<IEventLog>(EventLogId.Default, keyExtension: "f455c031-630e-450d-a75b-ca050c441708");
-            eventLog.WarmUp();
+            var projections = _grainFactory.GetGrain<IProjections>(Guid.Empty);
+            projections.Start();
         }
     }
 }

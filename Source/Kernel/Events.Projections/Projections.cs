@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Pipelines;
 using Cratis.Execution;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections
 {
@@ -19,7 +20,10 @@ namespace Cratis.Events.Projections
         readonly IProjectionPipelineDefinitions _projectionPipelineDefinitions;
         readonly IProjectionFactory _projectionFactory;
         readonly IProjectionPipelineFactory _pipelineFactory;
+        readonly ILogger<Projection> _logger;
         readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
+        readonly ConcurrentDictionary<ProjectionId, CancellationTokenSource> _cancellationTokenSources = new();
+
         readonly ReplaySubject<IProjectionPipeline> _allPipelines = new();
 
         /// <summary>
@@ -29,16 +33,19 @@ namespace Cratis.Events.Projections
         /// <param name="projectionPipelineDefinitions">The <see cref="IProjectionPipelineDefinitions"/> to use.</param>
         /// <param name="projectionFactory">The <see cref="IProjectionFactory"/> for creating projection instances.</param>
         /// <param name="pipelineFactory">The <see cref="IProjectionPipelineFactory"/> for creating projection pipeline instances.</param>
+        /// <param name="logger"><see cref="ILogger"/> for logging.</param>
         public Projections(
             IProjectionDefinitions projectionDefinitions,
             IProjectionPipelineDefinitions projectionPipelineDefinitions,
             IProjectionFactory projectionFactory,
-            IProjectionPipelineFactory pipelineFactory)
+            IProjectionPipelineFactory pipelineFactory,
+            ILogger<Projection> logger)
         {
             _projectionDefinitions = projectionDefinitions;
             _projectionPipelineDefinitions = projectionPipelineDefinitions;
             _projectionFactory = projectionFactory;
             _pipelineFactory = pipelineFactory;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -48,28 +55,34 @@ namespace Cratis.Events.Projections
             var pipeline = _pipelineFactory.CreateFrom(projection, pipelineDefinition);
             var isNew = !await _projectionDefinitions.HasFor(projectionDefinition.Identifier);
             var hasChanged = await _projectionDefinitions.HasChanged(projectionDefinition);
+            IProjectionPipeline? existingPipeline = default;
+            if (_pipelines.ContainsKey(projection.Identifier))
+            {
+                existingPipeline = _pipelines[projection.Identifier];
+            }
 
             if (!isNew && hasChanged)
             {
                 await pipeline.Rewind();
             }
 
+            if (existingPipeline != default)
+            {
+                await existingPipeline.Suspend("Replacing projection due to definition changes");
+            }
+
             await _projectionDefinitions.Register(projectionDefinition);
             await _projectionPipelineDefinitions.Register(pipelineDefinition);
+            RunProjection(pipeline);
 
             _pipelines[projection.Identifier] = pipeline;
-
             _allPipelines.OnNext(pipeline);
         }
 
         /// <inheritdoc/>
         public void Start()
         {
-            RegisterUnregisteredProjections().Wait();
-            foreach (var (_, pipeline) in _pipelines)
-            {
-                pipeline.Start();
-            }
+            await RegisterUnregisteredProjections();
         }
 
         /// <inheritdoc/>
@@ -80,6 +93,19 @@ namespace Cratis.Events.Projections
 
         /// <inheritdoc/>
         public IProjectionPipeline GetById(ProjectionId id) => _pipelines[id];
+
+        void RunProjection(IProjectionPipeline pipeline)
+        {
+            if (_cancellationTokenSources.ContainsKey(pipeline.Projection.Identifier))
+            {
+                _logger.StopRunning(pipeline.Projection.Identifier, pipeline.Projection.Name);
+                _cancellationTokenSources[pipeline.Projection.Identifier].Cancel();
+            }
+            var cts = new CancellationTokenSource();
+            _cancellationTokenSources[pipeline.Projection.Identifier] = cts;
+            _logger.Running(pipeline.Projection.Identifier, pipeline.Projection.Name);
+            Task.Run(async () => await pipeline.Start(), cts.Token);
+        }
 
         async Task RegisterUnregisteredProjections()
         {
