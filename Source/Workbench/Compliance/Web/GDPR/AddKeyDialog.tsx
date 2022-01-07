@@ -3,7 +3,7 @@
 
 import { IModalProps } from '@cratis/fluentui';
 import { Guid } from '@cratis/fundamentals';
-import { Stack, TextField, IconButton, ITextFieldStyles } from '@fluentui/react';
+import { TextField, ITextFieldStyles } from '@fluentui/react';
 import { useState } from 'react';
 
 interface AddKeyDialogResult {
