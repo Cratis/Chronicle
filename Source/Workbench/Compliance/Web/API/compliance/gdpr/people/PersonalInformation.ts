@@ -5,6 +5,7 @@
 import { PersonalInformationValue } from './PersonalInformationValue';
 
 export type PersonalInformation = {
+    identifier: string;
     type: string;
     value: PersonalInformationValue;
 };

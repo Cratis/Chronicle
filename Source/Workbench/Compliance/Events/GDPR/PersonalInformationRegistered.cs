@@ -6,5 +6,5 @@ using Cratis.Compliance.Concepts.PersonalInformation;
 namespace Cratis.Compliance.Events
 {
     [EventType("e70bdf4e-d757-4241-b59a-74d61b0ffd49")]
-    public record PersonalInformationRegistered(PersonalInformationType Type, PersonalInformationValue Value);
+    public record PersonalInformationRegistered(EventSourceId Person, PersonalInformationType Type, PersonalInformationValue Value);
 }

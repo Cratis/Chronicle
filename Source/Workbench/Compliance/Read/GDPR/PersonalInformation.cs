@@ -5,5 +5,5 @@ using Cratis.Compliance.Concepts.PersonalInformation;
 
 namespace Cratis.Compliance.Read.GDPR
 {
-    public record PersonalInformation(PersonalInformationType Type, PersonalInformationValue Value);
+    public record PersonalInformation(PersonalInformationId Identifier, PersonalInformationType Type, PersonalInformationValue Value);
 }
