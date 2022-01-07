@@ -81,7 +81,10 @@ namespace Cratis.Events.Projections.Pipelines
                 _logger.Projecting(@event.SequenceNumber);
                 projection.OnNext(@event, changeset);
                 _logger.SavingResult(@event.SequenceNumber);
-                await resultStore.ApplyChanges(key, changeset);
+                if (changeset.HasChanges)
+                {
+                    await resultStore.ApplyChanges(key, changeset);
+                }
             }
             else
             {
