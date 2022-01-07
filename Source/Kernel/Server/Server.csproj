@@ -18,6 +18,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../Compliance/Compliance.csproj" />
+        <ProjectReference Include="../Compliance.Grains/Compliance.Grains.csproj" />
+        <ProjectReference Include="../Compliance.Grains.Interfaces/Compliance.Grains.Interfaces.csproj" />
         <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Configuration.Grains/Configuration.Grains.csproj" />
         <ProjectReference Include="../Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj" />

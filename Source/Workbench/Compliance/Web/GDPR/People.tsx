@@ -1,13 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ModalButtons, ScrollableDetailsList, useModal } from '@cratis/fluentui';
-import { CommandBar, IColumn, ICommandBarItemProps, Panel, SearchBox, Selection, SelectionMode, Stack, TextField } from '@fluentui/react';
+import { ModalButtons, ScrollableDetailsList, useModal, ModalResult, IModalProps } from '@cratis/fluentui';
+import { CommandBar, IColumn, ICommandBarItemProps, IconButton, Panel, SearchBox, Selection, SelectionMode, Stack, TextField } from '@fluentui/react';
 import { AllPeople } from 'API/compliance/gdpr/people/AllPeople';
 import { useMemo, useState } from 'react';
 import { Person } from 'API/compliance/gdpr/people/Person';
 import { useBoolean } from '@fluentui/react-hooks';
 import { SearchForPeople } from '../API/compliance/gdpr/people/SearchForPeople';
+import { CreateAndRegisterKeyFor } from '../API/compliance/gdpr/pii/CreateAndRegisterKeyFor';
+import { AddKeyDialog } from './AddKeyDialog';
 
 const columns: IColumn[] = [
     {
@@ -32,6 +34,7 @@ const columns: IColumn[] = [
 ];
 
 
+
 export const People = () => {
     const [searching, setSearching] = useState(false);
     const [people] = AllPeople.use();
@@ -42,9 +45,27 @@ export const People = () => {
         ModalButtons.OkCancel,
         `Are you sure you want to delete PII for '${selectedPerson?.firstName} ${selectedPerson?.lastName} (${selectedPerson?.socialSecurityNumber})'?`,
         () => { });
+    const [showAddKeyDialog] = useModal(
+        'Create Encryption Key',
+        ModalButtons.OkCancel,
+        AddKeyDialog,
+        async (result, output) => {
+            if (result == ModalResult.Success && output) {
+                const command = new CreateAndRegisterKeyFor();
+                command.identifier = output?.identifier;
+                await command.execute();
+            }
+        }
+    );
 
     //const [searchPeople, searchForPeople] = SearchForPeople.use({ query: '' });
     const commandBarItems: ICommandBarItemProps[] = [
+        {
+            key: 'crateKey',
+            name: 'Create Key',
+            iconProps: { iconName: 'AzureKeyVault' },
+            onClick: showAddKeyDialog
+        }
         // {
         //     key: 'search',
         //     onRender: (props, defaultRenderer) => {
