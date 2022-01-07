@@ -133,19 +133,21 @@ export const People = () => {
                 </Stack.Item>
             </Stack>
 
-            <Panel
-                isLightDismiss
-                isOpen={isDetailsPanelOpen}
-                onDismiss={() => {
-                    selection.toggleAllSelected();
-                    dismissPanel();
-                }}
-                headerText={`${selectedPerson?.firstName} - ${selectedPerson?.lastName}`}>
-                <TextField label="Social Security Number" disabled defaultValue={selectedPerson?.socialSecurityNumber as any} />
-                {
-                    (selectedPerson) && selectedPerson.personalInformation.map((_, index) => <TextField key={index} label={_.type} disabled defaultValue={_.value as any} />)
-                }
-            </Panel>
+            {isDetailsPanelOpen &&
+                <Panel
+                    isLightDismiss
+                    isOpen={isDetailsPanelOpen}
+                    onDismiss={() => {
+                        selection.toggleAllSelected();
+                        dismissPanel();
+                    }}
+                    headerText={`${selectedPerson?.firstName} - ${selectedPerson?.lastName}`}>
+                    <TextField label="Social Security Number" disabled defaultValue={selectedPerson?.socialSecurityNumber as any} />
+                    {
+                        (selectedPerson && selectedPerson.personalInformation) && selectedPerson.personalInformation.map((_, index) => <TextField key={index} label={_.type} disabled defaultValue={_.value as any} />)
+                    }
+                </Panel>
+            }
         </>
     );
 };
