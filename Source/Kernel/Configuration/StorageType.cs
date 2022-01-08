@@ -21,6 +21,6 @@ namespace Cratis.Configuration
         /// <summary>
         /// The event store connection configuration per tenant.
         /// </summary>
-        public IDictionary<string, object> EventStore { get; init; } = new Dictionary<string, object>();
+        public IDictionary<string, object> Tenants { get; init; } = new Dictionary<string, object>();
     };
 }
