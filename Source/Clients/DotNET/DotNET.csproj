@@ -7,6 +7,7 @@
     <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
+        <ProjectReference Include="../../Kernel/Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Events.Projections/Events.Projections.csproj"/>
         <ProjectReference Include="../../Kernel/Events.Projections.Grains.Interfaces/Events.Projections.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Events.Schemas.Grains.Interfaces/Events.Schemas.Grains.Interfaces.csproj"/>
