@@ -18,5 +18,8 @@ namespace Cratis.Events.Projections.Pipelines
 
         [LoggerMessage(3, LogLevel.Trace, "Saving result for event with sequence number {SequenceNumber}")]
         internal static partial void SavingResult(this ILogger logger, ulong sequenceNumber);
+
+        [LoggerMessage(4, LogLevel.Trace, "Projection '{Name} - {Path}' is not accepting event of type '{EventType}' at sequence number {SequenceNumber}")]
+        internal static partial void EventNotAccepted(this ILogger logger, ulong sequenceNumber, ProjectionName name, ProjectionPath path, EventType eventType);
     }
 }
