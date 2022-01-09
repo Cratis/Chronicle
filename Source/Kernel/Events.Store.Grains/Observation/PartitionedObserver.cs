@@ -24,6 +24,7 @@ namespace Cratis.Events.Store.Grains.Observation
         TenantId _tenantId = TenantId.NotSet;
         EventSourceId _eventSourceId = EventSourceId.Unspecified;
         EventLogId _eventLogId = EventLogId.Unspecified;
+        string _connectionId = string.Empty;
 
         /// <inheritdoc/>
         public override async Task OnActivateAsync()
@@ -33,9 +34,6 @@ namespace Cratis.Events.Store.Grains.Observation
             _tenantId = tenantId;
             _eventLogId = eventLogId;
             _eventSourceId = eventSourceId;
-
-            var streamProvider = GetStreamProvider("observer-handlers");
-            _stream = streamProvider.GetStream<AppendedEvent>(_observerId, null);
 
             _recoverReminder = await GetReminder(RecoverReminder);
             if (State.IsFailed)
@@ -54,6 +52,16 @@ namespace Cratis.Events.Store.Grains.Observation
         }
 
         /// <inheritdoc/>
+        public Task SetConnectionId(string connectionId)
+        {
+            _connectionId = connectionId;
+            var streamProvider = GetStreamProvider("observer-handlers");
+            _stream = streamProvider.GetStream<AppendedEvent>(_observerId, _connectionId);
+
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
         public async Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes)
         {
             if (State.IsFailed)
@@ -64,6 +72,7 @@ namespace Cratis.Events.Store.Grains.Observation
             await HandleEvent(@event, eventTypes);
         }
 
+        /// <inheritdoc/>
         public async Task ReceiveReminder(string reminderName, TickStatus status)
         {
             if (reminderName == RecoverReminder)

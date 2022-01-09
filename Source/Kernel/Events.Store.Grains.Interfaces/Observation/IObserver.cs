@@ -13,9 +13,10 @@ namespace Cratis.Events.Store.Grains.Observation
         /// <summary>
         /// Subscribe to observer.
         /// </summary>
+        /// <param name="connectionId">The unique identifier of the connected clients connection.</param>
         /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
-        /// <returns>The subscription identifier.</returns>
-        Task<Guid> Subscribe(IEnumerable<EventType> eventTypes);
+        /// <returns>Awaitable task.</returns>
+        Task Subscribe(string connectionId, IEnumerable<EventType> eventTypes);
 
         /// <summary>
         /// Unsubscribe from the observer.

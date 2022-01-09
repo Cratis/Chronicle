@@ -12,6 +12,8 @@ namespace Sample.Accounts.Debit
         {
             //throw new ArgumentException("Not interested in this event");
 
+            Console.WriteLine("Account Opened");
+
             return Task.CompletedTask;
         }
     }
