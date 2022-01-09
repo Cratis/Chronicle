@@ -60,14 +60,17 @@ namespace Cratis.Events.Observation
             _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
             var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
 
+            // TODO: Ideally we would get the current connection identifier - which could then be a consistent identifier to be used throughout
+            var connectionId = Guid.NewGuid().ToString();
+
             foreach (var handler in _observerHandlers)
             {
-                var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, null);
-                await stream.SubscribeAsync(async (@event, _) => await handler.OnNext(@event));
+                var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, connectionId);
+                var subscription = await stream.SubscribeAsync(async (@event, _) => await handler.OnNext(@event));
 
                 var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
                 var eventTypes = handler.EventTypes.ToArray();
-                await observer.Subscribe(eventTypes);
+                await observer.Subscribe(connectionId, eventTypes);
             }
         }
     }
