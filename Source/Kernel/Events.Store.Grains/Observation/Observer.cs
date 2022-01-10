@@ -29,13 +29,13 @@ namespace Cratis.Events.Store.Grains.Observation
         /// Initializes a new instance of the <see cref="Observer"/> class.
         /// </summary>
         /// <param name="requestContextManager"></param>
-        /// <param name="connectedObservers"></param>
+        /// <param name="connectedClients"></param>
         public Observer(
             IRequestContextManager requestContextManager,
-            IConnectedClients connectedObservers)
+            IConnectedClients connectedClients)
         {
             _requestContextManager = requestContextManager;
-            _connectedObservers = connectedObservers;
+            _connectedObservers = connectedClients;
             _connectedObservers.ClientDisconnected += async (_) =>
             {
                 foreach (var (subscriptionId, handler) in _subscriptions)
@@ -60,7 +60,7 @@ namespace Cratis.Events.Store.Grains.Observation
         }
 
         /// <inheritdoc/>
-        public async Task<Guid> Subscribe(IEnumerable<EventType> eventTypes)
+        public async Task Subscribe(string connectionId, IEnumerable<EventType> eventTypes)
         {
             var subscriptionHandle = await _stream!.SubscribeAsync(
                 async (@event, _) =>
@@ -72,6 +72,7 @@ namespace Cratis.Events.Store.Grains.Observation
 
                     var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.EventContext.EventSourceId);
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
+                    await partitionedObserver.SetConnectionId(connectionId);
                     try
                     {
                         await partitionedObserver.OnNext(@event, eventTypes);
@@ -88,8 +89,6 @@ namespace Cratis.Events.Store.Grains.Observation
                 }, new EventLogSequenceNumberTokenWithFilter(State.Offset, eventTypes));
 
             _subscriptions[subscriptionHandle.HandleId] = subscriptionHandle;
-
-            return subscriptionHandle.HandleId;
         }
 
         /// <inheritdoc/>

@@ -77,13 +77,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events.Projections.Grains",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events.Projections.Grains.Interfaces", "Source\Kernel\Events.Projections.Grains.Interfaces\Events.Projections.Grains.Interfaces.csproj", "{1B560414-4621-4675-B39D-6A575C8B177C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events.Projections.Grains", "Source\Kernel\Configuration.Grains\Configuration.Grains.csproj", "{F3FD30D9-C7AC-4F2C-9DFF-2EE3AB3CE49E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events.Projections.Grains.Interfaces", "Source\Kernel\Configuration.Grains.Interfaces\Configuration.Grains.Interfaces.csproj", "{7AD8768B-462C-4938-A03F-8462946E03FC}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compliance.Grains", "Source\Kernel\Compliance.Grains\Compliance.Grains.csproj", "{6AAEAE2C-8A46-471D-B598-4BA451D2E535}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compliance.Grains.Interfaces", "Source\Kernel\Compliance.Grains.Interfaces\Compliance.Grains.Interfaces.csproj", "{CFC7D390-B3CB-4E24-B29C-EA48840F5243}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Configuration.Grains", "Source\Kernel\Configuration.Grains\Configuration.Grains.csproj", "{F3FD30D9-C7AC-4F2C-9DFF-2EE3AB3CE49E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Configuration.Grains.Interfaces", "Source\Kernel\Configuration.Grains.Interfaces\Configuration.Grains.Interfaces.csproj", "{7AD8768B-462C-4938-A03F-8462946E03FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
