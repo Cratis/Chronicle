@@ -3,6 +3,7 @@
 
 using Cratis.Collections;
 using Cratis.Compliance;
+using Cratis.Connections;
 using Cratis.Events;
 using Cratis.Events.Observation;
 using Cratis.Events.Projections;
@@ -45,8 +46,10 @@ namespace Cratis.Hosting
         public void Build(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
             var types = new Types.Types();
+            var connectionManager = new ConnectionManager();
 
             services
+                .AddSingleton<IConnectionManager>(connectionManager)
                 .AddSingleton<ITypes>(types)
                 .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
                 .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
@@ -80,7 +83,9 @@ namespace Cratis.Hosting
                 .AddEventLogStream()
                 .AddSimpleMessageStreamProvider("observer-handlers")
                 .UseExecutionContext()
+                .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
                 .ConfigureServices(services => services
+                    .AddSingleton<IConnectionManager>(connectionManager)
                     .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
                     .AddSingleton<IRequestContextManager, RequestContextManager>()
                     .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());

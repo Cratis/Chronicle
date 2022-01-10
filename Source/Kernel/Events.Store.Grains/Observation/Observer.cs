@@ -60,8 +60,9 @@ namespace Cratis.Events.Store.Grains.Observation
         }
 
         /// <inheritdoc/>
-        public async Task Subscribe(string connectionId, IEnumerable<EventType> eventTypes)
+        public async Task Subscribe(IEnumerable<EventType> eventTypes)
         {
+            var connectionId = _requestContextManager.Get(RequestContextKeys.ConnectionId).ToString()!;
             var subscriptionHandle = await _stream!.SubscribeAsync(
                 async (@event, _) =>
                 {
@@ -72,9 +73,9 @@ namespace Cratis.Events.Store.Grains.Observation
 
                     var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.EventContext.EventSourceId);
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
-                    await partitionedObserver.SetConnectionId(connectionId);
                     try
                     {
+                        await partitionedObserver.SetConnectionId(connectionId);
                         await partitionedObserver.OnNext(@event, eventTypes);
 
                         State.Offset = @event.Metadata.SequenceNumber + 1;
