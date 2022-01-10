@@ -30,5 +30,8 @@ namespace Cratis.Compliance.Grains
             var key = _encryption.GenerateKey();
             await _keyStore.SaveFor(identifier, key);
         }
+
+        /// <inheritdoc/>
+        public Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier) => _keyStore.DeleteFor(identifier);
     }
 }

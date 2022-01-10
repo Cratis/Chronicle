@@ -4,6 +4,7 @@
 #pragma warning disable IDE0005
 
 global using Microsoft.AspNetCore.Mvc;
+global using Cratis.Concepts;
 global using Cratis.Events;
 global using Cratis.Events.Store;
 global using Cratis.Events.Observation;
