@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Events.Store;
 
 namespace Cratis.Events.Observation
 {
@@ -45,7 +46,7 @@ namespace Cratis.Events.Observation
 
                 if (parameters.Length == 2)
                 {
-                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content, null! })!;
+                    returnValue = (Task)method.Invoke(actualObserver, new object[] { content, eventContext })!;
                 }
                 else
                 {
@@ -69,7 +70,7 @@ namespace Cratis.Events.Observation
                 isObservingMethod = _eventTypes.HasFor(parameters[0].ParameterType);
                 if (parameters.Length == 2)
                 {
-                    isObservingMethod &= parameters[1].ParameterType != typeof(EventContext);
+                    isObservingMethod &= parameters[1].ParameterType == typeof(EventContext);
                 }
                 else if (parameters.Length > 2)
                 {
