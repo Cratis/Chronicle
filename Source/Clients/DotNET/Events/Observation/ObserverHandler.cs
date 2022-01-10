@@ -42,7 +42,7 @@ namespace Cratis.Events.Observation
         {
             var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.EventType.Id);
             var content = _eventSerializer.Deserialize(eventType, @event.Content);
-            await _observerInvoker.Invoke(content, null!);
+            await _observerInvoker.Invoke(content, @event.EventContext);
         }
     }
 }
