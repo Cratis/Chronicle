@@ -17,11 +17,18 @@ namespace Cratis.Events.Store.Grains.Observation
         Task TryResume();
 
         /// <summary>
+        /// Set the current connection identifier.
+        /// </summary>
+        /// <param name="connectionId">The connection identifier.</param>
+        /// <returns>Awaitable task.</returns>
+        Task SetConnectionId(string connectionId);
+
+        /// <summary>
         /// Handle the next event.
         /// </summary>
         /// <param name="event">The actual event.</param>
         /// <param name="eventTypes">Event types to set.</param>
-        /// <returns>Awaitable task</returns>
+        /// <returns>Awaitable task.</returns>
         Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes);
     }
 }

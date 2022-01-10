@@ -5,7 +5,6 @@ using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
-using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
 namespace Cratis.Events.Store.Grains
