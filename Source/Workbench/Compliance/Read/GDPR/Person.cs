@@ -6,6 +6,7 @@ using Cratis.Compliance.Concepts.PersonalInformation;
 namespace Cratis.Compliance.Read.GDPR
 {
     public record Person(
+        PersonId Id,
         SocialSecurityNumber SocialSecurityNumber,
         FirstName FirstName,
         LastName LastName,

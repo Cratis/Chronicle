@@ -10,6 +10,7 @@ import { useBoolean } from '@fluentui/react-hooks';
 import { SearchForPeople } from '../API/compliance/gdpr/people/SearchForPeople';
 import { CreateAndRegisterKeyFor } from '../API/compliance/gdpr/pii/CreateAndRegisterKeyFor';
 import { AddKeyDialog } from './AddKeyDialog';
+import { DeletePIIForPerson } from '../API/compliance/gdpr/pii/DeletePIIForPerson';
 
 const columns: IColumn[] = [
     {
@@ -44,7 +45,13 @@ export const People = () => {
         `Delete PII? `,
         ModalButtons.OkCancel,
         `Are you sure you want to delete PII for '${selectedPerson?.firstName} ${selectedPerson?.lastName} (${selectedPerson?.socialSecurityNumber})'?`,
-        () => { });
+        async (result) => {
+            if (result == ModalResult.Success) {
+                const command = new DeletePIIForPerson();
+                command.personId = selectedPerson?.id as any;
+                await command.execute();
+            }
+        });
     const [showAddKeyDialog] = useModal(
         'Create Encryption Key',
         ModalButtons.OkCancel,
@@ -142,6 +149,7 @@ export const People = () => {
                         dismissPanel();
                     }}
                     headerText={`${selectedPerson?.firstName} - ${selectedPerson?.lastName}`}>
+                    <TextField label="Identifier" disabled defaultValue={selectedPerson?.id as any} />
                     <TextField label="Social Security Number" disabled defaultValue={selectedPerson?.socialSecurityNumber as any} />
                     {
                         (selectedPerson && selectedPerson.personalInformation) && selectedPerson.personalInformation.map((_, index) => <TextField key={index} label={_.type} disabled defaultValue={_.value as any} />)

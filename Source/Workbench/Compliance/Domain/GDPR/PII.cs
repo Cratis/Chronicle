@@ -1,26 +1,27 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance.Grains;
-using Orleans;
+using Cratis.Compliance.Events;
+using Cratis.Compliance.GDPR;
 
 namespace Cratis.Compliance.Domain.GDPR
 {
     [Route("/api/compliance/gdpr/pii")]
     public class PII : Controller
     {
-        readonly IClusterClient _clusterClient;
+        readonly IEventLog _eventLog;
+        readonly IPIIManager _piiManager;
 
-        public PII(IClusterClient clusterClient)
+        public PII(IEventLog eventLog, IPIIManager piiManager)
         {
-            _clusterClient = clusterClient;
+            _eventLog = eventLog;
+            _piiManager = piiManager;
         }
 
         [HttpPost]
-        public async Task CreateAndRegisterKeyFor([FromBody] CreateAndRegisterKeyFor command)
-        {
-            var piiManager = _clusterClient.GetGrain<IPIIManager>(Guid.Empty);
-            await piiManager.CreateAndRegisterKeyFor(command.Identifier);
-        }
+        public Task CreateAndRegisterKeyFor([FromBody] CreateAndRegisterKeyFor command) => _piiManager.CreateAndRegisterKeyFor(command.Identifier);
+
+        [HttpPost("delete")]
+        public Task DeletePIIForPerson([FromBody] DeletePIIForPerson command) => _eventLog.Append(command.PersonId, new PersonalInformationForPersonDeleted());
     }
 }

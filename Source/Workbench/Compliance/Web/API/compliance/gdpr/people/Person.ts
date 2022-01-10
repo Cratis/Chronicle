@@ -12,6 +12,7 @@ import { Country } from './Country';
 import { PersonalInformation } from './PersonalInformation';
 
 export type Person = {
+    id: string;
     socialSecurityNumber: SocialSecurityNumber;
     firstName: FirstName;
     lastName: LastName;
