@@ -17,7 +17,6 @@ namespace Cratis.Events.Store.Grains.Observation
     public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObserver, IRemindable
     {
         const string RecoverReminder = "partitioned-observer-failure-recovery";
-
         ObserverId _observerId = ObserverId.Unspecified;
         IAsyncStream<AppendedEvent>? _stream;
         IGrainReminder? _recoverReminder;
@@ -52,16 +51,6 @@ namespace Cratis.Events.Store.Grains.Observation
         }
 
         /// <inheritdoc/>
-        public Task SetConnectionId(string connectionId)
-        {
-            _connectionId = connectionId;
-            var streamProvider = GetStreamProvider("observer-handlers");
-            _stream = streamProvider.GetStream<AppendedEvent>(_observerId, _connectionId);
-
-            return Task.CompletedTask;
-        }
-
-        /// <inheritdoc/>
         public async Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes)
         {
             if (State.IsFailed)
@@ -70,6 +59,19 @@ namespace Cratis.Events.Store.Grains.Observation
             }
 
             await HandleEvent(@event, eventTypes);
+        }
+
+        /// <inheritdoc/>
+        public Task SetConnectionId(string connectionId)
+        {
+            if (_connectionId != connectionId || _stream == default)
+            {
+                var streamProvider = GetStreamProvider("observer-handlers");
+                _stream = streamProvider.GetStream<AppendedEvent>(_observerId, connectionId);
+            }
+            _connectionId = connectionId!;
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
