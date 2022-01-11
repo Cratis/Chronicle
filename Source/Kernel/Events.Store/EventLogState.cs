@@ -14,16 +14,11 @@ namespace Cratis.Events.Store
         /// <summary>
         /// The name of the storage provider used for working with this type of state.
         /// </summary>
-        public const string StorageProvider = "EventLogStorage";
-
-        /// <summary>
-        /// Gets or sets the <see cref="EventLogId"/> for the state.
-        /// </summary>
-        public EventLogId EventLog { get; set; }
+        public const string StorageProvider = "event-log-state";
 
         /// <summary>
         /// Gets or sets the next sequencenumber (tail).
         /// </summary>
-        public uint SequenceNumber { get; set; }
+        public EventLogSequenceNumber SequenceNumber { get; set; } = EventLogSequenceNumber.First;
     }
 }

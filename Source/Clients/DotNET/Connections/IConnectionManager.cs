@@ -1,0 +1,16 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Connections
+{
+    /// <summary>
+    /// Defines the client connection manager.
+    /// </summary>
+    public interface IConnectionManager
+    {
+        /// <summary>
+        /// Gets the current connection identifier.
+        /// </summary>
+        ConnectionId CurrentConnectionId { get; }
+    }
+}

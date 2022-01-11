@@ -4,8 +4,16 @@
 namespace Cratis.Configuration
 {
     /// <summary>
-    /// Represents the configuration for storage.
+    /// Represents the storage configuration for all <see cref="StorageType">storage types</see>.
     /// </summary>
-    /// <param name="EventStore">The <see cref="EventStore"/> configuration object.</param>
-    public record Storage(EventStore EventStore);
+    [Configuration]
+    public class Storage : Dictionary<string, StorageType>
+    {
+        /// <summary>
+        /// Get a specific <see cref="StorageType"/>.
+        /// </summary>
+        /// <param name="storageType">Type of storage to get.</param>
+        /// <returns><see cref="StorageType"/> instance.</returns>
+        public StorageType Get(string storageType) => this[storageType];
+    }
 }

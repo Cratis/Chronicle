@@ -28,6 +28,11 @@ namespace Cratis.Changes
         IEnumerable<Change> Changes { get; }
 
         /// <summary>
+        /// Gets whether or not there are changes in the changeset.
+        /// </summary>
+        bool HasChanges { get; }
+
+        /// <summary>
         /// Add a change to the changeset.
         /// </summary>
         /// <param name="change"><see cref="Change"/> to add.</param>

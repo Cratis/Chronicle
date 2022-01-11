@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Schemas;
+using Orleans;
 
 namespace Cratis.Events.Schemas
 {
@@ -10,22 +11,26 @@ namespace Cratis.Events.Schemas
     /// </summary>
     public class Schemas : ISchemas
     {
-        protected readonly IEnumerable<EventSchemaDefinition> _definitions;
+        readonly IEnumerable<EventSchemaDefinition> _definitions;
+        readonly IClusterClient _clusterClient;
         readonly IEventTypes _eventTypes;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Schemas"/> class.
         /// </summary>
+        /// <param name="clusterClient"><see cref="IClusterClient"/> for connecting to Orleans.</param>
         /// <param name="eventTypes"><see cref="IEventTypes"/></param>
         /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for event types.</param>
         public Schemas(
+            IClusterClient clusterClient,
             IEventTypes eventTypes,
             IJsonSchemaGenerator schemaGenerator)
         {
+            _clusterClient = clusterClient;
             _eventTypes = eventTypes;
             _definitions = eventTypes.All.Select(_ =>
             {
-                var type = _eventTypes.GetClrTypeFor(_.EventTypeId)!;
+                var type = _eventTypes.GetClrTypeFor(_.Id)!;
                 return new EventSchemaDefinition(
                     _,
                     type.Name,
@@ -34,8 +39,16 @@ namespace Cratis.Events.Schemas
         }
 
         /// <inheritdoc/>
-        public virtual void RegisterAll()
+        public void RegisterAll()
         {
+            var schemaStore = _clusterClient.GetGrain<Grains.ISchemaStore>(Guid.Empty);
+            foreach (var schemaDefinition in _definitions)
+            {
+                schemaStore.Register(
+                    schemaDefinition.Type,
+                    schemaDefinition.FriendlyName,
+                    schemaDefinition.Schema.ToJson());
+            }
         }
     }
 }

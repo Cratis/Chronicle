@@ -45,7 +45,7 @@ namespace Cratis.Extensions.Dolittle.Projections
         public ProjectionEventProviderTypeId TypeId => ProjectionEventProviderTypeId;
 
         /// <inheritdoc/>
-        public void ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject)
+        public Task ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject)
         {
             _logger.ProvidingFor(pipeline.Projection.Identifier);
             if (!_piplinesWithSubjects.ContainsKey(pipeline))
@@ -54,6 +54,8 @@ namespace Cratis.Extensions.Dolittle.Projections
             }
 
             _piplinesWithSubjects[pipeline].Add(subject);
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
@@ -66,7 +68,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             }
 
             var eventTypes = projection.EventTypes.Select(_ => new global::Dolittle.SDK.Events.EventType(_.Id.Value)).ToArray();
-            var cursor = await _eventStream.GetFromPosition(start, eventTypes);
+            var cursor = await _eventStream.GetFromPosition((uint)start.Value, eventTypes);
             return new EventCursor(cursor);
         }
 

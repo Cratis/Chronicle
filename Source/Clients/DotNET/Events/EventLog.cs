@@ -1,9 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store.Grpc.Contracts;
-using Cratis.Grpc;
-using Newtonsoft.Json;
+using System.Text.Json;
+using Cratis.Concepts.SystemJson;
 
 namespace Cratis.Events
 {
@@ -12,35 +11,34 @@ namespace Cratis.Events
     /// </summary>
     public class EventLog : IEventLog
     {
-        readonly IGrpcChannel _channel;
-        readonly EventLogId _eventLogId;
+        readonly JsonSerializerOptions _serializerOptions;
+        readonly IEventTypes _eventTypes;
+        readonly Store.Grains.IEventLog _eventLog;
 
-        readonly IEventLogService _eventLogService;
-
-        public EventLog(IGrpcChannel channel, EventLogId eventLogId)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventLog"/> class.
+        /// </summary>
+        /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving the types of events.</param>
+        /// <param name="eventLog">The actual <see cref="Store.Grains.IEventLog"/>.</param>
+        public EventLog(IEventTypes eventTypes, Store.Grains.IEventLog eventLog)
         {
-            _channel = channel;
-            _eventLogId = eventLogId;
-            _eventLogService = _channel.CreateGrpcService<IEventLogService>();
+            _serializerOptions = new()
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = {
+                    new ConceptAsJsonConverterFactory()
+                }
+            };
+            _eventTypes = eventTypes;
+            _eventLog = eventLog;
         }
 
         /// <inheritdoc/>
-        public async Task Commit(EventSourceId eventSourceId, object content)
+        public async Task Append<T>(EventSourceId eventSourceId, T @event)
         {
-            var request = new CommitRequest
-            {
-                EventLogId = _eventLogId,
-                EventSourceId = eventSourceId,
-                EventType = new()
-                {
-                    EventTypeId = Guid.Parse("e4139473-287f-4565-a396-e998b4421e25"),
-                    Generation = 1
-                },
-                Content = JsonConvert.SerializeObject(content)
-            };
-
-            var response = await _eventLogService.Commit(request);
-            Console.WriteLine($"Result : {response.Success}");
+            var eventType = _eventTypes.GetEventTypeFor(typeof(T));
+            var json = JsonSerializer.Serialize(@event, _serializerOptions);
+            await _eventLog.Append(eventSourceId, eventType, json);
         }
     }
 }

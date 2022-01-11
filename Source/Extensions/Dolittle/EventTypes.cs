@@ -7,8 +7,8 @@ using System.Reflection;
 using Cratis.Reflection;
 using Cratis.Types;
 using Dolittle.SDK.Events;
-using EventType = SDK::Cratis.Events.EventType;
-using EventTypeId = SDK::Cratis.Events.EventTypeId;
+using EventType = Cratis.Events.EventType;
+using EventTypeId = Cratis.Events.EventTypeId;
 
 namespace Cratis.Extensions.Dolittle
 {
@@ -40,19 +40,19 @@ namespace Cratis.Extensions.Dolittle
         public IEnumerable<EventType> All { get; }
 
         /// <inheritdoc/>
-        public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.EventTypeId == eventTypeId);
+        public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);
 
         /// <inheritdoc/>
-        public EventTypeId GetEventTypeIdFor(Type clrType)
+        public EventType GetEventTypeFor(Type clrType)
         {
             TypeIsMissingEventType.ThrowIfMissingEventType(clrType);
-            return _typesByEventType.Single(_ => _.Value == clrType).Key.EventTypeId;
+            return _typesByEventType.Single(_ => _.Value == clrType).Key;
         }
 
         /// <inheritdoc/>
         public bool HasFor(Type clrType) => _typesByEventType.Any(_ => _.Value == clrType);
 
         /// <inheritdoc/>
-        public Type GetClrTypeFor(EventTypeId eventTypeId) => _typesByEventType.Single(_ => _.Key.EventTypeId == eventTypeId).Value;
+        public Type GetClrTypeFor(EventTypeId eventTypeId) => _typesByEventType.Single(_ => _.Key.Id == eventTypeId).Value;
     }
 }

@@ -21,13 +21,13 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> to start providing for.</param>
         /// <param name="subject"><see cref="ISubject{Event}"/> to provide into.</param>
-        /// <returns><see cref="IObservable{T}"/> of <see cref="Event">events</see>.</returns>
+        /// <returns>Awaitable task</returns>
         /// <remarks>
         /// The provider will provide events from the current position it has recorded for the
         /// <see cref="IProjection"/>. It will be in a state of catching up till its at the
         /// head of the stream. Once at the head, it will provide events as they occur.
         /// </remarks>
-        void ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject);
+        Task ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject);
 
         /// <summary>
         /// Get events from a specific sequence numbers.

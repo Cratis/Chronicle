@@ -15,5 +15,4 @@ namespace Cratis.Events.Projections.for_Projections
 
         [Fact] void should_get_projection() => result.ShouldEqual(pipeline.Object);
     }
-
 }

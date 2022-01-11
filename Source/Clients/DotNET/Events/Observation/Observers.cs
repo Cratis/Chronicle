@@ -2,9 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Grpc;
-using Cratis.Reflection;
+using Cratis.Connections;
+using Cratis.Events.Store;
+using Cratis.Events.Store.Grains.Observation;
+using Cratis.Execution;
 using Cratis.Types;
+using Orleans;
+using Orleans.Streams;
 
 namespace Cratis.Events.Observation
 {
@@ -13,37 +17,62 @@ namespace Cratis.Events.Observation
     /// </summary>
     public class Observers : IObservers
     {
-        readonly IEnumerable<IObserver> _observers;
+        readonly IEnumerable<ObserverHandler> _observerHandlers;
+        readonly IClusterClient _clusterClient;
+        readonly IConnectionManager _connectionManager;
+        readonly IExecutionContextManager _executionContextManager;
 
         /// <summary>
         /// Initializes a new instance of <see cref="Observers"/>.
         /// </summary>
-        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to work with instances of <see cref="IObserver"/> types.</param>
+        /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
+        /// <param name="connectionManager"><see cref="IConnectionManager"/> for getting current connection information.</param>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
         /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
-        /// <param name="channel"><see cref="GrpcChannel"/> to use.</param>
+        /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-        public Observers(IServiceProvider serviceProvider, IEventTypes eventTypes, IGrpcChannel channel, ITypes types)
+        public Observers(
+            IClusterClient clusterClient,
+            IConnectionManager connectionManager,
+            IExecutionContextManager executionContextManager,
+            IServiceProvider serviceProvider,
+            IEventTypes eventTypes,
+            IEventSerializer eventSerializer,
+            ITypes types)
         {
-            _observers = types.All
-                                .Where(_ => _.HasAttribute<ObserverAttribute>())
+            _observerHandlers = types.AllObservers()
                                 .Select(_ =>
                                 {
                                     var observer = _.GetCustomAttribute<ObserverAttribute>()!;
-                                    return new Observer(
+                                    return new ObserverHandler(
                                         observer.ObserverId,
+                                        _.FullName ?? $"{_.Namespace}.{_.Name}",
                                         observer.EventLogId,
                                         eventTypes,
                                         new ObserverInvoker(serviceProvider, eventTypes, _),
-                                        channel);
+                                        eventSerializer);
                                 });
+            _clusterClient = clusterClient;
+            _connectionManager = connectionManager;
+            _executionContextManager = executionContextManager;
         }
 
         /// <inheritdoc/>
-        public void StartObserving()
+        public async Task StartObserving()
         {
-            foreach (var observer in _observers)
+            // TODO: Observe for all tenants
+            _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
+            var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
+
+            foreach (var handler in _observerHandlers)
             {
-                observer.StartObserving();
+                var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.CurrentConnectionId.Value);
+                var subscription = await stream.SubscribeAsync(async (@event, _) => await handler.OnNext(@event));
+
+                var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
+                var eventTypes = handler.EventTypes.ToArray();
+                await observer.Subscribe(eventTypes);
             }
         }
     }

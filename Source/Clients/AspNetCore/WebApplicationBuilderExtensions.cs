@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis;
+using Cratis.Events.Schemas;
 using Cratis.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.AspNetCore.Builder
@@ -34,6 +36,18 @@ namespace Microsoft.AspNetCore.Builder
         {
             webApplicationBuilder.Host.UseCratis(microserviceId, configureDelegate);
             return webApplicationBuilder;
+        }
+
+        /// <summary>
+        /// Configures the usage of Cratis for the app.
+        /// </summary>
+        /// <param name="app"><see cref="IApplicationBuilder"/> to extend.</param>
+        /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
+        public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
+        {
+            app.UseExecutionContext();
+            app.ApplicationServices.GetService<ISchemas>()!.RegisterAll();
+            return app;
         }
     }
 }

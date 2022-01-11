@@ -19,11 +19,6 @@ namespace Cratis.Compliance.MongoDB
         static MongoDBEncryptionKeyStore()
         {
             BsonSerializer.RegisterSerializer(new EncryptionKeySerializer());
-            BsonClassMap.RegisterClassMap<EncryptionKeyForIdentifier>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapIdProperty(_ => _.Identifier);
-            });
         }
 
         /// <summary>

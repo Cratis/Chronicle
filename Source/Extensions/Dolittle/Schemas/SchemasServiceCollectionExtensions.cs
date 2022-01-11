@@ -3,7 +3,6 @@
 
 extern alias SDK;
 
-using Cratis.Events.Schemas;
 using Cratis.Extensions.Dolittle.Schemas;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -21,7 +20,6 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddDolittleSchemas(this IServiceCollection services)
         {
             services.AddSingleton<SDK::Cratis.Events.Schemas.ISchemas, Schemas>();
-            services.AddSingleton(new SchemaStoreConfiguration("localhost", 27017));
             return services;
         }
     }

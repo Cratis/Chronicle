@@ -19,6 +19,29 @@
             }
         },
         {
+            "name": ".NET Core Launch (Server - not just my code)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build server",
+            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net6.0/Cratis.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Source/Kernel/Server",
+            "stopAtEntry": false,
+            "justMyCode": false,
+            "requireExactSource": false,
+            "symbolOptions": {
+                "searchPaths": [],
+                "searchMicrosoftSymbolServer": false,
+                "searchNuGetOrgSymbolServer": true
+            },
+            "suppressJITOptimizations": true,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+            }
+        },
+        {
             "name": ".NET Core Launch (AspNetCore Sample)",
             "type": "coreclr",
             "request": "launch",
@@ -48,6 +71,15 @@
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Server and Client",
+            "configurations": [
+                ".NET Core Launch (Server)",
+                ".NET Core Launch (AspNetCore Sample)"
+            ]
         }
     ]
 }

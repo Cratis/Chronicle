@@ -14,10 +14,10 @@ Below is an example:
 ```csharp
     public static class EventLogLoggerMessages
     {
-        [LoggerMessage(0, LogLevel.Information, "Committing event with '{SequenceNumber}' as sequence number")]
-        internal static partial void Committing(this ILogger logger, EventType eventType, EventSourceId eventSource, uint sequenceNumber, EventLogId eventLog);
+        [LoggerMessage(0, LogLevel.Information, "Appending event with '{SequenceNumber}' as sequence number")]
+        internal static partial void Appending(this ILogger logger, EventType eventType, EventSourceId eventSource, uint sequenceNumber, EventLogId eventLog);
 
-        [LoggerMessage(1, LogLevel.Error, "Problem committing event to storage")]
-        internal static partial void CommitFailure(this ILogger logger, Exception exception);
+        [LoggerMessage(1, LogLevel.Error, "Problem appending event to storage")]
+        internal static partial void AppendFailure(this ILogger logger, Exception exception);
     }
 ```
