@@ -1,3 +1,17 @@
+# [v3.4.0] - 2022-1-11 [PR: #90](https://github.com/Cratis/cratis/pull/90)
+
+### Added
+
+- Adding MongoDB to the docker image being created. Later this will be multiple tags for different purposes (Development / Production..). We'll also likely split it up into multiple servers (API, Workbench, etc..).
+- Started on the basics of the Compliance workbench and domain with events.
+- Added a common dialog for FluentUI that makes it easy to pop up modal dialogs that share the same look & feel. This feature is also unobtrusive, meaning that you don't have to have the dialog in the markup.
+- Introducing a `ScrollableDetailsList` with the starting support for paging.
+
+### Fixed
+
+- Removing duplicates of concept definitions - leading to simpler code.
+
+
 # [v3.3.2] - 2022-1-11 [PR: #87](https://github.com/Cratis/cratis/pull/87)
 
 ### Fixed
