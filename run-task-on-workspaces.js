@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable header/header */
 
 if (process.argv.length < 3) {
     console.log('You have to specify what workspace task to run on all')
