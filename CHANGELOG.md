@@ -1,3 +1,10 @@
+# [v3.3.2] - 2022-1-11 [PR: #87](https://github.com/Cratis/cratis/pull/87)
+
+### Fixed
+
+- Setting Yarn timeout in Dockerfile to avoid getting **ESOCKETTIMEDOUT** during Yarn install (as suggested [here](https://github.com/yarnpkg/yarn/issues/8242#issuecomment-661881292). This is till we've upgraded to Yarn 2.0 that should have this fixed.
+
+
 # [v3.1.0] - 2022-1-11 [PR: #86](https://github.com/Cratis/cratis/pull/86)
 
 ### Fixed
