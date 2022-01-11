@@ -1,3 +1,10 @@
+# [v3.0.1] - 2022-1-11 [PR: #85](https://github.com/Cratis/cratis/pull/85)
+
+### Fixed
+
+- GitHub Actions failed for publishing due to `package.json` files being altered during build for correct versions. Added a `git reset` task before to the `docker build`.
+
+
 # [v3.0.0] - 2022-1-11 [PR: #84](https://github.com/Cratis/cratis/pull/84)
 
 ## Summary
