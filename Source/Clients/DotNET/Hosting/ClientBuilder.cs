@@ -38,19 +38,25 @@ namespace Cratis.Hosting
             _microserviceId = microserviceId;
         }
 
+        /// <inheritdoc/>
         public static IClientBuilder ForMicroservice(MicroserviceId id)
         {
             return new ClientBuilder(id);
         }
 
-        public void Build(HostBuilderContext hostBuilderContext, IServiceCollection services)
+        /// <inheritdoc/>
+        public void Build(HostBuilderContext hostBuilderContext, IServiceCollection services, ITypes? types = default)
         {
-            var types = new Types.Types();
+            if (types == default)
+            {
+                types = new Types.Types();
+            }
+
             var connectionManager = new ConnectionManager();
 
             services
                 .AddSingleton<IConnectionManager>(connectionManager)
-                .AddSingleton<ITypes>(types)
+                .AddSingleton(types)
                 .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
                 .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
                 .AddTransient<IEventStore, EventStore>()

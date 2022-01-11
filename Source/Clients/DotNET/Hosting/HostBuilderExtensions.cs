@@ -3,6 +3,7 @@
 
 using Cratis;
 using Cratis.Hosting;
+using Cratis.Types;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -15,11 +16,15 @@ namespace Microsoft.Extensions.Hosting
         /// Configures the <see cref="IClientBuilder"/> for a non-microservice oriented scenario.
         /// </summary>
         /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
+        /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
         /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
         /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
-        public static IHostBuilder UseCratis(this IHostBuilder hostBuilder, Action<IClientBuilder>? configureDelegate = null)
+        public static IHostBuilder UseCratis(
+            this IHostBuilder hostBuilder,
+            ITypes? types = default,
+            Action<IClientBuilder>? configureDelegate = default)
         {
-            return hostBuilder.UseCratis(Guid.Empty, configureDelegate);
+            return hostBuilder.UseCratis(MicroserviceId.Unspecified, types, configureDelegate);
         }
 
         /// <summary>
@@ -27,13 +32,18 @@ namespace Microsoft.Extensions.Hosting
         /// </summary>
         /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
         /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
+        /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
         /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
         /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
-        public static IHostBuilder UseCratis(this IHostBuilder hostBuilder, MicroserviceId microserviceId, Action<IClientBuilder>? configureDelegate = null)
+        public static IHostBuilder UseCratis(
+            this IHostBuilder hostBuilder,
+            MicroserviceId microserviceId,
+            ITypes? types = default,
+            Action<IClientBuilder>? configureDelegate = default)
         {
             var clientBuilder = ClientBuilder.ForMicroservice(microserviceId);
             configureDelegate?.Invoke(clientBuilder);
-            hostBuilder.ConfigureServices((context, services) => clientBuilder.Build(context, services));
+            hostBuilder.ConfigureServices((context, services) => clientBuilder.Build(context, services, types));
             return hostBuilder;
         }
     }

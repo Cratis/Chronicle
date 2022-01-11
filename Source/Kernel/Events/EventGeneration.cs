@@ -5,6 +5,8 @@ using Cratis.Concepts;
 
 namespace Cratis.Events
 {
+    // TODO: Rename this to EventTypeGeneration.
+
     /// <summary>
     /// Represents the generation of an <see cref="EventType"/>.
     /// </summary>

@@ -115,3 +115,6 @@ jobs:
           tags: |
             einari/cratis:${{ steps.release.outputs.version }}
             einari/cratis:latest
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}
+

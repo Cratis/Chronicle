@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Compliance.Reactions</AssemblyName>
+        <RootNamespace>CratisCompliance.Reactions</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Events/Events.csproj"/>
+    </ItemGroup>
+</Project>

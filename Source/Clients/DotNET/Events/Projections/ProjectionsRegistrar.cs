@@ -70,8 +70,6 @@ namespace Cratis.Events.Projections
                     });
                 await projections.Register(projectionDefinition, pipelineDefinition);
             }
-
-            await projections.Start();
         }
 
         /// <summary>

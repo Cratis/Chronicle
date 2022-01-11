@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -16,6 +17,7 @@ namespace Cratis.Hosting
         /// </summary>
         /// <param name="hostBuilderContext"><see cref="HostBuilderContext"/> we're building for.</param>
         /// <param name="services"><see cref="IServiceCollection"/> to register services for.</param>
-        void Build(HostBuilderContext hostBuilderContext, IServiceCollection services);
+        /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
+        void Build(HostBuilderContext hostBuilderContext, IServiceCollection services, ITypes? types = default);
     }
 }

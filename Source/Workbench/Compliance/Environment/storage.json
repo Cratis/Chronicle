@@ -1,0 +1,7 @@
+{
+    "type": "MongoDB",
+    "shared": "mongodb://mongo:27017/shared-event-store",
+    "eventStore": {
+        "f455c031-630e-450d-a75b-ca050c441708": "mongodb://mongo:27017/tenant-1-event-store"
+    }
+}

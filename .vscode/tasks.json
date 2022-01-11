@@ -5,10 +5,6 @@
             "label": "build server",
             "command": "dotnet",
             "type": "process",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
             "args": [
                 "build",
                 "--no-restore",
@@ -43,7 +39,25 @@
                 "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
-        }
+        },
+        {
+            "label": "build compliance",
+            "command": "dotnet",
+            "type": "process",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "args": [
+                "build",
+                "--no-restore",
+                "${workspaceFolder}/Source/Workbench/Compliance/Main/Main.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+
 
     ]
 }
