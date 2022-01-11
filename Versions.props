@@ -4,7 +4,7 @@
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
         <Autofac>6.2.0</Autofac>
         <AutofacExtensions>7.1.0</AutofacExtensions>
-        <Aksio>1.12.6</Aksio>
+        <Aksio>1.12.7</Aksio>
         <Orleans>3.5.1</Orleans>
         <MongoDB>2.13.1</MongoDB>
         <ServiceModelPrimitives>4.8.1</ServiceModelPrimitives>
