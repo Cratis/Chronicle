@@ -46,9 +46,9 @@ export const People = () => {
         ModalButtons.OkCancel,
         `Are you sure you want to delete PII for '${selectedPerson?.firstName} ${selectedPerson?.lastName} (${selectedPerson?.socialSecurityNumber})'?`,
         async (result) => {
-            if (result == ModalResult.Success) {
+            if (result == ModalResult.Success && selectedPerson) {
                 const command = new DeletePIIForPerson();
-                command.personId = selectedPerson?.id as any;
+                command.personId = selectedPerson.id;
                 await command.execute();
             }
         });
