@@ -3,6 +3,8 @@
 
 using System.Net;
 using Autofac.Extensions.DependencyInjection;
+using Cratis.Compliance;
+using Cratis.Compliance.MongoDB;
 using Cratis.Events.Projections;
 using Cratis.Events.Projections.Changes;
 using Cratis.Events.Projections.Definitions;
@@ -23,7 +25,7 @@ namespace Cratis.Server
 
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
                 .Build();
 
@@ -41,6 +43,7 @@ namespace Cratis.Server
                     .ConfigureServices(_ => _
                         .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
                         .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
+                        .AddSingleton<IEncryptionKeyStore, MongoDBEncryptionKeyStore>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
                         .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())

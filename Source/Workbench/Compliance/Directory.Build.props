@@ -1,0 +1,36 @@
+<Project>
+    <Import Project="$(MSBuildThisFileDirectory)../../../Versions.props"/>
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217</NoWarn>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+        <IsPackable>false</IsPackable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <ImplicitUsings>true</ImplicitUsings>
+
+        <AksioProxyOutput>$(MSBuildThisFileDirectory)Web/API</AksioProxyOutput>
+        <AksioUseRouteAsPath>true</AksioUseRouteAsPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="$(MSBuildThisFileDirectory)logo.png" PackagePath="/" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../../Clients/AspNetCore/AspNetCore.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.ProxyGenerator" Version="$(Aksio)"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+    </ItemGroup>
+
+</Project>

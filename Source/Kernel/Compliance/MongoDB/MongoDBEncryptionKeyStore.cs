@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Extensions.MongoDB;
+using Cratis.MongoDB;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
@@ -12,8 +12,6 @@ namespace Cratis.Compliance.MongoDB
     /// </summary>
     public class MongoDBEncryptionKeyStore : IEncryptionKeyStore
     {
-        readonly IMongoClient _client;
-        readonly IMongoDatabase _database;
         readonly IMongoCollection<EncryptionKeyForIdentifier> _encryptionKeysCollection;
 
         static MongoDBEncryptionKeyStore()
@@ -24,18 +22,10 @@ namespace Cratis.Compliance.MongoDB
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBEncryptionKeyStore"/> class.
         /// </summary>
-        /// <param name="mongoDBClientFactory"><see cref="IMongoDBClientFactory"/> to use for accessing database.</param>
-        public MongoDBEncryptionKeyStore(IMongoDBClientFactory mongoDBClientFactory)
+        /// <param name="database"><see cref="ISharedDatabase"/> to use for accessing database.</param>
+        public MongoDBEncryptionKeyStore(ISharedDatabase database)
         {
-            var mongoUrlBuilder = new MongoUrlBuilder
-            {
-                Servers = new[] { new MongoServerAddress("localhost", 27017) }
-            };
-            var url = mongoUrlBuilder.ToMongoUrl();
-            var settings = MongoClientSettings.FromUrl(url);
-            _client = mongoDBClientFactory.Create(settings);
-            _database = _client.GetDatabase("certificates");
-            _encryptionKeysCollection = _database.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
+            _encryptionKeysCollection = database.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
         }
 
         /// <inheritdoc/>
