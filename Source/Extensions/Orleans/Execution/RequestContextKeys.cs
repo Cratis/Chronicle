@@ -25,5 +25,10 @@ namespace Cratis.Extensions.Orleans.Execution
         /// The causation identifier key.
         /// </summary>
         public const string CausationId = "CausationId";
+
+        /// <summary>
+        /// The unique connection id from a client.
+        /// </summary>
+        public const string ConnectionId = "ConnectionId";
     }
 }
