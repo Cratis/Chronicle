@@ -20,7 +20,7 @@ namespace Cratis.Events.Projections
         readonly IProjectionPipelineDefinitions _projectionPipelineDefinitions;
         readonly IProjectionFactory _projectionFactory;
         readonly IProjectionPipelineFactory _pipelineFactory;
-        readonly ILogger<Projection> _logger;
+        readonly ILogger<Projections> _logger;
         readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
         readonly ConcurrentDictionary<ProjectionId, CancellationTokenSource> _cancellationTokenSources = new();
 
@@ -39,7 +39,7 @@ namespace Cratis.Events.Projections
             IProjectionPipelineDefinitions projectionPipelineDefinitions,
             IProjectionFactory projectionFactory,
             IProjectionPipelineFactory pipelineFactory,
-            ILogger<Projection> logger)
+            ILogger<Projections> logger)
         {
             _projectionDefinitions = projectionDefinitions;
             _projectionPipelineDefinitions = projectionPipelineDefinitions;

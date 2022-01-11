@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Cratis.Properties;
 
-namespace Cratis.Events.Projections.for_PropertyMappers
+namespace Cratis.Events.Projections.for_EventValueProviders
 {
     public class when_getting_event_source_id : Specification
     {

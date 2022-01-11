@@ -32,7 +32,7 @@ namespace Cratis.Events.Projections.for_Projections
                 "ce35564f-f75c-4429-b91e-b236f48dd88b",
                 Array.Empty<ProjectionResultStoreDefinition>());
 
-            pipeline_definitions.Setup(_ => _.GetAll()).Returns(new[] { unregistered_pipeline_definition });
+            pipeline_definitions.Setup(_ => _.GetAll()).Returns(Task.FromResult(new[] { unregistered_pipeline_definition }.AsEnumerable()));
             projection_definitions.Setup(_ => _.HasFor(unregistered_projection_identifier)).Returns(Task.FromResult(true));
             projection_definitions.Setup(_ => _.GetFor(unregistered_projection_identifier)).Returns(Task.FromResult(unregistered_projection_definition));
 
@@ -41,13 +41,14 @@ namespace Cratis.Events.Projections.for_Projections
             unregistered_projection = new();
             unregistered_projection.SetupGet(_ => _.Identifier).Returns(unregistered_projection_identifier);
             unregistered_pipeline = new();
+            unregistered_pipeline.SetupGet(_ => _.Projection).Returns(unregistered_projection.Object);
             projection_factory.Setup(_ => _.CreateFrom(unregistered_projection_definition)).Returns(unregistered_projection.Object);
             pipeline_factory.Setup(_ => _.CreateFrom(unregistered_projection.Object, unregistered_pipeline_definition)).Returns(unregistered_pipeline.Object);
 
             projections.Pipelines.Subscribe(_ => pipeline_registered = _);
         }
 
-        void Because() => projections.Start();
+        async Task Because() => await projections.Start();
 
         [Fact] void should_register_projection_definition() => projection_definitions.Verify(_ => _.Register(unregistered_projection_definition), Once());
         [Fact] void should_register_pipeline_definition() => pipeline_definitions.Verify(_ => _.Register(unregistered_pipeline_definition), Once());
