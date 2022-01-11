@@ -17,13 +17,13 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class ProjectionsServiceCollectionExtensions
     {
         /// <summary>
-        /// Configure use of Dolittle implementations of <see cref="SDK::Cratis.Events.Projections.IProjections"/>.
+        /// Configure use of Dolittle implementations of <see cref="SDK::Cratis.Events.Projections.IProjectionsRegistrar"/>.
         /// </summary>
         /// <param name="services"><see cref="IServiceCollection"/> to build on.</param>
         /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
         public static IServiceCollection AddDolittleProjections(this IServiceCollection services)
         {
-            services.AddSingleton<SDK::Cratis.Events.Projections.IProjections, Cratis.Extensions.Dolittle.Projections.Projections>();
+            services.AddSingleton<SDK::Cratis.Events.Projections.IProjectionsRegistrar, ProjectionsRegistrar>();
             services.AddSingleton<IProjectionPositions, MongoDBProjectionPositions>();
             services.AddSingleton<IChangesetStorage, MongoDBChangesetStorage>();
             services.AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>();
