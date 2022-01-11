@@ -29,6 +29,9 @@ WORKDIR /build
 COPY --from=shared /build/ .
 
 WORKDIR /build/Source/Workbench/Events/Web
+
+# Set network timeout manually as a workaround till we're on Yarn 2: https://github.com/yarnpkg/yarn/issues/8242#issuecomment-661881292
+RUN yarn config set network-timeout 300000
 RUN yarn
 RUN yarn build
 
