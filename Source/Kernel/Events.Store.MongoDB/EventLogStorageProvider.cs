@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.DependencyInversion;
 using Cratis.Execution;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
@@ -11,34 +9,34 @@ using Orleans.Storage;
 
 namespace Cratis.Events.Store.MongoDB
 {
-    // Read more: https://dotnet.github.io/orleans/docs/grains/grain_persistence/index.html#storage-provider-semantics
+    /// <summary>
+    /// Represents an implementation of <see cref="IGrainStorage"/> for handling event log state storage.
+    /// </summary>
     public class EventLogStorageProvider : IGrainStorage
     {
         const string CollectionName = "event-logs";
 
-        static EventLogStorageProvider()
-        {
-            BsonClassMap.RegisterClassMap<EventLogState>(cm =>
-            {
-                cm.AutoMap();
-                cm.MapIdProperty(_ => _.EventLog);
-            });
-        }
-
         readonly IExecutionContextManager _executionContextManager;
-        readonly ProviderFor<IMongoDatabase> _mongoDatabaseProvider;
+        readonly IEventStoreDatabase _eventStoreDatabase;
 
-        public EventLogStorageProvider(IExecutionContextManager executionContextManager, ProviderFor<IMongoDatabase> mongoDatabaseProvider)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventLogStorageProvider"/> class.
+        /// </summary>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+        /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
+        public EventLogStorageProvider(IExecutionContextManager executionContextManager, IEventStoreDatabase eventStoreDatabase)
         {
             _executionContextManager = executionContextManager;
-            _mongoDatabaseProvider = mongoDatabaseProvider;
+            _eventStoreDatabase = eventStoreDatabase;
         }
 
+        /// <inheritdoc/>
         public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc/>
         public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
             var eventLogId = grainReference.GetPrimaryKey(out var tenantIdAsString);
@@ -48,6 +46,7 @@ namespace Cratis.Events.Store.MongoDB
             grainState.State = await cursor.FirstOrDefaultAsync() ?? new EventLogState();
         }
 
+        /// <inheritdoc/>
         public Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
             var eventLogId = grainReference.GetPrimaryKey(out var tenantIdAsString);
@@ -59,6 +58,6 @@ namespace Cratis.Events.Store.MongoDB
                 new() { IsUpsert = true });
         }
 
-        IMongoCollection<EventLogState> Collection => _mongoDatabaseProvider().GetCollection<EventLogState>(CollectionName);
+        IMongoCollection<EventLogState> Collection => _eventStoreDatabase.GetCollection<EventLogState>(CollectionName);
     }
 }

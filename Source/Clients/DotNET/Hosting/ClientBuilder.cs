@@ -1,12 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Collections;
+using Cratis.Compliance;
+using Cratis.Connections;
 using Cratis.Events;
 using Cratis.Events.Observation;
-using Cratis.Grpc;
+using Cratis.Events.Projections;
+using Cratis.Events.Schemas;
+using Cratis.Execution;
+using Cratis.Extensions.MongoDB;
+using Cratis.Extensions.Orleans.Execution;
+using Cratis.Schemas;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProtoBuf.Grpc.Client;
+using Orleans;
+using Orleans.Hosting;
+using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
+using OrleansClientBuilder = Orleans.ClientBuilder;
 
 namespace Cratis.Hosting
 {
@@ -33,17 +45,60 @@ namespace Cratis.Hosting
 
         public void Build(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
-            GrpcClientFactory.AllowUnencryptedHttp2 = true;
-
-            var channel = new GrpcChannel("http://localhost:5002");
             var types = new Types.Types();
+            var connectionManager = new ConnectionManager();
 
-            services.AddSingleton<Types.ITypes>(types);
-            services.AddSingleton<IGrpcChannel>(channel);
-            services.AddSingleton<IEventStore, EventStore>();
-            services.AddSingleton<IObservers, Observers>();
-            services.AddSingleton<IEventTypes, EventTypes>();
-            services.AddSingleton<IHostedService, ObserversService>();
+            services
+                .AddSingleton<IConnectionManager>(connectionManager)
+                .AddSingleton<ITypes>(types)
+                .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
+                .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
+                .AddTransient<IEventStore, EventStore>()
+                .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
+                .AddMongoDBReadModels(types)
+                .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
+                .AddProjections()
+                .AddSingleton<IObservers, Observers>()
+                .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
+                .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
+                .AddSingleton<ISchemas, Events.Schemas.Schemas>()
+                .AddSingleton<IEventTypes, EventTypes>()
+                .AddSingleton<IEventSerializer, EventSerializer>()
+                .AddSingleton<IHostedService, ObserversService>()
+                .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
+                .AddSingleton<IRequestContextManager, RequestContextManager>();
+            types.AllObservers().ForEach(_ => services.AddTransient(_));
+
+            types.All.Where(_ =>
+                _ != typeof(ICanProvideComplianceMetadataForType) &&
+                _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
+            types.All.Where(_ =>
+                _ != typeof(ICanProvideComplianceMetadataForProperty) &&
+                _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
+
+            var orleansBuilder = new OrleansClientBuilder()
+                .UseLocalhostClustering()
+                // TODO: .AddClusterConnectionLostHandler()
+                .AddEventLogStream()
+                .AddSimpleMessageStreamProvider("observer-handlers")
+                .UseExecutionContext()
+                .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
+                .ConfigureServices(services => services
+                    .AddSingleton<IConnectionManager>(connectionManager)
+                    .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                    .AddSingleton<IRequestContextManager, RequestContextManager>()
+                    .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
+
+            var orleansClient = orleansBuilder.Build();
+
+            services.AddSingleton(orleansClient);
+
+            orleansClient.Connect(async (_) =>
+            {
+                await Task.Delay(1000);
+                return true;
+            }).Wait();
         }
     }
 }

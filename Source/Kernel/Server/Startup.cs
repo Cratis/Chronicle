@@ -1,16 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.IO.Compression;
 using Autofac;
-using Cratis.Events.Observation.Grpc;
-using Cratis.Events.Store.Grpc;
+using Cratis.Concepts;
+using Cratis.Concepts.SystemJson;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using ProtoBuf.Grpc.Configuration;
-using ProtoBuf.Grpc.Server;
 
 namespace Cratis.Server
 {
@@ -21,19 +17,24 @@ namespace Cratis.Server
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(Types);
+            Types.RegisterTypeConvertersForConcepts();
+
+            services
+                .AddSingleton(Types)
+                .AddConfigurationObjects(Types);
             services.AddMvc();
+
+            var controllerBuilder = services
+                .AddControllers(_ => _.AddCQRS())
+                .AddJsonOptions(_ => _.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory()));
 
             foreach (var controllerAssembly in Types.FindMultiple<Controller>().Select(_ => _.Assembly).Distinct())
             {
-                services.AddControllers().PartManager.ApplicationParts.Add(new AssemblyPart(controllerAssembly));
+                controllerBuilder.PartManager.ApplicationParts.Add(new AssemblyPart(controllerAssembly));
             }
 
-            services.AddCodeFirstGrpc(config => config.ResponseCompressionLevel = CompressionLevel.Optimal);
-            services.AddCodeFirstGrpcReflection();
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
-            services.TryAddSingleton(BinderConfiguration.Create(binder: new ServiceBinderWithServiceResolutionFromServiceCollection(services)));
         }
 
         public void ConfigureContainer(ContainerBuilder containerBuilder)
@@ -53,17 +54,19 @@ namespace Cratis.Server
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseWebSockets();
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+
             app.UseSwagger();
             app.UseSwaggerUI();
 
+            app.PerformBootProcedures();
+
             app.UseRouting();
-            // app.UseEndpoints(endpoints =>
-            // {
-            //     endpoints.MapControllers();
-            //     endpoints.MapGrpcService<EventLogService>();
-            //     endpoints.MapGrpcService<ObserversService>();
-            //     endpoints.MapCodeFirstGrpcReflectionService();
-            // });
+            app.UseEndpoints(endpoints => endpoints.MapControllers());
+
+            app.RunAsSinglePageApplication();
         }
     }
 }

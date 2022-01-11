@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Reflection;
 using Cratis.Concepts;
 using MongoDB.Bson;
@@ -86,12 +87,22 @@ namespace Cratis.Extensions.MongoDB
             {
                 bsonWriter.WriteDouble((double)(underlyingValue ?? default(double)));
             }
-            else if (underlyingValueType == typeof(int))
+            else if (underlyingValueType == typeof(int) || underlyingValueType == typeof(uint))
             {
+                if (underlyingValue is uint)
+                {
+                    underlyingValue = Convert.ChangeType(underlyingValue, typeof(int), CultureInfo.InvariantCulture)!;
+                }
+
                 bsonWriter.WriteInt32((int)(underlyingValue ?? default(int)));
             }
-            else if (underlyingValueType == typeof(long))
+            else if (underlyingValueType == typeof(long) || underlyingValueType == typeof(ulong))
             {
+                if (underlyingValue is ulong)
+                {
+                    underlyingValue = Convert.ChangeType(underlyingValue, typeof(long), CultureInfo.InvariantCulture)!;
+                }
+
                 bsonWriter.WriteInt64((long)(underlyingValue ?? default(long)));
             }
             else if (underlyingValueType == typeof(bool))
@@ -144,13 +155,23 @@ namespace Cratis.Extensions.MongoDB
             {
                 return (float)bsonReader.ReadDouble();
             }
-            else if (valueType == typeof(int))
+            else if (valueType == typeof(int) || valueType == typeof(uint))
             {
-                return bsonReader.ReadInt32();
+                var value = bsonReader.ReadInt32();
+                if( valueType == typeof(uint) )
+                {
+                    return Convert.ChangeType(value, typeof(uint), CultureInfo.InvariantCulture)!;
+                }
+                return value;
             }
-            else if (valueType == typeof(long))
+            else if (valueType == typeof(long) || valueType == typeof(ulong))
             {
-                return bsonReader.ReadInt64();
+                var value = bsonReader.ReadInt64();
+                if( valueType == typeof(ulong) )
+                {
+                    return Convert.ChangeType(value, typeof(ulong), CultureInfo.InvariantCulture)!;
+                }
+                return value;
             }
             else if (valueType == typeof(bool))
             {

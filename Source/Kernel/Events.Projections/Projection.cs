@@ -79,6 +79,9 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
+        public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(eventType);
+
+        /// <inheritdoc/>
         public ValueProvider<Event> GetKeyResolverFor(EventType eventType)
         {
             ThrowIfMissingKeyResolverForEventType(eventType);

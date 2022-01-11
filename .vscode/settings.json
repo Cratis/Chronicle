@@ -66,6 +66,7 @@
         "Namotion",
         "Proto",
         "protobuf",
-        "tinycolor"
+        "tinycolor",
+        "upserted"
     ]
 }

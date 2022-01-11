@@ -1,0 +1,11 @@
+**/bin
+**/obj
+.vscode
+**/node_modules
+.github
+yarn-error.log
+yarn.lock
+package-json.lock
+dist
+for_*
+Dockerfile

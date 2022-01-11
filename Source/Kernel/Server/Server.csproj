@@ -5,9 +5,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Autofac" Version="$(Autofac)" />
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
-        <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="$(ProtobufNetGrpc)" />
-        <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="$(ProtobufNetGrpc)" />
         <PackageReference Include="serilog.aspnetcore" Version="4.0.0" />
         <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
@@ -20,15 +19,20 @@
 
     <ItemGroup>
         <ProjectReference Include="../Configuration/Configuration.csproj" />
-        <ProjectReference Include="../Events.Observation/Events.Observation.csproj" />
-        <ProjectReference Include="../Events.Observation.Grpc/Events.Observation.Grpc.csproj" />
+        <ProjectReference Include="../Configuration.Grains/Configuration.Grains.csproj" />
+        <ProjectReference Include="../Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj" />
         <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
         <ProjectReference Include="../Events.Schemas.Api/Events.Schemas.Api.csproj" />
+        <ProjectReference Include="../Events.Schemas.Grains/Events.Schemas.Grains.csproj" />
         <ProjectReference Include="../Events.Store/Events.Store.csproj" />
         <ProjectReference Include="../Events.Store.Api/Events.Store.Api.csproj" />
-        <ProjectReference Include="../Events.Store.Grpc/Events.Store.Grpc.csproj" />
+        <ProjectReference Include="../Events.Store.Grains/Events.Store.Grains.csproj" />
         <ProjectReference Include="../Events.Store.MongoDB/Events.Store.MongoDB.csproj" />
+        <ProjectReference Include="../Events.Projections/Events.Projections.csproj" />
+        <ProjectReference Include="../Events.Projections.MongoDB/Events.Projections.MongoDB.csproj" />
         <ProjectReference Include="../Events.Projections.Api/Events.Projections.Api.csproj" />
+        <ProjectReference Include="../Events.Projections.Grains/Events.Projections.Grains.csproj" />
+        <ProjectReference Include="../Events.Projections.Grains.Interfaces/Events.Projections.Grains.Interfaces.csproj" />
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />

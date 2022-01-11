@@ -3,14 +3,16 @@
 
 using System.Net;
 using Autofac.Extensions.DependencyInjection;
-using Cratis.Events.Store;
-using Cratis.Events.Store.MongoDB;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Cratis.Events.Projections;
+using Cratis.Events.Projections.Changes;
+using Cratis.Events.Projections.Definitions;
+using Cratis.Events.Projections.MongoDB;
+using Cratis.Extensions.Dolittle.Projections;
 using Orleans;
+using Orleans.Configuration;
 using Orleans.Hosting;
-using Orleans.Runtime;
-using Orleans.Storage;
 using Serilog;
+
 namespace Cratis.Server
 {
     public static class Program
@@ -33,21 +35,32 @@ namespace Cratis.Server
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
+             Host.CreateDefaultBuilder(args)
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
-                    .AddMemoryGrainStorageAsDefault()
-                    .AddExecutionContext()
-                    .ConfigureServices(services => services.AddSingletonNamedService(EventLogState.StorageProvider, (serviceProvider, ___) => serviceProvider.GetService(typeof(EventLogStorageProvider)) as IGrainStorage)))
+                    .ConfigureServices(_ => _
+                        .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
+                        .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
+                        .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
+                        .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
+                        .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
+                    .Configure<EndpointOptions>(options =>
+                    {
+                        options.SiloPort = 11111;
+                        options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Any, 11111);
+                        options.GatewayPort = 30000;
+                        options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, 30000);
+                    })
+                    .AddConnectedClientsTracking()
+                    .AddEventLogStream()
+                    .UseMongoDBReminderService()
+                    .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
+                    .AddExecutionContext())
+
                 .UseSerilog()
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _
-                    .UseStartup<Startup>()
-                    // .ConfigureKestrel(options => {
-                    //     options.Listen(IPAddress.Any, 5000, listenOptions => listenOptions.Protocols = HttpProtocols.Http1AndHttp2);
-                    //     options.Listen(IPAddress.Any, 5002, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
-                    // })
-                    );
+                    .UseStartup<Startup>());
 
         static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
         {

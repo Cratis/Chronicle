@@ -69,6 +69,13 @@ namespace Cratis.Events.Projections
         void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset);
 
         /// <summary>
+        /// Checks whether or not the projection will accept a specific event type.
+        /// </summary>
+        /// <param name="eventType"><see cref="EventType"/> to check.</param>
+        /// <returns>True if it does, false if not.</returns>
+        bool Accepts(EventType eventType);
+
+        /// <summary>
         /// Get the <see cref="ValueProvider{Event}"/> associated with a given <see cref="EventType"/>.
         /// </summary>
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>

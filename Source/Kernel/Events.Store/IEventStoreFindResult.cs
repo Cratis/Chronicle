@@ -11,13 +11,13 @@ namespace Cratis.Events.Store
     public interface IEventStoreFindResult
     {
         /// <summary>
-        /// Gets an observable <see cref="Subject{T}"/> that will receive all the <see cref="CommittedEvent"/> from a find.
+        /// Gets an observable <see cref="Subject{T}"/> that will receive all the <see cref="AppendedEvent"/> from a find.
         /// </summary>
-        Subject<CommittedEvent> Event { get; }
+        Subject<AppendedEvent> Event { get; }
 
         /// <summary>
-        /// Create an enumerable of all the <see cref="CommittedEvent"/> in the find result
+        /// Create an enumerable of all the <see cref="AppendedEvent"/> in the find result
         /// </summary>
-        IEnumerable<CommittedEvent> AsEnumerable();
+        IEnumerable<AppendedEvent> AsEnumerable();
     }
 }

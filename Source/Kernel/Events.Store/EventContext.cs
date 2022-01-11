@@ -4,7 +4,7 @@
 namespace Cratis.Events.Store
 {
     /// <summary>
-    /// Represents the context in which an event exists - typically what it was committed with.
+    /// Represents the context in which an event exists - typically what it was appended with.
     /// </summary>
     /// <param name="EventSourceId">The <see cref="EventSourceId"/>.</param>
     /// <param name="Occurred"><see cref="DateTimeOffset">When</see> it occurred.</param>

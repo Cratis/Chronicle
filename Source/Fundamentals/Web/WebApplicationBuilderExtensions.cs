@@ -21,7 +21,7 @@ namespace Microsoft.AspNetCore.Builder
         /// <remarks>
         /// If there is no <see cref="SharedOptions"/> given, it will default to index.html inside your wwwwroot of the content root.
         /// </remarks>
-        public static void RunAsSinglePageApplication(this IApplicationBuilder app, SharedOptions? options)
+        public static void RunAsSinglePageApplication(this IApplicationBuilder app, SharedOptions? options = null)
         {
             var environment = app.ApplicationServices.GetService(typeof(IWebHostEnvironment)) as IWebHostEnvironment;
             var fileInfo = options?.FileProvider?.GetFileInfo("index.html") ?? new PhysicalFileInfo(new FileInfo($"{environment!.ContentRootPath}/wwwroot/index.html"));

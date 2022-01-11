@@ -8,8 +8,10 @@ using Cratis.Schemas;
 
 namespace Cratis.Extensions.Dolittle.Schemas
 {
-    public class Schemas : SDK::Cratis.Events.Schemas.Schemas
+    public class Schemas : SDK::Cratis.Events.Schemas.ISchemas
     {
+        readonly IEnumerable<SDK::Cratis.Events.Schemas.EventSchemaDefinition> _definitions;
+        readonly SDK::Cratis.Events.IEventTypes _eventTypes;
         readonly ISchemaStore _schemaStore;
 
         /// <summary>
@@ -21,18 +23,28 @@ namespace Cratis.Extensions.Dolittle.Schemas
         public Schemas(
             SDK::Cratis.Events.IEventTypes eventTypes,
             IJsonSchemaGenerator schemaGenerator,
-            ISchemaStore schemaStore) : base(eventTypes, schemaGenerator)
+            ISchemaStore schemaStore)
         {
+            _eventTypes = eventTypes;
+            _definitions = eventTypes.All.Select(_ =>
+            {
+                var type = _eventTypes.GetClrTypeFor(_.Id)!;
+                return new SDK::Cratis.Events.Schemas.EventSchemaDefinition(
+                    _,
+                    type.Name,
+                    schemaGenerator.Generate(type));
+            });
+
             _schemaStore = schemaStore;
         }
 
         /// <inheritdoc/>
-        public override void RegisterAll()
+        public void RegisterAll()
         {
             foreach (var schemaDefinition in _definitions)
             {
                 _schemaStore.Register(
-                    new Events.EventType(schemaDefinition.Type.EventTypeId.Value, schemaDefinition.Type.Generation.Value),
+                    schemaDefinition.Type,
                     schemaDefinition.FriendlyName,
                     schemaDefinition.Schema);
             }

@@ -5,16 +5,20 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Kernel/Events.Observation.Grpc.Contracts/Events.Observation.Grpc.Contracts.csproj" />
-        <ProjectReference Include="../../Kernel/Events.Store.Grpc.Contracts/Events.Store.Grpc.Contracts.csproj" />
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
+        <ProjectReference Include="../../Kernel/Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Projections/Events.Projections.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Projections.Grains.Interfaces/Events.Projections.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Schemas.Grains.Interfaces/Events.Schemas.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Events.Store.MongoDB/Events.Store.MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Grpc.Net.Client" Version="2.39.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
-      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+      <PackageReference Include="Microsoft.Orleans.Client" Version="$(Orleans)" />
       <PackageReference Include="Humanizer" Version="$(Humanizer)" />
     </ItemGroup>
 </Project>

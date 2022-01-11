@@ -30,6 +30,9 @@ namespace Cratis.Execution
         public static void SetCurrent(ExecutionContext context) => _currentExecutionContext.Value = context;
 
         /// <inheritdoc/>
+        public bool IsInContext => _currentExecutionContext?.Value != default;
+
+        /// <inheritdoc/>
         public ExecutionContext Current => GetCurrent();
 
         /// <inheritdoc/>
@@ -38,7 +41,8 @@ namespace Cratis.Execution
             _currentExecutionContext.Value = new ExecutionContext(
                 tenantId,
                 correlationId,
-                string.Empty);
+                string.Empty,
+                Guid.Empty);
 
             return _currentExecutionContext.Value;
         }

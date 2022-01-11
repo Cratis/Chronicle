@@ -4,6 +4,7 @@
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Pipelines;
 using Cratis.Properties;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.for_Projections.given
 {
@@ -24,11 +25,13 @@ namespace Cratis.Events.Projections.for_Projections.given
             projection_definitions.Object,
             pipeline_definitions.Object,
             projection_factory.Object,
-            pipeline_factory.Object);
+            pipeline_factory.Object,
+            Mock.Of<ILogger<Projections>>());
 
             projection = new();
             projection.SetupGet(_ => _.Identifier).Returns(projection_identifier);
             pipeline = new();
+            pipeline.SetupGet(_ => _.Projection).Returns(projection.Object);
 
             projection_definition = new(
                 projection_identifier,

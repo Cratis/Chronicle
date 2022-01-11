@@ -5,6 +5,10 @@
     "private": true,
     "author": "Cratis",
     "license": "MIT",
+    "engineStrict": true,
+    "engines": {
+        "node": ">= 16"
+    },
     "scripts": {
         "build": "webpack --mode=production",
         "build:dev": "webpack --mode=development",
