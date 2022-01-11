@@ -85,6 +85,10 @@ jobs:
         run: |
           yarn publish-version ${{ steps.release.outputs.version }}
 
+      - name: Git reset (package.json files changed)
+        run: |
+          git reset
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
