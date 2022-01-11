@@ -1,3 +1,31 @@
+# [v3.0.0] - 2022-1-11 [PR: #84](https://github.com/Cratis/cratis/pull/84)
+
+## Summary
+
+The primary focus of this PR is to bring in support for observers. While doing so, some major changes had to be done internally. There is also a shift in mindset and design during the process of doing this. Such as dropping GRPC in favor of just using the Orleans cluster client directly. This is fine for now as our primary focus is on C#/.NET support.
+
+### Added
+
+- Full partitioned observer support with support for failures with reminders of retry.
+- Distributed event log leveraging the streaming capabilities of Orleans.
+- C# Type converter support for concepts - useful when using concepts as parameters on API actions.
+- Started work on compensations.
+
+
+### Changed
+
+- EventLog API changed to `Append` from `Commit`.
+
+### Fixed
+
+- Describe the fix and the bug
+
+### Removed
+
+- All GRPC contracts and implementations.
+
+
+
 # [v2.17.0] - 2021-12-22 [PR: #76](https://github.com/Cratis/cratis/pull/76)
 
 ## Summary
