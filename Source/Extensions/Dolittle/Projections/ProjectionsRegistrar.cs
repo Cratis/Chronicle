@@ -19,10 +19,10 @@ using IEventTypes = SDK::Cratis.Events.IEventTypes;
 namespace Cratis.Extensions.Dolittle.Projections
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionsRegistrar"/>.
+    /// Represents an implementation of <see cref="SDK::Cratis.Events.Projections.IProjectionsRegistrar"/>.
     /// </summary>
     [Singleton]
-    public class ProjectionsRegistrar : IProjectionsRegistrar
+    public class ProjectionsRegistrar : SDK::Cratis.Events.Projections.IProjectionsRegistrar
     {
         readonly IJsonProjectionSerializer _projectionSerializer;
         readonly IServiceProvider _serviceProvider;
@@ -45,7 +45,7 @@ namespace Cratis.Extensions.Dolittle.Projections
             IJsonSchemaGenerator schemaGenerator,
             IServiceProvider serviceProvider)
         {
-            _projections = ProjectionsRegistrar.FindAllProjectionDefinitions(eventTypes, types, schemaGenerator);
+            _projections = SDK::Cratis.Events.Projections.ProjectionsRegistrar.FindAllProjectionDefinitions(eventTypes, types, schemaGenerator);
             _projectionSerializer = projectionSerializer;
             _serviceProvider = serviceProvider;
             projectionsReady.IsReady.Subscribe(async _ => await ActualStartAll());
@@ -80,7 +80,7 @@ namespace Cratis.Extensions.Dolittle.Projections
                 await projections.Register(parsed, pipelineDefinition);
             }
 
-            projections.Start();
+            await projections.Start();
         }
     }
 }
