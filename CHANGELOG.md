@@ -1,3 +1,10 @@
+# [v3.1.0] - 2022-1-11 [PR: #86](https://github.com/Cratis/cratis/pull/86)
+
+### Fixed
+
+- Docker image creation.
+
+
 # [v3.0.1] - 2022-1-11 [PR: #85](https://github.com/Cratis/cratis/pull/85)
 
 ### Fixed
