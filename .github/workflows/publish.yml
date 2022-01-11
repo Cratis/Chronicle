@@ -87,7 +87,7 @@ jobs:
 
       - name: Git reset (package.json files changed)
         run: |
-          git reset
+          git reset --hard
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
