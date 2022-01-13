@@ -69,9 +69,10 @@ RUN ln -s /bin/true /bin/systemctl
 
 # Install MongoDB
 RUN wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | apt-key add - \
-    && echo "deb [ arch=arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" > /etc/apt/sources.list.d/mongodb-org-4.2.list \
+    && echo "deb [ arch= ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" > /etc/apt/sources.list.d/mongodb-org-4.2.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+        curl \
         mongodb-org-server \
         mongodb-org-shell \
     && rm -rf /var/lib/apt/lists/*
@@ -86,7 +87,7 @@ RUN mkdir -p /data/db /data/configdb \
 VOLUME /data/db /data/configdb
 
 # Add Tini to get a real init process
-ADD https://github.com/krallin/tini/releases/download/v0.19.0/tini-arm64 /usr/bin/tini
+RUN curl -LJ https://github.com/krallin/tini/releases/download/v0.19.0/tini-$(dpkg --print-architecture) --output /usr/bin/tini
 RUN chmod +x /usr/bin/tini
 
 # Create entrypoint that runs both MongoDB and Runtime
