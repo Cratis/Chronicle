@@ -13,6 +13,12 @@ namespace Cratis.Hosting
     public interface IClientBuilder
     {
         /// <summary>
+        /// Instruct the builder that the client is within a silo.
+        /// </summary>
+        /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
+        IClientBuilder InSilo();
+
+        /// <summary>
         /// Build the client.
         /// </summary>
         /// <param name="hostBuilderContext"><see cref="HostBuilderContext"/> we're building for.</param>

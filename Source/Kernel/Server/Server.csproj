@@ -43,6 +43,8 @@
         <ProjectReference Include="../Projections/Events.Projections.Api/Events.Projections.Api.csproj" />
         <ProjectReference Include="../Projections/Events.Projections.Grains/Events.Projections.Grains.csproj" />
         <ProjectReference Include="../Projections/Events.Projections.Grains.Interfaces/Events.Projections.Grains.Interfaces.csproj" />
+
+        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj"/>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />

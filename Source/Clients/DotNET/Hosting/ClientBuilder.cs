@@ -29,6 +29,8 @@ namespace Cratis.Hosting
     {
         readonly MicroserviceId _microserviceId;
 
+        bool _inSilo;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
         /// </summary>
@@ -42,6 +44,13 @@ namespace Cratis.Hosting
         public static IClientBuilder ForMicroservice(MicroserviceId id)
         {
             return new ClientBuilder(id);
+        }
+
+        /// <inheritdoc/>
+        public IClientBuilder InSilo()
+        {
+            _inSilo = true;
+            return this;
         }
 
         /// <inheritdoc/>
@@ -100,11 +109,14 @@ namespace Cratis.Hosting
 
             services.AddSingleton(orleansClient);
 
-            orleansClient.Connect(async (_) =>
+            if (!_inSilo)
             {
-                await Task.Delay(1000);
-                return true;
-            }).Wait();
+                orleansClient.Connect(async (_) =>
+                {
+                    await Task.Delay(1000);
+                    return true;
+                }).Wait();
+            }
         }
     }
 }

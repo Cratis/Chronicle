@@ -59,7 +59,7 @@ namespace Cratis.Server
                     .UseMongoDBReminderService()
                     .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
                     .AddExecutionContext())
-
+                .UseCratis(Startup.Types, _ => _.InSilo())
                 .UseSerilog()
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _
