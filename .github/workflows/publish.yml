@@ -104,12 +104,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker Image
+      - name: Build Production Docker Image
         uses: docker/build-push-action@v2
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: ./Docker/Dockerfile
+          file: ./Docker/Production/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -117,4 +117,17 @@ jobs:
             einari/cratis:latest
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
+
+      - name: Build Development Docker Image
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/Development/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            einari/cratis:${{ steps.release.outputs.version }}-development
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}-development
 
