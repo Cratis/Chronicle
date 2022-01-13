@@ -1,0 +1,37 @@
+{
+    "name": "@cratis/workbench.compliance",
+    "version": "1.0.0",
+    "description": "",
+    "private": true,
+    "author": "Cratis",
+    "license": "MIT",
+    "engineStrict": true,
+    "engines": {
+        "node": ">= 16"
+    },
+    "scripts": {
+        "build": "webpack --mode=production",
+        "build:dev": "webpack --mode=development",
+        "start:dev": "webpack serve --mode=development --progress --hot",
+        "clean": "tsc -b --clean",
+        "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
+        "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
+        "ci": "yarn clean && yarn lint:ci && yarn build",
+        "up": "ncu -u \\!'@cratis/*'"
+    },
+    "dependencies": {
+        "@cratis/fluentui": "1.0.0",
+        "@cratis/react": "1.0.0",
+        "@cratis/fundamentals": "1.0.0",
+        "@fluentui/react-experiments": "8.4.17",
+        "@monaco-editor/react": "4.3.1",
+        "echarts": "^5.2.2",
+        "handlebars": "^4.7.7",
+        "@aksio/frontend": "1.12.7",
+        "@ctrl/tinycolor": "^3.4.0",
+        "d3": "7.3.0"
+    },
+    "devDependencies": {
+        "@cratis/webpack": "1.0.0"
+    }
+}

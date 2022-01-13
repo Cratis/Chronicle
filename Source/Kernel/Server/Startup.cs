@@ -62,6 +62,8 @@ namespace Cratis.Server
 
             app.PerformBootProcedures();
 
+            app.UseCratis();
+
             app.UseRouting();
             app.UseEndpoints(endpoints => endpoints.MapControllers());
 
