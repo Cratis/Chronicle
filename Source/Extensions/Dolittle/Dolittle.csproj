@@ -14,10 +14,10 @@
         <ProjectReference Include="../../Clients/DotNET/DotNET.csproj">
             <Aliases>SDK</Aliases>
         </ProjectReference>
-        <ProjectReference Include="../../Kernel/Compliance/Compliance.csproj"/>
+        <ProjectReference Include="../../Kernel/Compliance/Compliance/Compliance.csproj"/>
         <ProjectReference Include="../../Kernel/Events/Events.csproj"/>
-        <ProjectReference Include="../../Kernel/Events.Projections.MongoDB/Events.Projections.MongoDB.csproj"/>
-        <ProjectReference Include="../../Kernel/Events.Schemas/Events.Schemas.csproj"/>
+        <ProjectReference Include="../../Kernel/Projections/Events.Projections.MongoDB/Events.Projections.MongoDB.csproj"/>
+        <ProjectReference Include="../../Kernel/Schemas/Events.Schemas/Events.Schemas.csproj"/>
         <ProjectReference Include="../../Clients/AspNetCore.Workbench/AspNetCore.Workbench.csproj"/>
     </ItemGroup>
 </Project>
