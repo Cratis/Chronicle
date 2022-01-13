@@ -20,8 +20,14 @@
 
     <ItemGroup>
         <ProjectReference Include="../Compliance/Compliance/Compliance.csproj" />
-        <ProjectReference Include="../Compliance/Compliance.Grains/Compliance.Grains.csproj" />
-        <ProjectReference Include="../Compliance/Compliance.Grains.Interfaces/Compliance.Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Compliance/Domain/Compliance.Domain.csproj" />
+        <ProjectReference Include="../Compliance/Events/Compliance.Events.csproj" />
+        <ProjectReference Include="../Compliance/Read/Compliance.Read.csproj" />
+        <ProjectReference Include="../Compliance/Grains/Compliance.Grains.csproj" />
+        <ProjectReference Include="../Compliance/Grains.Interfaces/Compliance.Grains.Interfaces.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Configuration/Configuration/Configuration.csproj" />
         <ProjectReference Include="../Configuration/Configuration.Grains/Configuration.Grains.csproj" />
         <ProjectReference Include="../Configuration/Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj" />

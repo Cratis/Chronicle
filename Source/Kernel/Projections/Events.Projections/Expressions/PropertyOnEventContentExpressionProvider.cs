@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using Cratis.Properties;
-using Cratis.Strings;
 
 namespace Cratis.Events.Projections.Expressions
 {

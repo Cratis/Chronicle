@@ -8,7 +8,7 @@
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
         <ProjectReference Include="../../Kernel/Compliance/Compliance/Compliance.csproj"/>
-        <ProjectReference Include="../../Kernel/Compliance/Compliance.Grains.Interfaces/Compliance.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Compliance/Grains.Interfaces/Compliance.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Configuration/Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Projections/Events.Projections/Events.Projections.csproj"/>
         <ProjectReference Include="../../Kernel/Projections/Events.Projections.Grains.Interfaces/Events.Projections.Grains.Interfaces.csproj"/>
