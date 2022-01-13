@@ -25,7 +25,9 @@ COPY --from=shared /build/ .
 
 WORKDIR /build/Source/Kernel/Server
 
-RUN dotnet publish -c ${CONFIGURATION} -p:Version=${VERSION} -o out
+ADD Docker/build-server.sh .
+RUN chmod +x ./build-server.sh
+RUN ./build-server.sh
 
 # Web Build
 FROM node:16 AS web-build
@@ -40,12 +42,14 @@ RUN yarn config set network-timeout 300000
 RUN yarn
 RUN yarn build
 
+####################################
+# Cratis Server
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+####################################
+FROM mcr.microsoft.com/dotnet/runtime:6.0.1-focal
 ARG CONFIGURATION=Release
 ARG VERSION
 
-# Cratis Server
 WORKDIR /app
 
 RUN echo Configuration = ${CONFIGURATION}
@@ -54,27 +58,20 @@ RUN echo Version = ${VERSION}
 # Install MongoDB dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        wget \
-        gnupg \
+    wget \
+    curl \
+    gnupg \
+    apt-transport-https \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Hack to get MongoDB to install even without systemctl
-# See https://www.julienrouse.com/blog/systemctl_not_found_while_installing_mongodb_server/#spoiler-a-solution
-RUN ln -s /bin/true /usr/local/sbin/systemctl
-RUN ln -s /bin/true /usr/local/bin/systemctl
-RUN ln -s /bin/true /usr/sbin/systemctl
-RUN ln -s /bin/true /usr/bin/systemctl
-RUN ln -s /bin/true /sbin/systemctl
-RUN ln -s /bin/true /bin/systemctl
-
 # Install MongoDB
-RUN wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | apt-key add - \
-    && echo "deb [ arch= ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.2 multiverse" > /etc/apt/sources.list.d/mongodb-org-4.2.list \
+RUN wget --no-check-certificate -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - \
+    && echo "deb [ arch=$(dpkg --print-architecture) ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/5.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-5.0.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        curl \
-        mongodb-org-server \
-        mongodb-org-shell \
+    mongodb-org-server \
+    mongodb-org-shell \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup MongoDB as single-node replicaset
@@ -96,7 +93,10 @@ RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 80 11111 30000
 
-COPY --from=server-build /build/Source/Kernel/Server/out .
+COPY --from=server-build /build/Source/Kernel/Server/out/*.dll .
+COPY --from=server-build /build/Source/Kernel/Server/out/*.json .
+COPY --from=server-build /build/Source/Kernel/Server/out/*.so .
+COPY --from=server-build /build/Source/Kernel/Server/out/Cratis.Server .
 COPY --from=web-build /build/Source/Workbench/Events/Web/wwwroot wwwroot
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]

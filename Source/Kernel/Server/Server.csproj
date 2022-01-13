@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Server</AssemblyName>
         <RootNamespace>Cratis.Server</RootNamespace>
+        <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
 
     <ItemGroup>
