@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Compliance.Grains</AssemblyName>
+        <RootNamespace>Cratis.Compliance.Grains</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj" />
+        <ProjectReference Include="../Compliance/Compliance.csproj" />
+        <ProjectReference Include="../Compliance.Grains.Interfaces/Compliance.Grains.Interfaces.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Orleans.Server" Version="$(Orleans)" />
+    </ItemGroup>
+</Project>
