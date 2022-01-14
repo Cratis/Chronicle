@@ -29,18 +29,8 @@ ADD Docker/build-server.sh .
 RUN chmod +x ./build-server.sh
 RUN ./build-server.sh
 
-# Web Build
-FROM node:16 AS web-build
-WORKDIR /build
-
-COPY --from=shared /build/ .
-
-WORKDIR /build/Source/Workbench/Events/Web
-
-# Set network timeout manually as a workaround till we're on Yarn 2: https://github.com/yarnpkg/yarn/issues/8242#issuecomment-661881292
-RUN yarn config set network-timeout 300000
-RUN yarn
-RUN yarn build
+# Workbench
+FROM einari/cratis:workbench as workbench
 
 ####################################
 # Cratis Server
@@ -61,6 +51,6 @@ COPY --from=server-build /build/Source/Kernel/Server/out/*.dll .
 COPY --from=server-build /build/Source/Kernel/Server/out/*.json .
 COPY --from=server-build /build/Source/Kernel/Server/out/*.so .
 COPY --from=server-build /build/Source/Kernel/Server/out/Cratis.Server .
-COPY --from=web-build /build/Source/Workbench/Events/Web/wwwroot wwwroot
+COPY --from=workbench /usr/share/nginx/html wwwroot
 
 ENTRYPOINT ["./Cratis.Server"]

@@ -46,6 +46,7 @@ jobs:
 
       - name: Build .NET
         run: dotnet build --configuration Release
+        working-directory: ./Source/Clients
 
       - name: Build JS/TS
         run: |
@@ -65,6 +66,7 @@ jobs:
       - name: Create NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ steps.release.outputs.version }}
+        working-directory: ./Source/Clients
 
       - name: Push NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
@@ -96,13 +98,26 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Build Workbench Image
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/Workbench/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            einari/cratis:${{ steps.release.outputs.version }}-workbench
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}
+
       - name: Build Production Docker Image
         uses: docker/build-push-action@v2
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
           file: ./Docker/Production/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             einari/cratis:${{ steps.release.outputs.version }}
@@ -122,4 +137,3 @@ jobs:
             einari/cratis:${{ steps.release.outputs.version }}-development
           build-args: |
             VERSION=${{ steps.release.outputs.version }}-development
-
