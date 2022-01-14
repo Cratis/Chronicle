@@ -104,7 +104,6 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
           file: ./Docker/Workbench/Dockerfile
-          platforms: linux/amd64
           push: true
           tags: |
             einari/cratis:${{ steps.release.outputs.version }}-workbench
@@ -117,7 +116,6 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
           file: ./Docker/Production/Dockerfile
-          platforms: linux/amd64
           push: true
           tags: |
             einari/cratis:${{ steps.release.outputs.version }}
