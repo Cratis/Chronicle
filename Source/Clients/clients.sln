@@ -7,9 +7,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{C8089F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clients", "Clients", "{680A9723-41D4-4E69-B082-75DD565D1FCA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET", "Source\Clients\DotNET\DotNET.csproj", "{5029C204-3EF7-4D8A-AC70-F2D0E42DC0FD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNET", "DotNET\DotNET.csproj", "{5029C204-3EF7-4D8A-AC70-F2D0E42DC0FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore", "Source\Clients\AspNetCore\AspNetCore.csproj", "{7F704E24-7D36-46F0-ACB5-574C2C485F31}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore", "AspNetCore\AspNetCore.csproj", "{7F704E24-7D36-46F0-ACB5-574C2C485F31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
