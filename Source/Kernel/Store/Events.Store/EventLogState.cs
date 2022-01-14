@@ -8,7 +8,6 @@ namespace Cratis.Events.Store
     /// <summary>
     /// Represents the state used by the event log. This state is meant to be per event log instance.
     /// </summary>
-    [Serializable]
     public class EventLogState
     {
         /// <summary>

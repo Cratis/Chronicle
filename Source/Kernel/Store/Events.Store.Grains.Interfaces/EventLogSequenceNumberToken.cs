@@ -7,28 +7,38 @@ using Orleans.Streams;
 namespace Cratis.Events.Store.Grains
 {
     /// <summary>
-    /// Stream sequence token that tracks sequence number and event index
+    /// Stream sequence token that tracks sequence number and event index.
     /// </summary>
-    [Serializable]
     public class EventLogSequenceNumberToken : StreamSequenceToken
     {
+        long _sequenceNumber;
+        int _eventIndex;
+
         /// <summary>
         /// Gets the number sequence number within the event log.
         /// </summary>
-        public override long SequenceNumber { get; protected set; }
+        public override long SequenceNumber
+        {
+            get => _sequenceNumber;
+            protected set => _sequenceNumber = value;
+        }
 
         /// <summary>
-        /// Gets an event index - not used!
+        /// Gets an event index - not used!.
         /// </summary>
-        public override int EventIndex { get; protected set; }
+        public override int EventIndex
+        {
+            get => _eventIndex;
+            protected set => _eventIndex = value;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogSequenceNumberToken"/>.
         /// </summary>
         public EventLogSequenceNumberToken()
         {
-            SequenceNumber = -1;
-            EventIndex = 0;
+            _sequenceNumber = -1;
+            _eventIndex = 0;
         }
 
         /// <summary>
@@ -37,8 +47,8 @@ namespace Cratis.Events.Store.Grains
         /// <param name="sequenceNumber">The actual <see cref="EventLogSequenceNumber"/>.</param>
         public EventLogSequenceNumberToken(EventLogSequenceNumber sequenceNumber)
         {
-            SequenceNumber = (long)sequenceNumber.Value;
-            EventIndex = 0;
+            _sequenceNumber = (long)sequenceNumber.Value;
+            _eventIndex = 0;
         }
 
         /// <inheritdoc/>
@@ -60,13 +70,8 @@ namespace Cratis.Events.Store.Grains
             if (other == null)
                 return 1;
 
-            if (!(other is EventLogSequenceNumberToken token))
-            {
-                throw new ArgumentOutOfRangeException(nameof(other));
-            }
-
-            var difference = SequenceNumber.CompareTo(token.SequenceNumber);
-            return difference != 0 ? difference : EventIndex.CompareTo(token.EventIndex);
+            var difference = SequenceNumber.CompareTo(other.SequenceNumber);
+            return difference != 0 ? difference : EventIndex.CompareTo(other.EventIndex);
         }
 
         /// <inheritdoc/>

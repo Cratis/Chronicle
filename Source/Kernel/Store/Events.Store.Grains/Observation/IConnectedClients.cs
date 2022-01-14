@@ -6,12 +6,6 @@ using Microsoft.AspNetCore.Connections;
 namespace Cratis.Events.Store.Grains.Observation
 {
     /// <summary>
-    /// Delegate for when a client is disconnected.
-    /// </summary>
-    /// <param name="context">The client <see cref="ConnectionContext"/>.</param>
-    public delegate Task ClientDisconnected(ConnectionContext context);
-
-    /// <summary>
     /// Defines a system for tracking connected observers.
     /// </summary>
     public interface IConnectedClients

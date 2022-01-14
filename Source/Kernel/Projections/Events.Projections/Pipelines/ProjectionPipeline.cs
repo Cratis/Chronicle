@@ -202,7 +202,7 @@ namespace Cratis.Events.Projections.Pipelines
 
         void ThrowIfRewindAlreadyInProgress(ProjectionResultStoreConfigurationId configurationId)
         {
-            var rewindJob = _jobs.FirstOrDefault(_ => _.Name.Equals(ProjectionPipelineJobs.RewindJob));
+            var rewindJob = _jobs.FirstOrDefault(_ => _.Name == ProjectionPipelineJobs.RewindJob);
             if (rewindJob != default)
             {
                 foreach (var step in rewindJob.Steps)

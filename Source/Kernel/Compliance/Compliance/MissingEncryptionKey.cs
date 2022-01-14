@@ -4,7 +4,7 @@
 namespace Cratis.Compliance
 {
     /// <summary>
-    /// Exception that is thrown when an <see cref="EncryptionKey"/> is missing.
+    /// Exception that gets thrown when an <see cref="EncryptionKey"/> is missing.
     /// </summary>
     public class MissingEncryptionKey : Exception
     {

@@ -8,7 +8,6 @@ namespace Cratis.Events.Store.Observation
     /// <summary>
     /// Represents the state used for an observer.
     /// </summary>
-    [Serializable]
     public class ObserverState
     {
         /// <summary>

@@ -109,13 +109,13 @@ namespace Cratis.Events.Store.Grains.Observation
             }
         }
 
+        /// <inheritdoc/>
         public async Task TryResume()
         {
             // Get the event log stream for this tenant
             // Use a stream sequence token that has partition in it
             // Subscribe to the stream with this token
             // When stream is at the edge - unsubscribe to the stream
-
             await Task.CompletedTask;
         }
 

@@ -14,20 +14,21 @@ namespace Cratis.Events.Store.Grains
         /// Handle next <see cref="AppendedEvent"/>.
         /// </summary>
         /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
+        /// <returns>Awaitable <see cref="Task"/>.</returns>
         Task Next(AppendedEvent @event);
 
         /// <summary>
         /// Add an <see cref="IEventLogObserver">observer</see> of the <see cref="IEventLog"/>.
         /// </summary>
         /// <param name="observer"><see cref="IEventLogObserver"/> to subscribe.</param>
-        /// <returns>Awaitable <see cref="Task"/></returns>
+        /// <returns>Awaitable <see cref="Task"/>.</returns>
         Task Subscribe(IEventLogObserver observer);
 
         /// <summary>
         /// Unsubscribe an <see cref="IEventLogObserver">observer</see> of the <see cref="IEventLog"/>.
         /// </summary>
         /// <param name="observer"><see cref="IEventLogObserver"/> to unsubscribe.</param>
-        /// <returns>Awaitable <see cref="Task"/></returns>
+        /// <returns>Awaitable <see cref="Task"/>.</returns>
         Task Unsubscribe(IEventLogObserver observer);
     }
 }

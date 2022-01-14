@@ -28,8 +28,8 @@ namespace Cratis.Events.Store.Grains.Observation
         /// <summary>
         /// Initializes a new instance of the <see cref="Observer"/> class.
         /// </summary>
-        /// <param name="requestContextManager"></param>
-        /// <param name="connectedClients"></param>
+        /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
+        /// <param name="connectedClients"><see cref="IConnectedClients"/>.</param>
         public Observer(
             IRequestContextManager requestContextManager,
             IConnectedClients connectedClients)
@@ -87,7 +87,8 @@ namespace Cratis.Events.Store.Grains.Observation
                         var i = 0;
                         i++;
                     }
-                }, new EventLogSequenceNumberTokenWithFilter(State.Offset, eventTypes));
+                },
+                new EventLogSequenceNumberTokenWithFilter(State.Offset, eventTypes));
 
             _subscriptions[subscriptionHandle.HandleId] = subscriptionHandle;
         }

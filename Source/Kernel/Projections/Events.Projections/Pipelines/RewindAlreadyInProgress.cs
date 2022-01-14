@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections.Pipelines
 {
     /// <summary>
-    /// Exception that is thrown if one attempts to rewind while a rewind is already in progress.
+    /// Exception that gets thrown if one attempts to rewind while a rewind is already in progress.
     /// </summary>
     public class RewindAlreadyInProgress : Exception
     {

@@ -2,21 +2,21 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #nullable disable
+#pragma warning disable CA1819 // Allow arrays on properties
 
 namespace Cratis.Events.Store.Observation
 {
     /// <summary>
     /// Represents the state used for failed observers.
     /// </summary>
-    [Serializable]
     public class FailedObserverState
     {
-        string _id;
-
         /// <summary>
         /// The name of the storage provider used for working with this type of state.
         /// </summary>
         public const string StorageProvider = "failed-observer-state-provider";
+
+        string _id;
 
         /// <summary>
         /// Gets the unique identifier for the state.
@@ -98,7 +98,7 @@ namespace Cratis.Events.Store.Observation
         /// </summary>
         /// <param name="key">Key to parse.</param>
         /// <returns>Tuple holding event log, observer and event source.</returns>
-        public static (EventLogId eventLogId, ObserverId observerId, EventSourceId eventSourceId) Parse(string key)
+        public static (EventLogId EventLogId, ObserverId ObserverId, EventSourceId EventSourceId) Parse(string key)
         {
             var segments = key.Split('+');
             return (

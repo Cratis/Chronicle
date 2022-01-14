@@ -21,7 +21,6 @@ namespace Cratis.Events.Store.Grains
             // - The child grain can then have IGrainObservers registered - these can be the actual client calls
             //     - We need to figure out if an exception can be caught..
             // - Child grain is then responsible for managing offset
-
             _subscriptions.ForEach(_ => _.Next(@event));
             return Task.CompletedTask;
         }
