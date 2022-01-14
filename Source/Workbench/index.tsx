@@ -6,7 +6,7 @@ import ReactDOM from 'react-dom';
 import { BrowserRouter } from 'react-router-dom';
 
 import './index.scss';
-import '@cratis/workbench.styles/theme';
+import './styles/theme';
 
 import { App } from './App';
 import { ModalProvider } from '@cratis/fluentui';
