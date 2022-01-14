@@ -1,0 +1,15 @@
+<Project>
+    <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props"/>
+    <PropertyGroup>
+        <AksioProxyOutput>$(MSBuildThisFileDirectory)../Workbench/API</AksioProxyOutput>
+        <AksioUseRouteAsPath>true</AksioUseRouteAsPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.ProxyGenerator" Version="$(Aksio)"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+    </ItemGroup>
+</Project>

@@ -55,32 +55,6 @@
             }
         },
         {
-            "name": ".NET Core Launch (Dolittle Sample)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build dolittle sample",
-            "program": "${workspaceFolder}/Samples/Dolittle/bin/Debug/net6.0/Cratis.Sample.Dolittle.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Samples/Dolittle",
-            "stopAtEntry": false,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": ".NET Core Launch (Compliance)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build compliance",
-            "program": "${workspaceFolder}/Source/Workbench/Compliance/Main/bin/Debug/net6.0/Cratis.Compliance.Main.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Source/Workbench/Compliance/Main",
-            "stopAtEntry": false,
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
@@ -93,14 +67,6 @@
                 ".NET Core Launch (Server)",
                 ".NET Core Launch (AspNetCore Sample)"
             ]
-        },
-        {
-            "name": "Server and Compliance",
-            "configurations": [
-                ".NET Core Launch (Server)",
-                ".NET Core Launch (Compliance)"
-            ]
         }
-
     ]
 }

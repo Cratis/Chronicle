@@ -34,7 +34,7 @@ module.exports = [
             // Adds typescript declarations to the css modules and allows importing and using strongly typed scss modules in react components.
             'css-modules-typescript-loader',
             // Translates CSS into CommonJS
-            { loader: 'css-loader', options: { modules: true, importLoaders: 1 } },
+            { loader: 'css-loader', options: { modules: true, importLoaders: 1, sourceMap: true } },
             // Compiles Sass to CSS
             'sass-loader',
         ],

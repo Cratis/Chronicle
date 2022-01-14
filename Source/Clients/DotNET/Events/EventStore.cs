@@ -17,10 +17,12 @@ namespace Cratis.Events
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStore"/> class.
         /// </summary>
+        /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
         /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with execution context.</param>
         /// <param name="eventTypes">The <see cref="IEventTypes"/> in the system.</param>
         public EventStore(
+            IEventSerializer serializer,
             IClusterClient clusterClient,
             IExecutionContextManager executionContextManager,
             IEventTypes eventTypes)
@@ -28,7 +30,7 @@ namespace Cratis.Events
             _clusterClient = clusterClient;
 
             var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
-            EventLog = new EventLog(eventTypes, defaultEventLog);
+            EventLog = new EventLog(eventTypes, serializer, defaultEventLog);
         }
 
         /// <inheritdoc/>

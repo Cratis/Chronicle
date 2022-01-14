@@ -28,10 +28,16 @@ namespace Microsoft.AspNetCore.Builder
 
             app.Run(async context =>
             {
-                if (Path.HasExtension(context.Request.Path)) await Task.CompletedTask.ConfigureAwait(false);
+                if (Path.HasExtension(context.Request.Path))
+                {
+                    return;
+                }
                 context.Request.Path = options?.RequestPath ?? new PathString("/");
 
-                await context.Response.SendFileAsync(fileInfo).ConfigureAwait(false);
+                if (File.Exists(fileInfo.PhysicalPath))
+                {
+                    await context.Response.SendFileAsync(fileInfo);
+                }
             });
         }
     }

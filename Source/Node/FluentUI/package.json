@@ -22,15 +22,15 @@
         "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
         "test": "mocha",
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
-        "up": "ncu \\!'@cratis/*'"
+        "up": "ncu -u \\!'@cratis/*'"
     },
     "dependencies": {
         "@cratis/typescript": "1.0.0",
-        "@fluentui/font-icons-mdl2": "8.1.11",
-        "@fluentui/react": "8.34.7",
-        "@fluentui/react-charting": "5.3.46",
-        "@fluentui/react-hooks": "8.3.2",
-        "@fluentui/react-icons": "1.1.141"
+        "@fluentui/font-icons-mdl2": "8.1.20",
+        "@fluentui/react": "8.49.5",
+        "@fluentui/react-charting": "5.6.17",
+        "@fluentui/react-hooks": "8.3.9",
+        "@fluentui/react-icons": "1.1.145"
     },
     "devDependencies": {}
 }
