@@ -46,7 +46,6 @@ jobs:
 
       - name: Build .NET
         run: dotnet build --configuration Release
-        working-directory: ./Source/Clients
 
       - name: Build JS/TS
         run: |
@@ -66,12 +65,10 @@ jobs:
       - name: Create NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ steps.release.outputs.version }}
-        working-directory: ./Source/Clients
 
       - name: Push NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
-        working-directory: ./Source/Clients
 
       - name: Publish NPM packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
