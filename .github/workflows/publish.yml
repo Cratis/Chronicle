@@ -132,4 +132,4 @@ jobs:
           tags: |
             einari/cratis:${{ steps.release.outputs.version }}-development
           build-args: |
-            VERSION=${{ steps.release.outputs.version }}-development
+            VERSION=${{ steps.release.outputs.version }}
