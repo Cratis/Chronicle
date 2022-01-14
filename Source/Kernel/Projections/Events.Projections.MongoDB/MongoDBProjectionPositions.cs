@@ -2,16 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.DependencyInversion;
-using Cratis.Events;
-using Cratis.Events.Projections;
 using Cratis.Events.Store.MongoDB;
 using Cratis.MongoDB;
 using MongoDB.Driver;
 
-namespace Cratis.Extensions.Dolittle.Projections
+namespace Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionPositions"/> for Dolittle event store.
+    /// Represents an implementation of <see cref="IProjectionPositions"/> for  event store.
     /// </summary>
     public class MongoDBProjectionPositions : IProjectionPositions
     {

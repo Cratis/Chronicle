@@ -26,38 +26,6 @@
                 "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build dolittle sample",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "--no-restore",
-                "${workspaceFolder}/Samples/Dolittle/Dolittle.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build compliance",
-            "command": "dotnet",
-            "type": "process",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "args": [
-                "build",
-                "--no-restore",
-                "${workspaceFolder}/Source/Workbench/Compliance/Main/Main.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-
-
+        }
     ]
 }

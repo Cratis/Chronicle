@@ -6,7 +6,7 @@ using MongoDB.Driver;
 namespace Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IEventCursor"/> for handling Dolittle events from event log.
+    /// Represents an implementation of <see cref="IEventCursor"/> for handling events from event log.
     /// </summary>
     public class EventCursor : IEventCursor
     {
