@@ -15,6 +15,10 @@ namespace Cratis.Compliance
     {
         readonly Dictionary<ComplianceMetadataType, IJsonCompliancePropertyValueHandler> _propertyValueHandlers;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JsonComplianceManager"/> class.
+        /// </summary>
+        /// <param name="propertyValueHandlers">Instances of <see cref="IJsonCompliancePropertyValueHandler"/>.</param>
         public JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHandler> propertyValueHandlers)
         {
             _propertyValueHandlers = propertyValueHandlers.ToDictionary(_ => _.Type, _ => _);

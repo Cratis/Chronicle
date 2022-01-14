@@ -14,14 +14,19 @@ namespace Cratis.Compliance
         readonly IEncryptionKeyStore _encryptionKeyStore;
         readonly IEncryption _encryption;
 
+        /// <inheritdoc/>
+        public ComplianceMetadataType Type => ComplianceMetadataType.PII;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/>.
+        /// </summary>
+        /// <param name="encryptionKeyStore"><see cref="IEncryptionKeyStore"/> to use for keys.</param>
+        /// <param name="encryption"><see cref="IEncryption"/> for performing encryption/decryption.</param>
         public PIICompliancePropertyValueHandler(IEncryptionKeyStore encryptionKeyStore, IEncryption encryption)
         {
             _encryptionKeyStore = encryptionKeyStore;
             _encryption = encryption;
         }
-
-        /// <inheritdoc/>
-        public ComplianceMetadataType Type => ComplianceMetadataType.PII;
 
         /// <inheritdoc/>
         public async Task<JToken> Apply(string identifier, JToken value)

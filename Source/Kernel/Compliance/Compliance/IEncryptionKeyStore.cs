@@ -30,7 +30,6 @@ namespace Cratis.Compliance
         /// <returns>The <see cref="EncryptionKey"/>.</returns>
         Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier);
 
-
         /// <summary>
         /// Delete an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
         /// </summary>

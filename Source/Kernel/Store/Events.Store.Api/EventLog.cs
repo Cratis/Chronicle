@@ -46,7 +46,6 @@ namespace Cratis.Events.Store.Api
         [HttpGet("{eventLogId}")]
         public Task<IEnumerable<Event>> FindFor([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<Event>().AsEnumerable());
 
-
         [HttpGet("{eventLogId}/count")]
         public Task<long> Count() => Task.FromResult(0L);
 
