@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Concepts;
-using Newtonsoft.Json;
+using System.Text.Json;
+using Cratis.Concepts.SystemJson;
 
 namespace Cratis.Events
 {
@@ -11,24 +11,23 @@ namespace Cratis.Events
     /// </summary>
     public class EventSerializer : IEventSerializer
     {
-        readonly JsonSerializer _serializer;
+        readonly JsonSerializerOptions _serializerOptions;
 
         public EventSerializer()
         {
-            _serializer = new();
-            _serializer.Converters.Add(new ConceptAsJsonConverter());
-            _serializer.Converters.Add(new ConceptAsDictionaryJsonConverter());
+            _serializerOptions = new()
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = {
+                    new ConceptAsJsonConverterFactory()
+                }
+            };
         }
 
         /// <inheritdoc/>
-        public object Deserialize(Type type, string json) => _serializer.Deserialize(new StringReader(json), type)!;
+        public object Deserialize(Type type, string json) => JsonSerializer.Deserialize(json, type, _serializerOptions)!;
 
         /// <inheritdoc/>
-        public string Serialize(object @event)
-        {
-            var stringWriter = new StringWriter();
-            _serializer.Serialize(stringWriter, @event);
-            return stringWriter.ToString();
-        }
+        public string Serialize(object @event) => JsonSerializer.Serialize(@event, _serializerOptions);
     }
 }
