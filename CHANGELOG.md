@@ -1,3 +1,11 @@
+# [v4.0.2] - 2022-1-14 [PR: #97](https://github.com/Cratis/cratis/pull/97)
+
+### Fixed
+
+- Adding missing Global.d.ts file for declaring modules for CSS and SCSS files.
+- Making the development & production images dependent on the specific version of the workbench.
+
+
 # [v4.0.1] - 2022-1-14 [PR: #96](https://github.com/Cratis/cratis/pull/96)
 
 ### Fixed
