@@ -1,3 +1,10 @@
+# [v4.0.4] - 2022-1-14 [PR: #99](https://github.com/Cratis/cratis/pull/99)
+
+### Fixed
+
+- Fixing version info passed to the development Docker image build.
+
+
 # [v4.0.3] - 2022-1-14 [PR: #98](https://github.com/Cratis/cratis/pull/98)
 
 ### Fixed
