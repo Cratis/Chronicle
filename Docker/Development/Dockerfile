@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # Server Build
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS server-build
 ARG CONFIGURATION=Release
 ARG VERSION
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS server-build
 WORKDIR /build
 
 COPY .editorconfig .
@@ -18,15 +18,16 @@ RUN chmod +x ./build-server.sh
 RUN ./build-server.sh
 
 # Workbench
-FROM einari/cratis:workbench as workbench
+ARG VERSION
+FROM einari/cratis:$VERSION-workbench as workbench
 
 ####################################
 # Cratis Server
 # Build runtime image
 ####################################
-FROM mcr.microsoft.com/dotnet/runtime:6.0.1-focal
 ARG CONFIGURATION=Release
 ARG VERSION
+FROM mcr.microsoft.com/dotnet/runtime:6.0.1-focal
 
 WORKDIR /app
 

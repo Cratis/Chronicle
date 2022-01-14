@@ -1,27 +1,15 @@
 # syntax=docker/dockerfile:1
-FROM scratch as shared
+# Server Build
 ARG CONFIGURATION=Release
 ARG VERSION
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS server-build
 WORKDIR /build
 
 COPY .editorconfig .
-COPY .eslintrc.js .
-COPY .prettierrc .
-COPY .mocharc.js .
-COPY package.json .
 COPY global.json .
-COPY tsconfig.json .
 COPY Directory.Build.props .
 COPY Versions.props .
 COPY ./Source ./Source
-
-# Server Build
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS server-build
-ARG CONFIGURATION=Release
-ARG VERSION
-WORKDIR /build
-
-COPY --from=shared /build/ .
 
 WORKDIR /build/Source/Kernel/Server
 
@@ -30,7 +18,8 @@ RUN chmod +x ./build-server.sh
 RUN ./build-server.sh
 
 # Workbench
-FROM einari/cratis:workbench as workbench
+ARG VERSION
+FROM einari/cratis:$VERSION-workbench as workbench
 
 ####################################
 # Cratis Server
