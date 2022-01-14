@@ -13,7 +13,7 @@ namespace Cratis.Compliance
         /// <summary>
         /// Initializes a new instance of the <see cref="CompositeEncryptionKeyStore"/>.
         /// </summary>
-        /// <param name="inner"></param>
+        /// <param name="inner">Inner collection of <see cref="IEncryptionKeyStore"/>.</param>
         public CompositeEncryptionKeyStore(params IEncryptionKeyStore[] inner)
         {
             _inner = inner;

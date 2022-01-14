@@ -7,7 +7,7 @@ using MongoDB.Bson.Serialization;
 namespace Cratis.Compliance.MongoDB
 {
     /// <summary>
-    /// Represents a class map for <see cref="EncryptionKeyForIdentifier"/>
+    /// Represents a class map for <see cref="EncryptionKeyForIdentifier"/>.
     /// </summary>
     public class EncryptionKeyForIdentifierClassMap : IBsonClassMapFor<EncryptionKeyForIdentifier>
     {

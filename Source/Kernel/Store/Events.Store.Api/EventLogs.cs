@@ -11,7 +11,8 @@ namespace Cratis.Events.Store.Api
         [HttpGet]
         public Task<IEnumerable<EventLogInformation>> AllEventLogs()
         {
-            return Task.FromResult(new[] {
+            return Task.FromResult(new[]
+            {
                 new EventLogInformation("00000000-0000-0000-0000-000000000000", "Main Event Log")
             }.AsEnumerable());
         }

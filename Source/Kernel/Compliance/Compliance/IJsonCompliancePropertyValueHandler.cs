@@ -13,7 +13,7 @@ namespace Cratis.Compliance
         /// <summary>
         /// Gets the <see cref="ComplianceMetadataType"/> it supports.
         /// </summary>
-        ComplianceMetadataType  Type { get; }
+        ComplianceMetadataType Type { get; }
 
         /// <summary>
         /// Apply to the given value.
