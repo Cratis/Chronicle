@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Concepts.SystemJson;
-
 namespace Cratis.Events
 {
     /// <summary>
@@ -11,25 +8,20 @@ namespace Cratis.Events
     /// </summary>
     public class EventLog : IEventLog
     {
-        readonly JsonSerializerOptions _serializerOptions;
         readonly IEventTypes _eventTypes;
+        readonly IEventSerializer _serializer;
         readonly Store.Grains.IEventLog _eventLog;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLog"/> class.
         /// </summary>
         /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving the types of events.</param>
+        /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
         /// <param name="eventLog">The actual <see cref="Store.Grains.IEventLog"/>.</param>
-        public EventLog(IEventTypes eventTypes, Store.Grains.IEventLog eventLog)
+        public EventLog(IEventTypes eventTypes, IEventSerializer serializer, Store.Grains.IEventLog eventLog)
         {
-            _serializerOptions = new()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = {
-                    new ConceptAsJsonConverterFactory()
-                }
-            };
             _eventTypes = eventTypes;
+            _serializer = serializer;
             _eventLog = eventLog;
         }
 
@@ -37,7 +29,7 @@ namespace Cratis.Events
         public async Task Append<T>(EventSourceId eventSourceId, T @event)
         {
             var eventType = _eventTypes.GetEventTypeFor(typeof(T));
-            var json = JsonSerializer.Serialize(@event, _serializerOptions);
+            var json = _serializer.Serialize(@event!);
             await _eventLog.Append(eventSourceId, eventType, json);
         }
     }

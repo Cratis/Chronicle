@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Compliance.Domain</AssemblyName>
+        <RootNamespace>Cratis.Compliance.Domain</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Clients/DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../Events/Compliance.Events.csproj"/>
+        <ProjectReference Include="../Concepts/Compliance.Concepts.csproj"/>
+
+        <ProjectReference Include="../Grains.Interfaces/Compliance.Grains.Interfaces.csproj"/>
+    </ItemGroup>
+</Project>

@@ -25,21 +25,10 @@
         <IncludeSource>True</IncludeSource>
 
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-
         <ImplicitUsings>true</ImplicitUsings>
-
-        <AksioProxyOutput>$(MSBuildThisFileDirectory)Source/Workbench/Events/Web/API</AksioProxyOutput>
-        <AksioUseRouteAsPath>true</AksioUseRouteAsPath>
     </PropertyGroup>
 
     <ItemGroup>
         <Content Include="$(MSBuildThisFileDirectory)logo.png" PackagePath="/" />
-    </ItemGroup>
-
-    <!-- <Import Project="$(MSBuildThisFileDirectory)../../Aksio/Foundation/Source/Tooling/ProxyGenerator/build/Aksio.ProxyGenerator.props"/> -->
-
-    <ItemGroup>
-        <!-- <ProjectReference Include="$(MSBuildThisFileDirectory)../../Aksio/Foundation/Source/Tooling/ProxyGenerator/ProxyGenerator.csproj" OutputItemType="Analyzer" Private="true"/> -->
-        <PackageReference Include="Aksio.ProxyGenerator" Version="$(Aksio)"/>
     </ItemGroup>
 </Project>
