@@ -15,17 +15,6 @@ namespace Cratis.Changes
     {
         readonly List<Change> _changes = new();
 
-        /// <summary>
-        /// Initializes a new instance of <see cref="Changeset{TSource, TTarget}"/>.
-        /// </summary>
-        /// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{TSource, TTarget}"/> is for.</param>
-        /// <param name="initialState">The initial state before any changes are applied.</param>
-        public Changeset(TSource incoming, TTarget initialState)
-        {
-            Incoming = incoming;
-            InitialState = initialState;
-        }
-
         /// <inheritdoc/>
         public TSource Incoming { get; }
 
@@ -37,6 +26,17 @@ namespace Cratis.Changes
 
         /// <inheritdoc/>
         public bool HasChanges => _changes.Count > 0;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="Changeset{TSource, TTarget}"/>.
+        /// </summary>
+        /// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{TSource, TTarget}"/> is for.</param>
+        /// <param name="initialState">The initial state before any changes are applied.</param>
+        public Changeset(TSource incoming, TTarget initialState)
+        {
+            Incoming = incoming;
+            InitialState = initialState;
+        }
 
         /// <inheritdoc/>
         public void Add(Change change)

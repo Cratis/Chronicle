@@ -16,7 +16,7 @@ namespace Cratis.Extensions.Autofac
     /// </summary>
     public class SingletonPerTenantRegistrationSource : IRegistrationSource
     {
-        public record ImplementationTypeAndTenant(Type ImplementationType, TenantId TenantId);
+        record ImplementationTypeAndTenant(Type ImplementationType, TenantId TenantId);
         readonly ConcurrentDictionary<ImplementationTypeAndTenant, object> _instancesPerTenant = new();
 
         readonly ContractToImplementorsMap _implementorsMap = new();
@@ -36,14 +36,17 @@ namespace Cratis.Extensions.Autofac
         /// <inheritdoc/>
         public IEnumerable<IComponentRegistration> RegistrationsFor(Service service, Func<Service, IEnumerable<ServiceRegistration>> registrationAccessor)
         {
-            if (!(service is IServiceWithType) || service is not IServiceWithType serviceWithType) return Enumerable.Empty<IComponentRegistration>();
+            if (!(service is IServiceWithType) || service is not IServiceWithType serviceWithType)
+            {
+                return Enumerable.Empty<IComponentRegistration>();
+            }
 
             var implementors = _implementorsMap.GetImplementorsFor(serviceWithType.ServiceType);
             if (!implementors.Any()) return Enumerable.Empty<IComponentRegistration>();
 
             var implementationType = implementors.First();
             var registration = RegistrationBuilder
-                                .ForDelegate(implementors.First(), (_,__) => Resolve(implementationType))
+                                .ForDelegate(implementors.First(), (_, __) => Resolve(implementationType))
                                 .As(serviceWithType.ServiceType).CreateRegistration();
 
             return new[] { registration };

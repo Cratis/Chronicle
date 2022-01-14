@@ -16,6 +16,9 @@ namespace Cratis.Extensions.MongoDB
     /// <typeparam name="T">Type of concept.</typeparam>
     public class ConceptSerializer<T> : IBsonSerializer<T>
     {
+        /// <inheritdoc/>
+        public Type ValueType { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ConceptSerializer{T}"/> class.
         /// </summary>
@@ -26,9 +29,6 @@ namespace Cratis.Extensions.MongoDB
             if (!ValueType.IsConcept())
                 throw new TypeIsNotAConcept(ValueType);
         }
-
-        /// <inheritdoc/>
-        public Type ValueType { get; }
 
         /// <inheritdoc/>
         public T Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
@@ -131,7 +131,6 @@ namespace Cratis.Extensions.MongoDB
         object GetDeserializedValue(Type valueType, ref IBsonReader bsonReader)
         {
             var bsonType = bsonReader.CurrentBsonType;
-
             if (bsonType == BsonType.Null)
             {
                 bsonReader.ReadNull();
@@ -147,41 +146,48 @@ namespace Cratis.Extensions.MongoDB
                 var binaryData = bsonReader.ReadBinaryData();
                 return binaryData.ToGuid();
             }
-            else if (valueType == typeof(double))
+
+            if (valueType == typeof(double))
             {
                 return bsonReader.ReadDouble();
             }
-            else if (valueType == typeof(float))
+
+            if (valueType == typeof(float))
             {
                 return (float)bsonReader.ReadDouble();
             }
-            else if (valueType == typeof(int) || valueType == typeof(uint))
+
+            if (valueType == typeof(int) || valueType == typeof(uint))
             {
                 var value = bsonReader.ReadInt32();
-                if( valueType == typeof(uint) )
+                if (valueType == typeof(uint))
                 {
                     return Convert.ChangeType(value, typeof(uint), CultureInfo.InvariantCulture)!;
                 }
                 return value;
             }
-            else if (valueType == typeof(long) || valueType == typeof(ulong))
+
+            if (valueType == typeof(long) || valueType == typeof(ulong))
             {
                 var value = bsonReader.ReadInt64();
-                if( valueType == typeof(ulong) )
+                if (valueType == typeof(ulong))
                 {
                     return Convert.ChangeType(value, typeof(ulong), CultureInfo.InvariantCulture)!;
                 }
                 return value;
             }
-            else if (valueType == typeof(bool))
+
+            if (valueType == typeof(bool))
             {
                 return bsonReader.ReadBoolean();
             }
-            else if (valueType == typeof(string))
+
+            if (valueType == typeof(string))
             {
                 return bsonReader.ReadString();
             }
-            else if (valueType == typeof(decimal))
+
+            if (valueType == typeof(decimal))
             {
                 return bsonReader.ReadDecimal128();
             }

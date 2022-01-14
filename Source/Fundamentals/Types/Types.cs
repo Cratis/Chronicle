@@ -7,24 +7,13 @@ using Microsoft.Extensions.DependencyModel;
 namespace Cratis.Types
 {
     /// <summary>
-    /// Represents an implementation of <see cref="ITypes"/>
+    /// Represents an implementation of <see cref="ITypes"/>.
     /// </summary>
     public class Types : ITypes
     {
         readonly IContractToImplementorsMap _contractToImplementorsMap = new ContractToImplementorsMap();
         readonly List<Assembly> _assemblies = new();
         readonly string[] _assemblyPrefixesToInclude;
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="Types"/>
-        /// </summary>
-        /// <param name="assemblyPrefixesToInclude">Optional params of assembly prefixes to include in type discovery</param>
-        public Types(params string[] assemblyPrefixesToInclude)
-        {
-            _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
-            All = DiscoverAllTypes();
-            _contractToImplementorsMap.Feed(All);
-        }
 
         /// <inheritdoc/>
         public IEnumerable<Assembly> Assemblies => _assemblies;
@@ -34,6 +23,17 @@ namespace Cratis.Types
 
         /// <inheritdoc/>
         public IEnumerable<Type> All { get; }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="Types"/>.
+        /// </summary>
+        /// <param name="assemblyPrefixesToInclude">Optional params of assembly prefixes to include in type discovery.</param>
+        public Types(params string[] assemblyPrefixesToInclude)
+        {
+            _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
+            All = DiscoverAllTypes();
+            _contractToImplementorsMap.Feed(All);
+        }
 
         /// <inheritdoc/>
         public Type FindSingle<T>() => FindSingle(typeof(T));
@@ -64,12 +64,17 @@ namespace Cratis.Types
         void ThrowIfMultipleTypesFound(Type type, IEnumerable<Type> typesFound)
         {
             if (typesFound.Count() > 1)
+            {
                 throw new MultipleTypesFound(type, typesFound);
+            }
         }
 
         void ThrowIfTypeNotFound(string fullName, Type typeFound)
         {
-            if (typeFound == null) throw new UnableToResolveTypeByName(fullName);
+            if (typeFound == null)
+            {
+                throw new UnableToResolveTypeByName(fullName);
+            }
         }
 
         IEnumerable<Type> DiscoverAllTypes()

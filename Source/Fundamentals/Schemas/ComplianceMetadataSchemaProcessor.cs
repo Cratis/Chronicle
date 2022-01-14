@@ -10,7 +10,6 @@ using NJsonSchema.Generation;
 
 namespace Cratis.Schemas
 {
-
     /// <summary>
     /// Represents an implementation of <see cref="ISchemaProcessor"/> for handling compliance metadata.
     /// </summary>

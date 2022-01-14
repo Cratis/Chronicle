@@ -36,9 +36,10 @@ namespace Cratis.Objects
             var currentType = source.GetType();
             var currentInstance = source;
 
-            for (var segmentIndex = 0; segmentIndex < propertyPath.Segments.Length - 1; segmentIndex++)
+            var segments = propertyPath.Segments.ToArray();
+            for (var segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
             {
-                var segment = propertyPath.Segments[segmentIndex];
+                var segment = segments[segmentIndex];
                 var currentPropertyInfo = currentType.GetProperty(segment, BindingFlags.Public | BindingFlags.Instance);
 
                 if (currentPropertyInfo is null)

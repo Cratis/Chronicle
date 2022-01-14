@@ -11,6 +11,18 @@ namespace Cratis.Execution
     {
         static readonly AsyncLocal<ExecutionContext> _currentExecutionContext = new();
 
+        /// <inheritdoc/>
+        public bool IsInContext => _currentExecutionContext?.Value != default;
+
+        /// <inheritdoc/>
+        public ExecutionContext Current => GetCurrent();
+
+        /// <summary>
+        /// Set a <see cref="ExecutionContext"/> for current call path.
+        /// </summary>
+        /// <param name="context"><see cref="ExecutionContext"/> to set.</param>
+        public static void SetCurrent(ExecutionContext context) => _currentExecutionContext.Value = context;
+
         /// <summary>
         /// Get current <see cref="ExecutionContext"/>.
         /// </summary>
@@ -22,18 +34,6 @@ namespace Cratis.Execution
 
             return current!;
         }
-
-        /// <summary>
-        /// Set a <see cref="ExecutionContext"/> for current call path.
-        /// </summary>
-        /// <param name="context"><see cref="ExecutionContext"/> to set.</param>
-        public static void SetCurrent(ExecutionContext context) => _currentExecutionContext.Value = context;
-
-        /// <inheritdoc/>
-        public bool IsInContext => _currentExecutionContext?.Value != default;
-
-        /// <inheritdoc/>
-        public ExecutionContext Current => GetCurrent();
 
         /// <inheritdoc/>
         public ExecutionContext Establish(TenantId tenantId, CorrelationId correlationId)

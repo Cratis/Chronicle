@@ -9,7 +9,7 @@ namespace Cratis.Extensions.Orleans.Execution
     /// <remarks>
     /// See <see cref="ExecutionContextOutgoingCallFilter"/> and <see cref="ExecutionContextIncomingCallFilter"/> for usage.
     /// </remarks>
-    public static class  RequestContextKeys
+    public static class RequestContextKeys
     {
         /// <summary>
         /// The tenant identifier key.

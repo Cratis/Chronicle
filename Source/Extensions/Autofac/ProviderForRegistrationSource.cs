@@ -32,7 +32,8 @@ namespace Cratis.Extensions.Autofac
             }
 
             var method = _provideMethod.MakeGenericMethod(serviceWithType.ServiceType.GetGenericArguments()[0]);
-            var registration = RegistrationBuilder.ForDelegate(serviceWithType.ServiceType,
+            var registration = RegistrationBuilder.ForDelegate(
+                serviceWithType.ServiceType,
                 (_, __) => method.CreateDelegate(serviceWithType.ServiceType))
                 .As(serviceWithType.ServiceType)
                 .CreateRegistration();

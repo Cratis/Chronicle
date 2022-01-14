@@ -7,8 +7,13 @@ namespace Cratis.Compliance
     /// Represents an attribute that can be used to mark classes or properties to indicate the information kept is PII according to the definition of GDPR.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = false)]
-    public class PIIAttribute : Attribute
+    public sealed class PIIAttribute : Attribute
     {
+        /// <summary>
+        /// Gets the details as to why or to what purpose/extent the type or property marked is classified as PII.
+        /// </summary>
+        public string Details { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PIIAttribute"/> class.
         /// </summary>
@@ -17,10 +22,5 @@ namespace Cratis.Compliance
         {
             Details = details;
         }
-
-        /// <summary>
-        /// Gets the details as to why or to what purpose/extent the type or property marked is classified as PII.
-        /// </summary>
-        public string Details { get; }
     }
 }

@@ -70,7 +70,8 @@ namespace Cratis.Changes
         /// <param name="key">Key value.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers) where TChild : new();
+        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
+            where TChild : new();
 
         /// <summary>
         /// Apply a remove change to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -91,11 +92,11 @@ namespace Cratis.Changes
         bool HasChildBeenAddedWithKey(PropertyPath childrenProperty, object key);
 
         /// <summary>
-        /// Get a specific child from
+        /// Get a specific child from.
         /// </summary>
         /// <typeparam name="TChild">Type of child.</typeparam>
         /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
-        /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies the child</param>
+        /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies the child.</param>
         /// <param name="key">The key of the item.</param>
         /// <returns>The added child.</returns>
         TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key);

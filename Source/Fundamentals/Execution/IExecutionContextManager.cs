@@ -4,7 +4,7 @@
 namespace Cratis.Execution
 {
     /// <summary>
-    /// Defines a system for working with <see cref="ExecutionContext"/>
+    /// Defines a system for working with <see cref="ExecutionContext"/>.
     /// </summary>
     public interface IExecutionContextManager
     {

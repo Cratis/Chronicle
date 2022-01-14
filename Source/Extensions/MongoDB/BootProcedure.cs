@@ -6,7 +6,7 @@ using Cratis.Boot;
 namespace Cratis.Extensions.MongoDB
 {
     /// <summary>
-    /// Represents a <see cref="IPerformBootProcedure"/> for setting up defaults and bindings for MongoDB
+    /// Represents a <see cref="IPerformBootProcedure"/> for setting up defaults and bindings for MongoDB.
     /// </summary>
     public class BootProcedure : IPerformBootProcedure
     {
@@ -15,7 +15,7 @@ namespace Cratis.Extensions.MongoDB
         /// <summary>
         /// Initializes a new instance of the <see cref="BootProcedure"/> class.
         /// </summary>
-        /// <param name="defaults"></param>
+        /// <param name="defaults"><see cref="MongoDBDefaults"/> to initialize defaults.</param>
         public BootProcedure(MongoDBDefaults defaults)
         {
             _defaults = defaults;
