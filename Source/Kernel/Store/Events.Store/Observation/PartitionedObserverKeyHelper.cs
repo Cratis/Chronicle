@@ -24,7 +24,7 @@ namespace Cratis.Events.Store.Observation
         /// </summary>
         /// <param name="key">Key to parse.</param>
         /// <returns>Tuple with tenant, event log and event source.</returns>
-        public static (TenantId tenantId, EventLogId eventLogId, EventSourceId eventSourceId) Parse(string key)
+        public static (TenantId TenantId, EventLogId EventLogId, EventSourceId EventSourceId) Parse(string key)
         {
             var elements = key.Split('+');
 

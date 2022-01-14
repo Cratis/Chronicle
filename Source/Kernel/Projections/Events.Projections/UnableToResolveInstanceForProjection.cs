@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Exception that is thrown when an instance is not possible to resolve.
+    /// Exception that gets thrown when an instance is not possible to resolve.
     /// </summary>
     public class UnableToResolveInstanceForProjection : Exception
     {

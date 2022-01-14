@@ -16,11 +16,11 @@ namespace Cratis.Configuration
         /// <summary>
         /// The shared database connection configuration.
         /// </summary>
-        public object Shared { get; init; } = "";
+        public object Shared { get; init; } = string.Empty;
 
         /// <summary>
         /// The event store connection configuration per tenant.
         /// </summary>
         public IDictionary<string, object> Tenants { get; init; } = new Dictionary<string, object>();
-    };
+    }
 }

@@ -11,7 +11,6 @@ namespace Cratis.Events.Store.MongoDB
     /// <summary>
     /// Represents an implementation of <see cref="IBatchContainer"/> for MongoDB event log events.
     /// </summary>
-    [Serializable]
     public class EventLogBatchContainer : IBatchContainer
     {
         readonly IEnumerable<AppendedEvent> _events;

@@ -18,8 +18,8 @@ namespace Cratis.Events.Store.Grains
         /// <summary>
         /// Initializes a new instance of the <see cref="BootProcedure"/> class.
         /// </summary>
-        /// <param name="grainFactory"></param>
-        /// <param name="executionContextManager"></param>
+        /// <param name="grainFactory"><see cref="IGrainFactory"/> to use for getting grains.</param>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
         public BootProcedure(IGrainFactory grainFactory, IExecutionContextManager executionContextManager)
         {
             _grainFactory = grainFactory;
@@ -32,8 +32,7 @@ namespace Cratis.Events.Store.Grains
             // TODO: Start for all tenants
             _executionContextManager.Establish(
                 Guid.Parse("f455c031-630e-450d-a75b-ca050c441708"),
-                Guid.NewGuid().ToString()
-            );
+                Guid.NewGuid().ToString());
 
             var eventLog = _grainFactory.GetGrain<IEventLog>(EventLogId.Default, keyExtension: "f455c031-630e-450d-a75b-ca050c441708");
             eventLog.WarmUp();

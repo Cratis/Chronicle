@@ -8,21 +8,8 @@ namespace Cratis.Events.Store.Grains
     /// <summary>
     /// Represents a <see cref="StreamSequenceToken"/> for observers.
     /// </summary>
-    [Serializable]
     public class EventLogSequenceNumberTokenWithFilter : EventLogSequenceNumberToken
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EventLogSequenceNumberTokenWithFilter"/> class.
-        /// </summary>
-        /// <param name="sequenceNumber"><see cref="EventLogSequenceNumber"/></param>
-        /// <param name="eventTypes"><see cref="EventType">event types</see> the observer is interested in.</param>
-        /// <param name="partition">Optional <see cref="EventSourceId"/> partition.</param>
-        public EventLogSequenceNumberTokenWithFilter(EventLogSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSourceId? partition = default) : base(sequenceNumber)
-        {
-            EventTypes = eventTypes;
-            Partition = partition ?? EventSourceId.Unspecified;
-        }
-
         /// <summary>
         /// Gets the collection of <see cref="EventType">event types</see> the observer is interested in.
         /// </summary>
@@ -32,6 +19,18 @@ namespace Cratis.Events.Store.Grains
         /// Gets the <see cref="EventSourceId"/> partition.
         /// </summary>
         public EventSourceId Partition { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventLogSequenceNumberTokenWithFilter"/> class.
+        /// </summary>
+        /// <param name="sequenceNumber"><see cref="EventLogSequenceNumber"/>.</param>
+        /// <param name="eventTypes"><see cref="EventType">event types</see> the observer is interested in.</param>
+        /// <param name="partition">Optional <see cref="EventSourceId"/> partition.</param>
+        public EventLogSequenceNumberTokenWithFilter(EventLogSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSourceId? partition = default) : base(sequenceNumber)
+        {
+            EventTypes = eventTypes;
+            Partition = partition ?? EventSourceId.Unspecified;
+        }
 
         /// <inheritdoc/>
         public override bool Equals(StreamSequenceToken other)

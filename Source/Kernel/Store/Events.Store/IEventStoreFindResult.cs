@@ -6,7 +6,7 @@ using System.Reactive.Subjects;
 namespace Cratis.Events.Store
 {
     /// <summary>
-    /// Defines the result of a find within the event store
+    /// Defines the result of a find within the event store.
     /// </summary>
     public interface IEventStoreFindResult
     {
@@ -16,8 +16,9 @@ namespace Cratis.Events.Store
         Subject<AppendedEvent> Event { get; }
 
         /// <summary>
-        /// Create an enumerable of all the <see cref="AppendedEvent"/> in the find result
+        /// Create an enumerable of all the <see cref="AppendedEvent"/> in the find result.
         /// </summary>
+        /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
         IEnumerable<AppendedEvent> AsEnumerable();
     }
 }

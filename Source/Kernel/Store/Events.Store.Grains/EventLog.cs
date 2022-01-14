@@ -15,7 +15,11 @@ namespace Cratis.Events.Store.Grains
     [StorageProvider(ProviderName = EventLogState.StorageProvider)]
     public class EventLog : Grain<EventLogState>, IEventLog
     {
+        /// <summary>
+        /// The name of the stream provider.
+        /// </summary>
         public const string StreamProvider = "event-log";
+
         readonly ILogger<EventLog> _logger;
         EventLogId _eventLogId = EventLogId.Unspecified;
         TenantId _tenantId = TenantId.NotSet;
@@ -48,8 +52,7 @@ namespace Cratis.Events.Store.Grains
             var appendedEvent = new AppendedEvent(
                 new EventMetadata(0, new EventType(Guid.Empty, EventGeneration.First)),
                 new EventContext(string.Empty, DateTimeOffset.UtcNow),
-                "{}"
-            );
+                "{}");
 
             await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken());
             await WriteStateAsync();
@@ -63,8 +66,7 @@ namespace Cratis.Events.Store.Grains
             var appendedEvent = new AppendedEvent(
                 new EventMetadata(State.SequenceNumber, eventType),
                 new EventContext(eventSourceId, DateTimeOffset.UtcNow),
-                content
-            );
+                content);
 
             var updateSequenceNumber = true;
 
@@ -79,8 +81,7 @@ namespace Cratis.Events.Store.Grains
                     ex.SequenceNumber,
                     ex.TenantId,
                     ex.EventSourceId,
-                    ex
-                );
+                    ex);
 
                 updateSequenceNumber = false;
             }
@@ -91,8 +92,7 @@ namespace Cratis.Events.Store.Grains
                     State.SequenceNumber,
                     _tenantId,
                     eventSourceId,
-                    ex
-                );
+                    ex);
             }
 
             if (updateSequenceNumber)

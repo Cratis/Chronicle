@@ -16,7 +16,7 @@ namespace Cratis.Events.Store
         /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
         /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
         /// <param name="content">The JSON payload of the event.</param>
-        /// <returns>Awaitable <see cref="Task"/></returns>
+        /// <returns>Awaitable <see cref="Task"/>.</returns>
         Task Append(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, string content);
 
         /// <summary>
@@ -26,7 +26,7 @@ namespace Cratis.Events.Store
         /// <param name="sequenceNumber">The unique <see cref="EventLogSequenceNumber">sequence number</see> within the event log.</param>
         /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
         /// <param name="content">The JSON payload of the event.</param>
-        /// <returns>Awaitable <see cref="Task"/></returns>
+        /// <returns>Awaitable <see cref="Task"/>.</returns>
         Task Compensate(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventType eventType, string content);
 
         /// <summary>

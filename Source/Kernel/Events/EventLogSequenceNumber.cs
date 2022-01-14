@@ -6,8 +6,8 @@ namespace Cratis.Events
     /// <summary>
     /// Represents the sequence number within an event log for an event.
     /// </summary>
-    /// <param name="Value">The sequence number</param>
-    public record EventLogSequenceNumber(ulong Value): ConceptAs<ulong>(Value)
+    /// <param name="Value">The sequence number.</param>
+    public record EventLogSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     {
         /// <summary>
         /// Gets the first sequence number.
@@ -17,8 +17,8 @@ namespace Cratis.Events
         /// <summary>
         /// Implicitly convert from <see cref="ulong"/> to <see cref="EventLogSequenceNumber"/>.
         /// </summary>
-        /// <param name="Value">Value to convert from.</param>
+        /// <param name="value">Value to convert from.</param>
         /// <returns>A converted <see cref="EventLogSequenceNumber"/>.</returns>;
-        public static implicit operator EventLogSequenceNumber(ulong Value) => new (Value);
+        public static implicit operator EventLogSequenceNumber(ulong value) => new(value);
     }
 }
