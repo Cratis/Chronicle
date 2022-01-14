@@ -13,8 +13,8 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ProjectionEventProviderTypeId"/>.
         /// </summary>
-        /// <param name="value">Guid as string</param>
-        /// <returns>A new <see cref="ProjectionEventProviderTypeId"/></returns>
+        /// <param name="value">Guid as string.</param>
+        /// <returns>A new <see cref="ProjectionEventProviderTypeId"/>.</returns>
         public static implicit operator ProjectionEventProviderTypeId(string value) => new(Guid.Parse(value));
     }
 }

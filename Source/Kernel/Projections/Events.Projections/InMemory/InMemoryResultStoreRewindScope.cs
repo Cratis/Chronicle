@@ -8,14 +8,14 @@ namespace Cratis.Events.Projections.InMemory
     /// </summary>
     public class InMemoryResultStoreRewindScope : IProjectionResultStoreRewindScope
     {
+        /// <inheritdoc/>
+        public Model Model { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryResultStoreRewindScope"/> class.
         /// </summary>
         /// <param name="model"><see cref="Model"/> the scope is for.</param>
         public InMemoryResultStoreRewindScope(Model model) => Model = model;
-
-        /// <inheritdoc/>
-        public Model Model { get; }
 
         /// <inheritdoc/>
         public void Dispose()

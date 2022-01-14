@@ -41,7 +41,7 @@ namespace Cratis.Events.Projections.Pipelines
         /// <summary>
         /// Report task for the status.
         /// </summary>
-        /// <param name="task">Current task to report</param>
+        /// <param name="task">Current task to report.</param>
         public void ReportTask(string task) => Task.OnNext(task);
 
         /// <summary>

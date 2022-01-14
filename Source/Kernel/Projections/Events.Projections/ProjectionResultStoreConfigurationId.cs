@@ -8,7 +8,7 @@ namespace Cratis.Events.Projections
     /// <summary>
     /// Represents the unique identifier of a specific store configuration using in a <see cref="IProjectionPipeline"/>.
     /// </summary>
-    /// <param name="Value">Underlying value</param>
+    /// <param name="Value">Underlying value.</param>
     public record ProjectionResultStoreConfigurationId(Guid Value) : ConceptAs<Guid>(Value)
     {
         /// <summary>

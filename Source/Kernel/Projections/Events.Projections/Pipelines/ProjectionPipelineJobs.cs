@@ -49,7 +49,8 @@ namespace Cratis.Events.Projections.Pipelines
         public IProjectionPipelineJob Catchup(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId) =>
             new ProjectionPipelineJob(
                 CatchupJob,
-                new[] {
+                new[]
+                {
                     new Catchup(
                         pipeline,
                         _projectionPositions,
@@ -57,14 +58,15 @@ namespace Cratis.Events.Projections.Pipelines
                         _projectionPipelineHandler,
                         configurationId,
                         _loggerFactory.CreateLogger<Catchup>())
-                    });
+                });
 
         /// <inheritdoc/>
         public IEnumerable<IProjectionPipelineJob> Catchup(IProjectionPipeline pipeline) =>
             pipeline.ResultStores.Select(kvp =>
                 new ProjectionPipelineJob(
                     CatchupJob,
-                    new[] {
+                    new[]
+                    {
                         new Catchup(
                             pipeline,
                             _projectionPositions,
@@ -78,7 +80,8 @@ namespace Cratis.Events.Projections.Pipelines
         public IProjectionPipelineJob Rewind(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId) =>
             new ProjectionPipelineJob(
                 RewindJob,
-                new IProjectionPipelineJobStep[] {
+                new IProjectionPipelineJobStep[]
+                {
                     new Rewind(
                         pipeline,
                         _projectionPositions,
@@ -97,7 +100,8 @@ namespace Cratis.Events.Projections.Pipelines
         public IEnumerable<IProjectionPipelineJob> Rewind(IProjectionPipeline pipeline) => pipeline.ResultStores.Select(kvp =>
             new ProjectionPipelineJob(
                 RewindJob,
-                new IProjectionPipelineJobStep[] {
+                new IProjectionPipelineJobStep[]
+                {
                     new Rewind(
                         pipeline,
                         _projectionPositions,

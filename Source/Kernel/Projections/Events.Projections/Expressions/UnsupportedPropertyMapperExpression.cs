@@ -12,6 +12,8 @@ namespace Cratis.Events.Projections.Expressions
         /// Initializes a new instance of the <see cref="UnsupportedPropertyMapperExpression"/> class.
         /// </summary>
         /// <param name="expression">The unsupported expression.</param>
-        public UnsupportedPropertyMapperExpression(string expression) : base($"Couldn't find an property mapper for the expression '{expression}'") { }
+        public UnsupportedPropertyMapperExpression(string expression) : base($"Couldn't find an property mapper for the expression '{expression}'")
+        {
+        }
     }
 }

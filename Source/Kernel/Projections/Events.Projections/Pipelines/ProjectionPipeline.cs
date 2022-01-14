@@ -194,7 +194,7 @@ namespace Cratis.Events.Projections.Pipelines
 
         void ThrowIfRewindAlreadyInProgress()
         {
-            if (_jobs.Any(_ => _.Name.Equals(ProjectionPipelineJobs.RewindJob)))
+            if (_jobs.Any(_ => _.Name == ProjectionPipelineJobs.RewindJob))
             {
                 throw new RewindAlreadyInProgress(this);
             }

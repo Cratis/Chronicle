@@ -18,6 +18,6 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="model"><see cref="Model"/> to create for.</param>
         /// <returns>A new instance of <see cref="IProjectionResultStore"/> for the <see cref="Model"/>.</returns>
-        IProjectionResultStore  CreateFor(Model model);
+        IProjectionResultStore CreateFor(Model model);
     }
 }

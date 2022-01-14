@@ -15,5 +15,4 @@ namespace Cratis.Events.Projections
         /// <param name="value">String value to convert from.</param>
         public static implicit operator ProjectionResultStoreTypeName(string value) => new(value);
     }
-
 }

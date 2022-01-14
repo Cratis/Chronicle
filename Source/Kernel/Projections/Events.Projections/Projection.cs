@@ -17,33 +17,6 @@ namespace Cratis.Events.Projections
         readonly ISubject<EventContext> _subject = new Subject<EventContext>();
         readonly IDictionary<EventType, ValueProvider<Event>> _eventTypesToKeyResolver;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Projection"/> class.
-        /// </summary>
-        /// <param name="identifier">The unique identifier of the projection.</param>
-        /// <param name="name">The name of the projection.</param>
-        /// <param name="path">The qualified path of the projection.</param>
-        /// <param name="model">The target <see cref="Model"/>.</param>
-        /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
-        /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
-        public Projection(
-            ProjectionId identifier,
-            ProjectionName name,
-            ProjectionPath path,
-            Model model,
-            IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
-            IEnumerable<IProjection> childProjections)
-        {
-            Identifier = identifier;
-            Name = name;
-            Model = model;
-            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
-            Event = FilterEventTypes(_subject);
-            Path = path;
-            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
-            ChildProjections = childProjections;
-        }
-
         /// <inheritdoc/>
         public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
 
@@ -70,6 +43,33 @@ namespace Cratis.Events.Projections
 
         /// <inheritdoc/>
         public IEnumerable<IProjection> ChildProjections { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Projection"/> class.
+        /// </summary>
+        /// <param name="identifier">The unique identifier of the projection.</param>
+        /// <param name="name">The name of the projection.</param>
+        /// <param name="path">The qualified path of the projection.</param>
+        /// <param name="model">The target <see cref="Model"/>.</param>
+        /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
+        /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
+        public Projection(
+            ProjectionId identifier,
+            ProjectionName name,
+            ProjectionPath path,
+            Model model,
+            IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
+            IEnumerable<IProjection> childProjections)
+        {
+            Identifier = identifier;
+            Name = name;
+            Model = model;
+            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
+            Event = FilterEventTypes(_subject);
+            Path = path;
+            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+            ChildProjections = childProjections;
+        }
 
         /// <inheritdoc/>
         public void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset)

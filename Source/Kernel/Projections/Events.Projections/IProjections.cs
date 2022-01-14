@@ -27,12 +27,12 @@ namespace Cratis.Events.Projections
         /// Get all <see cref="IProjectionPipeline">projection pipelines</see> in the system.
         /// </summary>
         /// <returns>Collection of <see cref="IProjectionPipeline"/>.</returns>
-        IEnumerable<IProjectionPipeline>  GetPipelines();
+        IEnumerable<IProjectionPipeline> GetPipelines();
 
         /// <summary>
         /// Gets an observable of all <see cref="IProjectionPipeline"/> in the system.
         /// </summary>
-        IObservable<IProjectionPipeline> Pipelines { get; }
+        IObservable<IProjectionPipeline> Pipelines { get; }
 
         /// <summary>
         /// Get a specific <see cref="IProjectionPipeline"/> by the identifier.

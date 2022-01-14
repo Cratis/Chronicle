@@ -52,7 +52,7 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
             var resultStore = _pipeline.ResultStores[_configurationId];
             jobStatus.ReportTask($"Getting positions for '{resultStore.Name}' with configuration id {_configurationId}");
             var offset = await _projectionPositions.GetFor(_pipeline.Projection, _configurationId);
-            if( offset == 0 )
+            if (offset == 0)
             {
                 jobStatus.ReportTask($"Prepare for initial run for '{resultStore.Name}' with configuration id {_configurationId}");
                 await resultStore.PrepareInitialRun();
@@ -62,7 +62,7 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
 
             jobStatus.ReportTask($"Catching up from offset {offset} for '{resultStore.Name}' with configuration id {_configurationId}");
 
-            while(!exhausted)
+            while (!exhausted)
             {
                 var cursor = await _projectionEventProvider.GetFromPosition(_pipeline.Projection, offset);
                 while (await cursor.MoveNext())

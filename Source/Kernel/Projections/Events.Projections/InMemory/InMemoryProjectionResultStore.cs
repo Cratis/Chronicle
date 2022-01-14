@@ -22,6 +22,12 @@ namespace Cratis.Events.Projections.InMemory
         readonly Model _model;
         IProjectionResultStoreRewindScope? _rewindScope;
 
+        /// <inheritdoc/>
+        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
+
+        /// <inheritdoc/>
+        public ProjectionResultStoreTypeName Name => "InMemory";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryProjectionResultStore"/> class.
         /// </summary>
@@ -30,12 +36,6 @@ namespace Cratis.Events.Projections.InMemory
         {
             _model = model;
         }
-
-        /// <inheritdoc/>
-        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
-
-        /// <inheritdoc/>
-        public ProjectionResultStoreTypeName Name => "InMemory";
 
         /// <inheritdoc/>
         public Task<ExpandoObject> FindOrDefault(object key)
