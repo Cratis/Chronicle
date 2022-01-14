@@ -5,25 +5,20 @@ on:
     branches:
       - "main"
     paths:
-      - "Source/**"
+      - "Source/Node/**"
+      - "Source/Workbench/**"
   pull_request:
     branches:
       - "**"
     paths:
-      - "Source/**"
+      - "Source/Node/**"
+      - "Source/Workbench/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
       - name: Setup node v16
         uses: actions/setup-node@v1
         with:
@@ -44,13 +39,6 @@ jobs:
       - name: Yarn install
         run: yarn
 
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: "6.0.100"
-
-      - name: Build .NET
-        run: dotnet build --configuration Release
 
       - name: Build JS/TS
         run: |
