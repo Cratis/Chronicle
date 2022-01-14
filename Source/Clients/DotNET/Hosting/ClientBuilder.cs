@@ -61,16 +61,22 @@ namespace Cratis.Hosting
                 types = new Types.Types();
             }
 
-            var connectionManager = new ConnectionManager();
+            services
+                .AddMongoDBReadModels(types)
+                .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
 
+            if (_inSilo)
+            {
+                return;
+            }
+
+            var connectionManager = new ConnectionManager();
             services
                 .AddSingleton<IConnectionManager>(connectionManager)
-                .AddSingleton(types)
                 .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
                 .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
                 .AddTransient<IEventStore, EventStore>()
-                .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
-                .AddMongoDBReadModels(types)
+                .AddSingleton(types)
                 .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
                 .AddProjections()
                 .AddSingleton<IObservers, Observers>()
@@ -106,17 +112,13 @@ namespace Cratis.Hosting
                     .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
 
             var orleansClient = orleansBuilder.Build();
-
             services.AddSingleton(orleansClient);
 
-            if (!_inSilo)
+            orleansClient.Connect(async (_) =>
             {
-                orleansClient.Connect(async (_) =>
-                {
-                    await Task.Delay(1000);
-                    return true;
-                }).Wait();
-            }
+                await Task.Delay(1000);
+                return true;
+            }).Wait();
         }
     }
 }
