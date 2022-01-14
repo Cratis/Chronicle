@@ -18,6 +18,21 @@ namespace Cratis.Changes
         readonly TTarget _modifiedInstance;
 
         /// <summary>
+        /// Gets the full member path to the property that has changed.
+        /// </summary>
+        public string MemberPath { get; }
+
+        /// <summary>
+        /// Gets the original value - possibly default.
+        /// </summary>
+        public object? Original { get; }
+
+        /// <summary>
+        /// Gets the changed value - possibly default.
+        /// </summary>
+        public object? Changed { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="PropertyDifference{T}"/> class.
         /// </summary>
         /// <param name="initialInstance">Original state.</param>
@@ -44,21 +59,6 @@ namespace Cratis.Changes
                 }
             }
         }
-
-        /// <summary>
-        /// Gets the full member path to the property that has changed.
-        /// </summary>
-        public string MemberPath { get; }
-
-        /// <summary>
-        /// Gets the original value - possibly default.
-        /// </summary>
-        public object? Original { get; }
-
-        /// <summary>
-        /// Gets the changed value - possibly default.
-        /// </summary>
-        public object? Changed { get; }
 
         Type? GetValueType()
         {

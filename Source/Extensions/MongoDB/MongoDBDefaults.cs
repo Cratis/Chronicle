@@ -44,24 +44,19 @@ namespace Cratis.Extensions.MongoDB
             _initialized = true;
 
             BsonSerializer
-                .RegisterSerializationProvider(
-                    new ConceptSerializationProvider()
-                );
+                .RegisterSerializationProvider(new ConceptSerializationProvider());
             BsonSerializer
-                .RegisterSerializer(
-                    new DateTimeOffsetSupportingBsonDateTimeSerializer()
-                );
+                .RegisterSerializer(new DateTimeOffsetSupportingBsonDateTimeSerializer());
 
 #pragma warning disable CS0618
+
             // Due to what must be a bug in the latest MongoDB drivers, we set this explicitly as well.
             // This property is marked obsolete, we'll keep it here till that time
             // https://www.mongodb.com/community/forums/t/c-driver-2-11-1-allegedly-use-different-guid-representation-for-insert-and-for-find/8536/3
             BsonDefaults.GuidRepresentationMode = GuidRepresentationMode.V3;
 #pragma warning restore CS0618
             BsonSerializer
-                .RegisterSerializer(
-                    new GuidSerializer(GuidRepresentation.Standard)
-                );
+                .RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
             RegisterConventionAsPack(ConventionPacks.CamelCase, new CamelCaseElementNameConvention());
             RegisterConventionAsPack(ConventionPacks.IgnoreExtraElements, new IgnoreExtraElementsConvention(true));

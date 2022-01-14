@@ -6,7 +6,7 @@ namespace Cratis.Collections
     /// <summary>
     /// Provides a set of extension methods for different collection and enumerable types.
     /// </summary>
-    public static class CollectionsExtensions
+    public static class CollectionExtensions
     {
         /// <summary>
         /// Enumerate an enumerable and call the given Action for each item.

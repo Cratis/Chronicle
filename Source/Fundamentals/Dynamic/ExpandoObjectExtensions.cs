@@ -38,9 +38,9 @@ namespace Cratis.Dynamic
         }
 
         /// <summary>
-        /// Converts an object to a dynamic <see cref="ExpandoObject"/>
+        /// Converts an object to a dynamic <see cref="ExpandoObject"/>.
         /// </summary>
-        /// <param name="original"></param>
+        /// <param name="original">Original object to convert.</param>
         /// <returns>A new <see cref="ExpandoObject"/> representing the given object.</returns>
         public static ExpandoObject AsExpandoObject(this object original)
         {
@@ -107,9 +107,10 @@ namespace Cratis.Dynamic
         public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property)
         {
             var currentTarget = target as IDictionary<string, object>;
-            for (var propertyIndex = 0; propertyIndex < property.Segments.Length - 1; propertyIndex++)
+            var segments = property.Segments.ToArray();
+            for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
             {
-                var segment = property.Segments[propertyIndex];
+                var segment = segments[propertyIndex];
                 if (!currentTarget.ContainsKey(segment))
                 {
                     var nested = new ExpandoObject();
@@ -161,7 +162,7 @@ namespace Cratis.Dynamic
         /// <param name="items">Items to check.</param>
         /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
         /// <param name="key">The key value to check for.</param>
-        /// <returns>True if there is an item, false if not</returns>
+        /// <returns>True if there is an item, false if not.</returns>
         public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
             items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
     }

@@ -62,7 +62,7 @@ namespace Cratis.Reflection
         /// <summary>
         /// Get the underlying nullable type.
         /// </summary>
-        /// <param name="type"><see cref="Type"/> to get from</param>
+        /// <param name="type"><see cref="Type"/> to get from.</param>
         /// <returns>Underlying nullable type.</returns>
         public static Type GetNullableType(this Type type)
         {
@@ -175,17 +175,16 @@ namespace Cratis.Reflection
             {
                 return enumerableType.GetElementType()!;
             }
-            else if (enumerableType.IsGenericType && enumerableType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+
+            if (enumerableType.IsGenericType && enumerableType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 return enumerableType.GetGenericArguments()[0];
             }
-            else
-            {
-                return enumerableType.GetInterfaces()
-                    .Where(t => t.IsGenericType &&
-                        t.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-                    .Select(t => t.GenericTypeArguments[0]).FirstOrDefault()!;
-            }
+
+            return enumerableType.GetInterfaces()
+                .Where(t => t.IsGenericType &&
+                    t.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                .Select(t => t.GenericTypeArguments[0]).FirstOrDefault()!;
         }
 
         /// <summary>

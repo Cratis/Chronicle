@@ -15,7 +15,7 @@ namespace Cratis.Changes
         /// <summary>
         /// Find an item in a collection by its identity.
         /// </summary>
-        /// <typeparam name="TTarget">Target type</typeparam>
+        /// <typeparam name="TTarget">Target type.</typeparam>
         /// <param name="items">Items to find from.</param>
         /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
         /// <param name="key">The key value to check for.</param>
@@ -30,7 +30,7 @@ namespace Cratis.Changes
         /// <param name="target">Target object.</param>
         /// <param name="childrenProperty"><see cref="PropertyPath"/> to ensure collection for.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
-        /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
+        /// <exception cref="ChildrenPropertyIsNotEnumerableForType">Thrown if there is an existing property and it is not enumerable.</exception>
         public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty)
         {
             if (target is ExpandoObject targetAsExpandoObject)
@@ -41,7 +41,7 @@ namespace Cratis.Changes
             var propertyInfo = childrenProperty.GetPropertyInfoFor<TTarget>();
             if (!propertyInfo.PropertyType.IsAssignableFrom(typeof(IEnumerable<TChild>)))
             {
-                throw new ChildrenPropertyIsNotEnumerable(typeof(TTarget), childrenProperty);
+                throw new ChildrenPropertyIsNotEnumerableForType(typeof(TTarget), childrenProperty);
             }
 
             if (childrenProperty.GetValue(target!) is not ICollection<TChild> items)
@@ -60,7 +60,7 @@ namespace Cratis.Changes
         /// <param name="items">Items to check.</param>
         /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
         /// <param name="key">The key value to check for.</param>
-        /// <returns>True if there is an item, false if not</returns>
+        /// <returns>True if there is an item, false if not.</returns>
         public static bool Contains<TChild>(this IEnumerable<TChild> items, PropertyPath identityProperty, object key)
         {
             if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);

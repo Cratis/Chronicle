@@ -6,23 +6,35 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
+#pragma warning disable AS0008
+
 namespace Cratis.Extensions.MongoDB
 {
     /// <summary>
     /// Represents a serializer for handling serialization of <see cref="DateTimeOffset"/> to and from MongoDB.
     /// </summary>
     /// <remarks>
-    /// Based on this: https://www.codeproject.com/Tips/1268086/MongoDB-Csharp-Serializer-for-DateTimeOffset-to-Bs
+    /// Based on this: https://www.codeproject.com/Tips/1268086/MongoDB-Csharp-Serializer-for-DateTimeOffset-to-Bs.
     /// </remarks>
     public class DateTimeOffsetSupportingBsonDateTimeSerializer : StructSerializerBase<DateTimeOffset>,
                  IRepresentationConfigurable<DateTimeOffsetSupportingBsonDateTimeSerializer>
     {
         readonly string _stringSerializationFormat = "YYYY-MM-ddTHH:mm:ss.FFFFFFK";
 
+        /// <inheritdoc/>
+        public BsonType Representation { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DateTimeOffsetSupportingBsonDateTimeSerializer"/> class.
+        /// </summary>
         public DateTimeOffsetSupportingBsonDateTimeSerializer() : this(BsonType.DateTime)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DateTimeOffsetSupportingBsonDateTimeSerializer"/> class.
+        /// </summary>
+        /// <param name="representation"><see cref="BsonType"/> representation.</param>
         public DateTimeOffsetSupportingBsonDateTimeSerializer(BsonType representation)
         {
             switch (representation)
@@ -37,10 +49,8 @@ namespace Cratis.Extensions.MongoDB
             Representation = representation;
         }
 
-        public BsonType Representation { get; }
-
-        public override DateTimeOffset Deserialize(BsonDeserializationContext context,
-                                                   BsonDeserializationArgs args)
+        /// <inheritdoc/>
+        public override DateTimeOffset Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
             var bsonReader = context.Reader;
 
@@ -49,8 +59,7 @@ namespace Cratis.Extensions.MongoDB
             {
                 case BsonType.String:
                     var stringValue = bsonReader.ReadString();
-                    return DateTimeOffset.ParseExact
-                        (stringValue, _stringSerializationFormat, DateTimeFormatInfo.InvariantInfo);
+                    return DateTimeOffset.ParseExact(stringValue, _stringSerializationFormat, DateTimeFormatInfo.InvariantInfo);
 
                 case BsonType.DateTime:
                     var dateTimeValue = bsonReader.ReadDateTime();
@@ -61,16 +70,15 @@ namespace Cratis.Extensions.MongoDB
             }
         }
 
-        public override void Serialize
-           (BsonSerializationContext context, BsonSerializationArgs args, DateTimeOffset value)
+        /// <inheritdoc/>
+        public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, DateTimeOffset value)
         {
             var bsonWriter = context.Writer;
 
             switch (Representation)
             {
                 case BsonType.String:
-                    bsonWriter.WriteString(value.ToString
-                          (_stringSerializationFormat, DateTimeFormatInfo.InvariantInfo));
+                    bsonWriter.WriteString(value.ToString(_stringSerializationFormat, DateTimeFormatInfo.InvariantInfo));
                     break;
 
                 case BsonType.DateTime:
@@ -83,6 +91,7 @@ namespace Cratis.Extensions.MongoDB
             }
         }
 
+        /// <inheritdoc/>
         public DateTimeOffsetSupportingBsonDateTimeSerializer WithRepresentation(BsonType representation)
         {
             if (representation == Representation)
@@ -92,6 +101,7 @@ namespace Cratis.Extensions.MongoDB
             return new DateTimeOffsetSupportingBsonDateTimeSerializer(representation);
         }
 
+        /// <inheritdoc/>
         IBsonSerializer IRepresentationConfigurable.WithRepresentation(BsonType representation)
         {
             return WithRepresentation(representation);

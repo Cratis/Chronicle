@@ -15,12 +15,7 @@ namespace Cratis.Properties
     public class PropertyPath
     {
         /// <summary>
-        /// Represents the root path.
-        /// </summary>
-        public static readonly PropertyPath Root = new(string.Empty);
-
-        /// <summary>
-        /// Implicitly convert from <see cref="PropertyPath"/> to <see cref="string"/>
+        /// Implicitly convert from <see cref="PropertyPath"/> to <see cref="string"/>.
         /// </summary>
         /// <param name="property"><see cref="PropertyPath"/> to convert from.</param>
         /// <returns>Converted path.</returns>
@@ -34,14 +29,9 @@ namespace Cratis.Properties
         public static implicit operator PropertyPath(string path) => new(path);
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PropertyPath"/> class.
+        /// Represents the root path.
         /// </summary>
-        /// <param name="path">Path to the property relative within an object.</param>
-        public PropertyPath(string path)
-        {
-            Path = path;
-            Segments = path.Split('.').Select(_ => _.ToCamelCase()).ToArray();
-        }
+        public static readonly PropertyPath Root = new(string.Empty);
 
         /// <summary>
         /// Gets the full path of the property.
@@ -51,17 +41,29 @@ namespace Cratis.Properties
         /// <summary>
         /// Gets the segments the full property path consists of.
         /// </summary>
-        public string[] Segments { get; }
+        public IEnumerable<string> Segments => _segments;
 
         /// <summary>
         /// Gets the last segment of the path.
         /// </summary>
-        public string LastSegment => Segments[^1];
+        public string LastSegment => _segments[^1];
 
         /// <summary>
         /// Gets whether or not this is the root path.
         /// </summary>
         public bool IsRoot => Path?.Length == 0;
+
+        readonly string[] _segments;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PropertyPath"/> class.
+        /// </summary>
+        /// <param name="path">Path to the property relative within an object.</param>
+        public PropertyPath(string path)
+        {
+            Path = path;
+            _segments = path.Split('.').Select(_ => _.ToCamelCase()).ToArray();
+        }
 
         /// <summary>
         /// Gets the value at the path of the property.
@@ -99,7 +101,6 @@ namespace Cratis.Properties
                 var propertyInfo = GetPropertyInfoFor(target.GetType());
                 propertyInfo.SetValue(inner, value);
             }
-
         }
 
         /// <summary>

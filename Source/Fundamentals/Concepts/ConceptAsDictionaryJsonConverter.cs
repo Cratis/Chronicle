@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 namespace Cratis.Concepts
 {
     /// <summary>
-    /// Represents a <see cref="JsonConverter"/> that can serialize and deserialize a <see cref="IDictionary{TKey, TValue}">dictionary</see> of <see cref="ConceptAs{T}"/>
+    /// Represents a <see cref="JsonConverter"/> that can serialize and deserialize a <see cref="IDictionary{TKey, TValue}">dictionary</see> of <see cref="ConceptAs{T}"/>.
     /// </summary>
     public class ConceptAsDictionaryJsonConverter : JsonConverter
     {
@@ -73,7 +73,10 @@ namespace Cratis.Concepts
         public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
         {
             var dictionary = value as IDictionary;
-            if( dictionary == default) return;
+            if (dictionary == default)
+            {
+                return;
+            }
 
             var objectType = dictionary.GetType();
             var keyType = objectType.GetType().GetGenericArguments()[0];

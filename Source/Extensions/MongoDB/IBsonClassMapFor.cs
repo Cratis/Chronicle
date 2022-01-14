@@ -14,7 +14,7 @@ namespace Cratis.Extensions.MongoDB
         /// <summary>
         /// Configure the given class map.
         /// </summary>
-        /// <param name="classMap"></param>
+        /// <param name="classMap"><see cref="BsonClassMap{T}"/> to register.</param>
         void Configure(BsonClassMap<T> classMap);
     }
 }

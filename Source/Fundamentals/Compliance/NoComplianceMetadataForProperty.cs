@@ -6,7 +6,7 @@ using System.Reflection;
 namespace Cratis.Compliance
 {
     /// <summary>
-    /// Exception that is thrown when where is no <see cref="ComplianceMetadata"/> associated with a property.
+    /// Exception that gets thrown when where is no <see cref="ComplianceMetadata"/> associated with a property.
     /// </summary>
     public class NoComplianceMetadataForProperty : Exception
     {

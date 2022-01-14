@@ -20,7 +20,7 @@ namespace Microsoft.AspNetCore.Builder
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
         public static IApplicationBuilder PerformBootProcedures(this IApplicationBuilder applicationBuilder)
         {
-            if( _bootProceduresPerformed ) return applicationBuilder;
+            if (_bootProceduresPerformed) return applicationBuilder;
             applicationBuilder.ApplicationServices.GetService<IBootProcedures>()!.Perform();
             _bootProceduresPerformed = true;
             return applicationBuilder;

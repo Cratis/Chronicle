@@ -14,6 +14,10 @@ namespace Autofac
     {
         internal static ITypes? Types;
         internal static IContainer? Container;
+
+        /// <summary>
+        /// Gets or sets the <see cref="IServiceProvider"/> to resolve to.
+        /// </summary>
         public static IServiceProvider? ServiceProvider { get; set; }
 
         /// <summary>

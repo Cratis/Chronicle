@@ -18,9 +18,6 @@ namespace Cratis.Reactive
         ConcurrentBag<TItem> _internalCollection = new();
 
         /// <inheritdoc/>
-        public event ObservableCollectionCleared Cleared = () => { };
-
-        /// <inheritdoc/>
         public IObservable<TItem> Added => _added;
 
         /// <inheritdoc/>
@@ -31,6 +28,9 @@ namespace Cratis.Reactive
 
         /// <inheritdoc/>
         public bool IsReadOnly => false;
+
+        /// <inheritdoc/>
+        public event ObservableCollectionCleared Cleared = () => { };
 
         /// <inheritdoc/>
         public void Add(TItem item)
@@ -81,6 +81,7 @@ namespace Cratis.Reactive
             return true;
         }
 
+        /// <inheritdoc/>
         IEnumerator IEnumerable.GetEnumerator() => _internalCollection.GetEnumerator();
     }
 }

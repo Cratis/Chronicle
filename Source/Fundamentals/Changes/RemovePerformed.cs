@@ -6,6 +6,6 @@ namespace Cratis.Changes
     /// <summary>
     /// Represents an entry being removed.
     /// </summary>
-    /// <param name="Key"></param>
+    /// <param name="Key">The key of the object that was removed.</param>
     public record RemovePerformed(object Key) : Change(null!);
 }

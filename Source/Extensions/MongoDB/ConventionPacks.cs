@@ -17,6 +17,5 @@ namespace Cratis.Extensions.MongoDB
         /// Gets the ignore extra elements convention pack name.
         /// </summary>
         public const string IgnoreExtraElements = "Ignore extra elements convention";
-
     }
 }

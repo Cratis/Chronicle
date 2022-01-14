@@ -6,7 +6,7 @@ namespace Cratis.Reactive
     /// <summary>
     /// Defines an observable collection.
     /// </summary>
-    /// <typeparam name="TItem"></typeparam>
+    /// <typeparam name="TItem">Type of the items in the collection.</typeparam>
     public interface IObservableCollection<TItem> : ICollection<TItem>, IDisposable
     {
         /// <summary>

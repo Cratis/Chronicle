@@ -4,14 +4,16 @@
 namespace Cratis.Execution
 {
     /// <summary>
-    /// Exception that is thrown when the <see cred="ExecutionContext"/> is not set.
+    /// Exception that gets thrown when the <see cred="ExecutionContext"/> is not set.
     /// </summary>
     public class ExecutionContextNotSet : Exception
     {
         /// <summary>
         /// Initializes a new instance of <see cref="ExecutionContextNotSet"/>.
         /// </summary>
-        public ExecutionContextNotSet() : base("Execution context is not set") { }
+        public ExecutionContextNotSet() : base("Execution context is not set")
+        {
+        }
 
         /// <summary>
         /// Throw <see cref="ExecutionContextNotSet"/> is not set.

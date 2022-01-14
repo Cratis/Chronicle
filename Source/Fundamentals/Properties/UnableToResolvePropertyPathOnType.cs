@@ -4,7 +4,7 @@
 namespace Cratis.Properties
 {
     /// <summary>
-    /// Exception that is thrown when property path is not possible to be resolved on a type.
+    /// Exception that gets thrown when property path is not possible to be resolved on a type.
     /// </summary>
     public class UnableToResolvePropertyPathOnType : Exception
     {
