@@ -71,6 +71,7 @@ jobs:
       - name: Push NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        working-directory: ./Source/Clients
 
       - name: Publish NPM packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
