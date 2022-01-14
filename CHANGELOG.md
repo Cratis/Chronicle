@@ -1,3 +1,17 @@
+# [v4.0.0] - 2022-1-14 [PR: #95](https://github.com/Cratis/cratis/pull/95)
+
+## Summary
+
+This is primarily a maintenance and cleanup of code release. The reason for the major bump in version is the change in behavior as to where the Compliance workbench is now located and how it is merged with Events to provide a holistic Workbench.
+
+### Changed
+
+- Merged Compliance and Events workbench for a single workbench frontend.
+- Consolidated APIs - cleaning up duplicates.
+- Compliance frontfacing APIs are now inside the Kernel.
+
+
+
 # [v3.4.0] - 2022-1-11 [PR: #90](https://github.com/Cratis/cratis/pull/90)
 
 ### Added
