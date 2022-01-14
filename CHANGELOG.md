@@ -1,3 +1,10 @@
+# [v4.0.3] - 2022-1-14 [PR: #98](https://github.com/Cratis/cratis/pull/98)
+
+### Fixed
+
+- Going back to publishing all .NET Projects for now - to get all dependencies published.
+
+
 # [v4.0.2] - 2022-1-14 [PR: #97](https://github.com/Cratis/cratis/pull/97)
 
 ### Fixed
