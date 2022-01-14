@@ -1,3 +1,10 @@
+# [v4.0.1] - 2022-1-14 [PR: #96](https://github.com/Cratis/cratis/pull/96)
+
+### Fixed
+
+- Fixing the publishin pipeline - missing working directory for the NuGet publish step.
+
+
 # [v4.0.0] - 2022-1-14 [PR: #95](https://github.com/Cratis/cratis/pull/95)
 
 ## Summary
