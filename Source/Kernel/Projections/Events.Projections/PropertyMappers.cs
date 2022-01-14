@@ -42,7 +42,7 @@ namespace Cratis.Events.Projections
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment))
                 {
-                    actualTarget[lastSegment] = (double)0;
+                    actualTarget[lastSegment] = 0D;
                 }
                 var value = (double)Convert.ChangeType(actualTarget[lastSegment], typeof(double), CultureInfo.InvariantCulture);
                 value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);
@@ -64,7 +64,7 @@ namespace Cratis.Events.Projections
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment))
                 {
-                    actualTarget[lastSegment] = (double)0;
+                    actualTarget[lastSegment] = 0D;
                 }
                 var value = (double)Convert.ChangeType(actualTarget[lastSegment], typeof(double), CultureInfo.InvariantCulture);
                 value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);

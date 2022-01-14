@@ -11,11 +11,11 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Move to the next part in the cursor.
         /// </summary>
-        Task<bool>  MoveNext();
+        Task<bool> MoveNext();
 
         /// <summary>
         /// Gets the current events, if any.
         /// </summary>
-        IEnumerable<Event> Current { get; }
+        IEnumerable<Event> Current { get; }
     }
 }

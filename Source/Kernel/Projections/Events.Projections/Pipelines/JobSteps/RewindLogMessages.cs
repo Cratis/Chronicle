@@ -5,6 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.Pipelines.JobSteps
 {
+    /// <summary>
+    /// Holds log messages for <see cref="Rewind"/>.
+    /// </summary>
     public static partial class RewindLogMessages
     {
         [LoggerMessage(0, LogLevel.Debug, "Rewinding projection '{Projection}' for configuration '{Configuration}'")]

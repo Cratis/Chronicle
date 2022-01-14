@@ -32,6 +32,7 @@ namespace Cratis.Events.Projections.Pipelines
         /// <summary>
         /// Stops a running job.
         /// </summary>
+        /// <returns>Async continuation.</returns>
         Task Stop();
     }
 }

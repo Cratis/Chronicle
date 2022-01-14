@@ -5,6 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.Pipelines
 {
+    /// <summary>
+    /// Holds log messages for <see cref="ProjectionPipelineHandler"/>.
+    /// </summary>
     public static partial class ProjectionPipelineHandlerLogMessages
     {
         [LoggerMessage(0, LogLevel.Debug, "Handling event with sequence number {SequenceNumber}")]

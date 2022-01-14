@@ -23,13 +23,13 @@ namespace Cratis.Events.Projections.Pipelines
         /// </summary>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> it should handle for.</param>
         /// <param name="configurationId">What is the identifier for the projection result store.</param>
-        /// <returns>Async task continuation</returns>
+        /// <returns>Async task continuation.</returns>
         Task InitializeFor(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId);
 
         /// <summary>
         /// Handle event for pipeline.
         /// </summary>
-        /// <param name="event">Event to handle</param>
+        /// <param name="event">Event to handle.</param>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> it should handle for.</param>
         /// <param name="resultStore">Which <see cref="IProjectionResultStore"/> it should use.</param>
         /// <param name="configurationId">What is the identifier for the projection result store.</param>

@@ -40,7 +40,9 @@ namespace Cratis.Events.Projections
             IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions,
             Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes)
         {
-            var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(kvp.Key, string.IsNullOrEmpty(kvp.Value.ParentKey) ?
+            var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
+                kvp.Key,
+                string.IsNullOrEmpty(kvp.Value.ParentKey) ?
                     EventValueProviders.FromEventSourceId :
                     EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
 

@@ -5,6 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Events.Projections.Pipelines.JobSteps
 {
+    /// <summary>
+    /// Holds log messages for <see cref="Catchup"/>.
+    /// </summary>
     public static partial class CatchupLogMessages
     {
         [LoggerMessage(0, LogLevel.Debug, "Catching up projection '{Projection}' for result store configuration '{ConfigurationId}'")]

@@ -12,7 +12,7 @@ namespace Cratis.Events.Projections.Definitions
         /// Get all projection definitions.
         /// </summary>
         /// <returns>Collection of <see cref="ProjectionDefinition"/>.</returns>
-        IEnumerable<ProjectionDefinition>   GetAll();
+        IEnumerable<ProjectionDefinition> GetAll();
 
         /// <summary>
         /// Register <see cref="ProjectionDefinition"/> in the system.

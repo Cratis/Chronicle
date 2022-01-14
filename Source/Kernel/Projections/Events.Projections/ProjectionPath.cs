@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the path for a <see cref="Projection"/>
+    /// Represents the path for a <see cref="Projection"/>.
     /// </summary>
     /// <param name="Path">The path string.</param>
     public record ProjectionPath(string Path) : ConceptAs<string>(Path)
