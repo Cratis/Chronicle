@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections;
-
-namespace Cratis.Extensions.Dolittle.Projections
+namespace Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents the stored position of a <see cref="IProjection"/>.

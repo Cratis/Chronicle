@@ -39,14 +39,6 @@ jobs:
       - name: Yarn install
         run: yarn
 
-      - name: Build workbench (TEMPORARY STEP)
-        run: |
-          pushd .
-          cd Source/Workbench/Events/Web
-          base_path=/events/ yarn build
-          cp -r wwwroot/. ../../../Clients/AspNetCore.Workbench/workbench/
-          popd
-
       - name: Setup .Net
         uses: actions/setup-dotnet@v1
         with:

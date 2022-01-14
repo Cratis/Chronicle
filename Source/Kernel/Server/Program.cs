@@ -9,7 +9,6 @@ using Cratis.Events.Projections;
 using Cratis.Events.Projections.Changes;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.MongoDB;
-using Cratis.Extensions.Dolittle.Projections;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
