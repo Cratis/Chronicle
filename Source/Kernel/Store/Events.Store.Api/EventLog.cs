@@ -10,19 +10,6 @@ using Orleans;
 
 namespace Cratis.Events.Store.Api
 {
-    [Route("/api/events/store/logs")]
-    public class EventLogs : Controller
-    {
-        [HttpGet]
-        public Task<IEnumerable<EventLogInformation>> AllEventLogs()
-        {
-            return Task.FromResult(new[] {
-                new EventLogInformation("00000000-0000-0000-0000-000000000000", "Main Event Log")
-            }.AsEnumerable());
-        }
-    }
-
-
     [Route("/api/events/store/log")]
     public class EventLog : Controller
     {
@@ -66,7 +53,7 @@ namespace Cratis.Events.Store.Api
         [HttpGet("histogram")]
         public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
-        [HttpGet("{eventSourceId}")]
+        [HttpGet("{eventLogId}/{eventSourceId}")]
         public Task FindFor(
             [FromRoute] EventLogId eventLogId,
             [FromRoute] EventSourceId eventSourceId)
@@ -74,7 +61,6 @@ namespace Cratis.Events.Store.Api
             _logger.LogInformation($"Find {eventLogId}- {eventSourceId}");
             return Task.CompletedTask;
         }
-
 
         [HttpGet("{eventLogId}/types")]
         public Task Types([FromRoute] string eventLogId)
