@@ -41,7 +41,11 @@ namespace Cratis.Hosting
             _microserviceId = microserviceId;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Start configuring <see cref="IClientBuilder"/> for a specific <see cref="MicroserviceId"/>.
+        /// </summary>
+        /// <param name="id"><see cref="MicroserviceId"/>.</param>
+        /// <returns><see cref="IClientBuilder/"> to build.</returns>
         public static IClientBuilder ForMicroservice(MicroserviceId id)
         {
             return new ClientBuilder(id);
