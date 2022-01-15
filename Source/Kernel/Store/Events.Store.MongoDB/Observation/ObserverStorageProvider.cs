@@ -20,6 +20,8 @@ namespace Cratis.Events.Store.MongoDB.Observation
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
 
+        IMongoCollection<ObserverState> Collection => _eventStoreDatabase.GetCollection<ObserverState>(CollectionNames.Observers);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
         /// </summary>
@@ -80,7 +82,5 @@ namespace Cratis.Events.Store.MongoDB.Observation
         }
 
         string GetKeyFrom(EventLogId eventLogId, ObserverId observerId) => $"{eventLogId} : {observerId}";
-
-        IMongoCollection<ObserverState> Collection => _eventStoreDatabase.GetCollection<ObserverState>(CollectionNames.Observers);
     }
 }

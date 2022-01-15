@@ -33,7 +33,7 @@ namespace Cratis.Events.Store.MongoDB.Reminders
         /// Initializes a new instance of the <see cref="EventLogPubSubStore"/> class.
         /// </summary>
         /// <param name="database"><see cref="ISharedDatabase"/> to keep state in.</param>
-        /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types-</param>
+        /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types.</param>
         /// <param name="grainFactory"><see cref="IGrainFactory"/> for resolving grains during serialization.</param>
         /// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
         /// <param name="logger">Logger for logging.</param>
@@ -89,8 +89,7 @@ namespace Cratis.Events.Store.MongoDB.Reminders
             var filter = Builders<BsonDocument>.Filter.And(
                 Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), _clusterOptions.Value.ServiceId),
                 Builders<BsonDocument>.Filter.Gt(new StringFieldDefinition<BsonDocument, long>(GrainHashProperty), begin),
-                Builders<BsonDocument>.Filter.Lte(new StringFieldDefinition<BsonDocument, long>(GrainHashProperty), end)
-            );
+                Builders<BsonDocument>.Filter.Lte(new StringFieldDefinition<BsonDocument, long>(GrainHashProperty), end));
 
             var result = await GetCollection().FindAsync(filter);
             var entries = result.ToList().Select(Deserialize);
@@ -129,7 +128,7 @@ namespace Cratis.Events.Store.MongoDB.Reminders
             try
             {
                 var json = JsonConvert.SerializeObject(entry, _serializerSettings);
-                json = json.Replace("\"$", "\"__");
+                json = json.Replace("\"$", "\"__", StringComparison.InvariantCulture);
                 var filter = GetKeyFilterFor(key);
                 var bson = BsonDocument.Parse(json);
                 var hash = (long)entry.GrainRef.GetUniformHashCode();
@@ -154,7 +153,7 @@ namespace Cratis.Events.Store.MongoDB.Reminders
         {
             document.Remove(GrainHashProperty);
             var json = document.ToJson();
-            json = json.Replace("\"__", "\"$");
+            json = json.Replace("\"__", "\"$", StringComparison.InvariantCulture);
             return JsonConvert.DeserializeObject<ReminderEntry>(json, _serializerSettings)!;
         }
 

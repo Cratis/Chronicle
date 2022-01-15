@@ -15,22 +15,18 @@ namespace Cratis.Events.Store.MongoDB
     {
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
-        readonly QueueId _queueId;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueCache"/> class.
         /// </summary>
-        /// <param name="queueId"><see cref="QueueId"/> the cache is for.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
         /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
         public EventLogQueueCache(
-            QueueId queueId,
             IExecutionContextManager executionContextManager,
             IEventStoreDatabase eventStoreDatabase)
         {
             _executionContextManager = executionContextManager;
             _eventStoreDatabase = eventStoreDatabase;
-            _queueId = queueId;
         }
 
         /// <inheritdoc/>

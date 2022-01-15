@@ -13,17 +13,7 @@ namespace Cratis.Events.Store.MongoDB
     /// </summary>
     public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
     {
-        readonly QueueId _queueId;
         readonly ConcurrentBag<IBatchContainer> _eventBatches = new();
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EventLogQueueAdapterReceiver"/> class.
-        /// </summary>
-        /// <param name="queueId"><see cref="QueueId"/> the receiver is for.</param>
-        public EventLogQueueAdapterReceiver(QueueId queueId)
-        {
-            _queueId = queueId;
-        }
 
         /// <inheritdoc/>
         public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)

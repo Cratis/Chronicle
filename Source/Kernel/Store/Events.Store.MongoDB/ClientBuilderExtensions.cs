@@ -7,8 +7,16 @@ using Orleans.Hosting;
 
 namespace Orleans
 {
+    /// <summary>
+    /// Extension methods for <see cref="IClientBuilder"/>.
+    /// </summary>
     public static class ClientBuilderExtensions
     {
+        /// <summary>
+        /// Add the event log stream.
+        /// </summary>
+        /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
+        /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
         public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
         {
             builder.ConfigureServices(services => services

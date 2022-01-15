@@ -19,6 +19,8 @@ namespace Cratis.Events.Store.MongoDB
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
 
+        IMongoCollection<EventLogState> Collection => _eventStoreDatabase.GetCollection<EventLogState>(CollectionName);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogStorageProvider"/> class.
         /// </summary>
@@ -53,11 +55,10 @@ namespace Cratis.Events.Store.MongoDB
             _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
             var eventLogState = grainState.State as EventLogState;
             var filter = Builders<EventLogState>.Filter.Eq(new StringFieldDefinition<EventLogState, Guid>("_id"), eventLogId);
-            return Collection.UpdateOneAsync(filter,
+            return Collection.UpdateOneAsync(
+                filter,
                 Builders<EventLogState>.Update.Set(_ => _.SequenceNumber, eventLogState!.SequenceNumber),
                 new() { IsUpsert = true });
         }
-
-        IMongoCollection<EventLogState> Collection => _eventStoreDatabase.GetCollection<EventLogState>(CollectionName);
     }
 }

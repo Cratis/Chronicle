@@ -24,6 +24,5 @@ namespace Cratis.Events.Store.MongoDB
         /// <param name="eventLogId"><see cref="EventLogId"/> identifier.</param>
         /// <returns>The collection instance.</returns>
         IMongoCollection<Event> GetEventLogCollectionFor(EventLogId eventLogId);
-
     }
 }
