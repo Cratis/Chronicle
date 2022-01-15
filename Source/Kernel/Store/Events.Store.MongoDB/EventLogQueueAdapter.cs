@@ -17,12 +17,21 @@ namespace Cratis.Events.Store.MongoDB
         readonly IStreamQueueMapper _mapper;
         readonly ProviderFor<IEventLogs> _eventLogsProvider;
 
+        /// <inheritdoc/>
+        public string Name { get; }
+
+        /// <inheritdoc/>
+        public bool IsRewindable => true;
+
+        /// <inheritdoc/>
+        public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueAdapter"/> class.
         /// </summary>
         /// <param name="name">Name of stream.</param>
-        /// <param name="mapper"></param>
-        /// <param name="eventLogsProvider"></param>
+        /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
+        /// <param name="eventLogsProvider">Provider for <see cref="IEventLogs"/>.</param>
         public EventLogQueueAdapter(
             string name,
             IStreamQueueMapper mapper,
@@ -34,18 +43,9 @@ namespace Cratis.Events.Store.MongoDB
         }
 
         /// <inheritdoc/>
-        public string Name { get; }
-
-        /// <inheritdoc/>
-        public bool IsRewindable => true;
-
-        /// <inheritdoc/>
-        public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
-
-        /// <inheritdoc/>
         public IQueueAdapterReceiver CreateReceiver(QueueId queueId)
         {
-            var receiver = new EventLogQueueAdapterReceiver(queueId);
+            var receiver = new EventLogQueueAdapterReceiver();
             _receivers[queueId] = receiver;
             return receiver;
         }

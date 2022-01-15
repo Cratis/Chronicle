@@ -16,6 +16,15 @@ namespace Cratis.Events.Store.MongoDB
         readonly IEnumerable<AppendedEvent> _events;
         readonly IDictionary<string, object> _requestContext;
 
+        /// <inheritdoc/>
+        public Guid StreamGuid { get; }
+
+        /// <inheritdoc/>
+        public string StreamNamespace { get; }
+
+        /// <inheritdoc/>
+        public StreamSequenceToken SequenceToken { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogBatchContainer"/> class.
         /// </summary>
@@ -42,15 +51,6 @@ namespace Cratis.Events.Store.MongoDB
                 SequenceToken = new EventLogSequenceNumberToken();
             }
         }
-
-        /// <inheritdoc/>
-        public Guid StreamGuid { get; }
-
-        /// <inheritdoc/>
-        public string StreamNamespace { get; }
-
-        /// <inheritdoc/>
-        public StreamSequenceToken SequenceToken { get; }
 
         /// <inheritdoc/>
         public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>() =>

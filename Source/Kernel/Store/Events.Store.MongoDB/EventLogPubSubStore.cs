@@ -28,7 +28,7 @@ namespace Cratis.Events.Store.MongoDB
         /// Initializes a new instance of the <see cref="EventLogPubSubStore"/> class.
         /// </summary>
         /// <param name="database"><see cref="ISharedDatabase"/> to keep state in.</param>
-        /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types-</param>
+        /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types.</param>
         /// <param name="grainFactory"><see cref="IGrainFactory"/> for resolving grains during serialization.</param>
         /// <param name="logger">Logger for logging.</param>
         public EventLogPubSubStore(
@@ -55,7 +55,7 @@ namespace Cratis.Events.Store.MongoDB
             _logger.ReadingState();
 
             var json = JsonConvert.SerializeObject(grainState.State, _serializerSettings);
-            json = json.Replace("\"$", "\"_");
+            json = json.Replace("\"$", "\"_", StringComparison.InvariantCulture);
             var jsonObject = JObject.Parse(json);
             var filter = new BsonDocument
             {
@@ -68,7 +68,7 @@ namespace Cratis.Events.Store.MongoDB
             if (document != null)
             {
                 json = document.ToJson();
-                json = json.Replace("\"_", "\"$");
+                json = json.Replace("\"_", "\"$", StringComparison.InvariantCulture);
                 grainState.State = JsonConvert.DeserializeObject(json, grainState.Type, _serializerSettings);
             }
         }
@@ -79,7 +79,7 @@ namespace Cratis.Events.Store.MongoDB
             _logger.WritingState();
 
             var json = JsonConvert.SerializeObject(grainState.State, _serializerSettings);
-            json = json.Replace("\"$", "\"_");
+            json = json.Replace("\"$", "\"_", StringComparison.InvariantCulture);
             var jsonObject = JObject.Parse(json);
             var filter = new BsonDocument
             {

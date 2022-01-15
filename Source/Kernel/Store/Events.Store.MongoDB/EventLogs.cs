@@ -51,7 +51,7 @@ namespace Cratis.Events.Store.MongoDB
                     {
                         { eventType.Generation.ToString(), BsonDocument.Parse(content) }
                     },
-                     Array.Empty<EventCompensation>());
+                    Array.Empty<EventCompensation>());
                 await GetCollectionFor(eventLogId).InsertOneAsync(@event);
             }
             catch (Exception ex)

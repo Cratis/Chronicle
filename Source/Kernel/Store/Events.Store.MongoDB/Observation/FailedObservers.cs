@@ -13,6 +13,8 @@ namespace Cratis.Events.Store.MongoDB.Observation
     {
         readonly IEventStoreDatabase _eventStoreDatabase;
 
+        IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="FailedObservers"/> class.
         /// </summary>
@@ -24,7 +26,5 @@ namespace Cratis.Events.Store.MongoDB.Observation
 
         /// <inheritdoc/>
         public async Task<IEnumerable<FailedObserverState>> GetAll() => (await Collection.FindAsync(FilterDefinition<FailedObserverState>.Empty)).ToList();
-
-        IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
     }
 }

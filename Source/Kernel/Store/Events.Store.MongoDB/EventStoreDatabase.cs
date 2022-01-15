@@ -21,6 +21,26 @@ namespace Cratis.Events.Store.MongoDB
         readonly IExecutionContextManager _executionContextManager;
         Dictionary<TenantId, IMongoDatabase> _databases = new();
 
+        IMongoDatabase Database
+        {
+            get
+            {
+                if (_databases.Count == 0)
+                {
+                    var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
+                    var configuration = _serviceProvider.GetService<Storage>()!;
+                    _databases = configuration.Get(WellKnownStorageTypes.EventStore).Tenants.ToDictionary(_ => (TenantId)_.Key, _ =>
+                    {
+                        var url = new MongoUrl(_.Value.ToString());
+                        var client = mongoDBClientFactory.Create(url);
+                        return client.GetDatabase(url.DatabaseName);
+                    });
+                }
+
+                return _databases[_executionContextManager.Current.TenantId];
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
         /// </summary>
@@ -54,26 +74,6 @@ namespace Cratis.Events.Store.MongoDB
             }
 
             return Database.GetCollection<Event>(collectionName);
-        }
-
-        IMongoDatabase Database
-        {
-            get
-            {
-                if (_databases.Count == 0)
-                {
-                    var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
-                    var configuration = _serviceProvider.GetService<Storage>()!;
-                    _databases = configuration.Get(WellKnownStorageTypes.EventStore).Tenants.ToDictionary(_ => (TenantId)_.Key, _ =>
-                    {
-                        var url = new MongoUrl(_.Value.ToString());
-                        var client = mongoDBClientFactory.Create(url);
-                        return client.GetDatabase(url.DatabaseName);
-                    });
-                }
-
-                return _databases[_executionContextManager.Current.TenantId];
-            }
         }
     }
 }

@@ -18,6 +18,8 @@ namespace Cratis.Events.Store.MongoDB.Observation
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
 
+        IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
         /// </summary>
@@ -76,10 +78,7 @@ namespace Cratis.Events.Store.MongoDB.Observation
         {
             var key = $"{eventLogId}+{observerId}+{eventSourceId}";
             return Builders<FailedObserverState>.Filter.Eq(
-                new StringFieldDefinition<FailedObserverState, string>("_id"), key
-            );
+                new StringFieldDefinition<FailedObserverState, string>("_id"), key);
         }
-
-        IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
     }
 }

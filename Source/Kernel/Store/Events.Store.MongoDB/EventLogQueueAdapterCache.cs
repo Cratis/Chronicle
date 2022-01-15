@@ -28,6 +28,6 @@ namespace Cratis.Events.Store.MongoDB
         }
 
         /// <inheritdoc/>
-        public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache(queueId, _executionContextManager, _eventStoreDatabase);
+        public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache(_executionContextManager, _eventStoreDatabase);
     }
 }
