@@ -17,19 +17,20 @@ namespace Cratis.Events.Projections.Pipelines
         /// Perform the step.
         /// </summary>
         /// <param name="jobStatus">The <see cref="ProjectionPipelineJobStatus"/>.</param>
-        /// <returns>Async task for continuation.</returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task Perform(ProjectionPipelineJobStatus jobStatus);
 
         /// <summary>
         /// Perform any post job operations.
         /// </summary>
         /// <param name="jobStatus">The <see cref="ProjectionPipelineJobStatus"/>.</param>
-        /// <returns>Async task for continuation.</returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task PerformPostJob(ProjectionPipelineJobStatus jobStatus);
 
         /// <summary>
         /// Stop the step.
         /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task Stop();
     }
 }

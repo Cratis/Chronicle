@@ -30,6 +30,7 @@ namespace Cratis.Events.Projections.Definitions
             _projectionSerializer = projectionSerializer;
         }
 
+        /// <inheritdoc/>
         public IEnumerable<ProjectionDefinition> GetAll()
         {
             PopulateIfEmpty().Wait();

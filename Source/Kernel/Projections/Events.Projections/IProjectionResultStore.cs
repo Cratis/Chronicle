@@ -43,6 +43,7 @@ namespace Cratis.Events.Projections
         /// Typically the store will clear out any existing data. This is to be able to guarantee
         /// the idempotency of the projection.
         /// </remarks>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task PrepareInitialRun();
 
         /// <summary>
@@ -54,6 +55,7 @@ namespace Cratis.Events.Projections
         /// dispose of this. Depending on the implementation of it, it will perform
         /// necessary cleanup after a rewind has been performed.
         /// </remarks>
+        /// <returns>A <see cref="IProjectionResultStoreRewindScope"/>.</returns>.
         IProjectionResultStoreRewindScope BeginRewind();
     }
 }

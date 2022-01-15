@@ -9,7 +9,6 @@ namespace Cratis.Events.Projections
     /// <param name="Value">Underlying value.</param>
     public record ProjectionEventProviderTypeId(Guid Value) : ConceptAs<Guid>(Value)
     {
-
         /// <summary>
         /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ProjectionEventProviderTypeId"/>.
         /// </summary>

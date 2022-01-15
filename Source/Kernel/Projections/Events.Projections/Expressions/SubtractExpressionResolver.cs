@@ -12,7 +12,7 @@ namespace Cratis.Events.Projections.Expressions
     /// </summary>
     public class SubtractExpressionResolver : IPropertyMapperExpressionResolver
     {
-        static readonly Regex _regularExpression = new("\\$subtract\\(([A-Za-z.]*)\\)", RegexOptions.Compiled);
+        static readonly Regex _regularExpression = new("\\$subtract\\(([A-Za-z.]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
         /// <inheritdoc/>
         public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;

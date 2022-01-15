@@ -13,7 +13,7 @@ namespace Cratis.Events.Projections.Pipelines
         readonly Subject<IProjectionPipelineJobStep> _step = new();
 
         /// <summary>
-        /// Gets the observable for current the step being worked on
+        /// Gets the observable for current the step being worked on.
         /// </summary>
         public IObservable<IProjectionPipelineJobStep> Step => _step;
 

@@ -25,7 +25,7 @@ namespace Cratis.Events.Projections.Pipelines
         /// <param name="projectionEventProviders"><see cref="IProjectionEventProviders"/> in the system.</param>
         /// <param name="projectionPositions"><see cref="IProjectionPositions"/> to use.</param>
         /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
-        /// <param name="loggerFactory"></param>
+        /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
         public ProjectionPipelineFactory(
             IProjectionResultStores projectionResultStores,
             IProjectionEventProviders projectionEventProviders,

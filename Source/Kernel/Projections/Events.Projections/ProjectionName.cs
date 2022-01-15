@@ -12,7 +12,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Implicitly convert from <see cref="string"/> to <see cref="ProjectionName"/>.
         /// </summary>
-        /// <param name="Value"><see cref="string"/> to convert from.</param>
-        public static implicit operator ProjectionName(string Value) => new(Value);
+        /// <param name="value"><see cref="string"/> to convert from.</param>
+        public static implicit operator ProjectionName(string value) => new(value);
     }
 }

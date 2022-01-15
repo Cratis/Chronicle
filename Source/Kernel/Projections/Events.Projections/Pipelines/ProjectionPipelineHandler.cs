@@ -23,6 +23,18 @@ namespace Cratis.Events.Projections.Pipelines
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> _positions = new();
         readonly ReplaySubject<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> _observablePositions = new(1);
 
+        /// <inheritdoc/>
+        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _observablePositions;
+
+        /// <inheritdoc/>
+        public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> CurrentPositions => new ReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>(_positions);
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProjectionPipelineHandler"/> class.
+        /// </summary>
+        /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for managing positions for pipelines.</param>
+        /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for tracking changesets.</param>
+        /// <param name="logger">Logger for logging.</param>
         public ProjectionPipelineHandler(
             IProjectionPositions projectionPositions,
             IChangesetStorage changesetStorage,
@@ -32,12 +44,6 @@ namespace Cratis.Events.Projections.Pipelines
             _changesetStorage = changesetStorage;
             _logger = logger;
         }
-
-        /// <inheritdoc/>
-        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _observablePositions;
-
-        /// <inheritdoc/>
-        public IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> CurrentPositions => new ReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>(_positions);
 
         /// <inheritdoc/>
         public async Task InitializeFor(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId)

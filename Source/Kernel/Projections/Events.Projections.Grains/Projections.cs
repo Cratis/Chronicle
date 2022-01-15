@@ -13,6 +13,10 @@ namespace Cratis.Events.Projections.Grains
     {
         readonly Events.Projections.IProjections _projections;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Projections"/> clas.
+        /// </summary>
+        /// <param name="projections">The underlying <see cref="Events.Projections.IProjections"/>.</param>
         public Projections(Events.Projections.IProjections projections)
         {
             _projections = projections;

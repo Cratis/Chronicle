@@ -21,7 +21,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> to start providing for.</param>
         /// <param name="subject"><see cref="ISubject{Event}"/> to provide into.</param>
-        /// <returns>Awaitable task</returns>
+        /// <returns>Awaitable task.</returns>
         /// <remarks>
         /// The provider will provide events from the current position it has recorded for the
         /// <see cref="IProjection"/>. It will be in a state of catching up till its at the

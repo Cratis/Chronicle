@@ -4,6 +4,8 @@
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.Pipelines;
 
+#pragma warning disable CA1721 // Pipelines property is confusing since there is a GetPipelines - they do differ - see GH issue #103.
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -44,6 +46,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Start the supervisor.
         /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         Task Start();
     }
 }
