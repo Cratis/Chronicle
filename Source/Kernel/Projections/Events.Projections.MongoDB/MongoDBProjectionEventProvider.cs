@@ -26,6 +26,9 @@ namespace Cratis.Events.Projections.MongoDB
         readonly ProviderFor<IProjectionPositions> _positionsProvider;
         readonly IClusterClient _clusterClient;
 
+        /// <inheritdoc/>
+        public ProjectionEventProviderTypeId TypeId => "c0c0196f-57e3-4860-9e3b-9823cf45df30";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionEventProvider"/> class.
         /// </summary>
@@ -46,9 +49,6 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public ProjectionEventProviderTypeId TypeId => "c0c0196f-57e3-4860-9e3b-9823cf45df30";
-
-        /// <inheritdoc/>
         public async Task<IEventCursor> GetFromPosition(IProjection projection, EventLogSequenceNumber start)
         {
             if (!projection.EventTypes.Any())
@@ -64,8 +64,7 @@ namespace Cratis.Events.Projections.MongoDB
 
             var filter = Builders<Store.MongoDB.Event>.Filter.And(
                 offsetFilter,
-                Builders<Store.MongoDB.Event>.Filter.Or(eventTypeFilters)
-            );
+                Builders<Store.MongoDB.Event>.Filter.Or(eventTypeFilters));
 
             var cursor = await collection.FindAsync(
                 filter,
@@ -100,7 +99,8 @@ namespace Cratis.Events.Projections.MongoDB
                         ));
 
                         return Task.CompletedTask;
-                    }, new EventLogSequenceNumberTokenWithFilter(currentOffset, pipeline.Projection.EventTypes.ToArray()));
+                    },
+                    new EventLogSequenceNumberTokenWithFilter(currentOffset, pipeline.Projection.EventTypes.ToArray()));
             }
         }
     }

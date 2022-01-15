@@ -12,17 +12,17 @@ namespace Cratis.Events.Projections.MongoDB
     {
         readonly IAsyncCursor<Store.MongoDB.Event>? _innerCursor;
 
+        /// <inheritdoc/>
+        public IEnumerable<Event> Current { get; private set; } = Array.Empty<Event>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventCursor"/> class.
         /// </summary>
-        /// <param name="innerCursor"></param>
+        /// <param name="innerCursor">The underlying MongoDB cursor.</param>
         public EventCursor(IAsyncCursor<Store.MongoDB.Event>? innerCursor)
         {
             _innerCursor = innerCursor;
         }
-
-        /// <inheritdoc/>
-        public IEnumerable<Event> Current { get; private set; } = Array.Empty<Event>();
 
         /// <inheritdoc/>
         public async Task<bool> MoveNext()
@@ -40,5 +40,4 @@ namespace Cratis.Events.Projections.MongoDB
             return result;
         }
     }
-
 }

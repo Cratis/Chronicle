@@ -13,6 +13,9 @@ namespace Cratis.Events.Projections.MongoDB
         readonly IMongoDatabase _database;
         readonly Action _onDispose;
 
+        /// <inheritdoc/>
+        public Model Model { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionResultStoreRewindScope"/> class.
         /// </summary>
@@ -28,9 +31,6 @@ namespace Cratis.Events.Projections.MongoDB
             Model = model;
             _onDispose = onDispose;
         }
-
-        /// <inheritdoc/>
-        public Model Model { get; }
 
         /// <inheritdoc/>
         public void Dispose()

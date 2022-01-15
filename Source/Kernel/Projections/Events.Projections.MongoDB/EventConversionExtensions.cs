@@ -28,5 +28,4 @@ namespace Cratis.Events.Projections.MongoDB
                 content);
         }
     }
-
 }

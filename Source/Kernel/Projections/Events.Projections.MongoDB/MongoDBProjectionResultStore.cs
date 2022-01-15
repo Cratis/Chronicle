@@ -18,19 +18,24 @@ namespace Cratis.Events.Projections.MongoDB
     /// </summary>
     public class MongoDBProjectionResultStore : IProjectionResultStore, IDisposable
     {
+        /// <summary>
+        /// Gets the identifier of the <see cref="MongoDBProjectionResultStore"/>.
+        /// </summary>
+        public static readonly ProjectionResultStoreTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
+
         readonly Model _model;
         readonly IExecutionContextManager _executionContextManager;
         readonly IMongoDBClientFactory _clientFactory;
         readonly Storage _configuration;
         IProjectionResultStoreRewindScope? _rewindScope;
 
-        /// <summary>
-        /// Gets the identifier of the <see cref="MongoDBProjectionResultStore"/>.
-        /// </summary>
-        public static readonly ProjectionResultStoreTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
-
         /// <inheritdoc/>
         public ProjectionResultStoreTypeName Name => "MongoDB";
+
+        /// <inheritdoc/>
+        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
+
+        bool IsRewinding => _rewindScope != default;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
@@ -50,9 +55,6 @@ namespace Cratis.Events.Projections.MongoDB
             _clientFactory = clientFactory;
             _configuration = configuration;
         }
-
-        /// <inheritdoc/>
-        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
 
         /// <summary>
         /// Get the rewind collection name.
@@ -187,7 +189,5 @@ namespace Cratis.Events.Projections.MongoDB
             var database = GetDatabase();
             return IsRewinding ? database.GetCollection<BsonDocument>(GetRewindCollectionName(_model.Name)) : database.GetCollection<BsonDocument>(_model.Name);
         }
-
-        bool IsRewinding => _rewindScope != default;
     }
 }
