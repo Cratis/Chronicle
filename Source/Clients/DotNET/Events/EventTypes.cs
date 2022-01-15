@@ -14,8 +14,11 @@ namespace Cratis.Events
     {
         readonly IDictionary<EventType, Type> _typesByEventType;
 
+        /// <inheritdoc/>
+        public IEnumerable<EventType> All { get; }
+
         /// <summary>
-        /// Initializes a new instance of <see cref="EventTypes"/>.
+        /// /// Initializes a new instance of <see cref="EventTypes"/>.
         /// </summary>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         public EventTypes(ITypes types)
@@ -26,9 +29,6 @@ namespace Cratis.Events
 
             All = _typesByEventType.Keys.ToArray();
         }
-
-        /// <inheritdoc/>
-        public IEnumerable<EventType> All { get; }
 
         /// <inheritdoc/>
         public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);

@@ -11,6 +11,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Start all projections.
         /// </summary>
+        /// <returns>Awaitable task.</returns>
         Task StartAll();
     }
 }

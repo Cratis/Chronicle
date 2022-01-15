@@ -19,7 +19,7 @@ namespace Cratis.Events.Schemas
         /// Initializes a new instance of the <see cref="Schemas"/> class.
         /// </summary>
         /// <param name="clusterClient"><see cref="IClusterClient"/> for connecting to Orleans.</param>
-        /// <param name="eventTypes"><see cref="IEventTypes"/></param>
+        /// <param name="eventTypes"><see cref="IEventTypes"/>.</param>
         /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for event types.</param>
         public Schemas(
             IClusterClient clusterClient,

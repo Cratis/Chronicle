@@ -14,6 +14,9 @@ namespace Cratis.Events
     {
         readonly IClusterClient _clusterClient;
 
+        /// <inheritdoc/>
+        public IEventLog EventLog { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStore"/> class.
         /// </summary>
@@ -32,8 +35,5 @@ namespace Cratis.Events
             var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
             EventLog = new EventLog(eventTypes, serializer, defaultEventLog);
         }
-
-        /// <inheritdoc/>
-        public IEventLog EventLog { get; }
     }
 }

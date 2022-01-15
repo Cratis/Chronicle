@@ -15,11 +15,19 @@ using Orleans;
 
 namespace Cratis.Hosting
 {
+    /// <summary>
+    /// Extension methods for configuring MongoDB based read models.
+    /// </summary>
     public static class MongoDBReadModels
     {
         static readonly MethodInfo _getCollectionMethod = typeof(IMongoDatabase).GetMethod(nameof(IMongoDatabase.GetCollection), BindingFlags.Public | BindingFlags.Instance)!;
         static readonly Dictionary<TenantId, IMongoDatabase> _databasesPerTenant = new();
 
+        /// <summary>
+        /// Configure read model configuration - through talking to the Kernel.
+        /// </summary>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to use for locating services needed.</param>
+        /// <returns>Awaitable task.</returns>
         public static async Task ConfigureReadModels(IServiceProvider serviceProvider)
         {
             var configurations = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfigurations>(Guid.Empty);
@@ -35,6 +43,12 @@ namespace Cratis.Hosting
             }
         }
 
+        /// <summary>
+        /// Add all services related to being able to use MongoDB for read models.
+        /// </summary>
+        /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+        /// <param name="types"><see cref="ITypes"/> for discovery.</param>
+        /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
         public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types)
         {
             services.AddTransient(sp =>

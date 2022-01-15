@@ -7,16 +7,27 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Events.Projections.Api
 {
+    /// <summary>
+    /// Represents the API for projections.
+    /// </summary>
     [Route("/api/events/projections")]
     public class Projections : Controller
     {
         readonly IProjections _projections;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Projections"/> class.
+        /// </summary>
+        /// <param name="projections">Underlying <see cref="IProjections"/>.</param>
         public Projections(IProjections projections)
         {
             _projections = projections;
         }
 
+        /// <summary>
+        /// Gets all projections.
+        /// </summary>
+        /// <returns><see cref="ClientObservable{T}"/> containing all projections.</returns>
         [HttpGet]
         public ClientObservable<IEnumerable<Projection>> AllProjections()
         {
@@ -62,16 +73,27 @@ namespace Cratis.Events.Projections.Api
             return observable;
         }
 
+        /// <summary>
+        /// Rewind a specific projection.
+        /// </summary>
+        /// <param name="projectionId">Id of projection to rewind.</param>
         [HttpPost("{projectionId}/rewind")]
         public void Rewind([FromRoute] Guid projectionId)
         {
             _projections.GetById(projectionId).Rewind();
         }
 
+        /// <summary>
+        /// Get all collections for projection.
+        /// </summary>
+        /// <param name="projectionId">Id of projection to get for.</param>
+        /// <returns>Collection of all the projection collections.</returns>
         [HttpGet("{projectionId}/collections")]
+        #pragma warning disable IDE0060
         public IEnumerable<ProjectionCollection> Collections([FromRoute] Guid projectionId)
         {
-            return new ProjectionCollection[] {
+            return new ProjectionCollection[]
+            {
                 new("Something", 42)
             };
         }

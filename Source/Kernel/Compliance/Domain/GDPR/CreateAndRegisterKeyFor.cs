@@ -3,5 +3,9 @@
 
 namespace Cratis.Compliance.Domain.GDPR
 {
+    /// <summary>
+    /// Encapsulation representing the creation and registration of a key for a specific identifier.
+    /// </summary>
+    /// <param name="Identifier"><see cref="EncryptionIdentifier"/> the key should be created and registered for.</param>
     public record CreateAndRegisterKeyFor(EncryptionKeyIdentifier Identifier);
 }

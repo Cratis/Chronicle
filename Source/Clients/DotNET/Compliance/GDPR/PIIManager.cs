@@ -15,7 +15,7 @@ namespace Cratis.Compliance.GDPR
         /// <summary>
         /// Initializes a new instance of the <see cref="IClusterClient"/> class.
         /// </summary>
-        /// <param name="clusterClient"></param>
+        /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
         public PIIManager(IClusterClient clusterClient)
         {
             _clusterClient = clusterClient;

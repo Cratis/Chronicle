@@ -13,12 +13,16 @@ namespace Cratis.Events
     {
         readonly JsonSerializerOptions _serializerOptions;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventSerializer"/> class.
+        /// </summary>
         public EventSerializer()
         {
             _serializerOptions = new()
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = {
+                Converters =
+                {
                     new ConceptAsJsonConverterFactory()
                 }
             };

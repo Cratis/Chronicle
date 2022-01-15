@@ -35,8 +35,6 @@ namespace Cratis.Events.Projections.MongoDB
         /// <inheritdoc/>
         public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
 
-        bool IsRewinding => _rewindScope != default;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
         /// </summary>
@@ -189,5 +187,7 @@ namespace Cratis.Events.Projections.MongoDB
             var database = GetDatabase();
             return IsRewinding ? database.GetCollection<BsonDocument>(GetRewindCollectionName(_model.Name)) : database.GetCollection<BsonDocument>(_model.Name);
         }
+
+        bool IsRewinding => _rewindScope != default;
     }
 }

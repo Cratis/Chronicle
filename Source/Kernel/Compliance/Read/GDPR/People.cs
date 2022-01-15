@@ -8,6 +8,9 @@ using MongoDB.Driver;
 
 namespace Cratis.Compliance.Read.GDPR
 {
+    /// <summary>
+    /// Represents the API for working with people.
+    /// </summary>
     [Route("/api/compliance/gdpr/people")]
     public class People : Controller
     {
@@ -15,9 +18,18 @@ namespace Cratis.Compliance.Read.GDPR
 
         public People(IMongoCollection<Person> collection) => _collection = collection;
 
+        /// <summary>
+        /// Get all people.
+        /// </summary>
+        /// <returns>Client observable of a collection of <see cref="Person">people</see>.</returns>
         [HttpGet]
         public Task<ClientObservable<IEnumerable<Person>>> AllPeople() => _collection.Observe();
 
+        /// <summary>
+        /// Search for people by an arbitrary string.
+        /// </summary>
+        /// <param name="query">String to search for.</param>
+        /// <returns>Collection of matching <see cref="Person">people</see>.</returns>
         [HttpGet("search")]
         public async Task<IEnumerable<Person>> SearchForPeople([FromQuery] string query)
         {

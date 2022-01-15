@@ -21,6 +21,6 @@ namespace Cratis.Events.Observation
         /// <summary>
         /// Gets the supported <see cref="EventType">event types</see>.
         /// </summary>
-        IEnumerable<EventType>  EventTypes { get; }
+        IEnumerable<EventType> EventTypes { get; }
     }
 }

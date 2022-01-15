@@ -7,8 +7,13 @@ namespace Cratis.Events.Projections
     /// Attribute used to adorn classes to define a projection.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class ProjectionAttribute : Attribute
+    public sealed class ProjectionAttribute : Attribute
     {
+        /// <summary>
+        /// Gets the unique identifier for the target projection.
+        /// </summary>
+        public ProjectionId Identifier { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionAttribute"/> class.
         /// </summary>
@@ -17,10 +22,5 @@ namespace Cratis.Events.Projections
         {
             Identifier = identifier;
         }
-
-        /// <summary>
-        /// Gets the unique identifier for the target projection.
-        /// </summary>
-        public ProjectionId Identifier { get; }
     }
 }

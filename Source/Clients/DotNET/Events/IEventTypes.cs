@@ -11,7 +11,7 @@ namespace Cratis.Events
         /// <summary>
         /// Gets all the available event types.
         /// </summary>
-        IEnumerable<EventType>  All { get; }
+        IEnumerable<EventType> All { get; }
 
         /// <summary>
         /// Check if there is a registered <see cref="Type">Clr Type</see> for a specific <see cref="EventTypeId"/>.

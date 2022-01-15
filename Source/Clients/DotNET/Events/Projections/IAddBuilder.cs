@@ -17,7 +17,7 @@ namespace Cratis.Events.Projections
         /// Add with a property on the event.
         /// </summary>
         /// <param name="eventPropertyAccessor">Event property accessor for defining the source property.</param>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         IFromBuilder<TModel, TEvent> With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor);
     }
 }

@@ -10,8 +10,18 @@ namespace Cratis.Events.Observation
     /// Attribute used to adorn classes to tell Cratis that the class is an observer.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class ObserverAttribute : Attribute
+    public sealed class ObserverAttribute : Attribute
     {
+        /// <summary>
+        /// Gets the unique identifier for an observer.
+        /// </summary>
+        public ObserverId ObserverId { get; }
+
+        /// <summary>
+        /// Gets the unique identifier for an event log.
+        /// </summary>
+        public EventLogId EventLogId { get; } = Guid.Empty;
+
         /// <summary>
         /// Initializes a new instance of <see cref="ObserverAttribute"/>.
         /// </summary>
@@ -22,15 +32,5 @@ namespace Cratis.Events.Observation
             ObserverId = observerIdAsString;
             if (eventLogIdAsString != null) EventLogId = eventLogIdAsString;
         }
-
-        /// <summary>
-        /// Gets the unique identifier for an observer.
-        /// </summary>
-        public ObserverId ObserverId { get; }
-
-        /// <summary>
-        /// Gets the unique identifier for an event log.
-        /// </summary>
-        public EventLogId EventLogId { get; } = Guid.Empty;
     }
 }
