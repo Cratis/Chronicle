@@ -12,6 +12,10 @@ namespace Cratis.Events.Observation
     {
         readonly IObservers _observers;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserversService"/> class.
+        /// </summary>
+        /// <param name="observers"><see cref="IObservers"/> to work with.</param>
         public ObserversService(IObservers observers)
         {
             _observers = observers;

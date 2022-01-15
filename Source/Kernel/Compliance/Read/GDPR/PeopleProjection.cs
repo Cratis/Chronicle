@@ -6,9 +6,13 @@ using Cratis.Events.Projections;
 
 namespace Cratis.Compliance.Read.GDPR
 {
+    /// <summary>
+    /// Defines the projection for <see cref="Person"/>.
+    /// </summary>
     [Projection("deae7ac0-7eac-48c2-a10a-10aef4e4c02f")]
     public class PeopleProjection : IProjectionFor<Person>
     {
+        /// <inheritdoc/>
         public void Define(IProjectionBuilderFor<Person> builder) => builder
             .From<PersonRegistered>(_ => _
                 .Set(m => m.SocialSecurityNumber).To(e => e.SocialSecurityNumber)

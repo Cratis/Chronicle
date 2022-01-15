@@ -16,6 +16,10 @@ namespace Cratis.Compliance.Read.GDPR
     {
         readonly IMongoCollection<Person> _collection;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="People"/> class.
+        /// </summary>
+        /// <param name="collection">Mongo collection.</param>
         public People(IMongoCollection<Person> collection) => _collection = collection;
 
         /// <summary>

@@ -29,7 +29,7 @@ namespace Cratis.Compliance.Domain.GDPR
         }
 
         /// <summary>
-        /// Create and register a key
+        /// Create and register a key.
         /// </summary>
         /// <param name="command"><see cref="CreateAndRegisterKeyFor"/> payload.</param>
         /// <returns>Awaitable task.</returns>
