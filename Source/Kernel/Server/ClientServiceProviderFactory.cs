@@ -14,7 +14,7 @@ namespace Cratis.Server
             var builder = new ContainerBuilder();
             builder.Populate(services);
 
-            foreach( var registration in Startup.AutofacContainer!.ComponentRegistry.Registrations.Where(_ => !_.Services.Any(s => s.Description.Contains("Orleans", StringComparison.InvariantCulture))))
+            foreach (var registration in Startup.AutofacContainer!.ComponentRegistry.Registrations.Where(_ => !_.Services.Any(s => s.Description.Contains("Orleans", StringComparison.InvariantCulture))))
             {
                 builder.ComponentRegistryBuilder.Register(registration);
             }
