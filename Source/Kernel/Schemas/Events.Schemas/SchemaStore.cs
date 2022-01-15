@@ -36,20 +36,16 @@ namespace Cratis.Events.Schemas
             // .. if they're the same. Ignore saving.
             // If this is a new generation, there must be an upcaster and downcaster associated with the schema
             // .. do not allow generational gaps
-
             // if (await HasFor(type.Id, type.Generation)) return;
-
             schema.SetDisplayName(friendlyName);
             schema.SetGeneration(type.Generation);
 
             var eventSchema = new EventSchema(type, schema).ToMongoDB();
 
             await _collection.ReplaceOneAsync(
-
                 _ => _.Id == eventSchema.Id,
                 eventSchema,
-                new ReplaceOptions { IsUpsert = true }
-            );
+                new ReplaceOptions { IsUpsert = true });
         }
 
         /// <inheritdoc/>
@@ -112,8 +108,7 @@ namespace Cratis.Events.Schemas
 
         FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                        Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),
-                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? EventGeneration.First).Value)
-                   );
+                       Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? EventGeneration.First).Value));
 
         async Task PopulateIfNotPopulated()
         {

@@ -8,12 +8,6 @@ namespace Cratis.Events.Projections.Pipelines
     /// </summary>
     public class ProjectionPipelineJob : IProjectionPipelineJob
     {
-        public ProjectionPipelineJob(string name, IEnumerable<IProjectionPipelineJobStep> steps)
-        {
-            Name = name;
-            Steps = steps;
-        }
-
         /// <inheritdoc/>
         public string Name { get; }
 
@@ -22,6 +16,17 @@ namespace Cratis.Events.Projections.Pipelines
 
         /// <inheritdoc/>
         public IEnumerable<IProjectionPipelineJobStep> Steps { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProjectionPipelineJob"/> class.
+        /// </summary>
+        /// <param name="name">Name of the job.</param>
+        /// <param name="steps">Collection of <see cref="IProjectionPipelineJobStep"/>.</param>
+        public ProjectionPipelineJob(string name, IEnumerable<IProjectionPipelineJobStep> steps)
+        {
+            Name = name;
+            Steps = steps;
+        }
 
         /// <inheritdoc/>
         public async Task Run()

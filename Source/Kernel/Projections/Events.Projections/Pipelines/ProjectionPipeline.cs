@@ -23,6 +23,27 @@ namespace Cratis.Events.Projections.Pipelines
         readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
         readonly ObservableCollection<IProjectionPipelineJob> _jobs = new();
 
+        /// <inheritdoc/>
+        public IProjection Projection { get; }
+
+        /// <inheritdoc/>
+        public IProjectionEventProvider EventProvider { get; }
+
+        /// <inheritdoc/>
+        public IDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> ResultStores => _resultStores;
+
+        /// <inheritdoc/>
+        public IObservable<ProjectionState> State => _state;
+
+        /// <inheritdoc/>
+        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
+
+        /// <inheritdoc/>
+        public ProjectionState CurrentState => _state.Value;
+
+        /// <inheritdoc/>
+        public IObservableCollection<IProjectionPipelineJob> Jobs => _jobs;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
         /// </summary>
@@ -44,27 +65,6 @@ namespace Cratis.Events.Projections.Pipelines
             Projection = projection;
             _logger = logger;
         }
-
-        /// <inheritdoc/>
-        public IProjection Projection { get; }
-
-        /// <inheritdoc/>
-        public IProjectionEventProvider EventProvider { get; }
-
-        /// <inheritdoc/>
-        public IDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> ResultStores => _resultStores;
-
-        /// <inheritdoc/>
-        public IObservable<ProjectionState> State => _state;
-
-        /// <inheritdoc/>
-        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
-
-        /// <inheritdoc/>
-        public ProjectionState CurrentState => _state.Value;
-
-        /// <inheritdoc/>
-        public IObservableCollection<IProjectionPipelineJob> Jobs => _jobs;
 
         /// <inheritdoc/>
         public async Task Start()
@@ -122,7 +122,7 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
         {
-            ThrowIfRewindAlreadyInProgress(configurationId);
+            ThrowIfRewindAlreadyInProgressForConfiguration(configurationId);
 
             _logger.RewindingForConfiguration(Projection.Identifier, configurationId);
             _state.OnNext(ProjectionState.Rewinding);
@@ -200,7 +200,7 @@ namespace Cratis.Events.Projections.Pipelines
             }
         }
 
-        void ThrowIfRewindAlreadyInProgress(ProjectionResultStoreConfigurationId configurationId)
+        void ThrowIfRewindAlreadyInProgressForConfiguration(ProjectionResultStoreConfigurationId configurationId)
         {
             var rewindJob = _jobs.FirstOrDefault(_ => _.Name == ProjectionPipelineJobs.RewindJob);
             if (rewindJob != default)
@@ -209,7 +209,7 @@ namespace Cratis.Events.Projections.Pipelines
                 {
                     if (step is Rewind rewind && rewind.ConfigurationId == configurationId)
                     {
-                        throw new RewindAlreadyInProgress(this, configurationId);
+                        throw new RewindAlreadyInProgressForConfiguration(this, configurationId);
                     }
                 }
             }

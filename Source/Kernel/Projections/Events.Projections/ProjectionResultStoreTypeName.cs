@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents a friendly name for a type of <see cref="IProjectionResultStore"/>
+    /// Represents a friendly name for a type of <see cref="IProjectionResultStore"/>.
     /// </summary>
     /// <param name="Value">Underlying value.</param>
     public record ProjectionResultStoreTypeName(string Value) : ConceptAs<string>(Value)

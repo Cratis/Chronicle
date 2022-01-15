@@ -21,7 +21,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to save for.</param>
         /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> to get for.</param>
-        /// <param name="position">The <see cref="EventLogSequenceNumber"/></param>
+        /// <param name="position">The <see cref="EventLogSequenceNumber"/>.</param>
         /// <returns>Asynchronous task.</returns>
         Task Save(IProjection projection, ProjectionResultStoreConfigurationId configurationId, EventLogSequenceNumber position);
 

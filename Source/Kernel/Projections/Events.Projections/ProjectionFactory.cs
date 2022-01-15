@@ -15,6 +15,10 @@ namespace Cratis.Events.Projections
     {
         readonly IPropertyMapperExpressionResolvers _propertyMapperExpressionResolvers;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
+        /// </summary>
+        /// <param name="propertyMapperExpressionResolvers"><see cref="IPropertyMapperExpressionResolvers"/> for resolving expressions for properties.</param>
         public ProjectionFactory(IPropertyMapperExpressionResolvers propertyMapperExpressionResolvers)
         {
             _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
@@ -42,9 +46,7 @@ namespace Cratis.Events.Projections
         {
             var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
                 kvp.Key,
-                string.IsNullOrEmpty(kvp.Value.ParentKey) ?
-                    EventValueProviders.FromEventSourceId :
-                    EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
+                string.IsNullOrEmpty(kvp.Value.ParentKey) ? EventValueProviders.FromEventSourceId : EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
 
             var childProjections = projectionDefinition.Children.Select(kvp => CreateProjectionFrom(
                     name,

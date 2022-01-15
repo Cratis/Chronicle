@@ -36,9 +36,10 @@ namespace Cratis.Events.Schemas
             task.Wait();
 
             return new EventSchema(
-               new EventType(
+                new EventType(
                    schema.EventType,
-                   schema.Generation), task.Result);
+                   schema.Generation),
+                task.Result);
         }
     }
 }

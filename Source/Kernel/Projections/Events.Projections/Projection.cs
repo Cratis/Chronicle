@@ -18,12 +18,6 @@ namespace Cratis.Events.Projections
         readonly IDictionary<EventType, ValueProvider<Event>> _eventTypesToKeyResolver;
 
         /// <inheritdoc/>
-        public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
-
-        /// <inheritdoc/>
-        public IObservable<Event> FilterEventTypes(IObservable<Event> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Type));
-
-        /// <inheritdoc/>
         public ProjectionId Identifier { get; }
 
         /// <inheritdoc/>
@@ -70,6 +64,12 @@ namespace Cratis.Events.Projections
             _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
             ChildProjections = childProjections;
         }
+
+        /// <inheritdoc/>
+        public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
+
+        /// <inheritdoc/>
+        public IObservable<Event> FilterEventTypes(IObservable<Event> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Type));
 
         /// <inheritdoc/>
         public void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset)

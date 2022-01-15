@@ -8,6 +8,8 @@ using Cratis.Events.Projections.Pipelines;
 using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable CA1721 // Pipelines property is confusing since there is a GetPipelines - they do differ - see GH issue #103.
+
 namespace Cratis.Events.Projections
 {
     /// <summary>
@@ -23,8 +25,10 @@ namespace Cratis.Events.Projections
         readonly ILogger<Projections> _logger;
         readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
         readonly ConcurrentDictionary<ProjectionId, CancellationTokenSource> _cancellationTokenSources = new();
-
         readonly ReplaySubject<IProjectionPipeline> _allPipelines = new();
+
+        /// <inheritdoc/>
+        public IObservable<IProjectionPipeline> Pipelines => _allPipelines;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -87,9 +91,6 @@ namespace Cratis.Events.Projections
 
         /// <inheritdoc/>
         public IEnumerable<IProjectionPipeline> GetPipelines() => _pipelines.Values;
-
-        /// <inheritdoc/>
-        public IObservable<IProjectionPipeline> Pipelines => _allPipelines;
 
         /// <inheritdoc/>
         public IProjectionPipeline GetById(ProjectionId id) => _pipelines[id];

@@ -100,6 +100,12 @@ namespace Cratis.Events.Projections
             return observable;
         }
 
+        /// <summary>
+        /// Join with a specific <see cref="EventType"/>.
+        /// </summary>
+        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+        /// <param name="eventType"><see cref="EventType"/> to join with.</param>
+        /// <returns>The observable for continuation.</returns>
         public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType)
         {
             return observable.Where(_ => _.Event.Type == eventType);

@@ -17,6 +17,9 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
         readonly ProjectionResultStoreConfigurationId _configurationId;
         readonly ILogger<Catchup> _logger;
 
+        /// <inheritdoc/>
+        public string Name => "Catchup";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Rewind"/> class.
         /// </summary>
@@ -41,9 +44,6 @@ namespace Cratis.Events.Projections.Pipelines.JobSteps
             _configurationId = configurationId;
             _logger = logger;
         }
-
-        /// <inheritdoc/>
-        public string Name => "Catchup";
 
         /// <inheritdoc/>
         public async Task Perform(ProjectionPipelineJobStatus jobStatus)

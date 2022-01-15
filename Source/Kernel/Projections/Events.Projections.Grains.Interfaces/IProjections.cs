@@ -26,6 +26,7 @@ namespace Cratis.Events.Projections.Grains
         /// <summary>
         /// Start the supervisor.
         /// </summary>
+        /// <returns>Async task.</returns>
         Task Start();
     }
 }
