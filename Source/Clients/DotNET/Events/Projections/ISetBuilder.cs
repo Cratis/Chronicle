@@ -17,13 +17,13 @@ namespace Cratis.Events.Projections
         /// Straight map to a property on the event.
         /// </summary>
         /// <param name="eventPropertyAccessor">Event property accessor for defining the source property.</param>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         IFromBuilder<TModel, TEvent> To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor);
 
         /// <summary>
         /// Map to the event source id on the metadata of the event.
         /// </summary>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         IFromBuilder<TModel, TEvent> ToEventSourceId();
     }
 }

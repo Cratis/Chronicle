@@ -6,7 +6,7 @@ using Cratis.Properties;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Defines a builder of a property expressions;
+    /// Defines a builder of a property expressions.
     /// </summary>
     public interface IPropertyExpressionBuilder
     {
@@ -18,7 +18,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Builds the expression.
         /// </summary>
-        /// <returns>The expression built</returns>
+        /// <returns>The expression built.</returns>
         string Build();
     }
 }

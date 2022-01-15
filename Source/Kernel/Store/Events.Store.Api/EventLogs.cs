@@ -5,9 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cratis.Events.Store.Api
 {
+    /// <summary>
+    /// Represents the API for working with event logs.
+    /// </summary>
     [Route("/api/events/store/logs")]
     public class EventLogs : Controller
     {
+        /// <summary>
+        /// Gets all event logs.
+        /// </summary>
+        /// <returns>Collection of event logs.</returns>
         [HttpGet]
         public Task<IEnumerable<EventLogInformation>> AllEventLogs()
         {

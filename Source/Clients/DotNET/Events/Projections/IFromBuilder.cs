@@ -18,7 +18,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>
         /// <param name="keyAccessor">Accessor for the property to use.</param>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>
         /// <param name="keyAccessor">Accessor for the property to use.</param>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         IFromBuilder<TModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>
         /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         IAddBuilder<TModel, TEvent, TProperty> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>
         /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         ISubtractBuilder<TModel, TEvent, TProperty> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <typeparam name="TProperty">Type of the property.</typeparam>
         /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
-        /// <returns>Builder continuation</returns>
+        /// <returns>Builder continuation.</returns>
         ISetBuilder<TModel, TEvent, TProperty> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 
         /// <summary>

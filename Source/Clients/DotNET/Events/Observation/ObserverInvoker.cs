@@ -16,6 +16,15 @@ namespace Cratis.Events.Observation
         readonly IEventTypes _eventTypes;
         readonly Type _targetType;
 
+        /// <inheritdoc/>
+        public IEnumerable<EventType> EventTypes => _methodsByEventTypeId.Keys;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverInvoker"/> class.
+        /// </summary>
+        /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual observer.</param>
+        /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
+        /// <param name="targetType">Type of observer.</param>
         public ObserverInvoker(IServiceProvider serviceProvider, IEventTypes eventTypes, Type targetType)
         {
             _serviceProvider = serviceProvider;
@@ -28,9 +37,6 @@ namespace Cratis.Events.Observation
                                             .Where(_ => IsObservingMethod(_))
                                             .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
         }
-
-        /// <inheritdoc/>
-        public IEnumerable<EventType> EventTypes => _methodsByEventTypeId.Keys;
 
         /// <inheritdoc/>
         public Task Invoke(object content, EventContext eventContext)

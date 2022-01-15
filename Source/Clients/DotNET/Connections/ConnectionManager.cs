@@ -11,15 +11,15 @@ namespace Cratis.Connections
     [Singleton]
     public class ConnectionManager : IConnectionManager
     {
+        /// <inheritdoc/>
+        public ConnectionId CurrentConnectionId { get; }
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionManager"/> class
+        /// Initializes a new instance of the <see cref="ConnectionManager"/> class.
         /// </summary>
         public ConnectionManager()
         {
             CurrentConnectionId = Guid.NewGuid().ToString();
         }
-
-        /// <inheritdoc/>
-        public ConnectionId CurrentConnectionId { get; }
     }
 }

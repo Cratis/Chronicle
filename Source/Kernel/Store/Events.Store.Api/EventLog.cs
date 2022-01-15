@@ -5,26 +5,32 @@ using System.Text;
 using Cratis.Events.Store.Grains;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Orleans;
+
+#pragma warning disable SA1600, IDE0060
 
 namespace Cratis.Events.Store.Api
 {
+    /// <summary>
+    /// Represents the API for working with the event log.
+    /// </summary>
     [Route("/api/events/store/log")]
     public class EventLog : Controller
     {
         readonly IGrainFactory _grainFactory;
         readonly IExecutionContextManager _executionContextManager;
-        readonly ILogger<EventLog> _logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventLog"/> class.
+        /// </summary>
+        /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
         public EventLog(
             IGrainFactory grainFactory,
-            IExecutionContextManager executionContextManager,
-            ILogger<EventLog> logger)
+            IExecutionContextManager executionContextManager)
         {
             _grainFactory = grainFactory;
             _executionContextManager = executionContextManager;
-            _logger = logger;
         }
 
         [HttpPost("{eventSourceId}/{eventTypeId}/{eventGeneration}")]
@@ -57,7 +63,6 @@ namespace Cratis.Events.Store.Api
             [FromRoute] EventLogId eventLogId,
             [FromRoute] EventSourceId eventSourceId)
         {
-            _logger.LogInformation($"Find {eventLogId}- {eventSourceId}");
             return Task.CompletedTask;
         }
 

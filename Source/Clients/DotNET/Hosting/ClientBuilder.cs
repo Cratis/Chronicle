@@ -27,6 +27,7 @@ namespace Cratis.Hosting
     /// </summary>
     public class ClientBuilder : IClientBuilder
     {
+        #pragma warning disable IDE0052 // We will be expanding on this.
         readonly MicroserviceId _microserviceId;
 
         bool _inSilo;
@@ -100,7 +101,6 @@ namespace Cratis.Hosting
 
             var orleansBuilder = new OrleansClientBuilder()
                 .UseLocalhostClustering()
-                // TODO: .AddClusterConnectionLostHandler()
                 .AddEventLogStream()
                 .AddSimpleMessageStreamProvider("observer-handlers")
                 .UseExecutionContext()

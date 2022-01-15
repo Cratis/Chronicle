@@ -7,8 +7,13 @@ namespace Cratis.Events
     /// Attribute to adorn types for providing metadata about the actual <see cref="EventType"/>.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class EventTypeAttribute : Attribute
+    public sealed class EventTypeAttribute : Attribute
     {
+        /// <summary>
+        /// Gets the <see cref="EventType"/>.
+        /// </summary>
+        public EventType Type { get; }
+
         /// <summary>
         /// Initializes a new instance of <see cref="EventTypeAttribute"/>.
         /// </summary>
@@ -18,10 +23,5 @@ namespace Cratis.Events
         {
             Type = new(Guid.Parse(idAsGuid), generation);
         }
-
-        /// <summary>
-        /// Gets the <see cref="EventType"/>.
-        /// </summary>
-        public EventType Type { get; }
     }
 }

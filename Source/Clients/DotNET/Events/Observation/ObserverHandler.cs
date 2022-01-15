@@ -16,6 +16,35 @@ namespace Cratis.Events.Observation
         readonly IObserverInvoker _observerInvoker;
         readonly IEventSerializer _eventSerializer;
 
+        /// <summary>
+        /// Gets the unique identifier of the observer.
+        /// </summary>
+        public ObserverId ObserverId { get; }
+
+        /// <summary>
+        /// Gets the name of the observer.
+        /// </summary>
+        public ObserverName Name { get; }
+
+        /// <summary>
+        /// Gets the event log for the observer.
+        /// </summary>
+        public EventLogId EventLogId { get; }
+
+        /// <summary>
+        /// Gets the event types for the observer.
+        /// </summary>
+        public IEnumerable<EventType> EventTypes => _observerInvoker.EventTypes;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverHandler"/>.
+        /// </summary>
+        /// <param name="observerId">Unique identifier.</param>
+        /// <param name="name">Name of the observer.</param>
+        /// <param name="eventLogId">Event log identifier.</param>
+        /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
+        /// <param name="observerInvoker">The actual invoker.</param>
+        /// <param name="eventSerializer">The serializer to use.</param>
         public ObserverHandler(
             ObserverId observerId,
             ObserverName name,
@@ -32,12 +61,11 @@ namespace Cratis.Events.Observation
             _eventSerializer = eventSerializer;
         }
 
-        public ObserverId ObserverId { get; }
-        public ObserverName Name { get; }
-        public EventLogId EventLogId { get; }
-
-        public IEnumerable<EventType> EventTypes => _observerInvoker.EventTypes;
-
+        /// <summary>
+        /// Handle next event.
+        /// </summary>
+        /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
+        /// <returns>Awaitable task.</returns>
         public async Task OnNext(AppendedEvent @event)
         {
             var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.EventType.Id);

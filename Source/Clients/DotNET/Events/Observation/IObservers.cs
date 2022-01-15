@@ -11,6 +11,7 @@ namespace Cratis.Events.Observation
         /// <summary>
         /// Start observing for all observers.
         /// </summary>
+        /// <returns>Awaitable task.</returns>
         Task StartObserving();
     }
 }

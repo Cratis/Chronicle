@@ -18,8 +18,11 @@ namespace Cratis.Events.Projections
         readonly IFromBuilder<TModel, TEvent> _parent;
         string _expression = string.Empty;
 
+        /// <inheritdoc/>
+        public PropertyPath TargetProperty { get; }
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty}"/> class.
+        /// /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty}"/> class.
         /// </summary>
         /// <param name="parent">Parent builder.</param>
         /// <param name="targetProperty">Target property we're building for.</param>
@@ -28,9 +31,6 @@ namespace Cratis.Events.Projections
             _parent = parent;
             TargetProperty = targetProperty;
         }
-
-        /// <inheritdoc/>
-        public PropertyPath TargetProperty { get; }
 
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)

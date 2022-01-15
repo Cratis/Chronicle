@@ -28,8 +28,6 @@ namespace Cratis.Events.Projections.InMemory
         /// <inheritdoc/>
         public ProjectionResultStoreTypeName Name => "InMemory";
 
-        bool IsRewinding => _rewindScope != default;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryProjectionResultStore"/> class.
         /// </summary>
@@ -91,5 +89,7 @@ namespace Cratis.Events.Projections.InMemory
         }
 
         Dictionary<object, ExpandoObject> GetCollection() => IsRewinding ? _rewindCollection : _collection;
+
+        bool IsRewinding => _rewindScope != default;
     }
 }

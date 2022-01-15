@@ -6,7 +6,6 @@ using Cratis.Events.Projections.Definitions;
 
 namespace Cratis.Events.Projections
 {
-
     /// <summary>
     /// Defines the builder for building out a <see cref="IProjectionFor{TModel}"/>.
     /// </summary>
@@ -16,16 +15,16 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Names the model - typically used by storage as name of storage unit (collection, table etc.)
         /// </summary>
-        /// <param name="modelName">Name of the model</param>
-        /// <returns>Builder continuation."</returns>
+        /// <param name="modelName">Name of the model.</param>
+        /// <returns>Builder continuation.</returns>
         IProjectionBuilderFor<TModel> ModelName(string modelName);
 
         /// <summary>
         /// Start building the from expressions for a specific event type.
         /// </summary>
-        /// <param name="builderCallback">Callback for building</param>
+        /// <param name="builderCallback">Callback for building.</param>
         /// <typeparam name="TEvent">Type of event.</typeparam>
-        /// <returns>Builder continuation."</returns>
+        /// <returns>Builder continuation.</returns>
         IProjectionBuilderFor<TModel> From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback);
 
         /// <summary>
@@ -34,7 +33,7 @@ namespace Cratis.Events.Projections
         /// <param name="targetProperty">Expression for expressing the target property.</param>
         /// <param name="builderCallback">Builder callback.</param>
         /// <typeparam name="TChildModel">Type of child model.</typeparam>
-        /// <returns>Builder continuation."</returns>
+        /// <returns>Builder continuation.</returns>
         IProjectionBuilderFor<TModel> Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback);
 
         /// <summary>

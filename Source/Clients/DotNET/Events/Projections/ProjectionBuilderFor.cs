@@ -20,9 +20,9 @@ namespace Cratis.Events.Projections
         readonly ProjectionId _identifier;
         readonly IEventTypes _eventTypes;
         readonly IJsonSchemaGenerator _schemaGenerator;
-        string _modelName;
         readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
         readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
+        string _modelName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.

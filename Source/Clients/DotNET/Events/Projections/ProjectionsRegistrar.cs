@@ -51,27 +51,6 @@ namespace Cratis.Events.Projections
             _executionContextManager = executionContextManager;
         }
 
-        /// <inheritdoc/>
-        public async Task StartAll()
-        {
-            // TODO: Observe for all tenants
-            _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
-
-            var projections = _clusterClient.GetGrain<Grains.IProjections>(Guid.Empty);
-            foreach (var projectionDefinition in _projections)
-            {
-                var pipelineDefinition = new ProjectionPipelineDefinition(
-                    projectionDefinition.Identifier,
-                    "c0c0196f-57e3-4860-9e3b-9823cf45df30", // Cratis default
-                    new[] {
-                        new ProjectionResultStoreDefinition(
-                            "12358239-a120-4392-96d4-2b48271b904c",
-                            "22202c41-2be1-4547-9c00-f0b1f797fd75") // MongoDB
-                    });
-                await projections.Register(projectionDefinition, pipelineDefinition);
-            }
-        }
-
         /// <summary>
         /// Find all projection definitions.
         /// </summary>
@@ -90,5 +69,27 @@ namespace Cratis.Events.Projections
                         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
                         return (method.Invoke(null, new object[] { _, projection.Identifier, eventTypes, schemaGenerator }) as ProjectionDefinition)!;
                     }).ToArray();
+
+        /// <inheritdoc/>
+        public async Task StartAll()
+        {
+            // TODO: Observe for all tenants
+            _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
+
+            var projections = _clusterClient.GetGrain<Grains.IProjections>(Guid.Empty);
+            foreach (var projectionDefinition in _projections)
+            {
+                var pipelineDefinition = new ProjectionPipelineDefinition(
+                    projectionDefinition.Identifier,
+                    "c0c0196f-57e3-4860-9e3b-9823cf45df30", // Cratis default
+                    new[]
+                    {
+                        new ProjectionResultStoreDefinition(
+                            "12358239-a120-4392-96d4-2b48271b904c",
+                            "22202c41-2be1-4547-9c00-f0b1f797fd75") // MongoDB
+                    });
+                await projections.Register(projectionDefinition, pipelineDefinition);
+            }
+        }
     }
 }

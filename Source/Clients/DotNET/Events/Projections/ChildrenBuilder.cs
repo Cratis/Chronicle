@@ -71,8 +71,7 @@ namespace Cratis.Events.Projections
                 new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
                 _fromDefintions,
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
-                string.IsNullOrEmpty(_removedWithEvent) ? default : new RemovedWithDefinition(_removedWithEvent)
-            );
+                string.IsNullOrEmpty(_removedWithEvent) ? default : new RemovedWithDefinition(_removedWithEvent));
         }
     }
 }
