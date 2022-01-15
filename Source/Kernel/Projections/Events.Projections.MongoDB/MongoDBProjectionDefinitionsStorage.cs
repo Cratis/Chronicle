@@ -53,8 +53,7 @@ namespace Cratis.Events.Projections.MongoDB
             await _collection.ReplaceOneAsync(
                 filter: new BsonDocument("_id", id),
                 options: new ReplaceOptions { IsUpsert = true },
-                replacement: document
-            );
+                replacement: document);
         }
     }
 }

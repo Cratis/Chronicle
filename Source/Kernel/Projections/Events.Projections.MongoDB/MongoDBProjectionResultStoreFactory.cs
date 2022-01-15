@@ -16,8 +16,11 @@ namespace Cratis.Events.Projections.MongoDB
         readonly IExecutionContextManager _executionContextManager;
         readonly Storage _configuration;
 
+        /// <inheritdoc/>
+        public ProjectionResultStoreTypeId TypeId => MongoDBProjectionResultStore.ProjectionResultStoreTypeId;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="MongoDBProjectionResultStoreFactory"/> class.
+        /// /// Initializes a new instance of the <see cref="MongoDBProjectionResultStoreFactory"/> class.
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> to use.</param>
@@ -31,9 +34,6 @@ namespace Cratis.Events.Projections.MongoDB
             _executionContextManager = executionContextManager;
             _configuration = configuration;
         }
-
-        /// <inheritdoc/>
-        public ProjectionResultStoreTypeId TypeId => MongoDBProjectionResultStore.ProjectionResultStoreTypeId;
 
         /// <inheritdoc/>
         public IProjectionResultStore CreateFor(Model model) => new MongoDBProjectionResultStore(model, _executionContextManager, _clientFactory, _configuration);
