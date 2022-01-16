@@ -21,7 +21,7 @@
 
     <!-- Compliance -->
     <ItemGroup>
-        <ProjectReference Include="../Compliance/Compliance/Compliance.csproj" />
+        <ProjectReference Include="../Compliance/Engine/Engine.csproj" />
         <ProjectReference Include="../Compliance/Domain/Domain.csproj" />
         <ProjectReference Include="../Compliance/Events/Events.csproj" />
         <ProjectReference Include="../Compliance/Grains/Grains.csproj" />

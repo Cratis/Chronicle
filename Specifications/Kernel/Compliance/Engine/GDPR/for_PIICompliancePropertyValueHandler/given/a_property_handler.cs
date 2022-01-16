@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace Cratis.Compliance.for_PIICompliancePropertyValueHandler.given
+namespace Cratis.Compliance.GDPR.for_PIICompliancePropertyValueHandler.given
 {
     public class a_property_handler : Specification
     {

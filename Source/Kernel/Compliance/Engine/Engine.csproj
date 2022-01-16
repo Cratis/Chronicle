@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Compliance.Engine</AssemblyName>
+        <RootNamespace>Cratis.Compliance</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
+    </ItemGroup>
+</Project>

@@ -4,7 +4,7 @@
 using System.Text;
 using Newtonsoft.Json.Linq;
 
-namespace Cratis.Compliance
+namespace Cratis.Compliance.GDPR
 {
     /// <summary>
     /// Represents a <see cref="IJsonCompliancePropertyValueHandler"/> for handling PII.

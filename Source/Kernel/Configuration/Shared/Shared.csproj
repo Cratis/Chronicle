@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Configuration</AssemblyName>
+        <AssemblyName>Cratis.Configuration.Shared</AssemblyName>
         <RootNamespace>Cratis.Configuration</RootNamespace>
     </PropertyGroup>
 

@@ -4,7 +4,7 @@
 namespace Cratis.Compliance
 {
     /// <summary>
-    /// Represents the unique identifier of an <see cref="EncryptionKey"/>.
+    /// Represents the unique identifier of an encryption key.
     /// </summary>
     /// <param name="Value">The underlying value.</param>
     public record EncryptionKeyIdentifier(string Value) : ConceptAs<string>(Value)
