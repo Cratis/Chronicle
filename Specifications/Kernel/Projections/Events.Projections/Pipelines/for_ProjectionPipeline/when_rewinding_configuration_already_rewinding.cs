@@ -36,6 +36,6 @@ namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline
 
         async Task Because() => exception = await Catch.Exception(async () => await pipeline.Rewind(configuration));
 
-        [Fact] void should_throw_rewind_already_in_progress() => exception.ShouldBeOfExactType<RewindAlreadyInProgress>();
+        [Fact] void should_throw_rewind_already_in_progress() => exception.ShouldBeOfExactType<RewindAlreadyInProgressForConfiguration>();
     }
 }
