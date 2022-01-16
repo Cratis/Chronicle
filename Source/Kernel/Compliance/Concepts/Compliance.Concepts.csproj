@@ -12,6 +12,4 @@
         <ProjectReference Include="../../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Events/Events.csproj"/>
     </ItemGroup>
-
-
 </Project>
