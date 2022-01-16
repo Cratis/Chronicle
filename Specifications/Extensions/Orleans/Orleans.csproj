@@ -6,6 +6,5 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Source/Extensions/Orleans/Orleans.csproj"/>
-        <ProjectReference Include="../../Common/Common.csproj"/>
     </ItemGroup>
 </Project>
