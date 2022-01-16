@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Configuration/Configuration/Configuration.csproj" />
+        <ProjectReference Include="../Configuration/Shared/Shared.csproj" />
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
     </ItemGroup>

@@ -9,7 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Events.Projections/Events.Projections.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
     </ItemGroup>
 
 </Project>

@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Concepts/Compliance.Concepts.csproj"/>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
         <ProjectReference Include="../../../Clients/DotNET/DotNET.csproj"/>
     </ItemGroup>
 </Project>
