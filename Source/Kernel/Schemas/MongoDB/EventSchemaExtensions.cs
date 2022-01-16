@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Cratis.Events.Schemas
+namespace Cratis.Events.Schemas.MongoDB
 {
     /// <summary>
     /// Extension methods for working with <see cref="EventSchema"/>.

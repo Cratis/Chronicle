@@ -5,6 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
     </ItemGroup>
 </Project>

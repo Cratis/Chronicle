@@ -6,23 +6,23 @@ using Cratis.MongoDB;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Cratis.Events.Schemas
+namespace Cratis.Events.Schemas.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="ISchemaStore"/>.
     /// </summary>
     [Singleton]
-    public class SchemaStore : ISchemaStore
+    public class MongoDBSchemaStore : ISchemaStore
     {
         const string SchemasCollection = "schemas";
         readonly IMongoCollection<EventSchemaMongoDB> _collection;
         Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SchemaStore"/> class.
+        /// Initializes a new instance of the <see cref="MongoDBSchemaStore"/> class.
         /// </summary>
         /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
-        public SchemaStore(ISharedDatabase sharedDatabase)
+        public MongoDBSchemaStore(ISharedDatabase sharedDatabase)
         {
             _collection = sharedDatabase.GetCollection<EventSchemaMongoDB>(SchemasCollection);
         }
