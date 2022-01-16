@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Compliance.Grains</AssemblyName>
-        <RootNamespace>Cratis.Compliance.Grains</RootNamespace>
+        <AssemblyName>Cratis.Events.Projections.Grains</AssemblyName>
+        <RootNamespace>Cratis.Events.Projections.Grains</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj" />
-        <ProjectReference Include="../Compliance/Compliance.csproj" />
-        <ProjectReference Include="../Grains.Interfaces/Compliance.Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>

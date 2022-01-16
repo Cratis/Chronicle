@@ -8,10 +8,10 @@
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj"/>
         <ProjectReference Include="../../Kernel/Compliance/Compliance/Compliance.csproj"/>
-        <ProjectReference Include="../../Kernel/Compliance/Grains.Interfaces/Compliance.Grains.Interfaces.csproj"/>
-        <ProjectReference Include="../../Kernel/Configuration/Configuration.Grains.Interfaces/Configuration.Grains.Interfaces.csproj"/>
-        <ProjectReference Include="../../Kernel/Projections/Events.Projections/Events.Projections.csproj"/>
-        <ProjectReference Include="../../Kernel/Projections/Events.Projections.Grains.Interfaces/Events.Projections.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Compliance/Grains.Interfaces/Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Configuration/Grains.Interfaces/Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Projections/Shared/Shared.csproj"/>
+        <ProjectReference Include="../../Kernel/Projections/Grains.Interfaces/Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Schemas/Events.Schemas.Grains.Interfaces/Events.Schemas.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Store/Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Store/Events.Store.MongoDB/Events.Store.MongoDB.csproj"/>

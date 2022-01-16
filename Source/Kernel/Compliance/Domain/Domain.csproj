@@ -10,9 +10,8 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Clients/DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../Events/Compliance.Events.csproj"/>
-        <ProjectReference Include="../Concepts/Compliance.Concepts.csproj"/>
-
-        <ProjectReference Include="../Grains.Interfaces/Compliance.Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../Events/Events.csproj"/>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj"/>
     </ItemGroup>
 </Project>
