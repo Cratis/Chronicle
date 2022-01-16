@@ -25,6 +25,7 @@
         <ProjectReference Include="../Compliance/Read/Compliance.Read.csproj" />
         <ProjectReference Include="../Compliance/Grains/Compliance.Grains.csproj" />
         <ProjectReference Include="../Compliance/Grains.Interfaces/Compliance.Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Compliance/MongoDB/Compliance.MongoDB.csproj" />
     </ItemGroup>
 
     <ItemGroup>
