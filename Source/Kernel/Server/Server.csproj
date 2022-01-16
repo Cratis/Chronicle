@@ -22,10 +22,11 @@
         <ProjectReference Include="../Compliance/Compliance/Compliance.csproj" />
         <ProjectReference Include="../Compliance/Domain/Compliance.Domain.csproj" />
         <ProjectReference Include="../Compliance/Events/Compliance.Events.csproj" />
-        <ProjectReference Include="../Compliance/Read/Compliance.Read.csproj" />
         <ProjectReference Include="../Compliance/Grains/Compliance.Grains.csproj" />
         <ProjectReference Include="../Compliance/Grains.Interfaces/Compliance.Grains.Interfaces.csproj" />
         <ProjectReference Include="../Compliance/MongoDB/Compliance.MongoDB.csproj" />
+        <ProjectReference Include="../Compliance/Read/Compliance.Read.csproj" />
+        <ProjectReference Include="../Compliance/Reactions/Compliance.Reactions.csproj" />
     </ItemGroup>
 
     <ItemGroup>
