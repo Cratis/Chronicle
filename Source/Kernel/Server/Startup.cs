@@ -9,6 +9,8 @@ using Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
+#pragma warning disable SA1600
+
 namespace Cratis.Server
 {
     public class Startup
