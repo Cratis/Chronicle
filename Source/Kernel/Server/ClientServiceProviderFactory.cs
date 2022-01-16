@@ -7,8 +7,12 @@ using Autofac.Extensions.DependencyInjection;
 
 namespace Cratis.Server
 {
+    /// <summary>
+    /// Represents a <see cref="IServiceProviderFactory{T}"/> for <see cref="ContainerBuilder"/>.
+    /// </summary>
     public class ClientServiceProviderFactory : IServiceProviderFactory<ContainerBuilder>
     {
+        /// <inheritdoc/>
         public ContainerBuilder CreateBuilder(IServiceCollection services)
         {
             var builder = new ContainerBuilder();
@@ -22,6 +26,7 @@ namespace Cratis.Server
             return builder;
         }
 
+        /// <inheritdoc/>
         public IServiceProvider CreateServiceProvider(ContainerBuilder containerBuilder)
         {
             var container = containerBuilder.Build(ContainerBuildOptions.None);

@@ -14,6 +14,8 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Serilog;
 
+#pragma warning disable SA1600
+
 namespace Cratis.Server
 {
     public static class Program
