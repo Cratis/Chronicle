@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Compliance.Specs</AssemblyName>
+        <AssemblyName>Cratis.Compliance.Engine.Specs</AssemblyName>
         <RootNamespace>Cratis.Compliance</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../../Source/Kernel/Compliance/Compliance/Compliance.csproj"/>
+        <ProjectReference Include="../../../../Source/Kernel/Compliance/Engine/Engine.csproj"/>
     </ItemGroup>
 </Project>

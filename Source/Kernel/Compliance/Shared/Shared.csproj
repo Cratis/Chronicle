@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Compliance</AssemblyName>
+        <AssemblyName>Cratis.Compliance.Shared</AssemblyName>
         <RootNamespace>Cratis.Compliance</RootNamespace>
     </PropertyGroup>
 

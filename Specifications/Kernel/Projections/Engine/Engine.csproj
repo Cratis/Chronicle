@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Events.Projections.Specs</AssemblyName>
+        <AssemblyName>Cratis.Events.Projections.Engine.Specs</AssemblyName>
         <RootNamespace>Cratis.Events.Projections</RootNamespace>
     </PropertyGroup>
 

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Events.Schemas</AssemblyName>
+        <AssemblyName>Cratis.Events.Schemas.Shared</AssemblyName>
         <RootNamespace>Cratis.Events.Schemas</RootNamespace>
     </PropertyGroup>
 
