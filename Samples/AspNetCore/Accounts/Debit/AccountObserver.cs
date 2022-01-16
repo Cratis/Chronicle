@@ -10,9 +10,8 @@ namespace Sample.Accounts.Debit
     {
         public Task DebitAccountOpened(DebitAccountOpened @event)
         {
-            //throw new ArgumentException("Not interested in this event");
-
-            Console.WriteLine("Account Opened");
+            // throw new ArgumentException("Not interested in this event");
+            Console.WriteLine($"Account Opened : {@event.Name}");
 
             return Task.CompletedTask;
         }
