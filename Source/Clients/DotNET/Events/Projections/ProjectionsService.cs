@@ -15,7 +15,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionsService"/> class.
         /// </summary>
-        /// <param name="projectionsRegistrar">The <see cref="IProjections"/> system.</param>
+        /// <param name="projectionsRegistrar">The <see cref="IProjectionsRegistrar"/> system.</param>
         public ProjectionsService(IProjectionsRegistrar projectionsRegistrar)
         {
             _projectionsRegistrar = projectionsRegistrar;

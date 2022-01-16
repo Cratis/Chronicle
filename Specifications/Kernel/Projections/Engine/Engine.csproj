@@ -5,8 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../../Source/Kernel/Projections/Events.Projections/Events.Projections.csproj"/>
-        <ProjectReference Include="../../../Common/Common.csproj"/>
+        <ProjectReference Include="../../../../Source/Kernel/Projections/Engine/Engine.csproj"/>
     </ItemGroup>
 
 </Project>

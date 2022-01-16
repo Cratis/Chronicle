@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the friendly display name of a <see cref="Projection"/>.
+    /// Represents the friendly display name of a projection.
     /// </summary>
     /// <param name="Value">The inner value.</param>
     public record ProjectionName(string Value) : ConceptAs<string>(Value)

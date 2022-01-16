@@ -4,7 +4,7 @@
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the unique identifier of a type of <see cref="IProjectionEventProvider"/>.
+    /// Represents the unique identifier of a type of event provider.
     /// </summary>
     /// <param name="Value">Underlying value.</param>
     public record ProjectionEventProviderTypeId(Guid Value) : ConceptAs<Guid>(Value)

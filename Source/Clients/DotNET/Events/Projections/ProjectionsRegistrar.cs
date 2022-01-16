@@ -12,7 +12,7 @@ using Orleans;
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjections"/>.
+    /// Represents an implementation of <see cref="IProjectionsRegistrar"/>.
     /// </summary>
     public class ProjectionsRegistrar : IProjectionsRegistrar
     {

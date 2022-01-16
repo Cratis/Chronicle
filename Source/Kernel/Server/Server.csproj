@@ -37,6 +37,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Projections/Shared/Shared.csproj" />
+        <ProjectReference Include="../Projections/Engine/Engine.csproj" />
         <ProjectReference Include="../Projections/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../Projections/Api/Api.csproj" />
         <ProjectReference Include="../Projections/Grains/Grains.csproj" />

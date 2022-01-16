@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Shared/Shared.csproj" />
+        <ProjectReference Include="../Engine/Engine.csproj" />
         <ProjectReference Include="../../MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Store/Events.Store/Events.Store.csproj" />
         <ProjectReference Include="../../Store/Events.Store.MongoDB/Events.Store.MongoDB.csproj" />

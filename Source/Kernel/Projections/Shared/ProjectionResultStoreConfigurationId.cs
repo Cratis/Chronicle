@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Pipelines;
-
 namespace Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the unique identifier of a specific store configuration using in a <see cref="IProjectionPipeline"/>.
+    /// Represents the unique identifier of a specific store configuration using in a projection pipeline.
     /// </summary>
     /// <param name="Value">Underlying value.</param>
     public record ProjectionResultStoreConfigurationId(Guid Value) : ConceptAs<Guid>(Value)

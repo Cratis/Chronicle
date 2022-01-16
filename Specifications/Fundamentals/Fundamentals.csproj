@@ -6,7 +6,5 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Fundamentals/Fundamentals.csproj"/>
-        <ProjectReference Include="../Common/Common.csproj"/>
     </ItemGroup>
-
 </Project>
