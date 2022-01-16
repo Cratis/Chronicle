@@ -6,8 +6,8 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj" />
-        <ProjectReference Include="../Events.Schemas/Events.Schemas.csproj" />
-        <ProjectReference Include="../Events.Schemas.Grains.Interfaces/Events.Schemas.Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>

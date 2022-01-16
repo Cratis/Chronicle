@@ -23,7 +23,6 @@
         <ProjectReference Include="../Compliance/Domain/Domain.csproj" />
         <ProjectReference Include="../Compliance/Events/Events.csproj" />
         <ProjectReference Include="../Compliance/Grains/Grains.csproj" />
-        <ProjectReference Include="../Compliance/Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../Compliance/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../Compliance/Read/Read.csproj" />
         <ProjectReference Include="../Compliance/Reactions/Reactions.csproj" />
@@ -32,7 +31,6 @@
     <ItemGroup>
         <ProjectReference Include="../Configuration/Shared/Shared.csproj" />
         <ProjectReference Include="../Configuration/Grains/Grains.csproj" />
-        <ProjectReference Include="../Configuration/Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -41,13 +39,16 @@
         <ProjectReference Include="../Projections/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../Projections/Api/Api.csproj" />
         <ProjectReference Include="../Projections/Grains/Grains.csproj" />
-        <ProjectReference Include="../Projections/Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Schemas/Events.Schemas/Events.Schemas.csproj" />
-        <ProjectReference Include="../Schemas/Events.Schemas.Api/Events.Schemas.Api.csproj" />
-        <ProjectReference Include="../Schemas/Events.Schemas.Grains/Events.Schemas.Grains.csproj" />
+        <ProjectReference Include="../Schemas/Shared/Shared.csproj" />
+        <ProjectReference Include="../Schemas/Api/Api.csproj" />
+        <ProjectReference Include="../Schemas/Grains/Grains.csproj" />
+        <ProjectReference Include="../Schemas/MongoDB/MongoDB.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Store/Events.Store/Events.Store.csproj" />
         <ProjectReference Include="../Store/Events.Store.Api/Events.Store.Api.csproj" />
         <ProjectReference Include="../Store/Events.Store.Grains/Events.Store.Grains.csproj" />

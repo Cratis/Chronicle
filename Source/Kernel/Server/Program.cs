@@ -9,6 +9,8 @@ using Cratis.Events.Projections;
 using Cratis.Events.Projections.Changes;
 using Cratis.Events.Projections.Definitions;
 using Cratis.Events.Projections.MongoDB;
+using Cratis.Events.Schemas;
+using Cratis.Events.Schemas.MongoDB;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -45,6 +47,7 @@ namespace Cratis.Server
                         .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
                         .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
                         .AddSingleton<IEncryptionKeyStore, MongoDBEncryptionKeyStore>()
+                        .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
                         .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
