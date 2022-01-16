@@ -13,8 +13,8 @@
         <ProjectReference Include="../../Kernel/Projections/Shared/Shared.csproj"/>
         <ProjectReference Include="../../Kernel/Projections/Grains.Interfaces/Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Schemas/Grains.Interfaces/Grains.Interfaces.csproj"/>
-        <ProjectReference Include="../../Kernel/Store/Events.Store.Grains.Interfaces/Events.Store.Grains.Interfaces.csproj"/>
-        <ProjectReference Include="../../Kernel/Store/Events.Store.MongoDB/Events.Store.MongoDB.csproj"/>
+        <ProjectReference Include="../../Kernel/Store/Grains.Interfaces/Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Kernel/Store/MongoDB/MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

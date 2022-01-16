@@ -5,6 +5,7 @@
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
 
+    <!-- 3rd party package references -->
     <ItemGroup>
         <PackageReference Include="Autofac" Version="$(Autofac)" />
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
@@ -18,6 +19,7 @@
         <PackageReference Include="Swashbuckle.AspNetCore" Version="$(Swashbuckle)" />
     </ItemGroup>
 
+    <!-- Compliance -->
     <ItemGroup>
         <ProjectReference Include="../Compliance/Compliance/Compliance.csproj" />
         <ProjectReference Include="../Compliance/Domain/Domain.csproj" />
@@ -28,11 +30,13 @@
         <ProjectReference Include="../Compliance/Reactions/Reactions.csproj" />
     </ItemGroup>
 
+    <!-- Configuration -->
     <ItemGroup>
         <ProjectReference Include="../Configuration/Shared/Shared.csproj" />
         <ProjectReference Include="../Configuration/Grains/Grains.csproj" />
     </ItemGroup>
 
+    <!-- Projections -->
     <ItemGroup>
         <ProjectReference Include="../Projections/Shared/Shared.csproj" />
         <ProjectReference Include="../Projections/Engine/Engine.csproj" />
@@ -41,6 +45,7 @@
         <ProjectReference Include="../Projections/Grains/Grains.csproj" />
     </ItemGroup>
 
+    <!-- Schemas -->
     <ItemGroup>
         <ProjectReference Include="../Schemas/Shared/Shared.csproj" />
         <ProjectReference Include="../Schemas/Api/Api.csproj" />
@@ -48,12 +53,16 @@
         <ProjectReference Include="../Schemas/MongoDB/MongoDB.csproj" />
     </ItemGroup>
 
+    <!-- Store -->
     <ItemGroup>
-        <ProjectReference Include="../Store/Events.Store/Events.Store.csproj" />
-        <ProjectReference Include="../Store/Events.Store.Api/Events.Store.Api.csproj" />
-        <ProjectReference Include="../Store/Events.Store.Grains/Events.Store.Grains.csproj" />
-        <ProjectReference Include="../Store/Events.Store.MongoDB/Events.Store.MongoDB.csproj" />
+        <ProjectReference Include="../Store/Shared/Shared.csproj" />
+        <ProjectReference Include="../Store/Api/Api.csproj" />
+        <ProjectReference Include="../Store/Grains/Grains.csproj" />
+        <ProjectReference Include="../Store/MongoDB/MongoDB.csproj" />
+    </ItemGroup>
 
+    <!-- General -->
+    <ItemGroup>
         <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj"/>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
