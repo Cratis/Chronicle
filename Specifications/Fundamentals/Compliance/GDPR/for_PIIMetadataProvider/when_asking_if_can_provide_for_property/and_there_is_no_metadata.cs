@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance.for_PIIMetadataProvider.when_asking_if_can_provide_for_property
+namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_asking_if_can_provide_for_property
 {
     public class and_there_is_no_metadata : given.a_provider
     {

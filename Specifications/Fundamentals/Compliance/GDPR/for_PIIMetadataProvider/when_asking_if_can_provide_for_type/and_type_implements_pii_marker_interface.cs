@@ -1,12 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Compliance.for_PIIMetadataProvider.when_asking_if_can_provide_for_type
+namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_asking_if_can_provide_for_type
 {
-    public class and_type_is_adorned_with_pii_attribute : given.a_provider
+    public class and_type_implements_pii_marker_interface : given.a_provider
     {
-        [PII]
-        class MyType { }
+        class MyType : IHoldPII { }
 
         bool result;
         void Because() => result = provider.CanProvide(typeof(MyType));
