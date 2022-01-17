@@ -35,7 +35,10 @@ namespace Cratis.Events.Store.Grains
         /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
         /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-        public EventLog(ISchemaStore schemaStore, IJsonComplianceManager jsonComplianceManager, ILogger<EventLog> logger)
+        public EventLog(
+            ISchemaStore schemaStore,
+            IJsonComplianceManager jsonComplianceManager,
+            ILogger<EventLog> logger)
         {
             _schemaStore = schemaStore;
             _jsonComplianceManager = jsonComplianceManager;
@@ -74,8 +77,8 @@ namespace Cratis.Events.Store.Grains
             var updateSequenceNumber = true;
             try
             {
-                var schema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
-                var compliantEvent = await _jsonComplianceManager.Apply(schema.Schema, eventSourceId, JObject.Parse(content));
+                var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
+                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, JObject.Parse(content));
 
                 var appendedEvent = new AppendedEvent(
                     new EventMetadata(State.SequenceNumber, eventType),

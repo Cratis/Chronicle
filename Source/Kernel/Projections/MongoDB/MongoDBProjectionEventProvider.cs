@@ -3,14 +3,17 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
+using Cratis.Compliance;
 using Cratis.DependencyInversion;
 using Cratis.Events.Projections.Pipelines;
+using Cratis.Events.Schemas;
 using Cratis.Events.Store;
 using Cratis.Events.Store.Grains;
 using Cratis.Events.Store.MongoDB;
 using Cratis.Execution;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Streams;
 
@@ -24,6 +27,8 @@ namespace Cratis.Events.Projections.MongoDB
         readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
         readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IProjectionPositions> _positionsProvider;
+        readonly ISchemaStore _schemaStore;
+        readonly IJsonComplianceManager _jsonComplianceManager;
         readonly IClusterClient _clusterClient;
 
         /// <inheritdoc/>
@@ -35,16 +40,22 @@ namespace Cratis.Events.Projections.MongoDB
         /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
         /// <param name="positionsProvider">Provider for <see cref="IProjectionPositions"/>.</param>
+        /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
+        /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="clusterClient"><see cref="IClusterClient"/> for working with the Orleans cluster.</param>
         public MongoDBProjectionEventProvider(
             ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
             IExecutionContextManager executionContextManager,
             ProviderFor<IProjectionPositions> positionsProvider,
+            ISchemaStore schemaStore,
+            IJsonComplianceManager jsonComplianceManager,
             IClusterClient clusterClient)
         {
             _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
             _executionContextManager = executionContextManager;
             _positionsProvider = positionsProvider;
+            _schemaStore = schemaStore;
+            _jsonComplianceManager = jsonComplianceManager;
             _clusterClient = clusterClient;
         }
 
@@ -53,7 +64,7 @@ namespace Cratis.Events.Projections.MongoDB
         {
             if (!projection.EventTypes.Any())
             {
-                return new EventCursor(null);
+                return new EventCursor(_schemaStore, _jsonComplianceManager, null);
             }
 
             var collection = _eventStoreDatabaseProvider().GetEventLogCollectionFor(EventLogId.Default);
@@ -73,7 +84,7 @@ namespace Cratis.Events.Projections.MongoDB
                     Sort = Builders<Store.MongoDB.Event>.Sort.Ascending(_ => _.SequenceNumber)
                 });
 
-            return new EventCursor(cursor);
+            return new EventCursor(_schemaStore, _jsonComplianceManager, cursor);
         }
 
         /// <inheritdoc/>
@@ -86,10 +97,13 @@ namespace Cratis.Events.Projections.MongoDB
                 var tenantId = _executionContextManager.Current.TenantId;
                 var stream = streamProvider.GetStream<AppendedEvent>(EventLogId.Default, tenantId.ToString());
                 await stream.SubscribeAsync(
-                    (@event, _) =>
+                    async (@event, _) =>
                     {
                         _executionContextManager.Establish(tenantId, CorrelationId.New());
-                        var content = BsonSerializer.Deserialize<ExpandoObject>(@event.Content);
+                        var eventSchema = await _schemaStore.GetFor(@event.Metadata.EventType.Id, @event.Metadata.EventType.Generation);
+                        var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventContext.EventSourceId, JObject.Parse(@event.Content));
+
+                        var content = BsonSerializer.Deserialize<ExpandoObject>(releasedContent.ToString());
                         subject.OnNext(new(
                             @event.Metadata.SequenceNumber,
                             @event.Metadata.EventType,
@@ -97,8 +111,6 @@ namespace Cratis.Events.Projections.MongoDB
                             @event.EventContext.EventSourceId,
                             content
                         ));
-
-                        return Task.CompletedTask;
                     },
                     new EventLogSequenceNumberTokenWithFilter(currentOffset, pipeline.Projection.EventTypes.ToArray()));
             }
