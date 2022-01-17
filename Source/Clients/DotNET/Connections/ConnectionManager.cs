@@ -12,7 +12,7 @@ namespace Cratis.Connections
     public class ConnectionManager : IConnectionManager
     {
         /// <inheritdoc/>
-        public ConnectionId CurrentConnectionId { get; }
+        public ConnectionId CurrentConnectionId { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionManager"/> class.
@@ -20,6 +20,12 @@ namespace Cratis.Connections
         public ConnectionManager()
         {
             CurrentConnectionId = Guid.NewGuid().ToString();
+        }
+
+        /// <inheritdoc/>
+        public void SetKernelMode()
+        {
+            CurrentConnectionId = ConnectionId.Kernel;
         }
     }
 }
