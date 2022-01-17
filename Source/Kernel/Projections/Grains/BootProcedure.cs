@@ -31,7 +31,7 @@ namespace Cratis.Events.Projections.Grains
         {
             // TODO: Start for all tenants
             _executionContextManager.Establish(
-                Guid.Parse("f455c031-630e-450d-a75b-ca050c441708"),
+                Guid.Parse("3352d47d-c154-4457-b3fb-8a2efb725113"),
                 Guid.NewGuid().ToString());
 
             var projections = _grainFactory.GetGrain<IProjections>(Guid.Empty);
