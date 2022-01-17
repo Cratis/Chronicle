@@ -13,7 +13,6 @@ namespace Cratis.Compliance.for_Encryption
         byte[] encrypted;
         byte[] decrypted;
 
-
         void Establish()
         {
             encryption = new();

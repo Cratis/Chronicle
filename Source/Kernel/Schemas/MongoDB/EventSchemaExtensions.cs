@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Schemas;
 using NJsonSchema;
 
 namespace Cratis.Events.Schemas.MongoDB
@@ -34,6 +35,8 @@ namespace Cratis.Events.Schemas.MongoDB
         {
             var task = JsonSchema.FromJsonAsync(schema.Schema);
             task.Wait();
+
+            task.Result.EnsureCorrectMetadata();
 
             return new EventSchema(
                 new EventType(

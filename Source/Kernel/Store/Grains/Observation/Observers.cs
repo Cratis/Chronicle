@@ -36,7 +36,7 @@ namespace Cratis.Events.Store.Grains.Observation
         public async Task RetryFailed()
         {
             // TODO: do this for for all tenants
-            const string tenant = "f455c031-630e-450d-a75b-ca050c441708";
+            const string tenant = "3352d47d-c154-4457-b3fb-8a2efb725113";
             _executionContextManager.Establish(tenant, CorrelationId.New());
 
             var observers = await _failedObservers.GetAll();

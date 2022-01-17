@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Engine/Engine.csproj" />
+        <ProjectReference Include="../../Compliance/Engine/Engine.csproj" />
         <ProjectReference Include="../../MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Store/Shared/Shared.csproj" />
         <ProjectReference Include="../../Store/MongoDB/MongoDB.csproj" />

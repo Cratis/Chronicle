@@ -74,7 +74,7 @@ namespace Cratis.Events.Projections
         public async Task StartAll()
         {
             // TODO: Observe for all tenants
-            _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
+            _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
 
             var projections = _clusterClient.GetGrain<Grains.IProjections>(Guid.Empty);
             foreach (var projectionDefinition in _projections)

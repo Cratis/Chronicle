@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance.for_PIIMetadataProvider.when_asking_if_can_provide_for_property
+namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_asking_if_can_provide_for_property
 {
     public class and_propertytype_implements_pii_marker_interface : given.a_provider
     {

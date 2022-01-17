@@ -10,41 +10,31 @@ namespace Cratis.Compliance
     /// </summary>
     public class Encryption : IEncryption
     {
+        const int KeySize = 2048;
+
         /// <inheritdoc/>
         public EncryptionKey GenerateKey()
         {
-            var aes = CreateAes();
-            aes.GenerateKey();
-            return new(aes.Key);
+            var rsa = RSA.Create(KeySize);
+            var privateKey = rsa.ExportRSAPrivateKey();
+            var publicKey = rsa.ExportRSAPublicKey();
+            return new(publicKey, privateKey);
         }
 
         /// <inheritdoc/>
         public byte[] Encrypt(byte[] bytes, EncryptionKey key)
         {
-            var aes = CreateAes();
-            aes.GenerateIV();
-            aes.Key = key.Value;
-            using var encryptor = aes.CreateEncryptor();
-            var encrypted = encryptor.TransformFinalBlock(bytes, 0, bytes.Length);
-            return aes.IV.Concat(encrypted).ToArray();
+            using var provider = new RSACryptoServiceProvider(KeySize);
+            provider.ImportRSAPublicKey(key.Public, out _);
+            return provider.Encrypt(bytes, RSAEncryptionPadding.Pkcs1);
         }
 
         /// <inheritdoc/>
         public byte[] Decrypt(byte[] bytes, EncryptionKey key)
         {
-            var aes = CreateAes();
-            aes.IV = bytes[..16];
-            aes.Key = key.Value;
-            using var decryptor = aes.CreateDecryptor();
-            return decryptor.TransformFinalBlock(bytes, aes.IV.Length, bytes.Length - aes.IV.Length);
-        }
-
-        Aes CreateAes()
-        {
-            var aes = Aes.Create();
-            aes.Mode = CipherMode.CBC;
-            aes.Padding = PaddingMode.PKCS7;
-            return aes;
+            using var provider = new RSACryptoServiceProvider(KeySize);
+            provider.ImportRSAPrivateKey(key.Private, out _);
+            return provider.Decrypt(bytes, RSAEncryptionPadding.Pkcs1);
         }
     }
 }
