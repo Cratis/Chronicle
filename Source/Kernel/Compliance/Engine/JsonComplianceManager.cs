@@ -48,11 +48,11 @@ namespace Cratis.Compliance
                 if (schema.Properties != default)
                 {
                     var propertySchema = schema.Properties.Single(_ => _.Key == property.Name).Value;
-                    foreach (var metadata in GetMetadata(propertySchema).Concat(complianceMetadataForContainer).DistinctBy(_ => _.type))
+                    foreach (var metadata in GetMetadata(propertySchema).Concat(complianceMetadataForContainer).DistinctBy(_ => _.metadataType))
                     {
-                        if (_propertyValueHandlers.ContainsKey(metadata.type))
+                        if (_propertyValueHandlers.ContainsKey(metadata.metadataType))
                         {
-                            property.Value = await action(_propertyValueHandlers[metadata.type], identifier, property.Value);
+                            property.Value = await action(_propertyValueHandlers[metadata.metadataType], identifier, property.Value);
                         }
                     }
 
@@ -68,6 +68,7 @@ namespace Cratis.Compliance
             {
                 return allMetadata;
             }
+
             return Array.Empty<ComplianceSchemaMetadata>();
         }
     }
