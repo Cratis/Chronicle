@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj" />
+        <ProjectReference Include="../../Compliance/Engine/Engine.csproj" />
         <ProjectReference Include="../Shared/Shared.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
