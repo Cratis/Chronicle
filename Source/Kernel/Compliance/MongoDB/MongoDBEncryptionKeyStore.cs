@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.MongoDB;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Compliance.MongoDB
@@ -13,11 +12,6 @@ namespace Cratis.Compliance.MongoDB
     public class MongoDBEncryptionKeyStore : IEncryptionKeyStore
     {
         readonly IMongoCollection<EncryptionKeyForIdentifier> _encryptionKeysCollection;
-
-        static MongoDBEncryptionKeyStore()
-        {
-            BsonSerializer.RegisterSerializer(new EncryptionKeySerializer());
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBEncryptionKeyStore"/> class.
@@ -33,7 +27,7 @@ namespace Cratis.Compliance.MongoDB
         {
             await _encryptionKeysCollection.ReplaceOneAsync(
                 _ => _.Identifier == identifier,
-                new EncryptionKeyForIdentifier(identifier, key),
+                new EncryptionKeyForIdentifier(identifier, key.Public, key.Private),
                 new ReplaceOptions() { IsUpsert = true });
         }
 
@@ -48,7 +42,8 @@ namespace Cratis.Compliance.MongoDB
         public async Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier)
         {
             var result = await _encryptionKeysCollection.FindAsync(_ => _.Identifier == identifier);
-            return result.Single().Key;
+            var key = result.Single();
+            return new(key.PublicKey, key.PrivateKey);
         }
 
         /// <inheritdoc/>
