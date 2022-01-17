@@ -3,7 +3,7 @@
 
 using Cratis.Concepts;
 
-namespace Cratis.Compliance
+namespace Cratis.Compliance.GDPR
 {
     /// <summary>
     /// Represents a <see cref="ConceptAs{T}"/> that holds PII according to the definition of GDPR.

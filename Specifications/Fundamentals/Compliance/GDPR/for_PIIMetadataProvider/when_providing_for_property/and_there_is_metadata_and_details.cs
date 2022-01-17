@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance.for_PIIMetadataProvider.when_providing_for_property
+namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_providing_for_property
 {
     public class and_there_is_metadata_and_details : given.a_provider
     {
