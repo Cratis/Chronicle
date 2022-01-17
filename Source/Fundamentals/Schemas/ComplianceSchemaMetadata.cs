@@ -6,7 +6,7 @@ namespace Cratis.Schemas
     /// <summary>
     /// Represents the compliance metadata stored in a schema.
     /// </summary>
-    /// <param name="type">Type of metadata.</param>
+    /// <param name="metadataType">Type of metadata.</param>
     /// <param name="details">Details.</param>
-    public record ComplianceSchemaMetadata(Guid type, string details);
+    public record ComplianceSchemaMetadata(Guid metadataType, string details);
 }
