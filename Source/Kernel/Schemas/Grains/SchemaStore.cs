@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Schemas;
 using NJsonSchema;
 using Orleans;
 
@@ -26,6 +27,7 @@ namespace Cratis.Events.Schemas.Grains
         public async Task Register(EventType type, string friendlyName, string schema)
         {
             var jsonSchema = await JsonSchema.FromJsonAsync(schema);
+            jsonSchema.EnsureCorrectMetadata();
             await _underlyingSchemaStore.Register(type, friendlyName, jsonSchema);
         }
     }
