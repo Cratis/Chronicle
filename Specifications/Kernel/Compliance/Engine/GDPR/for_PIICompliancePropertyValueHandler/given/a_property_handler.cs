@@ -16,7 +16,7 @@ namespace Cratis.Compliance.GDPR.for_PIICompliancePropertyValueHandler.given
 
         void Establish()
         {
-            key = new EncryptionKey(Encoding.UTF8.GetBytes("TheKey"));
+            key = new EncryptionKey(Encoding.UTF8.GetBytes("PublicPart"), Encoding.UTF8.GetBytes("PrivatePart"));
             key_store = new();
             encryption = new();
             handler = new(key_store.Object, encryption.Object);
