@@ -3,11 +3,10 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance.for_PIIMetadataProvider.when_asking_if_can_provide_for_property
+namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_providing_for_property
 {
-    public class and_declaring_type_is_adorned_with_pii_attribute : given.a_provider
+    public class and_there_is_no_metadata : given.a_provider
     {
-        [PII]
         class MyClass
         {
             public string Something { get; set; }
@@ -15,9 +14,9 @@ namespace Cratis.Compliance.for_PIIMetadataProvider.when_asking_if_can_provide_f
             public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
         }
 
-        bool result;
-        void Because() => result = provider.CanProvide(MyClass.SomethingProperty);
+        Exception result;
+        void Because() => result = Catch.Exception(() => provider.Provide(MyClass.SomethingProperty));
 
-        [Fact] void should_be_able_to_provide() => result.ShouldBeTrue();
+        [Fact] void should_throw_no_compliance_metadata_for_property() => result.ShouldBeOfExactType<NoComplianceMetadataForProperty>();
     }
 }

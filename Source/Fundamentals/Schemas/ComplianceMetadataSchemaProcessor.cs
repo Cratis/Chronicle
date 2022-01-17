@@ -45,7 +45,7 @@ namespace Cratis.Schemas
             }
         }
 
-        void AddMetadataToSchema(JsonSchema schema, IEnumerable<ComplianceMetadata> metadata) => metadata.ForEach(_ => EnsureMetadata(schema).Add(new ComplianceSchemaMetadata(_.Type.Value, _.Details)));
+        void AddMetadataToSchema(JsonSchema schema, IEnumerable<ComplianceMetadata> metadata) => metadata.ForEach(_ => EnsureMetadata(schema).Add(new ComplianceSchemaMetadata(_.MetadataType.Value, _.Details)));
 
         List<ComplianceSchemaMetadata> EnsureMetadata(JsonSchema schema)
         {

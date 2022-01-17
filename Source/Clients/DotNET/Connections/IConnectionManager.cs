@@ -12,5 +12,10 @@ namespace Cratis.Connections
         /// Gets the current connection identifier.
         /// </summary>
         ConnectionId CurrentConnectionId { get; }
+
+        /// <summary>
+        /// Set the current client connections to be in kernel mode.
+        /// </summary>
+        void SetKernelMode();
     }
 }

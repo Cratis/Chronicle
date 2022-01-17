@@ -16,6 +16,9 @@ namespace Cratis.Compliance.MongoDB
         {
             classMap.AutoMap();
             classMap.MapIdProperty(_ => _.Identifier);
+            var serializer = new EncryptionKeySerializer();
+            classMap.MapField(_ => _.PublicKey).SetSerializer(serializer);
+            classMap.MapField(_ => _.PrivateKey).SetSerializer(serializer);
         }
     }
 }

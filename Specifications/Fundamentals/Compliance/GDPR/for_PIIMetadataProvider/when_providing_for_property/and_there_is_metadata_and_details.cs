@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance.for_PIIMetadataProvider.when_providing_for_property
+namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_providing_for_property
 {
     public class and_there_is_metadata_and_details : given.a_provider
     {
@@ -24,7 +24,7 @@ namespace Cratis.Compliance.for_PIIMetadataProvider.when_providing_for_property
 
         void Because() => result = provider.Provide(MyClass.SomethingProperty);
 
-        [Fact] void should_return_pii_metadata() => result.Type.ShouldEqual(ComplianceMetadataType.PII);
+        [Fact] void should_return_pii_metadata() => result.MetadataType.ShouldEqual(ComplianceMetadataType.PII);
         [Fact] void should_return_metadata_with_details() => result.Details.ShouldEqual(details);
     }
 }

@@ -6,7 +6,7 @@ namespace Cratis.Compliance
     /// <summary>
     /// Represents the metadata related to compliance.
     /// </summary>
-    /// <param name="Type">The <see cref="ComplianceMetadataType"/>.</param>
+    /// <param name="MetadataType">The <see cref="ComplianceMetadataType"/>.</param>
     /// <param name="Details">Any additional details - can be empty.</param>
-    public record ComplianceMetadata(ComplianceMetadataType Type, string Details);
+    public record ComplianceMetadata(ComplianceMetadataType MetadataType, string Details);
 }

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Compliance.for_PIIMetadataProvider.when_providing_for_type
+namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_providing_for_type
 {
     public class and_there_is_metadata_and_details : given.a_provider
     {
@@ -15,7 +15,7 @@ namespace Cratis.Compliance.for_PIIMetadataProvider.when_providing_for_type
 
         void Because() => result = provider.Provide(typeof(MyType));
 
-        [Fact] void should_return_pii_metadata() => result.Type.ShouldEqual(ComplianceMetadataType.PII);
+        [Fact] void should_return_pii_metadata() => result.MetadataType.ShouldEqual(ComplianceMetadataType.PII);
         [Fact] void should_return_metadata_with_details() => result.Details.ShouldEqual(details);
     }
 }
