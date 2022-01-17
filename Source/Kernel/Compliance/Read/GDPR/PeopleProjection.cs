@@ -26,7 +26,7 @@ namespace Cratis.Compliance.Read.GDPR
             .Children(_ => _.PersonalInformation, c => c
                 .IdentifiedBy(_ => _.Identifier)
                 .From<PersonalInformationRegistered>(_ => _
-                    .UsingParentKey(m => m.Person)
+                    .UsingKey(_ => _.Identifier)
                     .Set(m => m.Type).To(e => e.Type)
                     .Set(m => m.Value).To(e => e.Value)));
     }
