@@ -3,7 +3,10 @@
 
 using Autofac;
 using Cratis.Concepts.SystemJson;
+using Cratis.Connections;
+using Cratis.Events.Observation;
 using Cratis.Events.Projections;
+using Cratis.Extensions.Orleans.Execution;
 using Cratis.Hosting;
 using Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
@@ -79,7 +82,10 @@ namespace Cratis.Server
 
             // TODO: This needs to be improved.
             // In a regular client, this is hooked up with a hosted service, that is too early within the kernel
+            app.ApplicationServices.GetService<IConnectionManager>()!.SetKernelMode();
+            app.ApplicationServices.GetService<IRequestContextManager>()!.Set(RequestContextKeys.ConnectionId, ConnectionId.Kernel);
             app.ApplicationServices.GetService<IProjectionsRegistrar>()!.StartAll().Wait();
+            app.ApplicationServices.GetService<IObservers>()!.StartObserving().Wait();
         }
     }
 }
