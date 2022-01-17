@@ -24,7 +24,7 @@ namespace Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_providing_for_prop
 
         void Because() => result = provider.Provide(MyClass.SomethingProperty);
 
-        [Fact] void should_return_pii_metadata() => result.Type.ShouldEqual(ComplianceMetadataType.PII);
+        [Fact] void should_return_pii_metadata() => result.MetadataType.ShouldEqual(ComplianceMetadataType.PII);
         [Fact] void should_return_metadata_with_details() => result.Details.ShouldEqual(details);
     }
 }

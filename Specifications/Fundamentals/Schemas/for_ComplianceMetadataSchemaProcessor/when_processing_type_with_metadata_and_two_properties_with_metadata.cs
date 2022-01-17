@@ -35,17 +35,17 @@ namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
 
         void Because() => processor.Process(context);
 
-        [Fact] void should_add_first_type_metadata_with_correct_type() => GetMetadata()[0].type.ShouldEqual(first_type_metadata.Type.Value);
+        [Fact] void should_add_first_type_metadata_with_correct_type() => GetMetadata()[0].metadataType.ShouldEqual(first_type_metadata.MetadataType.Value);
         [Fact] void should_add_first_type_metadata_with_correct_details() => GetMetadata()[0].details.ShouldEqual(first_type_metadata.Details);
-        [Fact] void should_add_second_type_metadata_with_correct_type() => GetMetadata()[1].type.ShouldEqual(second_type_metadata.Type.Value);
+        [Fact] void should_add_second_type_metadata_with_correct_type() => GetMetadata()[1].metadataType.ShouldEqual(second_type_metadata.MetadataType.Value);
         [Fact] void should_add_second_type_metadata_with_correct_details() => GetMetadata()[1].details.ShouldEqual(second_type_metadata.Details);
-        [Fact] void should_add_first_property_first_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.First))[0].type.ShouldEqual(first_property_first_metadata.Type.Value);
+        [Fact] void should_add_first_property_first_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.First))[0].metadataType.ShouldEqual(first_property_first_metadata.MetadataType.Value);
         [Fact] void should_add_first_property_first_type_metadata_with_correct_details() => GetMetadataForProperty(nameof(TypeWithProperties.First))[0].details.ShouldEqual(first_property_first_metadata.Details);
-        [Fact] void should_add_first_property_second_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.First))[1].type.ShouldEqual(first_property_second_metadata.Type.Value);
+        [Fact] void should_add_first_property_second_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.First))[1].metadataType.ShouldEqual(first_property_second_metadata.MetadataType.Value);
         [Fact] void should_add_first_property_second_type_metadata_with_correct_details() => GetMetadataForProperty(nameof(TypeWithProperties.First))[1].details.ShouldEqual(first_property_second_metadata.Details);
-        [Fact] void should_add_second_property_first_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[0].type.ShouldEqual(second_property_first_metadata.Type.Value);
+        [Fact] void should_add_second_property_first_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[0].metadataType.ShouldEqual(second_property_first_metadata.MetadataType.Value);
         [Fact] void should_add_second_property_first_type_metadata_with_correct_details() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[0].details.ShouldEqual(second_property_first_metadata.Details);
-        [Fact] void should_add_second_property_second_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[1].type.ShouldEqual(second_property_second_metadata.Type.Value);
+        [Fact] void should_add_second_property_second_metadata_with_correct_type() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[1].metadataType.ShouldEqual(second_property_second_metadata.MetadataType.Value);
         [Fact] void should_add_second_property_second_type_metadata_with_correct_details() => GetMetadataForProperty(nameof(TypeWithProperties.Second))[1].details.ShouldEqual(second_property_second_metadata.Details);
 
         ComplianceSchemaMetadata[] GetMetadata() => ((IEnumerable<ComplianceSchemaMetadata>)context.Schema.ExtensionData[JsonSchemaGenerator.ComplianceKey]).ToArray();
