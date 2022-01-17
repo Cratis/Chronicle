@@ -62,7 +62,7 @@ namespace Cratis.Events.Observation
         public async Task StartObserving()
         {
             // TODO: Observe for all tenants
-            _executionContextManager.Establish("f455c031-630e-450d-a75b-ca050c441708", CorrelationId.New());
+            _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
             var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
 
             foreach (var handler in _observerHandlers)
