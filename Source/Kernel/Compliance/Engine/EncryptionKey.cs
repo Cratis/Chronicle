@@ -8,6 +8,7 @@ namespace Cratis.Compliance
     /// <summary>
     /// Represents a key used in encryption.
     /// </summary>
-    /// <param name="Value">The actual content of the key.</param>
-    public record EncryptionKey(byte[] Value);
+    /// <param name="Public">The public part of the key.</param>
+    /// <param name="Private">The private part of the key.</param>
+    public record EncryptionKey(byte[] Public, byte[] Private);
 }

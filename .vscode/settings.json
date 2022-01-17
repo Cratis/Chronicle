@@ -35,11 +35,6 @@
         "**/*.scss.ts": true,
         "**/temp": true
     },
-    "dotnet-test-explorer.testProjectPath": "Specifications/**/*.csproj",
-    "dotnet-test-explorer.treeMode": "full",
-    "dotnet-test-explorer.runInParallel": true,
-    "dotnet-test-explorer.showCodeLens": true,
-    "dotnet-test-explorer.autoExpandTree": true,
     "[csharp]": {
         "editor.defaultFormatter": "ms-dotnettools.csharp"
     },
@@ -66,6 +61,7 @@
         "IPII",
         "Namotion",
         "PII",
+        "Pkcs",
         "Proto",
         "protobuf",
         "tinycolor",
