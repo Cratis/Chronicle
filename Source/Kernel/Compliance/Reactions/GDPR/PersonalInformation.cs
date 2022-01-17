@@ -30,6 +30,18 @@ namespace Cratis.Compliance.Reactions.GDPR
         /// <param name="event">The event.</param>
         /// <param name="context">The context for the event.</param>
         /// <returns>Awaitable task.</returns>
+        public Task TestPersonalInformationAdded(PersonalInformationRegistered @event, EventContext context)
+        {
+            Console.WriteLine(@event);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Handles what needs to happen when personal information is deleted for a person.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        /// <param name="context">The context for the event.</param>
+        /// <returns>Awaitable task.</returns>
         public Task PersonalInformationDeleted(PersonalInformationForPersonDeleted @event, EventContext context) => _piiManager.DeleteEncryptionKeyFor(context.EventSourceId.Value);
     }
 }
