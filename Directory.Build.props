@@ -29,10 +29,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="$(MSBuildThisFileDirectory)logo.png" PackagePath="/" />
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Aksio.Defaults" Version="1.5.8" PrivateAssets="All" />
     </ItemGroup>
 </Project>
