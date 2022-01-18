@@ -1,3 +1,23 @@
+# [v4.2.0] - 2022-1-18 [PR: #111](https://github.com/Cratis/cratis/pull/111)
+
+## Summary
+
+This version is focused on Compliance and specifically GDPR; providing the necessary handling (apply) of events being appended and then for observers and projections (release).
+
+### Added
+
+- Compliance applied to events being appended.
+- Appended events being released from compliance when rehydrated into observers and projections.
+
+### Changed
+
+- Encryption keys are stored asymmetrically. This is transparent in the API, but internal behavioral change.
+
+### Fixed
+
+- Kernel mode observers weren't hooked up. We will need to revisit this, see #109.
+
+
 # [v4.1.0] - 2022-1-17 [PR: #110](https://github.com/Cratis/cratis/pull/110)
 
 ## Summary
