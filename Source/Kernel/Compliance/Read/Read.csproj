@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Workbench.Compliance.Read</AssemblyName>
-        <RootNamespace>Cratis.Workbench.Compliance.Read</RootNamespace>
+        <AssemblyName>Cratis.Compliance.Read</AssemblyName>
+        <RootNamespace>Cratis.Compliance.Read</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
