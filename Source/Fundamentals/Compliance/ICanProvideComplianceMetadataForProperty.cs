@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Defines a provider of <see cref="ComplianceMetadata"/> for <see cref="PropertyInfo">types</see>.

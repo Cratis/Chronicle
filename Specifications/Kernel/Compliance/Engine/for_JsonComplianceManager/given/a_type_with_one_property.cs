@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
-namespace Cratis.Compliance.for_JsonComplianceManager.given
+namespace Aksio.Cratis.Compliance.for_JsonComplianceManager.given
 {
     public class a_type_with_one_property : Specification
     {

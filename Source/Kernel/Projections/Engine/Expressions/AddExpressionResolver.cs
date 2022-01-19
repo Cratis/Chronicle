@@ -3,9 +3,9 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Expressions
+namespace Aksio.Cratis.Events.Projections.Expressions
 {
     /// <summary>
     /// Represents a <see cref="IPropertyMapperExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="Event"/>.

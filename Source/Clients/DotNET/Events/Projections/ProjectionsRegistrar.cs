@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Events.Projections.Definitions;
-using Cratis.Execution;
-using Cratis.Reflection;
-using Cratis.Schemas;
-using Cratis.Types;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Types;
 using Orleans;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionsRegistrar"/>.

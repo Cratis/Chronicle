@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Execution;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Execution;
 
-namespace Cratis.Events.Projections.Changes
+namespace Aksio.Cratis.Events.Projections.Changes
 {
     /// <summary>
     /// Defines the storage mechanism for changesets. Typically used for debugging purposes to see what changes has occurred.

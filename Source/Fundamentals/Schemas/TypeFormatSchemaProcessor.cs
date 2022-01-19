@@ -3,7 +3,7 @@
 
 using NJsonSchema.Generation;
 
-namespace Cratis.Schemas
+namespace Aksio.Cratis.Schemas
 {
     /// <summary>
     /// Represents an implementation of <see cref="ISchemaProcessor"/> for adding format information.

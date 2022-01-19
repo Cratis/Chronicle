@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance.Events.Microservices;
-using Cratis.Events;
+using Aksio.Cratis.Compliance.Events.Microservices;
+using Aksio.Cratis.Events;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.Compliance.Domain.Microservices
+namespace Aksio.Cratis.Compliance.Domain.Microservices
 {
     /// <summary>
     /// Represents the domain API for microservices.

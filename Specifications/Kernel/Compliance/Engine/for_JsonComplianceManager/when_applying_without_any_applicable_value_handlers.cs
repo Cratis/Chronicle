@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json.Linq;
 
-namespace Cratis.Compliance.for_JsonComplianceManager
+namespace Aksio.Cratis.Compliance.for_JsonComplianceManager
 {
     public class when_applying_without_any_applicable_value_handlers : given.no_value_handlers_and_a_type_with_one_property
     {

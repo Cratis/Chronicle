@@ -3,7 +3,7 @@
 
 using System.Globalization;
 
-namespace Cratis.Concepts.for_ConceptFactory
+namespace Aksio.Cratis.Concepts.for_ConceptFactory
 {
     public class when_creating_instance_of_long_concept_with_value_as_string : Specification
     {

@@ -3,21 +3,21 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
-using Cratis.Compliance;
-using Cratis.DependencyInversion;
-using Cratis.Events.Projections.Pipelines;
-using Cratis.Events.Schemas;
-using Cratis.Events.Store;
-using Cratis.Events.Store.Grains;
-using Cratis.Events.Store.MongoDB;
-using Cratis.Execution;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Grains;
+using Aksio.Cratis.Events.Store.MongoDB;
+using Aksio.Cratis.Execution;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Streams;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionEventProvider"/> for the default Cratis event log.

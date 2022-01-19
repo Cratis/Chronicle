@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Cratis.Concepts.SystemJson
+namespace Aksio.Cratis.Concepts.SystemJson
 {
     /// <summary>
     /// Represents a <see cref="JsonConverterFactory"/> for providing <see cref="ConceptAsJsonConverter{T}"/> for concept types.

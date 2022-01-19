@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     public class when_accessing_event_source_id : Specification
     {

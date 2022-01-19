@@ -5,7 +5,7 @@ using Autofac;
 using Autofac.Builder;
 using Autofac.Extensions.DependencyInjection;
 
-namespace Cratis.Server
+namespace Aksio.Cratis.Server
 {
     /// <summary>
     /// Represents a <see cref="IServiceProviderFactory{T}"/> for <see cref="ContainerBuilder"/>.

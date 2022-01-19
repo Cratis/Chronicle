@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Types
+namespace Aksio.Cratis.Types
 {
     /// <summary>
     /// Defines something that can discover implementations of types and give instance of these types

@@ -3,9 +3,9 @@
 
 using System.Collections.Concurrent;
 using System.Reflection;
-using Cratis.Reflection;
+using Aksio.Cratis.Reflection;
 
-namespace Cratis.Types
+namespace Aksio.Cratis.Types
 {
     /// <summary>
     /// Represents an implementation of <see cref="IContractToImplementorsMap"/>.

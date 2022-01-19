@@ -3,14 +3,14 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.Pipelines;
-using Cratis.Execution;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
 #pragma warning disable CA1721 // Pipelines property is confusing since there is a GetPipelines - they do differ - see GH issue #103.
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjections"/>.

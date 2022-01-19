@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store.Grains;
-using Cratis.Execution;
+using Aksio.Cratis.Events.Store.Grains;
+using Aksio.Cratis.Execution;
 using MongoDB.Driver;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IQueueCache"/> for MongoDB event log.

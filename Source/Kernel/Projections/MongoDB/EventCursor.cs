@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Compliance;
-using Cratis.Events.Schemas;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Events.Schemas;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Newtonsoft.Json.Linq;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventCursor"/> for handling events from event log.

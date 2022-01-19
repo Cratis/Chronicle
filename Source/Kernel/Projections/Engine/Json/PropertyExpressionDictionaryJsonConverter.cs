@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 using Newtonsoft.Json;
 
-namespace Cratis.Events.Projections.Json
+namespace Aksio.Cratis.Events.Projections.Json
 {
     /// <summary>
     /// Represents a <see cref="JsonConverter"/> that can convert to a dictionary of <see cref="PropertyPath"/> and expression.

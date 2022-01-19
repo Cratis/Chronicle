@@ -3,7 +3,7 @@
 
 using System.Reactive.Subjects;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents the status of a <see cref="IProjectionPipelineJob"/>.

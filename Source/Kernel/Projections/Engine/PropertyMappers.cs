@@ -3,10 +3,10 @@
 
 using System.Dynamic;
 using System.Globalization;
-using Cratis.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents utilities for creating <see cref="PropertyMapper{Event, ExpandoObject}"/> for different scenarios.

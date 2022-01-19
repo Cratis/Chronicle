@@ -4,7 +4,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.Events.Schemas.API
+namespace Aksio.Cratis.Events.Schemas.API
 {
     /// <summary>
     /// Represents the API for working with event types.

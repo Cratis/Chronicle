@@ -3,11 +3,11 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
-using Cratis.Changes;
-using Cratis.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Extension methods for building up a projection.

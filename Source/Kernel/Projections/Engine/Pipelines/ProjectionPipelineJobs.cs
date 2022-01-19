@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Pipelines.JobSteps;
+using Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPipelineJobs"/>.

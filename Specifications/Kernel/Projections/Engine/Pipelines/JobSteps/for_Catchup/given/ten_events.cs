@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
 {
     public class ten_events : a_catchup_step
     {

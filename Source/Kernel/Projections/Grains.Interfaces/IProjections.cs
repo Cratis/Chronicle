@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Definitions;
 using Orleans;
 
-namespace Cratis.Events.Projections.Grains
+namespace Aksio.Cratis.Events.Projections.Grains
 {
     /// <summary>
     /// Defines a system that is responsible for supervises projections in the system.

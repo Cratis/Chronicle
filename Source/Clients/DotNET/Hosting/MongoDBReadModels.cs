@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Configuration;
-using Cratis.Configuration.Grains;
-using Cratis.Execution;
-using Cratis.Extensions.MongoDB;
-using Cratis.Strings;
-using Cratis.Types;
+using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Configuration.Grains;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Strings;
+using Aksio.Cratis.Types;
 using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Orleans;
 
-namespace Cratis.Hosting
+namespace Aksio.Cratis.Hosting
 {
     /// <summary>
     /// Extension methods for configuring MongoDB based read models.

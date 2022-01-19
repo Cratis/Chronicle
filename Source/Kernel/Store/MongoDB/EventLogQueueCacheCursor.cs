@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Extensions.Orleans.Execution;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IQueueCacheCursor"/> for MongoDB event log.

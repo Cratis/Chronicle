@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.MongoDB;
+using Aksio.Cratis.MongoDB;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -12,7 +12,7 @@ using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Serialization;
 
-namespace Cratis.Events.Store.MongoDB.Reminders
+namespace Aksio.Cratis.Events.Store.MongoDB.Reminders
 {
     /// <summary>
     /// Represents an implementation of <see cref="IReminderTable"/>.

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance.Events;
-using Cratis.Events.Projections;
+using Aksio.Cratis.Compliance.Events;
+using Aksio.Cratis.Events.Projections;
 
-namespace Cratis.Compliance.Read.GDPR
+namespace Aksio.Cratis.Compliance.Read.GDPR
 {
     /// <summary>
     /// Defines the projection for <see cref="Person"/>.

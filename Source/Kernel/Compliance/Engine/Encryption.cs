@@ -3,7 +3,7 @@
 
 using System.Security.Cryptography;
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEncryption"/>.

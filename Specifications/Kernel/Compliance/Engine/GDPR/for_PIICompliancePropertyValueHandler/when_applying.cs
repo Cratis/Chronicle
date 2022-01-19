@@ -4,7 +4,7 @@
 using System.Text;
 using Newtonsoft.Json.Linq;
 
-namespace Cratis.Compliance.GDPR.for_PIICompliancePropertyValueHandler
+namespace Aksio.Cratis.Compliance.GDPR.for_PIICompliancePropertyValueHandler
 {
     public class when_applying : given.a_property_handler
     {

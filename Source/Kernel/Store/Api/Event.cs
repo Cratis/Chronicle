@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Cratis.Events.Store.Api
+namespace Aksio.Cratis.Events.Store.Api
 {
     public record Event(uint Sequence, string Name, DateTimeOffset Occurred, JsonDocument Content);
 }

@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Holds log messages for <see cref="ProjectionPipelineHandler"/>.

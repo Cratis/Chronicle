@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store;
-using Cratis.Events.Store.Grains.Observation;
-using Cratis.Events.Store.Observation;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Grains.Observation;
+using Aksio.Cratis.Events.Store.Observation;
 
-namespace Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation
 {
     /// <summary>
     /// Represents an implementation of <see cref="IObserver"/>.

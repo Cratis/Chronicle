@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines.JobSteps.for_Rewind.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Rewind.given
 {
     public class a_rewind_step : Specification
     {

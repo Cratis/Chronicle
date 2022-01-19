@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json;
 
-namespace Cratis.Properties
+namespace Aksio.Cratis.Properties
 {
     /// <summary>
     /// Represents a <see cref="JsonConverter"/> for converting <see cref="PropertyPath"/>.

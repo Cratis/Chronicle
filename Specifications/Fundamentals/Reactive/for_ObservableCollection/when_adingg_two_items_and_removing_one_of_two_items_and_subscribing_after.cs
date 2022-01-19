@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Reactive.for_ObservableCollection
+namespace Aksio.Cratis.Reactive.for_ObservableCollection
 {
     public class when_removing_one_of_two_items_and_subscribing_after : Specification
     {

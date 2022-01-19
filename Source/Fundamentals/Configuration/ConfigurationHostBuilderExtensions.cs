@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Configuration;
-using Cratis.Reflection;
-using Cratis.Types;
+using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Types;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store;
-using Cratis.Events.Store.Observation;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Observation;
 
-namespace Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation
 {
     /// <summary>
     /// Attribute used to adorn classes to tell Cratis that the class is an observer.

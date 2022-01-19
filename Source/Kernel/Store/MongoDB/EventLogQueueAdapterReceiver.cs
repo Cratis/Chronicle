@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Execution;
-using Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="EventLogQueueAdapterReceiver"/> for MongoDB event log.

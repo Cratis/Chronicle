@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Defines a builder for building subtract operations for properties - represented as expressions.

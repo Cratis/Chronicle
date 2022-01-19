@@ -8,7 +8,7 @@ using MongoDB.Bson.Serialization.Serializers;
 
 #pragma warning disable AS0008
 
-namespace Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB
 {
     /// <summary>
     /// Represents a serializer for handling serialization of <see cref="DateTimeOffset"/> to and from MongoDB.

@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Reflection;
-using Cratis.Types;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Types;
 
-namespace Cratis.Events
+namespace Aksio.Cratis.Events
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventTypes"/>.

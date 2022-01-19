@@ -1,16 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance;
-using Cratis.Events.Schemas;
-using Cratis.Execution;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Grains
+namespace Aksio.Cratis.Events.Store.Grains
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventLog"/>.

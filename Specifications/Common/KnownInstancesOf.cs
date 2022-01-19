@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
-using Cratis.Types;
+using Aksio.Cratis.Types;
 
-namespace Cratis.Common
+namespace Aksio.Cratis.Common
 {
     /// <summary>
     /// Represents an implementation of <see cref="IInstancesOf{T}"/> for providing exact instances.

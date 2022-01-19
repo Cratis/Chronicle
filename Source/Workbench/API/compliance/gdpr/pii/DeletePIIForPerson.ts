@@ -7,5 +7,5 @@ import { Command } from '@aksio/frontend/commands';
 export class DeletePIIForPerson extends Command {
     readonly route: string = '/api/compliance/gdpr/pii/delete';
 
-    personId!: string;
+    personId!: any;
 }

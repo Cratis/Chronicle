@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Compliance.Engine.for_CacheEncryptionKeyStore
+namespace Aksio.Cratis.Compliance.Engine.for_CacheEncryptionKeyStore
 {
     public class when_deleting : given.a_cache_encryption_key_store
     {

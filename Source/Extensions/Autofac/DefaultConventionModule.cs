@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Reflection;
 using Autofac;
-using Cratis.Execution;
-using Cratis.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Extensions.Autofac
+namespace Aksio.Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Represents a <see cref="Module">autofac module</see> for default convention (IFoo -> Foo).

@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
+using Aksio.Cratis.Changes;
 using ObjectsComparer;
 
-namespace Cratis.Events.Projections.for_PropertyDifference
+namespace Aksio.Cratis.Events.Projections.for_PropertyDifference
 {
     public class when_both_sides_has_the_value : Specification
     {

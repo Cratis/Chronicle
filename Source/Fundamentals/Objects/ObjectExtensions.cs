@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 using Newtonsoft.Json;
 
-namespace Cratis.Objects
+namespace Aksio.Cratis.Objects
 {
     /// <summary>
     /// Extension methods for any object.

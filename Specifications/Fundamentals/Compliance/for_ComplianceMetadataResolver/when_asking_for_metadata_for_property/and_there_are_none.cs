@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance.for_ComplianceMetadataResolver.when_asking_for_metadata_for_property
+namespace Aksio.Cratis.Compliance.for_ComplianceMetadataResolver.when_asking_for_metadata_for_property
 {
     public class and_there_are_none : Specification
     {

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events;
+using Aksio.Cratis.Events;
 
-namespace Cratis.Compliance.Concepts.PersonalInformation
+namespace Aksio.Cratis.Compliance.Concepts.PersonalInformation
 {
     /// <summary>
     /// Represents the concept of a unique identifier that identifies a person.

@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Connections;
-using Cratis.Events.Store;
-using Cratis.Events.Store.Grains.Observation;
-using Cratis.Execution;
-using Cratis.Types;
+using Aksio.Cratis.Connections;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Grains.Observation;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Types;
 using Orleans;
 using Orleans.Streams;
 
-namespace Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation
 {
     /// <summary>
     /// Represents an implementation of <see cref="Observers"/>.

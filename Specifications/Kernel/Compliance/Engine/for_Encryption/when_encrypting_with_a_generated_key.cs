@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace Cratis.Compliance.for_Encryption
+namespace Aksio.Cratis.Compliance.for_Encryption
 {
     public class when_encrypting_with_a_generated_key : Specification
     {

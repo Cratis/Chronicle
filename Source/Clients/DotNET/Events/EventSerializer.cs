@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Concepts.SystemJson;
+using Aksio.Cratis.Concepts.SystemJson;
 
-namespace Cratis.Events
+namespace Aksio.Cratis.Events
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventSerializer"/>.

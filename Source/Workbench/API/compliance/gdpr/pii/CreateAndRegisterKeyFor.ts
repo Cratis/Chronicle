@@ -7,5 +7,5 @@ import { Command } from '@aksio/frontend/commands';
 export class CreateAndRegisterKeyFor extends Command {
     readonly route: string = '/api/compliance/gdpr/pii';
 
-    identifier!: string;
+    identifier!: any;
 }

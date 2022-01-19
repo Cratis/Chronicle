@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Events.Projections.Expressions.for_SubtractExpressionResolver
+namespace Aksio.Cratis.Events.Projections.Expressions.for_SubtractExpressionResolver
 {
     public class when_trying_to_resolve_valid_add_expression_against_model_and_event : Specification
     {

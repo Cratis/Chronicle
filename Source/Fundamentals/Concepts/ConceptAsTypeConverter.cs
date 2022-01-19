@@ -4,7 +4,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Cratis.Concepts
+namespace Aksio.Cratis.Concepts
 {
     /// <summary>
     /// Represents a <see cref="TypeConverter"/> for handling conversion of concept as represented as its value type.

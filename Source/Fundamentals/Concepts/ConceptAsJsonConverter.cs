@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json;
 
-namespace Cratis.Concepts
+namespace Aksio.Cratis.Concepts
 {
     /// <summary>
     /// Represents a <see cref="JsonConverter"/> for <see cref="ConceptAs{T}"/>.

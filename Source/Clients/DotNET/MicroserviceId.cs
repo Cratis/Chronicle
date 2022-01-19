@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Concepts;
+using Aksio.Cratis.Concepts;
 
-namespace Cratis
+namespace Aksio.Cratis
 {
     /// <summary>
     /// Represents the concept of the microservice identifier.

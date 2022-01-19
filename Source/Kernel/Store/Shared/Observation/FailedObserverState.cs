@@ -4,7 +4,7 @@
 #nullable disable
 #pragma warning disable CA1819 // Allow arrays on properties
 
-namespace Cratis.Events.Store.Observation
+namespace Aksio.Cratis.Events.Store.Observation
 {
     /// <summary>
     /// Represents the state used for failed observers.

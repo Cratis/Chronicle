@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Reflection.for_TypeExtensions
+namespace Aksio.Cratis.Reflection.for_TypeExtensions
 {
     public class when_getting_non_default_constructor_from_type_with_non_default_and_default_constructor : Specification
     {

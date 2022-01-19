@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Reflection;
+using Aksio.Cratis.Reflection;
 
-namespace Cratis.Compliance.GDPR
+namespace Aksio.Cratis.Compliance.GDPR
 {
     /// <summary>
     /// Represents a metadata provider for PII.

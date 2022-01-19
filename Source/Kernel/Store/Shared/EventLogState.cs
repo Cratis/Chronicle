@@ -3,7 +3,7 @@
 
 #nullable disable
 
-namespace Cratis.Events.Store
+namespace Aksio.Cratis.Events.Store
 {
     /// <summary>
     /// Represents the state used by the event log. This state is meant to be per event log instance.

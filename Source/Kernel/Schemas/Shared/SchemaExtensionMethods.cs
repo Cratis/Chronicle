@@ -4,7 +4,7 @@
 using System.Globalization;
 using NJsonSchema;
 
-namespace Cratis.Events.Schemas
+namespace Aksio.Cratis.Events.Schemas
 {
     /// <summary>
     /// Extension methods for working with <see cref="JsonSchema"/> and specific metadata.

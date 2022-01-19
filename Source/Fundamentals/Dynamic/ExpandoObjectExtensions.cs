@@ -3,10 +3,10 @@
 
 using System.Collections;
 using System.Dynamic;
-using Cratis.Concepts;
-using Cratis.Properties;
+using Aksio.Cratis.Concepts;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Dynamic
+namespace Aksio.Cratis.Dynamic
 {
     /// <summary>
     /// Extension methods for working with <see cref="ExpandoObject"/>.

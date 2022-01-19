@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Cratis.Dynamic.for_ExpandoObjectExtensions
+namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
 {
     public class when_converting_a_complex_nested_object_to_expando_object : Specification
     {

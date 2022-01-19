@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Hosting;
 
-namespace Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation
 {
     /// <summary>
     /// Represents a <see cref="IHostedService"/> for working with observers.

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 using NJsonSchema;
 
-namespace Cratis.Events.Projections.for_Projection
+namespace Aksio.Cratis.Events.Projections.for_Projection
 {
     public class when_getting_key_resolver_for_event_type : Specification
     {

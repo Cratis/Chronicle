@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Holds log messages for <see cref="EventLogPubSubStore"/>.

@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.Expressions;
-using Cratis.Properties;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Expressions;
+using Aksio.Cratis.Properties;
 using NJsonSchema;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionFactory"/>.

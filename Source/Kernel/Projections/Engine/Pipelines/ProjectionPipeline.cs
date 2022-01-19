@@ -3,11 +3,11 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
-using Cratis.Events.Projections.Pipelines.JobSteps;
-using Cratis.Reactive;
+using Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
+using Aksio.Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPipeline"/>.
