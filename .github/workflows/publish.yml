@@ -56,8 +56,8 @@ jobs:
         id: release
         uses: cratis/release-action@v1
         with:
-          user-name: 'Cratis Build'
-          user-email: 'build@cratis.io'
+          user-name: 'Aksio Build'
+          user-email: 'build@aksio.no'
 
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
