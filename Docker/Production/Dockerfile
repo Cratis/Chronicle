@@ -19,7 +19,7 @@ RUN ./build-server.sh
 
 # Workbench
 ARG VERSION
-FROM einari/cratis:$VERSION-workbench as workbench
+FROM aksioinsurtech/cratis:$VERSION-workbench as workbench
 
 ####################################
 # Cratis Server

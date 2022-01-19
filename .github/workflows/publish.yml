@@ -104,7 +104,7 @@ jobs:
           file: ./Docker/Workbench/Dockerfile
           push: true
           tags: |
-            einari/cratis:${{ steps.release.outputs.version }}-workbench
+            aksioinsurtech/cratis:${{ steps.release.outputs.version }}-workbench
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
 
@@ -116,8 +116,8 @@ jobs:
           file: ./Docker/Production/Dockerfile
           push: true
           tags: |
-            einari/cratis:${{ steps.release.outputs.version }}
-            einari/cratis:latest
+            aksioinsurtech/cratis:${{ steps.release.outputs.version }}
+            aksioinsurtech/cratis:latest
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
 
@@ -130,6 +130,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            einari/cratis:${{ steps.release.outputs.version }}-development
+            aksioinsurtech/cratis:${{ steps.release.outputs.version }}-development
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
