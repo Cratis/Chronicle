@@ -1,5 +1,5 @@
 {
-    "name": "@cratis/fundamentals",
+    "name": "@aksio/fundamentals",
     "version": "1.0.0",
     "description": "",
     "author": "Cratis",
@@ -24,7 +24,7 @@
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
     },
     "dependencies": {
-        "@cratis/typescript": "1.0.0"
+        "@aksio/typescript": "1.0.0"
     },
     "devDependencies": {}
 }

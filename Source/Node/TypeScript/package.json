@@ -1,5 +1,5 @@
 {
-    "name": "@cratis/typescript",
+    "name": "@aksio/typescript",
     "version": "1.0.0",
     "description": "",
     "author": "Cratis",
@@ -15,7 +15,7 @@
         "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
         "test": "mocha",
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
-        "up": "ncu -u \\!'@cratis/*'"
+        "up": "ncu -u \\!'@aksio/*'"
     },
     "dependencies": {
         "reflect-metadata": "^0.1.13"

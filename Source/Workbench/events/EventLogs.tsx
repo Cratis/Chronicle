@@ -17,7 +17,7 @@ import { useBoolean } from '@fluentui/react-hooks';
 
 import { default as styles } from './EventLogs.module.scss';
 import { EventHistogram } from './EventHistogram';
-import { Guid } from '@cratis/fundamentals';
+import { Guid } from '@aksio/fundamentals';
 import { useState } from 'react';
 import { FilterBuilder } from './FilterBuilder';
 import { EventList } from './EventList';
