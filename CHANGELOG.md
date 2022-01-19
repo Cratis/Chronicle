@@ -1,3 +1,14 @@
+# [v4.3.0] - 2022-1-19 [PR: #116](https://github.com/Cratis/cratis/pull/116)
+
+### Added
+
+- Adding a simple inmemory cache that can sit in front of any other `EncrpyptionKeyStore`. Configured for the MongoDB one in kernel right now.
+
+### Fixed
+
+- Hopefully fixing #112 - needs verification since its not consistently happening.
+
+
 # [v4.2.1] - 2022-1-19 [PR: #114](https://github.com/Cratis/cratis/pull/114)
 
 ## Summary
