@@ -1,0 +1,24 @@
+<Project>
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <ImplicitUsings>true</ImplicitUsings>
+        <NoWarn>$(NoWarn);CS8019;SA1600;SA1601;CS1591;</NoWarn>
+        <NoWarn>$(NoWarn);CS0012;RCS1090;CA2007</NoWarn>    <!-- ConfigureAwait requirement, https://devblogs.microsoft.com/dotnet/configureawait-faq/#when-should-i-use-configureawaitfalse -->
+
+        <AksioProxyOutput>$(MSBuildThisFileDirectory)/Web/API</AksioProxyOutput>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.Defaults" Version="1.1.18" />
+        <PackageReference Include="Aksio.Integration" Version="1.7.2" />
+        <PackageReference Include="Aksio.Microservices" Version="1.7.2" />
+        <!--#if (IncludeWeb) -->
+        <PackageReference Include="Aksio.ProxyGenerator" Version="1.7.2" />
+        <!--#endif -->
+    </ItemGroup>
+</Project>

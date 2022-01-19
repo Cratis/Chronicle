@@ -1,0 +1,20 @@
+/*---------------------------------------------------------------------------------------------
+ *  **DO NOT EDIT** - This file is an automatically generated file.
+ *--------------------------------------------------------------------------------------------*/
+
+import { Command } from '@aksio/frontend/commands';
+{{#Imports}}
+import { {{Type}} } from '{{Module}}';
+{{/Imports}}
+
+export class {{Name}} extends Command {
+    readonly route: string = '{{Route}}';
+
+    {{#Properties}}
+    {{#if Enumerable}}
+    {{camelcase Name}}!: {{Type}}[];
+    {{else}}
+    {{camelcase Name}}!: {{Type}};
+    {{/if}}
+    {{/Properties}}
+}

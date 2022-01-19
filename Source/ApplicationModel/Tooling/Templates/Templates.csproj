@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+
+    <AssemblyName>Aksio.Cratis.Applications.Templates</AssemblyName>
+
+    <PackageType>Template</PackageType>
+    <PackageVersion>1.0</PackageVersion>
+    <PackageId>Aksio.Templates</PackageId>
+    <Title>Aksio Templates</Title>
+    <Authors>Aksio</Authors>
+    <Description>Templates to use when creating an application for Aksio.</Description>
+    <PackageTags>dotnet-new;templates;aksio</PackageTags>
+
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeSymbols>False</IncludeSymbols>
+    <IncludeSource>False</IncludeSource>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+  </PropertyGroup>
+
+    <PropertyGroup>
+        <Sample>../../../Sample</Sample>
+        <TemplateDir>$(MSBuildThisFileDirectory)/templates/aspnet</TemplateDir>
+    </PropertyGroup>
+    <ItemGroup>
+        <FilesToDelete Include="$(TemplateDir)/**/*.cs;$(TemplateDir)/**/*.csproj;$(TemplateDir)/**/*.js;$(TemplateDir)/**/*.ts;$(TemplateDir)/**/*.tsx;$(TemplateDir)/**/*.scss*;$(TemplateDir)/**/*.ejs;$(TemplateDir)/**/*.json" Exclude="$(TemplateDir)/Web/package.json;$(TemplateDir)/Web/tsconfig.json;$(TemplateDir)/updateAksioReferences.js;$(TemplateDir)/.vscode/**/*;$(TemplateDir)/.template.config/template.json"/>
+        <FilesToCopy Include="$(Sample)/**/*.cs;$(Sample)/**/*.csproj;;$(Sample)/**/*.js;$(Sample)/**/*.ts;$(Sample)/**/*.tsx;$(Sample)/**/*.scss*;$(Sample)/**/*.ejs;$(Sample)/**/*.json" Exclude="$(Sample)/Web/package.json;$(Sample)/Web/tsconfig.json;$(Sample)/Web/node_modules/**/*"/>
+    </ItemGroup>
+
+    <Target Name="CopyFiles" BeforeTargets="Build">
+        <Delete Files="@(FilesToDelete)"/>
+        <Message Text="Deleted template files" Importance="High" />
+        <Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(TemplateDir)/%(RecursiveDir)" SkipUnchangedFiles="true"/>
+        <Message Text="Copied template files from sample" Importance="High" />
+    </Target>
+
+    <ItemGroup>
+        <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**;templates\**\node_modules\**" />
+        <Compile Remove="**\*" />
+    </ItemGroup>
+</Project>
