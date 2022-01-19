@@ -1,3 +1,38 @@
+# [v4.2.1] - 2022-1-19 [PR: #114](https://github.com/Cratis/cratis/pull/114)
+
+## Summary
+
+Improved consistent behavior for child relationships.
+Events that represent something that is related to the same event source id as another event can now be modelled in a projection as a child. 
+
+Take the following:
+
+```csharp
+public void Define(IProjectionBuilderFor<Person> builder) => builder
+    .From<PersonRegistered>(_ => _
+        .Set(m => m.SocialSecurityNumber).To(e => e.SocialSecurityNumber)
+        .Set(m => m.FirstName).To(e => e.FirstName)
+        .Set(m => m.LastName).To(e => e.LastName))
+    .Children(_ => _.PersonalInformation, c => c
+        .IdentifiedBy(_ => _.Identifier)
+        .From<PersonalInformationRegistered>(_ => _
+            .UsingKey(_ => _.Identifier)
+            .Set\(m => m.Type).To(e => e.Type)
+            .Set\(m => m.Value).To(e => e.Value)));
+```
+
+With the child definition, it will identify the child uniquely based on the `IdentifiedBy` statement. This tells the engine to use the property `Identifier` on the target read model / document to identify it.
+Within the child definition from statements can now specify a property on the event to be used as the key. The statement `UsingKey()` accomplishes this. This will then direct the projection engine to use this property to identify the child object and map this with the `IdentifiedBy()` property on the read model / document. 
+
+The point of this all is to be able to share the event source id - being the aggregate identifier for all things related. While the child identifier is the value identifier.
+
+
+### Fixed
+
+- When `ParentKey()` is not specified in a child relationship, one can use the `UsingKey()` to specify a property on the child to be the key that identifies the child.
+
+
+
 # [v4.2.0] - 2022-1-18 [PR: #111](https://github.com/Cratis/cratis/pull/111)
 
 ## Summary
