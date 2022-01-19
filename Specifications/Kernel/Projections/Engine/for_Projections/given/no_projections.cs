@@ -46,7 +46,7 @@ namespace Cratis.Events.Projections.for_Projections.given
                 "dc5366eb-d453-43c9-859f-64989a858e7c",
                 Array.Empty<ProjectionResultStoreDefinition>());
 
-            projection_factory.Setup(_ => _.CreateFrom(projection_definition)).Returns(projection.Object);
+            projection_factory.Setup(_ => _.CreateFrom(projection_definition)).Returns(Task.FromResult(projection.Object));
             pipeline_factory.Setup(_ => _.CreateFrom(projection.Object, pipeline_definition)).Returns(pipeline.Object);
         }
     }
