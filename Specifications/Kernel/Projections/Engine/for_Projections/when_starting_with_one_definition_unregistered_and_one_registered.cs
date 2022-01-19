@@ -42,7 +42,7 @@ namespace Cratis.Events.Projections.for_Projections
             unregistered_projection.SetupGet(_ => _.Identifier).Returns(unregistered_projection_identifier);
             unregistered_pipeline = new();
             unregistered_pipeline.SetupGet(_ => _.Projection).Returns(unregistered_projection.Object);
-            projection_factory.Setup(_ => _.CreateFrom(unregistered_projection_definition)).Returns(unregistered_projection.Object);
+            projection_factory.Setup(_ => _.CreateFrom(unregistered_projection_definition)).Returns(Task.FromResult(unregistered_projection.Object));
             pipeline_factory.Setup(_ => _.CreateFrom(unregistered_projection.Object, unregistered_pipeline_definition)).Returns(unregistered_pipeline.Object);
 
             projections.Pipelines.Subscribe(_ => pipeline_registered = _);

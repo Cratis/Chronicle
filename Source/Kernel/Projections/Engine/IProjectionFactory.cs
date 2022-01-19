@@ -15,6 +15,6 @@ namespace Cratis.Events.Projections
         /// </summary>
         /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
         /// <returns>A new <see cref="IProjection"/> instance.</returns>
-        IProjection CreateFrom(ProjectionDefinition definition);
+        Task<IProjection> CreateFrom(ProjectionDefinition definition);
     }
 }
