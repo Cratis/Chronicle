@@ -10,15 +10,15 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
         <IsPackable>true</IsPackable>
-        <Copyright>Copyright Cratis</Copyright>
+        <Copyright>Copyright Aksio Insurtech</Copyright>
         <Authors>all contributors</Authors>
         <DebugType>portable</DebugType>
         <PackageIcon>logo.png</PackageIcon>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <RepositoryUrl>https://github.com/Cratis/cratis</RepositoryUrl>
-        <PackageProjectUrl>https://github.com/Cratis/cratis</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/aksio-insurtech/Cratis</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/aksio-insurtech/Cratis</PackageProjectUrl>
 
         <IncludeSymbols>True</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>

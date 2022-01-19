@@ -1,5 +1,5 @@
 {
-    "name": "@cratis/webpack",
+    "name": "@aksio/webpack",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
@@ -10,13 +10,13 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/cratis/cratis.git",
+        "url": "git+https://github.com/aksio-insurtech/Cratis.git",
         "directory": "Source/Fundamentals/WebPack"
     },
     "bugs": {
-        "url": "https://github.com/cratis/cratis/issues"
+        "url": "https://github.com/aksio-insurtech/Cratis/issues"
     },
-    "homepage": "https://github.com/cratis/cratis#readme",
+    "homepage": "https://github.com/aksio-insurtech/Cratis#readme",
     "engineStrict": true,
     "engines": {
         "node": ">= 14"
@@ -25,10 +25,10 @@
         "**/*.js"
     ],
     "scripts": {
-        "up": "ncu -u \\!'@cratis/*'"
+        "up": "ncu -u \\!'@aksio/*'"
     },
     "dependencies": {
-        "@cratis/typescript": "1.0.0",
+        "@aksio/typescript": "1.0.0",
         "clean-webpack-plugin": "4.0.0",
         "css-loader": "6.5.1",
         "css-modules-typescript-loader": "4.0.1",

@@ -3,7 +3,7 @@
 
 const path = require('path');
 
-const webpack = require('@cratis/webpack/frontend');
+const webpack = require('@aksio/webpack/frontend');
 module.exports = (env, argv) => {
     const isWebDevServer = (process.env.WEBPACK_DEV_SERVER || false) === 'true' ? true : false;
     const basePath = isWebDevServer ? '/' : process.env.base_path || '';

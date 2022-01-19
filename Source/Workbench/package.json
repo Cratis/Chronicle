@@ -1,5 +1,5 @@
 {
-    "name": "@cratis/workbench.compliance",
+    "name": "@aksio/workbench.compliance",
     "version": "1.0.0",
     "description": "",
     "private": true,
@@ -17,12 +17,12 @@
         "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
         "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
         "ci": "yarn clean && yarn lint:ci && yarn build",
-        "up": "ncu -u \\!'@cratis/*'"
+        "up": "ncu -u \\!'@aksio/*'"
     },
     "dependencies": {
-        "@cratis/fluentui": "1.0.0",
-        "@cratis/react": "1.0.0",
-        "@cratis/fundamentals": "1.0.0",
+        "@aksio/fluentui": "1.0.0",
+        "@aksio/react": "1.0.0",
+        "@aksio/fundamentals": "1.0.0",
         "@fluentui/react-experiments": "8.4.17",
         "@monaco-editor/react": "4.3.1",
         "echarts": "^5.2.2",
@@ -32,6 +32,6 @@
         "d3": "7.3.0"
     },
     "devDependencies": {
-        "@cratis/webpack": "1.0.0"
+        "@aksio/webpack": "1.0.0"
     }
 }
