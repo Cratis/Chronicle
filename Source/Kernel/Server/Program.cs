@@ -46,7 +46,7 @@ namespace Cratis.Server
                     .ConfigureServices(_ => _
                         .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
                         .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
-                        .AddSingleton<IEncryptionKeyStore, MongoDBEncryptionKeyStore>()
+                        .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
                         .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
                         .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
