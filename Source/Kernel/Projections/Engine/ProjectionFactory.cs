@@ -25,7 +25,7 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IProjection CreateFrom(ProjectionDefinition definition) =>
+        public Task<IProjection> CreateFrom(ProjectionDefinition definition) =>
             CreateProjectionFrom(
                 definition.Name,
                 definition,
@@ -35,7 +35,7 @@ namespace Cratis.Events.Projections
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
                 _ => { });
 
-        IProjection CreateProjectionFrom(
+        async Task<IProjection> CreateProjectionFrom(
             ProjectionName name,
             ProjectionDefinition projectionDefinition,
             PropertyPath childrenAccessorProperty,
@@ -48,7 +48,7 @@ namespace Cratis.Events.Projections
                 kvp.Key,
                 string.IsNullOrEmpty(kvp.Value.ParentKey) ? EventValueProviders.FromEventSourceId : EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
 
-            var childProjections = projectionDefinition.Children.Select(kvp => CreateProjectionFrom(
+            var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                     name,
                     kvp.Value,
                     kvp.Key,
@@ -59,12 +59,11 @@ namespace Cratis.Events.Projections
                     {
                         eventsForProjection.AddRange(_);
                         addChildEventTypes(_);
-                    })).ToArray();
+                    }));
+            var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
 
-            var task = JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
-            task.Wait();
-
-            var model = new Model(projectionDefinition.Model.Name, task.Result);
+            var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
+            var model = new Model(projectionDefinition.Model.Name, modelSchema);
             addChildEventTypes(eventsForProjection);
 
             var projection = new Projection(projectionDefinition.Identifier, name, path, model, eventsForProjection, childProjections);
@@ -74,7 +73,7 @@ namespace Cratis.Events.Projections
                 foreach (var (eventType, fromDefinition) in childrenDefinition.From)
                 {
                     var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                    var keyResolver = string.IsNullOrEmpty(fromDefinition.ParentKey) ? EventValueProviders.FromEventContent(childrenDefinition.IdentifiedBy) : EventValueProviders.FromEventSourceId;
+                    var keyResolver = !string.IsNullOrEmpty(fromDefinition.Key) ? EventValueProviders.FromEventContent(fromDefinition.Key) : EventValueProviders.FromEventSourceId;
                     projection.Event.From(eventType).Child(childrenProperty, childrenDefinition.IdentifiedBy, keyResolver, propertyMappers);
                 }
             }
@@ -82,7 +81,8 @@ namespace Cratis.Events.Projections
             foreach (var (eventType, fromDefinition) in projectionDefinition.From)
             {
                 var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty, EventValueProviders.FromEventSourceId, propertyMappers);
+                var keyResolver = !string.IsNullOrEmpty(fromDefinition.Key) ? EventValueProviders.FromEventContent(fromDefinition.Key) : EventValueProviders.FromEventSourceId;
+                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty, keyResolver, propertyMappers);
             }
 
             return projection;
