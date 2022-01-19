@@ -11,7 +11,7 @@ indent_size = 2
 
 [*.{cs,vb}]
 dotnet_analyzer_diagnostic.severity = warning
-file_header_template = Copyright (c) Cratis. All rights reserved.\nLicensed under the MIT license. See LICENSE file in the project root for full license information.
+file_header_template = Copyright (c) Aksio Insurtech. All rights reserved.\nLicensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #### .NET Conventions ####
 dotnet_sort_system_directives_first = true:error
@@ -38,7 +38,7 @@ dotnet_naming_symbols.const_fields.applicable_accessibilities                   
 dotnet_naming_symbols.const_fields.required_modifiers                           = const
 
 dotnet_naming_style.const_fields.capitalization                                 = pascal_case
-dotnet_naming_style.const_fields.required_prefix                                = 
+dotnet_naming_style.const_fields.required_prefix                                =
 
 # public static fields are pascal case
 dotnet_naming_rule.static_readonly_fields.symbols                               = static_readonly_fields
@@ -50,7 +50,7 @@ dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities         
 dotnet_naming_symbols.static_readonly_fields.required_modifiers                 = static
 
 dotnet_naming_style.static_readonly_fields.capitalization                       = pascal_case
-dotnet_naming_style.static_readonly_fields.required_prefix                      = 
+dotnet_naming_style.static_readonly_fields.required_prefix                      =
 
 # private fields should be camel case and start with _
 dotnet_naming_rule.private_Fields.symbols                                       = private_fields
@@ -59,7 +59,7 @@ dotnet_naming_rule.private_Fields.severity                                      
 
 dotnet_naming_symbols.private_fields.applicable_kinds                           = field
 dotnet_naming_symbols.private_fields.applicable_accessibilities                 = private
-dotnet_naming_symbols.private_fields.required_modifiers                         = 
+dotnet_naming_symbols.private_fields.required_modifiers                         =
 
 dotnet_naming_style.private_fields.capitalization                               = camel_case
 dotnet_naming_style.private_fields.required_prefix                              = _
