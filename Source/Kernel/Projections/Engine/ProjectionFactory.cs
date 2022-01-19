@@ -74,7 +74,8 @@ namespace Cratis.Events.Projections
                 foreach (var (eventType, fromDefinition) in childrenDefinition.From)
                 {
                     var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                    projection.Event.From(eventType).Child(childrenProperty, childrenDefinition.IdentifiedBy, EventValueProviders.FromEventSourceId, propertyMappers);
+                    var keyResolver = string.IsNullOrEmpty(fromDefinition.ParentKey) ? EventValueProviders.FromEventContent(childrenDefinition.IdentifiedBy) : EventValueProviders.FromEventSourceId;
+                    projection.Event.From(eventType).Child(childrenProperty, childrenDefinition.IdentifiedBy, keyResolver, propertyMappers);
                 }
             }
 
