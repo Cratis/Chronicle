@@ -42,11 +42,20 @@ namespace Cratis.Compliance.MongoDB
         public async Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier)
         {
             var result = await _encryptionKeysCollection.FindAsync(_ => _.Identifier == identifier);
-            var key = result.Single();
+            var key = result.SingleOrDefault();
+            ThrowIfMissingEncryptionKey(identifier, key);
             return new(key.PublicKey, key.PrivateKey);
         }
 
         /// <inheritdoc/>
         public async Task DeleteFor(EncryptionKeyIdentifier identifier) => await _encryptionKeysCollection.DeleteOneAsync(_ => _.Identifier == identifier);
+
+        void ThrowIfMissingEncryptionKey(EncryptionKeyIdentifier identifier, EncryptionKeyForIdentifier key)
+        {
+            if (key == default)
+            {
+                throw new MissingEncryptionKey(identifier);
+            }
+        }
     }
 }
