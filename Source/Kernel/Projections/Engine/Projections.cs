@@ -55,7 +55,7 @@ namespace Cratis.Events.Projections
         /// <inheritdoc/>
         public async Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition)
         {
-            var projection = _projectionFactory.CreateFrom(projectionDefinition);
+            var projection = await _projectionFactory.CreateFrom(projectionDefinition);
             var pipeline = _pipelineFactory.CreateFrom(projection, pipelineDefinition);
             var isNew = !await _projectionDefinitions.HasFor(projectionDefinition.Identifier);
             var hasChanged = await _projectionDefinitions.HasChanged(projectionDefinition);
