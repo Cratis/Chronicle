@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Applications</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Applications</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj"/>
+        <ProjectReference Include="../CQRS/CQRS.csproj"/>
+        <ProjectReference Include="../CQRS.MongoDB/CQRS.MongoDB.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
+        <PackageReference Include="Humanizer" Version="$(Humanizer)" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+        <PackageReference Include="Serilog" Version="2.10.0" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+        <PackageReference Include="serilog.aspnetcore" Version="4.0.0" />
+        <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.2" />
+    </ItemGroup>
+</Project>

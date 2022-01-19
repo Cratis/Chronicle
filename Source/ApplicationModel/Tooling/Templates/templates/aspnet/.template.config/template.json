@@ -1,0 +1,137 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Aksio",
+    "classifications": [
+        "Microservice",
+        "Common",
+        "AspNet"
+    ],
+    "identity": "Aksio.Templates.AspNet",
+    "name": "Aksio Microservice Template for AspNet",
+    "shortName": "aksioms",
+    "tags": {
+        "language": "C#",
+        "type": "project"
+    },
+    "symbols": {
+        "IncludeWeb": {
+            "type": "parameter",
+            "description": "Include a Web frontend?",
+            "datatype": "bool",
+            "defaultValue": "false"
+        }
+    },
+    "sourceName": "AksioMicroserviceTemplate",
+    "sources": [
+        {
+            "modifiers": [
+                {
+                    "condition": "(!IncludeWeb)",
+                    "exclude": [
+                        "Web/**/*"
+                    ]
+                }
+            ]
+        }
+    ],
+    "postActions": [
+        {
+            "description": "Set Aksio dependencies to the latest versions.",
+            "actionId": "3A7C4B45-1F5D-4A30-959A-51B88E82B5D2",
+            "continueOnError": false,
+            "manualInstructions": [
+                {
+                    "text": "Run 'node updateAksioReferences.js' from this folder, or update the 'Directory.Build.props' package references manually."
+                }
+            ],
+            "args": {
+                "executable": "node",
+                "args": "updateAksioReferences.js"
+            }
+        },
+        {
+            "description": "Restore NuGet packages required by this project.",
+            "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+            "continueOnError": true,
+            "manualInstructions": [
+                {
+                    "text": "Run 'dotnet restore'"
+                }
+            ],
+            "args": {
+                "files": [
+                    "./Main/Main.csproj"
+                ]
+            }
+        },
+        {
+            "condition": "(IncludeWeb)",
+            "description": "Install node modules required by this project.",
+            "actionId": "3A7C4B45-1F5D-4A30-959A-51B88E82B5D2",
+            "continueOnError": true,
+            "manualInstructions": [
+                {
+                    "text": "Run 'yarn' from the Web folder"
+                }
+            ],
+            "args": {
+                "executable": "npx",
+                "args": "yarn install --cwd ./Web"
+            }
+        },
+        {
+            "description": "Instructions for starting 3rd parties",
+            "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+            "manualInstructions": [
+                {
+                    "text": "To run the 3rd party dependencies; run the following command from the Main folder"
+                }
+            ],
+            "args": {
+                "executable": "docker",
+                "args": "compose up"
+            }
+        },
+        {
+            "description": "Instructions for starting Cratis",
+            "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+            "manualInstructions": [
+                {
+                    "text": "You'll need the Cratis Kernel to run"
+                }
+            ],
+            "args": {
+                "executable": "docker",
+                "args": "run -d -p 8080:80 -p 11111:11111 -p 30000:30000 aksioinsurtech/cratis:latest-development"
+            }
+        },
+        {
+            "description": "Instructions for starting backend",
+            "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+            "manualInstructions": [
+                {
+                    "text": "To run the backend; run the following command from the Main folder"
+                }
+            ],
+            "args": {
+                "executable": "dotnet",
+                "args": "run"
+            }
+        },
+        {
+            "description": "Instructions for starting frontend",
+            "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+            "manualInstructions": [
+                {
+                    "text": "To run the frontend; run the following command from the Web folder"
+                }
+            ],
+            "args": {
+                "executable": "yarn",
+                "args": "start:dev"
+            }
+        }
+
+    ],
+    "preferNameDirectory": true
+}

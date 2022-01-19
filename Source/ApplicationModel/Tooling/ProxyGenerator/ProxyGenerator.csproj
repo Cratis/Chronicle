@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <AssemblyName>Aksio.Cratis.Applications.ProxyGenerator</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Applications.ProxyGenerator</RootNamespace>
+        <IsRoslynComponent>true</IsRoslynComponent>
+        <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+   </PropertyGroup>
+
+   <Import Project="./build/Aksio.Cratis.Applications.ProxyGenerator.props"/>
+
+    <ItemGroup>
+        <PackageReference Include="handlebars.net" Version="2.0.9" GeneratePathProperty="true" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.11.0" />
+
+        <None Include="$(OutputPath)\$(AssemblyName).dll"
+                Pack="true"
+                PackagePath="analyzers/dotnet/cs"
+                Visible="false" />
+
+        <None Include="$(OutputPath)\Handlebars.dll"
+                Pack="true"
+                PackagePath="analyzers/dotnet/cs"
+                Visible="false" />
+
+        <None Include="$(OutputPath)\Humanizer.dll"
+                Pack="true"
+                PackagePath="analyzers/dotnet/cs"
+                Visible="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)/Templates/**/*" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="./build/Aksio.Cratis.Applications.ProxyGenerator.props" PackagePath="build\" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
+    </PropertyGroup>
+
+    <Target Name="GetDependencyTargetPaths">
+        <ItemGroup>
+            <TargetPathWithTargetPlatformMoniker Include="$(PKGHandlebars_Net)\lib\netstandard2.0\Handlebars.dll" IncludeRuntimeDependency="false" />
+        </ItemGroup>
+    </Target>
+</Project>
