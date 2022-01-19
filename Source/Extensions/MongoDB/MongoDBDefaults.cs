@@ -17,10 +17,10 @@ namespace Cratis.Extensions.MongoDB
     [Singleton]
     public class MongoDBDefaults
     {
+        static bool _initialized;
         readonly IInstancesOf<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
         readonly ITypes _types;
         readonly IServiceProvider _serviceProvider;
-        bool _initialized;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBDefaults"/> class.
