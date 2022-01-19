@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Configuration;
-using Cratis.Execution;
-using Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.MongoDB;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStoreFactory"/>.

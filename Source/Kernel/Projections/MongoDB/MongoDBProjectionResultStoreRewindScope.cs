@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStoreRewindScope"/> for MongoDB.

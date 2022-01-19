@@ -3,14 +3,14 @@
 
 using System.Net;
 using Autofac.Extensions.DependencyInjection;
-using Cratis.Compliance;
-using Cratis.Compliance.MongoDB;
-using Cratis.Events.Projections;
-using Cratis.Events.Projections.Changes;
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.MongoDB;
-using Cratis.Events.Schemas;
-using Cratis.Events.Schemas.MongoDB;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Compliance.MongoDB;
+using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Events.Projections.Changes;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.MongoDB;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Schemas.MongoDB;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -18,7 +18,7 @@ using Serilog;
 
 #pragma warning disable SA1600
 
-namespace Cratis.Server
+namespace Aksio.Cratis.Server
 {
     public static class Program
     {

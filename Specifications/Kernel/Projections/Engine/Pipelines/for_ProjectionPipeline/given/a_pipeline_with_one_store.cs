@@ -4,7 +4,7 @@
 using System.Dynamic;
 using System.Reactive.Subjects;
 
-namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 {
     public class a_pipeline_with_one_store : a_pipeline
     {

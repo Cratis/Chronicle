@@ -3,7 +3,7 @@
 
 using Orleans;
 
-namespace Cratis.Configuration.Grains
+namespace Aksio.Cratis.Configuration.Grains
 {
     /// <summary>
     /// Defines a system for working with configurations.

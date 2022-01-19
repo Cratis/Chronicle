@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Events.Projections.Pipelines;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Defines a provider of events for <see cref="IProjection">projections</see>.

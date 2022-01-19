@@ -5,7 +5,7 @@ using System.Reflection;
 
 #pragma warning disable RCS1047
 
-namespace Cratis.Reflection
+namespace Aksio.Cratis.Reflection
 {
     /// <summary>
     /// Provides a set of methods for working with methods, such as <see cref="MethodInfo"/>.

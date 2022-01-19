@@ -4,7 +4,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyModel;
 
-namespace Cratis.Types
+namespace Aksio.Cratis.Types
 {
     /// <summary>
     /// Represents an implementation of <see cref="ITypes"/>.

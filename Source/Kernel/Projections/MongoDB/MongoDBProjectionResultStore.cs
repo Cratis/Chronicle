@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Configuration;
-using Cratis.Execution;
-using Cratis.Extensions.MongoDB;
-using Cratis.Strings;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in MongoDB.

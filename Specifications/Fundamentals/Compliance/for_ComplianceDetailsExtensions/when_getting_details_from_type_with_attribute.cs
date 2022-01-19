@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Compliance.for_ComplianceDetailsExtensions
+namespace Aksio.Cratis.Compliance.for_ComplianceDetailsExtensions
 {
     public class when_getting_details_from_type_with_attribute : Specification
     {

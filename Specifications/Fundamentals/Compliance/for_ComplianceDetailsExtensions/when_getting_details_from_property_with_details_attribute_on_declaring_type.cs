@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Compliance.for_ComplianceDetailsExtensions
+namespace Aksio.Cratis.Compliance.for_ComplianceDetailsExtensions
 {
     public class when_getting_details_from_property_with_details_attribute_on_declaring_type : Specification
     {

@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance;
-using Cratis.Execution;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Execution;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Cratis.Schemas
+namespace Aksio.Cratis.Schemas
 {
     /// <summary>
     /// Represents an implementation of <see cref="IJsonSchemaGenerator"/>.

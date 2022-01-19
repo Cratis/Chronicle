@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
-using Cratis.Events.Store.Grains;
-using Cratis.Execution;
+using Aksio.Cratis.Events.Store.Grains;
+using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 
 #pragma warning disable SA1600, IDE0060
 
-namespace Cratis.Events.Store.Api
+namespace Aksio.Cratis.Events.Store.Api
 {
     /// <summary>
     /// Represents the API for working with the event log.

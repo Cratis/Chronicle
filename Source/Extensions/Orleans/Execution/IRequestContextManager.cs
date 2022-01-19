@@ -3,7 +3,7 @@
 
 using Orleans.Runtime;
 
-namespace Cratis.Extensions.Orleans.Execution
+namespace Aksio.Cratis.Extensions.Orleans.Execution
 {
     /// <summary>
     /// Defines a wrapper manager for the Orleans <see cref="RequestContext"/>.

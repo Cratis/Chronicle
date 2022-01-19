@@ -3,7 +3,7 @@
 
 #pragma warning disable CA1819
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Represents a key used in encryption.

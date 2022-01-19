@@ -5,7 +5,7 @@ using System.Reactive.Linq;
 using Aksio.Queries;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.Events.Projections.Api
+namespace Aksio.Cratis.Events.Projections.Api
 {
     /// <summary>
     /// Represents the API for projections.

@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Concepts.for_ConceptExtensions
+namespace Aksio.Cratis.Concepts.for_ConceptExtensions
 {
     public class when_checking_is_concept_on_a_primitive_instance : Concepts.given.concepts
     {

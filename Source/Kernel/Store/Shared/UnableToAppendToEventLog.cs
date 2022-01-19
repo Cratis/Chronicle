@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Execution;
+using Aksio.Cratis.Execution;
 
-namespace Cratis.Events.Store
+namespace Aksio.Cratis.Events.Store
 {
     /// <summary>
     /// Exception that gets thrown when the storage mechanism is not able to append the event to the event log.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.Definitions
+namespace Aksio.Cratis.Events.Projections.Definitions
 {
     /// <summary>
     /// Defines a system for working with <see cref="ProjectionPipelineDefinition"/>.

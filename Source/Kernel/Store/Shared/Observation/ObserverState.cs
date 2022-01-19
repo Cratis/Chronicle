@@ -3,7 +3,7 @@
 
 #nullable disable
 
-namespace Cratis.Events.Store.Observation
+namespace Aksio.Cratis.Events.Store.Observation
 {
     /// <summary>
     /// Represents the state used for an observer.

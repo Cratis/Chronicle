@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Cratis.Schemas
+namespace Aksio.Cratis.Schemas
 {
     /// <summary>
     /// Extension methods for <see cref="JsonSchema"/>.

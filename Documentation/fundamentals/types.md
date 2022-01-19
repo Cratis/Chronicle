@@ -20,7 +20,7 @@ assemblies only. The strings you pass to it are considered prefixes, meaning tha
 a set of assemblies all starting with the same string, you simply put the common start.
 
 ```csharp
-using Cratis.Types;
+using Aksio.Cratis.Types;
 
 var types = new Types("Microsoft","SomeOther");
 ```
@@ -33,7 +33,7 @@ There are basically 2 ways of discovering types:
 * Use the `IImplementationsOf<>` as a dependency and get all implementations of a specific type using generic parameters.
 
 ```csharp
-using Cratis.Types;
+using Aksio.Cratis.Types;
 
 public class MySystem
 {
@@ -51,7 +51,7 @@ public class MySystem
 An optimization of this would be the `IImplementationsOf<>`:
 
 ```csharp
-using Cratis.Types;
+using Aksio.Cratis.Types;
 
 public class MySystem
 {
@@ -70,7 +70,7 @@ A common scenario is to discover types were the implementation has dependencies 
 the IoC container. The `IImplementationsOf<>` interface provides this mechanism in a convenient way.
 
 ```csharp
-using Cratis.Types;
+using Aksio.Cratis.Types;
 
 public class MySystem
 {

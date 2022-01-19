@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Compliance;
-using Cratis.Connections;
-using Cratis.Events.Schemas;
-using Cratis.Events.Store.Observation;
-using Cratis.Execution;
-using Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Connections;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.Orleans.Execution;
 using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation
 {
     /// <summary>
     /// Represents an implementation of <see cref="IObserver"/>.

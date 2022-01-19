@@ -3,9 +3,9 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
-using Cratis.Changes;
+using Aksio.Cratis.Changes;
 
-namespace Cratis.Events.Projections.for_ProjectionExtensions.given
+namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
 {
     public class an_observable_and_event_setup : Specification
     {

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Expressions
+namespace Aksio.Cratis.Events.Projections.Expressions
 {
     /// <summary>
     /// Defines a resolver of expressions for providing values from events.

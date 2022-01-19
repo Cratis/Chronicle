@@ -4,7 +4,7 @@
 using Newtonsoft.Json.Linq;
 using NJsonSchema;
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Defines a Json serializer that is compliance aware.

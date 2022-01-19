@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Configuration;
-using Cratis.Execution;
-using Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
-using ExecutionContext = Cratis.Execution.ExecutionContext;
+using ExecutionContext = Aksio.Cratis.Execution.ExecutionContext;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventStoreDatabase"/>.

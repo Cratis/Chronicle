@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Cratis.Events.Schemas
+namespace Aksio.Cratis.Events.Schemas
 {
     /// <summary>
     /// Defines the store for event schemas.

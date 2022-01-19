@@ -5,12 +5,12 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Reactive.Subjects;
-using Cratis.Changes;
-using Cratis.Events.Projections.Changes;
-using Cratis.Execution;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Projections.Changes;
+using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPipelineHandler"/>.

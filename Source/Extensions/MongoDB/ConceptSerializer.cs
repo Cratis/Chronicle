@@ -3,12 +3,12 @@
 
 using System.Globalization;
 using System.Reflection;
-using Cratis.Concepts;
+using Aksio.Cratis.Concepts;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB
 {
     /// <summary>
     /// Represents a <see cref="IBsonSerializer{T}"/> for <see cref="ConceptAs{T}"/> types.

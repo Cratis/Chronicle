@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Schemas;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 using Orleans;
 
-namespace Cratis.Events.Schemas.Grains
+namespace Aksio.Cratis.Events.Schemas.Grains
 {
     /// <summary>
     /// Represents an implementation of <see cref="ISchemaStore"/>.

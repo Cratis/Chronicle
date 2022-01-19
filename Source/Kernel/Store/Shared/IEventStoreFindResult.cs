@@ -3,7 +3,7 @@
 
 using System.Reactive.Subjects;
 
-namespace Cratis.Events.Store
+namespace Aksio.Cratis.Events.Store
 {
     /// <summary>
     /// Defines the result of a find within the event store.

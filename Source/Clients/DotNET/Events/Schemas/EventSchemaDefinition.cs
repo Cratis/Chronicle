@@ -3,7 +3,7 @@
 
 using NJsonSchema;
 
-namespace Cratis.Events.Schemas
+namespace Aksio.Cratis.Events.Schemas
 {
     /// <summary>
     /// Represents the schema of an event.

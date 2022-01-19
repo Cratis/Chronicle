@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Cratis.Reflection
+namespace Aksio.Cratis.Reflection
 {
     /// <summary>
     /// Extension methods for calling methods on objects using reflection.

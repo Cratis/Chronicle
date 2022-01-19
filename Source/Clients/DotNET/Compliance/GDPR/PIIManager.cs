@@ -3,7 +3,7 @@
 
 using Orleans;
 
-namespace Cratis.Compliance.GDPR
+namespace Aksio.Cratis.Compliance.GDPR
 {
     /// <summary>
     /// Represents an implementation of <see cref="IPIIManager"/>.

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance.Concepts.PersonalInformation;
+using Aksio.Cratis.Compliance.Concepts.PersonalInformation;
 
-namespace Cratis.Compliance.Read.GDPR
+namespace Aksio.Cratis.Compliance.Read.GDPR
 {
     public record Person(
         PersonId Id,

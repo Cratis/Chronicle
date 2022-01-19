@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
 {
     public class a_catchup_step : all_dependencies
     {

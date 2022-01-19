@@ -3,11 +3,11 @@
 
 using System.Dynamic;
 using System.Reflection;
-using Cratis.Dynamic;
-using Cratis.Objects;
-using Cratis.Strings;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Objects;
+using Aksio.Cratis.Strings;
 
-namespace Cratis.Properties
+namespace Aksio.Cratis.Properties
 {
     /// <summary>
     /// Represents an encapsulation of a property in the system - used for accessing properties on objects.

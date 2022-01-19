@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 {
     public class a_pipeline : all_dependencies
     {

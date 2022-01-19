@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Execution;
+using Aksio.Cratis.Execution;
 
-namespace Cratis.Compliance.InMemory
+namespace Aksio.Cratis.Compliance.InMemory
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEncryptionKeyStore"/> for in-memory.

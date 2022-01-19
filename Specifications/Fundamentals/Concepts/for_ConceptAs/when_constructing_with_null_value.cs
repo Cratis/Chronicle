@@ -3,7 +3,7 @@
 
 #pragma warning disable CS1718
 
-namespace Cratis.Concepts.for_ConceptAs
+namespace Aksio.Cratis.Concepts.for_ConceptAs
 {
     public class when_constructing_with_null_value : Specification
     {

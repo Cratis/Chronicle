@@ -6,7 +6,7 @@ using Aksio.Queries.MongoDB;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
-namespace Cratis.Compliance.Read.Microservices
+namespace Aksio.Cratis.Compliance.Read.Microservices
 {
     /// <summary>
     /// Represents the read side API for microservices.

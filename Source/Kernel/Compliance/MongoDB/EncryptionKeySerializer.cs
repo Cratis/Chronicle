@@ -3,7 +3,7 @@
 
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Compliance.MongoDB
+namespace Aksio.Cratis.Compliance.MongoDB
 {
     /// <summary>
     /// Represents a <see cref="IBsonSerializer{T}"/> for handling serialization of <see cref="EncryptionKey"/>.

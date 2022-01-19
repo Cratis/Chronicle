@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Boot
+namespace Aksio.Cratis.Boot
 {
     /// <summary>
     /// Defines a system that can deal with <see cref="IPerformBootProcedure"/>.

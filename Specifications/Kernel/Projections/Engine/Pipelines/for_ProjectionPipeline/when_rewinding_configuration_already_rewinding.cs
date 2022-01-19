@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Pipelines.JobSteps;
+using Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline
+namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline
 {
     public class when_rewinding_configuration_already_rewinding : given.a_pipeline_with_one_store
     {

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
+namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
 {
     public class when_handling_remove : given.an_observable_and_event_setup
     {

@@ -3,7 +3,7 @@
 
 using Orleans;
 
-namespace Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation
 {
     /// <summary>
     /// Defines an observer of an event log.

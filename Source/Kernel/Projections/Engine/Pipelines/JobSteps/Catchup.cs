@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines.JobSteps
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
 {
     /// <summary>
     /// Represents a <see cref="IProjectionPipelineJobStep"/> for catching up.

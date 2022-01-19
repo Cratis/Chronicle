@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
+namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
 {
     public class when_projecting_to_child_property_and_child_has_not_been_added : given.an_observable_and_event_setup
     {

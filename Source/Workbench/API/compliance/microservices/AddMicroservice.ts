@@ -7,6 +7,6 @@ import { Command } from '@aksio/frontend/commands';
 export class AddMicroservice extends Command {
     readonly route: string = '/api/compliance/microservices';
 
-    microserviceId!: string;
+    microserviceId!: any;
     name!: string;
 }

@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 
-namespace Cratis.Reactive
+namespace Aksio.Cratis.Reactive
 {
     /// <summary>
     /// Represents an implementation of <see cref="IObservableCollection{TItem}"/>.

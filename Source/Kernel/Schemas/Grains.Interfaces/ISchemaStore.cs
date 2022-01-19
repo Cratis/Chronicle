@@ -4,7 +4,7 @@
 using NJsonSchema;
 using Orleans;
 
-namespace Cratis.Events.Schemas.Grains
+namespace Aksio.Cratis.Events.Schemas.Grains
 {
     /// <summary>
     /// Defines the store for event schemas.

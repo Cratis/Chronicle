@@ -3,4 +3,4 @@
 
 #pragma warning disable IDE0005, CS8019
 
-global using Cratis.Concepts;
+global using Aksio.Cratis.Concepts;

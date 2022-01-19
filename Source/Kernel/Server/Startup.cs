@@ -2,19 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Autofac;
-using Cratis.Concepts.SystemJson;
-using Cratis.Connections;
-using Cratis.Events.Observation;
-using Cratis.Events.Projections;
-using Cratis.Extensions.Orleans.Execution;
-using Cratis.Hosting;
-using Cratis.Types;
+using Aksio.Cratis.Concepts.SystemJson;
+using Aksio.Cratis.Connections;
+using Aksio.Cratis.Events.Observation;
+using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Hosting;
+using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
 #pragma warning disable SA1600
 
-namespace Cratis.Server
+namespace Aksio.Cratis.Server
 {
     public class Startup
     {

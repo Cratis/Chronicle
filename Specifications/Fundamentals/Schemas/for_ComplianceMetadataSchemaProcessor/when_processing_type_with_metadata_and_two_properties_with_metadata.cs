@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance;
-using Cratis.Strings;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Strings;
 
-namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
+namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
 {
     public class when_processing_type_with_metadata_and_two_properties_with_metadata : given.a_processor_and_a_context_for<TypeWithProperties>
     {

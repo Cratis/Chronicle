@@ -3,7 +3,7 @@
 
 using System.Reactive.Subjects;
 
-namespace Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 {
     public class all_dependencies : Specification
     {

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Concepts;
+using Aksio.Cratis.Concepts;
 
-namespace Cratis.Compliance.GDPR
+namespace Aksio.Cratis.Compliance.GDPR
 {
     /// <summary>
     /// Represents a <see cref="ConceptAs{T}"/> that holds PII according to the definition of GDPR.

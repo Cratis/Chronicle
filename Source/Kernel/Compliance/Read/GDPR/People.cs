@@ -6,7 +6,7 @@ using Aksio.Queries.MongoDB;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
-namespace Cratis.Compliance.Read.GDPR
+namespace Aksio.Cratis.Compliance.Read.GDPR
 {
     /// <summary>
     /// Represents the API for working with people.

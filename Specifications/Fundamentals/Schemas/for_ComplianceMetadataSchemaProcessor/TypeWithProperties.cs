@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
+namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
 {
     public class TypeWithProperties
     {

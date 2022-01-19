@@ -3,7 +3,7 @@
 
 using Autofac;
 
-namespace Cratis.Execution
+namespace Aksio.Cratis.Execution
 {
     /// <summary>
     /// Represents an Autofac <see cref="Module"/> for configuring dependencies related to <see cref="ExecutionContext"/>.

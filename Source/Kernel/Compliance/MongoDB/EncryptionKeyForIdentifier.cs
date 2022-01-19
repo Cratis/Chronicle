@@ -3,7 +3,7 @@
 
 #pragma warning disable CA1819 // Allow arrays for properties
 
-namespace Cratis.Compliance.MongoDB
+namespace Aksio.Cratis.Compliance.MongoDB
 {
     /// <summary>
     /// Represents the stored version of an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.

@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json.Linq;
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Defines a system that can handle a property for a specific <see cref="ComplianceMetadataType"/>.

@@ -3,7 +3,7 @@
 
 using MongoDB.Driver;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Defines the database used by the event store.

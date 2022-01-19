@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.DependencyInversion;
-using Cratis.Events.Store.MongoDB;
-using Cratis.MongoDB;
+using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events.Store.MongoDB;
+using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPositions"/> for  event store.

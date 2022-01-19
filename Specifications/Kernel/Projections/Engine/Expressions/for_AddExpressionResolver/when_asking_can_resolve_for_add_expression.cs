@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.Expressions.for_AddExpressionResolver
+namespace Aksio.Cratis.Events.Projections.Expressions.for_AddExpressionResolver
 {
     public class when_asking_can_resolve_for_add_expression : Specification
     {

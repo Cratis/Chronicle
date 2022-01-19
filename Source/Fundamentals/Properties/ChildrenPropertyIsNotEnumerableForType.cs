@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Properties
+namespace Aksio.Cratis.Properties
 {
     /// <summary>
     /// Exception that gets thrown when a children property is not enumerable for a specific type.

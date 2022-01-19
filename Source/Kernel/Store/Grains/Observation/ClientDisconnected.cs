@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Connections;
 
-namespace Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation
 {
     /// <summary>
     /// Delegate for when a client is disconnected.

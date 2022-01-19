@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance.GDPR;
-using Cratis.Events;
+using Aksio.Cratis.Compliance.GDPR;
+using Aksio.Cratis.Events;
 
 namespace Sample.Accounts.Debit
 {

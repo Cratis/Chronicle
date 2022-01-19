@@ -3,7 +3,7 @@
 
 using Orleans;
 
-namespace Cratis.Compliance.Grains
+namespace Aksio.Cratis.Compliance.Grains
 {
     /// <summary>
     /// Represents a manager of PII in the system.

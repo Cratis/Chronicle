@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cratis.Events.Store.Api
+namespace Aksio.Cratis.Events.Store.Api
 {
     /// <summary>
     /// Represents the API for working with event logs.

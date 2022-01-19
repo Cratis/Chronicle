@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Reflection;
-using Cratis.Types;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Types;
 
-namespace Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation
 {
     /// <summary>
     /// Extension methods for working with observers and type discovery.

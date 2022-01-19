@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Hosting;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents a <see cref="IHostedService"/> for working with projections.

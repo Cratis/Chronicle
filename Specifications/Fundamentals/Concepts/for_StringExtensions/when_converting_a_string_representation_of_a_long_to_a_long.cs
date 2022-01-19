@@ -3,7 +3,7 @@
 
 using System.Globalization;
 
-namespace Cratis.Concepts.for_StringExtensions
+namespace Aksio.Cratis.Concepts.for_StringExtensions
 {
     public class when_converting_a_string_representation_of_a_long_to_a_long : Specification
     {
