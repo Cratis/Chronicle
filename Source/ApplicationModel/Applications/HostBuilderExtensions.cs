@@ -1,7 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio;
+using Aksio.Cratis.Applications;
+using Aksio.Cratis.Concepts;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,12 +22,15 @@ namespace Microsoft.Extensions.Hosting
         public static IHostBuilder UseAksio(this IHostBuilder builder)
         {
             var types = new Types("Aksio");
+            types.RegisterTypeConvertersForConcepts();
+
             builder
                 .UseCratis(types)
                 .ConfigureServices(_ => _
                     .AddSingleton<ITypes>(types)
                     .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
                     .AddControllersFromProjectReferencedAssembles(types)
+                    .AddEndpointsApiExplorer()
                     .AddSwaggerGen()
 
                     // Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):

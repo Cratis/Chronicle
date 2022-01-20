@@ -27,7 +27,7 @@ namespace Aksio.Cratis.Hosting
     /// </summary>
     public class ClientBuilder : IClientBuilder
     {
-        #pragma warning disable IDE0052 // We will be expanding on this.
+#pragma warning disable IDE0052 // We will be expanding on this.
         readonly MicroserviceId _microserviceId;
 
         bool _inSilo;
