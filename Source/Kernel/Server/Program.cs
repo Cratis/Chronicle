@@ -10,11 +10,9 @@ using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.MongoDB;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
-using Autofac.Extensions.DependencyInjection;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
-using Serilog;
 
 #pragma warning disable SA1600
 
@@ -26,21 +24,12 @@ namespace Aksio.Cratis.Server
         {
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
 
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
-                .Build();
-
-            Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration)
-                .CreateLogger();
-
             return CreateHostBuilder(args).RunConsoleAsync();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
              Host.CreateDefaultBuilder(args)
+                .UseAksio(_ => _.InSilo())
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
                     .ConfigureServices(_ => _
@@ -63,9 +52,6 @@ namespace Aksio.Cratis.Server
                     .UseMongoDBReminderService()
                     .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
                     .AddExecutionContext())
-                .UseCratis(Startup.Types, _ => _.InSilo())
-                .UseSerilog()
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _
                     .UseStartup<Startup>());
 
