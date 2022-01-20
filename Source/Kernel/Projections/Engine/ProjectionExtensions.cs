@@ -45,6 +45,7 @@ namespace Aksio.Cratis.Events.Projections
             {
                 var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty);
                 var key = keyResolver(_.Event);
+
                 if (!items.Contains(identifiedByProperty, key))
                 {
                     _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
@@ -81,7 +82,10 @@ namespace Aksio.Cratis.Events.Projections
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
                         var child = _.Changeset.GetChildByKey<ExpandoObject>(childrenProperty, identifiedByProperty, key);
-                        _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                        if (child != default)
+                        {
+                            _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                        }
                     }
                 });
             }
