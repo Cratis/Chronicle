@@ -10,7 +10,7 @@ import {
 } from '@fluentui/react';
 
 import { default as styles } from './EventList.module.scss';
-import { ScrollableDetailsList } from '@aksio/fluentui';
+import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 
 export type EventSelected = (item: any) => void;
 

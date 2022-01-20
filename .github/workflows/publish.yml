@@ -121,6 +121,19 @@ jobs:
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
 
+      - name: Build MongoDB Docker Image
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/MongoDB/Dockerfile
+          push: true
+          tags: |
+            aksioinsurtech/mongodb:${{ steps.release.outputs.version }}
+            aksioinsurtech/mongodb:latest
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}
+
       - name: Build Development Docker Image
         uses: docker/build-push-action@v2
         with:

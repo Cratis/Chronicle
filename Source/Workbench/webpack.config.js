@@ -3,7 +3,7 @@
 
 const path = require('path');
 
-const webpack = require('@aksio/webpack/frontend');
+const webpack = require('@aksio/cratis-webpack/frontend');
 module.exports = (env, argv) => {
     const isWebDevServer = (process.env.WEBPACK_DEV_SERVER || false) === 'true' ? true : false;
     const basePath = isWebDevServer ? '/' : process.env.base_path || '';
@@ -14,10 +14,7 @@ module.exports = (env, argv) => {
                 target: 'http://localhost:5000',
                 ws: true
             },
-            '/swagger': {
-                target: 'http://localhost:5000',
-                ws: true
-            }
+            '/swagger': 'http://localhost:5000'
         };
         config.resolve.alias.API = path.resolve('./API');
     }, 'Cratis Compliance Workbench');

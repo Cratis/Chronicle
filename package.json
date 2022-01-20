@@ -1,7 +1,8 @@
 {
     "private": true,
     "workspaces": [
-        "Source/**/*"
+        "Source/**/*",
+        "Samples/**/*"
     ],
     "scripts": {
         "clean": "node ./run-task-on-workspaces.js clean",

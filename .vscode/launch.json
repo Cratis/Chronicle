@@ -42,13 +42,13 @@
             }
         },
         {
-            "name": ".NET Core Launch (AspNetCore Sample)",
+            "name": ".NET Core Launch (Bank Sample)",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build aspnetcore sample",
-            "program": "${workspaceFolder}/Samples/AspNetCore/bin/Debug/net6.0/Cratis.Sample.AspNetCore.dll",
+            "preLaunchTask": "build bank sample",
+            "program": "${workspaceFolder}/Samples/Bank/Main/bin/Debug/net6.0/Main.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Samples/AspNetCore",
+            "cwd": "${workspaceFolder}/Samples/Bank/Main",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"

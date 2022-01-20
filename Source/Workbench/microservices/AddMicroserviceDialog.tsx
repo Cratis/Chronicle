@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { TextField } from '@fluentui/react';
-import { IModalProps } from '@aksio/fluentui';
+import { IModalProps } from '@aksio/cratis-fluentui';
 
 export type AddMicroserviceDialogResult = {
     name: string;

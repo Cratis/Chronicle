@@ -13,7 +13,7 @@ import {
     TextField,
 } from '@fluentui/react';
 
-import { IDialogProps, DialogResult } from '@aksio/frontend/dialogs';
+import { IDialogProps, DialogResult } from '@aksio/cratis-applications-frontend/dialogs';
 
 const dialogContentProps: IDialogContentProps = {
     type: DialogType.normal,

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
-using Autofac.Extensions.DependencyInjection;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Compliance.MongoDB;
 using Aksio.Cratis.Events.Projections;
@@ -11,6 +10,7 @@ using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.MongoDB;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
+using Autofac.Extensions.DependencyInjection;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;

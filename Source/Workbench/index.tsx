@@ -9,7 +9,7 @@ import './index.scss';
 import './styles/theme';
 
 import { App } from './App';
-import { ModalProvider } from '@aksio/fluentui';
+import { ModalProvider } from '@aksio/cratis-fluentui';
 
 ReactDOM.render(
     <ModalProvider>

@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Nav, INavLinkGroup, INavLink, INavStyles } from '@fluentui/react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { default as styles } from './Navigation.module.scss';
 
@@ -50,12 +50,12 @@ const groups: INavLinkGroup[] = [
 
 export const Navigation = () => {
     const [selectedNav, setSelectedNav] = useState('');
-    const history = useHistory();
+    const history = useNavigate();
 
     const navItemClicked = (ev?: React.MouseEvent<HTMLElement>, item?: INavLink) => {
         if (item) {
             setSelectedNav(item.key!);
-            history.push(item.route);
+            history(item.route);
         }
     };
     return (
