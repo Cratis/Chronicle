@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
-        <AssemblyName>Cratis.Server</AssemblyName>
-        <RootNamespace>Cratis.Server</RootNamespace>
+        <AssemblyName>Aksio.Cratis.Server</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Server</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
 

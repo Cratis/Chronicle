@@ -39,7 +39,7 @@ EXPOSE 80 11111 30000
 COPY --from=server-build /build/Source/Kernel/Server/out/*.dll .
 COPY --from=server-build /build/Source/Kernel/Server/out/*.json .
 COPY --from=server-build /build/Source/Kernel/Server/out/*.so .
-COPY --from=server-build /build/Source/Kernel/Server/out/Cratis.Server .
+COPY --from=server-build /build/Source/Kernel/Server/out/Aksio.Cratis.Server .
 COPY --from=workbench /usr/share/nginx/html wwwroot
 
-ENTRYPOINT ["./Cratis.Server"]
+ENTRYPOINT ["./Aksio.Cratis.Server"]
