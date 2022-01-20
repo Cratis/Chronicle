@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { BrowserRouter as Router, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { default as styles } from './App.module.scss';
 import { Navigation } from './Navigation';
 import { Home } from './Home';
@@ -16,15 +16,11 @@ export const App = () => {
                     <Navigation />
                 </div>
                 <div style={{ width: '100%' }}>
-                    <Route exact path="/">
-                        <Home/>
-                    </Route>
-                    <Route path="/accounts/debit">
-                        <DebitAccounts/>
-                    </Route>
-                    <Route path="/integration">
-                        <AccountHolders/>
-                    </Route>
+                    <Routes>
+                        <Route path="/" element={<Home/>}/>
+                        <Route path="/accounts/debit" element={<DebitAccounts/>}/>
+                        <Route path="/integration" element={<AccountHolders/>}/>
+                    </Routes>
                 </div>
             </div>
         </Router>

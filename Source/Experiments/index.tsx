@@ -4,7 +4,7 @@
 import 'reflect-metadata';
 import ReactDOM from 'react-dom';
 
-import '@aksio/workbench.styles/theme';
+import '@aksio/cratis-workbench.styles/theme';
 import './index.scss';
 
 import { App } from './App';

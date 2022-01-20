@@ -3,7 +3,7 @@
 
 import { QueryResult } from './QueryResult';
 import { IQueryFor } from './IQueryFor';
-import { Constructor } from '@cratis/fundamentals';
+import { Constructor } from '@aksio/cratis-fundamentals';
 import { useState, useEffect } from 'react';
 
 /**

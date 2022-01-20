@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Autofac;
 using Aksio.Cratis.Concepts.SystemJson;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Observation;
@@ -9,6 +8,7 @@ using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
+using Autofac;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 

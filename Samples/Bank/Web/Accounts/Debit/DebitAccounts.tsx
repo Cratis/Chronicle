@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useMemo, useState } from 'react';
-import { useDialog, DialogResult } from '@aksio/frontend/dialogs';
+import { useDialog, DialogResult } from '@aksio/cratis-applications-frontend/dialogs';
 import { CreateAccountDialog, CreateAccountDialogResult } from './CreateAccountDialog';
-import { Guid } from '@cratis/fundamentals';
+import { Guid } from '@aksio/cratis-fundamentals';
 
 import {
     CommandBar,
@@ -17,13 +17,13 @@ import {
     SearchBox
 } from '@fluentui/react';
 import { AmountDialog, AmountDialogInput, AmountDialogResult } from './AmountDialog';
-import { CreateDebitAccount } from 'API/Accounts/Debit/CreateDebitAccount';
-import { DepositToAccount } from 'API/Accounts/Debit/DepositToAccount';
-import { WithdrawFromAccount } from 'API/Accounts/Debit/WithdrawFromAccount';
-import { AllAccounts } from 'API/Accounts/Debit/AllAccounts';
-import { StartingWith } from 'API/Accounts/Debit/StartingWith';
-import { LatestTransactions } from 'API/Accounts/Debit/LatestTransactions';
-import { DebitAccount } from 'API/Accounts/Debit/DebitAccount';
+import { CreateDebitAccount } from 'API/accounts/debit/CreateDebitAccount';
+import { DepositToAccount } from 'API/accounts/debit/DepositToAccount';
+import { WithdrawFromAccount } from 'API/accounts/debit/WithdrawFromAccount';
+import { AllAccounts } from 'API/accounts/debit/AllAccounts';
+import { StartingWith } from 'API/accounts/debit/StartingWith';
+import { LatestTransactions } from 'API/accounts/debit/LatestTransactions';
+import { DebitAccount } from 'API/accounts/debit/DebitAccount';
 
 const columns: IColumn[] = [
     {

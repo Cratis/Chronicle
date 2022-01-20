@@ -1,5 +1,5 @@
 {
-    "name": "@aksio/fluentui",
+    "name": "@aksio/cratis-fluentui",
     "version": "1.0.0",
     "description": "",
     "author": "Cratis",
@@ -25,10 +25,10 @@
         "up": "ncu -u \\!'@aksio/*'"
     },
     "dependencies": {
-        "@aksio/typescript": "1.0.0",
+        "@aksio/cratis-typescript": "1.0.0",
         "@fluentui/font-icons-mdl2": "8.1.20",
-        "@fluentui/react": "8.49.5",
-        "@fluentui/react-charting": "5.6.17",
+        "@fluentui/react": "8.49.7",
+        "@fluentui/react-charting": "5.7.1",
         "@fluentui/react-hooks": "8.3.9",
         "@fluentui/react-icons": "1.1.145"
     },

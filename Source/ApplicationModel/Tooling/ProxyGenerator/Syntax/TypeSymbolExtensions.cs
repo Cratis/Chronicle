@@ -117,7 +117,7 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
                 }
 
                 if (baseType.IsGenericType &&
-                    baseType.ContainingNamespace.ToDisplayString() == "Cratis.Concepts" &&
+                    baseType.ContainingNamespace.ToDisplayString() == "Aksio.Cratis.Concepts" &&
                     baseType.Name == "ConceptAs")
                 {
                     return baseType!.TypeArguments[0];
@@ -159,7 +159,7 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
         /// <returns>True if it is an observable client, false if not.</returns>
         public static bool IsObservableClient(this ITypeSymbol symbol)
         {
-            return symbol.ToDisplayString().StartsWith("Aksio.Queries.ClientObservable<", StringComparison.InvariantCulture);
+            return symbol.ToDisplayString().StartsWith("Aksio.Cratis.Applications.Queries.ClientObservable<", StringComparison.InvariantCulture);
         }
 
         static string GetTypeName(ITypeSymbol symbol)

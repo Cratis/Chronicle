@@ -1,12 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ScrollableDetailsList, useModal, ModalButtons, ModalResult } from '@aksio/fluentui';
+import { ScrollableDetailsList, useModal, ModalButtons, ModalResult } from '@aksio/cratis-fluentui';
 import { CommandBar, IColumn, ICommandBarItemProps, Stack } from '@fluentui/react';
 import { AllMicroservices } from 'API/compliance/microservices/AllMicroservices';
 import { AddMicroserviceDialog, AddMicroserviceDialogResult } from './AddMicroserviceDialog';
 import { AddMicroservice } from 'API/compliance/microservices/AddMicroservice';
-import { Guid } from '@aksio/fundamentals';
+import { Guid } from '@aksio/cratis-fundamentals';
 
 const columns: IColumn[] = [
     {

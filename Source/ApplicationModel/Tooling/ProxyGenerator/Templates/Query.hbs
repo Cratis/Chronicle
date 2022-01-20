@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/frontend/queries';
+import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
@@ -41,7 +41,7 @@ export class {{Name}} extends QueryFor<{{Model}}> {
 {{/if}}
 {{#if Arguments.[0]}}
     readonly requiresArguments: boolean = true;
-{{else}}    
+{{else}}
     readonly requiresArguments: boolean = false;
 {{/if}}
 

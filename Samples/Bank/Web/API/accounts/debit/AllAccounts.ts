@@ -2,19 +2,19 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/frontend/queries';
-import { ClientObservable } from './ClientObservable';
+import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
+import { DebitAccount } from './DebitAccount';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/debit');
 
-export class AllAccounts extends QueryFor<ClientObservable> {
+export class AllAccounts extends ObservableQueryFor<DebitAccount[]> {
     readonly route: string = '/api/accounts/debit';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: ClientObservable = {} as any;
+    readonly defaultValue: DebitAccount[] = [];
     readonly requiresArguments: boolean = false;
 
-    static use(): [QueryResult<ClientObservable>, PerformQuery] {
-        return useQuery<ClientObservable, AllAccounts>(AllAccounts);
+    static use(): [QueryResult<DebitAccount[]>] {
+        return useObservableQuery<DebitAccount[], AllAccounts>(AllAccounts);
     }
 }
