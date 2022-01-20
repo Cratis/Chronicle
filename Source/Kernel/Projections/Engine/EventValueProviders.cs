@@ -36,5 +36,11 @@ namespace Aksio.Cratis.Events.Projections
                 return sourceValue!;
             };
         }
+
+        /// <summary>
+        /// Create a <see cref="ValueProvider{T}"/> that generates a new unique identifier from the event metadata.
+        /// </summary>
+        /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
+        public static ValueProvider<Event> UniqueIdentifier() => (Event @event) => $"{@event.SequenceNumber}-{@event.Occurred.ToUnixTimeMilliseconds()}";
     }
 }
