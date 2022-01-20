@@ -4,6 +4,7 @@
 using Aksio.Cratis.Applications;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,27 +19,34 @@ namespace Microsoft.Extensions.Hosting
         /// Use Aksio defaults with the <see cref="IHostBuilder"/>.
         /// </summary>
         /// <param name="builder"><see cref="IHostBuilder"/> to extend.</param>
+        /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
         /// <returns><see cref="IHostBuilder"/> for building continuation.</returns>
-        public static IHostBuilder UseAksio(this IHostBuilder builder)
+        public static IHostBuilder UseAksio(this IHostBuilder builder, Action<IClientBuilder>? configureDelegate = default)
         {
             var types = new Types("Aksio");
             types.RegisterTypeConvertersForConcepts();
 
             builder
-                .UseCratis(types)
-                .ConfigureServices(_ => _
+                .UseCratis(types, configureDelegate)
+                .ConfigureServices(_ =>
+                {
+                    _
                     .AddSingleton<ITypes>(types)
                     .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
+                    .AddConfigurationObjects(types)
                     .AddControllersFromProjectReferencedAssembles(types)
-                    .AddEndpointsApiExplorer()
                     .AddSwaggerGen()
+                    .AddEndpointsApiExplorer()
 
                     // Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
-                    .AddRazorPages())
+                    .AddRazorPages();
+
+                    _.AddMvc();
+                })
                 .UseDefaultLogging()
                 .UseDefaultDependencyInversion(types);
 
             return builder;
         }
-    }
+}
 }

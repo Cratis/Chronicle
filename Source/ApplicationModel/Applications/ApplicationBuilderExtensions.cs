@@ -24,6 +24,8 @@ namespace Microsoft.AspNetCore.Builder
             Internals.ServiceProvider = app.ApplicationServices;
 
             app.UseWebSockets();
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
 
             if (RuntimeEnvironment.IsDevelopment)
             {
@@ -31,6 +33,8 @@ namespace Microsoft.AspNetCore.Builder
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Swagger"));
             }
+
+            app.PerformBootProcedures();
 
             app.UseDefaultLogging();
             app.UseCratis();
