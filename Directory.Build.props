@@ -29,6 +29,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.Defaults" Version="1.5.8" PrivateAssets="All" />
+        <PackageReference Include="Aksio.Defaults" Version="$(AksioDefaults)" PrivateAssets="All" />
     </ItemGroup>
 </Project>

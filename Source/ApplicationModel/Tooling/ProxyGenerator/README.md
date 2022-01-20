@@ -37,7 +37,7 @@ In addition to this to work, the property needs to be visible to the compiler - 
 <CompilerVisibleProperty Include="AksioProxyOutput"/>
 ```
 
-Within an `<ItemGroup/>` in the [Aksio.ProxyGenerator.props](./Aksio.ProxyGenerator.props) file that will automatically
+Within an `<ItemGroup/>` in the [Aksio.Cratis.Applications.ProxyGenerator.props](./build/Aksio.Cratis.Applications.ProxyGenerator.props) file that will automatically
 be included during compiletime of any consumers of this package.
 
 ## Run in sample

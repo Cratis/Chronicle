@@ -2,19 +2,19 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/frontend/queries';
-import { Person } from './Person';
+import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/frontend/queries';
+import { ClientObservable } from './ClientObservable';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/compliance/gdpr/people');
 
-export class AllPeople extends ObservableQueryFor<Person[]> {
+export class AllPeople extends QueryFor<ClientObservable> {
     readonly route: string = '/api/compliance/gdpr/people';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: Person[] = [];
+    readonly defaultValue: ClientObservable = {} as any;
     readonly requiresArguments: boolean = false;
 
-    static use(): [QueryResult<Person[]>] {
-        return useObservableQuery<Person[], AllPeople>(AllPeople);
+    static use(): [QueryResult<ClientObservable>, PerformQuery] {
+        return useQuery<ClientObservable, AllPeople>(AllPeople);
     }
 }

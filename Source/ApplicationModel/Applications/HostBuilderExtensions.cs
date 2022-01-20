@@ -21,20 +21,16 @@ namespace Microsoft.Extensions.Hosting
         public static IHostBuilder UseAksio(this IHostBuilder builder)
         {
             var types = new Types("Aksio");
-
-            builder.ConfigureServices(_ =>
-            {
-                _
-                  .AddSingleton<ITypes>(types)
-                  .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
-                  .AddControllersFromProjectReferencedAssembles(types)
-                  .AddSwaggerGen();
-
-                // Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
-                _.AddRazorPages();
-            });
-
             builder
+                .UseCratis(types)
+                .ConfigureServices(_ => _
+                    .AddSingleton<ITypes>(types)
+                    .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
+                    .AddControllersFromProjectReferencedAssembles(types)
+                    .AddSwaggerGen()
+
+                    // Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
+                    .AddRazorPages())
                 .UseDefaultLogging()
                 .UseDefaultDependencyInversion(types);
 

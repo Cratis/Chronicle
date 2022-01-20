@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using Aksio.Queries;
+using Aksio.Cratis.Applications.Queries;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Events.Projections.Api

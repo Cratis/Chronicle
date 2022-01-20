@@ -11,6 +11,7 @@
     <ItemGroup>
         <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj"/>
+        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj"/>
         <ProjectReference Include="../CQRS/CQRS.csproj"/>
         <ProjectReference Include="../CQRS.MongoDB/CQRS.MongoDB.csproj"/>
     </ItemGroup>

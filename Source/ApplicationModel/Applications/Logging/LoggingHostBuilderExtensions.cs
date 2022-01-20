@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 namespace Microsoft.Extensions.Hosting
@@ -18,6 +19,7 @@ namespace Microsoft.Extensions.Hosting
         public static IHostBuilder UseDefaultLogging(this IHostBuilder builder)
         {
             Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(ConfigurationHostBuilderExtensions.Configuration)
                 .CreateLogger();
 
             builder.UseSerilog();

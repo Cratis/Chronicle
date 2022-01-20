@@ -31,6 +31,8 @@ namespace Microsoft.AspNetCore.Builder
 
             app.UseDefaultLogging();
 
+            app.UseCratis();
+
             return app;
         }
     }
