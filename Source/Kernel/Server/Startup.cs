@@ -55,7 +55,6 @@ namespace Aksio.Cratis.Server
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseExecutionContext();
             MongoDBReadModels.ConfigureReadModels(app.ApplicationServices).Wait();
 
             ContainerBuilderExtensions.ServiceProvider = app.ApplicationServices;

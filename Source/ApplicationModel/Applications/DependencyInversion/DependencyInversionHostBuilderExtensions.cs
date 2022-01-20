@@ -4,6 +4,7 @@
 using Aksio.Cratis.Types;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -21,7 +22,9 @@ namespace Microsoft.Extensions.Hosting
         public static IHostBuilder UseDefaultDependencyInversion(this IHostBuilder builder, ITypes types)
         {
             builder.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-            builder.ConfigureContainer<ContainerBuilder>(containerBuilder => containerBuilder.RegisterDefaults(types));
+            IServiceCollection? services = default;
+            builder.ConfigureServices(_ => services = _);
+            builder.ConfigureContainer<ContainerBuilder>(containerBuilder => containerBuilder.RegisterDefaults(types, services));
             return builder;
         }
     }
