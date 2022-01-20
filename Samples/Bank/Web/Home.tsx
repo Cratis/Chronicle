@@ -28,7 +28,7 @@ export const Home = () => {
             </ul>
             <h2>Debugging tools</h2>
             <ul>
-                <li><Link href="/events" target="__blank">Event Workbench</Link></li>
+                <li><Link href="http://localhost:8080" target="__blank">Cratis Workbench</Link></li>
                 <li><Link href="/swagger" target="__blank">Swagger API</Link></li>
             </ul>
         </div>
