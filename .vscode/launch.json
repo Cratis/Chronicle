@@ -10,7 +10,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build server",
-            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net6.0/Cratis.Server.dll",
+            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net6.0/Aksio.Cratis.Server.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Source/Kernel/Server",
             "stopAtEntry": false,
@@ -23,7 +23,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build server",
-            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net6.0/Cratis.Server.dll",
+            "program": "${workspaceFolder}/Source/Kernel/Server/bin/Debug/net6.0/Aksio.Cratis.Server.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Source/Kernel/Server",
             "stopAtEntry": false,
@@ -65,7 +65,7 @@
             "name": "Server and Client",
             "configurations": [
                 ".NET Core Launch (Server)",
-                ".NET Core Launch (AspNetCore Sample)"
+                ".NET Core Launch (Bank Sample)"
             ]
         }
     ]
