@@ -73,19 +73,29 @@ namespace Aksio.Cratis.Events.Projections
                 foreach (var (eventType, fromDefinition) in childrenDefinition.From)
                 {
                     var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                    var keyResolver = !string.IsNullOrEmpty(fromDefinition.Key) ? EventValueProviders.FromEventContent(fromDefinition.Key) : EventValueProviders.FromEventSourceId;
-                    projection.Event.From(eventType).Child(childrenProperty, childrenDefinition.IdentifiedBy, keyResolver, propertyMappers);
+                    var (actualIdentifiedByProperty, actualKeyResolver) = ResolveIdentifiedPropertyWithKeyResolver(childrenDefinition.IdentifiedBy, fromDefinition.Key);
+                    projection.Event.From(eventType).Child(childrenProperty, actualIdentifiedByProperty, actualKeyResolver, propertyMappers);
                 }
             }
 
             foreach (var (eventType, fromDefinition) in projectionDefinition.From)
             {
                 var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
-                var keyResolver = !string.IsNullOrEmpty(fromDefinition.Key) ? EventValueProviders.FromEventContent(fromDefinition.Key) : EventValueProviders.FromEventSourceId;
-                projection.Event.From(eventType).Project(childrenAccessorProperty, identifiedByProperty, keyResolver, propertyMappers);
+                var (actualIdentifiedByProperty, actualKeyResolver) = ResolveIdentifiedPropertyWithKeyResolver(identifiedByProperty, fromDefinition.Key);
+                projection.Event.From(eventType).Project(childrenAccessorProperty, actualIdentifiedByProperty, actualKeyResolver, propertyMappers);
             }
 
             return projection;
+        }
+
+        (PropertyPath Property, ValueProvider<Event> KeyResolver) ResolveIdentifiedPropertyWithKeyResolver(PropertyPath identifiedByProperty, string? key)
+        {
+            if (identifiedByProperty.IsRoot)
+            {
+                return (Property: "_id", KeyResolver: EventValueProviders.UniqueIdentifier());
+            }
+
+            return (Property: identifiedByProperty, KeyResolver: !string.IsNullOrEmpty(key) ? EventValueProviders.FromEventContent(key) : EventValueProviders.FromEventSourceId);
         }
     }
 }
