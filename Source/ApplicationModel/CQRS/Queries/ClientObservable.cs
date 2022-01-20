@@ -52,17 +52,22 @@ namespace Aksio.Cratis.Applications.Queries
             });
 
             var buffer = new byte[1024 * 4];
-            var received = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-            while (!received.CloseStatus.HasValue)
+            try
             {
-                received = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                var received = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                while (!received.CloseStatus.HasValue)
+                {
+                    received = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                }
+
+                await webSocket.CloseAsync(received.CloseStatus.Value, received.CloseStatusDescription, CancellationToken.None);
             }
-
-            await webSocket.CloseAsync(received.CloseStatus.Value, received.CloseStatusDescription, CancellationToken.None);
-            subscription.Dispose();
-
-            ClientDisconnected?.Invoke();
+            finally
+            {
+                subscription.Dispose();
+                ClientDisconnected?.Invoke();
+            }
         }
 
         /// <inheritdoc/>
