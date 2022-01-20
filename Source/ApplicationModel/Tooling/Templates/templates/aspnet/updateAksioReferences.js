@@ -35,11 +35,11 @@ try {
         const content = fs.readFileSync(file).toString();
         const nugetPackages = [
             'Aksio.Defaults',
-            'Aksio.Microservices',
-            'Aksio.CQRS',
-            'Aksio.CQRS.MongoDB',
-            'Aksio.Integration',
-            'Aksio.ProxyGenerator'
+            'Aksio.Cratis.Applications',
+            'Aksio.Cratis.Applications.CQRS',
+            'Aksio.Cratis.Applications.CQRS.MongoDB',
+            'Aksio.Cratis.ApplicationsProxyGenerator',
+            'Aksio.Cratis.Integration'
         ];
 
         let result = content;

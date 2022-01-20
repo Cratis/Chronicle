@@ -1,0 +1,54 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "rootDir": ".",
+        "outDir": "dist",
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "composite": true,
+        "strict": true,
+        "allowJs": false,
+        "checkJs": false,
+        "module": "CommonJS",
+        "noEmit": false,
+        "pretty": true,
+        "noImplicitAny": false,
+        "skipLibCheck": true,
+        "target": "ES2015",
+        "moduleResolution": "node",
+        "jsx": "react-jsx",
+        "esModuleInterop": true,
+        "strictNullChecks": true,
+        "resolveJsonModule": true,
+        "downlevelIteration": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "stripInternal": true,
+        "allowSyntheticDefaultImports": true,
+        "watch": true,
+        "forceConsistentCasingInFileNames": true,
+        "assumeChangesOnlyAffectDirectDependencies": true,
+        "alwaysStrict": true,
+        "preserveConstEnums": true,
+        "newLine": "lf",
+        "paths": {
+            "API/*": [
+                "./API/*"
+            ]
+        },
+    },
+    "exclude": [
+        "**/dist"
+    ],
+    "references": [
+        {
+            "path": "../../Source/Frontend/tsconfig.json"
+        },
+        {
+            "path": "../../Source/TypeScript/tsconfig.json"
+        }
+    ]
+}

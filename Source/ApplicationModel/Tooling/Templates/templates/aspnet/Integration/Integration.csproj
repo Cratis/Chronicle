@@ -1,5 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-    <ItemGroup>
-        <ProjectReference Include="../Concepts/Concepts.csproj"/>
-    </ItemGroup>
-</Project>

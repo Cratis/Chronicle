@@ -11,9 +11,6 @@
     <ItemGroup>
         <ProjectReference Include="../Concepts/Concepts.csproj"/>
         <ProjectReference Include="../Events/Events.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Aksio.CQRS.MongoDB" Version="$(Aksio)"/>
+        <ProjectReference Include="../../../ApplicationModel/CQRS.MongoDB/CQRS.MongoDB.csproj"/>
     </ItemGroup>
 </Project>
