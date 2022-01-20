@@ -63,6 +63,10 @@ namespace Aksio.Cratis.Applications.Queries
 
                 await webSocket.CloseAsync(received.CloseStatus.Value, received.CloseStatusDescription, CancellationToken.None);
             }
+            catch
+            {
+                Console.WriteLine("Client disconnected");
+            }
             finally
             {
                 subscription.Dispose();
