@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.AspNetCore</AssemblyName>
+        <AssemblyName>Aksio.Cratis.AspNetCore</AssemblyName>
         <RootNamespace>Cratis.AspNetCore</RootNamespace>
     </PropertyGroup>
 

@@ -89,7 +89,7 @@ namespace Aksio.Cratis.Types
             ProjectReferencedAssemblies = projectReferencedAssemblies;
 
             var assemblies = dependencyModel.RuntimeLibraries
-                                .Where(_ => _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase) ||
+                                .Where(_ => _.Name.StartsWith("Aksio.Cratis", StringComparison.InvariantCultureIgnoreCase) ||
                                             _assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm, StringComparison.InvariantCultureIgnoreCase)))
                                 .Select(_ => Assembly.Load(_.Name))
                                 .Distinct()

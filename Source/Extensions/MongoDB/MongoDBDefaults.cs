@@ -17,23 +17,22 @@ namespace Aksio.Cratis.Extensions.MongoDB
     [Singleton]
     public class MongoDBDefaults
     {
+        static readonly object _lockObject = new();
         static bool _initialized;
-        readonly object _lockObject = new();
-        readonly IInstancesOf<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
+        readonly IEnumerable<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
         readonly ITypes _types;
-        readonly IServiceProvider _serviceProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBDefaults"/> class.
         /// </summary>
-        /// <param name="conventionPackFilters"><see cref="IInstancesOf{T}"/> <see cref="ICanFilterMongoDBConventionPacksForType"/>.</param>
         /// <param name="types"><see cref="ITypes"/> for general type discovery.</param>
-        /// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing instances of types.</param>
-        public MongoDBDefaults(IInstancesOf<ICanFilterMongoDBConventionPacksForType> conventionPackFilters, ITypes types, IServiceProvider serviceProvider)
+        public MongoDBDefaults(ITypes types)
         {
-            _conventionPackFilters = conventionPackFilters;
+            _conventionPackFilters = types
+                .FindMultiple<ICanFilterMongoDBConventionPacksForType>()
+                .Select(_ => (Activator.CreateInstance(_) as ICanFilterMongoDBConventionPacksForType)!)
+                .ToArray();
             _types = types;
-            _serviceProvider = serviceProvider;
         }
 
         /// <summary>
@@ -72,7 +71,7 @@ namespace Aksio.Cratis.Extensions.MongoDB
         {
             foreach (var classMapType in _types.FindMultiple(typeof(IBsonClassMapFor<>)))
             {
-                var classMapProvider = _serviceProvider.GetService(classMapType);
+                var classMapProvider = Activator.CreateInstance(classMapType);
                 var typeInterfaces = classMapType.GetInterfaces().Where(_ =>
                 {
                     var args = _.GetGenericArguments();
@@ -94,6 +93,10 @@ namespace Aksio.Cratis.Extensions.MongoDB
 
         void Register<T>(IBsonClassMapFor<T> classMapProvider)
         {
+            if (BsonClassMap.IsClassMapRegistered(typeof(T)))
+            {
+                return;
+            }
             BsonClassMap.RegisterClassMap<T>(_ => classMapProvider.Configure(_));
         }
 

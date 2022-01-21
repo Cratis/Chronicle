@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Compliance.Read</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Compliance.Read</AssemblyName>
         <RootNamespace>Cratis.Compliance.Read</RootNamespace>
     </PropertyGroup>
 

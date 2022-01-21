@@ -20,6 +20,17 @@ namespace Aksio.Cratis.Integration
             public static IAdapterFor<TModel, TExternalModel>? Adapter;
             public static IAdapterProjectionFor<TModel>? Projection;
             public static IMapper? Mapper;
+
+            public static async Task Initialize(
+                Type adapterType,
+                IServiceProvider serviceProvider,
+                IAdapterProjectionFactory adapterProjectionFactory,
+                IAdapterMapperFactory adapterMapperFactory)
+            {
+                Adapter = serviceProvider.GetService(adapterType) as IAdapterFor<TModel, TExternalModel>;
+                Projection = await adapterProjectionFactory.CreateFor(Adapter!);
+                Mapper = adapterMapperFactory.CreateFor(Adapter!);
+            }
         }
 
         readonly ITypes _types;
@@ -44,7 +55,29 @@ namespace Aksio.Cratis.Integration
             _serviceProvider = serviceProvider;
             _adapterProjectionFactory = adapterProjectionFactory;
             _adapterMapperFactory = adapterMapperFactory;
-            PopulateAdapters();
+        }
+
+        /// <inheritdoc/>
+        public async Task Initialize()
+        {
+            var adaptersByKeyType = typeof(AdaptersByKey<,>);
+
+            var adapter = _types.All.SingleOrDefault(_ => _.Name == "AccountHolderDetailsAdapter");
+            Console.WriteLine(adapter);
+
+            foreach (var adapterType in _types.FindMultiple(typeof(IAdapterFor<,>)))
+            {
+                var adapterInterface = adapterType.GetInterface(typeof(IAdapterFor<,>).Name)!;
+                var adaptersByKey = adaptersByKeyType.MakeGenericType(adapterInterface.GenericTypeArguments);
+                var method = adaptersByKey.GetMethod(nameof(AdaptersByKey<object, object>.Initialize), BindingFlags.Public | BindingFlags.Static);
+                await (method!.Invoke(null, new object[]
+                {
+                    adapterType,
+                    _serviceProvider,
+                    _adapterProjectionFactory,
+                    _adapterMapperFactory
+                }) as Task)!;
+            }
         }
 
         /// <inheritdoc/>
@@ -58,10 +91,6 @@ namespace Aksio.Cratis.Integration
         public IAdapterProjectionFor<TModel> GetProjectionFor<TModel, TExternalModel>()
         {
             ThrowIfMissingAdapterForModelAndExternalModel<TModel, TExternalModel>();
-            if (AdaptersByKey<TModel, TExternalModel>.Projection is null)
-            {
-                AdaptersByKey<TModel, TExternalModel>.Projection = _adapterProjectionFactory.CreateFor(AdaptersByKey<TModel, TExternalModel>.Adapter!);
-            }
             return AdaptersByKey<TModel, TExternalModel>.Projection!;
         }
 
@@ -69,25 +98,7 @@ namespace Aksio.Cratis.Integration
         public IMapper GetMapperFor<TModel, TExternalModel>()
         {
             ThrowIfMissingAdapterForModelAndExternalModel<TModel, TExternalModel>();
-            if (AdaptersByKey<TModel, TExternalModel>.Mapper is null)
-            {
-                AdaptersByKey<TModel, TExternalModel>.Mapper = _adapterMapperFactory.CreateFor(AdaptersByKey<TModel, TExternalModel>.Adapter!);
-            }
             return AdaptersByKey<TModel, TExternalModel>.Mapper!;
-        }
-
-        void PopulateAdapters()
-        {
-            var adaptersByKeyType = typeof(AdaptersByKey<,>);
-
-            foreach (var adapterType in _types.FindMultiple(typeof(IAdapterFor<,>)))
-            {
-                var adapterInterface = adapterType.GetInterface(typeof(IAdapterFor<,>).Name)!;
-                var adaptersByKey = adaptersByKeyType.MakeGenericType(adapterInterface.GenericTypeArguments);
-                var adapterProperty = adaptersByKey.GetField(nameof(AdaptersByKey<object, object>.Adapter), BindingFlags.Public | BindingFlags.Static)!;
-                var adapter = _serviceProvider.GetService(adapterType);
-                adapterProperty.SetValue(null, adapter);
-            }
         }
 
         void ThrowIfMissingAdapterForModelAndExternalModel<TModel, TExternalModel>()

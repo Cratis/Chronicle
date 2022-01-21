@@ -7,10 +7,13 @@ namespace Aksio.Cratis.Reactive.for_ObservableCollection
     {
         ObservableCollection<string> collection;
         bool clear_called;
+        List<IEnumerable<string>> changes;
 
         void Establish()
         {
+            changes = new();
             collection = new();
+            collection.Subscribe(_ => changes.Add(_));
             collection.Add("something");
             clear_called = false;
             collection.Cleared += () => clear_called = true;
@@ -20,5 +23,7 @@ namespace Aksio.Cratis.Reactive.for_ObservableCollection
 
         [Fact] void should_trigger_cleared_event() => clear_called.ShouldBeTrue();
         [Fact] void should_clear_the_collection() => collection.ShouldBeEmpty();
+        [Fact] void should_have_first_change_with_item() => changes[0].ShouldContainOnly("something");
+        [Fact] void should_have_second_change_as_empty() => changes[1].ShouldBeEmpty();
     }
 }

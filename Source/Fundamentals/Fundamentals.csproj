@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Fundamentals</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Fundamentals</AssemblyName>
         <RootNamespace>Cratis</RootNamespace>
     </PropertyGroup>
 

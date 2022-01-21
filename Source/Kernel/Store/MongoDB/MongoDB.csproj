@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Events.Store.MongoDB</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Events.Store.MongoDB</AssemblyName>
         <RootNamespace>Cratis.Events.Store.MongoDB</RootNamespace>
     </PropertyGroup>
 

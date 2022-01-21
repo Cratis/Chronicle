@@ -46,6 +46,11 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         ProjectionState CurrentState { get; }
 
         /// <summary>
+        /// Gets an observable of the status of the pipeline.
+        /// </summary>
+        IObservable<ProjectionPipelineStatus> Status { get; }
+
+        /// <summary>
         /// Starts the pipeline.
         /// </summary>
         /// <returns>A Task for async operations.</returns>
