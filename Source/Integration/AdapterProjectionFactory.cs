@@ -34,6 +34,9 @@ namespace Aksio.Cratis.Integration
             var projectionBuilder = new ProjectionBuilderFor<TModel>(Guid.Empty, _eventTypes, _schemaGenerator);
             adapter.DefineModel(projectionBuilder);
 
+            // Get AdapterID
+            // Register Projection with definition with kernel
+            // Get projection grain
             return new AdapterProjectionFor<TModel>();
         }
     }
