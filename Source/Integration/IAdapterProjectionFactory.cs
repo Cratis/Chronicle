@@ -15,6 +15,6 @@ namespace Aksio.Cratis.Integration
         /// <typeparam name="TModel">Type of model.</typeparam>
         /// <typeparam name="TExternalModel">Type of external model.</typeparam>
         /// <returns>A new instance of <see cref="IAdapterProjectionFor{TModel}"/>.</returns>
-        IAdapterProjectionFor<TModel> CreateFor<TModel, TExternalModel>(IAdapterFor<TModel, TExternalModel> adapter);
+        Task<IAdapterProjectionFor<TModel>> CreateFor<TModel, TExternalModel>(IAdapterFor<TModel, TExternalModel> adapter);
     }
 }

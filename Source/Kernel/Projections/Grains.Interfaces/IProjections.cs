@@ -19,7 +19,7 @@ namespace Aksio.Cratis.Events.Projections.Grains
         /// <returns>Async task.</returns>
         /// <remarks>
         /// If the projection is already in the system, the supervisor will see if there are any differences
-        /// and possible set up the projection for rewind.
+        /// and possibly set up the projection for rewind.
         /// </remarks>
         Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
 

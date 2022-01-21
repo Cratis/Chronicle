@@ -15,6 +15,12 @@ namespace Aksio.Cratis.Integration
     public interface IAdapterFor<TModel, TExternalModel>
     {
         /// <summary>
+        /// Gets the unique identifier for the adapter.
+        /// </summary>
+        /// <value></value>
+        AdapterId Identifier { get; }
+
+        /// <summary>
         /// Gets the property that represents the key.
         /// </summary>
         Func<TExternalModel, EventSourceId> KeyResolver { get; }

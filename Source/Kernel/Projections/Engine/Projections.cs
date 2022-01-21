@@ -65,7 +65,7 @@ namespace Aksio.Cratis.Events.Projections
                 existingPipeline = _pipelines[projection.Identifier];
             }
 
-            if (!isNew && hasChanged)
+            if (!isNew && hasChanged && projection.IsRewindable)
             {
                 await pipeline.Rewind();
             }

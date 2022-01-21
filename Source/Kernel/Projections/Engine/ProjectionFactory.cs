@@ -66,7 +66,15 @@ namespace Aksio.Cratis.Events.Projections
             var model = new Model(projectionDefinition.Model.Name, modelSchema);
             addChildEventTypes(eventsForProjection);
 
-            var projection = new Projection(projectionDefinition.Identifier, name, path, model, eventsForProjection, childProjections);
+            var projection = new Projection(
+                projectionDefinition.Identifier,
+                name,
+                path,
+                model,
+                projectionDefinition.IsPassive,
+                projectionDefinition.IsRewindable,
+                eventsForProjection,
+                childProjections);
 
             foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {

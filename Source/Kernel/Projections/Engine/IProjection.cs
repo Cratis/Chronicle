@@ -33,6 +33,16 @@ namespace Aksio.Cratis.Events.Projections
         Model Model { get; }
 
         /// <summary>
+        /// Gets whether or not the projection is a passive projection.
+        /// </summary>
+        bool IsPassive { get; }
+
+        /// <summary>
+        /// Gets whether or not the projection is rewindable.
+        /// </summary>
+        bool IsRewindable { get; }
+
+        /// <summary>
         /// Gets the <see cref="IObservable{T}">observable</see> <see cref="EventContext">event</see>.
         /// </summary>
         IObservable<EventContext> Event { get; }

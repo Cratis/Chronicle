@@ -18,5 +18,5 @@ namespace Aksio.Cratis.Events.Projections.Definitions
         ModelDefinition Model,
         IDictionary<EventType, FromDefinition> From,
         IDictionary<PropertyPath, ChildrenDefinition> Children,
-        RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, From, Children, RemovedWith);
+        RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, false, true, From, Children, RemovedWith);
 }

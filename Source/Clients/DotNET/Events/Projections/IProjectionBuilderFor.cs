@@ -13,11 +13,30 @@ namespace Aksio.Cratis.Events.Projections
     public interface IProjectionBuilderFor<TModel>
     {
         /// <summary>
+        /// Names the projection. Default behavior is to use the type of the models fullname.
+        /// </summary>
+        /// <param name="name">The name of the projection to use.</param>
+        /// <returns>Builder continuation.</returns>
+        IProjectionBuilderFor<TModel> WithName(string name);
+
+        /// <summary>
         /// Names the model - typically used by storage as name of storage unit (collection, table etc.)
         /// </summary>
         /// <param name="modelName">Name of the model.</param>
         /// <returns>Builder continuation.</returns>
         IProjectionBuilderFor<TModel> ModelName(string modelName);
+
+        /// <summary>
+        /// Set the projection to be passive, not responding to events as they happen.
+        /// </summary>
+        /// <returns>Builder continuation.</returns>
+        IProjectionBuilderFor<TModel> Passive();
+
+        /// <summary>
+        /// Set the projection to not be rewindable - its a moving forward only projection.
+        /// </summary>
+        /// <returns>Builder continuation.</returns>
+        IProjectionBuilderFor<TModel> NotRewindable();
 
         /// <summary>
         /// Start building the from expressions for a specific event type.

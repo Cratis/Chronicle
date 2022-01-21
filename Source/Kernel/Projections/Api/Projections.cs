@@ -49,7 +49,14 @@ namespace Aksio.Cratis.Events.Projections.Api
                                 (_, __) =>
                                 {
                                     var jobInformation = string.Join("\n", pipeline.Jobs.Select(_ => $"{_.Status.Progress.Value} - {_.Status.Task.Value}"));
-                                    return new Projection(pipeline.Projection.Identifier, pipeline.Projection.Name, stateString, jobInformation, positionsString);
+                                    return new Projection(
+                                        pipeline.Projection.Identifier,
+                                        pipeline.Projection.Name,
+                                        pipeline.Projection.IsPassive,
+                                        pipeline.Projection.IsRewindable,
+                                        stateString,
+                                        jobInformation,
+                                        positionsString);
                                 });
                         })).Switch();
             var subscription = merged.Subscribe(projection =>

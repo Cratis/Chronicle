@@ -21,13 +21,19 @@ namespace Aksio.Cratis.Events.Projections
         public ProjectionId Identifier { get; }
 
         /// <inheritdoc/>
-        public ProjectionName Name { get; }
+        public ProjectionName Name { get; }
 
         /// <inheritdoc/>
-        public ProjectionPath Path { get; }
+        public ProjectionPath Path { get; }
 
         /// <inheritdoc/>
         public Model Model { get; }
+
+        /// <inheritdoc/>
+        public bool IsPassive { get; }
+
+        /// <inheritdoc/>
+        public bool IsRewindable { get; }
 
         /// <inheritdoc/>
         public IObservable<EventContext> Event { get; }
@@ -45,6 +51,8 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="name">The name of the projection.</param>
         /// <param name="path">The qualified path of the projection.</param>
         /// <param name="model">The target <see cref="Model"/>.</param>
+        /// <param name="passive">Whether or not the projection is a passive projection.</param>
+        /// <param name="rewindable">Whether or not the projection is rewindable.</param>
         /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
         /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
         public Projection(
@@ -52,12 +60,16 @@ namespace Aksio.Cratis.Events.Projections
             ProjectionName name,
             ProjectionPath path,
             Model model,
+            bool passive,
+            bool rewindable,
             IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
             IEnumerable<IProjection> childProjections)
         {
             Identifier = identifier;
             Name = name;
             Model = model;
+            IsPassive = passive;
+            IsRewindable = rewindable;
             EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
             Event = FilterEventTypes(_subject);
             Path = path;

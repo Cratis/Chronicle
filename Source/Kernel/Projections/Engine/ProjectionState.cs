@@ -46,6 +46,11 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Projection is suspended, most likely due to failure.
         /// </summary>
-        Suspended = 7
+        Suspended = 7,
+
+        /// <summary>
+        /// Projection is passive, not observing events as they are appended.
+        /// </summary>
+        Passive = 8
     }
 }

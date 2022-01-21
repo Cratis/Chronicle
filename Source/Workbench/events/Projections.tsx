@@ -112,7 +112,7 @@ export const Projections = () => {
             },
         }), [projections.data]);
 
-    if (selected) {
+    if (selected && selected.rewindable) {
         commandBarItems.push({
             key: 'rewind',
             name: 'Rewind',
@@ -137,7 +137,7 @@ export const Projections = () => {
                 <Stack.Item grow={1}>
                     <Pivot linkFormat="links">
                         <PivotItem headerText="Collections">
-                            <Collections projectionId={selected.id}/>
+                            <Collections projectionId={selected.id} />
                         </PivotItem>
                     </Pivot>
                 </Stack.Item>
