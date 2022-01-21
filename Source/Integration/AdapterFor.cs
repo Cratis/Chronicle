@@ -15,6 +15,9 @@ namespace Aksio.Cratis.Integration
     public abstract class AdapterFor<TModel, TExternalModel> : IAdapterFor<TModel, TExternalModel>
     {
         /// <inheritdoc/>
+        public abstract AdapterId Identifier { get; }
+
+        /// <inheritdoc/>
         public abstract Func<TExternalModel, EventSourceId> KeyResolver { get; }
 
         /// <summary>
