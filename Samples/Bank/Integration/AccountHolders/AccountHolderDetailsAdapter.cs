@@ -8,6 +8,8 @@ namespace Integration.AccountHolders
 {
     public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
     {
+        public override AdapterId Identifier => "71741aaf-9f6b-4c6f-bfe6-af77aec464a2";
+
         public override Func<KontoEier, EventSourceId> KeyResolver => _ => _.Fnr;
 
         public override void DefineModel(IProjectionBuilderFor<AccountHolder> builder) => builder

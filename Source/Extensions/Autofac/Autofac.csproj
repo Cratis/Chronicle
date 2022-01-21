@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Extensions.Autofac</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Extensions.Autofac</AssemblyName>
         <RootNamespace>Cratis.Extensions.Autofac</RootNamespace>
     </PropertyGroup>
 

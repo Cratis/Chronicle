@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Reactive.for_ObservableCollection
 {
-    public class when_removing_one_of_two_items_and_subscribing_after : Specification
+    public class when_adding_two_items_and_removing_one_of_two_items_and_subscribing_after : Specification
     {
         const string first_item = "First Item";
         const string second_item = "Second Item";
@@ -12,12 +12,15 @@ namespace Aksio.Cratis.Reactive.for_ObservableCollection
 
         List<string> added;
         List<string> removed;
+        List<IEnumerable<string>> changes;
 
         void Establish()
         {
             collection = new();
             added = new();
             removed = new();
+            changes = new();
+            collection.Subscribe(_ => changes.Add(_));
         }
 
         void Because()
@@ -33,5 +36,8 @@ namespace Aksio.Cratis.Reactive.for_ObservableCollection
         [Fact] void should_have_both_items_added() => added.ShouldContainOnly(first_item, second_item);
         [Fact] void should_only_have_the_removed_items_removed() => removed.ShouldContainOnly(first_item);
         [Fact] void should_only_contain_the_non_removed_item() => collection.ShouldContainOnly(second_item);
+        [Fact] void should_have_first_change_with_first_item() => changes[0].ShouldContainOnly(first_item);
+        [Fact] void should_have_second_change_with_both_items() => changes[1].ShouldContainOnly(first_item, second_item);
+        [Fact] void should_have_third_change_with_first_item() => changes[0].ShouldContainOnly(first_item);
     }
 }

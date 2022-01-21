@@ -11,6 +11,12 @@ namespace Aksio.Cratis.Integration
     public interface IAdapters
     {
         /// <summary>
+        /// Initialize all adapters.
+        /// </summary>
+        /// <returns>Awaitable task.</returns>
+        Task Initialize();
+
+        /// <summary>
         /// Gets an <see cref="IAdapterFor{TModel, TExternalModel}"/> for the specific model and external model.
         /// </summary>
         /// <typeparam name="TModel">Type of model.</typeparam>

@@ -32,48 +32,52 @@ namespace Aksio.Cratis.Events.Projections.Api
         public ClientObservable<IEnumerable<Projection>> AllProjections()
         {
             var observable = new ClientObservable<IEnumerable<Projection>>();
-            var projections = new List<Projection>();
-            var merged = _projections.Pipelines
-                .SelectMany(pipeline =>
-                    pipeline.State.CombineLatest(
-                        pipeline.Positions,
-                        pipeline.Jobs.Added,
-                        pipeline.Jobs.Removed,
-                        (state, positions, addedJob, removedJob) =>
-                        {
-                            var stateString = Enum.GetName(typeof(ProjectionState), state) ?? "[N/A]";
-                            var positionsString = string.Join("-", positions.Values);
 
-                            return addedJob.Status.Progress.CombineLatest(
-                                addedJob.Status.Task,
-                                (_, __) =>
-                                {
-                                    var jobInformation = string.Join("\n", pipeline.Jobs.Select(_ => $"{_.Status.Progress.Value} - {_.Status.Task.Value}"));
-                                    return new Projection(
-                                        pipeline.Projection.Identifier,
-                                        pipeline.Projection.Name,
-                                        pipeline.Projection.IsPassive,
-                                        pipeline.Projection.IsRewindable,
-                                        stateString,
-                                        jobInformation,
-                                        positionsString);
-                                });
-                        })).Switch();
-            var subscription = merged.Subscribe(projection =>
+            var subscription = _projections.Pipelines.Subscribe(pipelines =>
             {
-                var existing = projections.Find(_ => _.Id == projection.Id);
-                if (existing != default)
-                {
-                    var index = projections.IndexOf(existing);
-                    projections.Remove(existing);
-                    projections.Insert(index, projection);
-                }
-                else
-                {
-                    projections.Add(projection);
-                }
+                var projections = pipelines.Select(p => new Projection(
+                        p.Projection.Identifier,
+                        p.Projection.Name,
+                        p.Projection.IsPassive,
+                        p.Projection.IsRewindable,
+                        string.Empty,
+                        string.Empty,
+                        string.Empty)).ToList();
 
                 observable.OnNext(projections);
+
+                foreach (var statusObservable in pipelines.Select(_ => _.Status))
+                {
+                    statusObservable.Subscribe(status =>
+                    {
+                        var stateString = Enum.GetName(typeof(ProjectionState), status.State) ?? "[N/A]";
+                        var positionsString = string.Join("-", status.Positions.Values);
+                        var jobInformation = string.Join("\n", status.Jobs.Select(_ => $"{_.Status.Progress.Value} - {_.Status.Task.Value}"));
+
+                        var newItem = new Projection(
+                            status.Projection!.Identifier,
+                            status.Projection!.Name,
+                            status.Projection!.IsPassive,
+                            status.Projection!.IsRewindable,
+                            stateString,
+                            jobInformation,
+                            positionsString);
+
+                        var existing = projections.Find(p => p.Id == status.Projection?.Identifier.Value);
+                        if (existing != default)
+                        {
+                            var index = projections.IndexOf(existing);
+                            projections.Remove(existing);
+                            projections.Insert(index, newItem);
+                        }
+                        else
+                        {
+                            projections.Add(newItem);
+                        }
+
+                        observable.OnNext(projections);
+                    });
+                }
             });
 
             observable.ClientDisconnected = () => subscription.Dispose();
@@ -96,7 +100,7 @@ namespace Aksio.Cratis.Events.Projections.Api
         /// <param name="projectionId">Id of projection to get for.</param>
         /// <returns>Collection of all the projection collections.</returns>
         [HttpGet("{projectionId}/collections")]
-        #pragma warning disable IDE0060
+#pragma warning disable IDE0060
         public IEnumerable<ProjectionCollection> Collections([FromRoute] Guid projectionId)
         {
             return new ProjectionCollection[]

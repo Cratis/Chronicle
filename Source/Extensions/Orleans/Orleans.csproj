@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Extensions.Orleans</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Extensions.Orleans</AssemblyName>
         <RootNamespace>Cratis.Extensions.Orleans</RootNamespace>
         <IsPackable>true</IsPackable>
     </PropertyGroup>

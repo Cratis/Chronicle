@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using System.Reactive.Subjects;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 
 #pragma warning disable CA1721 // Pipelines property is confusing since there is a GetPipelines - they do differ - see GH issue #103.
@@ -23,12 +23,11 @@ namespace Aksio.Cratis.Events.Projections
         readonly IProjectionFactory _projectionFactory;
         readonly IProjectionPipelineFactory _pipelineFactory;
         readonly ILogger<Projections> _logger;
-        readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
         readonly ConcurrentDictionary<ProjectionId, CancellationTokenSource> _cancellationTokenSources = new();
-        readonly ReplaySubject<IProjectionPipeline> _allPipelines = new();
+        readonly ObservableCollection<IProjectionPipeline> _allPipelines = new();
 
         /// <inheritdoc/>
-        public IObservable<IProjectionPipeline> Pipelines => _allPipelines;
+        public IObservable<IEnumerable<IProjectionPipeline>> Pipelines => _allPipelines;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -59,28 +58,32 @@ namespace Aksio.Cratis.Events.Projections
             var pipeline = _pipelineFactory.CreateFrom(projection, pipelineDefinition);
             var isNew = !await _projectionDefinitions.HasFor(projectionDefinition.Identifier);
             var hasChanged = await _projectionDefinitions.HasChanged(projectionDefinition);
-            IProjectionPipeline? existingPipeline = default;
-            if (_pipelines.ContainsKey(projection.Identifier))
-            {
-                existingPipeline = _pipelines[projection.Identifier];
-            }
-
+            var existingPipeline = _allPipelines.FirstOrDefault(_ => _.Projection.Identifier == projection.Identifier);
             if (!isNew && hasChanged && projection.IsRewindable)
             {
                 await pipeline.Rewind();
             }
 
-            if (existingPipeline != default)
+            if (existingPipeline != default && !projection.IsPassive)
             {
                 await existingPipeline.Suspend("Replacing projection due to definition changes");
             }
 
             await _projectionDefinitions.Register(projectionDefinition);
             await _projectionPipelineDefinitions.Register(pipelineDefinition);
-            RunProjection(pipeline);
 
-            _pipelines[projection.Identifier] = pipeline;
-            _allPipelines.OnNext(pipeline);
+            if (!projection.IsPassive)
+            {
+                RunProjection(pipeline);
+            }
+
+            if (_allPipelines.Any(_ => _.Projection.Identifier == pipeline.Projection.Identifier))
+            {
+                var existing = _allPipelines.First(_ => _.Projection.Identifier == pipeline.Projection.Identifier);
+                _allPipelines.Remove(existing);
+            }
+
+            _allPipelines.Add(pipeline);
         }
 
         /// <inheritdoc/>
@@ -90,10 +93,10 @@ namespace Aksio.Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IEnumerable<IProjectionPipeline> GetPipelines() => _pipelines.Values;
+        public IEnumerable<IProjectionPipeline> GetPipelines() => _allPipelines;
 
         /// <inheritdoc/>
-        public IProjectionPipeline GetById(ProjectionId id) => _pipelines[id];
+        public IProjectionPipeline GetById(ProjectionId id) => _allPipelines.Single(_ => _.Projection.Identifier == id);
 
         void RunProjection(IProjectionPipeline pipeline)
         {
@@ -111,7 +114,7 @@ namespace Aksio.Cratis.Events.Projections
         async Task RegisterUnregisteredProjections()
         {
             var projectionPipelineDefinitions = await _projectionPipelineDefinitions.GetAll();
-            foreach (var pipeline in projectionPipelineDefinitions.Where(pipeline => !_pipelines.Any(kvp => kvp.Key.Equals(pipeline.ProjectionId))))
+            foreach (var pipeline in projectionPipelineDefinitions.Where(pipeline => !_allPipelines.Any(_ => _.Projection.Identifier == pipeline.ProjectionId)))
             {
                 if (await _projectionDefinitions.HasFor(pipeline.ProjectionId))
                 {

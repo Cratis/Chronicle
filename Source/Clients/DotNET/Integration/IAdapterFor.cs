@@ -17,7 +17,6 @@ namespace Aksio.Cratis.Integration
         /// <summary>
         /// Gets the unique identifier for the adapter.
         /// </summary>
-        /// <value></value>
         AdapterId Identifier { get; }
 
         /// <summary>

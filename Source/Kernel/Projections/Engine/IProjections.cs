@@ -34,7 +34,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Gets an observable of all <see cref="IProjectionPipeline"/> in the system.
         /// </summary>
-        IObservable<IProjectionPipeline> Pipelines { get; }
+        IObservable<IEnumerable<IProjectionPipeline>> Pipelines { get; }
 
         /// <summary>
         /// Get a specific <see cref="IProjectionPipeline"/> by the identifier.

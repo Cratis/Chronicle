@@ -13,7 +13,6 @@
 
     <ItemGroup>
         <ProjectReference Include="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Applications/Applications.csproj" />
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../../Source/Integration/Integration.csproj" />
         <ProjectReference Include="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Tooling/ProxyGenerator/ProxyGenerator.csproj" OutputItemType="Analyzer" Private="true"/>
     </ItemGroup>
 

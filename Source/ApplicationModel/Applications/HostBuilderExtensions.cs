@@ -27,6 +27,7 @@ namespace Microsoft.Extensions.Hosting
             types.RegisterTypeConvertersForConcepts();
 
             builder
+                .UseMongoDB(types)
                 .UseCratis(types, configureDelegate)
                 .ConfigureServices(_ =>
                 {

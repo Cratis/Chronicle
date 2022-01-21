@@ -22,6 +22,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         readonly ILogger<ProjectionPipeline> _logger;
         readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
         readonly ObservableCollection<IProjectionPipelineJob> _jobs = new();
+        readonly BehaviorSubject<ProjectionPipelineStatus> _status = new(ProjectionPipelineStatus.Initial);
 
         /// <inheritdoc/>
         public IProjection Projection { get; }
@@ -43,6 +44,9 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
 
         /// <inheritdoc/>
         public IObservableCollection<IProjectionPipelineJob> Jobs => _jobs;
+
+        /// <inheritdoc/>
+        public IObservable<ProjectionPipelineStatus> Status => _status;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
@@ -69,6 +73,11 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             {
                 _state.OnNext(ProjectionState.Passive);
             }
+
+            _status.OnNext(new(projection, _status.Value.State, _status.Value.Positions, _status.Value.Jobs));
+            _state.Subscribe(_ => _status.OnNext(new(projection, _, _status.Value.Positions, _status.Value.Jobs)));
+            _handler.Positions.Subscribe(_ => _status.OnNext(new(projection, _status.Value.State, _.ToDictionary(_ => _.Key, _ => _.Value), _status.Value.Jobs)));
+            _jobs.Subscribe(_ => _status.OnNext(new(projection, _status.Value.State, _status.Value.Positions, _)));
         }
 
         /// <inheritdoc/>
