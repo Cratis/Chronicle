@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Types;
 using AutoMapper;
 
@@ -10,6 +11,7 @@ namespace Aksio.Cratis.Integration
     /// <summary>
     /// Represents an implementation of <see cref="IAdapters"/>.
     /// </summary>
+    [Singleton]
     public class Adapters : IAdapters
     {
         static class AdaptersByKey<TModel, TExternalModel>
