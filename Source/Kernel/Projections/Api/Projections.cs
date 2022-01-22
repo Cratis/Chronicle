@@ -33,8 +33,11 @@ namespace Aksio.Cratis.Events.Projections.Api
         {
             var observable = new ClientObservable<IEnumerable<Projection>>();
 
+            var statusSubscriptions = new List<IDisposable>();
             var subscription = _projections.Pipelines.Subscribe(pipelines =>
             {
+                statusSubscriptions.ForEach(_ => _.Dispose());
+
                 var projections = pipelines.Select(p => new Projection(
                         p.Projection.Identifier,
                         p.Projection.Name,
@@ -80,7 +83,11 @@ namespace Aksio.Cratis.Events.Projections.Api
                 }
             });
 
-            observable.ClientDisconnected = () => subscription.Dispose();
+            observable.ClientDisconnected = () =>
+            {
+                subscription.Dispose();
+                statusSubscriptions.ForEach(_ => _.Dispose());
+            };
             return observable;
         }
 
