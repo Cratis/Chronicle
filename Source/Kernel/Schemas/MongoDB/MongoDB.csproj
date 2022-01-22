@@ -11,8 +11,4 @@
         <ProjectReference Include="../../../Fundamentals/Fundamentals.csproj" />
         <ProjectReference Include="../../../Extensions/MongoDB/MongoDB.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
-    </ItemGroup>
 </Project>

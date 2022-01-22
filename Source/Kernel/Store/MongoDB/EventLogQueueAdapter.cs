@@ -61,11 +61,11 @@ namespace Aksio.Cratis.Events.Store.MongoDB
                     var appendedEvent = (@event as AppendedEvent)!;
                     try
                     {
-                        await _eventLogsProvider().Append(streamGuid, appendedEvent.Metadata.SequenceNumber, appendedEvent.EventContext.EventSourceId, appendedEvent.Metadata.EventType, appendedEvent.Content);
+                        await _eventLogsProvider().Append(streamGuid, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, appendedEvent.Metadata.Type, appendedEvent.Content);
                     }
                     catch (Exception ex)
                     {
-                        throw new UnableToAppendToEventLog(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.EventContext.EventSourceId, ex);
+                        throw new UnableToAppendToEventLog(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, ex);
                     }
                 }
             }

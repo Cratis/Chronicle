@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying
 
         void Establish()
         {
-            filtered = observable.From(event_context.Event.Type);
+            filtered = observable.From(event_context.Event.Metadata.Type);
             filtered.Subscribe(_ => received.Add(_));
         }
 

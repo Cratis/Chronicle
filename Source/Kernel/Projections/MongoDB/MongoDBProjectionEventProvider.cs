@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.DependencyInversion;
@@ -11,9 +10,7 @@ using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.Grains;
 using Aksio.Cratis.Events.Store.MongoDB;
 using Aksio.Cratis.Execution;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Streams;
 
@@ -69,26 +66,26 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
             var collection = _eventStoreDatabaseProvider().GetEventLogCollectionFor(EventLogId.Default);
 
-            var offsetFilter = Builders<Store.MongoDB.Event>.Filter.Gte(_ => _.SequenceNumber, start);
+            var offsetFilter = Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start);
             var eventTypeFilters = projection.EventTypes.Select(_ =>
-                                        Builders<Store.MongoDB.Event>.Filter.Eq(_ => _.Type, _.Id)).ToArray() ?? Array.Empty<FilterDefinition<Store.MongoDB.Event>>();
+                                        Builders<Event>.Filter.Eq(_ => _.Type, _.Id)).ToArray() ?? Array.Empty<FilterDefinition<Event>>();
 
-            var filter = Builders<Store.MongoDB.Event>.Filter.And(
+            var filter = Builders<Event>.Filter.And(
                 offsetFilter,
-                Builders<Store.MongoDB.Event>.Filter.Or(eventTypeFilters));
+                Builders<Event>.Filter.Or(eventTypeFilters));
 
             var cursor = await collection.FindAsync(
                 filter,
                 new()
                 {
-                    Sort = Builders<Store.MongoDB.Event>.Sort.Ascending(_ => _.SequenceNumber)
+                    Sort = Builders<Event>.Sort.Ascending(_ => _.SequenceNumber)
                 });
 
             return new EventCursor(_schemaStore, _jsonComplianceManager, cursor);
         }
 
         /// <inheritdoc/>
-        public async Task ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject)
+        public async Task ProvideFor(IProjectionPipeline pipeline, ISubject<AppendedEvent> subject)
         {
             foreach (var resultStore in pipeline.ResultStores)
             {
@@ -100,17 +97,9 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                     async (@event, _) =>
                     {
                         _executionContextManager.Establish(tenantId, CorrelationId.New());
-                        var eventSchema = await _schemaStore.GetFor(@event.Metadata.EventType.Id, @event.Metadata.EventType.Generation);
-                        var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventContext.EventSourceId, JObject.Parse(@event.Content));
-
-                        var content = BsonSerializer.Deserialize<ExpandoObject>(releasedContent.ToString());
-                        subject.OnNext(new(
-                            @event.Metadata.SequenceNumber,
-                            @event.Metadata.EventType,
-                            @event.EventContext.Occurred,
-                            @event.EventContext.EventSourceId,
-                            content
-                        ));
+                        var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+                        var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.Context.EventSourceId, @event.Content);
+                        subject.OnNext(new(@event.Metadata, @event.Context, releasedContent));
                     },
                     new EventLogSequenceNumberTokenWithFilter(currentOffset, pipeline.Projection.EventTypes.ToArray()));
             }

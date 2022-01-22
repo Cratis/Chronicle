@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections
@@ -15,7 +16,7 @@ namespace Aksio.Cratis.Events.Projections
     public class Projection : IProjection
     {
         readonly ISubject<EventContext> _subject = new Subject<EventContext>();
-        readonly IDictionary<EventType, ValueProvider<Event>> _eventTypesToKeyResolver;
+        readonly IDictionary<EventType, ValueProvider<AppendedEvent>> _eventTypesToKeyResolver;
 
         /// <inheritdoc/>
         public ProjectionId Identifier { get; }
@@ -78,13 +79,13 @@ namespace Aksio.Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
+        public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Metadata.Type));
 
         /// <inheritdoc/>
-        public IObservable<Event> FilterEventTypes(IObservable<Event> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Type));
+        public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Metadata.Type));
 
         /// <inheritdoc/>
-        public void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset)
+        public void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var context = new EventContext(@event, changeset);
             _subject.OnNext(context);
@@ -94,7 +95,7 @@ namespace Aksio.Cratis.Events.Projections
         public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(eventType);
 
         /// <inheritdoc/>
-        public ValueProvider<Event> GetKeyResolverFor(EventType eventType)
+        public ValueProvider<AppendedEvent> GetKeyResolverFor(EventType eventType)
         {
             ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];

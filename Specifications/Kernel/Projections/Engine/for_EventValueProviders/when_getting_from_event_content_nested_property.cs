@@ -3,13 +3,15 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Events.Store;
+using System.Text.Json.Nodes;
 
 namespace Aksio.Cratis.Events.Projections.for_EventValueProviders
 {
     public class when_getting_from_event_content_nested_property : Specification
     {
-        ValueProvider<Event> value_provider;
-        Event @event;
+        ValueProvider<AppendedEvent> value_provider;
+        AppendedEvent @event;
         object result;
 
         void Establish()
@@ -17,7 +19,7 @@ namespace Aksio.Cratis.Events.Projections.for_EventValueProviders
             dynamic content = new ExpandoObject();
             content.nested = new ExpandoObject();
             content.nested.sourceString = "Forty two";
-            @event = new Event(0, new  EventType("02405794-91e7-4e4f-8ad1-f043070ca297", 1), DateTimeOffset.UtcNow, "2f005aaf-2f4e-4a47-92ea-63687ef74bd4", content);
+            @event = new(new(0, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
             value_provider = EventValueProviders.FromEventContent("Nested.SourceString");
         }
 

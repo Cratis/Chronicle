@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections
@@ -69,14 +70,14 @@ namespace Aksio.Cratis.Events.Projections
         /// </summary>
         /// <param name="observable"><see cref="IObservable{Event}"/> to filter.</param>
         /// <returns>Filtered <see cref="IObservable{Event}"/>.</returns>
-        IObservable<Event> FilterEventTypes(IObservable<Event> observable);
+        IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable);
 
         /// <summary>
-        /// Provides the projection with a new <see cref="Event"/>.
+        /// Provides the projection with a new <see cref="AppendedEvent"/>.
         /// </summary>
-        /// <param name="event"><see cref="Event"/> to provide.</param>
+        /// <param name="event"><see cref="AppendedEvent"/> to provide.</param>
         /// <param name="changeset"><see cref="Changeset{Event, ExpandoObject}"/> being worked on.</param>
-        void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset);
+        void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset);
 
         /// <summary>
         /// Checks whether or not the projection will accept a specific event type.
@@ -90,6 +91,6 @@ namespace Aksio.Cratis.Events.Projections
         /// </summary>
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>
         /// <returns>The <see cref="ValueProvider{Event}"/>.</returns>
-        ValueProvider<Event> GetKeyResolverFor(EventType eventType);
+        ValueProvider<AppendedEvent> GetKeyResolverFor(EventType eventType);
     }
 }

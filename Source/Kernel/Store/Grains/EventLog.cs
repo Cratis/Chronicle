@@ -1,11 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
@@ -63,7 +63,7 @@ namespace Aksio.Cratis.Events.Store.Grains
             var appendedEvent = new AppendedEvent(
                 new EventMetadata(0, new EventType(Guid.Empty, EventGeneration.First)),
                 new EventContext(string.Empty, DateTimeOffset.UtcNow),
-                "{}");
+                (JsonNode.Parse("{}") as JsonObject)!);
 
             await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken());
             await WriteStateAsync();
@@ -78,12 +78,12 @@ namespace Aksio.Cratis.Events.Store.Grains
             try
             {
                 var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
-                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, JObject.Parse(content));
+                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, (JsonNode.Parse(content) as JsonObject)!);
 
                 var appendedEvent = new AppendedEvent(
                     new EventMetadata(State.SequenceNumber, eventType),
                     new EventContext(eventSourceId, DateTimeOffset.UtcNow),
-                    compliantEvent.ToString());
+                    compliantEvent);
 
                 await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));
             }

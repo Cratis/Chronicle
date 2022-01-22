@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying
 {
     public class when_handling_remove : given.an_observable_and_event_setup
     {
-        void Establish() => observable.RemovedWith(@event.Type);
+        void Establish() => observable.RemovedWith(@event.Metadata.Type);
 
         void Because() => observable.OnNext(event_context);
 

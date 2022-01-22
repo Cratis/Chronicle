@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.Events;
-using Newtonsoft.Json;
 
 namespace Aksio.Cratis.Integration
 {
@@ -22,7 +22,7 @@ namespace Aksio.Cratis.Integration
             // pipeline.Start();
 
             // if (result.HasInstance(eventSourceId)) return result.GetInstance(eventSourceId);
-            return JsonConvert.DeserializeObject<TModel>("{}")!;
+            return JsonSerializer.Deserialize<TModel>("{}")!;
         }
     }
 }

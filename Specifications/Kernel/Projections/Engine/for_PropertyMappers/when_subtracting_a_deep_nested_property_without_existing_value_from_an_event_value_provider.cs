@@ -2,22 +2,23 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections.for_PropertyMappers
 {
     public class when_subtracting_a_deep_nested_property_without_existing_value_from_an_event_value_provider : Specification
     {
-        PropertyMapper<Event, ExpandoObject> property_mapper;
-        Event @event;
+        PropertyMapper<AppendedEvent, ExpandoObject> property_mapper;
+        AppendedEvent @event;
         ExpandoObject result;
-        Event provided_event;
+        AppendedEvent provided_event;
 
         void Establish()
         {
-            dynamic content = new ExpandoObject();
             result = new();
-            @event = new Event(0, new  EventType("02405794-91e7-4e4f-8ad1-f043070ca297", 1), DateTimeOffset.UtcNow, "2f005aaf-2f4e-4a47-92ea-63687ef74bd4", content);
+            @event = new (new(0, new ("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
 
             property_mapper = PropertyMappers.SubtractWithEventValueProvider("deep.nested.property", _ =>
             {

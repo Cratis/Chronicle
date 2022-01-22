@@ -2,20 +2,20 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
-using Newtonsoft.Json.Linq;
+using System.Text.Json.Nodes;
 
 namespace Aksio.Cratis.Compliance.GDPR.for_PIICompliancePropertyValueHandler
 {
     public class when_applying : given.a_property_handler
     {
-        JToken input;
-        JToken result;
+        JsonNode input;
+        JsonNode result;
         string encrypted_string = "Hello";
         byte[] encrypted_bytes;
 
         void Establish()
         {
-            input = JToken.FromObject(42);
+            input = JsonValue.Create(42);
             encrypted_bytes = Encoding.UTF8.GetBytes(encrypted_string);
             encryption.Setup(_ => _.Encrypt(IsAny<byte[]>(), key)).Returns(encrypted_bytes);
         }

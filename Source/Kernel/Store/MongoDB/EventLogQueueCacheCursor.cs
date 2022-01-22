@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -55,7 +56,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
                     var metadata = new EventMetadata(_.SequenceNumber, new EventType(_.Type, EventGeneration.First));
                     var context = new EventContext(_.EventSourceId, _.Occurred);
                     var content = _.Content[EventGeneration.First.Value.ToString(CultureInfo.InvariantCulture)].ToJson();
-                    return new AppendedEvent(metadata, context, content);
+                    return new AppendedEvent(metadata, context, (JsonNode.Parse(content) as JsonObject)!);
                 }).ToArray();
 
                 if (appendedEvents.Length == 0)

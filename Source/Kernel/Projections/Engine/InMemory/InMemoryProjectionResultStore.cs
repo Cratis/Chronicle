@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Events.Store;
 
 namespace Aksio.Cratis.Events.Projections.InMemory
 {
@@ -56,7 +57,7 @@ namespace Aksio.Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset)
+        public Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var state = changeset.InitialState.Clone();
 

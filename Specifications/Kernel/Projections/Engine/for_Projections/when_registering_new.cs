@@ -7,7 +7,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projections
 {
     public class when_registering_new : given.no_projections
     {
-        IProjectionPipeline pipeline_registered;
+        IEnumerable<IProjectionPipeline> pipeline_registered;
 
         void Establish()
         {

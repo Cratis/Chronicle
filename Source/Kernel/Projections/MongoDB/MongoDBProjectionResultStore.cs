@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Strings;
@@ -75,7 +76,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset)
+        public async Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;
