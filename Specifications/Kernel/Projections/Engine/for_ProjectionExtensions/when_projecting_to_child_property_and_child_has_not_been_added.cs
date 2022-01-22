@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
@@ -11,8 +12,8 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying
         const string key = "42";
         PropertyPath children_property = "Children";
         PropertyPath identified_by_property = "Id";
-        ValueProvider<Event> key_resolver = (_) => key;
-        IEnumerable<PropertyMapper<Event, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<Event, ExpandoObject>>();
+        ValueProvider<AppendedEvent> key_resolver = (_) => key;
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<AppendedEvent, ExpandoObject>>();
 
         ExpandoObject child;
 

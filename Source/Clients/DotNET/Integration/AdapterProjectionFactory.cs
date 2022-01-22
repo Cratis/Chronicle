@@ -58,12 +58,7 @@ namespace Aksio.Cratis.Integration
             var pipelineDefinition = new ProjectionPipelineDefinition(
                 projectionDefinition.Identifier,
                 "c0c0196f-57e3-4860-9e3b-9823cf45df30", // Cratis default
-                new[]
-                {
-                        new ProjectionResultStoreDefinition(
-                            "dc8698c9-51a1-4217-aa02-d4803b25f8e1",
-                            "22202c41-2be1-4547-9c00-f0b1f797fd75") // MongoDB
-                });
+                Array.Empty<ProjectionResultStoreDefinition>());
 
             await projections.Register(projectionDefinition, pipelineDefinition);
 

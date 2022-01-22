@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.for_Projection
@@ -15,11 +17,11 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
         List<EventContext> observed_events;
         ExpandoObject initial_state;
 
-        Event first_event;
-        Changeset<Event, ExpandoObject> first_changeset;
+        AppendedEvent first_event;
+        Changeset<AppendedEvent, ExpandoObject> first_changeset;
 
-        Event second_event;
-        Changeset<Event, ExpandoObject> second_changeset;
+        AppendedEvent second_event;
+        Changeset<AppendedEvent, ExpandoObject> second_changeset;
 
         void Establish()
         {
@@ -28,6 +30,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 string.Empty,
                 string.Empty,
                 new Model(string.Empty, new JsonSchema()),
+                false,
+                true,
                 new[] {
                     new EventTypeWithKeyResolver(event_b, EventValueProviders.FromEventSourceId)
                 },
@@ -36,21 +40,10 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
             dynamic state = initial_state = new();
             state.Integer = 42;
 
-            first_event = new Event(
-                    0,
-                    event_a,
-                    DateTimeOffset.UtcNow,
-                    "30c1ebf5-cc30-4216-afed-e3e0aefa1316",
-                    new());
-
+            first_event = new(new(0, event_a), new("30c1ebf5-cc30-4216-afed-e3e0aefa1316", DateTimeOffset.UtcNow), new JsonObject());
             first_changeset = new(first_event, new());
 
-            second_event = new Event(
-                    0,
-                    event_b,
-                    DateTimeOffset.UtcNow,
-                    "30c1ebf5-cc30-4216-afed-e3e0aefa1316",
-                    new());
+            second_event = new(new(0, event_b), new("30c1ebf5-cc30-4216-afed-e3e0aefa1316", DateTimeOffset.UtcNow), new JsonObject());
             second_changeset = new(second_event, initial_state);
 
             observed_events = new();
@@ -64,7 +57,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
         }
 
         [Fact] void should_only_observe_one_event() => observed_events.Count.ShouldEqual(1);
-        [Fact] void should_observe_the_event_of_interest() => observed_events[0].Event.Type.ShouldEqual(event_b);
+        [Fact] void should_observe_the_event_of_interest() => observed_events[0].Event.Metadata.Type.ShouldEqual(event_b);
         [Fact] void should_pass_along_the_initial_state() => observed_events[0].Changeset.InitialState.ShouldEqual(initial_state);
     }
 }

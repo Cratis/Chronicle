@@ -7,6 +7,6 @@ namespace Aksio.Cratis.Events.Store
     /// Represents the metadata related to an event.
     /// </summary>
     /// <param name="SequenceNumber">The <see cref="EventLogSequenceNumber"/>.</param>
-    /// <param name="EventType">The <see cref="EventType"/>.</param>
-    public record EventMetadata(EventLogSequenceNumber SequenceNumber, EventType EventType);
+    /// <param name="Type">The <see cref="EventType"/>.</param>
+    public record EventMetadata(EventLogSequenceNumber SequenceNumber, EventType Type);
 }

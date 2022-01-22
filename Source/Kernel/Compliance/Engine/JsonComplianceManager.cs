@@ -1,9 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
-using Newtonsoft.Json.Linq;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Compliance
@@ -25,38 +26,41 @@ namespace Aksio.Cratis.Compliance
         }
 
         /// <inheritdoc/>
-        public async Task<JObject> Apply(JsonSchema schema, string identifier, JObject json)
+        public async Task<JsonObject> Apply(JsonSchema schema, string identifier, JsonObject json)
         {
-            var result = (json.DeepClone() as JObject)!;
+            var result = json.DeepClone();
             await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Apply(id, token));
             return result;
         }
 
         /// <inheritdoc/>
-        public async Task<JObject> Release(JsonSchema schema, string identifier, JObject json)
+        public async Task<JsonObject> Release(JsonSchema schema, string identifier, JsonObject json)
         {
-            var result = (json.DeepClone() as JObject)!;
+            var result = json.DeepClone();
             await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Release(id, token));
             return result;
         }
 
-        async Task HandleActionFor(JsonSchema schema, string identifier, JContainer json, Func<IJsonCompliancePropertyValueHandler, string, JToken, Task<JToken>> action)
+        async Task HandleActionFor(JsonSchema schema, string identifier, JsonObject json, Func<IJsonCompliancePropertyValueHandler, string, JsonNode, Task<JsonNode>> action)
         {
             var complianceMetadataForContainer = GetMetadata(schema);
-            foreach (var property in json.Children().Where(_ => _.Type == JTokenType.Property).Cast<JProperty>())
+            foreach (var (property, value) in json.ToArray())
             {
-                if (schema.Properties != default)
+                if (schema.Properties is not null && value is not null)
                 {
-                    var propertySchema = schema.Properties.Single(_ => _.Key == property.Name).Value;
+                    var propertySchema = schema.Properties.Single(_ => _.Key == property).Value;
                     foreach (var metadata in GetMetadata(propertySchema).Concat(complianceMetadataForContainer).DistinctBy(_ => _.metadataType))
                     {
                         if (_propertyValueHandlers.ContainsKey(metadata.metadataType))
                         {
-                            property.Value = await action(_propertyValueHandlers[metadata.metadataType], identifier, property.Value);
+                            json[property] = await action(_propertyValueHandlers[metadata.metadataType], identifier, value);
                         }
                     }
 
-                    await HandleActionFor(propertySchema, identifier, property, action);
+                    if (value is JsonObject)
+                    {
+                        await HandleActionFor(propertySchema, identifier, (value as JsonObject)!, action);
+                    }
                 }
             }
         }

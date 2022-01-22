@@ -68,9 +68,9 @@ namespace Aksio.Cratis.Events.Observation
         /// <returns>Awaitable task.</returns>
         public async Task OnNext(AppendedEvent @event)
         {
-            var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.EventType.Id);
+            var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
             var content = _eventSerializer.Deserialize(eventType, @event.Content);
-            await _observerInvoker.Invoke(content, @event.EventContext);
+            await _observerInvoker.Invoke(content, @event.Context);
         }
     }
 }

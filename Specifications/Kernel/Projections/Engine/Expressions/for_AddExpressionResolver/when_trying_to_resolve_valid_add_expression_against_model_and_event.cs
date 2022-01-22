@@ -2,13 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Events.Store;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.for_AddExpressionResolver
 {
     public class when_trying_to_resolve_valid_add_expression_against_model_and_event : Specification
     {
         AddExpressionResolver resolver;
-        Event @event;
+        AppendedEvent @event;
         ExpandoObject target;
 
 
@@ -18,7 +20,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.for_AddExpressionResolver
             var content = new ExpandoObject();
             dynamic contentAsDynamic = content;
             contentAsDynamic.sourceProperty = 42d;
-            @event = new Event(0, new("f0b3b624-faa7-4358-ade4-24e89ad067ce", 1), DateTimeOffset.UtcNow, "a258b980-b9e4-4b99-b44b-7c72f8633af7", content);
+            @event = new(new(1, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
             resolver = new();
         }
 

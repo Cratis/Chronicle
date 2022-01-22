@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Projections.Changes;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB
@@ -14,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
     public class MongoDBChangesetStorage : IChangesetStorage
     {
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets)
+        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets)
         {
             return Task.CompletedTask;
         }

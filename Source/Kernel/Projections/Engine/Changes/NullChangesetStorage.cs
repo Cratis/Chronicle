@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Events.Projections.Changes
@@ -13,6 +14,6 @@ namespace Aksio.Cratis.Events.Projections.Changes
     public class NullChangesetStorage : IChangesetStorage
     {
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets) => Task.CompletedTask;
+        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets) => Task.CompletedTask;
     }
 }

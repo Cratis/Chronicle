@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projections
         ProjectionId unregistered_projection_identifier = "793f9d99-bfcc-4d85-88f7-965beed001e7";
         ProjectionDefinition unregistered_projection_definition;
         ProjectionPipelineDefinition unregistered_pipeline_definition;
-        IProjectionPipeline pipeline_registered;
+        IEnumerable<IProjectionPipeline> pipeline_registered;
 
         Mock<IProjection> unregistered_projection;
         Mock<IProjectionPipeline> unregistered_pipeline;
@@ -23,6 +23,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projections
                 unregistered_projection_identifier,
                 "My Unregistered Projection",
                 new ModelDefinition("Some Model", "{}"),
+                false,
+                true,
                 new Dictionary<EventType, FromDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
                 null);

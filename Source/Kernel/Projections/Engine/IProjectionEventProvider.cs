@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Aksio.Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Events.Store;
 
 namespace Aksio.Cratis.Events.Projections
 {
@@ -27,7 +28,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <see cref="IProjection"/>. It will be in a state of catching up till its at the
         /// head of the stream. Once at the head, it will provide events as they occur.
         /// </remarks>
-        Task ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject);
+        Task ProvideFor(IProjectionPipeline pipeline, ISubject<AppendedEvent> subject);
 
         /// <summary>
         /// Get events from a specific sequence numbers.

@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Newtonsoft.Json.Linq;
+using System.Text.Json.Nodes;
 
 namespace Aksio.Cratis.Compliance.for_JsonComplianceManager
 {
@@ -9,17 +9,17 @@ namespace Aksio.Cratis.Compliance.for_JsonComplianceManager
     {
         const string identifier = "9ae5067b-2920-4c97-a263-efe35bec2b43";
         const string changed_value = "FortyTwo";
-        JObject result;
-        JToken property_value;
+        JsonObject result;
+        JsonNode property_value;
 
         void Establish()
         {
-            property_value = JToken.FromObject(changed_value);
-            value_handler.Setup(_ => _.Apply(identifier, IsAny<JToken>())).Returns(Task.FromResult(property_value));
+            property_value = JsonValue.Create(changed_value);
+            value_handler.Setup(_ => _.Apply(identifier, IsAny<JsonNode>())).Returns(Task.FromResult(property_value));
         }
 
         async Task Because() => result = await manager.Apply(schema, identifier, input);
 
-        [Fact] void should_return_instance_with_altered_property() => result.Properties().First().Value.ShouldEqual(property_value);
+        [Fact] void should_return_instance_with_altered_property() => result[property_name].ShouldEqual(property_value);
     }
 }

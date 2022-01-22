@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.Events.Projections.Definitions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using Aksio.Cratis.Json;
 
 namespace Aksio.Cratis.Events.Projections.Json
 {
@@ -12,30 +12,27 @@ namespace Aksio.Cratis.Events.Projections.Json
     /// </summary>
     public class JsonProjectionPipelineSerializer : IJsonProjectionPipelineSerializer
     {
-        readonly JsonSerializer _serializer;
+        readonly JsonSerializerOptions _serializerOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JsonProjectionPipelineSerializer"/>.
         /// </summary>
         public JsonProjectionPipelineSerializer()
         {
-            _serializer = new JsonSerializer
+            _serializerOptions = new()
             {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters =
+                {
+                    new ConceptAsJsonConverterFactory()
+                }
             };
-            _serializer.Converters.Add(new ConceptAsJsonConverter());
-            _serializer.Converters.Add(new ConceptAsDictionaryJsonConverter());
         }
 
         /// <inheritdoc/>
-        public string Serialize(ProjectionPipelineDefinition definition)
-        {
-            var writer = new StringWriter();
-            _serializer.Serialize(writer, definition);
-            return writer.ToString();
-        }
+        public string Serialize(ProjectionPipelineDefinition definition) => JsonSerializer.Serialize(definition, _serializerOptions);
 
         /// <inheritdoc/>
-        public ProjectionPipelineDefinition Deserialize(string json) => _serializer.Deserialize<ProjectionPipelineDefinition>(new JsonTextReader(new StringReader(json)))!;
+        public ProjectionPipelineDefinition Deserialize(string json) => JsonSerializer.Deserialize<ProjectionPipelineDefinition>(json, _serializerOptions)!;
     }
 }

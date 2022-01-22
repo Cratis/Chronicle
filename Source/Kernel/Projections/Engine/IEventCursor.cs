@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store;
+
 namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
@@ -17,7 +19,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Gets the current events, if any.
         /// </summary>
-        /// <returns>Collection of current <see cref="Event">events</see>.</returns>
-        IEnumerable<Event> Current { get; }
+        /// <returns>Collection of current <see cref="AppendedEvent">events</see>.</returns>
+        IEnumerable<AppendedEvent> Current { get; }
     }
 }

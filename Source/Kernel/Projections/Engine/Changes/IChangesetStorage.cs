@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Events.Projections.Changes
@@ -18,6 +19,6 @@ namespace Aksio.Cratis.Events.Projections.Changes
         /// <param name="correlationId"><see cref="CorrelationId"/> to save for.</param>
         /// <param name="associatedChangesets">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
         /// <returns>Async task.</returns>
-        Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets);
+        Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets);
     }
 }

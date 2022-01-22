@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Concepts.SystemJson;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Json;
 
 namespace Aksio.Cratis.Events
 {
@@ -29,7 +30,7 @@ namespace Aksio.Cratis.Events
         }
 
         /// <inheritdoc/>
-        public object Deserialize(Type type, string json) => JsonSerializer.Deserialize(json, type, _serializerOptions)!;
+        public object Deserialize(Type type, JsonObject json) => json.Deserialize(type, _serializerOptions)!;
 
         /// <inheritdoc/>
         public string Serialize(object @event) => JsonSerializer.Serialize(@event, _serializerOptions);

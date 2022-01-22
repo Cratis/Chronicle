@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Expressions;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 using NJsonSchema;
 
@@ -96,7 +97,7 @@ namespace Aksio.Cratis.Events.Projections
             return projection;
         }
 
-        (PropertyPath Property, ValueProvider<Event> KeyResolver) ResolveIdentifiedPropertyWithKeyResolver(PropertyPath identifiedByProperty, string? key)
+        (PropertyPath Property, ValueProvider<AppendedEvent> KeyResolver) ResolveIdentifiedPropertyWithKeyResolver(PropertyPath identifiedByProperty, string? key)
         {
             if (identifiedByProperty.IsRoot)
             {

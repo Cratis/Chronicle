@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
     public class ProjectionPipeline : IProjectionPipeline
     {
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> _resultStores = new();
-        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<Event>> _subjectsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<AppendedEvent>> _subjectsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
         readonly IProjectionPipelineHandler _handler;
         readonly IProjectionPipelineJobs _pipelineJobs;
@@ -207,7 +208,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         public void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
         {
             _resultStores[configurationId] = resultStore;
-            _subjectsPerConfiguration[configurationId] = new ReplaySubject<Event>();
+            _subjectsPerConfiguration[configurationId] = new ReplaySubject<AppendedEvent>();
             _handler.InitializeFor(this, configurationId);
         }
 

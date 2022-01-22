@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections
@@ -22,7 +23,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
         public static IObservable<EventContext> From(this IObservable<EventContext> observable, EventType eventType)
         {
-            return observable.Where(_ => _.Event.Type == eventType);
+            return observable.Where(_ => _.Event.Metadata.Type == eventType);
         }
 
         /// <summary>
@@ -38,8 +39,8 @@ namespace Aksio.Cratis.Events.Projections
             this IObservable<EventContext> observable,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
-            ValueProvider<Event> keyResolver,
-            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+            ValueProvider<AppendedEvent> keyResolver,
+            IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
         {
             observable.Subscribe(_ =>
             {
@@ -67,8 +68,8 @@ namespace Aksio.Cratis.Events.Projections
             this IObservable<EventContext> observable,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
-            ValueProvider<Event> keyResolver,
-            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+            ValueProvider<AppendedEvent> keyResolver,
+            IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
@@ -100,7 +101,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <returns>The observable for continuation.</returns>
         public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
         {
-            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.Remove());
+            observable.Where(_ => _.Event.Metadata.Type == eventType).Subscribe(_ => _.Changeset.Remove());
             return observable;
         }
 
@@ -112,7 +113,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <returns>The observable for continuation.</returns>
         public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType)
         {
-            return observable.Where(_ => _.Event.Type == eventType);
+            return observable.Where(_ => _.Event.Metadata.Type == eventType);
         }
     }
 }

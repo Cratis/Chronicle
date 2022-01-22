@@ -3,12 +3,13 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections.Expressions
 {
     /// <summary>
-    /// Represents a <see cref="IPropertyMapperExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="Event"/>.
+    /// Represents a <see cref="IPropertyMapperExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
     /// </summary>
     public class AddExpressionResolver : IPropertyMapperExpressionResolver
     {
@@ -18,7 +19,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions
         public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
 
         /// <inheritdoc/>
-        public PropertyMapper<Event, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
+        public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
         {
             var match = _regularExpression.Match(expression);
             return PropertyMappers.AddWithEventValueProvider(targetProperty, EventValueProviders.FromEventContent(match.Groups["property"].Value));

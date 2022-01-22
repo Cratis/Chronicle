@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
+
 namespace Aksio.Cratis.Events
 {
     /// <summary>
@@ -21,6 +23,6 @@ namespace Aksio.Cratis.Events
         /// <param name="type">Type to deserialize to.</param>
         /// <param name="json">JSON to deserialize.</param>
         /// <returns>Deserialized instance.</returns>
-        object Deserialize(Type type, string json);
+        object Deserialize(Type type, JsonObject json);
     }
 }

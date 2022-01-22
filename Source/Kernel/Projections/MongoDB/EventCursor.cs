@@ -1,12 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events.Schemas;
-using MongoDB.Bson.Serialization;
+using Aksio.Cratis.Events.Store;
 using MongoDB.Driver;
-using Newtonsoft.Json.Linq;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB
 {
@@ -20,7 +19,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         readonly IAsyncCursor<Store.MongoDB.Event>? _innerCursor;
 
         /// <inheritdoc/>
-        public IEnumerable<Event> Current { get; private set; } = Array.Empty<Event>();
+        public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventCursor"/> class.
@@ -49,24 +48,22 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
             }
             else
             {
-                Current = Array.Empty<Event>();
+                Current = Array.Empty<AppendedEvent>();
             }
             return result;
         }
 
-        async Task<Event> ConvertToCratis(Store.MongoDB.Event @event)
+        async Task<AppendedEvent> ConvertToCratis(Store.MongoDB.Event @event)
         {
             var eventType = new EventType(@event.Type, EventGeneration.First);
-            var content = @event.Content[EventGeneration.First.ToString()].ToString();
+            var content = (JsonNode.Parse(@event.Content[EventGeneration.First.ToString()].ToString()) as JsonObject)!;
             var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
-            var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventSourceId, JObject.Parse(content));
+            var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventSourceId, content);
 
-            return new Event(
-                @event.SequenceNumber,
-                eventType,
-                @event.Occurred,
-                @event.EventSourceId,
-                BsonSerializer.Deserialize<ExpandoObject>(releasedContent.ToString()!));
+            return new AppendedEvent(
+                new EventMetadata(@event.SequenceNumber, eventType),
+                new Store.EventContext(@event.EventSourceId, @event.Occurred),
+                releasedContent);
         }
     }
 }

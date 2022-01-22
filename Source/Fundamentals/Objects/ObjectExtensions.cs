@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Text.Json;
 using Aksio.Cratis.Properties;
-using Newtonsoft.Json;
 
 namespace Aksio.Cratis.Objects
 {
@@ -20,8 +20,8 @@ namespace Aksio.Cratis.Objects
         /// <returns>Cloned instance.</returns>
         public static T Clone<T>(this T source)
         {
-            var sourceAsString = JsonConvert.SerializeObject(source);
-            return JsonConvert.DeserializeObject<T>(sourceAsString)!;
+            var sourceAsString = JsonSerializer.Serialize(source);
+            return JsonSerializer.Deserialize<T>(sourceAsString)!;
         }
 
         /// <summary>

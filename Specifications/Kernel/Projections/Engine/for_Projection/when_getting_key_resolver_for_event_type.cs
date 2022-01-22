@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Events.Store;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.for_Projection
@@ -10,8 +11,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
     {
         static EventType event_type = new("993888cc-a9c5-4d56-ae21-f732159feec7", 1);
         Projection projection;
-        ValueProvider<Event> expected;
-        ValueProvider<Event> result;
+        ValueProvider<AppendedEvent> expected;
+        ValueProvider<AppendedEvent> result;
 
         void Establish()
         {
@@ -21,6 +22,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 string.Empty,
                 string.Empty,
                 new Model(string.Empty, new JsonSchema()),
+                false,
+                true,
                 new[] {
                     new EventTypeWithKeyResolver(event_type, expected)
                 },

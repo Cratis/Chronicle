@@ -8,7 +8,6 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
-using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
@@ -83,11 +82,11 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
                         return;
                     }
 
-                    var eventSchema = await _schemaStore.GetFor(@event.Metadata.EventType.Id, @event.Metadata.EventType.Generation);
-                    var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventContext.EventSourceId, JObject.Parse(@event.Content));
-                    var releasedEvent = new AppendedEvent(@event.Metadata, @event.EventContext, releasedContent.ToString());
+                    var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+                    var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.Context.EventSourceId, @event.Content);
+                    var releasedEvent = new AppendedEvent(@event.Metadata, @event.Context, releasedContent);
 
-                    var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.EventContext.EventSourceId);
+                    var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.Context.EventSourceId);
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
                     try
                     {

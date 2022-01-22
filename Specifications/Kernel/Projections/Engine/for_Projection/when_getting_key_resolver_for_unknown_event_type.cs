@@ -17,6 +17,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 string.Empty,
                 string.Empty,
                 new Model(string.Empty, new JsonSchema()),
+                false,
+                true,
                 Array.Empty<EventTypeWithKeyResolver>(),
                 Array.Empty<IProjection>());
         }

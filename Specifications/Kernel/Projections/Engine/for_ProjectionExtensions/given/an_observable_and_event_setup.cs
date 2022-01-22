@@ -3,7 +3,9 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
 
 namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
 {
@@ -12,21 +14,15 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
         protected Subject<EventContext> observable;
         protected List<EventContext> received = new();
         protected EventContext event_context;
-        protected Event @event;
-        protected Mock<IChangeset<Event, ExpandoObject>> changeset;
+        protected AppendedEvent @event;
+        protected Mock<IChangeset<AppendedEvent, ExpandoObject>> changeset;
         protected ExpandoObject initial_state;
 
         void Establish()
         {
             observable = new();
 
-            @event = new(
-                    1,
-                    new EventType("98949b84-ee1b-48d5-a486-c5adf0332028", 1),
-                    DateTimeOffset.UtcNow,
-                    "14b33c19-1311-4825-93f9-bedab9e7d5ee",
-                    new ExpandoObject());
-
+            @event = new(new(1, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
             initial_state = new();
             changeset = new();
             changeset.SetupGet(_ => _.InitialState).Returns(initial_state);

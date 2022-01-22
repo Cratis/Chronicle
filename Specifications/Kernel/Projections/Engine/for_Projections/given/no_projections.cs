@@ -37,6 +37,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projections.given
                 projection_identifier,
                 "My Projection",
                 new ModelDefinition("Some Model", "{}"),
+                false,
+                true,
                 new Dictionary<EventType, FromDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
                 null);
