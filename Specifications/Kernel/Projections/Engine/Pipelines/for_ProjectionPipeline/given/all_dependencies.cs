@@ -14,12 +14,17 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
         protected Mock<IProjectionPipelineHandler> pipeline_handler;
         protected Mock<IProjectionPipelineJobs> jobs;
         protected ISubject<AppendedEvent> subject;
+        protected ISubject<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> positions_per_configuration;
 
         void Establish()
         {
             event_provider = new();
             projection = new();
+            projection.SetupGet(_ => _.IsPassive).Returns(false);
+            projection.SetupGet(_ => _.IsRewindable).Returns(true);
             pipeline_handler = new();
+            positions_per_configuration = new Subject<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>>();
+            pipeline_handler.SetupGet(_ => _.Positions).Returns(positions_per_configuration);
             jobs = new();
             subject = new Subject<AppendedEvent>();
         }

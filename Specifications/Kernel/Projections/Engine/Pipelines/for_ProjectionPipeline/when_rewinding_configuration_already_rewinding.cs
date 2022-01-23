@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline
         TaskCompletionSource tcs;
         Mock<IProjectionPositions> positions;
 
-        void Establish()
+        async Task Establish()
         {
             tcs = new();
             started_jobs = new();
@@ -23,12 +23,13 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline
             positions = new();
             rewind_step = new(pipeline, positions.Object, configuration, Mock.Of<ILogger<Rewind>>());
             pipeline.Jobs.Added.Subscribe(_ => started_jobs.Add(_));
-            pipeline.Start();
+            await pipeline.Start();
             states.Clear();
             job.Setup(_ => _.Run()).Returns(tcs.Task);
             job.SetupGet(_ => _.Name).Returns(ProjectionPipelineJobs.RewindJob);
             job.SetupGet(_ => _.Steps).Returns(new[] { rewind_step });
             jobs.Setup(_ => _.Rewind(pipeline, configuration)).Returns(job.Object);
+#pragma warning disable CS4014 // We're not waiting for the first rewind - we're just looking to see if the second rewind is rejected or not.
             pipeline.Rewind(configuration);
         }
 
