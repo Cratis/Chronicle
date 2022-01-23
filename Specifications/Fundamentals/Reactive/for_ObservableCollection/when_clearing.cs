@@ -23,7 +23,8 @@ namespace Aksio.Cratis.Reactive.for_ObservableCollection
 
         [Fact] void should_trigger_cleared_event() => clear_called.ShouldBeTrue();
         [Fact] void should_clear_the_collection() => collection.ShouldBeEmpty();
-        [Fact] void should_have_first_change_with_item() => changes[0].ShouldContainOnly("something");
-        [Fact] void should_have_second_change_as_empty() => changes[1].ShouldBeEmpty();
+        [Fact] void should_have_first_change_be_empty() => changes[0].ShouldBeEmpty();
+        [Fact] void should_have_second_change_with_item() => changes[1].ShouldContainOnly("something");
+        [Fact] void should_have_third_change_as_empty() => changes[2].ShouldBeEmpty();
     }
 }
