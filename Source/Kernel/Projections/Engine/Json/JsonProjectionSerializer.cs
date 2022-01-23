@@ -26,6 +26,9 @@ namespace Aksio.Cratis.Events.Projections.Json
                 Converters =
                 {
                     new PropertyPathJsonConverter(),
+                    new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
+                    new PropertyExpressionDictionaryConverter(),
+                    new FromDefinitionsConverter(),
                     new ConceptAsJsonConverterFactory()
                 }
             };
