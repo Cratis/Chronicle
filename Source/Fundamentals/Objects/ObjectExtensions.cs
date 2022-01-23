@@ -1,8 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Objects
@@ -20,6 +22,11 @@ namespace Aksio.Cratis.Objects
         /// <returns>Cloned instance.</returns>
         public static T Clone<T>(this T source)
         {
+            if (source is ExpandoObject expandoObject)
+            {
+                return (T)(object)ExpandoObjectExtensions.Clone(expandoObject);
+            }
+
             var sourceAsString = JsonSerializer.Serialize(source);
             return JsonSerializer.Deserialize<T>(sourceAsString)!;
         }
