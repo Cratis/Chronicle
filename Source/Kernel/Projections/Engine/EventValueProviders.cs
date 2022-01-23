@@ -32,7 +32,10 @@ namespace Aksio.Cratis.Events.Projections
                 foreach (var property in sourceProperty.Segments)
                 {
                     var value = currentSource![property];
-                    sourceValue = value;
+                    if (value is JsonValue jsonValue)
+                    {
+                        jsonValue.TryGetValue(out sourceValue);
+                    }
                     currentSource = value;
                 }
 
