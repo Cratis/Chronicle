@@ -6,7 +6,7 @@
         <Autofac>6.2.0</Autofac>
         <AutofacExtensions>7.1.0</AutofacExtensions>
         <Orleans>3.5.1</Orleans>
-        <MongoDB>2.13.1</MongoDB>
+        <MongoDB>2.14.1</MongoDB>
         <ServiceModelPrimitives>4.8.1</ServiceModelPrimitives>
         <Humanizer>2.11.10</Humanizer>
         <Swashbuckle>6.2.3</Swashbuckle>
