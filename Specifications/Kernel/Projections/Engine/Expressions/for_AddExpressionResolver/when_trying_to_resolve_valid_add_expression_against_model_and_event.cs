@@ -17,10 +17,11 @@ namespace Aksio.Cratis.Events.Projections.Expressions.for_AddExpressionResolver
         void Establish()
         {
             target = new();
-            var content = new ExpandoObject();
-            dynamic contentAsDynamic = content;
-            contentAsDynamic.sourceProperty = 42d;
-            @event = new(new(1, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
+            var content = new JsonObject
+            {
+                ["sourceProperty"] = 42d
+            };
+            @event = new(new(1, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), content);
             resolver = new();
         }
 

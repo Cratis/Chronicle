@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projections
         ProjectionId unregistered_projection_identifier = "793f9d99-bfcc-4d85-88f7-965beed001e7";
         ProjectionDefinition unregistered_projection_definition;
         ProjectionPipelineDefinition unregistered_pipeline_definition;
-        IEnumerable<IProjectionPipeline> pipeline_registered;
+        IEnumerable<IProjectionPipeline> pipelines_registered;
 
         Mock<IProjection> unregistered_projection;
         Mock<IProjectionPipeline> unregistered_pipeline;
@@ -47,14 +47,14 @@ namespace Aksio.Cratis.Events.Projections.for_Projections
             projection_factory.Setup(_ => _.CreateFrom(unregistered_projection_definition)).Returns(Task.FromResult(unregistered_projection.Object));
             pipeline_factory.Setup(_ => _.CreateFrom(unregistered_projection.Object, unregistered_pipeline_definition)).Returns(unregistered_pipeline.Object);
 
-            projections.Pipelines.Subscribe(_ => pipeline_registered = _);
+            projections.Pipelines.Subscribe(_ => pipelines_registered = _);
         }
 
         async Task Because() => await projections.Start();
 
         [Fact] void should_register_projection_definition() => projection_definitions.Verify(_ => _.Register(unregistered_projection_definition), Once());
         [Fact] void should_register_pipeline_definition() => pipeline_definitions.Verify(_ => _.Register(unregistered_pipeline_definition), Once());
-        [Fact] void should_make_pipeline_the_next_in_observable() => pipeline_registered.ShouldEqual(unregistered_pipeline.Object);
+        [Fact] void should_make_pipeline_the_next_in_observable() => pipelines_registered.ShouldContain(unregistered_pipeline.Object);
         [Fact] void should_register_pipeline() => projections.GetPipelines().ToArray().ShouldContain(unregistered_pipeline.Object);
     }
 }

@@ -30,6 +30,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projections.given
 
             projection = new();
             projection.SetupGet(_ => _.Identifier).Returns(projection_identifier);
+            projection.SetupGet(_ => _.IsPassive).Returns(false);
+            projection.SetupGet(_ => _.IsRewindable).Returns(true);
             pipeline = new();
             pipeline.SetupGet(_ => _.Projection).Returns(projection.Object);
 
