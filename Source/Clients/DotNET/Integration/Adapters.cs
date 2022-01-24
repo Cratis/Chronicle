@@ -14,25 +14,7 @@ namespace Aksio.Cratis.Integration
     [Singleton]
     public class Adapters : IAdapters
     {
-        static class AdaptersByKey<TModel, TExternalModel>
-        {
-#pragma warning disable CS0649 // We're assigning using reflection
-            public static IAdapterFor<TModel, TExternalModel>? Adapter;
-            public static IAdapterProjectionFor<TModel>? Projection;
-            public static IMapper? Mapper;
-
-            public static async Task Initialize(
-                Type adapterType,
-                IServiceProvider serviceProvider,
-                IAdapterProjectionFactory adapterProjectionFactory,
-                IAdapterMapperFactory adapterMapperFactory)
-            {
-                Adapter = serviceProvider.GetService(adapterType) as IAdapterFor<TModel, TExternalModel>;
-                Projection = await adapterProjectionFactory.CreateFor(Adapter!);
-                Mapper = adapterMapperFactory.CreateFor(Adapter!);
-            }
-        }
-
+        readonly Dictionary<AdapterKey, object> _artifacts = new();
         readonly ITypes _types;
         readonly IServiceProvider _serviceProvider;
         readonly IAdapterProjectionFactory _adapterProjectionFactory;
@@ -60,50 +42,46 @@ namespace Aksio.Cratis.Integration
         /// <inheritdoc/>
         public async Task Initialize()
         {
-            var adaptersByKeyType = typeof(AdaptersByKey<,>);
-
-            var adapter = _types.All.SingleOrDefault(_ => _.Name == "AccountHolderDetailsAdapter");
-            Console.WriteLine(adapter);
-
+            var adapterArtifactsGenericType = typeof(AdapterArtifacts<,>);
             foreach (var adapterType in _types.FindMultiple(typeof(IAdapterFor<,>)))
             {
                 var adapterInterface = adapterType.GetInterface(typeof(IAdapterFor<,>).Name)!;
-                var adaptersByKey = adaptersByKeyType.MakeGenericType(adapterInterface.GenericTypeArguments);
-                var method = adaptersByKey.GetMethod(nameof(AdaptersByKey<object, object>.Initialize), BindingFlags.Public | BindingFlags.Static);
-                await (method!.Invoke(null, new object[]
-                {
-                    adapterType,
-                    _serviceProvider,
-                    _adapterProjectionFactory,
-                    _adapterMapperFactory
-                }) as Task)!;
+                var adapterArtifactsType = adapterArtifactsGenericType.MakeGenericType(adapterInterface.GenericTypeArguments);
+                var key = new AdapterKey(adapterInterface.GenericTypeArguments[0], adapterInterface.GenericTypeArguments[1]);
+                var artifacts = Activator.CreateInstance(adapterArtifactsType, adapterType, _serviceProvider, _adapterProjectionFactory, _adapterMapperFactory);
+                var method = adapterArtifactsType.GetMethod(nameof(AdapterArtifacts<object, object>.Initialize), BindingFlags.Public | BindingFlags.Instance);
+                await (method!.Invoke(artifacts, Array.Empty<object>()) as Task)!;
+                _artifacts[key] = artifacts!;
             }
         }
 
         /// <inheritdoc/>
         public IAdapterFor<TModel, TExternalModel> GetFor<TModel, TExternalModel>()
         {
-            ThrowIfMissingAdapterForModelAndExternalModel<TModel, TExternalModel>();
-            return AdaptersByKey<TModel, TExternalModel>.Adapter!;
+            return GetArtifactsFor<TModel, TExternalModel>().Adapter!;
         }
 
         /// <inheritdoc/>
         public IAdapterProjectionFor<TModel> GetProjectionFor<TModel, TExternalModel>()
         {
-            ThrowIfMissingAdapterForModelAndExternalModel<TModel, TExternalModel>();
-            return AdaptersByKey<TModel, TExternalModel>.Projection!;
+            return GetArtifactsFor<TModel, TExternalModel>().Projection!;
         }
 
         /// <inheritdoc/>
         public IMapper GetMapperFor<TModel, TExternalModel>()
         {
+            return GetArtifactsFor<TModel, TExternalModel>().Mapper!;
+        }
+
+        AdapterArtifacts<TModel, TExternalModel> GetArtifactsFor<TModel, TExternalModel>()
+        {
             ThrowIfMissingAdapterForModelAndExternalModel<TModel, TExternalModel>();
-            return AdaptersByKey<TModel, TExternalModel>.Mapper!;
+            return (AdapterArtifacts<TModel, TExternalModel>)_artifacts[new(typeof(TModel), typeof(TExternalModel))];
         }
 
         void ThrowIfMissingAdapterForModelAndExternalModel<TModel, TExternalModel>()
         {
-            if (AdaptersByKey<TModel, TExternalModel>.Adapter is null)
+            if (!_artifacts.ContainsKey(new(typeof(TModel), typeof(TExternalModel))))
             {
                 throw new MissingAdapterForModelAndExternalModel(typeof(TModel), typeof(TExternalModel));
             }
