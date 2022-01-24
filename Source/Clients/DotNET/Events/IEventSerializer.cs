@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events
         /// </summary>
         /// <param name="event">The event instance to serialize.</param>
         /// <returns>Serialized JSON.</returns>
-        string Serialize(object @event);
+        JsonObject Serialize(object @event);
 
         /// <summary>
         /// Deserialize a JSON representation of an event to a specific type.
