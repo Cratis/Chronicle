@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Orleans;
 
 namespace Aksio.Cratis.Events.Store.Grains
@@ -23,7 +24,7 @@ namespace Aksio.Cratis.Events.Store.Grains
         /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
         /// <param name="content">The JSON payload of the event.</param>
         /// <returns>Awaitable <see cref="Task"/>.</returns>
-        Task Append(EventSourceId eventSourceId, EventType eventType, string content);
+        Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content);
 
         /// <summary>
         /// Compensate a specific event in the event store.
