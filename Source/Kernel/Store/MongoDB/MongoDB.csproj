@@ -6,6 +6,8 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj" />
+        <ProjectReference Include="../../../Fundamentals/Fundamentals.csproj" />
+        <ProjectReference Include="../../Compliance/Engine/Engine.csproj" />
         <ProjectReference Include="../../MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../Shared/Shared.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
