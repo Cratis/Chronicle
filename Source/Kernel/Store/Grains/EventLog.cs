@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Store.EventLogs;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans;

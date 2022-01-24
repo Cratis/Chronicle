@@ -4,10 +4,9 @@
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events.Schemas;
-using Aksio.Cratis.Events.Store;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventCursor"/> for handling events from event log.
@@ -16,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
     {
         readonly ISchemaStore _schemaStore;
         readonly IJsonComplianceManager _jsonComplianceManager;
-        readonly IAsyncCursor<Store.MongoDB.Event>? _innerCursor;
+        readonly IAsyncCursor<Event>? _innerCursor;
 
         /// <inheritdoc/>
         public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();
@@ -30,7 +29,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         public EventCursor(
             ISchemaStore schemaStore,
             IJsonComplianceManager jsonComplianceManager,
-            IAsyncCursor<Store.MongoDB.Event>? innerCursor)
+            IAsyncCursor<Event>? innerCursor)
         {
             _schemaStore = schemaStore;
             _jsonComplianceManager = jsonComplianceManager;
@@ -53,7 +52,13 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
             return result;
         }
 
-        async Task<AppendedEvent> ConvertToCratis(Store.MongoDB.Event @event)
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            _innerCursor?.Dispose();
+        }
+
+        async Task<AppendedEvent> ConvertToCratis(Event @event)
         {
             var eventType = new EventType(@event.Type, EventGeneration.First);
             var content = (JsonNode.Parse(@event.Content[EventGeneration.First.ToString()].ToString()) as JsonObject)!;
@@ -62,7 +67,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
             return new AppendedEvent(
                 new EventMetadata(@event.SequenceNumber, eventType),
-                new Store.EventContext(@event.EventSourceId, @event.Occurred),
+                new EventContext(@event.EventSourceId, @event.Occurred),
                 releasedContent);
         }
     }

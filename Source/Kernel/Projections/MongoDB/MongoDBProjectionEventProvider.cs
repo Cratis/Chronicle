@@ -7,7 +7,7 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.Grains;
+using Aksio.Cratis.Events.Store.EventLogs;
 using Aksio.Cratis.Events.Store.MongoDB;
 using Aksio.Cratis.Execution;
 using MongoDB.Driver;
@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
     /// </summary>
     public class MongoDBProjectionEventProvider : IProjectionEventProvider
     {
-        readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+        readonly IEventLogStorageProvider _eventLogStorageProvider;
         readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IProjectionPositions> _positionsProvider;
         readonly ISchemaStore _schemaStore;
@@ -34,21 +34,21 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionEventProvider"/> class.
         /// </summary>
-        /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+        /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
         /// <param name="positionsProvider">Provider for <see cref="IProjectionPositions"/>.</param>
         /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
         /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="clusterClient"><see cref="IClusterClient"/> for working with the Orleans cluster.</param>
         public MongoDBProjectionEventProvider(
-            ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+            IEventLogStorageProvider eventLogStorageProvider,
             IExecutionContextManager executionContextManager,
             ProviderFor<IProjectionPositions> positionsProvider,
             ISchemaStore schemaStore,
             IJsonComplianceManager jsonComplianceManager,
             IClusterClient clusterClient)
         {
-            _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+            _eventLogStorageProvider = eventLogStorageProvider;
             _executionContextManager = executionContextManager;
             _positionsProvider = positionsProvider;
             _schemaStore = schemaStore;
@@ -64,24 +64,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 return new EventCursor(_schemaStore, _jsonComplianceManager, null);
             }
 
-            var collection = _eventStoreDatabaseProvider().GetEventLogCollectionFor(EventLogId.Default);
-
-            var offsetFilter = Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start);
-            var eventTypeFilters = projection.EventTypes.Select(_ =>
-                                        Builders<Event>.Filter.Eq(_ => _.Type, _.Id)).ToArray() ?? Array.Empty<FilterDefinition<Event>>();
-
-            var filter = Builders<Event>.Filter.And(
-                offsetFilter,
-                Builders<Event>.Filter.Or(eventTypeFilters));
-
-            var cursor = await collection.FindAsync(
-                filter,
-                new()
-                {
-                    Sort = Builders<Event>.Sort.Ascending(_ => _.SequenceNumber)
-                });
-
-            return new EventCursor(_schemaStore, _jsonComplianceManager, cursor);
+            return await _eventLogStorageProvider.GetFromSequenceNumber(start, eventTypes: projection.EventTypes);
         }
 
         /// <inheritdoc/>
