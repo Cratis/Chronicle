@@ -26,9 +26,9 @@ namespace Aksio.Cratis.Events
         }
 
         /// <inheritdoc/>
-        public async Task Append<T>(EventSourceId eventSourceId, T @event)
+        public async Task Append(EventSourceId eventSourceId, object @event)
         {
-            var eventType = _eventTypes.GetEventTypeFor(typeof(T));
+            var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
             var json = _serializer.Serialize(@event!);
             await _eventLog.Append(eventSourceId, eventType, json);
         }
