@@ -32,7 +32,7 @@ namespace Aksio.Cratis.Events.Projections
                 definition,
                 PropertyPath.Root,
                 PropertyPath.Root,
-                $"Root({definition.Identifier})",
+                ProjectionPath.GetRootFor(definition.Identifier),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
                 _ => { });
 
