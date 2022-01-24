@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Events.Projections
     public interface IProjectionFor<TModel>
     {
         /// <summary>
+        /// Gets the unique identifier of the projection.
+        /// </summary>
+        ProjectionId Identifier { get; }
+
+        /// <summary>
         /// Defines the projection.
         /// </summary>
         /// <param name="builder"><see cref="IProjectionBuilderFor{TModel}"/> to use for building the definition.</param>

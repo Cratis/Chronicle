@@ -5,9 +5,10 @@ using Events.AccountHolders;
 
 namespace Read.AccountHolders
 {
-    [Projection("4e53ba3f-c7bc-4129-a727-867a267b0941")]
     public class AccountHolderProjection : IProjectionFor<AccountHolder>
     {
+        public ProjectionId Identifier => "4e53ba3f-c7bc-4129-a727-867a267b0941";
+
         public void Define(IProjectionBuilderFor<AccountHolder> builder) => builder
             .From<AccountHolderRegistered>(_ => _
                 .Set(m => m.FirstName).To(ev => ev.FirstName)

@@ -89,9 +89,10 @@ Known types:
 ## CSharp
 
 ```csharp
-[Projection("610bbd9c-4024-40db-8bd2-38ea1481904d)]
 public class MyProjection : IProjectionFor<MyModel>
 {
+    public ProjectionId Identifier => "610bbd9c-4024-40db-8bd2-38ea1481904d";
+
     public void Define(IProjectionBuilderFor<MyModel> builder)
     {
         builder

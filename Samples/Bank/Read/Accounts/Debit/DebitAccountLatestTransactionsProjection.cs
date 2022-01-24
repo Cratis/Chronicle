@@ -7,9 +7,10 @@ using Events.Accounts.Debit;
 
 namespace Read.Accounts.Debit
 {
-    [Projection("d661904f-15e0-4a96-a0cc-c7389635e4cd")]
     public class DebitAccountLatestTransactionsProjection : IProjectionFor<DebitAccountLatestTransactions>
     {
+        public ProjectionId Identifier => "d661904f-15e0-4a96-a0cc-c7389635e4cd";
+
         public void Define(IProjectionBuilderFor<DebitAccountLatestTransactions> builder) =>
             builder
                 .Children(_ => _.Transactions, _ => _
