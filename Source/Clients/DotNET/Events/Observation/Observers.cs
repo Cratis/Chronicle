@@ -29,6 +29,7 @@ namespace Aksio.Cratis.Events.Observation
         /// <param name="connectionManager"><see cref="IConnectionManager"/> for getting current connection information.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
         /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
+        /// <param name="middlewares"><see cref="IObserverMiddlewares"/> to call.</param>
         /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
         /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
@@ -37,6 +38,7 @@ namespace Aksio.Cratis.Events.Observation
             IConnectionManager connectionManager,
             IExecutionContextManager executionContextManager,
             IServiceProvider serviceProvider,
+            IObserverMiddlewares middlewares,
             IEventTypes eventTypes,
             IEventSerializer eventSerializer,
             ITypes types)
@@ -50,7 +52,7 @@ namespace Aksio.Cratis.Events.Observation
                                         _.FullName ?? $"{_.Namespace}.{_.Name}",
                                         observer.EventLogId,
                                         eventTypes,
-                                        new ObserverInvoker(serviceProvider, eventTypes, _),
+                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, _),
                                         eventSerializer);
                                 });
             _clusterClient = clusterClient;
