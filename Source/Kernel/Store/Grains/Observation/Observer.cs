@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Store.EventLogs;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;

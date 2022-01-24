@@ -10,6 +10,8 @@ using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.MongoDB;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.MongoDB;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -37,6 +39,7 @@ namespace Aksio.Cratis.Server
                         .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
                         .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
                         .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
+                        .AddSingleton<IEventLogStorageProvider, MongoDBEventLogStorageProvider>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
                         .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
