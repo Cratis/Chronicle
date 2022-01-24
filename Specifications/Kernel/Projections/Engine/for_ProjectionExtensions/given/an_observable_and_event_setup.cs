@@ -11,9 +11,9 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
 {
     public class an_observable_and_event_setup : Specification
     {
-        protected Subject<EventContext> observable;
-        protected List<EventContext> received = new();
-        protected EventContext event_context;
+        protected Subject<ProjectionEventContext> observable;
+        protected List<ProjectionEventContext> received = new();
+        protected ProjectionEventContext event_context;
         protected AppendedEvent @event;
         protected Mock<IChangeset<AppendedEvent, ExpandoObject>> changeset;
         protected ExpandoObject initial_state;
