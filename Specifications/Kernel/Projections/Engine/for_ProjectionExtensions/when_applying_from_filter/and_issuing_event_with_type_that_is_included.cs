@@ -1,11 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store;
+
 namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
 {
     public class and_issuing_event_with_type_that_is_included : given.an_observable_and_event_setup
     {
-        IObservable<EventContext> filtered;
+        IObservable<ProjectionEventContext> filtered;
 
         void Establish()
         {

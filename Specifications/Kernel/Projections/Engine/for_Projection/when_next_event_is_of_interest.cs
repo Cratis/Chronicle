@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
         static EventType event_a = new("05c2799e-e3ad-43b6-87bb-9fecb0b4e147", 1);
         static EventType event_b = new("4212376e-dd74-44f4-8ed4-1b7fe314d208", 1);
         Projection projection;
-        List<EventContext> observed_events;
+        List<ProjectionEventContext> observed_events;
         ExpandoObject initial_state;
 
         AppendedEvent first_event;
