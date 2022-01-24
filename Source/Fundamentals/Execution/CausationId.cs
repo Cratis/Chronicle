@@ -12,6 +12,11 @@ namespace Aksio.Cratis.Execution
     public record CausationId(string Value) : ConceptAs<string>(Value)
     {
         /// <summary>
+        /// Represents a system cause.
+        /// </summary>
+        public static readonly CausationId System = "System";
+
+        /// <summary>
         /// Implicitly convert from <see cref="string"/> to <see cref="CausationId"/>.
         /// </summary>
         /// <param name="id"><see cref="string"/> to convert from.</param>
