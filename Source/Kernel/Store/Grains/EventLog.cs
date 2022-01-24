@@ -71,7 +71,7 @@ namespace Aksio.Cratis.Events.Store.Grains
         }
 
         /// <inheritdoc/>
-        public async Task Append(EventSourceId eventSourceId, EventType eventType, string content)
+        public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
         {
             _logger.Appending(eventType, eventSourceId, State.SequenceNumber, _eventLogId);
 
@@ -79,7 +79,7 @@ namespace Aksio.Cratis.Events.Store.Grains
             try
             {
                 var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
-                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, (JsonNode.Parse(content) as JsonObject)!);
+                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, content);
 
                 var appendedEvent = new AppendedEvent(
                     new EventMetadata(State.SequenceNumber, eventType),
