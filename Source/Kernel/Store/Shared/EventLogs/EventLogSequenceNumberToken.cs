@@ -4,7 +4,7 @@
 using System.Globalization;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.Grains
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Stream sequence token that tracks sequence number and event index.

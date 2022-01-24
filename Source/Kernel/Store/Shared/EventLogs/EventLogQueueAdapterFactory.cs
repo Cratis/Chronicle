@@ -6,7 +6,7 @@ using Aksio.Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Represents an implementation of <see cref="IQueueAdapterFactory"/> for our persistent event store.
@@ -24,15 +24,15 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         /// <param name="name">Name of stream.</param>
         /// <param name="eventLogsProvder">Provider for <see cref="IEventLogs"/>.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-        /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> for working with the database.</param>
+        /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
         public EventLogQueueAdapterFactory(
             string name,
             ProviderFor<IEventLogs> eventLogsProvder,
             IExecutionContextManager executionContextManager,
-            IEventStoreDatabase eventStoreDatabase)
+            IEventLogStorageProvider eventLogStorageProvider)
         {
             _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-            _cache = new EventLogQueueAdapterCache(executionContextManager, eventStoreDatabase);
+            _cache = new EventLogQueueAdapterCache(executionContextManager, eventLogStorageProvider);
             _name = name;
             _eventLogsProvder = eventLogsProvder;
         }
@@ -49,7 +49,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
                 name,
                 serviceProvider.GetService<ProviderFor<IEventLogs>>()!,
                 serviceProvider.GetService<IExecutionContextManager>()!,
-                serviceProvider.GetService<IEventStoreDatabase>()!);
+                serviceProvider.GetService<IEventLogStorageProvider>()!);
         }
 
         /// <inheritdoc/>

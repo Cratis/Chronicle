@@ -1,12 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.Grains;
 using Aksio.Cratis.Execution;
-using MongoDB.Driver;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Represents an implementation of <see cref="IQueueCache"/> for MongoDB event log.
@@ -14,19 +12,19 @@ namespace Aksio.Cratis.Events.Store.MongoDB
     public class EventLogQueueCache : IQueueCache
     {
         readonly IExecutionContextManager _executionContextManager;
-        readonly IEventStoreDatabase _eventStoreDatabase;
+        readonly IEventLogStorageProvider _eventLogStorageProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueCache"/> class.
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-        /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
+        /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
         public EventLogQueueCache(
             IExecutionContextManager executionContextManager,
-            IEventStoreDatabase eventStoreDatabase)
+            IEventLogStorageProvider eventLogStorageProvider)
         {
             _executionContextManager = executionContextManager;
-            _eventStoreDatabase = eventStoreDatabase;
+            _eventLogStorageProvider = eventLogStorageProvider;
         }
 
         /// <inheritdoc/>
@@ -39,14 +37,13 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         {
             var tenantId = (TenantId)streamIdentity.Namespace;
             _executionContextManager.Establish(tenantId, CorrelationId.New());
-            var collection = _eventStoreDatabase.GetEventLogCollectionFor(streamIdentity.Guid);
 
             if (token is EventLogSequenceNumberTokenWithFilter tokenWithFilter)
             {
-                return new EventLogQueueCacheCursor(collection, streamIdentity, token, tokenWithFilter.EventTypes, tokenWithFilter.Partition);
+                return new EventLogQueueCacheCursor(_eventLogStorageProvider, streamIdentity, token, tokenWithFilter.EventTypes, tokenWithFilter.Partition);
             }
 
-            return new EventLogQueueCacheCursor(collection, streamIdentity, token);
+            return new EventLogQueueCacheCursor(_eventLogStorageProvider, streamIdentity, token);
         }
 
         /// <inheritdoc/>

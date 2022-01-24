@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using Aksio.Cratis.DependencyInversion;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Represents an implementation of <see cref="IQueueAdapter"/> for MongoDB event log.

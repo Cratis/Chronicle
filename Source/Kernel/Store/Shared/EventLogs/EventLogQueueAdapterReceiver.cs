@@ -6,7 +6,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Represents an implementation of <see cref="EventLogQueueAdapterReceiver"/> for MongoDB event log.

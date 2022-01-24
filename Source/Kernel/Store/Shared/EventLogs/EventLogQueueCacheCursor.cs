@@ -1,42 +1,38 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
-using System.Text.Json.Nodes;
 using Aksio.Cratis.Extensions.Orleans.Execution;
-using MongoDB.Bson;
-using MongoDB.Driver;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Represents an implementation of <see cref="IQueueCacheCursor"/> for MongoDB event log.
     /// </summary>
     public class EventLogQueueCacheCursor : IQueueCacheCursor
     {
-        readonly IMongoCollection<Event> _collection;
+        readonly IEventLogStorageProvider _eventLogStorageProvider;
         readonly IStreamIdentity _streamIdentity;
         readonly IEnumerable<EventType> _eventTypes;
         readonly EventSourceId? _partition;
-        IAsyncCursor<Event>? _cursor;
+        IEventCursor? _cursor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueCacheCursor"/>.
         /// </summary>
-        /// <param name="collection"><see cref="IMongoCollection{T}"/> to use for getting events from the event log.</param>
+        /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
         /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
         /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
         /// <param name="eventTypes">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
         /// <param name="partition">Optional <see cref="EventSourceId"/> partition to filter for.</param>
         public EventLogQueueCacheCursor(
-            IMongoCollection<Event> collection,
+            IEventLogStorageProvider eventLogStorageProvider,
             IStreamIdentity streamIdentity,
             StreamSequenceToken token,
             IEnumerable<EventType>? eventTypes = default,
             EventSourceId? partition = default)
         {
-            _collection = collection;
+            _eventLogStorageProvider = eventLogStorageProvider;
             _streamIdentity = streamIdentity;
             _eventTypes = eventTypes ?? Array.Empty<EventType>();
             _partition = partition;
@@ -51,14 +47,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
 
             try
             {
-                var appendedEvents = _cursor.Current.Select(_ =>
-                {
-                    var metadata = new EventMetadata(_.SequenceNumber, new EventType(_.Type, EventGeneration.First));
-                    var context = new EventContext(_.EventSourceId, _.Occurred);
-                    var content = _.Content[EventGeneration.First.Value.ToString(CultureInfo.InvariantCulture)].ToJson();
-                    return new AppendedEvent(metadata, context, (JsonNode.Parse(content) as JsonObject)!);
-                }).ToArray();
-
+                var appendedEvents = _cursor.Current.ToArray();
                 if (appendedEvents.Length == 0)
                 {
                     return null!;
@@ -79,7 +68,14 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         }
 
         /// <inheritdoc/>
-        public bool MoveNext() => _cursor?.MoveNext() ?? false;
+        public bool MoveNext()
+        {
+            if (_cursor is null) return false;
+
+            var task = _cursor.MoveNext();
+            task.Wait();
+            return task.Result;
+        }
 
         /// <inheritdoc/>
         public void RecordDeliveryFailure()
@@ -101,24 +97,9 @@ namespace Aksio.Cratis.Events.Store.MongoDB
 
         void FindEventsFrom(StreamSequenceToken token)
         {
-            var from = (ulong)token.SequenceNumber;
-            var filters = new List<FilterDefinition<Event>>
-            {
-                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, from)
-            };
-
-            if (_partition?.IsSpecified == true)
-            {
-                filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, _partition));
-            }
-
-            if (_eventTypes.Any())
-            {
-                filters.Add(Builders<Event>.Filter.Or(_eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
-            }
-
-            var filter = Builders<Event>.Filter.And(filters.ToArray());
-            _cursor = _collection.Find(filter).ToCursor();
+            var task = _eventLogStorageProvider.GetFromSequenceNumber((ulong)token.SequenceNumber, _partition, _eventTypes);
+            task.Wait();
+            _cursor = task.Result;
         }
     }
 }
