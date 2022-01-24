@@ -33,6 +33,6 @@ namespace Aksio.Cratis.Events
         public object Deserialize(Type type, JsonObject json) => json.Deserialize(type, _serializerOptions)!;
 
         /// <inheritdoc/>
-        public string Serialize(object @event) => JsonSerializer.Serialize(@event, _serializerOptions);
+        public JsonObject Serialize(object @event) => (JsonSerializer.SerializeToNode(@event, _serializerOptions) as JsonObject)!;
     }
 }
