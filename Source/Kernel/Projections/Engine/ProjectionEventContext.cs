@@ -12,5 +12,5 @@ namespace Aksio.Cratis.Events.Projections
     /// </summary>
     /// <param name="Event">The <see cref="AppendedEvent"/> that occurred.</param>
     /// <param name="Changeset">The <see cref="IChangeset{Event, ExpandoObject}"/> to build on.</param>
-    public record EventContext(AppendedEvent Event, IChangeset<AppendedEvent, ExpandoObject> Changeset);
+    public record ProjectionEventContext(AppendedEvent Event, IChangeset<AppendedEvent, ExpandoObject> Changeset);
 }
