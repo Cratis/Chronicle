@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis</AssemblyName>
-        <RootNamespace>Cratis</RootNamespace>
+        <RootNamespace>Aksio.Cratis</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,7 +13,6 @@
         <ProjectReference Include="../../Kernel/Projections/Grains.Interfaces/Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Schemas/Grains.Interfaces/Grains.Interfaces.csproj"/>
         <ProjectReference Include="../../Kernel/Store/Grains.Interfaces/Grains.Interfaces.csproj"/>
-        <ProjectReference Include="../../Kernel/Store/MongoDB/MongoDB.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
