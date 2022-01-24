@@ -86,6 +86,7 @@ namespace Aksio.Cratis.Hosting
                 .AddProjections()
                 .AddIntegration()
                 .AddSingleton<IObservers, Observers>()
+                .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
                 .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
                 .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
                 .AddSingleton<ISchemas, Events.Schemas.Schemas>()
