@@ -3,7 +3,7 @@
 
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.Grains
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Represents a <see cref="StreamSequenceToken"/> for observers.

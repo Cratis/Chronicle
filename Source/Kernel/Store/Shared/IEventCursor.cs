@@ -1,14 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store;
-
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Store
 {
     /// <summary>
     /// Defines a cursor API for walking through events.
     /// </summary>
-    public interface IEventCursor
+    public interface IEventCursor : IDisposable
     {
         /// <summary>
         /// Move to the next part in the cursor.

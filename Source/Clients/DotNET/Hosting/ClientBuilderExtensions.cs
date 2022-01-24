@@ -1,8 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.MongoDB;
-using Microsoft.Extensions.DependencyInjection;
+using Aksio.Cratis.Events.Store.EventLogs;
 using Orleans.Hosting;
 
 namespace Orleans
@@ -19,9 +18,6 @@ namespace Orleans
         /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
         public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
         {
-            builder.ConfigureServices(services => services
-                .AddSingleton<IEventStoreDatabase, EventStoreDatabase>());
-
             builder.AddPersistentStreams(
                 "event-log",
                 EventLogQueueAdapterFactory.Create,

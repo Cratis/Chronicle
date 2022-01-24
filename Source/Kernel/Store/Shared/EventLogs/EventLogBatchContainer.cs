@@ -1,12 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.Grains;
 using Aksio.Cratis.Execution;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
     /// Represents an implementation of <see cref="IBatchContainer"/> for MongoDB event log events.
