@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Types;
 using Orleans;
 
 namespace Aksio.Cratis.Events
@@ -24,16 +25,18 @@ namespace Aksio.Cratis.Events
         /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with execution context.</param>
         /// <param name="eventTypes">The <see cref="IEventTypes"/> in the system.</param>
+        /// /// <param name="additionalEventInformationProviders">Providers of additional event information.</param>
         public EventStore(
             IEventSerializer serializer,
             IClusterClient clusterClient,
             IExecutionContextManager executionContextManager,
-            IEventTypes eventTypes)
+            IEventTypes eventTypes,
+            IInstancesOf<ICanProvideAdditionalEventInformation> additionalEventInformationProviders)
         {
             _clusterClient = clusterClient;
 
             var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
-            EventLog = new EventLog(eventTypes, serializer, defaultEventLog);
+            EventLog = new EventLog(eventTypes, serializer, additionalEventInformationProviders, defaultEventLog);
         }
     }
 }
