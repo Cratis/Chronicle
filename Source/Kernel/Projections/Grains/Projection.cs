@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Store;
 using Orleans;
@@ -53,7 +55,7 @@ namespace Aksio.Cratis.Events.Projections.Grains
                 return new JsonObject();
             }
             var cursor = await _eventLogStorageProvider.GetFromSequenceNumber(EventLogSequenceNumber.First, eventSourceId, _projection.EventTypes);
-            var initialState = new ExpandoObject();
+            var state = new ExpandoObject();
             while (await cursor.MoveNext())
             {
                 if (!cursor.Current.Any())
@@ -63,12 +65,20 @@ namespace Aksio.Cratis.Events.Projections.Grains
 
                 foreach (var @event in cursor.Current)
                 {
-                    var changeSet = new Changeset<AppendedEvent, ExpandoObject>(@event, initialState);
-                    _projection.OnNext(@event, changeSet);
+                    var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, state);
+                    _projection.OnNext(@event, changeset);
+
+                    foreach (var change in changeset.Changes)
+                    {
+                        state = state.OverwriteWith((change.State as ExpandoObject)!);
+                    }
                 }
             }
 
-            return new JsonObject();
+            // TODO: Conversion from ExpandoObject to JsonObject can be improved - they're effectively both just Dictionary<string, object>
+            var json = JsonSerializer.Serialize(state);
+            var jsonObject = JsonNode.Parse(json)!;
+            return (jsonObject as JsonObject)!;
         }
     }
 }
