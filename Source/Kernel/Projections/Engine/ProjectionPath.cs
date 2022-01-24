@@ -14,5 +14,12 @@ namespace Aksio.Cratis.Events.Projections
         /// </summary>
         /// <param name="path">String path.</param>
         public static implicit operator ProjectionPath(string path) => new(path);
+
+        /// <summary>
+        /// Get the root path for a projection.
+        /// </summary>
+        /// <param name="projectionId">Identifier of the projection.</param>
+        /// <returns>A root <see cref="ProjectionPath"/>.</returns>
+        public static ProjectionPath GetRootFor(ProjectionId projectionId) => $"Root({projectionId})";
     }
 }
