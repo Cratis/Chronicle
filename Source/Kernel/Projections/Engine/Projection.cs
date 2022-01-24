@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections
     /// </summary>
     public class Projection : IProjection
     {
-        readonly ISubject<EventContext> _subject = new Subject<EventContext>();
+        readonly ISubject<ProjectionEventContext> _subject = new Subject<ProjectionEventContext>();
         readonly IDictionary<EventType, ValueProvider<AppendedEvent>> _eventTypesToKeyResolver;
 
         /// <inheritdoc/>
@@ -37,7 +37,7 @@ namespace Aksio.Cratis.Events.Projections
         public bool IsRewindable { get; }
 
         /// <inheritdoc/>
-        public IObservable<EventContext> Event { get; }
+        public IObservable<ProjectionEventContext> Event { get; }
 
         /// <inheritdoc/>
         public IEnumerable<EventType> EventTypes { get; }
@@ -79,7 +79,7 @@ namespace Aksio.Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Metadata.Type));
+        public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Metadata.Type));
 
         /// <inheritdoc/>
         public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Metadata.Type));
@@ -87,7 +87,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
-            var context = new EventContext(@event, changeset);
+            var context = new ProjectionEventContext(@event, changeset);
             _subject.OnNext(context);
         }
 

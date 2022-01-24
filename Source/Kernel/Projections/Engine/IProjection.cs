@@ -44,9 +44,9 @@ namespace Aksio.Cratis.Events.Projections
         bool IsRewindable { get; }
 
         /// <summary>
-        /// Gets the <see cref="IObservable{T}">observable</see> <see cref="EventContext">event</see>.
+        /// Gets the <see cref="IObservable{T}">observable</see> <see cref="ProjectionEventContext">event</see>.
         /// </summary>
-        IObservable<EventContext> Event { get; }
+        IObservable<ProjectionEventContext> Event { get; }
 
         /// <summary>
         /// Gets the <see cref="EventType">event types</see> the projection can handle.
@@ -63,7 +63,7 @@ namespace Aksio.Cratis.Events.Projections
         /// </summary>
         /// <param name="observable"><see cref="IObservable{EventContext}"/> to filter.</param>
         /// <returns>Filtered <see cref="IObservable{EventContext}"/>.</returns>
-        IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable);
+        IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable);
 
         /// <summary>
         /// Apply a filter to an <see cref="IObservable{Event}"/> with the event types the <see cref="Projection"/> is interested in.

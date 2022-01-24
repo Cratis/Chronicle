@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
         /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
         /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
-        public static IObservable<EventContext> From(this IObservable<EventContext> observable, EventType eventType)
+        public static IObservable<ProjectionEventContext> From(this IObservable<ProjectionEventContext> observable, EventType eventType)
         {
             return observable.Where(_ => _.Event.Metadata.Type == eventType);
         }
@@ -35,8 +35,8 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
         /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> Child(
-            this IObservable<EventContext> observable,
+        public static IObservable<ProjectionEventContext> Child(
+            this IObservable<ProjectionEventContext> observable,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
             ValueProvider<AppendedEvent> keyResolver,
@@ -64,8 +64,8 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
         /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> Project(
-            this IObservable<EventContext> observable,
+        public static IObservable<ProjectionEventContext> Project(
+            this IObservable<ProjectionEventContext> observable,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
             ValueProvider<AppendedEvent> keyResolver,
@@ -99,7 +99,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
         /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
+        public static IObservable<ProjectionEventContext> RemovedWith(this IObservable<ProjectionEventContext> observable, EventType eventType)
         {
             observable.Where(_ => _.Event.Metadata.Type == eventType).Subscribe(_ => _.Changeset.Remove());
             return observable;
@@ -111,7 +111,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
         /// <param name="eventType"><see cref="EventType"/> to join with.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType)
+        public static IObservable<ProjectionEventContext> Join(this IObservable<ProjectionEventContext> observable, EventType eventType)
         {
             return observable.Where(_ => _.Event.Metadata.Type == eventType);
         }
