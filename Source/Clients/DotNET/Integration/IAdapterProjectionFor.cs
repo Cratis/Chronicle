@@ -16,6 +16,6 @@ namespace Aksio.Cratis.Integration
         /// </summary>
         /// <param name="eventSourceId">The <see cref="EventSourceId"/> to get for.</param>
         /// <returns>Instance of the model.</returns>
-        TModel GetById(EventSourceId eventSourceId);
+        Task<TModel> GetById(EventSourceId eventSourceId);
     }
 }

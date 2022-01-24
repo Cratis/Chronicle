@@ -3,6 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Events.Projections.Grains;
+using Aksio.Cratis.Json;
 
 namespace Aksio.Cratis.Integration
 {
@@ -12,17 +14,35 @@ namespace Aksio.Cratis.Integration
     /// <typeparam name="TModel">Type of model.</typeparam>
     public class AdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>
     {
-        /// <inheritdoc/>
-        public TModel GetById(EventSourceId eventSourceId)
-        {
-            // var eventProvider = new EventSourceInstanceEventProvider(_eventStream, eventSourceId);
-            // var pipeline = new ProjectionPipeline(eventProvider, _projection, _changesetStorage, _loggerFactory.CreateLogger<ProjectionPipeline>());
-            // var result = new InstanceProjectionResult<TModel>();
-            // pipeline.StoreIn(result);
-            // pipeline.Start();
+        static readonly JsonSerializerOptions _serializerOptions;
+        readonly IProjection _projection;
 
-            // if (result.HasInstance(eventSourceId)) return result.GetInstance(eventSourceId);
-            return JsonSerializer.Deserialize<TModel>("{}")!;
+        static AdapterProjectionFor()
+        {
+            _serializerOptions = new()
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters =
+                {
+                    new ConceptAsJsonConverterFactory()
+                }
+            };
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AdapterProjectionFor{TModel}"/> class.
+        /// </summary>
+        /// <param name="projection">The <see cref="IProjection"/> to work with.</param>
+        public AdapterProjectionFor(IProjection projection)
+        {
+            _projection = projection;
+        }
+
+        /// <inheritdoc/>
+        public async Task<TModel> GetById(EventSourceId eventSourceId)
+        {
+            var jsonObject = await _projection.GetModelInstanceById(eventSourceId);
+            return jsonObject.Deserialize<TModel>(_serializerOptions)!;
         }
     }
 }

@@ -61,11 +61,8 @@ namespace Aksio.Cratis.Integration
                 Array.Empty<ProjectionResultStoreDefinition>());
 
             await projections.Register(projectionDefinition, pipelineDefinition);
-
-            // Get AdapterID
-            // Register Projection with definition with kernel
-            // Get projection grain
-            return new AdapterProjectionFor<TModel>();
+            var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value);
+            return new AdapterProjectionFor<TModel>(projection);
         }
     }
 }
