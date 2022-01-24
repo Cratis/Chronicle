@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Integration.for_Adapters
         void Establish()
         {
             adapter_projection = new();
-            projection_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(adapter_projection.Object);
+            projection_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(Task.FromResult(adapter_projection.Object));
         }
 
         void Because() => result = adapters.GetProjectionFor<Model, ExternalModel>();

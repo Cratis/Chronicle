@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Integration.for_ImportOperations.given
             initial = new(42, "Forty Two");
             incoming = new(42, "Forty Two");
 
-            projection.Setup(_ => _.GetById(key)).Returns(initial);
+            projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(initial));
             mapper.Setup(_ => _.Map<Model>(incoming)).Returns(initial);
 
             operations = new(

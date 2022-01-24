@@ -55,7 +55,7 @@ namespace Aksio.Cratis.Integration
             var keyValue = Adapter.KeyResolver(instance)!;
             var eventSourceId = keyValue;
             eventSourceId ??= new(keyValue.ToString()!);
-            var initial = Projection.GetById(eventSourceId!);
+            var initial = await Projection.GetById(eventSourceId!);
             var mappedInstance = Mapper.Map<TModel>(instance)!;
             var changeset = new Changeset<TModel, TModel>(mappedInstance, initial);
 
