@@ -6,6 +6,7 @@
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217</NoWarn>
+        <LangVersion>10.0</LangVersion>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
@@ -29,6 +30,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.Defaults" Version="$(AksioDefaults)" PrivateAssets="All" />
+        <PackageReference Include="Aksio.Defaults" Version="$(AksioDefaults)" PrivateAssets="All" Condition="'$(PublishReadyToRun)' != 'true'" />
     </ItemGroup>
 </Project>

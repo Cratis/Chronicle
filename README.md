@@ -3,9 +3,9 @@
 [![C# Build](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml)
 [![Node Build](https://github.com/aksio-insurtech/Cratis/actions/workflows/node-build.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/node-build.yml)
 [![Publish](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml)
-[![Nuget](https://img.shields.io/nuget/v/aksio.cratis)](http://nuget.org/packages/aksio.cratis)
-[![NPM](https://badge.fury.io/js/@aksio%2Fcratis-applications-frontend.svg)](https://www.npmjs.com/package/@aksio/cratis-applications-frontend)
-[![Docker](https://badgen.net/docker/pulls/library/aksioinsurtech/cratis?icon=docker)](https://hub.docker.com/r/aksioinsurtech/cratis)
+[![Nuget](https://img.shields.io/nuget/v/aksio.cratis&logo=nuget)](http://nuget.org/packages/aksio.cratis)
+[![NPM](https://img.shields.io/npm/v/@aksio/cratis-applications-frontend?label=@aksio/cratis-applications-frontend&logo=npm)](https://www.npmjs.com/package/@aksio/cratis-applications-frontend)
+[![Docker](https://img.shields.io/docker/v/aksioinsurtech/cratis?label=Cratis%Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/aksioinsurtech/cratis)
 
 ## Introduction
 

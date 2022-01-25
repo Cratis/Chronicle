@@ -23,7 +23,7 @@
   </PropertyGroup>
 
     <PropertyGroup>
-        <Sample>../../../Sample</Sample>
+        <Sample>../../../../Samples/Bank</Sample>
         <TemplateDir>$(MSBuildThisFileDirectory)/templates/aspnet</TemplateDir>
     </PropertyGroup>
     <ItemGroup>
