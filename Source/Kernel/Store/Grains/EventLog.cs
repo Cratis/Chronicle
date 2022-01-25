@@ -59,18 +59,6 @@ namespace Aksio.Cratis.Events.Store.Grains
         }
 
         /// <inheritdoc/>
-        public async Task WarmUp()
-        {
-            var appendedEvent = new AppendedEvent(
-                new EventMetadata(0, new EventType(Guid.Empty, EventGeneration.First)),
-                new EventContext(string.Empty, DateTimeOffset.UtcNow),
-                (JsonNode.Parse("{}") as JsonObject)!);
-
-            await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken());
-            await WriteStateAsync();
-        }
-
-        /// <inheritdoc/>
         public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
         {
             _logger.Appending(eventType, eventSourceId, State.SequenceNumber, _eventLogId);
