@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
 
@@ -11,6 +12,7 @@ namespace Aksio.Cratis.Events.Store.EventLogs
     /// </summary>
     public class EventLogQueueCacheCursor : IQueueCacheCursor
     {
+        readonly IExecutionContextManager _executionContextManager;
         readonly IEventLogStorageProvider _eventLogStorageProvider;
         readonly IStreamIdentity _streamIdentity;
         readonly IEnumerable<EventType> _eventTypes;
@@ -20,18 +22,21 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueCacheCursor"/>.
         /// </summary>
+        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
         /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
         /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
         /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
         /// <param name="eventTypes">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
         /// <param name="partition">Optional <see cref="EventSourceId"/> partition to filter for.</param>
         public EventLogQueueCacheCursor(
+            IExecutionContextManager executionContextManager,
             IEventLogStorageProvider eventLogStorageProvider,
             IStreamIdentity streamIdentity,
             StreamSequenceToken token,
             IEnumerable<EventType>? eventTypes = default,
             EventSourceId? partition = default)
         {
+            _executionContextManager = executionContextManager;
             _eventLogStorageProvider = eventLogStorageProvider;
             _streamIdentity = streamIdentity;
             _eventTypes = eventTypes ?? Array.Empty<EventType>();
@@ -97,6 +102,8 @@ namespace Aksio.Cratis.Events.Store.EventLogs
 
         void FindEventsFrom(StreamSequenceToken token)
         {
+            TenantId tenantId = _streamIdentity.Namespace;
+            _executionContextManager.Establish(tenantId, CorrelationId.New());
             var task = _eventLogStorageProvider.GetFromSequenceNumber((ulong)token.SequenceNumber, _partition, _eventTypes);
             task.Wait();
             _cursor = task.Result;
