@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store.EventLogs;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
@@ -23,8 +21,6 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
     public class Observer : Grain<ObserverState>, IObserver
     {
         readonly ConcurrentDictionary<Guid, StreamSubscriptionHandle<AppendedEvent>> _subscriptions = new();
-        readonly ISchemaStore _schemaStore;
-        readonly IJsonComplianceManager _jsonComplianceManager;
         readonly IRequestContextManager _requestContextManager;
         readonly IConnectedClients _connectedObservers;
         readonly ILogger<Observer> _logger;
@@ -36,20 +32,14 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
         /// <summary>
         /// Initializes a new instance of the <see cref="Observer"/> class.
         /// </summary>
-        /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
-        /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
         /// <param name="connectedClients"><see cref="IConnectedClients"/>.</param>
         /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
         public Observer(
-            ISchemaStore schemaStore,
-            IJsonComplianceManager jsonComplianceManager,
             IRequestContextManager requestContextManager,
             IConnectedClients connectedClients,
             ILogger<Observer> logger)
         {
-            _schemaStore = schemaStore;
-            _jsonComplianceManager = jsonComplianceManager;
             _requestContextManager = requestContextManager;
             _connectedObservers = connectedClients;
             _logger = logger;
@@ -88,16 +78,12 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
                         return;
                     }
 
-                    var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
-                    var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.Context.EventSourceId, @event.Content);
-                    var releasedEvent = new AppendedEvent(@event.Metadata, @event.Context, releasedContent);
-
                     var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.Context.EventSourceId);
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
                     try
                     {
                         await partitionedObserver.SetConnectionId(connectionId);
-                        await partitionedObserver.OnNext(releasedEvent, eventTypes);
+                        await partitionedObserver.OnNext(@event, eventTypes);
 
                         State.Offset = @event.Metadata.SequenceNumber + 1;
                         State.LastHandled = @event.Metadata.SequenceNumber + 1;
