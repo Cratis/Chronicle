@@ -105,6 +105,7 @@ jobs:
           push: true
           tags: |
             aksioinsurtech/cratis:${{ steps.release.outputs.version }}-workbench
+            aksioinsurtech/cratis:latest-workbench
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
 
