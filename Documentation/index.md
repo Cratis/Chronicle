@@ -37,6 +37,6 @@ To get a quick start, head over to our [getting started](./getting-started.md) s
 
 | Topic | Description |
 | ----- | ----------- |
-| [Proxy Generation](./application-modelfrontend/cqrs/proxy-generation.md) | How the proxy generator tool can be used. |
-| [Commands](./application-modelfrontend/cqrs/commands.md) | How to leverage commands from the frontend. |
-| [Queries](./application-modelfrontend/cqrs/queries.md) | How to leverage queries from the frontend. |
+| [Proxy Generation](./application-model/frontend/cqrs/proxy-generation.md) | How the proxy generator tool can be used. |
+| [Commands](./application-model/frontend/cqrs/commands.md) | How to leverage commands from the frontend. |
+| [Queries](./application-model/frontend/cqrs/queries.md) | How to leverage queries from the frontend. |
