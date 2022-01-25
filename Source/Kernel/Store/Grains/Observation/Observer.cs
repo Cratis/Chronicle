@@ -9,6 +9,7 @@ using Aksio.Cratis.Events.Store.EventLogs;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
@@ -26,6 +27,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
         readonly IJsonComplianceManager _jsonComplianceManager;
         readonly IRequestContextManager _requestContextManager;
         readonly IConnectedClients _connectedObservers;
+        readonly ILogger<Observer> _logger;
         IAsyncStream<AppendedEvent>? _stream;
         ObserverId _observerId = Guid.Empty;
         TenantId _tenantId = TenantId.NotSet;
@@ -38,16 +40,19 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
         /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
         /// <param name="connectedClients"><see cref="IConnectedClients"/>.</param>
+        /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
         public Observer(
             ISchemaStore schemaStore,
             IJsonComplianceManager jsonComplianceManager,
             IRequestContextManager requestContextManager,
-            IConnectedClients connectedClients)
+            IConnectedClients connectedClients,
+            ILogger<Observer> logger)
         {
             _schemaStore = schemaStore;
             _jsonComplianceManager = jsonComplianceManager;
             _requestContextManager = requestContextManager;
             _connectedObservers = connectedClients;
+            _logger = logger;
             _connectedObservers.ClientDisconnected += async (_) =>
             {
                 foreach (var (subscriptionId, handler) in _subscriptions)
@@ -114,7 +119,14 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
         {
             if (_subscriptions.ContainsKey(subscriptionId))
             {
-                await _subscriptions[subscriptionId].UnsubscribeAsync();
+                try
+                {
+                    await _subscriptions[subscriptionId].UnsubscribeAsync();
+                }
+                catch (Exception)
+                {
+                    _logger.UnsubscribeFailedSubscriptionUnavailable(subscriptionId);
+                }
                 _subscriptions.Remove(subscriptionId, out _);
             }
         }
