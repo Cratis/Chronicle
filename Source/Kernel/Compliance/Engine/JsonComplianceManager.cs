@@ -57,9 +57,9 @@ namespace Aksio.Cratis.Compliance
                         }
                     }
 
-                    if (value is JsonObject)
+                    if (value is JsonObject jsonObjectValue)
                     {
-                        await HandleActionFor(propertySchema, identifier, (value as JsonObject)!, action);
+                        await HandleActionFor(propertySchema, identifier, jsonObjectValue, action);
                     }
                 }
             }
