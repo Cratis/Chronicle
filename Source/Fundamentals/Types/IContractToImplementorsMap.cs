@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Types
+namespace Aksio.Cratis.Types
 {
     /// <summary>
     /// Defines a system that handles the relationship between contracts and their implementors.

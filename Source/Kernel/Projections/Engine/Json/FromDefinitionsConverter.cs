@@ -1,36 +1,22 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Json;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Json
+namespace Aksio.Cratis.Events.Projections.Json
 {
     /// <summary>
-    /// Represents a <see cref="JsonConverter"/> that can convert a from definition based on key/value of event type identifier to from definition.
+    /// Represents a <see cref="JsonConverter"/> that can convert to a dictionary of <see cref="PropertyPath"/> and <see cref="ChildrenDefinition"/>.
     /// </summary>
-    public class FromDefinitionsConverter : JsonConverter<IDictionary<EventType, FromDefinition>>
+    public class FromDefinitionsConverter : DictionaryJsonConverter<EventType, FromDefinition>
     {
         /// <inheritdoc/>
-        public override IDictionary<EventType, FromDefinition>? ReadJson(JsonReader reader, Type objectType, IDictionary<EventType, FromDefinition>? existingValue, bool hasExistingValue, JsonSerializer serializer)
-        {
-            var stringDictionary = new Dictionary<string, FromDefinition>();
-            serializer.Populate(reader, stringDictionary);
-            return stringDictionary.ToDictionary(kvp => new EventType(kvp.Key, 1), kvp => kvp.Value);
-        }
+        protected override EventType GetKeyFromString(string key) => new(key, 1);
 
         /// <inheritdoc/>
-        public override void WriteJson(JsonWriter writer, IDictionary<EventType, FromDefinition>? value, JsonSerializer serializer)
-        {
-            if (value is null) return;
-            writer.WriteStartObject();
-            foreach (var (key, children) in value)
-            {
-                writer.WritePropertyName(key.Id.Value.ToString());
-                serializer.Serialize(writer, children);
-            }
-
-            writer.WriteEndObject();
-        }
+        protected override string GetKeyString(EventType key) => key.Id.ToString();
     }
 }

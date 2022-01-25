@@ -1,10 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Expressions
+namespace Aksio.Cratis.Events.Projections.Expressions
 {
     /// <summary>
     /// Defines a resolver of expressions related to property mapping.
@@ -25,6 +26,6 @@ namespace Cratis.Events.Projections.Expressions
         /// <param name="targetProperty">The target property we're mapping to.</param>
         /// <param name="expression">Expression to resolve.</param>
         /// <returns><see cref="PropertyMapper{Event, ExpandoObject}"/> it resolves to.</returns>
-        PropertyMapper<Event, ExpandoObject> Resolve(PropertyPath targetProperty, string expression);
+        PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression);
     }
 }

@@ -1,13 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Newtonsoft.Json.Linq;
+using System.Text.Json.Nodes;
 
-namespace Cratis.Compliance.for_JsonComplianceManager
+namespace Aksio.Cratis.Compliance.for_JsonComplianceManager
 {
     public class when_applying_without_any_applicable_value_handlers : given.no_value_handlers_and_a_type_with_one_property
     {
-        JObject result;
+        JsonObject result;
 
         async Task Because() => result = await manager.Apply(schema, string.Empty, input);
 

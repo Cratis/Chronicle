@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Common.Specs</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Common.Specs</AssemblyName>
         <RootNamespace>Cratis.Common</RootNamespace>
     </PropertyGroup>
 

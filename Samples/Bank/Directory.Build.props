@@ -1,0 +1,26 @@
+<Project>
+    <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props"/>
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);CS8019;SA1600;SA1601;CS1591;</NoWarn>
+
+        <AksioProxyOutput>$(MSBuildThisFileDirectory)/Web/API</AksioProxyOutput>
+        <AksioUseRouteAsPath>true</AksioUseRouteAsPath>
+    </PropertyGroup>
+
+    <Import Project="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Tooling/ProxyGenerator/build/Aksio.Cratis.Applications.ProxyGenerator.props"/>
+
+    <ItemGroup>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Applications/Applications.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Tooling/ProxyGenerator/ProxyGenerator.csproj" OutputItemType="Analyzer" Private="true"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
+    </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aksio.Defaults" Version="$(AksioDefaults)" />
+	</ItemGroup>
+</Project>

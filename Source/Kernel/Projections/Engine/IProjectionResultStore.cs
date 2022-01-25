@@ -1,10 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Defines the storage for <see cref="IProjection">projections</see>.
@@ -34,7 +35,7 @@ namespace Cratis.Events.Projections
         /// <param name="key">Key of the model to upsert.</param>
         /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset);
+        Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset);
 
         /// <summary>
         /// Prepare the store for an initial run.

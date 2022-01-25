@@ -1,11 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Extensions.Orleans.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
 
-namespace Cratis.Connections
+namespace Aksio.Cratis.Connections
 {
     /// <summary>
     /// Represents a <see cref="IOutgoingGrainCallFilter"/> for adding <see cref="ConnectionId"/> to the context.

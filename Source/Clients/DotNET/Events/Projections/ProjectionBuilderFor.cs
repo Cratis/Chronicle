@@ -1,15 +1,15 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Cratis.Events.Projections.Definitions;
-using Cratis.Properties;
-using Cratis.Reflection;
-using Cratis.Schemas;
-using Cratis.Strings;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Strings;
 using Humanizer;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// /// Represents an implementation of <see cref="IProjectionBuilderFor{TModel}"/>.
@@ -22,7 +22,10 @@ namespace Cratis.Events.Projections
         readonly IJsonSchemaGenerator _schemaGenerator;
         readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
         readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
+        bool _isPassive;
+        bool _isRewindable = true;
         string _modelName;
+        string? _name;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -42,9 +45,30 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
+        public IProjectionBuilderFor<TModel> WithName(string name)
+        {
+            _name = name;
+            return this;
+        }
+
+        /// <inheritdoc/>
         public IProjectionBuilderFor<TModel> ModelName(string modelName)
         {
             _modelName = modelName;
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IProjectionBuilderFor<TModel> Passive()
+        {
+            _isPassive = true;
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IProjectionBuilderFor<TModel> NotRewindable()
+        {
+            _isRewindable = false;
             return this;
         }
 
@@ -72,8 +96,10 @@ namespace Cratis.Events.Projections
         {
             return new ProjectionDefinition(
                 _identifier,
-                typeof(TModel).FullName ?? "[N/A]",
+                _name ?? typeof(TModel).FullName ?? "[N/A]",
                 new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TModel)).ToJson()),
+                _isPassive,
+                _isRewindable,
                 _fromDefintions,
                 _childrenDefinitions);
         }

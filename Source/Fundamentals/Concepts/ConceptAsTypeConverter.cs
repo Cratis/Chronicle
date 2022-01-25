@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Cratis.Concepts
+namespace Aksio.Cratis.Concepts
 {
     /// <summary>
     /// Represents a <see cref="TypeConverter"/> for handling conversion of concept as represented as its value type.

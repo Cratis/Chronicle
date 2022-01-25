@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 const path = require('path');
 
-const webpack = require('@cratis/webpack/frontend');
+const webpack = require('@aksio/cratis-webpack/frontend');
 module.exports = (env, argv) => {
     const isWebDevServer = (process.env.WEBPACK_DEV_SERVER || false) === 'true' ? true : false;
     const basePath = isWebDevServer ? '/' : process.env.base_path || '';
@@ -14,10 +14,7 @@ module.exports = (env, argv) => {
                 target: 'http://localhost:5000',
                 ws: true
             },
-            '/swagger': {
-                target: 'http://localhost:5000',
-                ws: true
-            }
+            '/swagger': 'http://localhost:5000'
         };
         config.resolve.alias.API = path.resolve('./API');
     }, 'Cratis Compliance Workbench');

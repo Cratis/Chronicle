@@ -1,14 +1,15 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
+namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
 {
     public class when_projecting_to_root_property : given.an_observable_and_event_setup
     {
-        IEnumerable<PropertyMapper<Event, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<Event, ExpandoObject>>();
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<AppendedEvent, ExpandoObject>>();
 
         void Establish() => observable.Project("", "Id", _ => 42, property_mappers);
 

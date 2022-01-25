@@ -1,11 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reflection;
-using Cratis.Properties;
-using Newtonsoft.Json;
+using System.Text.Json;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Objects
+namespace Aksio.Cratis.Objects
 {
     /// <summary>
     /// Extension methods for any object.
@@ -20,8 +22,13 @@ namespace Cratis.Objects
         /// <returns>Cloned instance.</returns>
         public static T Clone<T>(this T source)
         {
-            var sourceAsString = JsonConvert.SerializeObject(source);
-            return JsonConvert.DeserializeObject<T>(sourceAsString)!;
+            if (source is ExpandoObject expandoObject)
+            {
+                return (T)(object)ExpandoObjectExtensions.Clone(expandoObject);
+            }
+
+            var sourceAsString = JsonSerializer.Serialize(source);
+            return JsonSerializer.Deserialize<T>(sourceAsString)!;
         }
 
         /// <summary>

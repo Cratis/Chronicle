@@ -1,18 +1,18 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.Pipelines;
-using Cratis.Properties;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.for_Projections
+namespace Aksio.Cratis.Events.Projections.for_Projections
 {
     public class when_starting_with_one_definition_unregistered_and_one_registered : given.no_projections
     {
         ProjectionId unregistered_projection_identifier = "793f9d99-bfcc-4d85-88f7-965beed001e7";
         ProjectionDefinition unregistered_projection_definition;
         ProjectionPipelineDefinition unregistered_pipeline_definition;
-        IProjectionPipeline pipeline_registered;
+        IEnumerable<IProjectionPipeline> pipelines_registered;
 
         Mock<IProjection> unregistered_projection;
         Mock<IProjectionPipeline> unregistered_pipeline;
@@ -23,6 +23,8 @@ namespace Cratis.Events.Projections.for_Projections
                 unregistered_projection_identifier,
                 "My Unregistered Projection",
                 new ModelDefinition("Some Model", "{}"),
+                false,
+                true,
                 new Dictionary<EventType, FromDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
                 null);
@@ -45,14 +47,14 @@ namespace Cratis.Events.Projections.for_Projections
             projection_factory.Setup(_ => _.CreateFrom(unregistered_projection_definition)).Returns(Task.FromResult(unregistered_projection.Object));
             pipeline_factory.Setup(_ => _.CreateFrom(unregistered_projection.Object, unregistered_pipeline_definition)).Returns(unregistered_pipeline.Object);
 
-            projections.Pipelines.Subscribe(_ => pipeline_registered = _);
+            projections.Pipelines.Subscribe(_ => pipelines_registered = _);
         }
 
         async Task Because() => await projections.Start();
 
         [Fact] void should_register_projection_definition() => projection_definitions.Verify(_ => _.Register(unregistered_projection_definition), Once());
         [Fact] void should_register_pipeline_definition() => pipeline_definitions.Verify(_ => _.Register(unregistered_pipeline_definition), Once());
-        [Fact] void should_make_pipeline_the_next_in_observable() => pipeline_registered.ShouldEqual(unregistered_pipeline.Object);
-        [Fact] void should_register_pipeline() => projections.GetPipelines().ToArray()[1].ShouldEqual(unregistered_pipeline.Object);
+        [Fact] void should_make_pipeline_the_next_in_observable() => pipelines_registered.ShouldContain(unregistered_pipeline.Object);
+        [Fact] void should_register_pipeline() => projections.GetPipelines().ToArray().ShouldContain(unregistered_pipeline.Object);
     }
 }

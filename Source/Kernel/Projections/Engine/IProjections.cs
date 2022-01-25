@@ -1,12 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Pipelines;
 
 #pragma warning disable CA1721 // Pipelines property is confusing since there is a GetPipelines - they do differ - see GH issue #103.
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Defines a system that is responsible for supervises projections in the system.
@@ -34,7 +34,7 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Gets an observable of all <see cref="IProjectionPipeline"/> in the system.
         /// </summary>
-        IObservable<IProjectionPipeline> Pipelines { get; }
+        IObservable<IEnumerable<IProjectionPipeline>> Pipelines { get; }
 
         /// <summary>
         /// Get a specific <see cref="IProjectionPipeline"/> by the identifier.

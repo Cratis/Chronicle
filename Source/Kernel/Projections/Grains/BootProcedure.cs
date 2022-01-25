@@ -1,11 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Boot;
-using Cratis.Execution;
+using Aksio.Cratis.Boot;
+using Aksio.Cratis.Execution;
 using Orleans;
 
-namespace Cratis.Events.Projections.Grains
+namespace Aksio.Cratis.Events.Projections.Grains
 {
     /// <summary>
     /// Represents a <see cref="IPerformBootProcedure"/> for the event store.

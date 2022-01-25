@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ReactElement, useState, useRef } from 'react';
@@ -7,7 +7,7 @@ import { IToolbarItemProps } from './IToolbarItemProps';
 import { ToolbarButton } from './ToolbarButton';
 import { ToolbarContext } from './ToolbarContext';
 import { ToolbarDirection } from './ToolbarDirection';
-import { Guid } from '@cratis/fundamentals';
+import { Guid } from '@aksio/cratis-fundamentals';
 import { Toolbar } from './Toolbar';
 
 export interface IToolbarMenuProps {

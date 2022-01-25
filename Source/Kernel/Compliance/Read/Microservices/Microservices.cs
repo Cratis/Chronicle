@@ -1,12 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Queries;
-using Aksio.Queries.MongoDB;
+using Aksio.Cratis.Applications.Queries;
+using Aksio.Cratis.Applications.Queries.MongoDB;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
-namespace Cratis.Compliance.Read.Microservices
+namespace Aksio.Cratis.Compliance.Read.Microservices
 {
     /// <summary>
     /// Represents the read side API for microservices.

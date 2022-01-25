@@ -1,13 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Reflection;
 using Autofac.Builder;
 using Autofac.Core;
-using Cratis.Execution;
-using Cratis.Reflection;
 
-namespace Cratis.Extensions.Autofac
+namespace Aksio.Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Provides registrations on-the-fly for any concrete type not already registered with

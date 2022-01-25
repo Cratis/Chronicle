@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Definitions
+namespace Aksio.Cratis.Events.Projections.Definitions
 {
     /// <summary>
     /// Represents the definition of a children projection.
@@ -18,5 +18,5 @@ namespace Cratis.Events.Projections.Definitions
         ModelDefinition Model,
         IDictionary<EventType, FromDefinition> From,
         IDictionary<PropertyPath, ChildrenDefinition> Children,
-        RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, From, Children, RemovedWith);
+        RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, false, true, From, Children, RemovedWith);
 }

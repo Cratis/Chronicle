@@ -1,0 +1,69 @@
+/*---------------------------------------------------------------------------------------------
+ *  **DO NOT EDIT** - This file is an automatically generated file.
+ *--------------------------------------------------------------------------------------------*/
+
+import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+{{#Imports}}
+import { {{Type}} } from '{{Module}}';
+{{/Imports}}
+import Handlebars from 'handlebars';
+
+const routeTemplate = Handlebars.compile('{{Route}}');
+
+{{#if Arguments.[0]}}
+export interface {{Name}}Arguments {
+    {{#Arguments}}
+    {{#if IsOptional}}
+    {{camelcase Name}}?: string;
+    {{else}}
+    {{camelcase Name}}: string;
+    {{/if}}
+    {{/Arguments}}
+}
+{{#if IsEnumerable}}
+export class {{Name}} extends QueryFor<{{Model}}[], {{Name}}Arguments> {
+{{else}}
+export class {{Name}} extends QueryFor<{{Model}}, {{Name}}Arguments> {
+{{/if}}
+{{else}}
+{{#if IsEnumerable}}
+export class {{Name}} extends QueryFor<{{Model}}[]> {
+{{else}}
+export class {{Name}} extends QueryFor<{{Model}}> {
+{{/if}}
+{{/if}}
+    readonly route: string = '{{Route}}';
+    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+{{#if IsEnumerable}}
+    readonly defaultValue: {{Model}}[] = [];
+{{else}}
+    readonly defaultValue: {{Model}} = {} as any;
+{{/if}}
+{{#if Arguments.[0]}}
+    readonly requiresArguments: boolean = true;
+{{else}}
+    readonly requiresArguments: boolean = false;
+{{/if}}
+
+{{#if Arguments.[0]}}
+{{#if IsEnumerable}}
+    static use(args?: {{Name}}Arguments): [QueryResult<{{Model}}[]>, PerformQuery<{{Name}}Arguments>] {
+        return useQuery<{{Model}}[], {{Name}}, {{Name}}Arguments>({{Name}}, args);
+    }
+{{else}}
+    static use(args?: {{Name}}Arguments): [QueryResult<{{Model}}>, PerformQuery<{{Name}}Arguments>] {
+        return useQuery<{{Model}}, {{Name}}, {{Name}}Arguments>({{Name}}, args);
+    }
+{{/if}}
+{{else}}
+{{#if IsEnumerable}}
+    static use(): [QueryResult<{{Model}}[]>, PerformQuery] {
+        return useQuery<{{Model}}[], {{Name}}>({{Name}});
+    }
+{{else}}
+    static use(): [QueryResult<{{Model}}>, PerformQuery] {
+        return useQuery<{{Model}}, {{Name}}>({{Name}});
+    }
+{{/if}}
+{{/if}}
+}

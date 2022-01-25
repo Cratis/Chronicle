@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Defines the states a <see cref="IProjection"/> can be in.
@@ -46,6 +46,11 @@ namespace Cratis.Events.Projections
         /// <summary>
         /// Projection is suspended, most likely due to failure.
         /// </summary>
-        Suspended = 7
+        Suspended = 7,
+
+        /// <summary>
+        /// Projection is passive, not observing events as they are appended.
+        /// </summary>
+        Passive = 8
     }
 }

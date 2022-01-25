@@ -56,8 +56,8 @@ jobs:
         id: release
         uses: cratis/release-action@v1
         with:
-          user-name: 'Cratis Build'
-          user-email: 'build@cratis.io'
+          user-name: 'Aksio Build'
+          user-email: 'build@aksio.no'
 
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
@@ -104,7 +104,7 @@ jobs:
           file: ./Docker/Workbench/Dockerfile
           push: true
           tags: |
-            einari/cratis:${{ steps.release.outputs.version }}-workbench
+            aksioinsurtech/cratis:${{ steps.release.outputs.version }}-workbench
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
 
@@ -116,8 +116,21 @@ jobs:
           file: ./Docker/Production/Dockerfile
           push: true
           tags: |
-            einari/cratis:${{ steps.release.outputs.version }}
-            einari/cratis:latest
+            aksioinsurtech/cratis:${{ steps.release.outputs.version }}
+            aksioinsurtech/cratis:latest
+          build-args: |
+            VERSION=${{ steps.release.outputs.version }}
+
+      - name: Build MongoDB Docker Image
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/MongoDB/Dockerfile
+          push: true
+          tags: |
+            aksioinsurtech/mongodb:${{ steps.release.outputs.version }}
+            aksioinsurtech/mongodb:latest
           build-args: |
             VERSION=${{ steps.release.outputs.version }}
 
@@ -130,6 +143,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            einari/cratis:${{ steps.release.outputs.version }}-development
+            aksioinsurtech/cratis:${{ steps.release.outputs.version }}-development
+            aksioinsurtech/cratis:latest-development
           build-args: |
             VERSION=${{ steps.release.outputs.version }}

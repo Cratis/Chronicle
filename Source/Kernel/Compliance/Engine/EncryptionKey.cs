@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #pragma warning disable CA1819
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Represents a key used in encryption.

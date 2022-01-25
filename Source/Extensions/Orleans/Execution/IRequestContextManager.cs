@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Orleans.Runtime;
 
-namespace Cratis.Extensions.Orleans.Execution
+namespace Aksio.Cratis.Extensions.Orleans.Execution
 {
     /// <summary>
     /// Defines a wrapper manager for the Orleans <see cref="RequestContext"/>.

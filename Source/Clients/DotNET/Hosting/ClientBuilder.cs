@@ -1,18 +1,18 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Collections;
-using Cratis.Compliance;
-using Cratis.Connections;
-using Cratis.Events;
-using Cratis.Events.Observation;
-using Cratis.Events.Projections;
-using Cratis.Events.Schemas;
-using Cratis.Execution;
-using Cratis.Extensions.MongoDB;
-using Cratis.Extensions.Orleans.Execution;
-using Cratis.Schemas;
-using Cratis.Types;
+using Aksio.Cratis.Collections;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Connections;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Events.Observation;
+using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
@@ -20,14 +20,14 @@ using Orleans.Hosting;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
 using OrleansClientBuilder = Orleans.ClientBuilder;
 
-namespace Cratis.Hosting
+namespace Aksio.Cratis.Hosting
 {
     /// <summary>
     /// Represents an implementation of <see cref="IClientBuilder"/>.
     /// </summary>
     public class ClientBuilder : IClientBuilder
     {
-        #pragma warning disable IDE0052 // We will be expanding on this.
+#pragma warning disable IDE0052 // We will be expanding on this.
         readonly MicroserviceId _microserviceId;
 
         bool _inSilo;
@@ -84,7 +84,9 @@ namespace Cratis.Hosting
                 .AddSingleton(types)
                 .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
                 .AddProjections()
+                .AddIntegration()
                 .AddSingleton<IObservers, Observers>()
+                .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
                 .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
                 .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
                 .AddSingleton<ISchemas, Events.Schemas.Schemas>()

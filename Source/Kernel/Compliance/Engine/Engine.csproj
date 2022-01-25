@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Compliance.Engine</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Compliance.Engine</AssemblyName>
         <RootNamespace>Cratis.Compliance</RootNamespace>
     </PropertyGroup>
 

@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB
 {
     /// <summary>
     /// Defines a map for mapping a type to bson for MongoDB.

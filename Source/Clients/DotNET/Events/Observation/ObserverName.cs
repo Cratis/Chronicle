@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Concepts;
-using Cratis.Events.Store.Observation;
+using Aksio.Cratis.Concepts;
+using Aksio.Cratis.Events.Store.Observation;
 
-namespace Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation
 {
     /// <summary>
     /// Concept that represents the name of an observer.

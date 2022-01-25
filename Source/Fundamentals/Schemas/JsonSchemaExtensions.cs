@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using NJsonSchema;
 
-namespace Cratis.Schemas
+namespace Aksio.Cratis.Schemas
 {
     /// <summary>
     /// Extension methods for <see cref="JsonSchema"/>.

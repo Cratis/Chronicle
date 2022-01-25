@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Concepts;
+using Aksio.Cratis.Concepts;
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Represents a type of compliance metadata.

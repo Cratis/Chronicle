@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Events.Store.Shared</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Events.Store.Shared</AssemblyName>
         <RootNamespace>Cratis.Events.Store</RootNamespace>
     </PropertyGroup>
 
@@ -8,5 +8,10 @@
         <ProjectReference Include="../../Events/Events.csproj" />
         <ProjectReference Include="../../Schemas/Shared/Shared.csproj" />
         <ProjectReference Include="../../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.OrleansProviders" Version="$(Orleans)" />
     </ItemGroup>
 </Project>

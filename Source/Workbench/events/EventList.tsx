@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useMemo, useRef, useEffect } from 'react';
@@ -10,7 +10,7 @@ import {
 } from '@fluentui/react';
 
 import { default as styles } from './EventList.module.scss';
-import { ScrollableDetailsList } from '@cratis/fluentui';
+import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 
 export type EventSelected = (item: any) => void;
 

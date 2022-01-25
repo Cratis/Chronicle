@@ -1,0 +1,8 @@
+version: '3.1'
+services:
+  cratis-kernel:
+    image: aksioinurtech/cratis:latest-development
+    ports:
+      - 8080:80
+      - 11111:11111
+      - 30000:30000

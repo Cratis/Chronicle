@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents the status of a <see cref="IProjectionPipelineJob"/>.

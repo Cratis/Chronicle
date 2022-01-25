@@ -1,12 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.Pipelines;
-using Cratis.Properties;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Properties;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.for_Projections.given
+namespace Aksio.Cratis.Events.Projections.for_Projections.given
 {
     public class no_projections : all_dependencies
     {
@@ -30,6 +30,8 @@ namespace Cratis.Events.Projections.for_Projections.given
 
             projection = new();
             projection.SetupGet(_ => _.Identifier).Returns(projection_identifier);
+            projection.SetupGet(_ => _.IsPassive).Returns(false);
+            projection.SetupGet(_ => _.IsRewindable).Returns(true);
             pipeline = new();
             pipeline.SetupGet(_ => _.Projection).Returns(projection.Object);
 
@@ -37,6 +39,8 @@ namespace Cratis.Events.Projections.for_Projections.given
                 projection_identifier,
                 "My Projection",
                 new ModelDefinition("Some Model", "{}"),
+                false,
+                true,
                 new Dictionary<EventType, FromDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
                 null);

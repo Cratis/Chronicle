@@ -1,9 +1,0 @@
-<Project>
-    <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props"/>
-
-    <PropertyGroup>
-        <NoWarn>$(NoWarn);SA1600</NoWarn>
-        <IsPackable>false</IsPackable>
-        <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    </PropertyGroup>
-</Project>

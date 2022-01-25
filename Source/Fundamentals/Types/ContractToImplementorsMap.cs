@@ -1,11 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
 using System.Reflection;
-using Cratis.Reflection;
+using Aksio.Cratis.Reflection;
 
-namespace Cratis.Types
+namespace Aksio.Cratis.Types
 {
     /// <summary>
     /// Represents an implementation of <see cref="IContractToImplementorsMap"/>.

@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
@@ -8,7 +8,7 @@ using MongoDB.Bson.Serialization.Serializers;
 
 #pragma warning disable AS0008
 
-namespace Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB
 {
     /// <summary>
     /// Represents a serializer for handling serialization of <see cref="DateTimeOffset"/> to and from MongoDB.

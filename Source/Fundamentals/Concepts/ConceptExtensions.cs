@@ -1,9 +1,9 @@
-﻿// Copyright (c) Cratis. All rights reserved.
+﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Reflection;
+using Aksio.Cratis.Reflection;
 
-namespace Cratis.Concepts
+namespace Aksio.Cratis.Concepts
 {
     /// <summary>
     /// Provides extensions related to <see cref="Type">types</see> and others related to <see cref="ConceptAs{T}"/>.

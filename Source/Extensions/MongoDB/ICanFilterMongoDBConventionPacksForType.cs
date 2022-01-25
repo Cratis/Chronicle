@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MongoDB.Bson.Serialization.Conventions;
 
-namespace Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB
 {
     /// <summary>
     /// Defines a system that can tell whether or not a specific <see cref="Type"/> should be affected by a <see cref="IConventionPack"/>.

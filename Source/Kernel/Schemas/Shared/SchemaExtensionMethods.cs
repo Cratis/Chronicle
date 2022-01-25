@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
 using NJsonSchema;
 
-namespace Cratis.Events.Schemas
+namespace Aksio.Cratis.Events.Schemas
 {
     /// <summary>
     /// Extension methods for working with <see cref="JsonSchema"/> and specific metadata.

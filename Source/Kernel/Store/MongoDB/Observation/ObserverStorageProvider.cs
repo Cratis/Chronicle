@@ -1,15 +1,15 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store.Observation;
-using Cratis.Execution;
-using Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.Orleans.Execution;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Cratis.Events.Store.MongoDB.Observation
+namespace Aksio.Cratis.Events.Store.MongoDB.Observation
 {
     /// <summary>
     /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.

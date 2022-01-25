@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Cratis.Reflection
+namespace Aksio.Cratis.Reflection
 {
     /// <summary>
     /// Extension methods for calling methods on objects using reflection.

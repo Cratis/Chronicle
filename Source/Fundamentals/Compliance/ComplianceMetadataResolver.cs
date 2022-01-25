@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Types;
+using Aksio.Cratis.Types;
 
-namespace Cratis.Compliance
+namespace Aksio.Cratis.Compliance
 {
     /// <summary>
     /// Represents an implementation of <see cref="IComplianceMetadataResolver"/>.

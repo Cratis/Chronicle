@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #pragma warning disable CS1718
 
-namespace Cratis.Concepts.for_ConceptAs
+namespace Aksio.Cratis.Concepts.for_ConceptAs
 {
     public class when_constructing_with_null_value : Specification
     {

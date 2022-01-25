@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Execution;
+using Aksio.Cratis.Execution;
 using Orleans;
 
-namespace Cratis.Extensions.Orleans.Execution
+namespace Aksio.Cratis.Extensions.Orleans.Execution
 {
     /// <summary>
     /// Represents an Orleans <see cref="IOutgoingGrainCallFilter">grain call filter</see> that adds

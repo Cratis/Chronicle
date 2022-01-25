@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Configuration
+namespace Aksio.Cratis.Configuration
 {
 #pragma warning disable AS0003  // Allow sealed attribute
 

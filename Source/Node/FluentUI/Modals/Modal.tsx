@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DefaultButton, Dialog, DialogFooter, DialogType, IDialogContentProps, PrimaryButton } from '@fluentui/react';

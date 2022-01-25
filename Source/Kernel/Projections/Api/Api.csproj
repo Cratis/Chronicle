@@ -1,15 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Events.Projections.Api</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Events.Projections.Api</AssemblyName>
         <RootNamespace>Cratis.Events.Projections.Api</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.CQRS.MongoDB" Version="$(Aksio)"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="../Engine/Engine.csproj" />
+        <ProjectReference Include="../../../ApplicationModel/CQRS.MongoDB/CQRS.MongoDB.csproj"/>
     </ItemGroup>
 
 </Project>

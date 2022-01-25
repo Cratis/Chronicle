@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 /**@type {import('eslint').Linter.Config} */
@@ -51,7 +51,7 @@ module.exports = {
             2,
             'line',
             [
-                ' Copyright (c) Cratis. All rights reserved.',
+                ' Copyright (c) Aksio Insurtech. All rights reserved.',
                 ' Licensed under the MIT license. See LICENSE file in the project root for full license information.'
             ]
         ],

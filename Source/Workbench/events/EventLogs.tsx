@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import {
@@ -17,7 +17,7 @@ import { useBoolean } from '@fluentui/react-hooks';
 
 import { default as styles } from './EventLogs.module.scss';
 import { EventHistogram } from './EventHistogram';
-import { Guid } from '@cratis/fundamentals';
+import { Guid } from '@aksio/cratis-fundamentals';
 import { useState } from 'react';
 import { FilterBuilder } from './FilterBuilder';
 import { EventList } from './EventList';

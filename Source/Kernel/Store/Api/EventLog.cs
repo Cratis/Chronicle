@@ -1,15 +1,16 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text;
-using Cratis.Events.Store.Grains;
-using Cratis.Execution;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Events.Store.Grains;
+using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 
 #pragma warning disable SA1600, IDE0060
 
-namespace Cratis.Events.Store.Api
+namespace Aksio.Cratis.Events.Store.Api
 {
     /// <summary>
     /// Represents the API for working with the event log.
@@ -39,18 +40,17 @@ namespace Cratis.Events.Store.Api
             [FromRoute] EventTypeId eventTypeId,
             [FromRoute] EventGeneration eventGeneration)
         {
-            using var reader = new StreamReader(Request.Body, Encoding.UTF8);
-            var content = await reader.ReadToEndAsync();
-
+            var jsonDocument = await JsonDocument.ParseAsync(Request.Body);
+            var content = JsonObject.Create(jsonDocument.RootElement);
             var eventLog = _grainFactory.GetGrain<IEventLog>(EventLogId.Default, keyExtension: _executionContextManager.Current.TenantId.ToString());
             await eventLog.Append(
                 eventSourceId,
                 new EventType(eventTypeId, eventGeneration),
-                content);
+                content!);
         }
 
         [HttpGet("{eventLogId}")]
-        public Task<IEnumerable<Event>> FindFor([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<Event>().AsEnumerable());
+        public Task<IEnumerable<AppendedEvent>> FindFor([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<AppendedEvent>().AsEnumerable());
 
         [HttpGet("{eventLogId}/count")]
         public Task<long> Count() => Task.FromResult(0L);

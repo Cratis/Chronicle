@@ -1,4 +1,4 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 const path = require('path');
@@ -67,7 +67,7 @@ module.exports = (env, argv, callback) => {
             ]
         },
         plugins: [
-            
+
             new webpack.NormalModuleReplacementPlugin(/package.json/, (resource) => {
                 if (path.isAbsolute(resource.request)) {
                     return;

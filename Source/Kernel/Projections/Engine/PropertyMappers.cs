@@ -1,12 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
 using System.Globalization;
-using Cratis.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents utilities for creating <see cref="PropertyMapper{Event, ExpandoObject}"/> for different scenarios.
@@ -19,9 +20,9 @@ namespace Cratis.Events.Projections
         /// <param name="targetProperty">Target property.</param>
         /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
         /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
-        public static PropertyMapper<Event, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<Event> eventValueProvider)
+        public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
         {
-            return (Event @event, ExpandoObject target) =>
+            return (AppendedEvent @event, ExpandoObject target) =>
             {
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
                 actualTarget[targetProperty.LastSegment] = eventValueProvider(@event);
@@ -34,9 +35,9 @@ namespace Cratis.Events.Projections
         /// <param name="targetProperty">Target property.</param>
         /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
         /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
-        public static PropertyMapper<Event, ExpandoObject> AddWithEventValueProvider(PropertyPath targetProperty, ValueProvider<Event> eventValueProvider)
+        public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
         {
-            return (Event @event, ExpandoObject target) =>
+            return (AppendedEvent @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.LastSegment;
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
@@ -56,9 +57,9 @@ namespace Cratis.Events.Projections
         /// <param name="targetProperty">Target property.</param>
         /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
         /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
-        public static PropertyMapper<Event, ExpandoObject> SubtractWithEventValueProvider(PropertyPath targetProperty, ValueProvider<Event> eventValueProvider)
+        public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
         {
-            return (Event @event, ExpandoObject target) =>
+            return (AppendedEvent @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.LastSegment;
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;

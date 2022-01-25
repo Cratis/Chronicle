@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/frontend/queries';
+import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
 import { Projection } from './Projection';
 import Handlebars from 'handlebars';
 

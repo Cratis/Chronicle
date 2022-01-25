@@ -1,34 +1,31 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Events.Store;
 
-namespace Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
 {
     public class two_cursors_in_sequence_with_ten_events_each : a_catchup_step
     {
-        protected IEnumerable<Event> first_cursor_events;
-        protected IEnumerable<Event> second_cursor_events;
+        protected IEnumerable<AppendedEvent> first_cursor_events;
+        protected IEnumerable<AppendedEvent> second_cursor_events;
 
         void Establish()
         {
             first_cursor_events = Enumerable
                         .Range(0, 10)
-                        .Select(_ => new Event(
-                                            (uint)_,
-                                            new EventType(Guid.NewGuid(), 1),
-                                            DateTimeOffset.UtcNow,
-                                            Guid.NewGuid().ToString(),
-                                            new ExpandoObject())).ToArray();
+                        .Select(_ => new AppendedEvent(
+                                            new((uint)_, new EventType(Guid.NewGuid(), 1)),
+                                            new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow),
+                                            new JsonObject())).ToArray();
 
             second_cursor_events = Enumerable
                         .Range(0, 10)
-                        .Select(_ => new Event(
-                                            (uint)_,
-                                            new EventType(Guid.NewGuid(), 1),
-                                            DateTimeOffset.UtcNow,
-                                            Guid.NewGuid().ToString(),
-                                            new ExpandoObject())).ToArray();
+                        .Select(_ => new AppendedEvent(
+                                            new((uint)_, new EventType(Guid.NewGuid(), 1)),
+                                            new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow),
+                                            new JsonObject())).ToArray();
 
             var first_cursor = new Mock<IEventCursor>();
             first_cursor.SetupSequence(_ => _.MoveNext())

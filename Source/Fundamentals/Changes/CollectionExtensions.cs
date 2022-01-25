@@ -1,11 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Changes
+namespace Aksio.Cratis.Changes
 {
     /// <summary>
     /// Extension methods for working with collections.
@@ -20,7 +20,7 @@ namespace Cratis.Changes
         /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
         /// <param name="key">The key value to check for.</param>
         /// <returns>The item or default if not found.</returns>
-        public static TTarget? FindByKey<TTarget>(this IEnumerable<TTarget> items, PropertyPath identityProperty, object key) => items.FirstOrDefault(_ => identityProperty.GetValue(_!)!.Equals(key));
+        public static TTarget? FindByKey<TTarget>(this IEnumerable<TTarget> items, PropertyPath identityProperty, object key) => items.FirstOrDefault(_ => identityProperty.GetValue(_!)?.Equals(key) ?? false);
 
         /// <summary>
         /// Ensures that a collection exists for a specific <see cref="PropertyPath"/>.

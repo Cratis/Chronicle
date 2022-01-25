@@ -1,13 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Execution;
+using Aksio.Cratis.Execution;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IGrainStorage"/> for handling event log state storage.

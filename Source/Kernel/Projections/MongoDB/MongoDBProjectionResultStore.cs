@@ -1,17 +1,18 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Configuration;
-using Cratis.Execution;
-using Cratis.Extensions.MongoDB;
-using Cratis.Strings;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in MongoDB.
@@ -75,7 +76,7 @@ namespace Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset)
+        public async Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;

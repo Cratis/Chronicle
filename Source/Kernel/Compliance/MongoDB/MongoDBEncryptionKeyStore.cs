@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.MongoDB;
+using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 
-namespace Cratis.Compliance.MongoDB
+namespace Aksio.Cratis.Compliance.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEncryptionKeyStore"/> for MongoDB.

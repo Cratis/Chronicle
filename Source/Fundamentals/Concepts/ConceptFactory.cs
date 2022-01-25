@@ -1,12 +1,12 @@
-﻿// Copyright (c) Cratis. All rights reserved.
+﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Reflection;
+using Aksio.Cratis.Reflection;
 
 #nullable disable
 
-namespace Cratis.Concepts
+namespace Aksio.Cratis.Concepts
 {
     /// <summary>
     /// Factory to create an instance of a <see cref="ConceptAs{T}"/> from the Type and Underlying value.

@@ -1,13 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
 using System.Reflection;
-using Cratis.Dynamic;
-using Cratis.Objects;
-using Cratis.Strings;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Objects;
+using Aksio.Cratis.Strings;
 
-namespace Cratis.Properties
+namespace Aksio.Cratis.Properties
 {
     /// <summary>
     /// Represents an encapsulation of a property in the system - used for accessing properties on objects.

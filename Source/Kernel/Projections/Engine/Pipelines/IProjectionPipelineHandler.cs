@@ -1,7 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.Pipelines
+using Aksio.Cratis.Events.Store;
+
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Defines a system for handling events for a <see cref="IProjectionPipeline"/>.
@@ -34,6 +36,6 @@ namespace Cratis.Events.Projections.Pipelines
         /// <param name="resultStore">Which <see cref="IProjectionResultStore"/> it should use.</param>
         /// <param name="configurationId">What is the identifier for the projection result store.</param>
         /// <returns>Next<see cref="EventLogSequenceNumber"/> it can handle.</returns>
-        Task<EventLogSequenceNumber> Handle(Event @event, IProjectionPipeline pipeline, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId);
+        Task<EventLogSequenceNumber> Handle(AppendedEvent @event, IProjectionPipeline pipeline, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId);
     }
 }

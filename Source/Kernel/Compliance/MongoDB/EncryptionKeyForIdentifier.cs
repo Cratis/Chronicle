@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #pragma warning disable CA1819 // Allow arrays for properties
 
-namespace Cratis.Compliance.MongoDB
+namespace Aksio.Cratis.Compliance.MongoDB
 {
     /// <summary>
     /// Represents the stored version of an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.

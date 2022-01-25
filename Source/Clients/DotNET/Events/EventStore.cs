@@ -1,11 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Store;
-using Cratis.Execution;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Types;
 using Orleans;
 
-namespace Cratis.Events
+namespace Aksio.Cratis.Events
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventStore"/>.
@@ -24,16 +25,18 @@ namespace Cratis.Events
         /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with execution context.</param>
         /// <param name="eventTypes">The <see cref="IEventTypes"/> in the system.</param>
+        /// /// <param name="additionalEventInformationProviders">Providers of additional event information.</param>
         public EventStore(
             IEventSerializer serializer,
             IClusterClient clusterClient,
             IExecutionContextManager executionContextManager,
-            IEventTypes eventTypes)
+            IEventTypes eventTypes,
+            IInstancesOf<ICanProvideAdditionalEventInformation> additionalEventInformationProviders)
         {
             _clusterClient = clusterClient;
 
             var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
-            EventLog = new EventLog(eventTypes, serializer, defaultEventLog);
+            EventLog = new EventLog(eventTypes, serializer, additionalEventInformationProviders, defaultEventLog);
         }
     }
 }

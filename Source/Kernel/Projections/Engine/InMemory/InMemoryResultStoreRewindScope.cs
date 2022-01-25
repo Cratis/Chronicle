@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.InMemory
+namespace Aksio.Cratis.Events.Projections.InMemory
 {
     /// <summary>
     /// Represents a <see cref="IProjectionResultStoreRewindScope"/> for in-memory.

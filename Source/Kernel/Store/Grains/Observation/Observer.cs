@@ -1,19 +1,18 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Compliance;
-using Cratis.Connections;
-using Cratis.Events.Schemas;
-using Cratis.Events.Store.Observation;
-using Cratis.Execution;
-using Cratis.Extensions.Orleans.Execution;
-using Newtonsoft.Json.Linq;
+using Aksio.Cratis.Connections;
+using Aksio.Cratis.Events.Store.EventLogs;
+using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.Orleans.Execution;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation
 {
     /// <summary>
     /// Represents an implementation of <see cref="IObserver"/>.
@@ -22,10 +21,9 @@ namespace Cratis.Events.Store.Grains.Observation
     public class Observer : Grain<ObserverState>, IObserver
     {
         readonly ConcurrentDictionary<Guid, StreamSubscriptionHandle<AppendedEvent>> _subscriptions = new();
-        readonly ISchemaStore _schemaStore;
-        readonly IJsonComplianceManager _jsonComplianceManager;
         readonly IRequestContextManager _requestContextManager;
         readonly IConnectedClients _connectedObservers;
+        readonly ILogger<Observer> _logger;
         IAsyncStream<AppendedEvent>? _stream;
         ObserverId _observerId = Guid.Empty;
         TenantId _tenantId = TenantId.NotSet;
@@ -34,20 +32,17 @@ namespace Cratis.Events.Store.Grains.Observation
         /// <summary>
         /// Initializes a new instance of the <see cref="Observer"/> class.
         /// </summary>
-        /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
-        /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
         /// <param name="connectedClients"><see cref="IConnectedClients"/>.</param>
+        /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
         public Observer(
-            ISchemaStore schemaStore,
-            IJsonComplianceManager jsonComplianceManager,
             IRequestContextManager requestContextManager,
-            IConnectedClients connectedClients)
+            IConnectedClients connectedClients,
+            ILogger<Observer> logger)
         {
-            _schemaStore = schemaStore;
-            _jsonComplianceManager = jsonComplianceManager;
             _requestContextManager = requestContextManager;
             _connectedObservers = connectedClients;
+            _logger = logger;
             _connectedObservers.ClientDisconnected += async (_) =>
             {
                 foreach (var (subscriptionId, handler) in _subscriptions)
@@ -83,16 +78,12 @@ namespace Cratis.Events.Store.Grains.Observation
                         return;
                     }
 
-                    var eventSchema = await _schemaStore.GetFor(@event.Metadata.EventType.Id, @event.Metadata.EventType.Generation);
-                    var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventContext.EventSourceId, JObject.Parse(@event.Content));
-                    var releasedEvent = new AppendedEvent(@event.Metadata, @event.EventContext, releasedContent.ToString());
-
-                    var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.EventContext.EventSourceId);
+                    var key = PartitionedObserverKeyHelper.Create(_tenantId, _eventLogId, @event.Context.EventSourceId);
                     var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
                     try
                     {
                         await partitionedObserver.SetConnectionId(connectionId);
-                        await partitionedObserver.OnNext(releasedEvent, eventTypes);
+                        await partitionedObserver.OnNext(@event, eventTypes);
 
                         State.Offset = @event.Metadata.SequenceNumber + 1;
                         State.LastHandled = @event.Metadata.SequenceNumber + 1;
@@ -114,7 +105,14 @@ namespace Cratis.Events.Store.Grains.Observation
         {
             if (_subscriptions.ContainsKey(subscriptionId))
             {
-                await _subscriptions[subscriptionId].UnsubscribeAsync();
+                try
+                {
+                    await _subscriptions[subscriptionId].UnsubscribeAsync();
+                }
+                catch (Exception)
+                {
+                    _logger.UnsubscribeFailedSubscriptionUnavailable(subscriptionId);
+                }
                 _subscriptions.Remove(subscriptionId, out _);
             }
         }

@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
-using Newtonsoft.Json.Linq;
+using System.Text.Json.Nodes;
 
-namespace Cratis.Compliance.GDPR
+namespace Aksio.Cratis.Compliance.GDPR
 {
     /// <summary>
     /// Represents a <see cref="IJsonCompliancePropertyValueHandler"/> for handling PII.
@@ -29,24 +29,24 @@ namespace Cratis.Compliance.GDPR
         }
 
         /// <inheritdoc/>
-        public async Task<JToken> Apply(string identifier, JToken value)
+        public async Task<JsonNode> Apply(string identifier, JsonNode value)
         {
             var key = await _encryptionKeyStore.GetFor(identifier);
             var valueAsString = value.ToString();
             var encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key);
             var encryptedAsBase64 = Convert.ToBase64String(encrypted);
-            return JToken.FromObject(encryptedAsBase64);
+            return JsonValue.Create(encryptedAsBase64)!;
         }
 
         /// <inheritdoc/>
-        public async Task<JToken> Release(string identifier, JToken value)
+        public async Task<JsonNode> Release(string identifier, JsonNode value)
         {
             var key = await _encryptionKeyStore.GetFor(identifier);
             var encryptedAsString = value.ToString();
             var encrypted = Convert.FromBase64String(encryptedAsString);
             var decrypted = _encryption.Decrypt(encrypted, key);
             var decryptedAsString = Encoding.UTF8.GetString(decrypted);
-            return JToken.FromObject(decryptedAsString);
+            return JsonValue.Create(decryptedAsString)!;
         }
     }
 }

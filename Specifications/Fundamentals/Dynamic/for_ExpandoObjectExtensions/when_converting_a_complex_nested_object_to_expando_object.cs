@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
 
-namespace Cratis.Dynamic.for_ExpandoObjectExtensions
+namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
 {
     public class when_converting_a_complex_nested_object_to_expando_object : Specification
     {

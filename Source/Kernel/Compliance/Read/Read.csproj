@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Compliance.Read</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Compliance.Read</AssemblyName>
         <RootNamespace>Cratis.Compliance.Read</RootNamespace>
     </PropertyGroup>
 
@@ -11,9 +11,6 @@
     <ItemGroup>
         <ProjectReference Include="../Concepts/Concepts.csproj"/>
         <ProjectReference Include="../Events/Events.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Aksio.CQRS.MongoDB" Version="$(Aksio)"/>
+        <ProjectReference Include="../../../ApplicationModel/CQRS.MongoDB/CQRS.MongoDB.csproj"/>
     </ItemGroup>
 </Project>
