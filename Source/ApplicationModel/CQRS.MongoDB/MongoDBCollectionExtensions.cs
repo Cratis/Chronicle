@@ -65,7 +65,7 @@ namespace Aksio.Cratis.Applications.Queries.MongoDB
                         observable.OnNext(response.ToList());
                     }
                 }
-                catch (Exception)
+                catch (ObjectDisposedException)
                 {
                     Console.WriteLine("Cursor disposed.");
                 }
