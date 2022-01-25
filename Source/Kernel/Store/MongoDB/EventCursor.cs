@@ -43,7 +43,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
             var result = await _innerCursor.MoveNextAsync();
             if (_innerCursor.Current is not null)
             {
-                Current = await Task.WhenAll(_innerCursor.Current.Select(@event => ConvertToCratis(@event)));
+                Current = await Task.WhenAll(_innerCursor.Current.Select(@event => ToAppendedEvent(@event)));
             }
             else
             {
@@ -58,7 +58,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
             _innerCursor?.Dispose();
         }
 
-        async Task<AppendedEvent> ConvertToCratis(Event @event)
+        async Task<AppendedEvent> ToAppendedEvent(Event @event)
         {
             var eventType = new EventType(@event.Type, EventGeneration.First);
             var content = (JsonNode.Parse(@event.Content[EventGeneration.First.ToString()].ToString()) as JsonObject)!;
