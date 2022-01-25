@@ -38,8 +38,7 @@ try {
             'Aksio.Cratis.Applications',
             'Aksio.Cratis.Applications.CQRS',
             'Aksio.Cratis.Applications.CQRS.MongoDB',
-            'Aksio.Cratis.ApplicationsProxyGenerator',
-            'Aksio.Cratis.Integration'
+            'Aksio.Cratis.Applications.ProxyGenerator'
         ];
 
         let result = content;
