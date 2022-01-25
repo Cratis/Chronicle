@@ -2,7 +2,7 @@
     "name": "@aksio/cratis-fluentui",
     "version": "1.0.0",
     "description": "",
-    "author": "Cratis",
+    "author": "Aksio Insurtech",
     "license": "MIT",
     "publishConfig": {
         "access": "public"
@@ -27,8 +27,8 @@
     "dependencies": {
         "@aksio/cratis-typescript": "1.0.0",
         "@fluentui/font-icons-mdl2": "8.1.20",
-        "@fluentui/react": "8.49.7",
-        "@fluentui/react-charting": "5.7.1",
+        "@fluentui/react": "8.51.0",
+        "@fluentui/react-charting": "5.7.4",
         "@fluentui/react-hooks": "8.3.9",
         "@fluentui/react-icons": "1.1.145"
     },
