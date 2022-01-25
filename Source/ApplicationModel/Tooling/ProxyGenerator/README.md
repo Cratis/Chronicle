@@ -43,7 +43,7 @@ be included during compiletime of any consumers of this package.
 ## Run in sample
 
 ```shell
-$ dotnet build --no-incremental
+dotnet build --no-incremental
 ```
 
 ## Debugging
@@ -61,7 +61,7 @@ while (!System.Diagnostics.Debugger.IsAttached) Thread.Sleep(10);
 Then do a build from the project you're testing from:
 
 ```shell
-$ dotnet build --no-incremental
+dotnet build --no-incremental
 ```
 
 You can then attach the debugger:
