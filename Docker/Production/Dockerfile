@@ -2,7 +2,7 @@
 # Server Build
 ARG CONFIGURATION=Release
 ARG VERSION
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS server-build
+FROM mcr.microsoft.com/dotnet/sdk:6.0.101 AS server-build
 WORKDIR /build
 
 COPY .editorconfig .
