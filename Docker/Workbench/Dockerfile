@@ -11,6 +11,7 @@ COPY .mocharc.js .
 COPY package.json .
 COPY tsconfig.json .
 COPY ./Source/Node ./Source/Node
+COPY ./Source/ApplicationModel/Frontend ./Source/ApplicationModel/Frontend
 COPY ./Source/Workbench ./Source/Workbench
 
 WORKDIR /build/Source/Workbench
