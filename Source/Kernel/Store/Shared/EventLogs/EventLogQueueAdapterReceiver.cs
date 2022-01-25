@@ -18,12 +18,9 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         /// <inheritdoc/>
         public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
         {
-            lock (_eventBatches)
-            {
-                var result = _eventBatches.OrderBy(_ => _.SequenceToken).ToArray().ToList();
-                _eventBatches.Clear();
-                return Task.FromResult<IList<IBatchContainer>>(result);
-            }
+            var result = _eventBatches.OrderBy(_ => _.SequenceToken).ToList();
+            _eventBatches.Clear();
+            return Task.FromResult<IList<IBatchContainer>>(result);
         }
 
         /// <inheritdoc/>
@@ -52,13 +49,10 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         /// <param name="requestContext">The request context.</param>
         public void AddAppendedEvent(Guid streamGuid, IEnumerable<AppendedEvent> events, IDictionary<string, object> requestContext)
         {
-            lock (_eventBatches)
-            {
-                var tenantIdAsString = requestContext[RequestContextKeys.TenantId]?.ToString() ?? TenantId.NotSet.ToString();
-                var tenantId = (TenantId)tenantIdAsString;
+            var tenantIdAsString = requestContext[RequestContextKeys.TenantId]?.ToString() ?? TenantId.NotSet.ToString();
+            var tenantId = (TenantId)tenantIdAsString;
 
-                _eventBatches.Add(new EventLogBatchContainer(events, streamGuid, tenantId, requestContext));
-            }
+            _eventBatches.Add(new EventLogBatchContainer(events, streamGuid, tenantId, requestContext));
         }
     }
 }
