@@ -81,8 +81,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                     {
                         _executionContextManager.Establish(tenantId, CorrelationId.New());
                         var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
-                        var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.Context.EventSourceId, @event.Content);
-                        subject.OnNext(new(@event.Metadata, @event.Context, releasedContent));
+                        subject.OnNext(new(@event.Metadata, @event.Context, @event.Content));
                     },
                     new EventLogSequenceNumberTokenWithFilter(currentOffset, pipeline.Projection.EventTypes.ToArray()));
             }
