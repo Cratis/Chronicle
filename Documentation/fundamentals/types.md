@@ -1,6 +1,6 @@
 # Types
 
-Within the fundamentals of the foundation you'll find a package called `Cratis.Types`.
+Within the fundamentals of you'll find a package called `Aksio.Cratis.Types`.
 This package provides mechanisms for discovering types in the project referenced assemblies
 you have in your project. It will look at the entry assembly and find all its project references
 at runtime and index the types from all of these.
@@ -10,7 +10,7 @@ remove the need for configuration of types to include in a system and discover t
 criteria instead.
 
 If you want to bypass any automatic hookup of the system, you can manually create an instance of
-the class called `Types` in the `Cratis.Types` namespace. This implements the interface `ITypes`.
+the class called `Types` in the `Aksio.Cratis.Types` namespace. This implements the interface `ITypes`.
 
 ## Assembly prefixes
 

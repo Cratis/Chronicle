@@ -28,7 +28,7 @@ With symbols it is also possible to do [conditional processing](https://github.c
 To test the template pack, simply install it by doing the following from a terminal:
 
 ```shell
-$ dotnet new -i ./
+dotnet new -i ./
 ```
 
 Then you can go ahead and run `dotnet new <short name of template>`.
@@ -38,5 +38,5 @@ Aksio templates at the top of the list.
 To uninstall it when you're done testing:
 
 ```shell
-$ dotnet new -u ./
+dotnet new -u ./
 ```
