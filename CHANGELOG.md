@@ -1,3 +1,12 @@
+# [v5.0.3] - 2022-1-25 [PR: #123](https://github.com/aksio-insurtech/Cratis/pull/123)
+
+### Fixed
+
+- Fixing Docker builds to not include the Aksio.Defaults - which doesn't produce a DLL when publishing with **PublishReadyToRun**.
+- Fixing image name in `docker-compose.yml` for sample and template.
+- Fixing path to sample for the template generator
+
+
 # [v5.0.2] - 2022-1-25 [PR: #122](https://github.com/aksio-insurtech/Cratis/pull/122)
 
 ### Fixed
