@@ -20,7 +20,7 @@ To get a quick start, head over to our [getting started](./getting-started.md) s
 | Topic | Description |
 | ------- | ----------- |
 | [Events](./clients/dotnet/events/events.md) | How to work with events. |
-| [Event Handlers](./clients/dotnet/events/observers.md) | How to work with event handlers. |
+| [Observers](./clients/dotnet/events/observers.md) | How to work with observers. |
 | [Integration](./clients/dotnet/integration/integration.md) | How to create integration connectors and adapters for 3rd parties. |
 
 ## Application Model
