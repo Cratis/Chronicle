@@ -56,11 +56,18 @@ namespace Aksio.Cratis.Applications.Queries.MongoDB
 
             _ = Task.Run(async () =>
             {
-                while (await cursor.MoveNextAsync())
+                try
                 {
-                    if (!cursor.Current.Any()) continue;
-                    var response = await findCall();
-                    observable.OnNext(response.ToList());
+                    while (await cursor.MoveNextAsync())
+                    {
+                        if (!cursor.Current.Any()) continue;
+                        var response = await findCall();
+                        observable.OnNext(response.ToList());
+                    }
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Cursor disposed.")
                 }
             });
 
