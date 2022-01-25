@@ -67,7 +67,7 @@ namespace Aksio.Cratis.Applications.Queries.MongoDB
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine("Cursor disposed.")
+                    Console.WriteLine("Cursor disposed.");
                 }
             });
 
