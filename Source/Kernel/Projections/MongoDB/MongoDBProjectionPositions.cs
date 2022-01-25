@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Store.MongoDB;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
@@ -13,15 +12,15 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
     /// </summary>
     public class MongoDBProjectionPositions : IProjectionPositions
     {
-        readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+        readonly IEventStoreDatabase _eventStoreDatabase;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBProjectionPositions"/> class.
         /// </summary>
-        /// <param name="eventStoreDatabaseProvider">The <see cref="ISharedDatabase"/>.</param>
-        public MongoDBProjectionPositions(ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
+        /// <param name="eventStoreDatabase">The <see cref="ISharedDatabase"/>.</param>
+        public MongoDBProjectionPositions(IEventStoreDatabase eventStoreDatabase)
         {
-            _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+            _eventStoreDatabase = eventStoreDatabase;
         }
 
         /// <inheritdoc/>
@@ -51,6 +50,6 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
         string GetIdentifierFor(IProjection projection, ProjectionResultStoreConfigurationId configurationId) => $"{projection.Identifier}-{configurationId}";
 
-        IMongoCollection<ProjectionPosition> GetCollection() => _eventStoreDatabaseProvider().GetCollection<ProjectionPosition>("projection-positions");
+        IMongoCollection<ProjectionPosition> GetCollection() => _eventStoreDatabase.GetCollection<ProjectionPosition>("projection-positions");
     }
 }
