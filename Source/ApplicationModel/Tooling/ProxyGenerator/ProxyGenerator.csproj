@@ -6,6 +6,8 @@
         <IsRoslynComponent>true</IsRoslynComponent>
         <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <LangVersion>10.0</LangVersion>
+        <Nullable>enable</Nullable>
    </PropertyGroup>
 
    <Import Project="./build/Aksio.Cratis.Applications.ProxyGenerator.props"/>
