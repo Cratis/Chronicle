@@ -14,13 +14,22 @@ namespace Aksio.Cratis.Events.Store.EventLogs
     public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
     {
         readonly ConcurrentBag<IBatchContainer> _eventBatches = new();
+        readonly List<IBatchContainer> _empty = new();
 
         /// <inheritdoc/>
         public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
         {
-            var result = _eventBatches.OrderBy(_ => _.SequenceToken).ToList();
-            _eventBatches.Clear();
-            return Task.FromResult<IList<IBatchContainer>>(result);
+            lock (_eventBatches)
+            {
+                if (!_eventBatches.IsEmpty)
+                {
+                    var result = _eventBatches.OrderBy(_ => _.SequenceToken).ToArray().ToList();
+                    _eventBatches.Clear();
+                    return Task.FromResult<IList<IBatchContainer>>(result);
+                }
+            }
+
+            return Task.FromResult<IList<IBatchContainer>>(_empty);
         }
 
         /// <inheritdoc/>
@@ -52,7 +61,10 @@ namespace Aksio.Cratis.Events.Store.EventLogs
             var tenantIdAsString = requestContext[RequestContextKeys.TenantId]?.ToString() ?? TenantId.NotSet.ToString();
             var tenantId = (TenantId)tenantIdAsString;
 
-            _eventBatches.Add(new EventLogBatchContainer(events, streamGuid, tenantId, requestContext));
+            lock (_eventBatches)
+            {
+                _eventBatches.Add(new EventLogBatchContainer(events, streamGuid, tenantId, requestContext));
+            }
         }
     }
 }
