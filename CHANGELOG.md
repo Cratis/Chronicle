@@ -1,3 +1,10 @@
+# [v5.0.2] - 2022-1-25 [PR: #122](https://github.com/aksio-insurtech/Cratis/pull/122)
+
+### Fixed
+
+- Fixed the path to `entrypoint.sh` in the Dockerfile for our MongoDB image.
+
+
 # [v5.0.1] - 2022-1-25 [PR: #121](https://github.com/aksio-insurtech/Cratis/pull/121)
 
 ### Fixed
