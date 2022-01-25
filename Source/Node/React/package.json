@@ -2,7 +2,7 @@
     "name": "@aksio/cratis-react",
     "version": "1.0.0",
     "description": "",
-    "author": "Cratis",
+    "author": "Aksio Insurtech",
     "license": "MIT",
     "publishConfig": {
         "access": "public"
