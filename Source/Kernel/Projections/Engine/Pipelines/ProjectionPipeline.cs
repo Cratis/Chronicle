@@ -114,6 +114,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             {
                 subscription.Dispose();
             }
+            await EventProvider.StopProvidingFor(this);
             _subscriptionsPerConfiguration.Clear();
             _state.OnNext(ProjectionState.Paused);
         }
@@ -200,6 +201,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             {
                 subscription.Dispose();
             }
+            await EventProvider.StopProvidingFor(this);
             _subscriptionsPerConfiguration.Clear();
             _state.OnNext(ProjectionState.Suspended);
         }

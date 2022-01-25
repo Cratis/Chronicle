@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Events.Projections
         ProjectionEventProviderTypeId TypeId { get; }
 
         /// <summary>
-        /// Start providing events for a <see cref="IProjection"/>.
+        /// Start providing events for a <see cref="IProjectionPipeline"/>.
         /// </summary>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> to start providing for.</param>
         /// <param name="subject"><see cref="ISubject{Event}"/> to provide into.</param>
@@ -29,6 +29,13 @@ namespace Aksio.Cratis.Events.Projections
         /// head of the stream. Once at the head, it will provide events as they occur.
         /// </remarks>
         Task ProvideFor(IProjectionPipeline pipeline, ISubject<AppendedEvent> subject);
+
+        /// <summary>
+        /// Stop providing for a specific <see cref="IProjectionPipeline"/>.
+        /// </summary>
+        /// <param name="pipeline"><see cref="IProjectionPipeline"/> to stop for.</param>
+        /// <returns>Awaitable task.</returns>
+        Task StopProvidingFor(IProjectionPipeline pipeline);
 
         /// <summary>
         /// Get events from a specific sequence numbers.
