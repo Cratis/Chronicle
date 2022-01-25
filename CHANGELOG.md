@@ -1,3 +1,28 @@
+# [v5.0.0] - 2022-1-25 [PR: #120](https://github.com/aksio-insurtech/Cratis/pull/120)
+
+## Summary
+
+This release is a consolidation of repositories and projects. It has involved simplification internally with less code and less repetition. The kernel startup code is now dogfooding the appliction model itself, making the setup simpler and more maintainable.
+
+There are no behavioral changes.
+
+### Changed
+
+- All namespaces are changed. They all start now with `Aksio.Cratis`.
+- All NuGet packages have new names. They all start now with `Aksio.Cratis`.
+- All NPM pakcages have new names. They all start now with `@aksio/cratis`.
+- Docker images changed names; aksioinsurtech/cratis:<label>
+- No longer dependending on Newtonsoft.Json - consistently using System.Text.Json both in Client and Kernel
+
+### Fixed
+
+- Improved startup predictability for Kernel - taking out "WarmUp" for event logs
+- Fixed error situations for observable clients - closing down more gracefully
+- Graceful handling of projections when replacing these - unsubscribe previous stream subscriber
+- Improved consistency in codebase for working with events by switching to `JsonObject` throughout rather than JSON strings.
+- Integration now works together with the Kernel rather than all in-memory. Leveraging a new Projection Grain.
+
+
 # [v4.3.0] - 2022-1-19 [PR: #116](https://github.com/aksio-insurtech/Cratis/pull/116)
 
 ### Added
