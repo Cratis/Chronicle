@@ -10,7 +10,7 @@ RUN mkdir -p /data/db /data/configdb \
     && mongo --eval 'rs.initiate({_id: "rs0", members: [{ _id: 0, host: "localhost:27017"}]})' \
     && mongod --shutdown
 
-COPY ./entrypoint.sh /app/entrypoint.sh
+COPY ./Docker/MongoDB/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT [ "/app/entrypoint.sh" ]
