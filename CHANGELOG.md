@@ -1,3 +1,12 @@
+# [v5.0.1] - 2022-1-25 [PR: #121](https://github.com/aksio-insurtech/Cratis/pull/121)
+
+### Fixed
+
+- Add missing `ApplicationModel/Frontend` for the Workbench Docker image
+- Locking down Newtonsoft JSON version + System.IO.FileSystem.Primitives. NJsonSchema has a dependency to an earlier version of Newtonsoft, causing problems during publish with downgraded references.
+- Add **latest** tag for Workbench docker image.
+
+
 # [v5.0.0] - 2022-1-25 [PR: #120](https://github.com/aksio-insurtech/Cratis/pull/120)
 
 ## Summary
