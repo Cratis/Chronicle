@@ -40,10 +40,10 @@ namespace Aksio.Cratis.Events.Store.EventLogs
 
             if (token is EventLogSequenceNumberTokenWithFilter tokenWithFilter)
             {
-                return new EventLogQueueCacheCursor(_eventLogStorageProvider, streamIdentity, token, tokenWithFilter.EventTypes, tokenWithFilter.Partition);
+                return new EventLogQueueCacheCursor(_executionContextManager, _eventLogStorageProvider, streamIdentity, token, tokenWithFilter.EventTypes, tokenWithFilter.Partition);
             }
 
-            return new EventLogQueueCacheCursor(_eventLogStorageProvider, streamIdentity, token);
+            return new EventLogQueueCacheCursor(_executionContextManager, _eventLogStorageProvider, streamIdentity, token);
         }
 
         /// <inheritdoc/>
