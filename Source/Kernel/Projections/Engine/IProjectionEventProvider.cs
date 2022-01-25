@@ -1,10 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Events.Projections.Pipelines;
+using Aksio.Cratis.Events.Store;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Defines a provider of events for <see cref="IProjection">projections</see>.
@@ -17,7 +18,7 @@ namespace Cratis.Events.Projections
         ProjectionEventProviderTypeId TypeId { get; }
 
         /// <summary>
-        /// Start providing events for a <see cref="IProjection"/>.
+        /// Start providing events for a <see cref="IProjectionPipeline"/>.
         /// </summary>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> to start providing for.</param>
         /// <param name="subject"><see cref="ISubject{Event}"/> to provide into.</param>
@@ -27,7 +28,14 @@ namespace Cratis.Events.Projections
         /// <see cref="IProjection"/>. It will be in a state of catching up till its at the
         /// head of the stream. Once at the head, it will provide events as they occur.
         /// </remarks>
-        Task ProvideFor(IProjectionPipeline pipeline, ISubject<Event> subject);
+        Task ProvideFor(IProjectionPipeline pipeline, ISubject<AppendedEvent> subject);
+
+        /// <summary>
+        /// Stop providing for a specific <see cref="IProjectionPipeline"/>.
+        /// </summary>
+        /// <param name="pipeline"><see cref="IProjectionPipeline"/> to stop for.</param>
+        /// <returns>Awaitable task.</returns>
+        Task StopProvidingFor(IProjectionPipeline pipeline);
 
         /// <summary>
         /// Get events from a specific sequence numbers.

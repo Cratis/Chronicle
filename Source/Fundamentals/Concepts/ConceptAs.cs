@@ -1,7 +1,7 @@
-﻿// Copyright (c) Cratis. All rights reserved.
+﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Concepts
+namespace Aksio.Cratis.Concepts
 {
     /// <summary>
     /// Expresses a Concept as a another type, usually a primitive such as Guid, Int or String.

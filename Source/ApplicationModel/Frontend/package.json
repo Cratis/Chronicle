@@ -1,0 +1,53 @@
+{
+    "name": "@aksio/cratis-applications-frontend",
+    "version": "1.0.0",
+    "description": "",
+    "author": "Aksio",
+    "license": "MIT",
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "dist",
+        "**/*.ts"
+    ],
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "typings": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "default": "./dist/index.js"
+        },
+        "./commands": {
+            "default": "./dist/commands/index.js"
+        },
+        "./queries": {
+            "default": "./dist/queries/index.js"
+        },
+        "./dialogs": {
+            "default": "./dist/dialogs/index.js"
+        }
+    },
+    "scripts": {
+        "prepublish": "yarn build",
+        "clean": "tsc -b --clean",
+        "build": "tsc -b",
+        "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
+        "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
+        "test": "mocha",
+        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
+        "up": "ncu -u \\!'@aksio/*'"
+    },
+    "dependencies": {
+        "@aksio/cratis-typescript": "1.0.0",
+        "react": "17.0.2",
+        "react-dom": "17.0.2",
+        "react-router-dom": "6.2.1",
+        "handlebars": "4.7.7"
+    },
+    "devDependencies": {
+        "@types/react": "17.0.38",
+        "@types/react-dom": "17.0.11",
+        "@types/react-router-dom": "5.3.3"
+    }
+}

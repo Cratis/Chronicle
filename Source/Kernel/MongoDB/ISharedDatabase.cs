@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MongoDB.Driver;
 
-namespace Cratis.MongoDB
+namespace Aksio.Cratis.MongoDB
 {
     /// <summary>
     /// Defines the common database for event store that goes across all tenants.

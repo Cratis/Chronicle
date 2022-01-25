@@ -1,24 +1,24 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
-using Autofac.Extensions.DependencyInjection;
-using Cratis.Compliance;
-using Cratis.Compliance.MongoDB;
-using Cratis.Events.Projections;
-using Cratis.Events.Projections.Changes;
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.MongoDB;
-using Cratis.Events.Schemas;
-using Cratis.Events.Schemas.MongoDB;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Compliance.MongoDB;
+using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Events.Projections.Changes;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.MongoDB;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Schemas.MongoDB;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.MongoDB;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
-using Serilog;
 
 #pragma warning disable SA1600
 
-namespace Cratis.Server
+namespace Aksio.Cratis.Server
 {
     public static class Program
     {
@@ -26,21 +26,12 @@ namespace Cratis.Server
         {
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
 
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
-                .Build();
-
-            Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration)
-                .CreateLogger();
-
             return CreateHostBuilder(args).RunConsoleAsync();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
              Host.CreateDefaultBuilder(args)
+                .UseAksio(_ => _.InSilo())
                 .UseOrleans(_ => _
                     .UseLocalhostClustering()
                     .ConfigureServices(_ => _
@@ -48,6 +39,7 @@ namespace Cratis.Server
                         .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
                         .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
                         .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
+                        .AddSingleton<IEventLogStorageProvider, MongoDBEventLogStorageProvider>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
                         .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
                         .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
@@ -63,9 +55,6 @@ namespace Cratis.Server
                     .UseMongoDBReminderService()
                     .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
                     .AddExecutionContext())
-                .UseCratis(Startup.Types, _ => _.InSilo())
-                .UseSerilog()
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .ConfigureWebHostDefaults(_ => _
                     .UseStartup<Startup>());
 

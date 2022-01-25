@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.for_ProjectionEventProviders
+namespace Aksio.Cratis.Events.Projections.for_ProjectionEventProviders
 {
     public class when_getting_for_known_type : Specification
     {

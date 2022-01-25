@@ -1,15 +1,15 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Execution;
-using Cratis.Types;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Types;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
 
-namespace Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB
 {
     /// <summary>
     /// Represents the setup of MongoDB defaults.
@@ -17,22 +17,22 @@ namespace Cratis.Extensions.MongoDB
     [Singleton]
     public class MongoDBDefaults
     {
+        static readonly object _lockObject = new();
         static bool _initialized;
-        readonly IInstancesOf<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
+        readonly IEnumerable<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
         readonly ITypes _types;
-        readonly IServiceProvider _serviceProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoDBDefaults"/> class.
         /// </summary>
-        /// <param name="conventionPackFilters"><see cref="IInstancesOf{T}"/> <see cref="ICanFilterMongoDBConventionPacksForType"/>.</param>
         /// <param name="types"><see cref="ITypes"/> for general type discovery.</param>
-        /// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing instances of types.</param>
-        public MongoDBDefaults(IInstancesOf<ICanFilterMongoDBConventionPacksForType> conventionPackFilters, ITypes types, IServiceProvider serviceProvider)
+        public MongoDBDefaults(ITypes types)
         {
-            _conventionPackFilters = conventionPackFilters;
+            _conventionPackFilters = types
+                .FindMultiple<ICanFilterMongoDBConventionPacksForType>()
+                .Select(_ => (Activator.CreateInstance(_) as ICanFilterMongoDBConventionPacksForType)!)
+                .ToArray();
             _types = types;
-            _serviceProvider = serviceProvider;
         }
 
         /// <summary>
@@ -43,32 +43,35 @@ namespace Cratis.Extensions.MongoDB
             if (_initialized) return;
             _initialized = true;
 
-            BsonSerializer
-                .RegisterSerializationProvider(new ConceptSerializationProvider());
-            BsonSerializer
-                .RegisterSerializer(new DateTimeOffsetSupportingBsonDateTimeSerializer());
+            lock (_lockObject)
+            {
+                BsonSerializer
+                    .RegisterSerializationProvider(new ConceptSerializationProvider());
+                BsonSerializer
+                    .RegisterSerializer(new DateTimeOffsetSupportingBsonDateTimeSerializer());
 
 #pragma warning disable CS0618
 
-            // Due to what must be a bug in the latest MongoDB drivers, we set this explicitly as well.
-            // This property is marked obsolete, we'll keep it here till that time
-            // https://www.mongodb.com/community/forums/t/c-driver-2-11-1-allegedly-use-different-guid-representation-for-insert-and-for-find/8536/3
-            BsonDefaults.GuidRepresentationMode = GuidRepresentationMode.V3;
+                // Due to what must be a bug in the latest MongoDB drivers, we set this explicitly as well.
+                // This property is marked obsolete, we'll keep it here till that time
+                // https://www.mongodb.com/community/forums/t/c-driver-2-11-1-allegedly-use-different-guid-representation-for-insert-and-for-find/8536/3
+                BsonDefaults.GuidRepresentationMode = GuidRepresentationMode.V3;
 #pragma warning restore CS0618
-            BsonSerializer
-                .RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+                BsonSerializer
+                    .RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
-            RegisterConventionAsPack(ConventionPacks.CamelCase, new CamelCaseElementNameConvention());
-            RegisterConventionAsPack(ConventionPacks.IgnoreExtraElements, new IgnoreExtraElementsConvention(true));
+                RegisterConventionAsPack(ConventionPacks.CamelCase, new CamelCaseElementNameConvention());
+                RegisterConventionAsPack(ConventionPacks.IgnoreExtraElements, new IgnoreExtraElementsConvention(true));
 
-            RegisterClassMaps();
+                RegisterClassMaps();
+            }
         }
 
         void RegisterClassMaps()
         {
             foreach (var classMapType in _types.FindMultiple(typeof(IBsonClassMapFor<>)))
             {
-                var classMapProvider = _serviceProvider.GetService(classMapType);
+                var classMapProvider = Activator.CreateInstance(classMapType);
                 var typeInterfaces = classMapType.GetInterfaces().Where(_ =>
                 {
                     var args = _.GetGenericArguments();
@@ -90,6 +93,10 @@ namespace Cratis.Extensions.MongoDB
 
         void Register<T>(IBsonClassMapFor<T> classMapProvider)
         {
+            if (BsonClassMap.IsClassMapRegistered(typeof(T)))
+            {
+                return;
+            }
             BsonClassMap.RegisterClassMap<T>(_ => classMapProvider.Configure(_));
         }
 

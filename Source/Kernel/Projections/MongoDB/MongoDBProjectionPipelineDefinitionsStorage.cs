@@ -1,14 +1,14 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
-using Cratis.Events.Projections.Json;
-using Cratis.Extensions.MongoDB;
-using Cratis.MongoDB;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Json;
+using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.

@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Events.Store;
+using Aksio.Cratis.Events.Store;
 
-namespace Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation
 {
     /// <summary>
     /// Represents an implementation of <see cref="IObserverInvoker"/>.
@@ -14,6 +14,7 @@ namespace Cratis.Events.Observation
         readonly Dictionary<EventType, MethodInfo> _methodsByEventTypeId;
         readonly IServiceProvider _serviceProvider;
         readonly IEventTypes _eventTypes;
+        readonly IObserverMiddlewares _middlewares;
         readonly Type _targetType;
 
         /// <inheritdoc/>
@@ -24,11 +25,13 @@ namespace Cratis.Events.Observation
         /// </summary>
         /// <param name="serviceProvider"><see cref="IServiceProvider"/> for creating instances of actual observer.</param>
         /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
+        /// <param name="middlewares"><see cref="IObserverMiddlewares"/> to call.</param>
         /// <param name="targetType">Type of observer.</param>
-        public ObserverInvoker(IServiceProvider serviceProvider, IEventTypes eventTypes, Type targetType)
+        public ObserverInvoker(IServiceProvider serviceProvider, IEventTypes eventTypes, IObserverMiddlewares middlewares, Type targetType)
         {
             _serviceProvider = serviceProvider;
             _eventTypes = eventTypes;
+            _middlewares = middlewares;
             _targetType = targetType;
 
             // TODO: Make a choice; can we have multiple methods handling the same event -
@@ -39,16 +42,18 @@ namespace Cratis.Events.Observation
         }
 
         /// <inheritdoc/>
-        public Task Invoke(object content, EventContext eventContext)
+        public async Task Invoke(object content, EventContext eventContext)
         {
             var actualObserver = _serviceProvider.GetService(_targetType);
             var eventType = _eventTypes.GetEventTypeFor(content.GetType());
 
-            object returnValue = null!;
             if (_methodsByEventTypeId.ContainsKey(eventType))
             {
+                Task returnValue;
                 var method = _methodsByEventTypeId[eventType];
                 var parameters = method.GetParameters();
+
+                await _middlewares.BeforeInvoke(eventContext, content);
 
                 if (parameters.Length == 2)
                 {
@@ -58,10 +63,10 @@ namespace Cratis.Events.Observation
                 {
                     returnValue = (Task)method.Invoke(actualObserver, new object[] { content })!;
                 }
-            }
-            if (returnValue != null) return (Task)returnValue;
 
-            return Task.CompletedTask;
+                if (returnValue is not null) await returnValue;
+                await _middlewares.AfterInvoke(eventContext, content);
+            }
         }
 
         bool IsObservingMethod(MethodInfo methodInfo)

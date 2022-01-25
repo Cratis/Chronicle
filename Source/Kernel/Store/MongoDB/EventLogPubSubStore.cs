@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.MongoDB;
+using Aksio.Cratis.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -12,7 +12,7 @@ using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Storage;
 
-namespace Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
     /// Represents the <see cref="IGrainStorage"/> for "PubSubStore" - which is used to store state about producers and consumers.

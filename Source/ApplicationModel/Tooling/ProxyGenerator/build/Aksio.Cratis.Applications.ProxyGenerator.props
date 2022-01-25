@@ -1,0 +1,6 @@
+<Project>
+    <ItemGroup>
+        <CompilerVisibleProperty Include="AksioProxyOutput"/>
+        <CompilerVisibleProperty Include="AksioUseRouteAsPath"/>
+    </ItemGroup>
+</Project>

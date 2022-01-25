@@ -1,11 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
 
 #pragma warning disable RCS1047
 
-namespace Cratis.Reflection
+namespace Aksio.Cratis.Reflection
 {
     /// <summary>
     /// Provides a set of methods for working with methods, such as <see cref="MethodInfo"/>.

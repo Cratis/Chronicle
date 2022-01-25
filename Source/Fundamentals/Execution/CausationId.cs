@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Concepts;
+using Aksio.Cratis.Concepts;
 
-namespace Cratis.Execution
+namespace Aksio.Cratis.Execution
 {
     /// <summary>
     /// Represents an identifier for correlation.
@@ -11,6 +11,11 @@ namespace Cratis.Execution
     /// <param name="Value">Actual value.</param>
     public record CausationId(string Value) : ConceptAs<string>(Value)
     {
+        /// <summary>
+        /// Represents a system cause.
+        /// </summary>
+        public static readonly CausationId System = "System";
+
         /// <summary>
         /// Implicitly convert from <see cref="string"/> to <see cref="CausationId"/>.
         /// </summary>

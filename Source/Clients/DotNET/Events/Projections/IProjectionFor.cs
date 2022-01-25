@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Defines something that can define a projection.
@@ -9,6 +9,11 @@ namespace Cratis.Events.Projections
     /// <typeparam name="TModel">Model type to target.</typeparam>
     public interface IProjectionFor<TModel>
     {
+        /// <summary>
+        /// Gets the unique identifier of the projection.
+        /// </summary>
+        ProjectionId Identifier { get; }
+
         /// <summary>
         /// Defines the projection.
         /// </summary>

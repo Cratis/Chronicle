@@ -1,11 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Execution;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Execution;
 
-namespace Cratis.Events.Projections.Changes
+namespace Aksio.Cratis.Events.Projections.Changes
 {
     /// <summary>
     /// Defines the storage mechanism for changesets. Typically used for debugging purposes to see what changes has occurred.
@@ -18,6 +19,6 @@ namespace Cratis.Events.Projections.Changes
         /// <param name="correlationId"><see cref="CorrelationId"/> to save for.</param>
         /// <param name="associatedChangesets">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
         /// <returns>Async task.</returns>
-        Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets);
+        Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets);
     }
 }

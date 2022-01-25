@@ -1,16 +1,17 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance;
-using Cratis.Events.Schemas;
-using Cratis.Execution;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Store.EventLogs;
+using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
 
-namespace Cratis.Events.Store.Grains
+namespace Aksio.Cratis.Events.Store.Grains
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventLog"/>.
@@ -58,19 +59,7 @@ namespace Cratis.Events.Store.Grains
         }
 
         /// <inheritdoc/>
-        public async Task WarmUp()
-        {
-            var appendedEvent = new AppendedEvent(
-                new EventMetadata(0, new EventType(Guid.Empty, EventGeneration.First)),
-                new EventContext(string.Empty, DateTimeOffset.UtcNow),
-                "{}");
-
-            await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken());
-            await WriteStateAsync();
-        }
-
-        /// <inheritdoc/>
-        public async Task Append(EventSourceId eventSourceId, EventType eventType, string content)
+        public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
         {
             _logger.Appending(eventType, eventSourceId, State.SequenceNumber, _eventLogId);
 
@@ -78,12 +67,12 @@ namespace Cratis.Events.Store.Grains
             try
             {
                 var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
-                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, JObject.Parse(content));
+                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, content);
 
                 var appendedEvent = new AppendedEvent(
                     new EventMetadata(State.SequenceNumber, eventType),
                     new EventContext(eventSourceId, DateTimeOffset.UtcNow),
-                    compliantEvent.ToString());
+                    compliantEvent);
 
                 await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));
             }

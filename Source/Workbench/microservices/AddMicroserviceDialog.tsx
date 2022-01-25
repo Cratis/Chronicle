@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState } from 'react';
 import { TextField } from '@fluentui/react';
-import { IModalProps } from '@cratis/fluentui';
+import { IModalProps } from '@aksio/cratis-fluentui';
 
 export type AddMicroserviceDialogResult = {
     name: string;

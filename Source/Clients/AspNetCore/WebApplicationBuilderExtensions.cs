@@ -1,17 +1,17 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis;
-using Cratis.Events.Schemas;
-using Cratis.Hosting;
-using Cratis.Types;
+using Aksio.Cratis;
+using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Hosting;
+using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.AspNetCore.Builder
 {
     /// <summary>
-    /// Extensions for using Cratis with a <see cref="WebApplicationBuilder"/>.
+    /// Extensions for using Aksio.Cratis with a <see cref="WebApplicationBuilder"/>.
     /// </summary>
     public static class WebApplicationBuilderExtensions
     {

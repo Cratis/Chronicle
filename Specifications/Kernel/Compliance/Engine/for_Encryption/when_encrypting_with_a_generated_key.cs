@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
 
-namespace Cratis.Compliance.for_Encryption
+namespace Aksio.Cratis.Compliance.for_Encryption
 {
     public class when_encrypting_with_a_generated_key : Specification
     {

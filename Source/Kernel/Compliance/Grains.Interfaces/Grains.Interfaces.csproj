@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Compliance.Grains.Interfaces</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Compliance.Grains.Interfaces</AssemblyName>
         <RootNamespace>Cratis.Compliance.Grains</RootNamespace>
     </PropertyGroup>
 

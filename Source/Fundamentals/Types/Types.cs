@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
 using Microsoft.Extensions.DependencyModel;
 
-namespace Cratis.Types
+namespace Aksio.Cratis.Types
 {
     /// <summary>
     /// Represents an implementation of <see cref="ITypes"/>.
@@ -89,7 +89,7 @@ namespace Cratis.Types
             ProjectReferencedAssemblies = projectReferencedAssemblies;
 
             var assemblies = dependencyModel.RuntimeLibraries
-                                .Where(_ => _.Name.StartsWith("Cratis", StringComparison.InvariantCultureIgnoreCase) ||
+                                .Where(_ => _.Name.StartsWith("Aksio.Cratis", StringComparison.InvariantCultureIgnoreCase) ||
                                             _assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm, StringComparison.InvariantCultureIgnoreCase)))
                                 .Select(_ => Assembly.Load(_.Name))
                                 .Distinct()

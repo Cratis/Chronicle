@@ -1,15 +1,15 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Events.Projections.Definitions;
-using Cratis.Execution;
-using Cratis.Reflection;
-using Cratis.Schemas;
-using Cratis.Types;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Types;
 using Orleans;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionsRegistrar"/>.
@@ -18,10 +18,10 @@ namespace Cratis.Events.Projections
     {
         static class ProjectionDefinitionCreator<TModel>
         {
-            public static ProjectionDefinition CreateAndDefine(Type type, ProjectionId identifier, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator)
+            public static ProjectionDefinition CreateAndDefine(Type type, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator)
             {
                 var instance = (Activator.CreateInstance(type) as IProjectionFor<TModel>)!;
-                var builder = new ProjectionBuilderFor<TModel>(identifier, eventTypes, schemaGenerator);
+                var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, eventTypes, schemaGenerator);
                 instance.Define(builder);
                 return builder.Build();
             }
@@ -60,14 +60,13 @@ namespace Cratis.Events.Projections
         /// <returns>Collection of <see cref="ProjectionDefinition"/>.</returns>
         public static IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(IEventTypes eventTypes, ITypes types, IJsonSchemaGenerator schemaGenerator) =>
             types.All
-                    .Where(_ => _.HasAttribute<ProjectionAttribute>() && _.HasInterface(typeof(IProjectionFor<>)))
+                    .Where(_ => _.HasInterface(typeof(IProjectionFor<>)))
                     .Select(_ =>
                     {
-                        var projection = _.GetCustomAttribute<ProjectionAttribute>()!;
                         var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
                         var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
                         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                        return (method.Invoke(null, new object[] { _, projection.Identifier, eventTypes, schemaGenerator }) as ProjectionDefinition)!;
+                        return (method.Invoke(null, new object[] { _, eventTypes, schemaGenerator }) as ProjectionDefinition)!;
                     }).ToArray();
 
         /// <inheritdoc/>

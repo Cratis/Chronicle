@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ModalButtons, ScrollableDetailsList, useModal, ModalResult, IModalProps } from '@cratis/fluentui';
+import { ModalButtons, ScrollableDetailsList, useModal, ModalResult, IModalProps } from '@aksio/cratis-fluentui';
 import { CommandBar, IColumn, ICommandBarItemProps, IconButton, Panel, SearchBox, Selection, SelectionMode, Stack, TextField } from '@fluentui/react';
 import { AllPeople } from 'API/compliance/gdpr/people/AllPeople';
 import { useMemo, useState } from 'react';

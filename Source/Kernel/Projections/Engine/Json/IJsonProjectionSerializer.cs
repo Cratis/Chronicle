@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Definitions;
 
-namespace Cratis.Events.Projections.Json
+namespace Aksio.Cratis.Events.Projections.Json
 {
     /// <summary>
     /// Defines a parser for JSON definition of a <see cref="IProjection"/>.

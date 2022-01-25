@@ -1,15 +1,15 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Types;
 using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
-using Cratis.Execution;
-using Cratis.Reflection;
-using Cratis.Types;
 
-namespace Cratis.Extensions.Autofac
+namespace Aksio.Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Represents a <see cref="IRegistrationSource"/> to handle correct lifecycle for implementations marked with <see cref="SingletonPerTenantAttribute"/>.

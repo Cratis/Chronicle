@@ -1,12 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
 using System.Dynamic;
-using Cratis.Concepts;
-using Cratis.Properties;
+using Aksio.Cratis.Concepts;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Dynamic
+namespace Aksio.Cratis.Dynamic
 {
     /// <summary>
     /// Extension methods for working with <see cref="ExpandoObject"/>.

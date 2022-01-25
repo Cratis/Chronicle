@@ -1,16 +1,17 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Reactive.Subjects;
-using Cratis.Changes;
-using Cratis.Events.Projections.Changes;
-using Cratis.Execution;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Projections.Changes;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPipelineHandler"/>.
@@ -53,16 +54,16 @@ namespace Cratis.Events.Projections.Pipelines
         }
 
         /// <inheritdoc/>
-        public async Task<EventLogSequenceNumber> Handle(Event @event, IProjectionPipeline pipeline, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId)
+        public async Task<EventLogSequenceNumber> Handle(AppendedEvent @event, IProjectionPipeline pipeline, IProjectionResultStore resultStore, ProjectionResultStoreConfigurationId configurationId)
         {
-            _logger.HandlingEvent(@event.SequenceNumber);
+            _logger.HandlingEvent(@event.Metadata.SequenceNumber);
             try
             {
                 var correlationId = CorrelationId.New();
-                var changesets = new List<IChangeset<Event, ExpandoObject>>();
+                var changesets = new List<IChangeset<AppendedEvent, ExpandoObject>>();
                 await HandleEventFor(pipeline.Projection, resultStore, @event, changesets);
                 await _changesetStorage.Save(correlationId, changesets);
-                var nextSequenceNumber = @event.SequenceNumber + 1;
+                var nextSequenceNumber = @event.Metadata.SequenceNumber + 1;
                 await _projectionPositions.Save(pipeline.Projection, configurationId, nextSequenceNumber);
                 UpdatePositionFor(configurationId, nextSequenceNumber);
                 return nextSequenceNumber;
@@ -70,23 +71,23 @@ namespace Cratis.Events.Projections.Pipelines
             catch (Exception ex)
             {
                 await pipeline.Suspend($"Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
-                return @event.SequenceNumber;
+                return @event.Metadata.SequenceNumber;
             }
         }
 
-        async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, Event @event, List<IChangeset<Event, ExpandoObject>> changesets)
+        async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, AppendedEvent @event, List<IChangeset<AppendedEvent, ExpandoObject>> changesets)
         {
-            if (projection.Accepts(@event.Type))
+            if (projection.Accepts(@event.Metadata.Type))
             {
-                var keyResolver = projection.GetKeyResolverFor(@event.Type);
+                var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
                 var key = keyResolver(@event);
-                _logger.GettingInitialValues(@event.SequenceNumber);
+                _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
                 var initialState = await resultStore.FindOrDefault(key);
-                var changeset = new Changeset<Event, ExpandoObject>(@event, initialState);
+                var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, initialState);
                 changesets.Add(changeset);
-                _logger.Projecting(@event.SequenceNumber);
+                _logger.Projecting(@event.Metadata.SequenceNumber);
                 projection.OnNext(@event, changeset);
-                _logger.SavingResult(@event.SequenceNumber);
+                _logger.SavingResult(@event.Metadata.SequenceNumber);
                 if (changeset.HasChanges)
                 {
                     await resultStore.ApplyChanges(key, changeset);
@@ -94,7 +95,7 @@ namespace Cratis.Events.Projections.Pipelines
             }
             else
             {
-                _logger.EventNotAccepted(@event.SequenceNumber, projection.Name, projection.Path, @event.Type);
+                _logger.EventNotAccepted(@event.Metadata.SequenceNumber, projection.Name, projection.Path, @event.Metadata.Type);
             }
 
             foreach (var child in projection.ChildProjections)

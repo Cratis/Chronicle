@@ -1,11 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Dynamic;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Events.Store;
 
-namespace Cratis.Events.Projections.InMemory
+namespace Aksio.Cratis.Events.Projections.InMemory
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in memory.
@@ -56,7 +57,7 @@ namespace Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public Task ApplyChanges(object key, IChangeset<Event, ExpandoObject> changeset)
+        public Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var state = changeset.InitialState.Clone();
 

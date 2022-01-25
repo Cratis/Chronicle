@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Definitions
+namespace Aksio.Cratis.Events.Projections.Definitions
 {
     /// <summary>
     /// Represents the definition of a projection.
@@ -11,6 +11,8 @@ namespace Cratis.Events.Projections.Definitions
     /// <param name="Identifier"><see cref="ProjectionId">Identifier</see> of the projection.</param>
     /// <param name="Name">Friendly displayname of the projection.</param>
     /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
+    /// <param name="IsPassive">Whether or not the projection is a passive projection.</param>
+    /// <param name="IsRewindable">Whether or not the projection is rewindable.</param>
     /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
     /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
     /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
@@ -18,6 +20,8 @@ namespace Cratis.Events.Projections.Definitions
         ProjectionId Identifier,
         ProjectionName Name,
         ModelDefinition Model,
+        bool IsPassive,
+        bool IsRewindable,
         IDictionary<EventType, FromDefinition> From,
         IDictionary<PropertyPath, ChildrenDefinition> Children,
         RemovedWithDefinition? RemovedWith = default);

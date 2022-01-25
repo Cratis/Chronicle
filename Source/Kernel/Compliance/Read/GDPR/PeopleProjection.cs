@@ -1,17 +1,19 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Compliance.Events;
-using Cratis.Events.Projections;
+using Aksio.Cratis.Compliance.Events;
+using Aksio.Cratis.Events.Projections;
 
-namespace Cratis.Compliance.Read.GDPR
+namespace Aksio.Cratis.Compliance.Read.GDPR
 {
     /// <summary>
     /// Defines the projection for <see cref="Person"/>.
     /// </summary>
-    [Projection("deae7ac0-7eac-48c2-a10a-10aef4e4c02f")]
     public class PeopleProjection : IProjectionFor<Person>
     {
+        /// <inheritdoc/>
+        public ProjectionId Identifier => "deae7ac0-7eac-48c2-a10a-10aef4e4c02f";
+
         /// <inheritdoc/>
         public void Define(IProjectionBuilderFor<Person> builder) => builder
             .From<PersonRegistered>(_ => _

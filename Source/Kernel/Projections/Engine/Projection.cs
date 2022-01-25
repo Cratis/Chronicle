@@ -1,36 +1,43 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Cratis.Changes;
-using Cratis.Properties;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Represents the implementation of <see cref="IProjection"/>.
     /// </summary>
     public class Projection : IProjection
     {
-        readonly ISubject<EventContext> _subject = new Subject<EventContext>();
-        readonly IDictionary<EventType, ValueProvider<Event>> _eventTypesToKeyResolver;
+        readonly ISubject<ProjectionEventContext> _subject = new Subject<ProjectionEventContext>();
+        readonly IDictionary<EventType, ValueProvider<AppendedEvent>> _eventTypesToKeyResolver;
 
         /// <inheritdoc/>
         public ProjectionId Identifier { get; }
 
         /// <inheritdoc/>
-        public ProjectionName Name { get; }
+        public ProjectionName Name { get; }
 
         /// <inheritdoc/>
-        public ProjectionPath Path { get; }
+        public ProjectionPath Path { get; }
 
         /// <inheritdoc/>
         public Model Model { get; }
 
         /// <inheritdoc/>
-        public IObservable<EventContext> Event { get; }
+        public bool IsPassive { get; }
+
+        /// <inheritdoc/>
+        public bool IsRewindable { get; }
+
+        /// <inheritdoc/>
+        public IObservable<ProjectionEventContext> Event { get; }
 
         /// <inheritdoc/>
         public IEnumerable<EventType> EventTypes { get; }
@@ -45,6 +52,8 @@ namespace Cratis.Events.Projections
         /// <param name="name">The name of the projection.</param>
         /// <param name="path">The qualified path of the projection.</param>
         /// <param name="model">The target <see cref="Model"/>.</param>
+        /// <param name="passive">Whether or not the projection is a passive projection.</param>
+        /// <param name="rewindable">Whether or not the projection is rewindable.</param>
         /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
         /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
         public Projection(
@@ -52,12 +61,16 @@ namespace Cratis.Events.Projections
             ProjectionName name,
             ProjectionPath path,
             Model model,
+            bool passive,
+            bool rewindable,
             IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
             IEnumerable<IProjection> childProjections)
         {
             Identifier = identifier;
             Name = name;
             Model = model;
+            IsPassive = passive;
+            IsRewindable = rewindable;
             EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
             Event = FilterEventTypes(_subject);
             Path = path;
@@ -66,15 +79,15 @@ namespace Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IObservable<EventContext> FilterEventTypes(IObservable<EventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Type));
+        public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Metadata.Type));
 
         /// <inheritdoc/>
-        public IObservable<Event> FilterEventTypes(IObservable<Event> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Type));
+        public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Metadata.Type));
 
         /// <inheritdoc/>
-        public void OnNext(Event @event, IChangeset<Event, ExpandoObject> changeset)
+        public void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
-            var context = new EventContext(@event, changeset);
+            var context = new ProjectionEventContext(@event, changeset);
             _subject.OnNext(context);
         }
 
@@ -82,7 +95,7 @@ namespace Cratis.Events.Projections
         public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(eventType);
 
         /// <inheritdoc/>
-        public ValueProvider<Event> GetKeyResolverFor(EventType eventType)
+        public ValueProvider<AppendedEvent> GetKeyResolverFor(EventType eventType)
         {
             ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];

@@ -15,13 +15,13 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build aspnetcore sample",
+            "label": "build bank sample",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
                 "--no-restore",
-                "${workspaceFolder}/Samples/AspNetCore/AspNetCore.csproj",
+                "${workspaceFolder}/Samples/Bank/Main/Main.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

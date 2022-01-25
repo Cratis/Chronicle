@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
 
-namespace Cratis.Properties
+namespace Aksio.Cratis.Properties
 {
     /// <summary>
     /// Represents the delegate of an operation that maps data from a source into a target object.

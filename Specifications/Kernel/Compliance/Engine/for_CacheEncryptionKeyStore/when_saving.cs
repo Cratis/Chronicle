@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Compliance.Engine.for_CacheEncryptionKeyStore
+namespace Aksio.Cratis.Compliance.Engine.for_CacheEncryptionKeyStore
 {
     public class when_saving : given.a_cache_encryption_key_store
     {

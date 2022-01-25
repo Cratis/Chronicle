@@ -1,13 +1,14 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
 using System.Reactive.Linq;
-using Cratis.Changes;
-using Cratis.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
     /// Extension methods for building up a projection.
@@ -20,9 +21,9 @@ namespace Cratis.Events.Projections
         /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
         /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
         /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
-        public static IObservable<EventContext> From(this IObservable<EventContext> observable, EventType eventType)
+        public static IObservable<ProjectionEventContext> From(this IObservable<ProjectionEventContext> observable, EventType eventType)
         {
-            return observable.Where(_ => _.Event.Type == eventType);
+            return observable.Where(_ => _.Event.Metadata.Type == eventType);
         }
 
         /// <summary>
@@ -34,17 +35,18 @@ namespace Cratis.Events.Projections
         /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
         /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> Child(
-            this IObservable<EventContext> observable,
+        public static IObservable<ProjectionEventContext> Child(
+            this IObservable<ProjectionEventContext> observable,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
-            ValueProvider<Event> keyResolver,
-            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+            ValueProvider<AppendedEvent> keyResolver,
+            IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
         {
             observable.Subscribe(_ =>
             {
                 var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty);
                 var key = keyResolver(_.Event);
+
                 if (!items.Contains(identifiedByProperty, key))
                 {
                     _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
@@ -62,12 +64,12 @@ namespace Cratis.Events.Projections
         /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
         /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> Project(
-            this IObservable<EventContext> observable,
+        public static IObservable<ProjectionEventContext> Project(
+            this IObservable<ProjectionEventContext> observable,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
-            ValueProvider<Event> keyResolver,
-            IEnumerable<PropertyMapper<Event, ExpandoObject>> propertyMappers)
+            ValueProvider<AppendedEvent> keyResolver,
+            IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
@@ -81,7 +83,10 @@ namespace Cratis.Events.Projections
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
                         var child = _.Changeset.GetChildByKey<ExpandoObject>(childrenProperty, identifiedByProperty, key);
-                        _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                        if (child != default)
+                        {
+                            _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                        }
                     }
                 });
             }
@@ -94,9 +99,9 @@ namespace Cratis.Events.Projections
         /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
         /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> RemovedWith(this IObservable<EventContext> observable, EventType eventType)
+        public static IObservable<ProjectionEventContext> RemovedWith(this IObservable<ProjectionEventContext> observable, EventType eventType)
         {
-            observable.Where(_ => _.Event.Type == eventType).Subscribe(_ => _.Changeset.Remove());
+            observable.Where(_ => _.Event.Metadata.Type == eventType).Subscribe(_ => _.Changeset.Remove());
             return observable;
         }
 
@@ -106,9 +111,9 @@ namespace Cratis.Events.Projections
         /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
         /// <param name="eventType"><see cref="EventType"/> to join with.</param>
         /// <returns>The observable for continuation.</returns>
-        public static IObservable<EventContext> Join(this IObservable<EventContext> observable, EventType eventType)
+        public static IObservable<ProjectionEventContext> Join(this IObservable<ProjectionEventContext> observable, EventType eventType)
         {
-            return observable.Where(_ => _.Event.Type == eventType);
+            return observable.Where(_ => _.Event.Metadata.Type == eventType);
         }
     }
 }

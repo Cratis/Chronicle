@@ -1,18 +1,19 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
+namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
 {
     public class when_projecting_to_child_property_and_child_has_not_been_added : given.an_observable_and_event_setup
     {
         const string key = "42";
         PropertyPath children_property = "Children";
         PropertyPath identified_by_property = "Id";
-        ValueProvider<Event> key_resolver = (_) => key;
-        IEnumerable<PropertyMapper<Event, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<Event, ExpandoObject>>();
+        ValueProvider<AppendedEvent> key_resolver = (_) => key;
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<AppendedEvent, ExpandoObject>>();
 
         ExpandoObject child;
 

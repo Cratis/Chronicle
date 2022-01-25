@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MongoDB.Driver;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionResultStoreRewindScope"/> for MongoDB.

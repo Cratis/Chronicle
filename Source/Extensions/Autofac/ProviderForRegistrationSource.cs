@@ -1,13 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.DependencyInversion;
 using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
-using Cratis.DependencyInversion;
 
-namespace Cratis.Extensions.Autofac
+namespace Aksio.Cratis.Extensions.Autofac
 {
     /// <summary>
     /// Represents a <see cref="IRegistrationSource"/> for automatically resolving <see cref="ProviderFor{T}"/> dependencies.

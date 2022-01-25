@@ -1,8 +1,8 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Extensions.Autofac;
-using Cratis.Types;
+using Aksio.Cratis.Extensions.Autofac;
+using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Autofac

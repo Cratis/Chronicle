@@ -1,7 +1,7 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.Pipelines.JobSteps.for_Rewind
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Rewind
 {
     public class when_performing_post_job : given.a_rewind_step
     {

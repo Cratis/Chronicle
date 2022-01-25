@@ -1,11 +1,12 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Execution;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Execution;
 
-namespace Cratis.Events.Projections.Changes
+namespace Aksio.Cratis.Events.Projections.Changes
 {
     /// <summary>
     /// Represents a null <see cref="IChangesetStorage"/> that does nothing.
@@ -13,6 +14,6 @@ namespace Cratis.Events.Projections.Changes
     public class NullChangesetStorage : IChangesetStorage
     {
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets) => Task.CompletedTask;
+        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets) => Task.CompletedTask;
     }
 }

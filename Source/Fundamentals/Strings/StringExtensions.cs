@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
 
-namespace Cratis.Strings
+namespace Aksio.Cratis.Strings
 {
     /// <summary>
     /// Provides a set of extension methods to <see cref="string"/>.

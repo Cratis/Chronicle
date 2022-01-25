@@ -1,13 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Reactive
+namespace Aksio.Cratis.Reactive
 {
     /// <summary>
     /// Defines an observable collection.
     /// </summary>
     /// <typeparam name="TItem">Type of the items in the collection.</typeparam>
-    public interface IObservableCollection<TItem> : ICollection<TItem>, IDisposable
+    public interface IObservableCollection<TItem> : ICollection<TItem>, IObservable<IEnumerable<TItem>>, IDisposable
     {
         /// <summary>
         /// The event that is fired if the collection is cleared.

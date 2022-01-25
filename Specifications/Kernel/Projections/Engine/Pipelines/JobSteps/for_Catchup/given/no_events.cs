@@ -1,7 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
+using Aksio.Cratis.Events.Store;
+
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
 {
     public class no_events : a_catchup_step
     {

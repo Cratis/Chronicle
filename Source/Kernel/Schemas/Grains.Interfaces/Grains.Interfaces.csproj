@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Events.Schemas.Grains.Interfaces</AssemblyName>
+        <AssemblyName>Aksio.Cratis.Events.Schemas.Grains.Interfaces</AssemblyName>
         <RootNamespace>Cratis.Events.Schemas.Grains</RootNamespace>
     </PropertyGroup>
 

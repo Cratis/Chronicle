@@ -1,10 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Concepts.SystemJson;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Json;
 
-namespace Cratis.Events
+namespace Aksio.Cratis.Events
 {
     /// <summary>
     /// Represents an implementation of <see cref="IEventSerializer"/>.
@@ -29,9 +30,9 @@ namespace Cratis.Events
         }
 
         /// <inheritdoc/>
-        public object Deserialize(Type type, string json) => JsonSerializer.Deserialize(json, type, _serializerOptions)!;
+        public object Deserialize(Type type, JsonObject json) => json.Deserialize(type, _serializerOptions)!;
 
         /// <inheritdoc/>
-        public string Serialize(object @event) => JsonSerializer.Serialize(@event, _serializerOptions);
+        public JsonObject Serialize(object @event) => (JsonSerializer.SerializeToNode(@event, _serializerOptions) as JsonObject)!;
     }
 }

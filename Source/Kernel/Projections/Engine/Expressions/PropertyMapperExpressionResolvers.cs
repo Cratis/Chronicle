@@ -1,10 +1,11 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Properties;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Expressions
+namespace Aksio.Cratis.Events.Projections.Expressions
 {
     /// <summary>
     /// Represents an implementation of <see cref="IPropertyMapperExpressionResolvers"/>.
@@ -23,7 +24,7 @@ namespace Cratis.Events.Projections.Expressions
         public bool CanResolve(PropertyPath targetProperty, string expression) => _resolvers.Any(_ => _.CanResolve(targetProperty, expression));
 
         /// <inheritdoc/>
-        public PropertyMapper<Event, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
+        public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
         {
             var resolver = Array.Find(_resolvers, _ => _.CanResolve(targetProperty, expression));
             ThrowIfUnsupportedEventValueExpression(expression, resolver);

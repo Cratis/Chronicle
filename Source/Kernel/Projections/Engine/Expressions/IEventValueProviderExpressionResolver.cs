@@ -1,9 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections.Expressions
+namespace Aksio.Cratis.Events.Projections.Expressions
 {
     /// <summary>
     /// Defines a resolver of expressions for providing values from events.
@@ -22,6 +23,6 @@ namespace Cratis.Events.Projections.Expressions
         /// </summary>
         /// <param name="expression">Expression to resolve.</param>
         /// <returns><see cref="ValueProvider{Event}"/> it resolves to.</returns>
-        ValueProvider<Event> Resolve(string expression);
+        ValueProvider<AppendedEvent> Resolve(string expression);
     }
 }

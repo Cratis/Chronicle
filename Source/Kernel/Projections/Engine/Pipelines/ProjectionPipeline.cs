@@ -1,13 +1,14 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
-using Cratis.Events.Projections.Pipelines.JobSteps;
-using Cratis.Reactive;
+using Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Represents an implementation of <see cref="IProjectionPipeline"/>.
@@ -15,13 +16,14 @@ namespace Cratis.Events.Projections.Pipelines
     public class ProjectionPipeline : IProjectionPipeline
     {
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> _resultStores = new();
-        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<Event>> _subjectsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<AppendedEvent>> _subjectsPerConfiguration = new();
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
         readonly IProjectionPipelineHandler _handler;
         readonly IProjectionPipelineJobs _pipelineJobs;
         readonly ILogger<ProjectionPipeline> _logger;
         readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
         readonly ObservableCollection<IProjectionPipelineJob> _jobs = new();
+        readonly BehaviorSubject<ProjectionPipelineStatus> _status = new(ProjectionPipelineStatus.Initial);
 
         /// <inheritdoc/>
         public IProjection Projection { get; }
@@ -44,6 +46,9 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public IObservableCollection<IProjectionPipelineJob> Jobs => _jobs;
 
+        /// <inheritdoc/>
+        public IObservable<ProjectionPipelineStatus> Status => _status;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
         /// </summary>
@@ -64,11 +69,27 @@ namespace Cratis.Events.Projections.Pipelines
             _pipelineJobs = jobs;
             Projection = projection;
             _logger = logger;
+
+            if (projection.IsPassive)
+            {
+                _state.OnNext(ProjectionState.Passive);
+            }
+
+            _status.OnNext(new(projection, _status.Value.State, _status.Value.Positions, _status.Value.Jobs));
+            _state.Subscribe(_ => _status.OnNext(new(projection, _, _status.Value.Positions, _status.Value.Jobs)));
+            _handler.Positions.Subscribe(_ => _status.OnNext(new(projection, _status.Value.State, _.ToDictionary(_ => _.Key, _ => _.Value), _status.Value.Jobs)));
+            _jobs.Subscribe(_ => _status.OnNext(new(projection, _status.Value.State, _status.Value.Positions, _)));
         }
 
         /// <inheritdoc/>
         public async Task Start()
         {
+            if (Projection.IsPassive)
+            {
+                _logger.IgnoringOperationForPassive(Projection.Identifier, "Start");
+                return;
+            }
+
             _logger.Starting(Projection.Identifier);
             _state.OnNext(ProjectionState.CatchingUp);
             await AddAndRunJobs(_pipelineJobs.Catchup(this));
@@ -80,6 +101,12 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Pause()
         {
+            if (Projection.IsPassive)
+            {
+                _logger.IgnoringOperationForPassive(Projection.Identifier, "Pause");
+                return;
+            }
+
             _logger.Pausing(Projection.Identifier);
 
             await StopAllJobs();
@@ -87,6 +114,7 @@ namespace Cratis.Events.Projections.Pipelines
             {
                 subscription.Dispose();
             }
+            await EventProvider.StopProvidingFor(this);
             _subscriptionsPerConfiguration.Clear();
             _state.OnNext(ProjectionState.Paused);
         }
@@ -94,6 +122,12 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Resume()
         {
+            if (Projection.IsPassive)
+            {
+                _logger.IgnoringOperationForPassive(Projection.Identifier, "Resume");
+                return;
+            }
+
             if (CurrentState == ProjectionState.Active ||
                 CurrentState == ProjectionState.CatchingUp ||
                 CurrentState == ProjectionState.Rewinding)
@@ -111,6 +145,17 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Rewind()
         {
+            if (Projection.IsPassive)
+            {
+                _logger.IgnoringOperationForPassive(Projection.Identifier, "Rewind");
+                return;
+            }
+            if (!Projection.IsRewindable)
+            {
+                _logger.IgnoringRewind(Projection.Identifier);
+                return;
+            }
+
             ThrowIfRewindAlreadyInProgress();
 
             _logger.Rewinding(Projection.Identifier);
@@ -122,6 +167,17 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
         {
+            if (Projection.IsPassive)
+            {
+                _logger.IgnoringOperationForPassive(Projection.Identifier, "Rewind");
+                return;
+            }
+            if (!Projection.IsRewindable)
+            {
+                _logger.IgnoringRewind(Projection.Identifier);
+                return;
+            }
+
             ThrowIfRewindAlreadyInProgressForConfiguration(configurationId);
 
             _logger.RewindingForConfiguration(Projection.Identifier, configurationId);
@@ -133,12 +189,19 @@ namespace Cratis.Events.Projections.Pipelines
         /// <inheritdoc/>
         public async Task Suspend(string reason)
         {
+            if (Projection.IsPassive)
+            {
+                _logger.IgnoringOperationForPassive(Projection.Identifier, "Rewind");
+                return;
+            }
+
             _logger.Suspended(Projection.Identifier, reason);
             await StopAllJobs();
             foreach (var (_, subscription) in _subscriptionsPerConfiguration)
             {
                 subscription.Dispose();
             }
+            await EventProvider.StopProvidingFor(this);
             _subscriptionsPerConfiguration.Clear();
             _state.OnNext(ProjectionState.Suspended);
         }
@@ -147,7 +210,7 @@ namespace Cratis.Events.Projections.Pipelines
         public void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
         {
             _resultStores[configurationId] = resultStore;
-            _subjectsPerConfiguration[configurationId] = new ReplaySubject<Event>();
+            _subjectsPerConfiguration[configurationId] = new ReplaySubject<AppendedEvent>();
             _handler.InitializeFor(this, configurationId);
         }
 

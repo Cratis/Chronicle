@@ -1,12 +1,13 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Cratis.Changes;
-using Cratis.Events.Projections.Changes;
-using Cratis.Execution;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Projections.Changes;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Execution;
 
-namespace Cratis.Events.Projections.MongoDB
+namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
     /// Represents a <see cref="IChangesetStorage"/> for storing changesets in MongoDB.
@@ -14,7 +15,7 @@ namespace Cratis.Events.Projections.MongoDB
     public class MongoDBChangesetStorage : IChangesetStorage
     {
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<Event, ExpandoObject>> associatedChangesets)
+        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets)
         {
             return Task.CompletedTask;
         }

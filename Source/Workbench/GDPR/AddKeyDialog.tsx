@@ -1,8 +1,8 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IModalProps } from '@cratis/fluentui';
-import { Guid } from '@cratis/fundamentals';
+import { IModalProps } from '@aksio/cratis-fluentui';
+import { Guid } from '@aksio/cratis-fundamentals';
 import { TextField, ITextFieldStyles } from '@fluentui/react';
 import { useState } from 'react';
 

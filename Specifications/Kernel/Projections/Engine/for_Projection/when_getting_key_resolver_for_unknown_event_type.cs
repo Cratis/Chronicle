@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using NJsonSchema;
 
-namespace Cratis.Events.Projections.for_Projection
+namespace Aksio.Cratis.Events.Projections.for_Projection
 {
     public class when_getting_key_resolver_for_unknown_event_type : Specification
     {
@@ -17,6 +17,8 @@ namespace Cratis.Events.Projections.for_Projection
                 string.Empty,
                 string.Empty,
                 new Model(string.Empty, new JsonSchema()),
+                false,
+                true,
                 Array.Empty<EventTypeWithKeyResolver>(),
                 Array.Empty<IProjection>());
         }

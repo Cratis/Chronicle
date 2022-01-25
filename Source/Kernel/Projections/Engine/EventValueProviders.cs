@@ -1,12 +1,16 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Properties;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Json;
+using Aksio.Cratis.Properties;
 
-namespace Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents utilities for creating <see cref="ValueProvider{T}"/> instances for providing values from <see cref="Event">events</see>.
+    /// Represents utilities for creating <see cref="ValueProvider{T}"/> instances for providing values from <see cref="AppendedEvent">events</see>.
     /// </summary>
     public static class EventValueProviders
     {
@@ -14,27 +18,42 @@ namespace Cratis.Events.Projections
         /// Create a <see cref="ValueProvider{T}"/> that can copy the content of the events event source id from within the content of an event to a target property.
         /// </summary>
         /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-        public static readonly ValueProvider<Event> FromEventSourceId = (Event @event) => @event.EventSourceId.ToString();
+        public static readonly ValueProvider<AppendedEvent> FromEventSourceId = (AppendedEvent @event) => @event.Context.EventSourceId.ToString();
 
         /// <summary>
         /// Create a <see cref="ValueProvider{T}"/> that can copy the content of a property from within the content of an event to a target property.
         /// </summary>
         /// <param name="sourceProperty">Source property.</param>
         /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-        public static ValueProvider<Event> FromEventContent(PropertyPath sourceProperty)
+        public static ValueProvider<AppendedEvent> FromEventContent(PropertyPath sourceProperty)
         {
-            return (Event @event) =>
+            return (AppendedEvent @event) =>
             {
-                var currentSource = @event.Content as IDictionary<string, object>;
+                JsonNode? currentSource = @event.Content;
                 object? sourceValue = null;
                 foreach (var property in sourceProperty.Segments)
                 {
-                    sourceValue = currentSource![property];
-                    currentSource = sourceValue as IDictionary<string, object>;
+                    var value = currentSource![property];
+                    if (value is JsonValue jsonValue)
+                    {
+                        jsonValue.TryGetValue(out sourceValue);
+
+                        if (sourceValue is JsonElement element)
+                        {
+                            element.TryGetValue(out sourceValue);
+                        }
+                    }
+                    currentSource = value;
                 }
 
                 return sourceValue!;
             };
         }
+
+        /// <summary>
+        /// Create a <see cref="ValueProvider{T}"/> that generates a new unique identifier from the event metadata.
+        /// </summary>
+        /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
+        public static ValueProvider<AppendedEvent> UniqueIdentifier() => (AppendedEvent @event) => $"{@event.Metadata.SequenceNumber}-{@event.Context.Occurred.ToUnixTimeMilliseconds()}";
     }
 }

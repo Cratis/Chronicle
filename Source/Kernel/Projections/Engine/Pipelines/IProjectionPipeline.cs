@@ -1,9 +1,9 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Reactive;
+using Aksio.Cratis.Reactive;
 
-namespace Cratis.Events.Projections.Pipelines
+namespace Aksio.Cratis.Events.Projections.Pipelines
 {
     /// <summary>
     /// Defines a system that can coordinate the effort around projections.
@@ -44,6 +44,11 @@ namespace Cratis.Events.Projections.Pipelines
         /// Gets the current <see cref="ProjectionState"/>.
         /// </summary>
         ProjectionState CurrentState { get; }
+
+        /// <summary>
+        /// Gets an observable of the status of the pipeline.
+        /// </summary>
+        IObservable<ProjectionPipelineStatus> Status { get; }
 
         /// <summary>
         /// Starts the pipeline.

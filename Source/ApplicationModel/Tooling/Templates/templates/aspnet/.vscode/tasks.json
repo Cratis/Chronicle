@@ -1,0 +1,29 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "process",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "command": "dotnet",
+            "args": [
+                "build",
+                "--nologo",
+                "--no-restore",
+                "${workspaceFolder}/Main/Main.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

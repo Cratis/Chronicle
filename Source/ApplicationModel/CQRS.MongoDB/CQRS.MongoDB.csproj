@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Applications.CQRS.MongoDB</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Applications</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../CQRS/CQRS.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MongoDB.Driver" Version="$(MongoDB)" />
+    </ItemGroup>
+</Project>
