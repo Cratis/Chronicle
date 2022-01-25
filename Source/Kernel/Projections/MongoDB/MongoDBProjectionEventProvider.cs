@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.DependencyInversion;
@@ -27,6 +28,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         readonly ISchemaStore _schemaStore;
         readonly IJsonComplianceManager _jsonComplianceManager;
         readonly IClusterClient _clusterClient;
+        readonly ConcurrentDictionary<IProjectionPipeline, StreamSubscriptionHandle<AppendedEvent>> _subscriptionsPerPipeline = new();
 
         /// <inheritdoc/>
         public ProjectionEventProviderTypeId TypeId => "c0c0196f-57e3-4860-9e3b-9823cf45df30";
@@ -76,7 +78,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 var streamProvider = _clusterClient.GetStreamProvider("event-log");
                 var tenantId = _executionContextManager.Current.TenantId;
                 var stream = streamProvider.GetStream<AppendedEvent>(EventLogId.Default, tenantId.ToString());
-                await stream.SubscribeAsync(
+                _subscriptionsPerPipeline[pipeline] = await stream.SubscribeAsync(
                     async (@event, _) =>
                     {
                         _executionContextManager.Establish(tenantId, CorrelationId.New());
@@ -84,6 +86,16 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                         subject.OnNext(new(@event.Metadata, @event.Context, @event.Content));
                     },
                     new EventLogSequenceNumberTokenWithFilter(currentOffset, pipeline.Projection.EventTypes.ToArray()));
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task StopProvidingFor(IProjectionPipeline pipeline)
+        {
+            if (_subscriptionsPerPipeline.ContainsKey(pipeline))
+            {
+                await _subscriptionsPerPipeline[pipeline].UnsubscribeAsync();
+                _subscriptionsPerPipeline.Remove(pipeline, out _);
             }
         }
     }
