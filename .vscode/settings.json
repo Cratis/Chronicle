@@ -50,6 +50,7 @@
     "typescript.implementationsCodeLens.enabled": true,
     "typescript.tsdk": "./node_modules/typescript/lib",
     "cSpell.words": [
+        "aksioinsurtech",
         "Bson",
         "Cratis",
         "decryptor",
