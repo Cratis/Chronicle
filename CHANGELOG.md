@@ -1,3 +1,13 @@
+# [v5.0.4] - 2022-1-26 [PR: #124](https://github.com/aksio-insurtech/Cratis/pull/124)
+
+### Fixed
+
+- Improved startup time for clients by lazily configuring things as needed. Due to our hosted service for setting up projections and other things, Orleans connections get configured in paralell as a consequence to this.
+- Fixing microservice template to have the correct NuGet references.
+- Adding MongoDB port to the `docker-compose.yml` for the Sample and also the microservice template
+- Adding logging to startup of clients - so we're not kept in the dark on whats going on.
+
+
 # [v5.0.3] - 2022-1-25 [PR: #123](https://github.com/aksio-insurtech/Cratis/pull/123)
 
 ### Fixed
