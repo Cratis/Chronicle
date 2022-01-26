@@ -68,7 +68,8 @@ try {
             '@aksio/cratis-react',
             '@aksio/cratis-fundamentals',
             '@aksio/cratis-applications-frontend',
-            '@aksio/cratis-webpack'
+            '@aksio/cratis-webpack',
+            '@aksio/cratis-typescript'
         ];
 
         let result = content;
