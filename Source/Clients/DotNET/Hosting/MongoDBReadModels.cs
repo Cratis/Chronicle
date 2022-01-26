@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Reflection;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Configuration.Grains;
@@ -21,27 +22,7 @@ namespace Aksio.Cratis.Hosting
     public static class MongoDBReadModels
     {
         static readonly MethodInfo _getCollectionMethod = typeof(IMongoDatabase).GetMethod(nameof(IMongoDatabase.GetCollection), BindingFlags.Public | BindingFlags.Instance)!;
-        static readonly Dictionary<TenantId, IMongoDatabase> _databasesPerTenant = new();
-
-        /// <summary>
-        /// Configure read model configuration - through talking to the Kernel.
-        /// </summary>
-        /// <param name="serviceProvider"><see cref="IServiceProvider"/> to use for locating services needed.</param>
-        /// <returns>Awaitable task.</returns>
-        public static async Task ConfigureReadModels(IServiceProvider serviceProvider)
-        {
-            var configurations = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfigurations>(Guid.Empty);
-            var storage = await configurations.GetStorage();
-            var storageType = storage.Get(WellKnownStorageTypes.ReadModels);
-            var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
-
-            foreach (var (tenant, config) in storageType.Tenants)
-            {
-                var url = new MongoUrl(config.ToString()!);
-                var client = clientFactory.Create(url);
-                _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
-            }
-        }
+        static readonly ConcurrentDictionary<TenantId, IMongoDatabase> _databasesPerTenant = new();
 
         /// <summary>
         /// Add all services related to being able to use MongoDB for read models.
@@ -54,6 +35,13 @@ namespace Aksio.Cratis.Hosting
             services.AddTransient(sp =>
             {
                 var executionContext = sp.GetService<Execution.ExecutionContext>()!;
+                lock (_databasesPerTenant)
+                {
+                    if (_databasesPerTenant.IsEmpty)
+                    {
+                        ConfigureReadModels(sp).Wait();
+                    }
+                }
                 return _databasesPerTenant[executionContext.TenantId];
             });
 
@@ -78,6 +66,21 @@ namespace Aksio.Cratis.Hosting
             }
 
             return services;
+        }
+
+        static async Task ConfigureReadModels(IServiceProvider serviceProvider)
+        {
+            var configurations = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfigurations>(Guid.Empty);
+            var storage = await configurations.GetStorage();
+            var storageType = storage.Get(WellKnownStorageTypes.ReadModels);
+            var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
+
+            foreach (var (tenant, config) in storageType.Tenants)
+            {
+                var url = new MongoUrl(config.ToString()!);
+                var client = clientFactory.Create(url);
+                _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
+            }
         }
     }
 }
