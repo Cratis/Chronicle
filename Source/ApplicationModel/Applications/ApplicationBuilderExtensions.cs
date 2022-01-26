@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Applications;
-using Aksio.Cratis.Hosting;
 using Aksio.Execution;
 
 namespace Microsoft.AspNetCore.Builder
@@ -19,8 +18,6 @@ namespace Microsoft.AspNetCore.Builder
         /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
         public static IApplicationBuilder UseAksio(this IApplicationBuilder app)
         {
-            // Todo: This should be more dynamic - not just hardcoded for MongoDB, but also probably something we can lazily perform.
-            MongoDBReadModels.ConfigureReadModels(app.ApplicationServices).Wait();
             Internals.ServiceProvider = app.ApplicationServices;
 
             app.UseWebSockets();
@@ -35,11 +32,9 @@ namespace Microsoft.AspNetCore.Builder
             }
 
             app.PerformBootProcedures();
-
             app.UseDefaultLogging();
             app.UseCratis();
             app.UseEndpoints(endpoints => endpoints.MapControllers());
-
             app.RunAsSinglePageApplication();
 
             return app;
