@@ -102,7 +102,7 @@
             ],
             "args": {
                 "executable": "docker",
-                "args": "run -d -p 8080:80 -p 11111:11111 -p 30000:30000 aksioinsurtech/cratis:latest-development"
+                "args": "compose up"
             }
         },
         {
