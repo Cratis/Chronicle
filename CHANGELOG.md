@@ -1,3 +1,11 @@
+# [v5.0.5] - 2022-1-26 [PR: #125](https://github.com/aksio-insurtech/Cratis/pull/125)
+
+### Fixed
+
+- Fixing 3rd party dependency versions of Web template.
+- Fixing template creation post script to update the correct NPM packages.
+
+
 # [v5.0.4] - 2022-1-26 [PR: #124](https://github.com/aksio-insurtech/Cratis/pull/124)
 
 ### Fixed
