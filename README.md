@@ -5,7 +5,7 @@
 [![Publish](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml)
 [![Nuget](https://img.shields.io/nuget/v/Aksio.Cratis?logo=nuget)](http://nuget.org/packages/aksio.cratis)
 [![NPM](https://img.shields.io/npm/v/@aksio/cratis-applications-frontend?label=@aksio/cratis-applications-frontend&logo=npm)](https://www.npmjs.com/package/@aksio/cratis-applications-frontend)
-[![Docker](https://img.shields.io/docker/v/aksioinsurtech/cratis?label=Cratis%Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/aksioinsurtech/cratis)
+[![Docker](https://img.shields.io/docker/v/aksioinsurtech/cratis?label=Cratis%20Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/aksioinsurtech/cratis)
 
 ## Introduction
 
