@@ -1,3 +1,10 @@
+# [v5.0.6] - 2022-1-26 [PR: #126](https://github.com/aksio-insurtech/Cratis/pull/126)
+
+### Fixed
+
+- Added `@aksio/cratis-typescript` as package for the template post script for updating references.
+
+
 # [v5.0.5] - 2022-1-26 [PR: #125](https://github.com/aksio-insurtech/Cratis/pull/125)
 
 ### Fixed
