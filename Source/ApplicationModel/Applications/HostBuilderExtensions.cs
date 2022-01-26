@@ -23,12 +23,16 @@ namespace Microsoft.Extensions.Hosting
         /// <returns><see cref="IHostBuilder"/> for building continuation.</returns>
         public static IHostBuilder UseAksio(this IHostBuilder builder, Action<IClientBuilder>? configureDelegate = default)
         {
+            var loggerFactory = builder.UseDefaultLogging();
+            var logger = loggerFactory.CreateLogger("Aksio setup");
+            logger.SettingUpDefaults();
+
             var types = new Types("Aksio");
             types.RegisterTypeConvertersForConcepts();
 
             builder
                 .UseMongoDB(types)
-                .UseCratis(types, configureDelegate)
+                .UseCratis(types, configureDelegate, loggerFactory)
                 .ConfigureServices(_ =>
                 {
                     _
@@ -44,10 +48,9 @@ namespace Microsoft.Extensions.Hosting
 
                     _.AddMvc();
                 })
-                .UseDefaultLogging()
                 .UseDefaultDependencyInversion(types);
 
             return builder;
         }
-}
+    }
 }
