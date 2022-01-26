@@ -15,6 +15,7 @@ using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Hosting;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
@@ -59,8 +60,15 @@ namespace Aksio.Cratis.Hosting
         }
 
         /// <inheritdoc/>
-        public void Build(HostBuilderContext hostBuilderContext, IServiceCollection services, ITypes? types = default)
+        public void Build(
+            HostBuilderContext hostBuilderContext,
+            IServiceCollection services,
+            ITypes? types = default,
+            ILoggerFactory? loggerFactory = default)
         {
+            var logger = loggerFactory?.CreateLogger<ClientBuilder>();
+            logger?.Configuring();
+
             if (types == default)
             {
                 types = new Types.Types();
@@ -75,6 +83,7 @@ namespace Aksio.Cratis.Hosting
                 return;
             }
 
+            logger?.ConfiguringServices();
             var connectionManager = new ConnectionManager();
             services
                 .AddSingleton<IConnectionManager>(connectionManager)
@@ -96,7 +105,10 @@ namespace Aksio.Cratis.Hosting
                 .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
                 .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
                 .AddSingleton<IRequestContextManager, RequestContextManager>();
+
             types.AllObservers().ForEach(_ => services.AddTransient(_));
+
+            logger?.ConfiguringCompliance();
 
             types.All.Where(_ =>
                 _ != typeof(ICanProvideComplianceMetadataForType) &&
@@ -105,26 +117,33 @@ namespace Aksio.Cratis.Hosting
                 _ != typeof(ICanProvideComplianceMetadataForProperty) &&
                 _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
 
-            var orleansBuilder = new OrleansClientBuilder()
-                .UseLocalhostClustering()
-                .AddEventLogStream()
-                .AddSimpleMessageStreamProvider("observer-handlers")
-                .UseExecutionContext()
-                .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
-                .ConfigureServices(services => services
-                    .AddSingleton<IConnectionManager>(connectionManager)
-                    .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-                    .AddSingleton<IRequestContextManager, RequestContextManager>()
-                    .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
-
-            var orleansClient = orleansBuilder.Build();
-            services.AddSingleton(orleansClient);
-
-            orleansClient.Connect(async (_) =>
+            services.AddSingleton(sp =>
             {
-                await Task.Delay(1000);
-                return true;
-            }).Wait();
+                logger?.ConfiguringKernelConnection();
+                var orleansBuilder = new OrleansClientBuilder()
+                    .UseLocalhostClustering()
+                    .AddEventLogStream()
+                    .AddSimpleMessageStreamProvider("observer-handlers")
+                    .UseExecutionContext()
+                    .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
+                    .ConfigureServices(services => services
+                        .AddSingleton<IConnectionManager>(connectionManager)
+                        .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                        .AddSingleton<IRequestContextManager, RequestContextManager>()
+                        .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
+
+                var orleansClient = orleansBuilder.Build();
+
+                logger?.ConnectingToKernel();
+                orleansClient.Connect(async (_) =>
+                {
+                    await Task.Delay(1000);
+                    return true;
+                }).Wait();
+                logger?.ConnectedToKernel();
+
+                return orleansClient;
+            });
         }
     }
 }

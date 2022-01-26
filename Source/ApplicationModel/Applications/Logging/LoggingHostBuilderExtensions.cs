@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Serilog;
 
 namespace Microsoft.Extensions.Hosting
@@ -16,7 +17,7 @@ namespace Microsoft.Extensions.Hosting
         /// </summary>
         /// <param name="builder"><see creF="IHostBuilder"/> to use with.</param>
         /// <returns><see creF="IHostBuilder"/> for continuation.</returns>
-        public static IHostBuilder UseDefaultLogging(this IHostBuilder builder)
+        public static ILoggerFactory UseDefaultLogging(this IHostBuilder builder)
         {
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(ConfigurationHostBuilderExtensions.Configuration)
@@ -24,7 +25,7 @@ namespace Microsoft.Extensions.Hosting
 
             builder.UseSerilog();
 
-            return builder;
+            return new Serilog.Extensions.Logging.SerilogLoggerFactory();
         }
     }
 }

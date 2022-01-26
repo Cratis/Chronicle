@@ -4,6 +4,7 @@
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Hosting
 {
@@ -24,6 +25,7 @@ namespace Aksio.Cratis.Hosting
         /// <param name="hostBuilderContext"><see cref="HostBuilderContext"/> we're building for.</param>
         /// <param name="services"><see cref="IServiceCollection"/> to register services for.</param>
         /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
-        void Build(HostBuilderContext hostBuilderContext, IServiceCollection services, ITypes? types = default);
+        /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
+        void Build(HostBuilderContext hostBuilderContext, IServiceCollection services, ITypes? types = default, ILoggerFactory? loggerFactory = default);
     }
 }
