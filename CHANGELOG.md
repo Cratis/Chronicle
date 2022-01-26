@@ -38,6 +38,8 @@ There are no behavioral changes.
 - All NPM pakcages have new names. They all start now with `@aksio/cratis`.
 - Docker images changed names; aksioinsurtech/cratis:<label>
 - No longer dependending on Newtonsoft.Json - consistently using System.Text.Json both in Client and Kernel
+- Change how Projections get their identity. Since we have a an interface one needs to implement, this is now there - no `[Projection("<guid")]` attribute.
+- `AdapterFor<>` now requires an identity, a property that needs to be implemented. This is used internally for things like the projection, seeing that it is an observer.
 
 ### Fixed
 
