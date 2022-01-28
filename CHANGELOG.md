@@ -1,3 +1,30 @@
+# [v5.1.0] - 2022-1-28 [PR: #136](https://github.com/aksio-insurtech/Cratis/pull/136)
+
+## Summary
+
+Adds support for defining a `RemovedWith<TEvent>()` on the projection builder. This is implemented all the way down and will cause a document in e.g. MongoDB to actually be deleted.
+
+A sample of usage:
+
+```csharp
+public class DebitAccountProjection : IProjectionFor<DebitAccount>
+{
+    public ProjectionId Identifier => "d1bb5522-5512-42ce-938a-d176536bb01d";
+
+    public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
+        builder
+            .From<DebitAccountOpened>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name)
+                .Set(model => model.Owner).To(@event => @event.Owner))
+            .From<DepositToDebitAccountPerformed>(_ => _
+                .Add(model => model.Balance).With(@event => @event.Amount))
+            .From<WithdrawalFromDebitAccountPerformed>(_ => _
+                .Subtract(model => model.Balance).With(@event => @event.Amount))
+            // ** NEW ** 
+            .RemovedWith<DebitAccountClosed>();
+}
+```
+
 # [v5.0.6] - 2022-1-26 [PR: #126](https://github.com/aksio-insurtech/Cratis/pull/126)
 
 ### Fixed
