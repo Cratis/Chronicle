@@ -10,7 +10,7 @@
         "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
         "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
         "ci": "yarn clean && yarn lint:ci && yarn build",
-        "up": "ncu -u \\!'@aksio/*'"
+        "up": "ncu -u'"
     },
     "dependencies": {
         "@aksio/cratis-react": "1.0.0",
