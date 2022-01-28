@@ -92,6 +92,12 @@ namespace Aksio.Cratis.Changes
         bool HasChildBeenAddedWithKey(PropertyPath childrenProperty, object key);
 
         /// <summary>
+        /// Check if there has been issued a remove on the changeset.
+        /// </summary>
+        /// <returns>True if there has, false if not.</returns>
+        bool HasBeenRemoved();
+
+        /// <summary>
         /// Get a specific child from.
         /// </summary>
         /// <typeparam name="TChild">Type of child.</typeparam>

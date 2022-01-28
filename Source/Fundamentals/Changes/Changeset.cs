@@ -116,6 +116,7 @@ namespace Aksio.Cratis.Changes
         /// <inheritdoc/>
         public void Remove()
         {
+            Add(new Removed(InitialState.Clone()!));
         }
 
         /// <inheritdoc/>
@@ -130,6 +131,9 @@ namespace Aksio.Cratis.Changes
                     .Select(_ => _ as ChildAdded)
                     .Any(_ => _ != null && _.ChildrenProperty == childrenProperty && _.Key == key);
         }
+
+        /// <inheritdoc/>
+        public bool HasBeenRemoved() => Changes.Any(_ => _ is Removed);
 
         /// <inheritdoc/>
         public TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key)
