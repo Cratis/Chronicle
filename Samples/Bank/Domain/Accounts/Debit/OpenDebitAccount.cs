@@ -7,5 +7,5 @@ using Events.Accounts.Debit;
 
 namespace Domain.Accounts.Debit
 {
-    public record CreateDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
+    public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
 }

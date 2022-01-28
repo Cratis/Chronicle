@@ -60,13 +60,19 @@ namespace Aksio.Cratis.Events.Projections.InMemory
         public Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var state = changeset.InitialState.Clone();
+            var collection = GetCollection();
+
+            if (changeset.HasBeenRemoved())
+            {
+                collection.Remove(key);
+                return Task.CompletedTask;
+            }
 
             foreach (var change in changeset.Changes)
             {
                 state = state.OverwriteWith((change.State as ExpandoObject)!);
             }
 
-            var collection = GetCollection();
             collection[key] = state;
 
             return Task.CompletedTask;

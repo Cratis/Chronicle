@@ -19,6 +19,7 @@ namespace Read.Accounts.Debit
                 .From<DepositToDebitAccountPerformed>(_ => _
                     .Add(model => model.Balance).With(@event => @event.Amount))
                 .From<WithdrawalFromDebitAccountPerformed>(_ => _
-                    .Subtract(model => model.Balance).With(@event => @event.Amount));
+                    .Subtract(model => model.Balance).With(@event => @event.Amount))
+                .RemovedWith<DebitAccountClosed>();
     }
 }
