@@ -47,6 +47,13 @@ namespace Aksio.Cratis.Events.Projections
         IProjectionBuilderFor<TModel> From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback);
 
         /// <summary>
+        /// Define an event type that causes a delete in the projected result.
+        /// </summary>
+        /// <typeparam name="TEvent">Type of event.</typeparam>
+        /// <returns>Builder continuation.</returns>
+        IProjectionBuilderFor<TModel> RemovedWith<TEvent>();
+
+        /// <summary>
         /// Start buildint the children projection for a specific child model.
         /// </summary>
         /// <param name="targetProperty">Expression for expressing the target property.</param>

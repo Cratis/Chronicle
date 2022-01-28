@@ -49,6 +49,11 @@ namespace Aksio.Cratis.Events.Projections
                 kvp.Key,
                 string.IsNullOrEmpty(kvp.Value.ParentKey) ? EventValueProviders.FromEventSourceId : EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
 
+            if (projectionDefinition.RemovedWith != default)
+            {
+                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, EventValueProviders.FromEventSourceId));
+            }
+
             var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                     name,
                     kvp.Value,
@@ -94,10 +99,15 @@ namespace Aksio.Cratis.Events.Projections
                 projection.Event.From(eventType).Project(childrenAccessorProperty, actualIdentifiedByProperty, actualKeyResolver, propertyMappers);
             }
 
+            if (projectionDefinition.RemovedWith != default)
+            {
+                projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
+            }
+
             return projection;
         }
 
-        (PropertyPath Property, ValueProvider<AppendedEvent> KeyResolver) ResolveIdentifiedPropertyWithKeyResolver(PropertyPath identifiedByProperty, string? key)
+        (PropertyPath Property, ValueProvider<AppendedEvent> KeyResolver) ResolveIdentifiedPropertyWithKeyResolver(PropertyPath identifiedByProperty, string? key = default)
         {
             if (identifiedByProperty.IsRoot)
             {
