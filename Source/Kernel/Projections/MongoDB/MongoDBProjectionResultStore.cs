@@ -83,6 +83,13 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
             var hasChanges = false;
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", key.ToString());
+            var collection = GetCollection();
+
+            if (changeset.HasBeenRemoved())
+            {
+                await collection.DeleteOneAsync(filter);
+                return;
+            }
 
             UpdateDefinition<BsonDocument> UpdateProperty(string path, object value)
             {
@@ -143,7 +150,6 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
             if (!hasChanges) return;
 
-            var collection = GetCollection();
             await collection.UpdateOneAsync(filter, updateBuilder, new UpdateOptions { IsUpsert = true });
 
             await Task.CompletedTask;

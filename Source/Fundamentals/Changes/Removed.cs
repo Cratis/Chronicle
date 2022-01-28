@@ -4,8 +4,8 @@
 namespace Aksio.Cratis.Changes
 {
     /// <summary>
-    /// Represents an entry being removed.
+    /// Represents the removal of an item.
     /// </summary>
-    /// <param name="Key">The key of the object that was removed.</param>
-    public record RemovePerformed(object Key) : Change(null!);
+    /// <param name="State">State of the object being removed.</param>
+    public record Removed(object State) : Change(State);
 }

@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Events.Projections
         readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
         readonly string _modelName;
         string _identifiedBy = string.Empty;
-        string _removedWithEvent = string.Empty;
+        EventType? _removedWithEvent;
 
         /// <summary>
         /// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -59,7 +59,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public IChildrenBuilder<TParentModel, TChildModel> RemovedWith<TEvent>()
         {
-            _removedWithEvent = _eventTypes.GetEventTypeFor(typeof(TEvent)).ToString();
+            _removedWithEvent = _eventTypes.GetEventTypeFor(typeof(TEvent));
             return this;
         }
 
@@ -71,7 +71,7 @@ namespace Aksio.Cratis.Events.Projections
                 new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
                 _fromDefintions,
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
-                string.IsNullOrEmpty(_removedWithEvent) ? default : new RemovedWithDefinition(_removedWithEvent));
+                _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
         }
     }
 }

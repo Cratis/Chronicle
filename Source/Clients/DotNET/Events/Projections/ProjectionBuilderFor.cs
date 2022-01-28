@@ -26,6 +26,7 @@ namespace Aksio.Cratis.Events.Projections
         bool _isRewindable = true;
         string _modelName;
         string? _name;
+        EventType? _removedWithEvent;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -83,6 +84,18 @@ namespace Aksio.Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
+        public IProjectionBuilderFor<TModel> RemovedWith<TEvent>()
+        {
+            if (_removedWithEvent != default)
+            {
+                throw new RemovalAlreadyDefined(_identifier);
+            }
+
+            _removedWithEvent = _eventTypes.GetEventTypeFor(typeof(TEvent));
+            return this;
+        }
+
+        /// <inheritdoc/>
         public IProjectionBuilderFor<TModel> Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
         {
             var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes, _schemaGenerator);
@@ -101,7 +114,8 @@ namespace Aksio.Cratis.Events.Projections
                 _isPassive,
                 _isRewindable,
                 _fromDefintions,
-                _childrenDefinitions);
+                _childrenDefinitions,
+                _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
         }
     }
 }
