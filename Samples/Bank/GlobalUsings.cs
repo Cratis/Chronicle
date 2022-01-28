@@ -8,6 +8,7 @@ global using Aksio.Cratis.Concepts;
 global using Aksio.Cratis.Events;
 global using Aksio.Cratis.Events.Observation;
 global using Aksio.Cratis.Events.Projections;
+global using Aksio.Cratis.Events.Store;
 global using Aksio.Cratis.Integration;
 global using AutoMapper;
 global using Microsoft.AspNetCore.Mvc;
