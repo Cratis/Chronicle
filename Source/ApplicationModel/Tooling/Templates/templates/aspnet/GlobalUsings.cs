@@ -6,6 +6,7 @@ global using Aksio.Cratis.Applications.Queries;
 global using Aksio.Cratis.Applications.Queries.MongoDB;
 global using Aksio.Cratis.Concepts;
 global using Aksio.Cratis.Events;
+global using Aksio.Cratis.Events.Observation;
 global using Aksio.Cratis.Events.Projections;
 global using Aksio.Cratis.Integration;
 global using AutoMapper;
