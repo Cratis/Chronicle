@@ -1,3 +1,10 @@
+# [v5.1.1] - 2022-2-1 [PR: #143](https://github.com/aksio-insurtech/Cratis/pull/143)
+
+### Fixed
+
+- Minor API documentation errors.
+- ExecutionContext not being set for observers in client. It is now hard-coded to Development, as everything else.
+
 # [v5.1.0] - 2022-1-28 [PR: #136](https://github.com/aksio-insurtech/Cratis/pull/136)
 
 ## Summary
