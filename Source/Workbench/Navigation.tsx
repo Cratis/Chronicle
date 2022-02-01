@@ -72,12 +72,13 @@ const groups: INavLinkGroup[] = [
 
 export const Navigation = () => {
     const [selectedNav, setSelectedNav] = useState('');
-    const history = useNavigate();
+    const navigate = useNavigate();
 
     const navItemClicked = (ev?: React.MouseEvent<HTMLElement>, item?: INavLink) => {
         if (item) {
+            ev?.preventDefault();
             setSelectedNav(item.key!);
-            history(item.route);
+            navigate(item.route);
         }
     };
     return (

@@ -13,7 +13,7 @@ type QueryResultFromServer<TDataType> = {
 export class QueryResult<TDataType> {
     /**
      * Creates an instance of query result.
-     * @param {TDataType[]} data The items returned, if any - can be empty.
+     * @param {TDataType} data The items returned, if any - can be empty.
      * @param {boolean} isSuccess Whether or not the query was successful.
      */
     constructor(readonly data: TDataType, readonly isSuccess: boolean) {
