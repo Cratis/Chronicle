@@ -6,7 +6,7 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
-    /// Represents a <see cref="StreamSequenceToken"/> for observers.
+    /// Represents a <see cref="EventLogSequenceNumber"/> for observers with filter on it.
     /// </summary>
     public class EventLogSequenceNumberTokenWithFilter : EventLogSequenceNumberToken
     {
