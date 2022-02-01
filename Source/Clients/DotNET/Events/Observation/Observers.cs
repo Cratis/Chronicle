@@ -70,7 +70,12 @@ namespace Aksio.Cratis.Events.Observation
             foreach (var handler in _observerHandlers)
             {
                 var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.CurrentConnectionId.Value);
-                var subscription = await stream.SubscribeAsync(async (@event, _) => await handler.OnNext(@event));
+                var subscription = await stream.SubscribeAsync(async (@event, _) =>
+                {
+                    // TODO: Establish in the correct context
+                    _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
+                    await handler.OnNext(@event);
+                });
 
                 var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
                 var eventTypes = handler.EventTypes.ToArray();
