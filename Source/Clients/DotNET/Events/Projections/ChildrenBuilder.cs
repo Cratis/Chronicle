@@ -65,7 +65,7 @@ namespace Aksio.Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
-        public IChildrenBuilder<TParentModel, TChildModel> Children<TNestedChildModel>(Expression<Func<TChildModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TChildModel, TNestedChildModel>> builderCallback)
+        public IChildrenBuilder<TParentModel, TChildModel> Children<TNestedChildModel>(Expression<Func<TChildModel, IEnumerable<TNestedChildModel>>> targetProperty, Action<IChildrenBuilder<TChildModel, TNestedChildModel>> builderCallback)
         {
             var builder = new ChildrenBuilder<TChildModel, TNestedChildModel>(_eventTypes, _schemaGenerator);
             builderCallback(builder);

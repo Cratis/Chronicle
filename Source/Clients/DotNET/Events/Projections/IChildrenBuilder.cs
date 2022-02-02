@@ -43,7 +43,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="builderCallback">Builder callback.</param>
         /// <typeparam name="TNestedChildModel">Type of nested child model.</typeparam>
         /// <returns>Builder continuation.</returns>
-        IChildrenBuilder<TParentModel, TChildModel> Children<TNestedChildModel>(Expression<Func<TChildModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TChildModel, TNestedChildModel>> builderCallback);
+        IChildrenBuilder<TParentModel, TChildModel> Children<TNestedChildModel>(Expression<Func<TChildModel, IEnumerable<TNestedChildModel>>> targetProperty, Action<IChildrenBuilder<TChildModel, TNestedChildModel>> builderCallback);
 
         /// <summary>
         /// Build the <see cref="ChildrenDefinition"/>.
