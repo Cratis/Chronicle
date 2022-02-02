@@ -54,7 +54,7 @@ namespace Aksio.Cratis.Events.Projections
         IProjectionBuilderFor<TModel> RemovedWith<TEvent>();
 
         /// <summary>
-        /// Start buildint the children projection for a specific child model.
+        /// Start building the children projection for a specific child model.
         /// </summary>
         /// <param name="targetProperty">Expression for expressing the target property.</param>
         /// <param name="builderCallback">Builder callback.</param>
