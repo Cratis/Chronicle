@@ -21,6 +21,7 @@ namespace Aksio.Cratis.Events.Projections
         readonly IEventTypes _eventTypes;
         readonly IJsonSchemaGenerator _schemaGenerator;
         readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
+        readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
         readonly string _modelName;
         string _identifiedBy = string.Empty;
         EventType? _removedWithEvent;
@@ -64,13 +65,22 @@ namespace Aksio.Cratis.Events.Projections
         }
 
         /// <inheritdoc/>
+        public IChildrenBuilder<TParentModel, TChildModel> Children<TNestedChildModel>(Expression<Func<TChildModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TChildModel, TNestedChildModel>> builderCallback)
+        {
+            var builder = new ChildrenBuilder<TChildModel, TNestedChildModel>(_eventTypes, _schemaGenerator);
+            builderCallback(builder);
+            _childrenDefinitions[targetProperty.GetPropertyInfo().Name.ToCamelCase()] = builder.Build();
+            return this;
+        }
+
+        /// <inheritdoc/>
         public ChildrenDefinition Build()
         {
             return new ChildrenDefinition(
                 _identifiedBy,
                 new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
                 _fromDefintions,
-                new Dictionary<PropertyPath, ChildrenDefinition>(),
+                _childrenDefinitions,
                 _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
         }
     }
