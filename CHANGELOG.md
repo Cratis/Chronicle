@@ -1,3 +1,10 @@
+# [v5.2.0] - 2022-2-2 [PR: #144](https://github.com/aksio-insurtech/Cratis/pull/144)
+
+### Added
+
+- Adding support for Children of Children in projection declarations. The Kernel is prepared for this. 🤞🏻 that this is working as expected.
+
+
 # [v5.1.1] - 2022-2-1 [PR: #143](https://github.com/aksio-insurtech/Cratis/pull/143)
 
 ### Fixed
