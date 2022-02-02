@@ -37,6 +37,15 @@ namespace Aksio.Cratis.Events.Projections
         IChildrenBuilder<TParentModel, TChildModel> RemovedWith<TEvent>();
 
         /// <summary>
+        /// Start building the children projection for a specific child model.
+        /// </summary>
+        /// <param name="targetProperty">Expression for expressing the target property.</param>
+        /// <param name="builderCallback">Builder callback.</param>
+        /// <typeparam name="TNestedChildModel">Type of nested child model.</typeparam>
+        /// <returns>Builder continuation.</returns>
+        IChildrenBuilder<TParentModel, TChildModel> Children<TNestedChildModel>(Expression<Func<TChildModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TChildModel, TNestedChildModel>> builderCallback);
+
+        /// <summary>
         /// Build the <see cref="ChildrenDefinition"/>.
         /// </summary>
         /// <returns>A a new <see cref="ChildrenDefinition"/>.</returns>
