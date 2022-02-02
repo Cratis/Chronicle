@@ -1,3 +1,10 @@
+# [v5.2.1] - 2022-2-2 [PR: #145](https://github.com/aksio-insurtech/Cratis/pull/145)
+
+### Fixed
+
+- Fixing children model type in expression when building children within children.
+
+
 # [v5.2.0] - 2022-2-2 [PR: #144](https://github.com/aksio-insurtech/Cratis/pull/144)
 
 ### Added
