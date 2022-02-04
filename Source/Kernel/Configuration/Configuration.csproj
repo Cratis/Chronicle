@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Configuration</AssemblyName>
+        <RootNamespace>Cratis.Configuration</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+        <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
+    </ItemGroup>
+
+</Project>
