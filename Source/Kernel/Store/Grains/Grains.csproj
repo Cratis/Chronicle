@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Events.Store.Grains</AssemblyName>
-        <RootNamespace>Cratis.Events.Store.Grains</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Events.Store.Grains</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

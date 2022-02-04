@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Compliance.Domain</AssemblyName>
-        <RootNamespace>Cratis.Compliance.Domain</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Compliance.Domain</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

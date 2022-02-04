@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Events.Projections.Api</AssemblyName>
-        <RootNamespace>Cratis.Events.Projections.Api</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Events.Projections.Api</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

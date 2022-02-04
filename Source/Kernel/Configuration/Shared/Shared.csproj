@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Configuration.Shared</AssemblyName>
-        <RootNamespace>Cratis.Configuration</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Configuration</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

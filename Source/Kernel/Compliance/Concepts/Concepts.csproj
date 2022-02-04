@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Compliance.Concepts</AssemblyName>
-        <RootNamespace>Cratis.Compliance.Concepts</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Compliance.Concepts</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
