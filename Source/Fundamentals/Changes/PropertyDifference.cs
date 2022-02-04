@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Globalization;
 using System.Reflection;
+using Cratis.Concepts;
 using ObjectsComparer;
 
 namespace Cratis.Changes
@@ -36,15 +37,28 @@ namespace Cratis.Changes
             {
                 if (!string.IsNullOrEmpty(difference.Value1))
                 {
-                    Original = Convert.ChangeType(difference.Value1, valueType, CultureInfo.InvariantCulture);
+                    if (valueType.IsConcept())
+                    {
+                        Original = ConceptFactory.CreateConceptInstance(valueType, difference.Value1);
+                    }
+                    else
+                    {
+                        Original = Convert.ChangeType(difference.Value1, valueType, CultureInfo.InvariantCulture);
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(difference.Value2))
                 {
-                    Changed = Convert.ChangeType(difference.Value2, valueType, CultureInfo.InvariantCulture);
+                    if (valueType.IsConcept())
+                    {
+                        Changed = ConceptFactory.CreateConceptInstance(valueType, difference.Value2);
+                    }
+                    else
+                    {
+                        Changed = Convert.ChangeType(difference.Value2, valueType, CultureInfo.InvariantCulture);
+                    }
                 }
-            }
-        }
+            }        }
 
         /// <summary>
         /// Gets the full member path to the property that has changed.
