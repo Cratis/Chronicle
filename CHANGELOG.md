@@ -41,7 +41,7 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
                 .Add(model => model.Balance).With(@event => @event.Amount))
             .From<WithdrawalFromDebitAccountPerformed>(_ => _
                 .Subtract(model => model.Balance).With(@event => @event.Amount))
-            // ** NEW ** 
+            // ** NEW **
             .RemovedWith<DebitAccountClosed>();
 }
 ```
@@ -369,6 +369,12 @@ This release focuses on compliance and schemas. Providing a mechanism for adding
 
 
 # [v2.15.0] - 2021-11-26 [PR: #68](https://github.com/aksio-insurtech/Cratis/pull/68)
+
+# [v2.13.6] - 2021-11-16
+
+### Fixed
+
+- `PropertyDifference` in the Changes engine supports Concepts.
 
 ### Added
 
