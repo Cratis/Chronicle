@@ -58,7 +58,8 @@ namespace Cratis.Changes
                         Changed = Convert.ChangeType(difference.Value2, valueType, CultureInfo.InvariantCulture);
                     }
                 }
-            }        }
+            }
+        }
 
         /// <summary>
         /// Gets the full member path to the property that has changed.
