@@ -379,7 +379,7 @@ This release focuses on compliance and schemas. Providing a mechanism for adding
 
 - Workbench will now reflect changes to projections in "real-time" - basically observing what is happening with projections running.
 
-# [v2.13.6] - 2021-11-16
+# [v2.13.6] & [v2.13.7] - 2021-11-16
 
 ### Fixed
 
