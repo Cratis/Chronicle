@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
     public class MongoDBChangesetStorage : IChangesetStorage
     {
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets)
+        public Task Save(CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> associatedChangeset)
         {
             return Task.CompletedTask;
         }

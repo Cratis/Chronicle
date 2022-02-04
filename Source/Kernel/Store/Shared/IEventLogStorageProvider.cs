@@ -9,6 +9,14 @@ namespace Aksio.Cratis.Events.Store
     public interface IEventLogStorageProvider
     {
         /// <summary>
+        /// Get the last instance of a specific event type for an event source.
+        /// </summary>
+        /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>
+        /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
+        /// <returns>The <see cref="AppendedEvent"/> found.</returns>
+        Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId);
+
+        /// <summary>
         /// Get events using a specific sequence number as starting point within the event log.
         /// </summary>
         /// <param name="sequenceNumber">The <see cref="EventLogSequenceNumber"/> to get from.</param>

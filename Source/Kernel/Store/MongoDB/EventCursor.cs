@@ -1,9 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Events.Schemas;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Events.Store.MongoDB
@@ -13,8 +10,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
     /// </summary>
     public class EventCursor : IEventCursor
     {
-        readonly ISchemaStore _schemaStore;
-        readonly IJsonComplianceManager _jsonComplianceManager;
+        readonly IEventConverter _converter;
         readonly IAsyncCursor<Event>? _innerCursor;
 
         /// <inheritdoc/>
@@ -23,16 +19,13 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         /// <summary>
         /// Initializes a new instance of the <see cref="EventCursor"/> class.
         /// </summary>
-        /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
-        /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
+        /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
         /// <param name="innerCursor">The underlying MongoDB cursor.</param>
         public EventCursor(
-            ISchemaStore schemaStore,
-            IJsonComplianceManager jsonComplianceManager,
+            IEventConverter converter,
             IAsyncCursor<Event>? innerCursor)
         {
-            _schemaStore = schemaStore;
-            _jsonComplianceManager = jsonComplianceManager;
+            _converter = converter;
             _innerCursor = innerCursor;
         }
 
@@ -43,7 +36,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
             var result = await _innerCursor.MoveNextAsync();
             if (_innerCursor.Current is not null)
             {
-                Current = await Task.WhenAll(_innerCursor.Current.Select(@event => ToAppendedEvent(@event)));
+                Current = await Task.WhenAll(_innerCursor.Current.Select(@event => _converter.ToAppendedEvent(@event)));
             }
             else
             {
@@ -56,19 +49,6 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         public void Dispose()
         {
             _innerCursor?.Dispose();
-        }
-
-        async Task<AppendedEvent> ToAppendedEvent(Event @event)
-        {
-            var eventType = new EventType(@event.Type, EventGeneration.First);
-            var content = (JsonNode.Parse(@event.Content[EventGeneration.First.ToString()].ToString()) as JsonObject)!;
-            var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
-            var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventSourceId, content);
-
-            return new AppendedEvent(
-                new EventMetadata(@event.SequenceNumber, eventType),
-                new EventContext(@event.EventSourceId, @event.Occurred),
-                releasedContent);
         }
     }
 }
