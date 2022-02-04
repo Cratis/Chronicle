@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Events.Store.Api</AssemblyName>
-        <RootNamespace>Cratis.Events.Store.Api</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Events.Store.Api</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

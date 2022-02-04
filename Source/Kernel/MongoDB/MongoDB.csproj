@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.MongoDB</AssemblyName>
-        <RootNamespace>Cratis.MongoDB</RootNamespace>
+        <RootNamespace>Aksio.Cratis.MongoDB</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

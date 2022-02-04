@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Events.Schemas.Shared</AssemblyName>
-        <RootNamespace>Cratis.Events.Schemas</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Events.Schemas</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

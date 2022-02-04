@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.AspNetCore</AssemblyName>
-        <RootNamespace>Cratis.AspNetCore</RootNamespace>
+        <RootNamespace>Aksio.Cratis.AspNetCore</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

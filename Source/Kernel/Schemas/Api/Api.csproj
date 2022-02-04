@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Events.Schemas.Api</AssemblyName>
-        <RootNamespace>Cratis.Events.Schemas.Api</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Events.Schemas.Api</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Configuration.Grains.Interfaces</AssemblyName>
-        <RootNamespace>Cratis.Configuration.Grains</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Configuration.Grains</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

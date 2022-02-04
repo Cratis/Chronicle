@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Extensions.Newtonsoft</AssemblyName>
-        <RootNamespace>Cratis.Extensions.Newtonsoft</RootNamespace>
+        <RootNamespace>Aksio.Cratis.Extensions.Newtonsoft</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
