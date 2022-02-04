@@ -11,6 +11,11 @@
 
     <ItemGroup>
         <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)" />
+        <PackageReference Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
     </ItemGroup>
 
 </Project>
