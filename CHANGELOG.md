@@ -370,15 +370,15 @@ This release focuses on compliance and schemas. Providing a mechanism for adding
 
 # [v2.15.0] - 2021-11-26 [PR: #68](https://github.com/aksio-insurtech/Cratis/pull/68)
 
+### Added
+
+- Workbench will now reflect changes to projections in "real-time" - basically observing what is happening with projections running.
+
 # [v2.13.6] - 2021-11-16
 
 ### Fixed
 
 - `PropertyDifference` in the Changes engine supports Concepts.
-
-### Added
-
-- Workbench will now reflect changes to projections in "real-time" - basically observing what is happening with projections running.
 
 # [v2.13.5] - 2021-11-16 [PR: #66](https://github.com/aksio-insurtech/Cratis/pull/66)
 
