@@ -122,6 +122,11 @@ There are no behavioral changes.
 - Improved consistency in codebase for working with events by switching to `JsonObject` throughout rather than JSON strings.
 - Integration now works together with the Kernel rather than all in-memory. Leveraging a new Projection Grain.
 
+# [v4.3.1] - 2021-11-16
+
+### Fixed
+
+- `PropertyDifference` in the Changes engine supports Concepts. This was later also merged down to version **2.13.6**.
 
 # [v4.3.0] - 2022-1-19 [PR: #116](https://github.com/aksio-insurtech/Cratis/pull/116)
 
