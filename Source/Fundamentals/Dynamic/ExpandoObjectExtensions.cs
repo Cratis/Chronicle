@@ -103,14 +103,23 @@ namespace Aksio.Cratis.Dynamic
         /// </summary>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
         /// <param name="property"><see cref="PropertyPath"/> to get or create for.</param>
+        /// <param name="parentIdentifierProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
+        /// <param name="parentIdentifier">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
         /// <returns><see cref="ExpandoObject"/> at property.</returns>
-        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property)
+        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, PropertyPath? parentIdentifierProperty = default, object? parentIdentifier = default)
         {
             var currentTarget = target as IDictionary<string, object>;
             var segments = property.Segments.ToArray();
+
             for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
             {
                 var segment = segments[propertyIndex];
+                currentTarget = EnsurePathWithinParentChild(currentTarget, segments, segment, propertyIndex, parentIdentifierProperty, parentIdentifier, out var found);
+                if (found)
+                {
+                    continue;
+                }
+
                 if (!currentTarget.ContainsKey(segment))
                 {
                     var nested = new ExpandoObject();
@@ -132,11 +141,13 @@ namespace Aksio.Cratis.Dynamic
         /// <typeparam name="TChild">Type of child for the collection.</typeparam>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
         /// <param name="childrenProperty"><see cref="PropertyPath"/> to ensure collection for.</param>
+        /// <param name="parentIdentifierProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
+        /// <param name="parentIdentifier">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
-        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty)
+        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, PropertyPath? parentIdentifierProperty = default, object? parentIdentifier = default)
         {
-            var inner = target.EnsurePath(childrenProperty) as IDictionary<string, object>;
+            var inner = target.EnsurePath(childrenProperty, parentIdentifierProperty, parentIdentifier) as IDictionary<string, object>;
             if (!inner.ContainsKey(childrenProperty.LastSegment))
             {
                 inner[childrenProperty.LastSegment] = new List<TChild>();
@@ -165,5 +176,31 @@ namespace Aksio.Cratis.Dynamic
         /// <returns>True if there is an item, false if not.</returns>
         public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
             items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
+
+        static IDictionary<string, object> EnsurePathWithinParentChild(IDictionary<string, object> currentTarget, string[] segments, string segment, int propertyIndex, PropertyPath? parentIdentifierProperty, object? parentIdentifier, out bool found)
+        {
+            if (parentIdentifierProperty is not null && parentIdentifier is not null && propertyIndex == segments.Length - 2)
+            {
+                if (!currentTarget.ContainsKey(segment))
+                {
+                    currentTarget[segment] = new List<ExpandoObject>();
+                }
+
+                if (currentTarget[segment] is IEnumerable currentTargetAsEnumerable)
+                {
+                    foreach (IDictionary<string, object> parentChild in currentTargetAsEnumerable)
+                    {
+                        if (parentChild.ContainsKey(parentIdentifierProperty) && parentChild[parentIdentifierProperty] == parentIdentifier)
+                        {
+                            found = true;
+                            return parentChild;
+                        }
+                    }
+                }
+            }
+
+            found = false;
+            return currentTarget;
+        }
     }
 }
