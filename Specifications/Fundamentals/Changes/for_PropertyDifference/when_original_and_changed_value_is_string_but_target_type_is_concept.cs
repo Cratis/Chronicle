@@ -1,10 +1,10 @@
-// Copyright (c) Cratis. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Concepts;
+using Aksio.Cratis.Concepts;
 using ObjectsComparer;
 
-namespace Cratis.Changes.for_PropertyDifference
+namespace Aksio.Cratis.Changes.for_PropertyDifference
 {
     public class when_original_and_changed_value_is_string_but_target_type_is_concept : Specification
     {
