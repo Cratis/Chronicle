@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Reflection;
+using System.Text;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Objects;
 using Aksio.Cratis.Strings;
@@ -27,6 +28,33 @@ namespace Aksio.Cratis.Properties
         /// <param name="path">The path of the property.</param>
         /// <returns>Converted <see cref="PropertyPath"/>.</returns>
         public static implicit operator PropertyPath(string path) => new(path);
+
+        /// <summary>
+        /// Adds two <see cref="PropertyPath"/> together - formatting it correctly.
+        /// </summary>
+        /// <param name="left">Left operand.</param>
+        /// <param name="right">Right operand.</param>
+        /// <returns>A merged <see cref="PropertyPath"/>.</returns>
+        public static PropertyPath operator +(PropertyPath left, PropertyPath right)
+        {
+            var builder = new StringBuilder();
+            if (left.Path.Length > 0)
+            {
+                builder.Append(left.Path);
+            }
+
+            if (left.Path.Length > 0 && right.Path.Length > 0)
+            {
+                builder.Append('.');
+            }
+
+            if (right.Path.Length > 0)
+            {
+                builder.Append(right.Path);
+            }
+
+            return new(builder.ToString());
+        }
 
         /// <summary>
         /// Represents the root path.
