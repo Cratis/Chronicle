@@ -17,8 +17,8 @@ namespace Aksio.Cratis.Events.Projections.Changes
         /// Save changesets associated with a specific <see cref="CorrelationId"/>.
         /// </summary>
         /// <param name="correlationId"><see cref="CorrelationId"/> to save for.</param>
-        /// <param name="associatedChangesets">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
+        /// <param name="associatedChangeset">All the associated <see cref="IChangeset{Event, ExpandoObject}">changesets</see>.</param>
         /// <returns>Async task.</returns>
-        Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets);
+        Task Save(CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> associatedChangeset);
     }
 }
