@@ -3,7 +3,7 @@
 
 using System.Globalization;
 using System.Reflection;
-using Cratis.Concepts;
+using Aksio.Cratis.Concepts;
 using ObjectsComparer;
 
 namespace Aksio.Cratis.Changes
