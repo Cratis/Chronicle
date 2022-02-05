@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -73,8 +75,9 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Provides the projection with a new <see cref="AppendedEvent"/>.
         /// </summary>
-        /// <param name="eventContext"><see cref="ProjectionEventContext"/> with event and its context to provide.</param>
-        void OnNext(ProjectionEventContext eventContext);
+        /// <param name="event"><see cref="AppendedEvent"/> to provide.</param>
+        /// <param name="changeset"><see cref="Changeset{Event, ExpandoObject}"/> being worked on.</param>
+        void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset);
 
         /// <summary>
         /// Checks whether or not the projection will accept a specific event type.
