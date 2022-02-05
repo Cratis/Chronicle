@@ -91,11 +91,13 @@ namespace Aksio.Cratis.Changes
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
             object key,
-            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
+            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers,
+            PropertyPath? parentIdentifiedByProperty = default,
+            object? parentKey = default)
             where TChild : new()
         {
             var workingState = InitialState.Clone()!;
-            var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty);
+            var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty, parentIdentifiedByProperty, parentKey);
 
             if (!items.Contains(identifiedByProperty, key))
             {
@@ -136,9 +138,9 @@ namespace Aksio.Cratis.Changes
         public bool HasBeenRemoved() => Changes.Any(_ => _ is Removed);
 
         /// <inheritdoc/>
-        public TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key)
+        public TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, PropertyPath? parentIdentifiedByProperty = default, object? parentKey = default)
         {
-            var items = childrenProperty.GetValue(InitialState!) as IEnumerable<TChild>;
+            var items = childrenProperty.GetValue(InitialState!, parentIdentifiedByProperty, parentKey) as IEnumerable<TChild>;
             return items!.FindByKey(identifiedByProperty, key)!;
         }
     }

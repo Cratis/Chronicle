@@ -97,12 +97,14 @@ namespace Aksio.Cratis.Properties
         /// Gets the value at the path of the property.
         /// </summary>
         /// <param name="target">Object to get from.</param>
+        /// <param name="parentIdentifiedByProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
+        /// <param name="parentIdentifier">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
         /// <returns>Value, if any.</returns>
-        public object? GetValue(object target)
+        public object? GetValue(object target, PropertyPath? parentIdentifiedByProperty = default, object? parentIdentifier = default)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
-                var innerInstance = targetAsExpandoObject.EnsurePath(this) as IDictionary<string, object>;
+                var innerInstance = targetAsExpandoObject.EnsurePath(this, parentIdentifiedByProperty, parentIdentifier) as IDictionary<string, object>;
                 return innerInstance.ContainsKey(LastSegment) ? innerInstance[LastSegment] : null;
             }
 

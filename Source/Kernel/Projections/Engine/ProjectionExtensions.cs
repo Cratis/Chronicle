@@ -52,13 +52,12 @@ namespace Aksio.Cratis.Events.Projections
                 var key = keyResolver(_.Event);
                 var parentKey = parentIdentifiedByProperty.IsRoot ? default : parentKeyResolver(_.Event);
                 var json = JsonSerializer.Serialize(_.Changeset.InitialState);
-                Console.WriteLine(json);
 
                 var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty, parentIdentifiedByProperty, parentKey);
 
                 if (!items.Contains(identifiedByProperty, key))
                 {
-                    _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
+                    _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers, parentIdentifiedByProperty, parentKey);
                 }
             });
             return observable;

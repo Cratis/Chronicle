@@ -78,7 +78,7 @@ namespace Aksio.Cratis.Events.Projections
             // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
             var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
                 kvp.Key,
-                string.IsNullOrEmpty(kvp.Value.ParentKey) ? KeyResolvers.FromEventSourceId : KeyResolvers.FromEventContent(kvp.Value.ParentKey!))).ToList();
+                string.IsNullOrEmpty(kvp.Value.ParentKey) ? KeyResolvers.FromEventSourceId : KeyResolvers.FromParentHierarchy(projection, kvp.Value.ParentKey!))).ToList();
 
             if (projectionDefinition.RemovedWith != default)
             {

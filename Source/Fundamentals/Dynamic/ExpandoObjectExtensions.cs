@@ -190,10 +190,14 @@ namespace Aksio.Cratis.Dynamic
                 {
                     foreach (IDictionary<string, object> parentChild in currentTargetAsEnumerable)
                     {
-                        if (parentChild.ContainsKey(parentIdentifierProperty) && parentChild[parentIdentifierProperty] == parentIdentifier)
+                        if (parentChild.ContainsKey(parentIdentifierProperty))
                         {
-                            found = true;
-                            return parentChild;
+                            var identifierAsString = parentChild[parentIdentifierProperty].ToString()!;
+                            if (string.Equals(identifierAsString, parentIdentifier.ToString(), StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                found = true;
+                                return parentChild;
+                            }
                         }
                     }
                 }

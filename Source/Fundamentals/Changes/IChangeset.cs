@@ -30,7 +30,7 @@ namespace Aksio.Cratis.Changes
         /// <summary>
         /// Gets whether or not there are changes in the changeset.
         /// </summary>
-        bool HasChanges { get; }
+        bool HasChanges { get; }
 
         /// <summary>
         /// Add a change to the changeset.
@@ -69,8 +69,10 @@ namespace Aksio.Cratis.Changes
         /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
         /// <param name="key">Key value.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
+        /// <param name="parentIdentifiedByProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
+        /// <param name="parentKey">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
+        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers, PropertyPath? parentIdentifiedByProperty = default, object? parentKey = default)
             where TChild : new();
 
         /// <summary>
@@ -104,7 +106,9 @@ namespace Aksio.Cratis.Changes
         /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
         /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies the child.</param>
         /// <param name="key">The key of the item.</param>
+        /// <param name="parentIdentifiedByProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
+        /// <param name="parentKey">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
         /// <returns>The added child.</returns>
-        TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key);
+        TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, PropertyPath? parentIdentifiedByProperty = default, object? parentKey = default);
     }
 }
