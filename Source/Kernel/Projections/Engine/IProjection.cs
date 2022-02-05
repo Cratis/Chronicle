@@ -29,6 +29,16 @@ namespace Aksio.Cratis.Events.Projections
         ProjectionPath Path { get; }
 
         /// <summary>
+        /// Gets whether or not there is a parent.
+        /// </summary>
+        bool HasParent { get; }
+
+        /// <summary>
+        /// Gets the parent projection - if any.
+        /// </summary>
+        IProjection? Parent { get; }
+
+        /// <summary>
         /// Gets the <see cref="Model"/> the projection targets.
         /// </summary>
         Model Model { get; }
@@ -52,6 +62,11 @@ namespace Aksio.Cratis.Events.Projections
         /// Gets the <see cref="EventType">event types</see> the projection can handle.
         /// </summary>
         IEnumerable<EventType> EventTypes { get; }
+
+        /// <summary>
+        /// Gets the <see cref="EventTypeWithKeyResolver"/> collection.
+        /// </summary>
+        IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; }
 
         /// <summary>
         /// Gets the collection of <see cref="IProjection">child projections</see>.
@@ -92,5 +107,17 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>
         /// <returns>The <see cref="KeyResolver"/>.</returns>
         KeyResolver GetKeyResolverFor(EventType eventType);
+
+        /// <summary>
+        /// Set event types with key resolvers for the projection.
+        /// </summary>
+        /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver"/>.</param>
+        void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver);
+
+        /// <summary>
+        /// Set the parent <see cref="IProjection"/>.
+        /// </summary>
+        /// <param name="projection">The parent <see cref="IProjection"/>.</param>
+        void SetParent(IProjection projection);
     }
 }

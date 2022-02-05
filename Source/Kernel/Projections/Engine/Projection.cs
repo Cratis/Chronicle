@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections
     public class Projection : IProjection
     {
         readonly ISubject<ProjectionEventContext> _subject = new Subject<ProjectionEventContext>();
-        readonly IDictionary<EventType, KeyResolver> _eventTypesToKeyResolver;
+        IDictionary<EventType, KeyResolver> _eventTypesToKeyResolver = new Dictionary<EventType, KeyResolver>();
 
         /// <inheritdoc/>
         public ProjectionId Identifier { get; }
@@ -39,10 +39,19 @@ namespace Aksio.Cratis.Events.Projections
         public IObservable<ProjectionEventContext> Event { get; }
 
         /// <inheritdoc/>
-        public IEnumerable<EventType> EventTypes { get; }
+        public IEnumerable<EventType> EventTypes { get; private set; } = Array.Empty<EventType>();
 
         /// <inheritdoc/>
         public IEnumerable<IProjection> ChildProjections { get; }
+
+        /// <inheritdoc/>
+        public bool HasParent => Parent != default;
+
+        /// <inheritdoc/>
+        public IProjection? Parent { get; private set; }
+
+        /// <inheritdoc/>
+        public IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; private set; } = Array.Empty<EventTypeWithKeyResolver>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -53,7 +62,6 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="model">The target <see cref="Model"/>.</param>
         /// <param name="passive">Whether or not the projection is a passive projection.</param>
         /// <param name="rewindable">Whether or not the projection is rewindable.</param>
-        /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
         /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
         public Projection(
             ProjectionId identifier,
@@ -62,7 +70,6 @@ namespace Aksio.Cratis.Events.Projections
             Model model,
             bool passive,
             bool rewindable,
-            IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
             IEnumerable<IProjection> childProjections)
         {
             Identifier = identifier;
@@ -70,10 +77,9 @@ namespace Aksio.Cratis.Events.Projections
             Model = model;
             IsPassive = passive;
             IsRewindable = rewindable;
-            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
             Event = FilterEventTypes(_subject);
             Path = path;
-            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+
             ChildProjections = childProjections;
         }
 
@@ -99,6 +105,17 @@ namespace Aksio.Cratis.Events.Projections
             ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];
         }
+
+        /// <inheritdoc/>
+        public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver)
+        {
+            EventTypesWithKeyResolver = eventTypesWithKeyResolver;
+            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
+            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+        }
+
+        /// <inheritdoc/>
+        public void SetParent(IProjection projection) => Parent = projection;
 
         void ThrowIfMissingKeyResolverForEventType(EventType eventType)
         {
