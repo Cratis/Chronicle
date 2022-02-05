@@ -103,12 +103,8 @@ namespace Aksio.Cratis.Changes
         /// Get a specific child from.
         /// </summary>
         /// <typeparam name="TChild">Type of child.</typeparam>
-        /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
-        /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies the child.</param>
         /// <param name="key">The key of the item.</param>
-        /// <param name="parentIdentifiedByProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
-        /// <param name="parentKey">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
         /// <returns>The added child.</returns>
-        TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, PropertyPath? parentIdentifiedByProperty = default, object? parentKey = default);
+        TChild GetChildByKey<TChild>(object key);
     }
 }
