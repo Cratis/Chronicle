@@ -6,7 +6,6 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections
 {
@@ -16,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections
     public class Projection : IProjection
     {
         readonly ISubject<ProjectionEventContext> _subject = new Subject<ProjectionEventContext>();
-        readonly IDictionary<EventType, ValueProvider<AppendedEvent>> _eventTypesToKeyResolver;
+        readonly IDictionary<EventType, KeyResolver> _eventTypesToKeyResolver;
 
         /// <inheritdoc/>
         public ProjectionId Identifier { get; }
@@ -95,7 +94,7 @@ namespace Aksio.Cratis.Events.Projections
         public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(eventType);
 
         /// <inheritdoc/>
-        public ValueProvider<AppendedEvent> GetKeyResolverFor(EventType eventType)
+        public KeyResolver GetKeyResolverFor(EventType eventType)
         {
             ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];

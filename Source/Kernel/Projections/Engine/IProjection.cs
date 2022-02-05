@@ -90,7 +90,7 @@ namespace Aksio.Cratis.Events.Projections
         /// Get the <see cref="ValueProvider{Event}"/> associated with a given <see cref="EventType"/>.
         /// </summary>
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-        /// <returns>The <see cref="ValueProvider{Event}"/>.</returns>
-        ValueProvider<AppendedEvent> GetKeyResolverFor(EventType eventType);
+        /// <returns>The <see cref="KeyResolver"/>.</returns>
+        KeyResolver GetKeyResolverFor(EventType eventType);
     }
 }
