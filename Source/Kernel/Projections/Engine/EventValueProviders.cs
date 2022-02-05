@@ -15,13 +15,13 @@ namespace Aksio.Cratis.Events.Projections
     public static class EventValueProviders
     {
         /// <summary>
-        /// Create a <see cref="ValueProvider{T}"/> that can copy the content of the events event source id from within the content of an event to a target property.
+        /// Create a <see cref="ValueProvider{T}"/> that provides the event source id from an event.
         /// </summary>
         /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
         public static readonly ValueProvider<AppendedEvent> FromEventSourceId = (AppendedEvent @event) => @event.Context.EventSourceId.ToString();
 
         /// <summary>
-        /// Create a <see cref="ValueProvider{T}"/> that can copy the content of a property from within the content of an event to a target property.
+        /// Create a <see cref="ValueProvider{T}"/> that provides a value from the event content.
         /// </summary>
         /// <param name="sourceProperty">Source property.</param>
         /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>

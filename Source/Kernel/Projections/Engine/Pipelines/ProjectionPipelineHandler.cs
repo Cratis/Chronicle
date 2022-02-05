@@ -62,7 +62,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
                 var correlationId = CorrelationId.New();
 
                 var keyResolver = pipeline.Projection.GetKeyResolverFor(@event.Metadata.Type);
-                var key = keyResolver(@event);
+                var key = keyResolver(pipeline.EventProvider, @event);
 
                 _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
                 var initialState = await resultStore.FindOrDefault(key);
@@ -70,13 +70,13 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
 
                 await HandleEventFor(pipeline.Projection, @event, changeset);
 
+                var nextSequenceNumber = @event.Metadata.SequenceNumber + 1;
                 if (changeset.HasChanges)
                 {
                     await resultStore.ApplyChanges(key, changeset);
+                    await _changesetStorage.Save(correlationId, changeset);
+                    _logger.SavingResult(@event.Metadata.SequenceNumber);
                 }
-
-                await _changesetStorage.Save(correlationId, changeset);
-                var nextSequenceNumber = @event.Metadata.SequenceNumber + 1;
                 await _projectionPositions.Save(pipeline.Projection, configurationId, nextSequenceNumber);
                 UpdatePositionFor(configurationId, nextSequenceNumber);
                 return nextSequenceNumber;
@@ -94,7 +94,6 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             {
                 _logger.Projecting(@event.Metadata.SequenceNumber);
                 projection.OnNext(@event, changeset);
-                _logger.SavingResult(@event.Metadata.SequenceNumber);
             }
             else
             {
