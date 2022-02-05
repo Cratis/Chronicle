@@ -138,10 +138,17 @@ namespace Aksio.Cratis.Changes
         public bool HasBeenRemoved() => Changes.Any(_ => _ is Removed);
 
         /// <inheritdoc/>
-        public TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, PropertyPath? parentIdentifiedByProperty = default, object? parentKey = default)
+        public TChild GetChildByKey<TChild>(object key)
         {
-            var items = childrenProperty.GetValue(InitialState!, parentIdentifiedByProperty, parentKey) as IEnumerable<TChild>;
-            return items!.FindByKey(identifiedByProperty, key)!;
+            foreach (var change in _changes)
+            {
+                if (change is ChildAdded childAdded && childAdded.Key == key)
+                {
+                    return (TChild)childAdded.Child;
+                }
+            }
+
+            return default!;
         }
     }
 }

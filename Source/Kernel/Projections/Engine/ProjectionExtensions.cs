@@ -94,7 +94,7 @@ namespace Aksio.Cratis.Events.Projections
                     var key = keyResolver(_.Event);
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
-                        var child = _.Changeset.GetChildByKey<ExpandoObject>(childrenProperty, identifiedByProperty, key);
+                        var child = _.Changeset.GetChildByKey<ExpandoObject>(key);
                         if (child != default)
                         {
                             _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
