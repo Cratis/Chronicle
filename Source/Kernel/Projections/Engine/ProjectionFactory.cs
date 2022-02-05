@@ -35,8 +35,7 @@ namespace Aksio.Cratis.Events.Projections
                 PropertyPath.Root,
                 PropertyPath.Root,
                 ProjectionPath.GetRootFor(definition.Identifier),
-                new Dictionary<PropertyPath, ChildrenDefinition>(),
-                _ => { });
+                new Dictionary<PropertyPath, ChildrenDefinition>());
 
         async Task<IProjection> CreateProjectionFrom(
             ProjectionName name,
@@ -46,9 +45,36 @@ namespace Aksio.Cratis.Events.Projections
             PropertyPath parentIdentifiedByProperty,
             PropertyPath identifiedByProperty,
             ProjectionPath path,
-            IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions,
-            Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes)
+            IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions)
         {
+            /*
+            1st level Use value in property of content defined (ParentKey) as the actual key when getting from result store
+            2nd level Use value in property of content defined (ParentKey) to find the parent event - first From - then get the key and use this for getting from result store
+            3rd recurse on 2nd - add another level
+            */
+            var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
+                    name,
+                    kvp.Value,
+                    childrenAccessorProperty,
+                    childrenAccessorProperty + kvp.Key,
+                    identifiedByProperty,
+                    kvp.Value.IdentifiedBy,
+                    $"{path} -> ChildrenAt({kvp.Key.Path})",
+                    projectionDefinition.Children));
+            var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
+
+            var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
+            var model = new Model(projectionDefinition.Model.Name, modelSchema);
+
+            var projection = new Projection(
+                projectionDefinition.Identifier,
+                name,
+                path,
+                model,
+                projectionDefinition.IsPassive,
+                projectionDefinition.IsRewindable,
+                childProjections);
+
             // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
             var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
                 kvp.Key,
@@ -59,35 +85,12 @@ namespace Aksio.Cratis.Events.Projections
                 eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
             }
 
-            var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
-                    name,
-                    kvp.Value,
-                    childrenAccessorProperty,
-                    childrenAccessorProperty + kvp.Key,
-                    identifiedByProperty,
-                    kvp.Value.IdentifiedBy,
-                    $"{path} -> ChildrenAt({kvp.Key.Path})",
-                    projectionDefinition.Children,
-                    _ =>
-                    {
-                        eventsForProjection.AddRange(_);
-                        addChildEventTypes(_);
-                    }));
-            var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-
-            var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
-            var model = new Model(projectionDefinition.Model.Name, modelSchema);
-            addChildEventTypes(eventsForProjection);
-
-            var projection = new Projection(
-                projectionDefinition.Identifier,
-                name,
-                path,
-                model,
-                projectionDefinition.IsPassive,
-                projectionDefinition.IsRewindable,
-                eventsForProjection.DistinctBy(_ => _.EventType),
-                childProjections);
+            foreach (var child in childProjections)
+            {
+                child.SetParent(projection);
+                eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
+            }
+            projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType));
 
             foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {
