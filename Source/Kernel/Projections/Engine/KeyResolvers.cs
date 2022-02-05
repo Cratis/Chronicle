@@ -23,5 +23,37 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="sourceProperty">Source property.</param>
         /// <returns>A new <see cref="KeyResolver"/>.</returns>
         public static KeyResolver FromEventContent(PropertyPath sourceProperty) => (IProjectionEventProvider _, AppendedEvent @event) => EventValueProviders.FromEventContent(sourceProperty)(@event);
+
+        /// <summary>
+        /// Create a <see cref="KeyResolver"/> that provides a key value hierarchically upwards in Child->Parent relationships.
+        /// </summary>
+        /// <param name="projection"><see cref="IProjection"/> to start at.</param>
+        /// <param name="sourceProperty">The property that represents the parent key.</param>
+        /// <returns>A new <see cref="KeyResolver"/>.</returns>
+        public static KeyResolver FromParentHierarchy(IProjection projection, PropertyPath sourceProperty)
+        {
+            return (IProjectionEventProvider eventProvider, AppendedEvent @event) =>
+            {
+                var parentKey = EventValueProviders.FromEventContent(sourceProperty)(@event);
+                var currentProjection = projection;
+                while (currentProjection.HasParent)
+                {
+                    currentProjection = currentProjection.Parent;
+                    if (currentProjection?.HasParent != true)
+                    {
+                        break;
+                    }
+
+                    var firstEvent = currentProjection.EventTypes.First()!;
+                    var task = eventProvider.GetLastInstanceFor(firstEvent.Id, parentKey.ToString()!);
+                    task.Wait();
+                    var parentEvent = task.Result;
+                    var keyResolver = currentProjection.GetKeyResolverFor(firstEvent);
+                    parentKey = keyResolver(eventProvider, parentEvent);
+                }
+
+                return parentKey;
+            };
+        }
     }
 }
