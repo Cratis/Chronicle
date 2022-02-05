@@ -93,8 +93,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             if (projection.Accepts(@event.Metadata.Type))
             {
                 _logger.Projecting(@event.Metadata.SequenceNumber);
-                var context = new ProjectionEventContext(@event, changeset);
-                projection.OnNext(context);
+                projection.OnNext(@event, changeset);
                 _logger.SavingResult(@event.Metadata.SequenceNumber);
             }
             else
