@@ -66,7 +66,8 @@ namespace Aksio.Cratis.Events.Projections.Grains
                 foreach (var @event in cursor.Current)
                 {
                     var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, state);
-                    _projection.OnNext(@event, changeset);
+                    var context = new ProjectionEventContext(@event, changeset);
+                    _projection.OnNext(context);
 
                     foreach (var change in changeset.Changes)
                     {
