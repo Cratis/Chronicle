@@ -114,21 +114,21 @@ namespace Aksio.Cratis.Dynamic
             for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
             {
                 var segment = segments[propertyIndex];
-                currentTarget = EnsurePathWithinParentChild(currentTarget, segments, segment, propertyIndex, parentIdentifierProperty, parentIdentifier, out var found);
+                currentTarget = EnsurePathWithinParentChild(currentTarget, segments, segment.Value, propertyIndex, parentIdentifierProperty, parentIdentifier, out var found);
                 if (found)
                 {
                     continue;
                 }
 
-                if (!currentTarget.ContainsKey(segment))
+                if (!currentTarget.ContainsKey(segment.Value))
                 {
                     var nested = new ExpandoObject();
-                    currentTarget[segment] = nested;
+                    currentTarget[segment.Value] = nested;
                     currentTarget = nested!;
                 }
                 else
                 {
-                    currentTarget = ((ExpandoObject)currentTarget[segment])!;
+                    currentTarget = ((ExpandoObject)currentTarget[segment.Value])!;
                 }
             }
 
@@ -148,22 +148,22 @@ namespace Aksio.Cratis.Dynamic
         public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, PropertyPath? parentIdentifierProperty = default, object? parentIdentifier = default)
         {
             var inner = target.EnsurePath(childrenProperty, parentIdentifierProperty, parentIdentifier) as IDictionary<string, object>;
-            if (!inner.ContainsKey(childrenProperty.LastSegment))
+            if (!inner.ContainsKey(childrenProperty.LastSegment.Value))
             {
-                inner[childrenProperty.LastSegment] = new List<TChild>();
+                inner[childrenProperty.LastSegment.Value] = new List<TChild>();
             }
 
-            if (!(inner[childrenProperty.LastSegment] is IEnumerable))
+            if (!(inner[childrenProperty.LastSegment.Value] is IEnumerable))
             {
                 throw new ChildrenPropertyIsNotEnumerable(childrenProperty);
             }
 
-            var items = (inner[childrenProperty.LastSegment] as IEnumerable)!.Cast<TChild>();
+            var items = (inner[childrenProperty.LastSegment.Value] as IEnumerable)!.Cast<TChild>();
             if (items is not IList<TChild>)
             {
                 items = new List<TChild>(items!);
             }
-            inner[childrenProperty.LastSegment] = items;
+            inner[childrenProperty.LastSegment.Value] = items;
             return (items as ICollection<TChild>)!;
         }
 
@@ -177,7 +177,7 @@ namespace Aksio.Cratis.Dynamic
         public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
             items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
 
-        static IDictionary<string, object> EnsurePathWithinParentChild(IDictionary<string, object> currentTarget, string[] segments, string segment, int propertyIndex, PropertyPath? parentIdentifierProperty, object? parentIdentifier, out bool found)
+        static IDictionary<string, object> EnsurePathWithinParentChild(IDictionary<string, object> currentTarget, IPropertyPathSegment[] segments, string segment, int propertyIndex, PropertyPath? parentIdentifierProperty, object? parentIdentifier, out bool found)
         {
             if (parentIdentifierProperty is not null && parentIdentifier is not null && propertyIndex == segments.Length - 2)
             {
