@@ -47,16 +47,11 @@ namespace Aksio.Cratis.Events.Projections
             ProjectionPath path,
             IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions)
         {
-            /*
-            1st level Use value in property of content defined (ParentKey) as the actual key when getting from result store
-            2nd level Use value in property of content defined (ParentKey) to find the parent event - first From - then get the key and use this for getting from result store
-            3rd recurse on 2nd - add another level
-            */
             var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                     name,
                     kvp.Value,
                     childrenAccessorProperty,
-                    childrenAccessorProperty + kvp.Key,
+                    (childrenAccessorProperty + kvp.Key).AddArrayIndex(kvp.Key),
                     identifiedByProperty,
                     kvp.Value.IdentifiedBy,
                     $"{path} -> ChildrenAt({kvp.Key.Path})",

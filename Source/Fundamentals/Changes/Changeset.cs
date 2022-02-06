@@ -92,12 +92,11 @@ namespace Aksio.Cratis.Changes
             PropertyPath identifiedByProperty,
             object key,
             IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers,
-            PropertyPath? parentIdentifiedByProperty = default,
-            object? parentKey = default)
+            params ArrayIndexer[] arrayIndexers)
             where TChild : new()
         {
             var workingState = InitialState.Clone()!;
-            var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty, parentIdentifiedByProperty, parentKey);
+            var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty, arrayIndexers);
 
             if (!items.Contains(identifiedByProperty, key))
             {

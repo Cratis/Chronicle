@@ -29,15 +29,14 @@ namespace Aksio.Cratis.Changes
         /// <typeparam name="TChild">Type of child for the collection.</typeparam>
         /// <param name="target">Target object.</param>
         /// <param name="childrenProperty"><see cref="PropertyPath"/> to ensure collection for.</param>
-        /// <param name="parentIdentifierProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
-        /// <param name="parentIdentifier">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
+        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
         /// <exception cref="ChildrenPropertyIsNotEnumerableForType">Thrown if there is an existing property and it is not enumerable.</exception>
-        public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, PropertyPath? parentIdentifierProperty = default, object? parentIdentifier = default)
+        public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, params ArrayIndexer[] arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
-                return targetAsExpandoObject.EnsureCollection<TChild>(childrenProperty, parentIdentifierProperty, parentIdentifier);
+                return targetAsExpandoObject.EnsureCollection<TChild>(childrenProperty, arrayIndexers);
             }
 
             var propertyInfo = childrenProperty.GetPropertyInfoFor<TTarget>();

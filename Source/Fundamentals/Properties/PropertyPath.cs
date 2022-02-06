@@ -63,7 +63,7 @@ namespace Aksio.Cratis.Properties
         public static readonly PropertyPath Root = new(string.Empty);
 
         static Regex? _arrayIndexRegex;
-        readonly IPropertyPathSegment[] _segments;
+        readonly IPropertyPathSegment[] _segments = Array.Empty<IPropertyPathSegment>();
 
         /// <summary>
         /// Gets the full path of the property.
@@ -85,7 +85,7 @@ namespace Aksio.Cratis.Properties
         /// </summary>
         public bool IsRoot => Path?.Length == 0;
 
-        static Regex ArrayIndexRegex => _arrayIndexRegex ??= new("\\[(?<property>[A-Za-z]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+        static Regex ArrayIndexRegex => _arrayIndexRegex ??= new("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PropertyPath"/> class.
@@ -106,15 +106,27 @@ namespace Aksio.Cratis.Properties
         }
 
         /// <summary>
+        /// Add an <see cref="ArrayIndex"/> as segment by creating a new <see cref="PropertyPath"/>.
+        /// </summary>
+        /// <param name="identifier">Identifier of the array segment.</param>
+        /// <returns>A new <see cref="PropertyPath"/> with the segment appended.</returns>
+        /// <remarks>This operation does not mutate the original.</remarks>
+        public PropertyPath AddArrayIndex(string identifier)
+        {
+            return new($"{Path}.[{identifier}]");
+        }
+
+        /// <summary>
         /// Gets the value at the path of the property.
         /// </summary>
         /// <param name="target">Object to get from.</param>
+        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>Value, if any.</returns>
-        public object? GetValue(object target)
+        public object? GetValue(object target, params ArrayIndexer[] arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
-                var innerInstance = targetAsExpandoObject.EnsurePath(this) as IDictionary<string, object>;
+                var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
                 return innerInstance.ContainsKey(LastSegment.Value) ? innerInstance[LastSegment.Value] : null;
             }
 
