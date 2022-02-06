@@ -47,7 +47,7 @@ namespace Aksio.Cratis.Objects
             for (var segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
             {
                 var segment = segments[segmentIndex];
-                var currentPropertyInfo = currentType.GetProperty(segment, BindingFlags.Public | BindingFlags.Instance);
+                var currentPropertyInfo = currentType.GetProperty(segment.Value, BindingFlags.Public | BindingFlags.Instance);
 
                 if (currentPropertyInfo is null)
                 {

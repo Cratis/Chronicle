@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Objects;
 using Aksio.Cratis.Strings;
@@ -61,6 +62,9 @@ namespace Aksio.Cratis.Properties
         /// </summary>
         public static readonly PropertyPath Root = new(string.Empty);
 
+        static Regex? _arrayIndexRegex;
+        readonly IPropertyPathSegment[] _segments;
+
         /// <summary>
         /// Gets the full path of the property.
         /// </summary>
@@ -69,19 +73,19 @@ namespace Aksio.Cratis.Properties
         /// <summary>
         /// Gets the segments the full property path consists of.
         /// </summary>
-        public IEnumerable<string> Segments => _segments;
+        public IEnumerable<IPropertyPathSegment> Segments => _segments;
 
         /// <summary>
         /// Gets the last segment of the path.
         /// </summary>
-        public string LastSegment => _segments[^1];
+        public IPropertyPathSegment LastSegment => _segments[^1];
 
         /// <summary>
         /// Gets whether or not this is the root path.
         /// </summary>
         public bool IsRoot => Path?.Length == 0;
 
-        readonly string[] _segments;
+        static Regex ArrayIndexRegex => _arrayIndexRegex ??= new("\\[(?<property>[A-Za-z]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PropertyPath"/> class.
@@ -90,7 +94,15 @@ namespace Aksio.Cratis.Properties
         public PropertyPath(string path)
         {
             Path = path;
-            _segments = path.Split('.').Select(_ => _.ToCamelCase()).ToArray();
+            _segments = path.Split('.').Select<string, IPropertyPathSegment>(_ =>
+            {
+                var match = ArrayIndexRegex!.Match(_);
+                if (match.Success)
+                {
+                    return new ArrayIndex(match.Groups["property"].Value.ToCamelCase());
+                }
+                return new PropertyName(_.ToCamelCase());
+            }).ToArray();
         }
 
         /// <summary>
@@ -103,7 +115,7 @@ namespace Aksio.Cratis.Properties
             if (target is ExpandoObject targetAsExpandoObject)
             {
                 var innerInstance = targetAsExpandoObject.EnsurePath(this) as IDictionary<string, object>;
-                return innerInstance.ContainsKey(LastSegment) ? innerInstance[LastSegment] : null;
+                return innerInstance.ContainsKey(LastSegment.Value) ? innerInstance[LastSegment.Value] : null;
             }
 
             var inner = target.EnsurePath(this);
@@ -121,7 +133,7 @@ namespace Aksio.Cratis.Properties
             if (target is ExpandoObject targetAsExpandoObject)
             {
                 var inner = targetAsExpandoObject.EnsurePath(this) as IDictionary<string, object>;
-                inner[LastSegment] = value;
+                inner[LastSegment.Value] = value;
             }
             else
             {
@@ -152,7 +164,7 @@ namespace Aksio.Cratis.Properties
 
             foreach (var segment in Segments)
             {
-                currentPropertyInfo = currentType.GetProperty(segment, BindingFlags.Public | BindingFlags.Instance);
+                currentPropertyInfo = currentType.GetProperty(segment.Value, BindingFlags.Public | BindingFlags.Instance);
             }
 
             if (currentPropertyInfo is null)
