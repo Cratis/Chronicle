@@ -69,10 +69,9 @@ namespace Aksio.Cratis.Changes
         /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
         /// <param name="key">Key value.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
-        /// <param name="parentIdentifiedByProperty">Optional property that identifies the parent if the parent is also a child in the hierarchy.</param>
-        /// <param name="parentKey">Optional key that identifies the parent if the parent is also a child in the hierarchy.</param>
+        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers, PropertyPath? parentIdentifiedByProperty = default, object? parentKey = default)
+        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers, params ArrayIndexer[] arrayIndexers)
             where TChild : new();
 
         /// <summary>

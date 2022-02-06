@@ -25,7 +25,7 @@ namespace Aksio.Cratis.Events.Projections
             return (AppendedEvent @event, ExpandoObject target) =>
             {
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
-                actualTarget[targetProperty.LastSegment] = eventValueProvider(@event);
+                actualTarget[targetProperty.LastSegment.Value] = eventValueProvider(@event);
             };
         }
 
@@ -41,13 +41,13 @@ namespace Aksio.Cratis.Events.Projections
             {
                 var lastSegment = targetProperty.LastSegment;
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
-                if (!actualTarget.ContainsKey(lastSegment))
+                if (!actualTarget.ContainsKey(lastSegment.Value))
                 {
-                    actualTarget[lastSegment] = 0D;
+                    actualTarget[lastSegment.Value] = 0D;
                 }
-                var value = (double)Convert.ChangeType(actualTarget[lastSegment], typeof(double), CultureInfo.InvariantCulture);
+                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double), CultureInfo.InvariantCulture);
                 value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);
-                actualTarget[lastSegment] = value;
+                actualTarget[lastSegment.Value] = value;
             };
         }
 
@@ -63,13 +63,13 @@ namespace Aksio.Cratis.Events.Projections
             {
                 var lastSegment = targetProperty.LastSegment;
                 var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
-                if (!actualTarget.ContainsKey(lastSegment))
+                if (!actualTarget.ContainsKey(lastSegment.Value))
                 {
-                    actualTarget[lastSegment] = 0D;
+                    actualTarget[lastSegment.Value] = 0D;
                 }
-                var value = (double)Convert.ChangeType(actualTarget[lastSegment], typeof(double), CultureInfo.InvariantCulture);
+                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double), CultureInfo.InvariantCulture);
                 value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);
-                actualTarget[lastSegment] = value;
+                actualTarget[lastSegment.Value] = value;
             };
         }
     }
