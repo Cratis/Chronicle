@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
 {
@@ -9,7 +10,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
     {
         ExpandoObject result;
 
-        void Because() => result = new ExpandoObject().EnsurePath("first_level.second_level.third_level");
+        void Because() => result = new ExpandoObject().EnsurePath("first_level.second_level.third_level", ArrayIndexer.NoIndexers);
 
         [Fact] void should_return_object() => result.ShouldNotBeNull();
     }

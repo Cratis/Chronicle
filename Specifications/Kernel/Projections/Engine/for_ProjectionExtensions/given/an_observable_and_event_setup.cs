@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
 {
@@ -28,7 +29,7 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
             changeset.SetupGet(_ => _.InitialState).Returns(initial_state);
             changeset.SetupGet(_ => _.Incoming).Returns(@event);
 
-            event_context = new(@event, changeset.Object);
+            event_context = new(new(@event.Context.EventSourceId, ArrayIndexer.NoIndexers), @event, changeset.Object);
         }
     }
 }

@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Objects.for_ObjectExtensions
             second_array_indexer = new($"{nameof(TopLevel.FirstLevel)}.[{nameof(FirstLevel.SecondLevel)}].{nameof(SecondLevel.ThirdLevel)}.[{nameof(ThirdLevel.ForthLevel)}]", "identifier", "second");
         }
 
-        void Because() => result = initial.EnsurePath(property_path, first_array_indexer, second_array_indexer) as ForthLevel;
+        void Because() => result = initial.EnsurePath(property_path, new[] { first_array_indexer, second_array_indexer }) as ForthLevel;
 
         [Fact] void should_return_a_new_object() => result.ShouldNotBeNull();
         [Fact] void should_add_all_levels_and_include_returning_object() => initial.FirstLevel.SecondLevel.First().ThirdLevel.ForthLevel.First().ShouldEqual(result);

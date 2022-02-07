@@ -32,7 +32,6 @@ namespace Aksio.Cratis.Events.Projections
                 definition,
                 PropertyPath.Root,
                 PropertyPath.Root,
-                PropertyPath.Root,
                 ProjectionPath.GetRootFor(definition.Identifier),
                 new Dictionary<PropertyPath, ChildrenDefinition>());
 
@@ -40,7 +39,6 @@ namespace Aksio.Cratis.Events.Projections
             ProjectionName name,
             ProjectionDefinition projectionDefinition,
             PropertyPath childrenAccessorProperty,
-            PropertyPath parentIdentifiedByProperty,
             PropertyPath identifiedByProperty,
             ProjectionPath path,
             IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions)
@@ -50,7 +48,6 @@ namespace Aksio.Cratis.Events.Projections
                     kvp.Value,
                     childrenAccessorProperty.AddArrayIndex(kvp.Key),
                     identifiedByProperty,
-                    kvp.Value.IdentifiedBy,
                     $"{path} -> ChildrenAt({kvp.Key.Path})",
                     projectionDefinition.Children));
             var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
@@ -103,7 +100,7 @@ namespace Aksio.Cratis.Events.Projections
             {
                 var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                 var (actualIdentifiedByProperty, actualKeyResolver) = ResolveIdentifiedPropertyWithKeyResolver(identifiedByProperty, fromDefinition.Key);
-                projection.Event.From(eventType).Project(childrenAccessorProperty, parentIdentifiedByProperty, actualIdentifiedByProperty, actualKeyResolver, propertyMappers);
+                projection.Event.From(eventType).Project(childrenAccessorProperty, actualIdentifiedByProperty, actualKeyResolver, propertyMappers);
             }
 
             if (projectionDefinition.RemovedWith != default)

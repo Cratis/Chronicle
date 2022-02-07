@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.for_Projection
@@ -22,12 +23,10 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 "0b7325dd-7a25-4681-9ab7-c387a6073547",
                 string.Empty,
                 string.Empty,
+                string.Empty,
                 new Model(string.Empty, new JsonSchema()),
                 false,
                 true,
-                new[] {
-                    new EventTypeWithKeyResolver(new  EventType("aac3d310-ff2f-4809-a326-afe14dd9a3d6", 1), EventValueProviders.FromEventSourceId)
-                },
                 Array.Empty<IProjection>());
 
             @event = new(new(0, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
@@ -36,7 +35,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
             projection.Event.Subscribe(_ => observed = true);
         }
 
-        void Because() => projection.OnNext(@event, changeset);
+        void Because() => projection.OnNext(new(new(@event.Context.EventSourceId, ArrayIndexer.NoIndexers), @event, changeset));
 
         [Fact] void should_not_be_observed() => observed.ShouldBeFalse();
     }

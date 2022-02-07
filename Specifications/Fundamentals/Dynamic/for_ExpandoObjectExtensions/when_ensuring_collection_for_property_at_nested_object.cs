@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
 {
@@ -13,7 +14,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
 
         void Establish() => root = new();
 
-        void Because() => result = root.EnsureCollection<ExpandoObject>(property);
+        void Because() => result = root.EnsureCollection<ExpandoObject>(property, ArrayIndexer.NoIndexers);
 
         [Fact] void should_add_collection_to_location() => ((object)((dynamic)root).deeply.nested.myCollection).ShouldEqual(result);
         [Fact] void should_create_a_collection() => result.ShouldNotBeNull();
