@@ -29,8 +29,12 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 true,
                 Array.Empty<IProjection>());
 
-            @event = new(new(0, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
+            projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
+            {
+                new EventTypeWithKeyResolver(new  EventType("aac3d310-ff2f-4809-a326-afe14dd9a3d6", 1), KeyResolvers.FromEventSourceId)
+            });
 
+            @event = new(new(0, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
             changeset = new(@event, new());
             projection.Event.Subscribe(_ => observed = true);
         }

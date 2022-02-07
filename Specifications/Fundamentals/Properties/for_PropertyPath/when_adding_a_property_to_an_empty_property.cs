@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Properties.for_PropertyPath
     public class when_adding_a_property_to_an_empty_property : Specification
     {
         const string left = "";
-        const string right = "Something";
+        const string right = "something";
 
         PropertyPath result;
 

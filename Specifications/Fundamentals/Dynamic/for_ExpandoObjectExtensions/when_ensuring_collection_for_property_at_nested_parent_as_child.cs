@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
         const string first_collection_property = "firstCollection";
         const string inner_collection_property = "myCollection";
 
-        const string property = $"{first_collection_property}.[{first_collection_property}].{inner_collection_property}";
+        const string property = $"[{first_collection_property}].[{inner_collection_property}]";
         const string parent_key = "d4e23066-1508-40eb-be58-a16abc6c572f";
         const string parentIdentifierProperty = "parentIdentifier";
         ExpandoObject root;
@@ -32,7 +32,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
             };
         }
 
-        void Because() => result = root.EnsureCollection<ExpandoObject>(property, ArrayIndexer.NoIndexers);
+        void Because() => result = root.EnsureCollection<ExpandoObject>(property, new[] { new ArrayIndexer($"[{first_collection_property}]", parentIdentifierProperty, parent_key) });
 
         [Fact] void should_add_collection_to_parent() => ((IDictionary<string, object>)parentAsChild)[inner_collection_property].ShouldEqual(result);
         [Fact] void should_create_a_collection() => result.ShouldNotBeNull();
