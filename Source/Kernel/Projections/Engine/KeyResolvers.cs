@@ -15,14 +15,14 @@ namespace Aksio.Cratis.Events.Projections
         /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
         /// </summary>
         /// <returns>A new <see cref="KeyResolver"/>.</returns>
-        public static readonly KeyResolver FromEventSourceId = (IProjectionEventProvider _, AppendedEvent @event) => new(EventValueProviders.FromEventSourceId(@event), Array.Empty<ArrayIndexer>());
+        public static readonly KeyResolver FromEventSourceId = (IProjectionEventProvider _, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), Array.Empty<ArrayIndexer>()));
 
         /// <summary>
         /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
         /// </summary>
         /// <param name="sourceProperty">Source property.</param>
         /// <returns>A new <see cref="KeyResolver"/>.</returns>
-        public static KeyResolver FromEventContent(PropertyPath sourceProperty) => (IProjectionEventProvider _, AppendedEvent @event) => new(EventValueProviders.FromEventContent(sourceProperty)(@event), Array.Empty<ArrayIndexer>());
+        public static KeyResolver FromEventContent(PropertyPath sourceProperty) => (IProjectionEventProvider _, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventContent(sourceProperty)(@event), Array.Empty<ArrayIndexer>()));
 
         /// <summary>
         /// Create a <see cref="KeyResolver"/> that provides a key value hierarchically upwards in Child->Parent relationships.
@@ -32,26 +32,28 @@ namespace Aksio.Cratis.Events.Projections
         /// <returns>A new <see cref="KeyResolver"/>.</returns>
         public static KeyResolver FromParentHierarchy(IProjection projection, PropertyPath sourceProperty)
         {
-            return (IProjectionEventProvider eventProvider, AppendedEvent @event) =>
+            return async (IProjectionEventProvider eventProvider, AppendedEvent @event) =>
             {
                 var arrayIndexers = new List<ArrayIndexer>();
                 var parentKey = EventValueProviders.FromEventContent(sourceProperty)(@event);
                 var currentProjection = projection;
                 while (currentProjection.HasParent)
                 {
-                    arrayIndexers.Add(new(currentProjection.ChildrenPropertyPath, sourceProperty, parentKey));
                     currentProjection = currentProjection.Parent;
                     if (currentProjection?.HasParent != true)
                     {
                         break;
                     }
 
+                    if (!currentProjection.ChildrenPropertyPath.IsRoot)
+                    {
+                        arrayIndexers.Add(new(currentProjection.ChildrenPropertyPath, sourceProperty, parentKey));
+                    }
                     var firstEvent = currentProjection.EventTypes.First()!;
-                    var task = eventProvider.GetLastInstanceFor(firstEvent.Id, parentKey.ToString()!);
-                    task.Wait();
-                    var parentEvent = task.Result;
+                    var parentEvent = await eventProvider.GetLastInstanceFor(firstEvent.Id, parentKey.ToString()!);
                     var keyResolver = currentProjection.GetKeyResolverFor(firstEvent);
-                    parentKey = keyResolver(eventProvider, parentEvent).Value;
+                    var resolvedParentKey = await keyResolver(eventProvider, parentEvent);
+                    parentKey = resolvedParentKey.Value;
                 }
 
                 return new(parentKey, arrayIndexers.ToArray());

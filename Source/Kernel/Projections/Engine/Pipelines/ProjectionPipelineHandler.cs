@@ -62,13 +62,14 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
                 var correlationId = CorrelationId.New();
 
                 var keyResolver = pipeline.Projection.GetKeyResolverFor(@event.Metadata.Type);
-                var key = keyResolver(pipeline.EventProvider, @event);
+                var key = await keyResolver(pipeline.EventProvider, @event);
 
                 _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
                 var initialState = await resultStore.FindOrDefault(key);
                 var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, initialState);
 
-                await HandleEventFor(pipeline.Projection, @event, changeset);
+                var context = new ProjectionEventContext(key, @event, changeset);
+                await HandleEventFor(pipeline.Projection, context);
 
                 var nextSequenceNumber = @event.Metadata.SequenceNumber + 1;
                 if (changeset.HasChanges)
@@ -88,21 +89,21 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             }
         }
 
-        async Task HandleEventFor(IProjection projection, AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset)
+        async Task HandleEventFor(IProjection projection, ProjectionEventContext context)
         {
-            if (projection.Accepts(@event.Metadata.Type))
+            if (projection.Accepts(context.Event.Metadata.Type))
             {
-                _logger.Projecting(@event.Metadata.SequenceNumber);
-                projection.OnNext(@event, changeset);
+                _logger.Projecting(context.Event.Metadata.SequenceNumber);
+                projection.OnNext(context);
             }
             else
             {
-                _logger.EventNotAccepted(@event.Metadata.SequenceNumber, projection.Name, projection.Path, @event.Metadata.Type);
+                _logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Name, projection.Path, context.Event.Metadata.Type);
             }
 
             foreach (var child in projection.ChildProjections)
             {
-                await HandleEventFor(child, @event, changeset);
+                await HandleEventFor(child, context);
             }
         }
 

@@ -12,8 +12,8 @@ namespace Aksio.Cratis.Properties
         /// Initializes a new instance of the <see cref="UndefinedArrayIndexer"/> class.
         /// </summary>
         /// <param name="propertyPath"><see cref="PropertyPath"/>.</param>
-        /// <param name="arrayIndex">The array indexer identifier.</param>
-        public UndefinedArrayIndexer(PropertyPath propertyPath, string arrayIndex) : base($"Missing array indexer for '{arrayIndex}' in property path '{propertyPath}'")
+        /// <param name="arrayProperty">The array indexer identifier.</param>
+        public UndefinedArrayIndexer(PropertyPath propertyPath, string arrayProperty) : base($"Missing array indexer for '{arrayProperty}' in property path '{propertyPath}'")
         {
         }
     }
