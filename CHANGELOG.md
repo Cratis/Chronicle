@@ -1,3 +1,10 @@
+# [v5.2.2] - 2022-2-7 [PR: #151](https://github.com/aksio-insurtech/Cratis/pull/151)
+
+### Fixed
+
+- Fixing so that `PropertyDifference` supports concepts - used for now in the integration parts.
+
+
 # [v5.2.1] - 2022-2-2 [PR: #145](https://github.com/aksio-insurtech/Cratis/pull/145)
 
 ### Fixed
