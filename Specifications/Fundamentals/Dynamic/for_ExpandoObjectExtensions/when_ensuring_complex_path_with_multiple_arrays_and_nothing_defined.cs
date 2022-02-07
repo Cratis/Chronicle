@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
             second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
         }
 
-        void Because() => result = initial.EnsurePath(property_path, first_array_indexer, second_array_indexer);
+        void Because() => result = initial.EnsurePath(property_path, new[] { first_array_indexer, second_array_indexer });
 
         [Fact] void should_return_a_new_object() => result.ShouldNotBeNull();
         [Fact] void should_add_all_levels_and_include_returning_object() => ((ExpandoObject)initial_as_dynamic.first_level.second_level[0].third_level.forth_level[0]).ShouldEqual(result);

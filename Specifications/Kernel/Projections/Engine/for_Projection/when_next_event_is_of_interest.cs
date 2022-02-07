@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.for_Projection
@@ -29,12 +30,10 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 "0b7325dd-7a25-4681-9ab7-c387a6073547",
                 string.Empty,
                 string.Empty,
+                string.Empty,
                 new Model(string.Empty, new JsonSchema()),
                 false,
                 true,
-                new[] {
-                    new EventTypeWithKeyResolver(event_b, EventValueProviders.FromEventSourceId)
-                },
                 Array.Empty<IProjection>());
 
             dynamic state = initial_state = new();
@@ -52,8 +51,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
 
         void Because()
         {
-            projection.OnNext(first_event, first_changeset);
-            projection.OnNext(second_event, second_changeset);
+            projection.OnNext(new(new(first_event.Context.EventSourceId, ArrayIndexer.NoIndexers), first_event, first_changeset));
+            projection.OnNext(new(new(second_event.Context.EventSourceId, ArrayIndexer.NoIndexers), second_event, second_changeset));
         }
 
         [Fact] void should_only_observe_one_event() => observed_events.Count.ShouldEqual(1);

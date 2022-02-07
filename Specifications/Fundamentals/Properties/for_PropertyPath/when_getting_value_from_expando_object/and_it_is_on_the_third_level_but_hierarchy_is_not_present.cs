@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Properties.for_PropertyPath
             property_path = new("first_level.second_level.third_level");
         }
 
-        void Because() => result = property_path.GetValue(input);
+        void Because() => result = property_path.GetValue(input, ArrayIndexer.NoIndexers);
 
         [Fact] void should_return_null() => result.ShouldBeNull();
     }
