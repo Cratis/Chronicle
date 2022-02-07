@@ -117,6 +117,25 @@ namespace Aksio.Cratis.Properties
         }
 
         /// <summary>
+        /// Check whether or not there is a value at the path of the property for a specific target.
+        /// </summary>
+        /// <param name="target">Object to get from.</param>
+        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+        /// <returns>Value, if any.</returns>
+        public bool HasValue(object target, params ArrayIndexer[] arrayIndexers)
+        {
+            if (target is ExpandoObject targetAsExpandoObject)
+            {
+                var innerInstance = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
+                return innerInstance.ContainsKey(LastSegment.Value);
+            }
+
+            var inner = target.EnsurePath(this);
+            var propertyInfo = GetPropertyInfoFor(target.GetType());
+            return propertyInfo.GetValue(inner) != null;
+        }
+
+        /// <summary>
         /// Gets the value at the path of the property.
         /// </summary>
         /// <param name="target">Object to get from.</param>
@@ -140,11 +159,12 @@ namespace Aksio.Cratis.Properties
         /// </summary>
         /// <param name="target">Object to set to.</param>
         /// <param name="value">Value to set.</param>
-        public void SetValue(object target, object value)
+        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+        public void SetValue(object target, object value, params ArrayIndexer[] arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
-                var inner = targetAsExpandoObject.EnsurePath(this) as IDictionary<string, object>;
+                var inner = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
                 inner[LastSegment.Value] = value;
             }
             else
