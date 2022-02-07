@@ -31,6 +31,22 @@ namespace Aksio.Cratis.Properties
         public static implicit operator PropertyPath(string path) => new(path);
 
         /// <summary>
+        /// Operator overload for equality comparison.
+        /// </summary>
+        /// <param name="left">Left operand.</param>
+        /// <param name="right">Right operand.</param>
+        /// <returns>True if they're equal, false if not.</returns>
+        public static bool operator ==(PropertyPath left, PropertyPath right) => left.Equals(right);
+
+        /// <summary>
+        /// Operator overload for not-equality comparison.
+        /// </summary>
+        /// <param name="left">Left operand.</param>
+        /// <param name="right">Right operand.</param>
+        /// <returns>True if they're not equal, false if they are.</returns>
+        public static bool operator !=(PropertyPath left, PropertyPath right) => !left.Equals(right);
+
+        /// <summary>
         /// Adds two <see cref="PropertyPath"/> together - formatting it correctly.
         /// </summary>
         /// <param name="left">Left operand.</param>
@@ -55,6 +71,22 @@ namespace Aksio.Cratis.Properties
             }
 
             return new(builder.ToString());
+        }
+
+        /// <summary>
+        /// Add a <see cref="IPropertyPathSegment"/> to a <see cref="PropertyPath"/> and return a new instance.
+        /// </summary>
+        /// <param name="left"><see cref="PropertyPath"/> to add to.</param>
+        /// <param name="segment"><see cref="IPropertyPathSegment"/> to add.</param>
+        /// <returns>New <see cref="PropertyPath"/>.</returns>
+        public static PropertyPath operator +(PropertyPath left, IPropertyPathSegment segment)
+        {
+            return segment switch
+            {
+                PropertyName => left.AddProperty(segment.Value),
+                ArrayIndex => left.AddArrayIndex(segment.Value),
+                _ => left
+            };
         }
 
         /// <summary>
@@ -106,6 +138,21 @@ namespace Aksio.Cratis.Properties
         }
 
         /// <summary>
+        /// Add an <see cref="PropertyName"/> as segment by creating a new <see cref="PropertyPath"/>.
+        /// </summary>
+        /// <param name="name">Name of the property.</param>
+        /// <returns>A new <see cref="PropertyPath"/> with the segment appended.</returns>
+        /// <remarks>This operation does not mutate the original.</remarks>
+        public PropertyPath AddProperty(string name)
+        {
+            if (Path.Length == 0)
+            {
+                return new(name);
+            }
+            return new($"{Path}.{name}");
+        }
+
+        /// <summary>
         /// Add an <see cref="ArrayIndex"/> as segment by creating a new <see cref="PropertyPath"/>.
         /// </summary>
         /// <param name="identifier">Identifier of the array segment.</param>
@@ -113,6 +160,10 @@ namespace Aksio.Cratis.Properties
         /// <remarks>This operation does not mutate the original.</remarks>
         public PropertyPath AddArrayIndex(string identifier)
         {
+            if (Path.Length == 0)
+            {
+                return new($"[{identifier}]");
+            }
             return new($"{Path}.[{identifier}]");
         }
 
@@ -209,5 +260,11 @@ namespace Aksio.Cratis.Properties
 
         /// <inheritdoc/>
         public override string ToString() => Path;
+
+        /// <inheritdoc/>
+        public override bool Equals(object? obj) => (obj as PropertyPath)?.Path.Equals(Path, StringComparison.InvariantCulture) ?? false;
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => Path.GetHashCode(StringComparison.InvariantCulture);
     }
 }

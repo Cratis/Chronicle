@@ -104,10 +104,12 @@ namespace Aksio.Cratis.Dynamic
         {
             var currentTarget = target as IDictionary<string, object>;
             var segments = property.Segments.ToArray();
+            var currentPath = new PropertyPath(string.Empty);
 
             for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
             {
                 var segment = segments[propertyIndex];
+                currentPath += segment;
                 switch (segment)
                 {
                     case PropertyName propertyName:
@@ -127,7 +129,7 @@ namespace Aksio.Cratis.Dynamic
 
                     case ArrayIndex arrayIndex:
                         {
-                            var indexer = Array.Find(arrayIndexers, _ => _.ArrayIndex.Equals(arrayIndex.Value, StringComparison.InvariantCulture));
+                            var indexer = Array.Find(arrayIndexers, _ => _.ArrayProperty.Equals(currentPath));
                             if (indexer == default)
                             {
                                 throw new UndefinedArrayIndexer(property, arrayIndex.Value);
@@ -149,12 +151,12 @@ namespace Aksio.Cratis.Dynamic
 
                             var element = collection
                                 .Cast<IDictionary<string, object>>()
-                                .SingleOrDefault(_ => _.ContainsKey(indexer.Property.Path) && _[indexer.Property.Path] == indexer.Identifier);
+                                .SingleOrDefault(_ => _.ContainsKey(indexer.IdentifierProperty.Path) && _[indexer.IdentifierProperty.Path] == indexer.Identifier);
 
                             if (element == default)
                             {
                                 element = new ExpandoObject()!;
-                                element[indexer.Property.Path] = indexer.Identifier;
+                                element[indexer.IdentifierProperty.Path] = indexer.Identifier;
                                 currentTarget[segment.Value] = collection.Append((element as ExpandoObject)!).ToList();
                             }
                             currentTarget = (element as ExpandoObject)!;

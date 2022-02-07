@@ -19,8 +19,8 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
         {
             initial_as_dynamic = initial = new();
             property_path = new("first_level.[second_level].third_level.[forth_level].fifth_level");
-            first_array_indexer = new("second_level", "identifier", "first");
-            second_array_indexer = new("forth_level", "identifier", "second");
+            first_array_indexer = new("first_level.[second_level]", "identifier", "first");
+            second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
         }
 
         void Because() => result = initial.EnsurePath(property_path, first_array_indexer, second_array_indexer);

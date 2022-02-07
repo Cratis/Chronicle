@@ -3,14 +3,14 @@
 
 namespace Aksio.Cratis.Properties.for_PropertyPath
 {
-    public class when_adding_a_property_to_an_existing_property : Specification
+    public class when_adding_a_property_using_operator_to_an_existing_property : Specification
     {
         const string left = "left";
         const string right = "right";
 
         PropertyPath result;
 
-        void Because() => result = new PropertyPath(left).AddProperty(right);
+        void Because() => result = new PropertyPath(left) + right;
 
         [Fact] void should_combine_with_dot_separator() => result.Path.ShouldEqual($"{left}.{right}");
     }
