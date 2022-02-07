@@ -27,7 +27,7 @@ namespace Aksio.Cratis.Events.Projections
         /// </summary>
         /// <param name="key">Key of the model to find.</param>
         /// <returns>A model instance with the data from the source, or an empty object.</returns>
-        Task<ExpandoObject> FindOrDefault(object key);
+        Task<ExpandoObject> FindOrDefault(Key key);
 
         /// <summary>
         /// Update or insert model based on key.
@@ -35,7 +35,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="key">Key of the model to upsert.</param>
         /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset);
+        Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset);
 
         /// <summary>
         /// Prepare the store for an initial run.

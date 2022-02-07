@@ -29,14 +29,19 @@ namespace Aksio.Cratis.Events.Projections
         ProjectionPath Path { get; }
 
         /// <summary>
+        /// Gets the fully qualified <see cref="PropertyPath"/> that represents the array that children will be operated on. Only applies to child projections.
+        /// </summary>
+        PropertyPath ChildrenPropertyPath { get; }
+
+        /// <summary>
         /// Gets whether or not there is a parent.
         /// </summary>
-        bool HasParent { get; }
+        bool HasParent { get; }
 
         /// <summary>
         /// Gets the parent projection - if any.
         /// </summary>
-        IProjection? Parent { get; }
+        IProjection? Parent { get; }
 
         /// <summary>
         /// Gets the <see cref="Model"/> the projection targets.
@@ -66,7 +71,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Gets the <see cref="EventTypeWithKeyResolver"/> collection.
         /// </summary>
-        IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; }
+        IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; }
 
         /// <summary>
         /// Gets the collection of <see cref="IProjection">child projections</see>.
