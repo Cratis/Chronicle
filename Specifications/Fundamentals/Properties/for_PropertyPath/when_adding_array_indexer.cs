@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Properties.for_PropertyPath
 
         void Because() => result = initial.AddArrayIndex(third_segment);
 
-        [Fact] void should_have_last_segment_be_array_index() => result.LastSegment.ShouldBeOfExactType<ArrayIndex>();
+        [Fact] void should_have_last_segment_be_array_index() => result.LastSegment.ShouldBeOfExactType<ArrayProperty>();
         [Fact] void should_have_last_segment_have_camel_case_identifier() => result.LastSegment.Value.ShouldEqual(third_segment.ToCamelCase());
     }
 }

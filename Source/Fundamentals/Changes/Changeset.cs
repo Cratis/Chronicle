@@ -92,7 +92,7 @@ namespace Aksio.Cratis.Changes
             PropertyPath identifiedByProperty,
             object key,
             IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers,
-            params ArrayIndexer[] arrayIndexers)
+            IEnumerable<ArrayIndexer> arrayIndexers)
             where TChild : new()
         {
             var workingState = InitialState.Clone()!;
@@ -107,7 +107,7 @@ namespace Aksio.Cratis.Changes
                     propertyMapper(Incoming, item);
                 }
 
-                identifiedByProperty.SetValue(item, key);
+                identifiedByProperty.SetValue(item, key, ArrayIndexer.NoIndexers);
                 ((IList<TChild>)items).Add(item);
 
                 Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));

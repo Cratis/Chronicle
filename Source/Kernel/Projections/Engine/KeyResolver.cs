@@ -11,5 +11,5 @@ namespace Aksio.Cratis.Events.Projections
     /// <param name="eventProvider"><see cref="IProjectionEventProvider"/> used.</param>
     /// <param name="event">The <see cref="AppendedEvent"/> to resolve from.</param>
     /// <returns>Resolved key.</returns>
-    public delegate Key KeyResolver(IProjectionEventProvider eventProvider, AppendedEvent @event);
+    public delegate Task<Key> KeyResolver(IProjectionEventProvider eventProvider, AppendedEvent @event);
 }

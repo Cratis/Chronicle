@@ -100,7 +100,7 @@ namespace Aksio.Cratis.Dynamic
         /// <returns><see cref="ExpandoObject"/> at property.</returns>
         /// <exception cref="UndefinedArrayIndexer">Thrown if a required array indexer is undefined.</exception>
         /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be expando object.</exception>
-        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, params ArrayIndexer[] arrayIndexers)
+        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, IEnumerable<ArrayIndexer> arrayIndexers)
         {
             var currentTarget = target as IDictionary<string, object>;
             var segments = property.Segments.ToArray();
@@ -127,15 +127,15 @@ namespace Aksio.Cratis.Dynamic
                         }
                         break;
 
-                    case ArrayIndex arrayIndex:
+                    case ArrayProperty arrayProperty:
                         {
-                            var indexer = Array.Find(arrayIndexers, _ => _.ArrayProperty.Equals(currentPath));
+                            var indexer = arrayIndexers.SingleOrDefault(_ => _.ArrayProperty.Equals(currentPath));
                             if (indexer == default)
                             {
-                                throw new UndefinedArrayIndexer(property, arrayIndex.Value);
+                                throw new UndefinedArrayIndexer(property, arrayProperty.Value);
                             }
                             IEnumerable<ExpandoObject> collection;
-                            if (!currentTarget.ContainsKey(arrayIndex.Value))
+                            if (!currentTarget.ContainsKey(arrayProperty.Value))
                             {
                                 collection = new List<ExpandoObject>();
                                 currentTarget[segment.Value] = collection;
@@ -174,10 +174,10 @@ namespace Aksio.Cratis.Dynamic
         /// <typeparam name="TChild">Type of child for the collection.</typeparam>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
         /// <param name="childrenProperty"><see cref="PropertyPath"/> to ensure collection for.</param>
-        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+        /// <param name="arrayIndexers">Any <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
-        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, params ArrayIndexer[] arrayIndexers)
+        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, IEnumerable<ArrayIndexer> arrayIndexers)
         {
             var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
             if (!inner.ContainsKey(childrenProperty.LastSegment.Value))

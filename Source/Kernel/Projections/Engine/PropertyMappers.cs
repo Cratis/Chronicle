@@ -24,7 +24,7 @@ namespace Aksio.Cratis.Events.Projections
         {
             return (AppendedEvent @event, ExpandoObject target) =>
             {
-                var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty, ArrayIndexer.NoIndexers) as IDictionary<string, object>;
                 actualTarget[targetProperty.LastSegment.Value] = eventValueProvider(@event);
             };
         }
@@ -40,7 +40,7 @@ namespace Aksio.Cratis.Events.Projections
             return (AppendedEvent @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty, ArrayIndexer.NoIndexers) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment.Value))
                 {
                     actualTarget[lastSegment.Value] = 0D;
@@ -62,7 +62,7 @@ namespace Aksio.Cratis.Events.Projections
             return (AppendedEvent @event, ExpandoObject target) =>
             {
                 var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.EnsurePath(targetProperty) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty, ArrayIndexer.NoIndexers) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment.Value))
                 {
                     actualTarget[lastSegment.Value] = 0D;

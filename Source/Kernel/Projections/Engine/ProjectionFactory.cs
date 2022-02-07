@@ -33,14 +33,12 @@ namespace Aksio.Cratis.Events.Projections
                 PropertyPath.Root,
                 PropertyPath.Root,
                 PropertyPath.Root,
-                PropertyPath.Root,
                 ProjectionPath.GetRootFor(definition.Identifier),
                 new Dictionary<PropertyPath, ChildrenDefinition>());
 
         async Task<IProjection> CreateProjectionFrom(
             ProjectionName name,
             ProjectionDefinition projectionDefinition,
-            PropertyPath parentProperty,
             PropertyPath childrenAccessorProperty,
             PropertyPath parentIdentifiedByProperty,
             PropertyPath identifiedByProperty,
@@ -50,7 +48,6 @@ namespace Aksio.Cratis.Events.Projections
             var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                     name,
                     kvp.Value,
-                    childrenAccessorProperty,
                     childrenAccessorProperty.AddArrayIndex(kvp.Key),
                     identifiedByProperty,
                     kvp.Value.IdentifiedBy,
@@ -92,15 +89,10 @@ namespace Aksio.Cratis.Events.Projections
             {
                 foreach (var (eventType, fromDefinition) in childrenDefinition.From)
                 {
-                    var fullyQualifiedChildrenProperty = parentProperty + childrenProperty;
-
                     var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                     var (actualIdentifiedByProperty, actualKeyResolver) = ResolveIdentifiedPropertyWithKeyResolver(childrenDefinition.IdentifiedBy, fromDefinition.Key);
-                    var (actualParentIdentifiedByProperty, actualParentKeyResolver) = ResolveIdentifiedPropertyWithKeyResolver(parentIdentifiedByProperty, fromDefinition.ParentKey);
                     projection.Event.From(eventType).Child(
-                        fullyQualifiedChildrenProperty,
-                        actualParentIdentifiedByProperty,
-                        actualParentKeyResolver,
+                        childrenAccessorProperty,
                         actualIdentifiedByProperty,
                         actualKeyResolver,
                         propertyMappers);

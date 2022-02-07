@@ -1,10 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -96,9 +94,8 @@ namespace Aksio.Cratis.Events.Projections
         public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Metadata.Type));
 
         /// <inheritdoc/>
-        public void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset)
+        public void OnNext(ProjectionEventContext context)
         {
-            var context = new ProjectionEventContext(@event, changeset);
             _subject.OnNext(context);
         }
 

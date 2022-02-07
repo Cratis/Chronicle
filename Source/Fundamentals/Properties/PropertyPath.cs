@@ -84,7 +84,7 @@ namespace Aksio.Cratis.Properties
             return segment switch
             {
                 PropertyName => left.AddProperty(segment.Value),
-                ArrayIndex => left.AddArrayIndex(segment.Value),
+                ArrayProperty => left.AddArrayIndex(segment.Value),
                 _ => left
             };
         }
@@ -130,7 +130,7 @@ namespace Aksio.Cratis.Properties
                 var match = ArrayIndexRegex!.Match(_);
                 if (match.Success)
                 {
-                    return new ArrayIndex(match.Groups["property"].Value.ToCamelCase());
+                    return new ArrayProperty(match.Groups["property"].Value.ToCamelCase());
                 }
                 return new PropertyName(_.ToCamelCase());
             }).ToArray();
@@ -154,7 +154,7 @@ namespace Aksio.Cratis.Properties
         }
 
         /// <summary>
-        /// Add an <see cref="ArrayIndex"/> as segment by creating a new <see cref="PropertyPath"/>.
+        /// Add an <see cref="ArrayProperty"/> as segment by creating a new <see cref="PropertyPath"/>.
         /// </summary>
         /// <param name="identifier">Identifier of the array segment.</param>
         /// <returns>A new <see cref="PropertyPath"/> with the segment appended.</returns>
@@ -174,7 +174,7 @@ namespace Aksio.Cratis.Properties
         /// <param name="target">Object to get from.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>Value, if any.</returns>
-        public bool HasValue(object target, params ArrayIndexer[] arrayIndexers)
+        public bool HasValue(object target, IEnumerable<ArrayIndexer> arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
@@ -193,7 +193,7 @@ namespace Aksio.Cratis.Properties
         /// <param name="target">Object to get from.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>Value, if any.</returns>
-        public object? GetValue(object target, params ArrayIndexer[] arrayIndexers)
+        public object? GetValue(object target, IEnumerable<ArrayIndexer> arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
@@ -212,7 +212,7 @@ namespace Aksio.Cratis.Properties
         /// <param name="target">Object to set to.</param>
         /// <param name="value">Value to set.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-        public void SetValue(object target, object value, params ArrayIndexer[] arrayIndexers)
+        public void SetValue(object target, object value, IEnumerable<ArrayIndexer> arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
