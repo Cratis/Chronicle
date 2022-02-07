@@ -1,3 +1,16 @@
+# [v5.3.0] - 2022-2-7 [PR: #152](https://github.com/aksio-insurtech/Cratis/pull/152)
+
+### Added
+
+- Full support for recursive children in the Kernel.
+
+### Fixed
+
+- More consistency in the codebase internally with formalization of Key, ArrayIndexers, PropertyPath with formalized segments and specific types (PropertyName, ArrayProperty).
+- PropertyPath is much more robust consistent.
+- Added more specs
+
+
 # [v5.2.2] - 2022-2-7 [PR: #151](https://github.com/aksio-insurtech/Cratis/pull/151)
 
 ### Fixed
