@@ -19,6 +19,6 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying
 
         void Because() => observable.OnNext(event_context);
 
-        [Fact] void should_add_child_to_changeset() => changeset.Verify(_ => _.AddChild(children_property, identified_by_property, key, property_mappers), Once());
+        [Fact] void should_add_child_to_changeset() => changeset.Verify(_ => _.AddChild(children_property, identified_by_property, key, property_mappers, ArrayIndexer.NoIndexers), Once());
     }
 }

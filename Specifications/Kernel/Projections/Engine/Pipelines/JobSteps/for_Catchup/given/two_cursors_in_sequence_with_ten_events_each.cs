@@ -43,7 +43,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
             third_cursor.Setup(_ => _.MoveNext()).Returns(Task.FromResult(false));
 
             provider
-                .SetupSequence(_ => _.GetFromPosition(projection.Object, IsAny<EventLogSequenceNumber>()))
+                .SetupSequence(_ => _.GetFromSequenceNumber(projection.Object, IsAny<EventLogSequenceNumber>()))
                 .ReturnsAsync(first_cursor.Object)
                 .ReturnsAsync(second_cursor.Object)
                 .ReturnsAsync(third_cursor.Object);

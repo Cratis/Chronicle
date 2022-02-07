@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
+using System.Text.Json;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
@@ -44,12 +45,13 @@ namespace Aksio.Cratis.Events.Projections
         {
             observable.Subscribe(_ =>
             {
-                var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty);
                 var key = keyResolver(_.Event);
+                var json = JsonSerializer.Serialize(_.Changeset.InitialState);
+                var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty, _.Key.ArrayIndexers);
 
                 if (!items.Contains(identifiedByProperty, key))
                 {
-                    _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers);
+                    _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers, _.Key.ArrayIndexers);
                 }
             });
             return observable;
@@ -82,7 +84,7 @@ namespace Aksio.Cratis.Events.Projections
                     var key = keyResolver(_.Event);
                     if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
                     {
-                        var child = _.Changeset.GetChildByKey<ExpandoObject>(childrenProperty, identifiedByProperty, key);
+                        var child = _.Changeset.GetChildByKey<ExpandoObject>(key);
                         if (child != default)
                         {
                             _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);

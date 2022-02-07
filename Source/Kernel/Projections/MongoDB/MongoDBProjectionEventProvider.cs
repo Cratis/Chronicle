@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
-using Aksio.Cratis.Compliance;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Schemas;
@@ -23,10 +22,10 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
     public class MongoDBProjectionEventProvider : IProjectionEventProvider
     {
         readonly IEventLogStorageProvider _eventLogStorageProvider;
+        readonly IEventConverter _converter;
         readonly IExecutionContextManager _executionContextManager;
         readonly ProviderFor<IProjectionPositions> _positionsProvider;
         readonly ISchemaStore _schemaStore;
-        readonly IJsonComplianceManager _jsonComplianceManager;
         readonly IClusterClient _clusterClient;
         readonly ConcurrentDictionary<IProjectionPipeline, StreamSubscriptionHandle<AppendedEvent>> _subscriptionsPerPipeline = new();
 
@@ -37,36 +36,39 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         /// Initializes a new instance of the <see cref="MongoDBProjectionEventProvider"/> class.
         /// </summary>
         /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+        /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
         /// <param name="positionsProvider">Provider for <see cref="IProjectionPositions"/>.</param>
         /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
-        /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="clusterClient"><see cref="IClusterClient"/> for working with the Orleans cluster.</param>
         public MongoDBProjectionEventProvider(
             IEventLogStorageProvider eventLogStorageProvider,
+            IEventConverter converter,
             IExecutionContextManager executionContextManager,
             ProviderFor<IProjectionPositions> positionsProvider,
             ISchemaStore schemaStore,
-            IJsonComplianceManager jsonComplianceManager,
             IClusterClient clusterClient)
         {
             _eventLogStorageProvider = eventLogStorageProvider;
+            _converter = converter;
             _executionContextManager = executionContextManager;
             _positionsProvider = positionsProvider;
             _schemaStore = schemaStore;
-            _jsonComplianceManager = jsonComplianceManager;
             _clusterClient = clusterClient;
         }
 
         /// <inheritdoc/>
-        public async Task<IEventCursor> GetFromPosition(IProjection projection, EventLogSequenceNumber start)
+        public Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId) => _eventLogStorageProvider.GetLastInstanceFor(eventTypeId, eventSourceId);
+
+        /// <inheritdoc/>
+        public async Task<IEventCursor> GetFromSequenceNumber(IProjection projection, EventLogSequenceNumber sequenceNumber)
         {
             if (!projection.EventTypes.Any())
             {
-                return new EventCursor(_schemaStore, _jsonComplianceManager, null);
+                return new EventCursor(_converter, null);
             }
 
-            return await _eventLogStorageProvider.GetFromSequenceNumber(start, eventTypes: projection.EventTypes);
+            return await _eventLogStorageProvider.GetFromSequenceNumber(sequenceNumber, eventTypes: projection.EventTypes);
         }
 
         /// <inheritdoc/>

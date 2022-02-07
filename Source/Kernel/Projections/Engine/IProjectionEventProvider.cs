@@ -38,11 +38,19 @@ namespace Aksio.Cratis.Events.Projections
         Task StopProvidingFor(IProjectionPipeline pipeline);
 
         /// <summary>
+        /// Get the last instance of a specific event type for an event source.
+        /// </summary>
+        /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>
+        /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
+        /// <returns>The <see cref="AppendedEvent"/> found.</returns>
+        Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId);
+
+        /// <summary>
         /// Get events from a specific sequence numbers.
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to start get for.</param>
-        /// <param name="start">The start number to get from - inclusive.</param>
+        /// <param name="sequenceNumber">The start number to get from - inclusive.</param>
         /// <returns><see cref="IEventCursor"/>.</returns>
-        Task<IEventCursor> GetFromPosition(IProjection projection, EventLogSequenceNumber start);
+        Task<IEventCursor> GetFromSequenceNumber(IProjection projection, EventLogSequenceNumber sequenceNumber);
     }
 }

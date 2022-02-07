@@ -30,7 +30,7 @@ namespace Aksio.Cratis.Changes
         /// <summary>
         /// Gets whether or not there are changes in the changeset.
         /// </summary>
-        bool HasChanges { get; }
+        bool HasChanges { get; }
 
         /// <summary>
         /// Add a change to the changeset.
@@ -69,8 +69,9 @@ namespace Aksio.Cratis.Changes
         /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
         /// <param name="key">Key value.</param>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
+        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
+        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers, IEnumerable<ArrayIndexer> arrayIndexers)
             where TChild : new();
 
         /// <summary>
@@ -101,10 +102,8 @@ namespace Aksio.Cratis.Changes
         /// Get a specific child from.
         /// </summary>
         /// <typeparam name="TChild">Type of child.</typeparam>
-        /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
-        /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies the child.</param>
         /// <param name="key">The key of the item.</param>
         /// <returns>The added child.</returns>
-        TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key);
+        TChild GetChildByKey<TChild>(object key);
     }
 }

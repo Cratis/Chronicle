@@ -91,11 +91,12 @@ namespace Aksio.Cratis.Changes
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
             object key,
-            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
+            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers,
+            IEnumerable<ArrayIndexer> arrayIndexers)
             where TChild : new()
         {
             var workingState = InitialState.Clone()!;
-            var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty);
+            var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty, arrayIndexers);
 
             if (!items.Contains(identifiedByProperty, key))
             {
@@ -106,7 +107,7 @@ namespace Aksio.Cratis.Changes
                     propertyMapper(Incoming, item);
                 }
 
-                identifiedByProperty.SetValue(item, key);
+                identifiedByProperty.SetValue(item, key, ArrayIndexer.NoIndexers);
                 ((IList<TChild>)items).Add(item);
 
                 Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
@@ -136,10 +137,17 @@ namespace Aksio.Cratis.Changes
         public bool HasBeenRemoved() => Changes.Any(_ => _ is Removed);
 
         /// <inheritdoc/>
-        public TChild GetChildByKey<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key)
+        public TChild GetChildByKey<TChild>(object key)
         {
-            var items = childrenProperty.GetValue(InitialState!) as IEnumerable<TChild>;
-            return items!.FindByKey(identifiedByProperty, key)!;
+            foreach (var change in _changes)
+            {
+                if (change is ChildAdded childAdded && childAdded.Key == key)
+                {
+                    return (TChild)childAdded.Child;
+                }
+            }
+
+            return default!;
         }
     }
 }

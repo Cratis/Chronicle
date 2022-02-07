@@ -33,8 +33,7 @@ namespace Aksio.Cratis.Events.Projections
                 PropertyPath.Root,
                 PropertyPath.Root,
                 ProjectionPath.GetRootFor(definition.Identifier),
-                new Dictionary<PropertyPath, ChildrenDefinition>(),
-                _ => { });
+                new Dictionary<PropertyPath, ChildrenDefinition>());
 
         async Task<IProjection> CreateProjectionFrom(
             ProjectionName name,
@@ -42,45 +41,46 @@ namespace Aksio.Cratis.Events.Projections
             PropertyPath childrenAccessorProperty,
             PropertyPath identifiedByProperty,
             ProjectionPath path,
-            IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions,
-            Action<IEnumerable<EventTypeWithKeyResolver>> addChildEventTypes)
+            IDictionary<PropertyPath, ChildrenDefinition> childrenDefinitions)
         {
-            var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
-                kvp.Key,
-                string.IsNullOrEmpty(kvp.Value.ParentKey) ? EventValueProviders.FromEventSourceId : EventValueProviders.FromEventContent(kvp.Value.ParentKey!))).ToList();
-
-            if (projectionDefinition.RemovedWith != default)
-            {
-                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, EventValueProviders.FromEventSourceId));
-            }
-
             var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                     name,
                     kvp.Value,
-                    kvp.Key,
-                    kvp.Value.IdentifiedBy,
+                    childrenAccessorProperty.AddArrayIndex(kvp.Key),
+                    identifiedByProperty,
                     $"{path} -> ChildrenAt({kvp.Key.Path})",
-                    projectionDefinition.Children,
-                    _ =>
-                    {
-                        eventsForProjection.AddRange(_);
-                        addChildEventTypes(_);
-                    }));
+                    projectionDefinition.Children));
             var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
 
             var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
             var model = new Model(projectionDefinition.Model.Name, modelSchema);
-            addChildEventTypes(eventsForProjection);
 
             var projection = new Projection(
                 projectionDefinition.Identifier,
                 name,
                 path,
+                childrenAccessorProperty,
                 model,
                 projectionDefinition.IsPassive,
                 projectionDefinition.IsRewindable,
-                eventsForProjection,
                 childProjections);
+
+            // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
+            var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
+                kvp.Key,
+                string.IsNullOrEmpty(kvp.Value.ParentKey) ? KeyResolvers.FromEventSourceId : KeyResolvers.FromParentHierarchy(projection, kvp.Value.ParentKey!))).ToList();
+
+            if (projectionDefinition.RemovedWith != default)
+            {
+                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
+            }
+
+            foreach (var child in childProjections)
+            {
+                child.SetParent(projection);
+                eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
+            }
+            projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType));
 
             foreach (var (childrenProperty, childrenDefinition) in childrenDefinitions)
             {
@@ -88,7 +88,11 @@ namespace Aksio.Cratis.Events.Projections
                 {
                     var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(kvp.Key, kvp.Value));
                     var (actualIdentifiedByProperty, actualKeyResolver) = ResolveIdentifiedPropertyWithKeyResolver(childrenDefinition.IdentifiedBy, fromDefinition.Key);
-                    projection.Event.From(eventType).Child(childrenProperty, actualIdentifiedByProperty, actualKeyResolver, propertyMappers);
+                    projection.Event.From(eventType).Child(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty,
+                        actualKeyResolver,
+                        propertyMappers);
                 }
             }
 

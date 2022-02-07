@@ -60,10 +60,24 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             try
             {
                 var correlationId = CorrelationId.New();
-                var changesets = new List<IChangeset<AppendedEvent, ExpandoObject>>();
-                await HandleEventFor(pipeline.Projection, resultStore, @event, changesets);
-                await _changesetStorage.Save(correlationId, changesets);
+
+                var keyResolver = pipeline.Projection.GetKeyResolverFor(@event.Metadata.Type);
+                var key = await keyResolver(pipeline.EventProvider, @event);
+
+                _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
+                var initialState = await resultStore.FindOrDefault(key);
+                var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, initialState);
+
+                var context = new ProjectionEventContext(key, @event, changeset);
+                await HandleEventFor(pipeline.Projection, context);
+
                 var nextSequenceNumber = @event.Metadata.SequenceNumber + 1;
+                if (changeset.HasChanges)
+                {
+                    await resultStore.ApplyChanges(key, changeset);
+                    await _changesetStorage.Save(correlationId, changeset);
+                    _logger.SavingResult(@event.Metadata.SequenceNumber);
+                }
                 await _projectionPositions.Save(pipeline.Projection, configurationId, nextSequenceNumber);
                 UpdatePositionFor(configurationId, nextSequenceNumber);
                 return nextSequenceNumber;
@@ -75,32 +89,21 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             }
         }
 
-        async Task HandleEventFor(IProjection projection, IProjectionResultStore resultStore, AppendedEvent @event, List<IChangeset<AppendedEvent, ExpandoObject>> changesets)
+        async Task HandleEventFor(IProjection projection, ProjectionEventContext context)
         {
-            if (projection.Accepts(@event.Metadata.Type))
+            if (projection.Accepts(context.Event.Metadata.Type))
             {
-                var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
-                var key = keyResolver(@event);
-                _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
-                var initialState = await resultStore.FindOrDefault(key);
-                var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, initialState);
-                changesets.Add(changeset);
-                _logger.Projecting(@event.Metadata.SequenceNumber);
-                projection.OnNext(@event, changeset);
-                _logger.SavingResult(@event.Metadata.SequenceNumber);
-                if (changeset.HasChanges)
-                {
-                    await resultStore.ApplyChanges(key, changeset);
-                }
+                _logger.Projecting(context.Event.Metadata.SequenceNumber);
+                projection.OnNext(context);
             }
             else
             {
-                _logger.EventNotAccepted(@event.Metadata.SequenceNumber, projection.Name, projection.Path, @event.Metadata.Type);
+                _logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Name, projection.Path, context.Event.Metadata.Type);
             }
 
             foreach (var child in projection.ChildProjections)
             {
-                await HandleEventFor(child, resultStore, @event, changesets);
+                await HandleEventFor(child, context);
             }
         }
 

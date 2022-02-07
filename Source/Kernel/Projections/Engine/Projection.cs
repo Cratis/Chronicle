@@ -1,10 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -16,7 +14,7 @@ namespace Aksio.Cratis.Events.Projections
     public class Projection : IProjection
     {
         readonly ISubject<ProjectionEventContext> _subject = new Subject<ProjectionEventContext>();
-        readonly IDictionary<EventType, ValueProvider<AppendedEvent>> _eventTypesToKeyResolver;
+        IDictionary<EventType, KeyResolver> _eventTypesToKeyResolver = new Dictionary<EventType, KeyResolver>();
 
         /// <inheritdoc/>
         public ProjectionId Identifier { get; }
@@ -26,6 +24,9 @@ namespace Aksio.Cratis.Events.Projections
 
         /// <inheritdoc/>
         public ProjectionPath Path { get; }
+
+        /// <inheritdoc/>
+        public PropertyPath ChildrenPropertyPath { get; }
 
         /// <inheritdoc/>
         public Model Model { get; }
@@ -40,10 +41,19 @@ namespace Aksio.Cratis.Events.Projections
         public IObservable<ProjectionEventContext> Event { get; }
 
         /// <inheritdoc/>
-        public IEnumerable<EventType> EventTypes { get; }
+        public IEnumerable<EventType> EventTypes { get; private set; } = Array.Empty<EventType>();
 
         /// <inheritdoc/>
         public IEnumerable<IProjection> ChildProjections { get; }
+
+        /// <inheritdoc/>
+        public bool HasParent => Parent != default;
+
+        /// <inheritdoc/>
+        public IProjection? Parent { get; private set; }
+
+        /// <inheritdoc/>
+        public IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; private set; } = Array.Empty<EventTypeWithKeyResolver>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -51,19 +61,19 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="identifier">The unique identifier of the projection.</param>
         /// <param name="name">The name of the projection.</param>
         /// <param name="path">The qualified path of the projection.</param>
+        /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
         /// <param name="model">The target <see cref="Model"/>.</param>
         /// <param name="passive">Whether or not the projection is a passive projection.</param>
         /// <param name="rewindable">Whether or not the projection is rewindable.</param>
-        /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver">event types with key resolvers</see> the projection should care about.</param>
         /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
         public Projection(
             ProjectionId identifier,
             ProjectionName name,
             ProjectionPath path,
+            PropertyPath childrenPropertyPath,
             Model model,
             bool passive,
             bool rewindable,
-            IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
             IEnumerable<IProjection> childProjections)
         {
             Identifier = identifier;
@@ -71,10 +81,9 @@ namespace Aksio.Cratis.Events.Projections
             Model = model;
             IsPassive = passive;
             IsRewindable = rewindable;
-            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
             Event = FilterEventTypes(_subject);
             Path = path;
-            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+            ChildrenPropertyPath = childrenPropertyPath;
             ChildProjections = childProjections;
         }
 
@@ -85,9 +94,8 @@ namespace Aksio.Cratis.Events.Projections
         public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Metadata.Type));
 
         /// <inheritdoc/>
-        public void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset)
+        public void OnNext(ProjectionEventContext context)
         {
-            var context = new ProjectionEventContext(@event, changeset);
             _subject.OnNext(context);
         }
 
@@ -95,11 +103,22 @@ namespace Aksio.Cratis.Events.Projections
         public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(eventType);
 
         /// <inheritdoc/>
-        public ValueProvider<AppendedEvent> GetKeyResolverFor(EventType eventType)
+        public KeyResolver GetKeyResolverFor(EventType eventType)
         {
             ThrowIfMissingKeyResolverForEventType(eventType);
             return _eventTypesToKeyResolver[eventType];
         }
+
+        /// <inheritdoc/>
+        public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver)
+        {
+            EventTypesWithKeyResolver = eventTypesWithKeyResolver;
+            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
+            _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+        }
+
+        /// <inheritdoc/>
+        public void SetParent(IProjection projection) => Parent = projection;
 
         void ThrowIfMissingKeyResolverForEventType(EventType eventType)
         {

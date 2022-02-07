@@ -14,6 +14,6 @@ namespace Aksio.Cratis.Events.Projections.Changes
     public class NullChangesetStorage : IChangesetStorage
     {
         /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IEnumerable<IChangeset<AppendedEvent, ExpandoObject>> associatedChangesets) => Task.CompletedTask;
+        public Task Save(CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> associatedChangeset) => Task.CompletedTask;
     }
 }
