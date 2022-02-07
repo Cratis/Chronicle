@@ -64,7 +64,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
 
             while (!exhausted)
             {
-                var cursor = await _projectionEventProvider.GetFromPosition(_pipeline.Projection, offset);
+                var cursor = await _projectionEventProvider.GetFromSequenceNumber(_pipeline.Projection, offset);
                 while (await cursor.MoveNext())
                 {
                     if (!cursor.Current.Any())

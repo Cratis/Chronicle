@@ -8,6 +8,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 using Orleans;
 using EngineProjection = Aksio.Cratis.Events.Projections.IProjection;
 
@@ -66,7 +67,8 @@ namespace Aksio.Cratis.Events.Projections.Grains
                 foreach (var @event in cursor.Current)
                 {
                     var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, state);
-                    _projection.OnNext(@event, changeset);
+                    var context = new ProjectionEventContext(new Key(@event.Context.EventSourceId, ArrayIndexer.NoIndexers), @event, changeset);
+                    _projection.OnNext(context);
 
                     foreach (var change in changeset.Changes)
                     {

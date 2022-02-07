@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -27,6 +25,21 @@ namespace Aksio.Cratis.Events.Projections
         /// Gets the fully qualified path for the projection. Typically for child relationships, this will show the full path it applies to.
         /// </summary>
         ProjectionPath Path { get; }
+
+        /// <summary>
+        /// Gets the fully qualified <see cref="PropertyPath"/> that represents the array that children will be operated on. Only applies to child projections.
+        /// </summary>
+        PropertyPath ChildrenPropertyPath { get; }
+
+        /// <summary>
+        /// Gets whether or not there is a parent.
+        /// </summary>
+        bool HasParent { get; }
+
+        /// <summary>
+        /// Gets the parent projection - if any.
+        /// </summary>
+        IProjection? Parent { get; }
 
         /// <summary>
         /// Gets the <see cref="Model"/> the projection targets.
@@ -54,6 +67,11 @@ namespace Aksio.Cratis.Events.Projections
         IEnumerable<EventType> EventTypes { get; }
 
         /// <summary>
+        /// Gets the <see cref="EventTypeWithKeyResolver"/> collection.
+        /// </summary>
+        IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; }
+
+        /// <summary>
         /// Gets the collection of <see cref="IProjection">child projections</see>.
         /// </summary>
         IEnumerable<IProjection> ChildProjections { get; }
@@ -75,9 +93,8 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Provides the projection with a new <see cref="AppendedEvent"/>.
         /// </summary>
-        /// <param name="event"><see cref="AppendedEvent"/> to provide.</param>
-        /// <param name="changeset"><see cref="Changeset{Event, ExpandoObject}"/> being worked on.</param>
-        void OnNext(AppendedEvent @event, IChangeset<AppendedEvent, ExpandoObject> changeset);
+        /// <param name="context"><see cref="ProjectionEventContext"/> to work with.</param>
+        void OnNext(ProjectionEventContext context);
 
         /// <summary>
         /// Checks whether or not the projection will accept a specific event type.
@@ -90,7 +107,19 @@ namespace Aksio.Cratis.Events.Projections
         /// Get the <see cref="ValueProvider{Event}"/> associated with a given <see cref="EventType"/>.
         /// </summary>
         /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-        /// <returns>The <see cref="ValueProvider{Event}"/>.</returns>
-        ValueProvider<AppendedEvent> GetKeyResolverFor(EventType eventType);
+        /// <returns>The <see cref="KeyResolver"/>.</returns>
+        KeyResolver GetKeyResolverFor(EventType eventType);
+
+        /// <summary>
+        /// Set event types with key resolvers for the projection.
+        /// </summary>
+        /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver"/>.</param>
+        void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver);
+
+        /// <summary>
+        /// Set the parent <see cref="IProjection"/>.
+        /// </summary>
+        /// <param name="projection">The parent <see cref="IProjection"/>.</param>
+        void SetParent(IProjection projection);
     }
 }

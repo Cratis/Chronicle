@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Globalization;
+using System.Text;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -63,10 +66,10 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         public static string GetRewindCollectionName(string name) => $"rewind-{name}";
 
         /// <inheritdoc/>
-        public async Task<ExpandoObject> FindOrDefault(object key)
+        public async Task<ExpandoObject> FindOrDefault(Key key)
         {
             var collection = GetCollection();
-            var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.ToString()));
+            var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.Value.ToString()));
             var instance = result.SingleOrDefault();
             if (instance != default)
             {
@@ -76,13 +79,13 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+        public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;
             var hasChanges = false;
 
-            var filter = Builders<BsonDocument>.Filter.Eq("_id", key.ToString());
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", key.Value.ToString());
             var collection = GetCollection();
 
             if (changeset.HasBeenRemoved())
@@ -118,6 +121,8 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 return differences.Any();
             }
 
+            var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
+
             foreach (var change in changeset.Changes)
             {
                 switch (change)
@@ -131,7 +136,9 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                     case ChildAdded childAdded:
                         {
                             var document = childAdded.State.ToBsonDocument();
-                            updateBuilder = updateDefinitionBuilder.AddToSet(childAdded.ChildrenProperty.Path, document);
+                            var (property, arrayFilters) = ConvertToMongoDBProperty(childAdded.ChildrenProperty, key);
+                            arrayFiltersForDocument.AddRange(arrayFilters);
+                            updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
                             hasChanges = true;
                         }
                         break;
@@ -150,7 +157,14 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
             if (!hasChanges) return;
 
-            await collection.UpdateOneAsync(filter, updateBuilder, new UpdateOptions { IsUpsert = true });
+            await collection.UpdateOneAsync(
+                filter,
+                updateBuilder,
+                new UpdateOptions
+                {
+                    IsUpsert = true,
+                    ArrayFilters = arrayFiltersForDocument.ToArray()
+                });
 
             await Task.CompletedTask;
         }
@@ -177,6 +191,54 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         {
             _rewindScope?.Dispose();
             GC.SuppressFinalize(this);
+        }
+
+        (string Property, IEnumerable<ArrayFilterDefinition> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, Key key)
+        {
+            var arrayFilters = new List<ArrayFilterDefinition>();
+            var propertyBuilder = new StringBuilder();
+            var currentPropertyPath = new PropertyPath(string.Empty);
+
+            foreach (var segment in propertyPath.Segments)
+            {
+                currentPropertyPath += segment;
+                switch (segment)
+                {
+                    case PropertyName:
+                        {
+                            propertyBuilder.Append(segment.Value);
+                        }
+                        break;
+
+                    case ArrayProperty:
+                        {
+                            var collectionIdentifier = currentPropertyPath.LastSegment.Value.ToCamelCase();
+                            if (propertyBuilder.Length > 0)
+                            {
+                                propertyBuilder.Append('.');
+                            }
+
+                            var arrayIndexer = key.ArrayIndexers.FirstOrDefault(_ => _.ArrayProperty == currentPropertyPath);
+                            if (arrayIndexer is not null)
+                            {
+                                propertyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0}.$[{1}]", segment.Value, collectionIdentifier);
+                                arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(
+                                    new BsonDocument(
+                                        new Dictionary<string, object>
+                                        {
+                                            { $"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier }
+                                        })));
+                            }
+                            else
+                            {
+                                propertyBuilder.Append(segment.Value);
+                            }
+                        }
+                        break;
+                }
+            }
+
+            return (Property: propertyBuilder.ToString(), ArrayFilters: arrayFilters.ToArray());
         }
 
         IMongoDatabase GetDatabase()

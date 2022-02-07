@@ -52,14 +52,7 @@ namespace Aksio.Cratis.Dynamic
                 var value = property.GetValue(original, null);
                 if (value != null)
                 {
-                    var valueType = value.GetType();
-                    if (!valueType.IsPrimitive &&
-                        valueType != typeof(string) &&
-                        valueType != typeof(Guid) &&
-                        !valueType.IsConcept())
-                    {
-                        value = value.AsExpandoObject();
-                    }
+                    value = GetActualValueFrom(value);
                 }
                 expandoAsDictionary[property.Name] = value!;
             }
@@ -103,23 +96,72 @@ namespace Aksio.Cratis.Dynamic
         /// </summary>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
         /// <param name="property"><see cref="PropertyPath"/> to get or create for.</param>
+        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns><see cref="ExpandoObject"/> at property.</returns>
-        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property)
+        /// <exception cref="UndefinedArrayIndexer">Thrown if a required array indexer is undefined.</exception>
+        /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be expando object.</exception>
+        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, IEnumerable<ArrayIndexer> arrayIndexers)
         {
             var currentTarget = target as IDictionary<string, object>;
             var segments = property.Segments.ToArray();
+            var currentPath = new PropertyPath(string.Empty);
+
             for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
             {
                 var segment = segments[propertyIndex];
-                if (!currentTarget.ContainsKey(segment))
+                currentPath += segment;
+                switch (segment)
                 {
-                    var nested = new ExpandoObject();
-                    currentTarget[segment] = nested;
-                    currentTarget = nested!;
-                }
-                else
-                {
-                    currentTarget = ((ExpandoObject)currentTarget[segment])!;
+                    case PropertyName propertyName:
+                        {
+                            if (!currentTarget.ContainsKey(propertyName.Value))
+                            {
+                                var nested = new ExpandoObject();
+                                currentTarget[segment.Value] = nested;
+                                currentTarget = nested!;
+                            }
+                            else
+                            {
+                                currentTarget = ((ExpandoObject)currentTarget[segment.Value])!;
+                            }
+                        }
+                        break;
+
+                    case ArrayProperty arrayProperty:
+                        {
+                            var indexer = arrayIndexers.SingleOrDefault(_ => _.ArrayProperty.Equals(currentPath));
+                            if (indexer == default)
+                            {
+                                throw new UndefinedArrayIndexer(property, arrayProperty.Value);
+                            }
+                            IEnumerable<ExpandoObject> collection;
+                            if (!currentTarget.ContainsKey(arrayProperty.Value))
+                            {
+                                collection = new List<ExpandoObject>();
+                                currentTarget[segment.Value] = collection;
+                            }
+                            else
+                            {
+                                if (currentTarget[segment.Value] is not IEnumerable enumerable)
+                                {
+                                    throw new SegmentValueIsNotCollection(property, segment);
+                                }
+                                collection = ((IEnumerable)currentTarget[segment.Value]).OfType<ExpandoObject>().ToList();
+                            }
+
+                            var element = collection
+                                .Cast<IDictionary<string, object>>()
+                                .SingleOrDefault(_ => _.ContainsKey(indexer.IdentifierProperty.Path) && _[indexer.IdentifierProperty.Path] == indexer.Identifier);
+
+                            if (element == default)
+                            {
+                                element = new ExpandoObject()!;
+                                element[indexer.IdentifierProperty.Path] = indexer.Identifier;
+                                currentTarget[segment.Value] = collection.Append((element as ExpandoObject)!).ToList();
+                            }
+                            currentTarget = (element as ExpandoObject)!;
+                        }
+                        break;
                 }
             }
 
@@ -132,27 +174,28 @@ namespace Aksio.Cratis.Dynamic
         /// <typeparam name="TChild">Type of child for the collection.</typeparam>
         /// <param name="target">Target <see cref="ExpandoObject"/>.</param>
         /// <param name="childrenProperty"><see cref="PropertyPath"/> to ensure collection for.</param>
+        /// <param name="arrayIndexers">Any <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
-        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty)
+        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, IEnumerable<ArrayIndexer> arrayIndexers)
         {
-            var inner = target.EnsurePath(childrenProperty) as IDictionary<string, object>;
-            if (!inner.ContainsKey(childrenProperty.LastSegment))
+            var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
+            if (!inner.ContainsKey(childrenProperty.LastSegment.Value))
             {
-                inner[childrenProperty.LastSegment] = new List<TChild>();
+                inner[childrenProperty.LastSegment.Value] = new List<TChild>();
             }
 
-            if (!(inner[childrenProperty.LastSegment] is IEnumerable))
+            if (!(inner[childrenProperty.LastSegment.Value] is IEnumerable))
             {
                 throw new ChildrenPropertyIsNotEnumerable(childrenProperty);
             }
 
-            var items = (inner[childrenProperty.LastSegment] as IEnumerable)!.Cast<TChild>();
+            var items = (inner[childrenProperty.LastSegment.Value] as IEnumerable)!.Cast<TChild>();
             if (items is not IList<TChild>)
             {
                 items = new List<TChild>(items!);
             }
-            inner[childrenProperty.LastSegment] = items;
+            inner[childrenProperty.LastSegment.Value] = items;
             return (items as ICollection<TChild>)!;
         }
 
@@ -165,5 +208,33 @@ namespace Aksio.Cratis.Dynamic
         /// <returns>True if there is an item, false if not.</returns>
         public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
             items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
+
+        static object GetActualValueFrom(object value)
+        {
+            var valueType = value.GetType();
+            if (!valueType.IsPrimitive &&
+                valueType != typeof(string) &&
+                valueType != typeof(Guid) &&
+                !valueType.IsConcept())
+            {
+                if (value is IEnumerable enumerableValue)
+                {
+                    var list = new List<object>();
+
+                    foreach (var element in enumerableValue)
+                    {
+                        list.Add(GetActualValueFrom(element));
+                    }
+
+                    value = list.ToArray();
+                }
+                else
+                {
+                    value = value.AsExpandoObject();
+                }
+            }
+
+            return value;
+        }
     }
 }

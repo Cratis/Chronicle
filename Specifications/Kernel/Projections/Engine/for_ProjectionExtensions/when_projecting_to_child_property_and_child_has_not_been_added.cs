@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying
         {
             child = new();
             changeset.Setup(_ => _.HasChildBeenAddedWithKey(children_property, key)).Returns(false);
-            changeset.Setup(_ => _.GetChildByKey<ExpandoObject>(children_property, identified_by_property, key)).Returns(child);
+            changeset.Setup(_ => _.GetChildByKey<ExpandoObject>(key)).Returns(child);
             observable.Project(children_property, identified_by_property, key_resolver, property_mappers);
         }
 
