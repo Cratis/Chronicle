@@ -75,13 +75,6 @@ namespace Aksio.Cratis.Changes
             }
         }
 
-        Type? GetValueType()
-        {
-            var originalValue = GetValueFrom(_initialInstance, _difference.MemberPath);
-            var changedValue = GetValueFrom(_modifiedInstance, _difference.MemberPath);
-            return originalValue?.GetType() ?? changedValue?.GetType() ?? default;
-        }
-
         object? GetValueFrom(TTarget obj, string memberPath)
         {
             object? current = obj;
@@ -109,6 +102,13 @@ namespace Aksio.Cratis.Changes
             }
 
             return current;
+        }
+
+        Type? GetValueType()
+        {
+            var originalValue = GetValueFrom(_initialInstance, _difference.MemberPath);
+            var changedValue = GetValueFrom(_modifiedInstance, _difference.MemberPath);
+            return originalValue?.GetType() ?? changedValue?.GetType() ?? default;
         }
     }
 }
