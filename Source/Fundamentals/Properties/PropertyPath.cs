@@ -125,7 +125,6 @@ namespace Aksio.Cratis.Properties
         /// <param name="path">Path to the property relative within an object.</param>
         public PropertyPath(string path)
         {
-            Path = path;
             _segments = path.Split('.').Select<string, IPropertyPathSegment>(_ =>
             {
                 var match = ArrayIndexRegex!.Match(_);
@@ -135,6 +134,8 @@ namespace Aksio.Cratis.Properties
                 }
                 return new PropertyName(_.ToCamelCase());
             }).ToArray();
+
+            Path = string.Join('.', (IEnumerable<object>)_segments);
         }
 
         /// <summary>
@@ -181,7 +182,7 @@ namespace Aksio.Cratis.Properties
                 return innerInstance.ContainsKey(LastSegment.Value);
             }
 
-            var inner = target.EnsurePath(this);
+            var inner = target.EnsurePath(this, arrayIndexers);
             var propertyInfo = GetPropertyInfoFor(target.GetType());
             return propertyInfo.GetValue(inner) != null;
         }
@@ -200,7 +201,7 @@ namespace Aksio.Cratis.Properties
                 return innerInstance.ContainsKey(LastSegment.Value) ? innerInstance[LastSegment.Value] : null;
             }
 
-            var inner = target.EnsurePath(this);
+            var inner = target.EnsurePath(this, arrayIndexers);
             var propertyInfo = GetPropertyInfoFor(target.GetType());
             return propertyInfo.GetValue(inner);
         }
@@ -220,7 +221,7 @@ namespace Aksio.Cratis.Properties
             }
             else
             {
-                var inner = target.EnsurePath(this);
+                var inner = target.EnsurePath(this, arrayIndexers);
                 var propertyInfo = GetPropertyInfoFor(target.GetType());
                 propertyInfo.SetValue(inner, value);
             }

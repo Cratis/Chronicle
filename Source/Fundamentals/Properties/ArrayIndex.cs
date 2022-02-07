@@ -7,5 +7,9 @@ namespace Aksio.Cratis.Properties
     /// Represents a <see cref="IPropertyPathSegment"/> for an array index.
     /// </summary>
     /// <param name="Value">Identifier of the array indexer.</param>
-    public record ArrayIndex(string Value) : IPropertyPathSegment;
+    public record ArrayIndex(string Value) : IPropertyPathSegment
+    {
+        /// <inheritdoc/>
+        public override string ToString() => $"[{Value}]";
+    }
 }
