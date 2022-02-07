@@ -39,14 +39,14 @@ namespace Aksio.Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public Task<ExpandoObject> FindOrDefault(object key)
+        public Task<ExpandoObject> FindOrDefault(Key key)
         {
             var collection = GetCollection();
 
             ExpandoObject modelInstance;
-            if (collection.ContainsKey(key))
+            if (collection.ContainsKey(key.Value))
             {
-                modelInstance = collection[key];
+                modelInstance = collection[key.Value];
             }
             else
             {
@@ -57,14 +57,14 @@ namespace Aksio.Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+        public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var state = changeset.InitialState.Clone();
             var collection = GetCollection();
 
             if (changeset.HasBeenRemoved())
             {
-                collection.Remove(key);
+                collection.Remove(key.Value);
                 return Task.CompletedTask;
             }
 
@@ -73,7 +73,7 @@ namespace Aksio.Cratis.Events.Projections.InMemory
                 state = state.OverwriteWith((change.State as ExpandoObject)!);
             }
 
-            collection[key] = state;
+            collection[key.Value] = state;
 
             return Task.CompletedTask;
         }

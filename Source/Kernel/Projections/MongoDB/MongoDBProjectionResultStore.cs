@@ -63,10 +63,10 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         public static string GetRewindCollectionName(string name) => $"rewind-{name}";
 
         /// <inheritdoc/>
-        public async Task<ExpandoObject> FindOrDefault(object key)
+        public async Task<ExpandoObject> FindOrDefault(Key key)
         {
             var collection = GetCollection();
-            var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.ToString()));
+            var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.Value.ToString()));
             var instance = result.SingleOrDefault();
             if (instance != default)
             {
@@ -76,13 +76,13 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task ApplyChanges(object key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+        public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             var updateDefinitionBuilder = Builders<BsonDocument>.Update;
             UpdateDefinition<BsonDocument>? updateBuilder = default;
             var hasChanges = false;
 
-            var filter = Builders<BsonDocument>.Filter.Eq("_id", key.ToString());
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", key.Value.ToString());
             var collection = GetCollection();
 
             if (changeset.HasBeenRemoved())

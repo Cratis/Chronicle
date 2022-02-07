@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections
 {
@@ -25,6 +26,9 @@ namespace Aksio.Cratis.Events.Projections
 
         /// <inheritdoc/>
         public ProjectionPath Path { get; }
+
+        /// <inheritdoc/>
+        public PropertyPath ChildrenPropertyPath { get; }
 
         /// <inheritdoc/>
         public Model Model { get; }
@@ -59,6 +63,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="identifier">The unique identifier of the projection.</param>
         /// <param name="name">The name of the projection.</param>
         /// <param name="path">The qualified path of the projection.</param>
+        /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
         /// <param name="model">The target <see cref="Model"/>.</param>
         /// <param name="passive">Whether or not the projection is a passive projection.</param>
         /// <param name="rewindable">Whether or not the projection is rewindable.</param>
@@ -67,6 +72,7 @@ namespace Aksio.Cratis.Events.Projections
             ProjectionId identifier,
             ProjectionName name,
             ProjectionPath path,
+            PropertyPath childrenPropertyPath,
             Model model,
             bool passive,
             bool rewindable,
@@ -79,7 +85,7 @@ namespace Aksio.Cratis.Events.Projections
             IsRewindable = rewindable;
             Event = FilterEventTypes(_subject);
             Path = path;
-
+            ChildrenPropertyPath = childrenPropertyPath;
             ChildProjections = childProjections;
         }
 
