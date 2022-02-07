@@ -24,6 +24,10 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 false,
                 true,
                 Array.Empty<IProjection>());
+            projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
+            {
+                new EventTypeWithKeyResolver(event_type, expected)
+            });
         }
 
         void Because() => result = projection.GetKeyResolverFor(event_type);

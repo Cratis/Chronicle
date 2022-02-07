@@ -35,6 +35,10 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
                 false,
                 true,
                 Array.Empty<IProjection>());
+            projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
+            {
+                new EventTypeWithKeyResolver(event_b, KeyResolvers.FromEventSourceId)
+            });
 
             dynamic state = initial_state = new();
             state.Integer = 42;
@@ -44,6 +48,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
 
             second_event = new(new(0, event_b), new("30c1ebf5-cc30-4216-afed-e3e0aefa1316", DateTimeOffset.UtcNow), new JsonObject());
             second_changeset = new(second_event, initial_state);
+
 
             observed_events = new();
             projection.Event.Subscribe(_ => observed_events.Add(_));
