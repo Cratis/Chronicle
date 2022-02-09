@@ -7,5 +7,5 @@ using Events.Accounts.Debit;
 
 namespace Domain.Accounts.Debit
 {
-    public record CloseDebitAccount(AccountId AccountId);
+    public record CloseDebitAccount();
 }
