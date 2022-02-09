@@ -1,3 +1,10 @@
+# [v5.4.1] - 2022-2-9 [PR: #156](https://github.com/aksio-insurtech/Cratis/pull/156)
+
+### Fixed
+
+- Proxy types for workbench generated with new proxy generator.
+
+
 # [v5.4.0] - 2022-2-9 [PR: #155](https://github.com/aksio-insurtech/Cratis/pull/155)
 
 ### Added
