@@ -12,5 +12,5 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates
     /// <param name="IsEnumerable">Whether or not the result is an enumerable or not.</param>
     /// <param name="Imports">Additional import statements.</param>
     /// <param name="Arguments">Arguments for the query.</param>
-    public record QueryDescriptor(string Route, string Name, string Model, bool IsEnumerable, IEnumerable<ImportStatement> Imports, IEnumerable<QueryArgumentDescriptor> Arguments);
+    public record QueryDescriptor(string Route, string Name, string Model, bool IsEnumerable, IEnumerable<ImportStatement> Imports, IEnumerable<RequestArgumentDescriptor> Arguments);
 }
