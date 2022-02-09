@@ -9,10 +9,17 @@ import { CommandResult } from "./CommandResult";
  */
 export abstract class Command implements ICommand {
     abstract readonly route: string;
+    abstract readonly routeTemplate: Handlebars.TemplateDelegate;
+    abstract get requestArguments(): string[];
 
     /** @inheritdoc */
     async execute(): Promise<CommandResult> {
-        const response = await fetch(this.route, {
+        let actualRoute = this.route;
+        if (this.requestArguments && this.requestArguments.length > 0) {
+            actualRoute = this.routeTemplate(this);
+        }
+
+        const response = await fetch(actualRoute, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
