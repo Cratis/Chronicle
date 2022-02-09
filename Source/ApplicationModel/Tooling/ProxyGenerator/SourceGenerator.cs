@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.RegularExpressions;
 using Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 using Aksio.Cratis.Applications.ProxyGenerator.Templates;
 using HandlebarsDotNet;
@@ -14,6 +15,9 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
     [Generator]
     public class SourceGenerator : ISourceGenerator
     {
+        static readonly Regex _routeRegex = new(@"(\{[\w]*\})", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+        static readonly Dictionary<string, int> _fileHashes = new();
+
         /// <inheritdoc/>
         public void Initialize(GeneratorInitializationContext context)
         {
@@ -71,14 +75,31 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
             foreach (var commandMethod in methods.Where(_ => _.GetAttributes().Any(_ => _.IsHttpPostAttribute())))
             {
                 var route = GetRoute(baseApiRoute, commandMethod);
-                var commandParameter = commandMethod.Parameters[0];
-                var commandType = commandParameter.Type;
-                var importStatements = new HashSet<ImportStatement>();
-                var properties = commandType.GetPropertyDescriptorsFrom(out var additionalImportStatements);
-                additionalImportStatements.ForEach(_ => importStatements.Add(_));
 
-                var typeName = commandType.IsKnownType() ? commandMethod.Name : commandType.Name;
-                var commandDescriptor = new CommandDescriptor(route, typeName, properties, importStatements);
+                var properties = new List<PropertyDescriptor>();
+                var importStatements = new HashSet<ImportStatement>();
+                foreach (var parameter in commandMethod.Parameters)
+                {
+                    if (parameter.Type.IsKnownType())
+                    {
+                        properties.Add(new(
+                            parameter.Name,
+                            parameter.Type.GetTypeScriptType(out var additionalImportStatements),
+                            parameter.Type.IsEnumerable()
+                        ));
+                        additionalImportStatements.ForEach(_ => importStatements.Add(_));
+                    }
+                    else
+                    {
+                        properties.AddRange(parameter.Type.GetPropertyDescriptorsFrom(out var additionalImportStatements));
+                        additionalImportStatements.ForEach(_ => importStatements.Add(_));
+                    }
+                }
+
+                var requestArguments = GetRequestArgumentsFrom(commandMethod, ref route, importStatements);
+
+                var typeName = commandMethod.Name;
+                var commandDescriptor = new CommandDescriptor(route, typeName, properties, importStatements, requestArguments);
                 var renderedTemplate = TemplateTypes.Command(commandDescriptor);
                 if (renderedTemplate != default)
                 {
@@ -131,7 +152,7 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
                     var targetFile = Path.Combine(targetFolder, $"{queryMethod.Name}.ts");
                     OutputType(actualType, rootNamespace, outputFolder, targetFile, importStatements, useRouteAsPath, baseApiRoute);
 
-                    var queryArguments = GetQueryArgumentsFrom(queryMethod, ref route, importStatements);
+                    var queryArguments = GetRequestArgumentsFrom(queryMethod, ref route, importStatements);
 
                     var typeName = actualType.IsKnownType() ? actualType.GetTypeScriptType(out _) : actualType.Name;
                     var queryDescriptor = new QueryDescriptor(route, queryMethod.Name, typeName, isEnumerable, importStatements, queryArguments);
@@ -146,9 +167,9 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
             }
         }
 
-        static List<QueryArgumentDescriptor> GetQueryArgumentsFrom(IMethodSymbol queryMethod, ref string route, HashSet<ImportStatement> importStatements)
+        static List<RequestArgumentDescriptor> GetRequestArgumentsFrom(IMethodSymbol queryMethod, ref string route, HashSet<ImportStatement> importStatements)
         {
-            var queryArguments = new List<QueryArgumentDescriptor>();
+            var queryArguments = new List<RequestArgumentDescriptor>();
             if (queryMethod.Parameters.Length > 0)
             {
                 foreach (var parameter in queryMethod.Parameters)
@@ -259,6 +280,8 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
 
             if (useRouteAsPath)
             {
+                baseApiRoute = _routeRegex.Replace(baseApiRoute, string.Empty);
+                baseApiRoute = baseApiRoute.Replace("//", "/");
                 const string apiPrefix = "/api";
                 if (baseApiRoute.StartsWith(apiPrefix, StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -290,6 +313,9 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
         static void WriteFile(string file, string content)
         {
             if (string.IsNullOrEmpty(Path.GetFileNameWithoutExtension(file))) return;
+            var hashCode = StringComparer.InvariantCulture.GetHashCode(content);
+            if (_fileHashes.ContainsKey(file) && _fileHashes[file] == hashCode) return;
+            _fileHashes[file] = hashCode;
             File.WriteAllText(file, content);
         }
     }
