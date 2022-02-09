@@ -18,9 +18,84 @@ there directly in the form of a generated proxy object
 
 ## Commands
 
-Commands are the things you want to perform. These are represented as **HttpPost** operations on controllers and take a
-complex type as input through the body of the Http request. The generator will generate commands based on the type and
-include the route information into the generated object.
+Commands are the things you want to perform. These are represented as **HttpPost** operations on controllers. Any method arguments
+are considered properties on the command. Complex types will have its properties added to the command directly as well.
+Any of the parameters can be sourced using `[FromRoute]` or `[FromQuery]` and the generated proxy will generate the correct
+route template based on whats in `[Route]` in combination with what is defined in `[HttpPost]`.
+
+Take following controller with action in C#:
+
+```csharp
+[Route("/api/accounts/debit")]
+public class DebitAccounts : Controller
+{
+    readonly IEventLog _eventLog;
+
+    public DebitAccounts(IEventLog eventLog) => _eventLog = eventLog;
+
+    [HttpPost]
+    public Task OpenDebitAccount([FromBody] OpenDebitAccount create) => _eventLog.Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
+}
+```
+
+The action takes a complex type called `OpenDebitAccount` that looks like this:
+
+```csharp
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
+```
+
+This will generate:
+
+```typescript
+import { Command } from '@aksio/cratis-applications-frontend/commands';
+
+export class OpenDebitAccount extends Command {
+    readonly route: string = '/api/accounts/debit';
+
+    accountId!: string;
+    name!: string;
+    owner!: string;
+}
+```
+
+While a controller leveraging route parameters:
+
+```csharp
+[Route("/api/accounts/debit/{accountId}")]
+public class DebitAccount : Controller
+{
+    readonly IEventLog _eventLog;
+
+    public DebitAccount(IEventLog eventLog) => _eventLog = eventLog;
+
+    [HttpPost("deposit/{amount}")]
+    public Task DepositToAccount([FromRoute] AccountId accountId, [FromRoute] double amount) => _eventLog.Append(accountId, new DepositToDebitAccountPerformed(amount));
+}
+```
+
+It will generate into:
+
+```typescript
+import { Command } from '@aksio/cratis-applications-frontend/commands';
+import Handlebars from 'handlebars';
+
+const routeTemplate = Handlebars.compile('/api/accounts/debit/{{accountId}}/deposit/{{amount}}');
+
+export class DepositToAccount extends Command {
+    readonly route: string = '/api/accounts/debit/{{accountId}}/deposit/{{amount}}';
+    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+
+    get requestArguments(): string[] {
+        return [
+            'accountId',
+            'amount',
+        ];
+    }
+
+    accountId!: string;
+    amount!: number;
+}
+```
 
 ## Queries
 
@@ -52,7 +127,7 @@ public record DebitAccount(AccountId Id, AccountName Name, PersonId Owner, doubl
 This all gets generated into the following TypeScript code:
 
 ```typescript
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/frontend/queries';
+import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { DebitAccount } from './DebitAccount';
 import Handlebars from 'handlebars';
 
