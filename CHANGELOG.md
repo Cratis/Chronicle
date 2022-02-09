@@ -1,3 +1,15 @@
+# [v5.4.0] - 2022-2-9 [PR: #155](https://github.com/aksio-insurtech/Cratis/pull/155)
+
+### Added
+
+- Supporting plain old ASP.NET API controllers for Commands - meaning that an object encapsulating the command is not required but optional. All parameters will now be added as properties on the generated command. (#154)
+
+### Fixed
+
+- Fixing file names generated when there are route parameters on controllers.
+- Keeping a hash in memory of generated files - it prevents writing to disk unless the content has changed. Very useful with regards to the dotnet build server running and constantly running the generator.
+
+
 # [v5.3.0] - 2022-2-7 [PR: #152](https://github.com/aksio-insurtech/Cratis/pull/152)
 
 ### Added
