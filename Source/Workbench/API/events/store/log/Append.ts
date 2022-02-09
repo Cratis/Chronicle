@@ -3,9 +3,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Command } from '@aksio/cratis-applications-frontend/commands';
+import Handlebars from 'handlebars';
+
+const routeTemplate = Handlebars.compile('/api/events/store/log/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}');
 
 export class Append extends Command {
-    readonly route: string = '/api/events/store/log/{eventSourceId}/{eventTypeId}/{eventGeneration}';
+    readonly route: string = '/api/events/store/log/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}';
+    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
 
-    isSpecified!: any;
+    get requestArguments(): string[] {
+        return [
+            'eventSourceId',
+            'eventTypeId',
+            'eventGeneration',
+        ];
+    }
+
+    eventSourceId!: string;
+    eventTypeId!: string;
+    eventGeneration!: number;
 }
