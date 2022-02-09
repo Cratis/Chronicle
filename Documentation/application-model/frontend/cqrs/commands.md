@@ -29,7 +29,7 @@ public record CreateDebitAccount(AccountId AccountId, AccountName Name, PersonId
 This all gets generated into the following TypeScript code:
 
 ```typescript
-import { Command } from '@aksio/frontend/commands';
+import { Command } from '@aksio/cratis-applications-frontend/commands';
 
 export class CreateDebitAccount extends Command {
     readonly route: string = '/api/accounts/debit';

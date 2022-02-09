@@ -9,5 +9,5 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates
     /// <param name="Name">Name of argument.</param>
     /// <param name="Type">Type of argument.</param>
     /// <param name="IsOptional">Whether or not the argument is nullable / optional.</param>
-    public record QueryArgumentDescriptor(string Name, string Type, bool IsOptional);
+    public record RequestArgumentDescriptor(string Name, string Type, bool IsOptional);
 }

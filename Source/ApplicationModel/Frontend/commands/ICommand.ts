@@ -14,6 +14,8 @@ export interface ICommand {
 
     /**
      * Execute the {@link ICommand}.
+     * @param [args] Optional arguments for the command route - depends on whether or not the command needs arguments.
+     * @returns {CommandResult} for the execution.
      */
     execute(): Promise<CommandResult>;
 }
