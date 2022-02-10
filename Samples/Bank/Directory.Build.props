@@ -3,7 +3,7 @@
 
     <PropertyGroup>
         <IsPackable>false</IsPackable>
-        <NoWarn>$(NoWarn);CS8019;SA1600;SA1601;CS1591;</NoWarn>
+        <NoWarn>$(NoWarn);SA1600;SA1601;CS1591;</NoWarn>
 
         <AksioProxyOutput>$(MSBuildThisFileDirectory)/Web/API</AksioProxyOutput>
         <AksioUseRouteAsPath>true</AksioUseRouteAsPath>
