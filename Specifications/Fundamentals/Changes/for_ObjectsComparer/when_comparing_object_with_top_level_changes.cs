@@ -24,6 +24,13 @@ namespace Aksio.Cratis.Changes.for_ObjectsComparer
 
         void Because() => result = comparer.Compare(left, right, out differences);
 
+        // Notes:
+        // - Handle Null values on either sides
+        // - Handle Concept Types (Do not recurse into them - Value is not a property)
+        // - Recurse
+        // - Handle IDictionary<string, object> types
+        // - Handle Guid types
+
         [Fact] void should_not_be_considered_equal() => result.ShouldBeTrue();
         [Fact] void should_have_first_difference_be_the_first_property() => differences.ToArray()[0].PropertyPath.Path.ShouldEqual(nameof(TheType.StringValue).ToCamelCase());
         [Fact] void should_have_second_difference_be_the_second_property() => differences.ToArray()[1].PropertyPath.Path.ShouldEqual(nameof(TheType.IntValue).ToCamelCase());
