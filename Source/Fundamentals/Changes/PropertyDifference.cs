@@ -2,9 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using System.Reflection;
 using Aksio.Cratis.Concepts;
-using ObjectsComparer;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Changes
 {
@@ -14,14 +13,13 @@ namespace Aksio.Cratis.Changes
     /// <typeparam name="TTarget">Target type the property difference is for.</typeparam>
     public class PropertyDifference<TTarget>
     {
-        readonly Difference _difference;
         readonly TTarget _initialInstance;
         readonly TTarget _modifiedInstance;
 
         /// <summary>
         /// Gets the full member path to the property that has changed.
         /// </summary>
-        public string MemberPath { get; }
+        public PropertyPath PropertyPath { get; }
 
         /// <summary>
         /// Gets the original value - possibly default.
@@ -36,78 +34,56 @@ namespace Aksio.Cratis.Changes
         /// <summary>
         /// Initializes a new instance of the <see cref="PropertyDifference{T}"/> class.
         /// </summary>
+        /// <param name="propertyPath">Raw difference.</param>
         /// <param name="initialInstance">Original state.</param>
         /// <param name="modifiedInstance">Changed state.</param>
-        /// <param name="difference">Raw difference.</param>
-        public PropertyDifference(TTarget initialInstance, TTarget modifiedInstance, Difference difference)
+        public PropertyDifference(PropertyPath propertyPath, TTarget initialInstance, TTarget modifiedInstance)
         {
             _initialInstance = initialInstance;
             _modifiedInstance = modifiedInstance;
-            _difference = difference;
-            MemberPath = difference.MemberPath;
+            PropertyPath = propertyPath;
 
-            var valueType = GetValueType();
+            var original = GetValueFrom(_initialInstance);
+            var changed = GetValueFrom(_modifiedInstance);
+
+            var valueType = GetValueTypeFrom(original, changed);
             if (valueType != default)
             {
-                if (!string.IsNullOrEmpty(difference.Value1))
-                {
-                    if (valueType.IsConcept())
-                    {
-                        Original = ConceptFactory.CreateConceptInstance(valueType, difference.Value1);
-                    }
-                    else
-                    {
-                        Original = Convert.ChangeType(difference.Value1, valueType, CultureInfo.InvariantCulture);
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(difference.Value2))
-                {
-                    if (valueType.IsConcept())
-                    {
-                        Changed = ConceptFactory.CreateConceptInstance(valueType, difference.Value2);
-                    }
-                    else
-                    {
-                        Changed = Convert.ChangeType(difference.Value2, valueType, CultureInfo.InvariantCulture);
-                    }
-                }
+                Original = GetValueInActualType(valueType, original);
+                Changed = GetValueInActualType(valueType, changed);
             }
         }
 
-        object? GetValueFrom(TTarget obj, string memberPath)
+        object? GetValueFrom(TTarget instance)
         {
-            object? current = obj;
+            object? value = null;
 
-            foreach (var member in memberPath.Split("."))
+            if (instance is not null && PropertyPath.HasValue(instance, ArrayIndexer.NoIndexers))
             {
-                if (obj is IDictionary<string, object> dictionary)
+                value = PropertyPath.GetValue(instance, ArrayIndexer.NoIndexers);
+            }
+
+            return value;
+        }
+
+        object? GetValueInActualType(Type valueType, object? value)
+        {
+            if (value is not null || (value is string && string.IsNullOrEmpty(value as string)))
+            {
+                if (valueType.IsConcept())
                 {
-                    if (dictionary.ContainsKey(member))
-                    {
-                        current = dictionary[member];
-                    }
-                    else
-                    {
-                        current = default;
-                    }
+                    value = ConceptFactory.CreateConceptInstance(valueType, value);
                 }
                 else
                 {
-                    var property = obj!.GetType().GetProperty(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    current = property?.GetValue(current) ?? default;
+                    value = Convert.ChangeType(value, valueType, CultureInfo.InvariantCulture);
                 }
-
-                if (current == default) break;
             }
-
-            return current;
+            return value;
         }
 
-        Type? GetValueType()
+        Type? GetValueTypeFrom(object? originalValue, object? changedValue)
         {
-            var originalValue = GetValueFrom(_initialInstance, _difference.MemberPath);
-            var changedValue = GetValueFrom(_modifiedInstance, _difference.MemberPath);
             return originalValue?.GetType() ?? changedValue?.GetType() ?? default;
         }
     }
