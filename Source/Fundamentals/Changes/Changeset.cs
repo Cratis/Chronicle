@@ -53,10 +53,10 @@ namespace Aksio.Cratis.Changes
                 propertyMapper(Incoming, workingState);
             }
 
-            var comparer = new ObjectsComparer.Comparer<TTarget>();
+            var comparer = new ObjectsComparer();
             if (!comparer.Compare(InitialState, workingState, out var differences))
             {
-                Add(new PropertiesChanged<TTarget>(workingState, differences.Select(_ => new PropertyDifference<TTarget>(InitialState, workingState, _))));
+                Add(new PropertiesChanged<TTarget>(workingState, differences));
             }
         }
 
@@ -74,7 +74,7 @@ namespace Aksio.Cratis.Changes
                 propertyMapper(Incoming, workingItem);
             }
 
-            var comparer = new ObjectsComparer.Comparer();
+            var comparer = new ObjectsComparer();
             if (!comparer.Compare(item, workingItem, out var differences))
             {
                 Add(new ChildPropertiesChanged<TChild>(
@@ -82,7 +82,7 @@ namespace Aksio.Cratis.Changes
                     childrenProperty,
                     identifiedByProperty,
                     keyResolver(Incoming),
-                    differences.Select(_ => new PropertyDifference<TChild>(item, workingItem, _))));
+                    differences));
             }
         }
 

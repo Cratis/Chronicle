@@ -64,7 +64,7 @@ namespace Aksio.Cratis.Integration
             var comparer = new ObjectsComparer.Comparer<TModel>();
             if (!comparer.Compare(initial, mappedInstance, out var differences))
             {
-                changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences.Select(_ => new PropertyDifference<TModel>(initial, mappedInstance, _))));
+                changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences.Select(_ => new PropertyDifference<TModel>(initial, mappedInstance, _)).ToArray()));
             }
 
             var context = new ImportContext<TModel, TExternalModel>(changeset, new EventsToAppend());
