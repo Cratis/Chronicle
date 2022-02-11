@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Concepts;
-using ObjectsComparer;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Changes.for_PropertyDifference
 {
@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Changes.for_PropertyDifference
 
         PropertyDifference<ObjectForComparison> result;
 
-        void Because() => result = new PropertyDifference<ObjectForComparison>(new(new(Guid.Empty)), new(new(Guid.Empty)), new Difference("GuidConcept", original_value, changed_value, DifferenceTypes.ValueMismatch));
+        void Because() => result = new PropertyDifference<ObjectForComparison>(new PropertyPath("GuidConcept"), new(new(Guid.Empty)), new(new(Guid.Empty)));
 
         [Fact] void should_have_the_correct_original_value() => ((GuidConcept)result.Original).Value.ShouldEqual(Guid.Parse(original_value));
         [Fact] void should_have_the_correct_changed_value() => ((GuidConcept)result.Changed).Value.ShouldEqual(Guid.Parse(changed_value));
