@@ -14,9 +14,9 @@ namespace Aksio.Cratis.Changes.for_PropertyDifference
         record GuidConcept(Guid Value) : ConceptAs<Guid>(Value);
         record ObjectForComparison(GuidConcept GuidConcept);
 
-        PropertyDifference<ObjectForComparison> result;
+        PropertyDifference result;
 
-        void Because() => result = new PropertyDifference<ObjectForComparison>(new PropertyPath("GuidConcept"), new(new(Guid.Empty)), new(new(Guid.Empty)));
+        void Because() => result = new PropertyDifference(new PropertyPath("GuidConcept"), new ObjectForComparison(new(Guid.Empty)), new ObjectForComparison(new(Guid.Empty)));
 
         [Fact] void should_have_the_correct_original_value() => ((GuidConcept)result.Original).Value.ShouldEqual(Guid.Parse(original_value));
         [Fact] void should_have_the_correct_changed_value() => ((GuidConcept)result.Changed).Value.ShouldEqual(Guid.Parse(changed_value));

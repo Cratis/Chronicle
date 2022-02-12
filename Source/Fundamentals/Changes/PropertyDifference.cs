@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
-using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Changes
@@ -10,12 +8,8 @@ namespace Aksio.Cratis.Changes
     /// <summary>
     /// Represents a value difference in a property of an object.
     /// </summary>
-    /// <typeparam name="TTarget">Target type the property difference is for.</typeparam>
-    public class PropertyDifference<TTarget>
+    public class PropertyDifference
     {
-        readonly TTarget _initialInstance;
-        readonly TTarget _modifiedInstance;
-
         /// <summary>
         /// Gets the full member path to the property that has changed.
         /// </summary>
@@ -32,59 +26,16 @@ namespace Aksio.Cratis.Changes
         public object? Changed { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PropertyDifference{T}"/> class.
+        /// Initializes a new instance of the <see cref="PropertyDifference"/> class.
         /// </summary>
         /// <param name="propertyPath">Raw difference.</param>
-        /// <param name="initialInstance">Original state.</param>
-        /// <param name="modifiedInstance">Changed state.</param>
-        public PropertyDifference(PropertyPath propertyPath, TTarget initialInstance, TTarget modifiedInstance)
+        /// <param name="original">Original value.</param>
+        /// <param name="changed">Changed value.</param>
+        public PropertyDifference(PropertyPath propertyPath, object? original, object? changed)
         {
-            _initialInstance = initialInstance;
-            _modifiedInstance = modifiedInstance;
             PropertyPath = propertyPath;
-
-            var original = GetValueFrom(_initialInstance);
-            var changed = GetValueFrom(_modifiedInstance);
-
-            var valueType = GetValueTypeFrom(original, changed);
-            if (valueType != default)
-            {
-                Original = GetValueInActualType(valueType, original);
-                Changed = GetValueInActualType(valueType, changed);
-            }
-        }
-
-        object? GetValueFrom(TTarget instance)
-        {
-            object? value = null;
-
-            if (instance is not null && PropertyPath.HasValue(instance, ArrayIndexer.NoIndexers))
-            {
-                value = PropertyPath.GetValue(instance, ArrayIndexer.NoIndexers);
-            }
-
-            return value;
-        }
-
-        object? GetValueInActualType(Type valueType, object? value)
-        {
-            if (value is not null || (value is string && string.IsNullOrEmpty(value as string)))
-            {
-                if (valueType.IsConcept())
-                {
-                    value = ConceptFactory.CreateConceptInstance(valueType, value);
-                }
-                else
-                {
-                    value = Convert.ChangeType(value, valueType, CultureInfo.InvariantCulture);
-                }
-            }
-            return value;
-        }
-
-        Type? GetValueTypeFrom(object? originalValue, object? changedValue)
-        {
-            return originalValue?.GetType() ?? changedValue?.GetType() ?? default;
+            Original = original;
+            Changed = changed;
         }
     }
 }

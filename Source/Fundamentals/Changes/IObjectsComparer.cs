@@ -13,9 +13,8 @@ namespace Aksio.Cratis.Changes
         /// </summary>
         /// <param name="left">Left object to compare.</param>
         /// <param name="right">Right object to compare.</param>
-        /// <param name="differences">Out variable with a collection of <see cref="PropertyDifference{TTarget}"/>.</param>
-        /// <typeparam name="TTarget">Type of object being compared.</typeparam>
+        /// <param name="differences">Out variable with a collection of <see cref="PropertyDifference"/>.</param>
         /// <returns>True if there are differences, false if not.</returns>
-        bool Compare<TTarget>(TTarget left, TTarget right, out IEnumerable<PropertyDifference<TTarget>> differences);
+        bool Equals(object? left, object? right, out IEnumerable<PropertyDifference> differences);
     }
 }
