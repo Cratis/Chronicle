@@ -54,7 +54,7 @@ namespace Aksio.Cratis.Changes
             }
 
             var comparer = new ObjectsComparer();
-            if (!comparer.Compare(InitialState, workingState, out var differences))
+            if (!comparer.Equals(InitialState, workingState, out var differences))
             {
                 Add(new PropertiesChanged<TTarget>(workingState, differences));
             }
@@ -75,7 +75,7 @@ namespace Aksio.Cratis.Changes
             }
 
             var comparer = new ObjectsComparer();
-            if (!comparer.Compare(item, workingItem, out var differences))
+            if (!comparer.Equals(item, workingItem, out var differences))
             {
                 Add(new ChildPropertiesChanged<TChild>(
                     workingItem,

@@ -9,5 +9,5 @@ namespace Aksio.Cratis.Changes
     /// <typeparam name="TTarget">Target type.</typeparam>
     /// <param name="State">State after change applied.</param>
     /// <param name="Differences">The differences between initial state and a change.</param>
-    public record PropertiesChanged<TTarget>(object State, IEnumerable<PropertyDifference<TTarget>> Differences) : Change(State);
+    public record PropertiesChanged<TTarget>(object State, IEnumerable<PropertyDifference> Differences) : Change(State);
 }

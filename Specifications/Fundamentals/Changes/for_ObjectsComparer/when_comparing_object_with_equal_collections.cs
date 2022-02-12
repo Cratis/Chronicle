@@ -3,27 +3,25 @@
 
 namespace Aksio.Cratis.Changes.for_ObjectsComparer
 {
-
-    public class when_comparing_object_with_no_changes : given.an_object_comparer
+    public class when_comparing_object_with_equal_collections : given.an_object_comparer
     {
-        record TheType(string StringValue, int IntValue);
+        record TheType(IEnumerable<int> Collection);
 
         TheType left;
         TheType right;
 
         bool result;
-
         IEnumerable<PropertyDifference> differences;
 
         void Establish()
         {
-            left = new TheType("FortyTwo", 42);
-            right = new TheType("FortyTwo", 42);
+            left = new(new[] { 1, 2, 3 });
+            right = new(new[] { 1, 2, 3 });
         }
 
         void Because() => result = comparer.Equals(left, right, out differences);
 
-        [Fact] void should_be_considered_equal() => result.ShouldBeTrue();
-        [Fact] void should_not_have_any_differences() => differences.ShouldBeEmpty();
+        [Fact] void should_be_equal() => result.ShouldBeTrue();
+        [Fact] void should_have_no_differences() => differences.ShouldBeEmpty();
     }
 }
