@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Changes.for_ObjectsComparer
 {
