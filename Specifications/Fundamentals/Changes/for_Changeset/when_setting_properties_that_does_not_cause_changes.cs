@@ -12,6 +12,7 @@ namespace Aksio.Cratis.Changes
         ExpandoObject initial_state;
         ExpandoObject source;
         IEnumerable<PropertyMapper<ExpandoObject, ExpandoObject>> property_mappers;
+        Mock<IObjectsComparer> objects_comparer;
 
         void Establish()
         {
@@ -33,7 +34,9 @@ namespace Aksio.Cratis.Changes
 
             source = new ExpandoObject();
 
-            changeset = new(source, initial_state);
+            objects_comparer = new();
+            objects_comparer.Setup(_ => _.Equals(initial_state, IsAny<ExpandoObject>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+            changeset = new(objects_comparer.Object, source, initial_state);
         }
 
         void Because() => changeset.SetProperties(property_mappers);

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Integration
@@ -10,6 +11,7 @@ namespace Aksio.Cratis.Integration
     /// </summary>
     public class Importer : IImporter
     {
+        readonly IObjectsComparer _objectsComparer;
         readonly IAdapters _adapters;
         readonly IEventLog _eventLog;
 
@@ -17,9 +19,14 @@ namespace Aksio.Cratis.Integration
         /// Initializes a new instance of the <see cref="Importer"/> class.
         /// </summary>
         /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
+        /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
         /// <param name="eventLog"><see cref="IEventLog"/> for appending events.</param>
-        public Importer(IAdapters adapters, IEventLog eventLog)
+        public Importer(
+            IAdapters adapters,
+            IObjectsComparer objectsComparer,
+            IEventLog eventLog)
         {
+            _objectsComparer = objectsComparer;
             _adapters = adapters;
             _eventLog = eventLog;
         }
@@ -30,7 +37,7 @@ namespace Aksio.Cratis.Integration
             var adapter = _adapters.GetFor<TModel, TExternalModel>();
             var projection = _adapters.GetProjectionFor<TModel, TExternalModel>();
             var mapper = _adapters.GetMapperFor<TModel, TExternalModel>();
-            return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _eventLog);
+            return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectsComparer, _eventLog);
         }
     }
 }

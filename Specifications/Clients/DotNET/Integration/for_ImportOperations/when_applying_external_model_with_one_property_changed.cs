@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Integration.for_ImportOperations
         {
             event_log
                 .Setup(_ => _.Append(IsAny<EventSourceId>(), IsAny<object>()))
-                .Callback((EventSourceId eventSourceId, object @event) => event_appended = (@event as SomeEvent)!);
+                .Callback((EventSourceId _, object @event) => event_appended = (@event as SomeEvent)!);
         }
 
         async Task Because() => await operations.Apply(incoming);

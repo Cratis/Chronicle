@@ -248,7 +248,9 @@ namespace Aksio.Cratis.Properties
 
             foreach (var segment in Segments)
             {
-                currentPropertyInfo = currentType.GetProperty(segment.Value, BindingFlags.Public | BindingFlags.Instance);
+                currentPropertyInfo =
+                    currentType.GetProperty(segment.Value, BindingFlags.Public | BindingFlags.Instance) ??
+                    currentType.GetProperty(segment.Value.ToPascalCase(), BindingFlags.Public | BindingFlags.Instance);
             }
 
             if (currentPropertyInfo is null)

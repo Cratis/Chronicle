@@ -108,13 +108,13 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 return updateBuilder;
             }
 
-            bool UpdateChangedProperties(IEnumerable<PropertyDifference<ExpandoObject>> differences, string? prefix = default)
+            bool UpdateChangedProperties(IEnumerable<PropertyDifference> differences, string? prefix = default)
             {
                 foreach (var propertyDifference in differences)
                 {
                     var propertyName = string.IsNullOrEmpty(prefix) ?
-                        propertyDifference.MemberPath.ToCamelCase() :
-                        $"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}";
+                        propertyDifference.PropertyPath.Path :
+                        $"{prefix}.{propertyDifference.PropertyPath.Path}";
 
                     UpdateProperty(propertyName, propertyDifference.Changed!);
                 }

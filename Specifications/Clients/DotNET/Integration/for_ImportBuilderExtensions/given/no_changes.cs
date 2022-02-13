@@ -3,7 +3,6 @@
 
 using System.Reactive.Subjects;
 using Aksio.Cratis.Changes;
-using ObjectsComparer;
 
 namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given
 {
@@ -16,6 +15,7 @@ namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given
         protected EventsToAppend events_to_append;
         protected Model original_model;
         protected Model modified_model;
+        protected Mock<IObjectsComparer> objects_comparer;
 
         void Establish()
         {
@@ -23,7 +23,9 @@ namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given
             import_builder = new ImportBuilderFor<Model, ExternalModel>(subject);
             modified_model = new Model(42, "Forty Two");
             original_model = new Model(42, "Forty Two");
-            changeset = new(modified_model, original_model);
+            objects_comparer = new();
+            objects_comparer.Setup(_ => _.Equals(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+            changeset = new(objects_comparer.Object, modified_model, original_model);
             events_to_append = new();
         }
     }
