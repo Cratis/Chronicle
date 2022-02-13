@@ -14,6 +14,7 @@ namespace Aksio.Cratis.Changes
     public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     {
         readonly List<Change> _changes = new();
+        readonly IObjectsComparer _comparer;
 
         /// <inheritdoc/>
         public TSource Incoming { get; }
@@ -30,10 +31,12 @@ namespace Aksio.Cratis.Changes
         /// <summary>
         /// Initializes a new instance of <see cref="Changeset{TSource, TTarget}"/>.
         /// </summary>
+        /// <param name="comparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
         /// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{TSource, TTarget}"/> is for.</param>
         /// <param name="initialState">The initial state before any changes are applied.</param>
-        public Changeset(TSource incoming, TTarget initialState)
+        public Changeset(IObjectsComparer comparer, TSource incoming, TTarget initialState)
         {
+            _comparer = comparer;
             Incoming = incoming;
             InitialState = initialState;
         }
@@ -53,10 +56,9 @@ namespace Aksio.Cratis.Changes
                 propertyMapper(Incoming, workingState);
             }
 
-            var comparer = new ObjectsComparer.Comparer<TTarget>();
-            if (!comparer.Compare(InitialState, workingState, out var differences))
+            if (!_comparer.Equals(InitialState, workingState, out var differences))
             {
-                Add(new PropertiesChanged<TTarget>(workingState, differences.Select(_ => new PropertyDifference<TTarget>(InitialState, workingState, _))));
+                Add(new PropertiesChanged<TTarget>(workingState, differences));
             }
         }
 
@@ -74,15 +76,14 @@ namespace Aksio.Cratis.Changes
                 propertyMapper(Incoming, workingItem);
             }
 
-            var comparer = new ObjectsComparer.Comparer();
-            if (!comparer.Compare(item, workingItem, out var differences))
+            if (!_comparer.Equals(item, workingItem, out var differences))
             {
                 Add(new ChildPropertiesChanged<TChild>(
                     workingItem,
                     childrenProperty,
                     identifiedByProperty,
                     keyResolver(Incoming),
-                    differences.Select(_ => new PropertyDifference<TChild>(item, workingItem, _))));
+                    differences));
             }
         }
 

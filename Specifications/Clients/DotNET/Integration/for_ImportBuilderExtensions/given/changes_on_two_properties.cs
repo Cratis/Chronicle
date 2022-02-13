@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
-using ObjectsComparer;
 
 namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given
 {
@@ -15,23 +14,15 @@ namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given
 
             changeset.Add(new PropertiesChanged<Model>(modified_model, new[]
             {
-                new PropertyDifference<Model>(
+                new PropertyDifference(
+                    new(nameof(Model.SomeInteger)),
                     original_model,
-                    modified_model,
-                    new Difference(
-                        nameof(Model.SomeInteger),
-                        original_model.SomeInteger.ToString(),
-                        modified_model.SomeInteger.ToString(),
-                        DifferenceTypes.ValueMismatch)),
+                    modified_model),
 
-                new PropertyDifference<Model>(
+                new PropertyDifference(
+                    new(nameof(Model.SomeString)),
                     original_model,
-                    modified_model,
-                    new Difference(
-                        nameof(Model.SomeString),
-                        original_model.SomeString,
-                        modified_model.SomeString,
-                        DifferenceTypes.ValueMismatch))
+                    modified_model)
             }));
         }
     }

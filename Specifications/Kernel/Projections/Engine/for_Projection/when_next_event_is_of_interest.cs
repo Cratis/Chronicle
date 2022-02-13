@@ -23,6 +23,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
 
         AppendedEvent second_event;
         Changeset<AppendedEvent, ExpandoObject> second_changeset;
+        Mock<IObjectsComparer> objects_comparer;
 
         void Establish()
         {
@@ -43,12 +44,14 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
             dynamic state = initial_state = new();
             state.Integer = 42;
 
+            objects_comparer = new();
+            objects_comparer.Setup(_ => _.Equals(IsAny<ExpandoObject>(), IsAny<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+
             first_event = new(new(0, event_a), new("30c1ebf5-cc30-4216-afed-e3e0aefa1316", DateTimeOffset.UtcNow), new JsonObject());
-            first_changeset = new(first_event, new());
+            first_changeset = new(objects_comparer.Object, first_event, new());
 
             second_event = new(new(0, event_b), new("30c1ebf5-cc30-4216-afed-e3e0aefa1316", DateTimeOffset.UtcNow), new JsonObject());
-            second_changeset = new(second_event, initial_state);
-
+            second_changeset = new(objects_comparer.Object, second_event, initial_state);
 
             observed_events = new();
             projection.Event.Subscribe(_ => observed_events.Add(_));

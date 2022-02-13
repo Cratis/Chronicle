@@ -52,12 +52,12 @@ namespace Aksio.Cratis.Integration
         /// <returns>Observable for chaining.</returns>
         public static IObservable<ImportContext<TModel, TExternalModel>> WithProperties<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
         {
-            var propertyPaths = properties.Select(_ => _.GetPropertyInfo().Name);
+            var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
 
             return builder.Where(_ =>
             {
                 var changes = _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>);
-                return changes.Any(_ => _!.Differences.Any(_ => propertyPaths.Contains(_.MemberPath)));
+                return changes.Any(_ => _!.Differences.Any(_ => propertyPaths.Any(p => _.PropertyPath.Path.StartsWith(p.Path, StringComparison.InvariantCulture))));
             });
         }
 

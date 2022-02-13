@@ -21,6 +21,7 @@ namespace Aksio.Cratis.Events.Projections.Grains
     {
         readonly IProjectionDefinitions _projectionDefinitions;
         readonly IProjectionFactory _projectionFactory;
+        readonly IObjectsComparer _objectsComparer;
         readonly IEventLogStorageProvider _eventLogStorageProvider;
         EngineProjection? _projection;
 
@@ -29,14 +30,17 @@ namespace Aksio.Cratis.Events.Projections.Grains
         /// </summary>
         /// <param name="projectionDefinitions"><see cref="IProjectionDefinitions"/>.</param>
         /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
+        /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
         /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
         public Projection(
             IProjectionDefinitions projectionDefinitions,
             IProjectionFactory projectionFactory,
+            IObjectsComparer objectsComparer,
             IEventLogStorageProvider eventLogStorageProvider)
         {
             _projectionDefinitions = projectionDefinitions;
             _projectionFactory = projectionFactory;
+            _objectsComparer = objectsComparer;
             _eventLogStorageProvider = eventLogStorageProvider;
         }
 
@@ -66,7 +70,7 @@ namespace Aksio.Cratis.Events.Projections.Grains
 
                 foreach (var @event in cursor.Current)
                 {
-                    var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, state);
+                    var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, state);
                     var context = new ProjectionEventContext(new Key(@event.Context.EventSourceId, ArrayIndexer.NoIndexers), @event, changeset);
                     _projection.OnNext(context);
 

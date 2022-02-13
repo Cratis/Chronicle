@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using AutoMapper;
 
@@ -13,6 +14,7 @@ namespace Aksio.Cratis.Integration.for_Importer
         Mock<IAdapterFor<Model, ExternalModel>> adapter;
         Mock<IAdapterProjectionFor<Model>> projection;
         Mock<IMapper> mapper;
+        Mock<IObjectsComparer> objects_comparer;
 
         Importer importer;
 
@@ -30,7 +32,8 @@ namespace Aksio.Cratis.Integration.for_Importer
             adapters.Setup(_ => _.GetProjectionFor<Model, ExternalModel>()).Returns(projection.Object);
             adapters.Setup(_ => _.GetMapperFor<Model, ExternalModel>()).Returns(mapper.Object);
 
-            importer = new(adapters.Object, event_log.Object);
+            objects_comparer = new();
+            importer = new(adapters.Object, objects_comparer.Object, event_log.Object);
         }
 
         void Because() => operations = importer.For<Model, ExternalModel>();

@@ -3,7 +3,7 @@
 
 using System.Collections;
 
-namespace Aksio.Cratis.Reflection.for_TypeExtensions.for_IsEnumerable
+namespace Aksio.Cratis.Reflection.for_TypeExtensions
 {
     public class MyEnumerable : IEnumerable<ComplexType>
     {

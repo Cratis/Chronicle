@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using System.Reflection;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using AutoMapper;
@@ -17,6 +16,7 @@ namespace Aksio.Cratis.Integration
     public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel, TExternalModel>
     {
         readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
+        readonly IObjectsComparer _objectsComparer;
         readonly IEventLog _eventLog;
 
         /// <inheritdoc/>
@@ -34,16 +34,19 @@ namespace Aksio.Cratis.Integration
         /// <param name="adapter">The <see cref="IAdapterFor{TModel, TExternalModel}"/>.</param>
         /// <param name="adapterProjection">The <see cref="IAdapterProjectionFor{TModel}"/> for the model.</param>
         /// <param name="mapper"><see cref="IMapper"/> to use for mapping beteween external model and model.</param>
+        /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
         /// <param name="eventLog">The <see cref="IEventLog"/> to work with.</param>
         public ImportOperations(
             IAdapterFor<TModel, TExternalModel> adapter,
             IAdapterProjectionFor<TModel> adapterProjection,
             IMapper mapper,
+            IObjectsComparer objectsComparer,
             IEventLog eventLog)
         {
             Adapter = adapter;
             Projection = adapterProjection;
             Mapper = mapper;
+            _objectsComparer = objectsComparer;
             _importContexts = new();
             Adapter.DefineImport(new ImportBuilderFor<TModel, TExternalModel>(_importContexts));
             _eventLog = eventLog;
@@ -57,14 +60,11 @@ namespace Aksio.Cratis.Integration
             eventSourceId ??= new(keyValue.ToString()!);
             var initial = await Projection.GetById(eventSourceId!);
             var mappedInstance = Mapper.Map<TModel>(instance)!;
-            var changeset = new Changeset<TModel, TModel>(mappedInstance, initial);
+            var changeset = new Changeset<TModel, TModel>(_objectsComparer, mappedInstance, initial);
 
-            var modelProperties = typeof(TModel).GetProperties(BindingFlags.Instance | BindingFlags.Public);
-
-            var comparer = new ObjectsComparer.Comparer<TModel>();
-            if (!comparer.Compare(initial, mappedInstance, out var differences))
+            if (!_objectsComparer.Equals(initial, mappedInstance, out var differences))
             {
-                changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences.Select(_ => new PropertyDifference<TModel>(initial, mappedInstance, _))));
+                changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences));
             }
 
             var context = new ImportContext<TModel, TExternalModel>(changeset, new EventsToAppend());

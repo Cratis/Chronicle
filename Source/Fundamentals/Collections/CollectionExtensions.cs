@@ -1,6 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
+using System.Reflection;
+using Aksio.Cratis.Reflection;
+
 namespace Aksio.Cratis.Collections
 {
     /// <summary>
@@ -33,6 +37,52 @@ namespace Aksio.Cratis.Collections
                 .SelectMany(l => l)
                 .SelectMany(l => l.Select(value => (l.Key, Value: value)))
                 .ToLookup(x => x.Key, x => x.Value);
+        }
+
+        /// <summary>
+        /// Count number of items from an enumerable.
+        /// </summary>
+        /// <param name="enumerable">Enumerable to count.</param>
+        /// <returns>The number of items it enumerates.</returns>
+        /// <remarks>
+        /// This method will look for more concrete types and leverage the fastest way to get the count without
+        /// having to enumerate it.
+        /// If no other options are available, it will enumerate it.
+        /// </remarks>
+        public static int CountElements(this IEnumerable enumerable)
+        {
+            var type = enumerable.GetType();
+            if (type.ImplementsOpenGeneric(typeof(IEnumerable<>)))
+            {
+                var countMethod = typeof(Enumerable).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                    .Single(_ => _.Name == nameof(Enumerable.Count) && _.GetParameters().Length == 1);
+                var enumerableInterface = type.GetInterface(typeof(IEnumerable<>).Name);
+                var genericCountMethod = countMethod.MakeGenericMethod(enumerableInterface!.GenericTypeArguments);
+                return (int)genericCountMethod.Invoke(null, new object[] { enumerable })!;
+            }
+
+            var count = 0;
+            foreach (var element in enumerable)
+            {
+                count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Converts an enumerable to an array of objects.
+        /// </summary>
+        /// <param name="enumerable">Enumerable to convert.</param>
+        /// <returns>Array of objects.</returns>
+        public static object[] ToObjectArray(this IEnumerable enumerable)
+        {
+            var list = new List<object>();
+            foreach (var element in enumerable)
+            {
+                list.Add(element);
+            }
+            return list.ToArray();
         }
     }
 }

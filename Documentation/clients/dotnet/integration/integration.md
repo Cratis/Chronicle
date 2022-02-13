@@ -171,6 +171,9 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 }
 ```
 
+For filtering for changes using the `.WithProperties()` with nested properties in complex structures.
+The system will automatically recurse within any nested property as long as you filter the top level property.
+
 > Note: There are multiple overloads of `AppendEvent`. One with a callback for creating the event and one without a callback.
 > The latter will then match properties by convention from the model type to the event type and copy the content over.
 > With the callback you have full flexibility of how you create the event and maybe there is a last minute
