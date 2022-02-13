@@ -113,8 +113,8 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 foreach (var propertyDifference in differences)
                 {
                     var propertyName = string.IsNullOrEmpty(prefix) ?
-                        propertyDifference.MemberPath.ToCamelCase() :
-                        $"{prefix}.{propertyDifference.MemberPath.ToCamelCase()}";
+                        propertyDifference.PropertyPath.Path :
+                        $"{prefix}.{propertyDifference.PropertyPath.Path}";
 
                     UpdateProperty(propertyName, propertyDifference.Changed!);
                 }
