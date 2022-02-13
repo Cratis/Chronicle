@@ -44,8 +44,9 @@ namespace Aksio.Cratis.Changes
             foreach (var property in type.GetProperties())
             {
                 var propertyPath = currentPropertyPath + property.Name;
-                var leftValue = property.GetValue(left);
-                var rightValue = property.GetValue(right);
+                var leftValue = left != null ? property.GetValue(left) : null;
+                var rightValue = right != null ? property.GetValue(right) : null;
+                if (leftValue is null && rightValue is null) return;
 
                 CompareValues(property.PropertyType, leftValue, rightValue, propertyPath, differences);
             }
@@ -74,7 +75,12 @@ namespace Aksio.Cratis.Changes
 
         void CompareValues(Type type, object? leftValue, object? rightValue, PropertyPath propertyPath, List<PropertyDifference> differences)
         {
-            if (!type.IsPrimitive &&
+            if ((leftValue is null && rightValue is not null) ||
+              (leftValue is not null && rightValue is null))
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+            }
+            else if (!type.IsPrimitive &&
               type != typeof(Guid) &&
               type != typeof(string) &&
               !type.IsConcept() &&
@@ -111,11 +117,6 @@ namespace Aksio.Cratis.Changes
                         }
                     }
                 }
-            }
-            else if ((leftValue is null && rightValue is not null) ||
-              (leftValue is not null && rightValue is null))
-            {
-                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
             }
             else
             {
