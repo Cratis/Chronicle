@@ -3,8 +3,6 @@
 
 using Concepts.Applications;
 using Concepts.Azure;
-using Concepts.Organizations;
-using ApplicationId = Concepts.Applications.ApplicationId;
 
 namespace Events.Applications
 {
