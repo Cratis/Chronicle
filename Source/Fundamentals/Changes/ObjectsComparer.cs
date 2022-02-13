@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Reflection;
 using Aksio.Cratis.Collections;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Properties;
@@ -77,7 +78,8 @@ namespace Aksio.Cratis.Changes
               type != typeof(Guid) &&
               type != typeof(string) &&
               !type.IsConcept() &&
-              !type.IsEnumerable())
+              !type.IsEnumerable() &&
+              !type.IsComparable())
             {
                 ComparePropertiesFor(type, leftValue, rightValue, propertyPath, differences);
             }
@@ -111,10 +113,36 @@ namespace Aksio.Cratis.Changes
                 }
             }
             else if ((leftValue is null && rightValue is not null) ||
-              (leftValue is not null && rightValue is null) ||
-              !leftValue!.Equals(rightValue))
+              (leftValue is not null && rightValue is null))
             {
                 differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+            }
+            else
+            {
+                var different = false;
+
+                if (type.IsComparable())
+                {
+                    if (type.Implements(typeof(IComparable)))
+                    {
+                        different = (leftValue as IComparable)!.CompareTo(rightValue) != 0;
+                    }
+                    else
+                    {
+                        var comparableInterface = type.GetInterface(typeof(IComparable<>).Name);
+                        var compareToMethod = comparableInterface!.GetMethod(nameof(IComparable<object>.CompareTo), BindingFlags.Public | BindingFlags.Instance);
+                        different = ((int)compareToMethod!.Invoke(leftValue, new[] { rightValue })!) != 0;
+                    }
+                }
+                else if (!leftValue!.Equals(rightValue))
+                {
+                    different = true;
+                }
+
+                if (different)
+                {
+                    differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+                }
             }
         }
     }

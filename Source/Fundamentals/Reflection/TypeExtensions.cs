@@ -91,6 +91,16 @@ namespace Aksio.Cratis.Reflection
         }
 
         /// <summary>
+        /// Check if a type is comparable, either implementing <see cref="IComparable"/> or <see cref="IComparable{T}"/>.
+        /// </summary>
+        /// <param name="type"><see cref="Type"/> to check.</param>
+        /// <returns>True if type is comparable, false if not an comparable.</returns>
+        public static bool IsComparable(this Type type)
+        {
+            return type.Implements(typeof(IComparable)) || type.ImplementsOpenGeneric(typeof(IComparable<>));
+        }
+
+        /// <summary>
         /// Check if the type is of the type specified in the generic param.
         /// </summary>
         /// <typeparam name="T">Type of the instance.</typeparam>
