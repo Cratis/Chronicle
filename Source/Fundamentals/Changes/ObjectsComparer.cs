@@ -96,7 +96,7 @@ namespace Aksio.Cratis.Changes
                 else
                 {
                     var leftElements = leftValueAsEnumerable.ToObjectArray();
-                    var rightElements = leftValueAsEnumerable.ToObjectArray();
+                    var rightElements = rightValueAsEnumerable.ToObjectArray();
 
                     for (var i = 0; i < leftElements.Length; i++)
                     {
