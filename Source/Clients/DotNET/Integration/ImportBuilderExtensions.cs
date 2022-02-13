@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using System.Reflection;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Strings;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration
@@ -52,12 +53,12 @@ namespace Aksio.Cratis.Integration
         /// <returns>Observable for chaining.</returns>
         public static IObservable<ImportContext<TModel, TExternalModel>> WithProperties<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
         {
-            var propertyPaths = properties.Select(_ => _.GetPropertyInfo().Name);
+            var propertyPaths = properties.Select(_ => _.GetPropertyInfo().Name.ToCamelCase());
 
             return builder.Where(_ =>
             {
                 var changes = _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>);
-                return changes.Any(_ => _!.Differences.Any(_ => propertyPaths.Contains(_.PropertyPath)));
+                return changes.Any(_ => _!.Differences.Any(_ => propertyPaths.Contains(_.PropertyPath.Path)));
             });
         }
 
