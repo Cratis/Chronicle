@@ -16,6 +16,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
         bool observed;
         AppendedEvent @event;
         Changeset<AppendedEvent, ExpandoObject> changeset;
+        Mock<IObjectsComparer> objects_comparer;
 
         void Establish()
         {
@@ -35,7 +36,11 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
             });
 
             @event = new(new(0, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
-            changeset = new(@event, new());
+
+            objects_comparer = new();
+            objects_comparer.Setup(_ => _.Equals(IsAny<ExpandoObject>(), IsAny<AppendedEvent>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
+
+            changeset = new(objects_comparer.Object, @event, new());
             projection.Event.Subscribe(_ => observed = true);
         }
 

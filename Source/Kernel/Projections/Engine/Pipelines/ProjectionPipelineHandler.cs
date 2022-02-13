@@ -20,6 +20,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
     {
         readonly ILogger<ProjectionPipelineHandler> _logger;
         readonly IProjectionPositions _projectionPositions;
+        readonly IObjectsComparer _objectsComparer;
         readonly IChangesetStorage _changesetStorage;
         readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber> _positions = new();
         readonly ReplaySubject<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> _observablePositions = new(1);
@@ -33,16 +34,19 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionPipelineHandler"/> class.
         /// </summary>
-        /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for managing positions for pipelines.</param>
+        /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
         /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for tracking changesets.</param>
+        /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for managing positions for pipelines.</param>
         /// <param name="logger">Logger for logging.</param>
         public ProjectionPipelineHandler(
-            IProjectionPositions projectionPositions,
+            IObjectsComparer objectsComparer,
             IChangesetStorage changesetStorage,
+            IProjectionPositions projectionPositions,
             ILogger<ProjectionPipelineHandler> logger)
         {
-            _projectionPositions = projectionPositions;
+            _objectsComparer = objectsComparer;
             _changesetStorage = changesetStorage;
+            _projectionPositions = projectionPositions;
             _logger = logger;
         }
 
@@ -66,7 +70,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
 
                 _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
                 var initialState = await resultStore.FindOrDefault(key);
-                var changeset = new Changeset<AppendedEvent, ExpandoObject>(@event, initialState);
+                var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, initialState);
 
                 var context = new ProjectionEventContext(key, @event, changeset);
                 await HandleEventFor(pipeline.Projection, context);
