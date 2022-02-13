@@ -1,3 +1,19 @@
+# [v5.5.0] - 2022-2-13 [PR: #159](https://github.com/aksio-insurtech/Cratis/pull/159)
+
+### Changes
+
+- Removing `ObjectsComparer` 3rd party dependency.
+
+### Added
+
+- [Integration] Support for complex structures with nested objects.
+- [Integration] When you want to react on a change within a complex structure, you don't have to specify all the properties within the structure. Instead you just simply specify the top level property in the `.WithProperties()` method.
+
+### Fixed
+
+- Recursive objects comparison producing a correct change difference hierarchy. Making it possible to do complex object comparison for things like integration.
+
+
 # [v5.4.1] - 2022-2-9 [PR: #156](https://github.com/aksio-insurtech/Cratis/pull/156)
 
 ### Fixed
