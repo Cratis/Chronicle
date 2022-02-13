@@ -46,7 +46,7 @@ namespace Aksio.Cratis.Changes
                 var propertyPath = currentPropertyPath + property.Name;
                 var leftValue = left != null ? property.GetValue(left) : null;
                 var rightValue = right != null ? property.GetValue(right) : null;
-                if (leftValue is null && rightValue is null) return;
+                if (leftValue is null && rightValue is null) continue;
 
                 CompareValues(property.PropertyType, leftValue, rightValue, propertyPath, differences);
             }
