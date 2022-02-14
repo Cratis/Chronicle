@@ -1,3 +1,10 @@
+# [v5.6.0] - 2022-2-14 [PR: #162](https://github.com/aksio-insurtech/Cratis/pull/162)
+
+### Added
+
+- Adds search paths for config files. By default it adds `$PWD/config` and automatically also `$PWD` as fallback. This is very helpful when packaged and leverages with services like Azure Container Instances which can't mount files, only folders.
+
+
 # [v5.5.0] - 2022-2-13 [PR: #159](https://github.com/aksio-insurtech/Cratis/pull/159)
 
 ### Changes
