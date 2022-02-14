@@ -53,3 +53,7 @@ public class MyController : Controller
 
 > Note: Effectively these are exactly the same, the `IOptions<>` means accessing the configuration needs to
 > go through the `Value` property of the `IOptions<>` interface.
+
+## Search Paths
+
+By default it will search for configuration files in `$PWD/config` and `$PWD`, in that order.
