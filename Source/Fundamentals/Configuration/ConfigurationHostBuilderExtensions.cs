@@ -54,7 +54,6 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="baseRelativePath">Optional base relative path, relative to the current running directory.</param>
         /// <param name="searchSubPaths">Optional search sub paths, relative to the current running directory and the optional baseRelativePath.</param>
         /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-        /// <exception cref="MissingConfiguration">Thrown if a configuration object can't be resolved.</exception>
         /// <remarks>
         /// It will always search the current running directory. When given search paths, the current directory will be added as the
         /// last search path, as a fallback.
@@ -77,7 +76,6 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 var fileName = attribute.FileNameSet ? attribute.FileName : configurationObject.Name.ToLowerInvariant();
                 fileName = Path.HasExtension(fileName) ? fileName : $"{fileName}.json";
-                var found = false;
 
                 foreach (var searchPath in allSearchPaths)
                 {
@@ -86,7 +84,6 @@ namespace Microsoft.Extensions.DependencyInjection
                     {
                         continue;
                     }
-                    found = true;
 
                     var configuration = new ConfigurationBuilder()
                         .SetBasePath(searchPath)
@@ -101,11 +98,6 @@ namespace Microsoft.Extensions.DependencyInjection
                     var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationInstance });
 
                     services.AddSingleton(optionsType, optionsWrapperInstance!);
-                }
-
-                if (!found && !attribute.Optional)
-                {
-                    throw new MissingConfiguration(configurationObject, fileName);
                 }
             }
 
