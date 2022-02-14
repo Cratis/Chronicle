@@ -1,3 +1,10 @@
+# [v5.6.1] - 2022-2-14 [PR: #164](https://github.com/aksio-insurtech/Cratis/pull/164)
+
+### Fixed
+
+- Removing the exception that was thrown if configuration was missing. That turned out to be a behavioral change we don't want right now.
+
+
 # [v5.6.0] - 2022-2-14 [PR: #162](https://github.com/aksio-insurtech/Cratis/pull/162)
 
 ### Added
