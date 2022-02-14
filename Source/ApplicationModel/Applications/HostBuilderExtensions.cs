@@ -38,7 +38,7 @@ namespace Microsoft.Extensions.Hosting
                     _
                     .AddSingleton<ITypes>(types)
                     .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
-                    .AddConfigurationObjects(types)
+                    .AddConfigurationObjects(types, searchSubPaths: new[] { "config" })
                     .AddControllersFromProjectReferencedAssembles(types)
                     .AddSwaggerGen()
                     .AddEndpointsApiExplorer()
