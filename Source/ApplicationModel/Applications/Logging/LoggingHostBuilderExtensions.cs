@@ -4,6 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Exceptions;
 
 namespace Microsoft.Extensions.Hosting
 {
@@ -20,6 +21,7 @@ namespace Microsoft.Extensions.Hosting
         public static ILoggerFactory UseDefaultLogging(this IHostBuilder builder)
         {
             Log.Logger = new LoggerConfiguration()
+                .Enrich.WithExceptionDetails()
                 .ReadFrom.Configuration(ConfigurationHostBuilderExtensions.Configuration)
                 .CreateLogger();
 
