@@ -103,6 +103,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationInstance });
 
                     services.AddSingleton(optionsType, optionsWrapperInstance!);
+                    break;
                 }
             }
 
