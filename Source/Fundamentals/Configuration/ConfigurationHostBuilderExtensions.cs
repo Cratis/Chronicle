@@ -7,6 +7,7 @@ using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -54,6 +55,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
         /// <param name="baseRelativePath">Optional base relative path, relative to the current running directory.</param>
         /// <param name="searchSubPaths">Optional search sub paths, relative to the current running directory and the optional baseRelativePath.</param>
+        /// <param name="logger">Logger for logging.</param>
         /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
         /// <remarks>
         /// It will always search the current running directory. When given search paths, the current directory will be added as the
@@ -63,7 +65,8 @@ namespace Microsoft.Extensions.DependencyInjection
             this IServiceCollection services,
             ITypes types,
             string baseRelativePath = "",
-            IEnumerable<string>? searchSubPaths = default)
+            IEnumerable<string>? searchSubPaths = default,
+            ILogger? logger = default)
         {
             var allSearchSubPaths = new List<string>(searchSubPaths ?? Array.Empty<string>())
             {
@@ -86,6 +89,7 @@ namespace Microsoft.Extensions.DependencyInjection
                         continue;
                     }
 
+                    logger?.BuildingConfigurationFor(configurationObject, fileName);
                     var configuration = new ConfigurationBuilder()
                         .SetBasePath(searchPath)
                         .AddJsonFile(fileName, attribute.Optional)

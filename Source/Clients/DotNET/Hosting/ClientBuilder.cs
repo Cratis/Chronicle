@@ -75,7 +75,7 @@ namespace Aksio.Cratis.Hosting
             }
 
             services
-                .AddMongoDBReadModels(types)
+                .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
                 .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
 
             if (_inSilo)
