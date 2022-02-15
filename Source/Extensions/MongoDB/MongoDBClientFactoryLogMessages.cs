@@ -19,5 +19,8 @@ namespace Aksio.Cratis.Extensions.MongoDB
 
         [LoggerMessage(2, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' succeeded.")]
         public static partial void CommandSucceeded(this ILogger logger, int requestId, string commandName);
+
+        [LoggerMessage(3, LogLevel.Trace, "Creating MongoClient for connecting to '{Address}'")]
+        public static partial void CreateClient(this ILogger logger, string address);
     }
 }
