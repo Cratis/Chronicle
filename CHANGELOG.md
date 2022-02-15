@@ -1,3 +1,14 @@
+# [v5.7.3] - 2022-2-15 [PR: #169](https://github.com/aksio-insurtech/Cratis/pull/169)
+
+### Added
+
+- Logging for when MongoClient is created.
+
+### Fixed
+
+- Load the first `storage.json` and break, not continue to the next - creating a second binding.
+
+
 # [v5.7.2] - 2022-2-15 [PR: #168](https://github.com/aksio-insurtech/Cratis/pull/168)
 
 ### Added
