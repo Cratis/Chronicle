@@ -25,6 +25,8 @@ namespace Microsoft.Extensions.Hosting
 
             builder.UseSerilog();
 
+            Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
+
             return new Serilog.Extensions.Logging.SerilogLoggerFactory();
         }
     }
