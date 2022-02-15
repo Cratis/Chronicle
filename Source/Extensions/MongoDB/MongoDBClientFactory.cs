@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 
 namespace Aksio.Cratis.Extensions.MongoDB
 {
@@ -12,13 +14,31 @@ namespace Aksio.Cratis.Extensions.MongoDB
     [Singleton]
     public class MongoDBClientFactory : IMongoDBClientFactory
     {
-        /// <inheritdoc/>
-        public IMongoClient Create(MongoClientSettings settings) => new MongoClient(settings);
+        readonly ILogger<MongoDBClientFactory> _logger;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MongoDBClientFactory"/> class.
+        /// </summary>
+        /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+        public MongoDBClientFactory(ILogger<MongoDBClientFactory> logger) => _logger = logger;
 
         /// <inheritdoc/>
-        public IMongoClient Create(MongoUrl url) => new MongoClient(url);
+        public IMongoClient Create(MongoClientSettings settings)
+        {
+            settings.ClusterConfigurator = builder =>
+            {
+                builder
+                    .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command))
+                    .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure))
+                    .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
+            };
+            return new MongoClient(settings);
+        }
 
         /// <inheritdoc/>
-        public IMongoClient Create(string connectionString) => new MongoClient(connectionString);
+        public IMongoClient Create(MongoUrl url) => Create(MongoClientSettings.FromUrl(url));
+
+        /// <inheritdoc/>
+        public IMongoClient Create(string connectionString) => Create(MongoClientSettings.FromConnectionString(connectionString));
     }
 }

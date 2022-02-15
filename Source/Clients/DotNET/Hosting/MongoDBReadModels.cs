@@ -11,6 +11,7 @@ using Aksio.Cratis.Strings;
 using Aksio.Cratis.Types;
 using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Orleans;
 
@@ -29,9 +30,12 @@ namespace Aksio.Cratis.Hosting
         /// </summary>
         /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
         /// <param name="types"><see cref="ITypes"/> for discovery.</param>
+        /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
         /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-        public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types)
+        public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default)
         {
+            var logger = loggerFactory?.CreateLogger("MongodBReadModels");
+
             services.AddTransient(sp =>
             {
                 var executionContext = sp.GetService<Execution.ExecutionContext>()!;
@@ -57,9 +61,10 @@ namespace Aksio.Cratis.Hosting
             {
                 services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
                 {
-                    var database = sp.GetService<IMongoDatabase>();
                     var name = readModelType.Name.Pluralize();
                     var camelCaseName = name.ToCamelCase();
+                    logger?.AddingMongoDBCollectionBinding(readModelType, camelCaseName);
+                    var database = sp.GetService<IMongoDatabase>();
                     var genericMethod = _getCollectionMethod.MakeGenericMethod(readModelType);
                     return genericMethod.Invoke(database, new object[] { camelCaseName, null! })!;
                 });
