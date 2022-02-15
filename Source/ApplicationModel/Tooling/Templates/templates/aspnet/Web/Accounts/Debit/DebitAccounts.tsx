@@ -17,7 +17,7 @@ import {
     SearchBox
 } from '@fluentui/react';
 import { AmountDialog, AmountDialogInput, AmountDialogResult } from './AmountDialog';
-import { CreateDebitAccount } from 'API/accounts/debit/CreateDebitAccount';
+import { OpenDebitAccount } from 'API/accounts/debit/OpenDebitAccount';
 import { DepositToAccount } from 'API/accounts/debit/DepositToAccount';
 import { WithdrawFromAccount } from 'API/accounts/debit/WithdrawFromAccount';
 import { AllAccounts } from 'API/accounts/debit/AllAccounts';
@@ -48,7 +48,7 @@ export const DebitAccounts = () => {
     const [selectedItem, setSelectedItem] = useState<any>(undefined);
     const [showCreateAccount, createAccountDialogProps] = useDialog<any, CreateAccountDialogResult>(async (result, output?) => {
         if (result === DialogResult.Success && output) {
-            const command = new CreateDebitAccount();
+            const command = new OpenDebitAccount();
             command.accountId = Guid.create().toString(),
                 command.name = output.name;
             command.owner = 'edd60145-a6df-493f-b48d-35ffdaaefc4c';
