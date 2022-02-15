@@ -1,3 +1,10 @@
+# [v5.7.1] - 2022-2-15 [PR: #167](https://github.com/aksio-insurtech/Cratis/pull/167)
+
+### Added
+
+- Logging for MongoDB related config and usage. You can see all MongoDB commands being issued when using Trace for the Aksio namespace prefix.
+
+
 # [v5.7.0] - 2022-2-15 [PR: #166](https://github.com/aksio-insurtech/Cratis/pull/166)
 
 ### Added
