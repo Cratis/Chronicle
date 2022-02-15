@@ -1,3 +1,11 @@
+# [v5.7.2] - 2022-2-15 [PR: #168](https://github.com/aksio-insurtech/Cratis/pull/168)
+
+### Added
+
+- Logging of unhandled exceptions
+- Added Serilog.Exceptions and enriching all logs with this to get deeper information about all exceptions.
+
+
 # [v5.7.1] - 2022-2-15 [PR: #167](https://github.com/aksio-insurtech/Cratis/pull/167)
 
 ### Added
