@@ -15,6 +15,7 @@ using Aksio.Cratis.Events.Store.MongoDB;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
+using Serilog;
 
 #pragma warning disable SA1600
 
@@ -62,6 +63,7 @@ namespace Aksio.Cratis.Server
         {
             if (args.ExceptionObject is Exception exception)
             {
+                Log.Logger?.Error(exception, "Unhandled exception");
                 Console.WriteLine("************ BEGIN UNHANDLED EXCEPTION ************");
                 PrintExceptionInfo(exception);
 
