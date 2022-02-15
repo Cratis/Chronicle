@@ -32,6 +32,8 @@ namespace Aksio.Cratis.Extensions.MongoDB
                     .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure))
                     .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
             };
+
+            _logger.CreateClient(settings.Server.ToString());
             return new MongoClient(settings);
         }
 
