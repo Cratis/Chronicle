@@ -1,3 +1,13 @@
+# [v5.7.0] - 2022-2-15 [PR: #166](https://github.com/aksio-insurtech/Cratis/pull/166)
+
+### Added
+
+- Look for **appsettings.json** in a **config** sub folder, this will help us configure everything when using Azure Container Instances due to its lack of not supporting indivdual file mounts.
+- Configured Serilog to self-log, very useful for errors.
+- Kernel now has Serilogs Elastic extension added to it.
+- Added sample of how to use Serilogs Elastic for production for the Bank sample, which means also for the default template when creating a new Microservice.
+
+
 # [v5.6.1] - 2022-2-14 [PR: #164](https://github.com/aksio-insurtech/Cratis/pull/164)
 
 ### Fixed
