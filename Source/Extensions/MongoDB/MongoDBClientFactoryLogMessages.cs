@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.Extensions.Logging;
-using MongoDB.Bson;
 
 namespace Aksio.Cratis.Extensions.MongoDB
 {
@@ -12,10 +11,10 @@ namespace Aksio.Cratis.Extensions.MongoDB
     public static partial class MongoDBClientFactoryLogMessages
     {
         [LoggerMessage(0, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' started with content {Command}.")]
-        public static partial void CommandStarted(this ILogger logger, int requestId, string commandName, BsonDocument command);
+        public static partial void CommandStarted(this ILogger logger, int requestId, string commandName, object command);
 
-        [LoggerMessage(1, LogLevel.Error, "Command ({RequestId}) '{CommandName}' failed.")]
-        public static partial void CommandFailed(this ILogger logger, int requestId, string commandName, Exception ex);
+        [LoggerMessage(1, LogLevel.Error, "Command ({RequestId}) '{CommandName}' failed with '{failure}'")]
+        public static partial void CommandFailed(this ILogger logger, int requestId, string commandName, object failure);
 
         [LoggerMessage(2, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' succeeded.")]
         public static partial void CommandSucceeded(this ILogger logger, int requestId, string commandName);
