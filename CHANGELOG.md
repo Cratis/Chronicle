@@ -1,3 +1,10 @@
+# [v5.8.1] - 2022-2-16 [PR: #172](https://github.com/aksio-insurtech/Cratis/pull/172)
+
+### Fixed
+
+- Publish GitHub Actions workflow was very slow due to the multiple architecture build of the development image. This is now improved by doing the build of the binaries outside of Docker and then just copying these into the image. (#115).
+
+
 # [v5.8.0] - 2022-2-16 [PR: #171](https://github.com/aksio-insurtech/Cratis/pull/171)
 
 ### Added
