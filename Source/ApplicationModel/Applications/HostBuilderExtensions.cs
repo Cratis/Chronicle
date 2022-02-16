@@ -1,11 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.IO.Compression;
 using Aksio.Cratis.Applications;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.Hosting
@@ -42,6 +45,13 @@ namespace Microsoft.Extensions.Hosting
                     .AddControllersFromProjectReferencedAssembles(types)
                     .AddSwaggerGen()
                     .AddEndpointsApiExplorer()
+                    .AddResponseCompression(options =>
+                    {
+                        options.EnableForHttps = true;
+                        options.Providers.Add<BrotliCompressionProvider>();
+                        options.Providers.Add<GzipCompressionProvider>();
+                    })
+                    .Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.SmallestSize)
 
                     // Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
                     .AddRazorPages();
