@@ -50,7 +50,7 @@ jobs:
       - name: Build JS/TS
         run: |
           export NODE_OPTIONS="--max-old-space-size=4096"
-          yarn ci
+          yarn build
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
@@ -63,8 +63,6 @@ jobs:
       - name: Build Workbench
         working-directory: ./Source/Workbench
         run: |
-          # Set network timeout manually as a workaround till we're on Yarn 2: https://github.com/yarnpkg/yarn/issues/8242#issuecomment-661881292
-          yarn config set network-timeout 300000
           yarn build
 
       - name: Release
