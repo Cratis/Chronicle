@@ -20,6 +20,7 @@ namespace Microsoft.AspNetCore.Builder
         {
             Internals.ServiceProvider = app.ApplicationServices;
 
+            app.UseResponseCompression();
             app.UseWebSockets();
             app.UseDefaultFiles();
             app.UseStaticFiles();
