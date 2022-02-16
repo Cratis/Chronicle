@@ -1,10 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 
@@ -30,8 +28,8 @@ namespace Aksio.Cratis.Extensions.MongoDB
             settings.ClusterConfigurator = builder =>
             {
                 builder
-                    .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, Serialize(command.Command.ToJson())))
-                    .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, Serialize(command.Failure)))
+                    .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName))
+                    .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message))
                     .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
             };
 
@@ -44,9 +42,5 @@ namespace Aksio.Cratis.Extensions.MongoDB
 
         /// <inheritdoc/>
         public IMongoClient Create(string connectionString) => Create(MongoClientSettings.FromConnectionString(connectionString));
-
-        object Serialize(Exception exception) => Serialize(JsonSerializer.Serialize(exception));
-
-        object Serialize(string input) => (object)(JsonSerializer.Deserialize<dynamic>(input) ?? new { });
     }
 }
