@@ -1,3 +1,11 @@
+# [v5.8.2] - 2022-2-16 [PR: #173](https://github.com/aksio-insurtech/Cratis/pull/173)
+
+### Fixed
+
+- Further build optimizations.
+- Fixing NuGet packaging to reuse what is in Aksio.Defaults.
+
+
 # [v5.8.1] - 2022-2-16 [PR: #172](https://github.com/aksio-insurtech/Cratis/pull/172)
 
 ### Fixed
