@@ -31,7 +31,7 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: "6.0.100"
+          dotnet-version: "6.0.102"
 
       - name: Build .NET
         run: dotnet build --configuration Release
