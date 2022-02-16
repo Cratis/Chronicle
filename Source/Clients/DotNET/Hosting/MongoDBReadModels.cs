@@ -59,11 +59,11 @@ namespace Aksio.Cratis.Hosting
 
             foreach (var readModelType in readModelTypes)
             {
+                var name = readModelType.Name.Pluralize();
+                var camelCaseName = name.ToCamelCase();
+                logger?.AddingMongoDBCollectionBinding(readModelType, camelCaseName);
                 services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
                 {
-                    var name = readModelType.Name.Pluralize();
-                    var camelCaseName = name.ToCamelCase();
-                    logger?.AddingMongoDBCollectionBinding(readModelType, camelCaseName);
                     var database = sp.GetService<IMongoDatabase>();
                     var genericMethod = _getCollectionMethod.MakeGenericMethod(readModelType);
                     return genericMethod.Invoke(database, new object[] { camelCaseName, null! })!;
