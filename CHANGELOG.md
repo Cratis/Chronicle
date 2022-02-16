@@ -1,3 +1,10 @@
+# [v5.8.6] - 2022-2-16 [PR: #179](https://github.com/aksio-insurtech/Cratis/pull/179)
+
+### Fixed
+
+- Removing serialization of MongoDB commands and failures for logging.
+
+
 # [v5.8.5] - 2022-2-16 [PR: #177](https://github.com/aksio-insurtech/Cratis/pull/177)
 
 ### Fixed
