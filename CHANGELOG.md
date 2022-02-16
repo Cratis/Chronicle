@@ -1,3 +1,10 @@
+# [v5.8.5] - 2022-2-16 [PR: #177](https://github.com/aksio-insurtech/Cratis/pull/177)
+
+### Fixed
+
+- Aggressive logging for telling which read models are bound for the IoC has now been moved to be only during setup.
+
+
 # [v5.8.2] - 2022-2-16 [PR: #173](https://github.com/aksio-insurtech/Cratis/pull/173)
 
 ### Fixed
