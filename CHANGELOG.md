@@ -1,3 +1,10 @@
+# [v5.8.0] - 2022-2-16 [PR: #171](https://github.com/aksio-insurtech/Cratis/pull/171)
+
+### Added
+
+- All HTTP & HTTPS requests will now have their responses compressed supporting GZip and Brotli, depending on `Accept-Encoding`.
+
+
 # [v5.7.3] - 2022-2-15 [PR: #169](https://github.com/aksio-insurtech/Cratis/pull/169)
 
 ### Added
