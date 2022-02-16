@@ -11,10 +11,10 @@ namespace Aksio.Cratis.Extensions.MongoDB
     public static partial class MongoDBClientFactoryLogMessages
     {
         [LoggerMessage(0, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' started with content {Command}.")]
-        public static partial void CommandStarted(this ILogger logger, int requestId, string commandName, object command);
+        public static partial void CommandStarted(this ILogger logger, int requestId, string commandName);
 
         [LoggerMessage(1, LogLevel.Error, "Command ({RequestId}) '{CommandName}' failed with '{failure}'")]
-        public static partial void CommandFailed(this ILogger logger, int requestId, string commandName, object failure);
+        public static partial void CommandFailed(this ILogger logger, int requestId, string commandName, string failure);
 
         [LoggerMessage(2, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' succeeded.")]
         public static partial void CommandSucceeded(this ILogger logger, int requestId, string commandName);
