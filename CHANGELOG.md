@@ -1,3 +1,10 @@
+# [v5.8.7] - 2022-2-17 [PR: #182](https://github.com/aksio-insurtech/Cratis/pull/182)
+
+### Fixed
+
+- Fixing a bug when recursively applying compliance for events for complex structures. NJsonSchema has properties that are prefixed **Actual** which point to resolved versions for type references.
+
+
 # [v5.8.6] - 2022-2-16 [PR: #179](https://github.com/aksio-insurtech/Cratis/pull/179)
 
 ### Fixed
