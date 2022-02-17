@@ -1,3 +1,10 @@
+# [v5.8.9] - 2022-2-17 [PR: #184](https://github.com/aksio-insurtech/Cratis/pull/184)
+
+### Fixed
+
+- Switching to using `ActualTypeSchema` from NJsonSchema for recursive nested schemas. When properties are considered nullable, NJsonSchema will create a "one-of" with Null and and the actual type. `ActualSchema` does not resolve to the actual type schema.
+
+
 # [v5.8.8] - 2022-2-17 [PR: #183](https://github.com/aksio-insurtech/Cratis/pull/183)
 
 ### Fixed
