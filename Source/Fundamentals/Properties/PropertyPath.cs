@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -161,11 +162,27 @@ namespace Aksio.Cratis.Properties
         /// <remarks>This operation does not mutate the original.</remarks>
         public PropertyPath AddArrayIndex(string identifier)
         {
+            var identifierPropertyPath = new PropertyPath(identifier);
+            var segments = identifierPropertyPath.Segments.ToArray();
+            var builder = new StringBuilder();
+            if (segments.Length > 1)
+            {
+                for (var i = 0; i < segments.Length - 1; i++)
+                {
+                    builder.Append(segments[0].Value);
+                }
+                builder.Append(CultureInfo.InvariantCulture, $"[{segments[^1].Value}]");
+            }
+            else
+            {
+                builder.Append(segments[0]);
+            }
+
             if (Path.Length == 0)
             {
-                return new($"[{identifier}]");
+                return new(builder.ToString());
             }
-            return new($"{Path}.[{identifier}]");
+            return new($"{Path}.{builder}");
         }
 
         /// <summary>
