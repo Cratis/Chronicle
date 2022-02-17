@@ -1,3 +1,10 @@
+# [v5.8.8] - 2022-2-17 [PR: #183](https://github.com/aksio-insurtech/Cratis/pull/183)
+
+### Fixed
+
+- Client was using the last name of the property when setting up properties for projection causing nested structures in both read models and events to be wrong. This is now fixed and it creates a fully qualified `PropertyPath`.
+
+
 # [v5.8.7] - 2022-2-17 [PR: #182](https://github.com/aksio-insurtech/Cratis/pull/182)
 
 ### Fixed
