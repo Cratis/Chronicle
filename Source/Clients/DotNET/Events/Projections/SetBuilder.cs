@@ -35,7 +35,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
         {
-            _expression = eventPropertyAccessor.GetPropertyInfo().Name;
+            _expression = eventPropertyAccessor.GetPropertyPath();
             return _parent;
         }
 
