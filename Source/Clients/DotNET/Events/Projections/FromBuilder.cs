@@ -35,7 +35,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public IAddBuilder<TModel, TEvent, TProperty> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
         {
-            var addBuilder = new AddBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyInfo().Name);
+            var addBuilder = new AddBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyPath());
             _propertyExpressions.Add(addBuilder);
             return addBuilder;
         }
@@ -43,7 +43,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public ISubtractBuilder<TModel, TEvent, TProperty> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
         {
-            var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyInfo().Name);
+            var subtractBuilder = new SubtractBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyPath());
             _propertyExpressions.Add(subtractBuilder);
             return subtractBuilder;
         }
@@ -51,7 +51,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public ISetBuilder<TModel, TEvent, TProperty> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
         {
-            var setBuilder = new SetBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyInfo().Name);
+            var setBuilder = new SetBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyPath());
             _propertyExpressions.Add(setBuilder);
             return setBuilder;
         }
