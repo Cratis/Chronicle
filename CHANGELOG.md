@@ -1,3 +1,10 @@
+# [v5.8.10] - 2022-2-17 [PR: #185](https://github.com/aksio-insurtech/Cratis/pull/185)
+
+### Fixed
+
+- Child relationships are now using PropertyPath for nested objects in the Client definition, not just the name of the last property in the chain.
+
+
 # [v5.8.9] - 2022-2-17 [PR: #184](https://github.com/aksio-insurtech/Cratis/pull/184)
 
 ### Fixed
