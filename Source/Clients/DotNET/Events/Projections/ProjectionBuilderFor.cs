@@ -100,7 +100,7 @@ namespace Aksio.Cratis.Events.Projections
         {
             var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes, _schemaGenerator);
             builderCallback(builder);
-            _childrenDefinitions[targetProperty.GetPropertyInfo().Name.ToCamelCase()] = builder.Build();
+            _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
             return this;
         }
 
