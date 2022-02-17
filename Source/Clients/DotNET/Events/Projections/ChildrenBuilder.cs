@@ -53,7 +53,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy<TProperty>(Expression<Func<TChildModel, TProperty>> propertyExpression)
         {
-            _identifiedBy = propertyExpression.GetPropertyInfo().Name.ToCamelCase();
+            _identifiedBy = propertyExpression.GetPropertyPath();
             return this;
         }
 
@@ -69,7 +69,7 @@ namespace Aksio.Cratis.Events.Projections
         {
             var builder = new ChildrenBuilder<TChildModel, TNestedChildModel>(_eventTypes, _schemaGenerator);
             builderCallback(builder);
-            _childrenDefinitions[targetProperty.GetPropertyInfo().Name.ToCamelCase()] = builder.Build();
+            _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
             return this;
         }
 
