@@ -14,8 +14,28 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
         /// </summary>
+        /// <param name="projection"><see cref="IProjection"/> to start at.</param>
+        /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
+        /// <param name="childrenKey">Key that identifies the child from the event.</param>
         /// <returns>A new <see cref="KeyResolver"/>.</returns>
-        public static readonly KeyResolver FromEventSourceId = (IProjectionEventProvider _, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers));
+        public static KeyResolver FromEventSourceId(IProjection projection, PropertyPath identifiedByProperty, PropertyPath? childrenKey = default)
+        {
+            return (IProjectionEventProvider eventProvider, AppendedEvent @event) =>
+            {
+                if (childrenKey is null)
+                {
+                    return Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers))!;
+                }
+
+                var key = EventValueProviders.FromEventSourceId(@event);
+                var childKey = EventValueProviders.FromEventContent(childrenKey)(@event);
+                var arrayIndexers = new List<ArrayIndexer>
+                {
+                    new(projection.ChildrenPropertyPath, identifiedByProperty, childKey)
+                };
+                return Task.FromResult(new Key(key, new ArrayIndexers(arrayIndexers)))!;
+            };
+        }
 
         /// <summary>
         /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
