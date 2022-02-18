@@ -40,7 +40,7 @@ namespace Aksio.Cratis.Events.Projections
             PropertyPath identifiedByProperty,
             ProjectionPath path)
         {
-            var actualIdentifiedByProperty = ResolveIdentifiedByProperty(identifiedByProperty);
+            var actualIdentifiedByProperty = ResolveIdentifiedByProperty(identifiedByProperty)!;
 
             var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                     name,
@@ -67,11 +67,11 @@ namespace Aksio.Cratis.Events.Projections
             // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
             var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
                 kvp.Key,
-                string.IsNullOrEmpty(kvp.Value.ParentKey) ? KeyResolvers.FromEventSourceId : KeyResolvers.FromParentHierarchy(projection, kvp.Value.ParentKey!, identifiedByProperty))).ToList();
+                string.IsNullOrEmpty(kvp.Value.ParentKey) ? KeyResolvers.FromEventSourceId(projection, actualIdentifiedByProperty, kvp.Value.Key == null ? null : new PropertyPath(kvp.Value.Key)) : KeyResolvers.FromParentHierarchy(projection, kvp.Value.ParentKey!, actualIdentifiedByProperty))).ToList();
 
             if (projectionDefinition.RemovedWith != default)
             {
-                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
+                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId(projection, actualIdentifiedByProperty)));
             }
 
             foreach (var child in childProjections)
