@@ -4,7 +4,9 @@
 using System.Collections;
 using System.Dynamic;
 using Aksio.Cratis.Concepts;
+using Aksio.Cratis.Objects;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Dynamic
 {
@@ -31,7 +33,26 @@ namespace Aksio.Cratis.Dynamic
 
             foreach (var (key, value) in originalAsDictionary)
             {
-                cloneAsDictionary.Add(key, value is ExpandoObject child ? child.Clone() : value);
+                var valueType = value.GetType();
+                if (!valueType.IsPrimitive &&
+                    valueType != typeof(ExpandoObject) &&
+                    valueType != typeof(string) &&
+                    valueType != typeof(Guid) &&
+                    !valueType.IsConcept() &&
+                    value is IEnumerable enumerableValue)
+                {
+                    var elementType = valueType.GetEnumerableElementType();
+                    var list = (Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType)) as IList)!;
+                    foreach (var element in enumerableValue)
+                    {
+                        list.Add(element is ExpandoObject child ? child.Clone() : element.Clone());
+                    }
+                    cloneAsDictionary.Add(key, list);
+                }
+                else
+                {
+                    cloneAsDictionary.Add(key, value is ExpandoObject nested ? nested.Clone() : value.Clone());
+                }
             }
 
             return clone;

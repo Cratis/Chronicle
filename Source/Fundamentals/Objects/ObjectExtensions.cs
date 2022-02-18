@@ -3,8 +3,10 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
@@ -24,13 +26,27 @@ namespace Aksio.Cratis.Objects
         /// <returns>Cloned instance.</returns>
         public static T Clone<T>(this T source)
         {
+            if (source is null) return default!;
+
             if (source is ExpandoObject expandoObject)
             {
                 return (T)(object)ExpandoObjectExtensions.Clone(expandoObject);
             }
 
+            if (source is Guid)
+            {
+                return (T)Convert.ChangeType(new Guid(source!.ToString()!), typeof(T), CultureInfo.InvariantCulture);
+            }
+
+            var valueType = source.GetType();
+            if (valueType.IsPrimitive || valueType == typeof(string)) return source;
+            if (valueType.IsConcept())
+            {
+                return (T)ConceptFactory.CreateConceptInstance(valueType, source.GetConceptValue());
+            }
+
             var sourceAsString = JsonSerializer.Serialize(source);
-            return JsonSerializer.Deserialize<T>(sourceAsString)!;
+            return (T)JsonSerializer.Deserialize(sourceAsString, valueType)!;
         }
 
         /// <summary>
