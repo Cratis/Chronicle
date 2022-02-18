@@ -26,10 +26,10 @@ namespace Aksio.Cratis.Changes
 
             property_mappers = new PropertyMapper<ExpandoObject, ExpandoObject>[]
             {
-                (_, target) => ((dynamic)target).Integer = 42,
-                (_, target) => ((dynamic)target).String = "Forty Two",
-                (_, target) => ((dynamic)target).Nested.Integer = 43,
-                (_, target) => ((dynamic)target).Nested.String = "Forty Three",
+                (_, target, __) => ((dynamic)target).Integer = 42,
+                (_, target, __) => ((dynamic)target).String = "Forty Two",
+                (_, target, __) => ((dynamic)target).Nested.Integer = 43,
+                (_, target, __) => ((dynamic)target).Nested.String = "Forty Three",
             };
 
             source = new ExpandoObject();
@@ -39,7 +39,7 @@ namespace Aksio.Cratis.Changes
             changeset = new(objects_comparer.Object, source, initial_state);
         }
 
-        void Because() => changeset.SetProperties(property_mappers);
+        void Because() => changeset.SetProperties(property_mappers, ArrayIndexers.NoIndexers);
 
         [Fact] void should_not_have_any_changes() => changeset.Changes.Count().ShouldEqual(0);
     }
