@@ -12,5 +12,6 @@ namespace Aksio.Cratis.Properties
     /// <typeparam name="TTarget">Type of the target.</typeparam>
     /// <param name="source">Source object.</param>
     /// <param name="target"><see cref="ExpandoObject"/> target to write to.</param>
-    public delegate void PropertyMapper<TSource, TTarget>(TSource source, TTarget target);
+    /// <param name="arrayIndexers"><see cref="IArrayIndexers"/> for accessing nested objects with arrays.</param>
+    public delegate void PropertyMapper<TSource, TTarget>(TSource source, TTarget target, IArrayIndexers arrayIndexers);
 }

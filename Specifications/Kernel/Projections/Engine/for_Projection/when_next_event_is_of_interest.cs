@@ -59,8 +59,8 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
 
         void Because()
         {
-            projection.OnNext(new(new(first_event.Context.EventSourceId, ArrayIndexer.NoIndexers), first_event, first_changeset));
-            projection.OnNext(new(new(second_event.Context.EventSourceId, ArrayIndexer.NoIndexers), second_event, second_changeset));
+            projection.OnNext(new(new(first_event.Context.EventSourceId, ArrayIndexers.NoIndexers), first_event, first_changeset));
+            projection.OnNext(new(new(second_event.Context.EventSourceId, ArrayIndexers.NoIndexers), second_event, second_changeset));
         }
 
         [Fact] void should_only_observe_one_event() => observed_events.Count.ShouldEqual(1);

@@ -22,7 +22,12 @@ namespace Read.Applications
                     .IdentifiedBy(m => m.DeployableId)
                     .From<DeployableCreated>(_ => _
                         .UsingParentKey(e => e.MicroserviceId)
-                        .Set(m => m.Name).To(e => e.Name))))
+                        .Set(m => m.Name).To(e => e.Name))
+                    .Children(_ => _.Users, _ => _
+                        .IdentifiedBy(m => m.User)
+                        .From<MongoDBUserChanged>(_ => _
+                            .Set(m => m.User).To(e => e.User)
+                            .Set(m => m.Password).To(e => e.Password)))))
             .RemovedWith<ApplicationRemoved>();
     }
 }
