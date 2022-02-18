@@ -43,11 +43,11 @@ namespace Aksio.Cratis.Changes
         {
             foreach (var property in type.GetProperties())
             {
-                var propertyPath = currentPropertyPath + property.Name;
                 var leftValue = left != null ? property.GetValue(left) : null;
                 var rightValue = right != null ? property.GetValue(right) : null;
                 if (leftValue is null && rightValue is null) continue;
 
+                var propertyPath = currentPropertyPath + (type.IsEnumerable() ? $"[{property.Name}]" : property.Name);
                 CompareValues(property.PropertyType, leftValue, rightValue, propertyPath, differences);
             }
         }
@@ -57,9 +57,8 @@ namespace Aksio.Cratis.Changes
             var keys = left.Keys.ToList();
             keys.AddRange(right.Keys);
 
-            foreach (var key in keys)
+            foreach (var key in keys.Distinct())
             {
-                var propertyPath = currentPropertyPath + key;
                 var leftValue = left!.ContainsKey(key) ? left[key] : null;
                 var rightValue = right!.ContainsKey(key) ? right[key] : null;
 
@@ -69,6 +68,7 @@ namespace Aksio.Cratis.Changes
                     continue;
                 }
 
+                var propertyPath = currentPropertyPath + (type.IsEnumerable() ? $"[{key}]" : key);
                 CompareValues(type, leftValue, rightValue, propertyPath, differences);
             }
         }
@@ -110,11 +110,7 @@ namespace Aksio.Cratis.Changes
                     {
                         var elementDifferences = new List<PropertyDifference>();
                         CompareValues(leftElements[i].GetType(), leftElements[i], rightElements[i], propertyPath, elementDifferences);
-                        if (elementDifferences.Count > 0)
-                        {
-                            differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
-                            break;
-                        }
+                        differences.AddRange(elementDifferences);
                     }
                 }
             }
