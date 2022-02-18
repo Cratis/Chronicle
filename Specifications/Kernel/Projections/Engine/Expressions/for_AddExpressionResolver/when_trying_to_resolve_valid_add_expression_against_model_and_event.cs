@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.for_AddExpressionResolver
 {
@@ -25,7 +26,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.for_AddExpressionResolver
             resolver = new();
         }
 
-        void Because() => resolver.Resolve("targetProperty", "$add(sourceProperty)")(@event, target);
+        void Because() => resolver.Resolve("targetProperty", "$add(sourceProperty)")(@event, target, ArrayIndexers.NoIndexers);
 
         [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(42d);
     }
