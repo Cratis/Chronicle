@@ -96,44 +96,32 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
             var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
 
-            UpdateDefinition<BsonDocument> UpdateProperty(string path, object value)
-            {
-                if (updateBuilder != default)
-                {
-                    updateBuilder = updateBuilder.Set(path, value);
-                }
-                else
-                {
-                    updateBuilder = updateDefinitionBuilder!.Set(path, value);
-                }
-
-                return updateBuilder;
-            }
-
-            bool UpdateChangedProperties(IEnumerable<PropertyDifference> differences, string? prefix = default)
-            {
-                var allArrayFilters = new List<ArrayFilterDefinition>();
-
-                foreach (var propertyDifference in differences)
-                {
-                    var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
-                    allArrayFilters.AddRange(arrayFilters);
-
-                    UpdateProperty(property, propertyDifference.Changed!);
-                }
-
-                arrayFiltersForDocument.AddRange(allArrayFilters);
-
-                return differences.Any();
-            }
-
             foreach (var change in changeset.Changes)
             {
                 switch (change)
                 {
                     case PropertiesChanged<ExpandoObject> propertiesChanged:
                         {
-                            hasChanges = UpdateChangedProperties(propertiesChanged.Differences);
+                            var allArrayFilters = new List<ArrayFilterDefinition>();
+
+                            foreach (var propertyDifference in propertiesChanged.Differences)
+                            {
+                                var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+                                allArrayFilters.AddRange(arrayFilters);
+
+                                if (updateBuilder != default)
+                                {
+                                    updateBuilder = updateBuilder.Set(property, propertyDifference.Changed!);
+                                }
+                                else
+                                {
+                                    updateBuilder = updateDefinitionBuilder!.Set(property, propertyDifference.Changed!);
+                                }
+                            }
+
+                            arrayFiltersForDocument.AddRange(allArrayFilters);
+
+                            hasChanges = propertiesChanged.Differences.Any();
                         }
                         break;
 
