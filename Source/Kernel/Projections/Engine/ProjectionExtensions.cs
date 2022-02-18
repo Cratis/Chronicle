@@ -44,7 +44,7 @@ namespace Aksio.Cratis.Events.Projections
             {
                 observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers));
             }
-                else
+            else
             {
                 observable.Subscribe(_ =>
                 {

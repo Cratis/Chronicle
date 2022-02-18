@@ -94,6 +94,8 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 return;
             }
 
+            var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
+
             UpdateDefinition<BsonDocument> UpdateProperty(string path, object value)
             {
                 if (updateBuilder != default)
@@ -110,18 +112,20 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
             bool UpdateChangedProperties(IEnumerable<PropertyDifference> differences, string? prefix = default)
             {
+                var allArrayFilters = new List<ArrayFilterDefinition>();
+
                 foreach (var propertyDifference in differences)
                 {
-                    var propertyName = string.IsNullOrEmpty(prefix) ?
-                        propertyDifference.PropertyPath.Path :
-                        $"{prefix}.{propertyDifference.PropertyPath.Path}";
+                    var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+                    allArrayFilters.AddRange(arrayFilters);
 
-                    UpdateProperty(propertyName, propertyDifference.Changed!);
+                    UpdateProperty(property, propertyDifference.Changed!);
                 }
+
+                arrayFiltersForDocument.AddRange(allArrayFilters);
+
                 return differences.Any();
             }
-
-            var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
 
             foreach (var change in changeset.Changes)
             {
