@@ -45,7 +45,7 @@ namespace Aksio.Cratis.Properties.for_PropertyPath
             second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
         }
 
-        void Because() => result = property_path.GetValue(input, new[] { first_array_indexer, second_array_indexer });
+        void Because() => result = property_path.GetValue(input, new ArrayIndexers(new[] { first_array_indexer, second_array_indexer }));
 
         [Fact] void should_return_value() => result.ShouldEqual(42);
     }
