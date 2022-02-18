@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Objects.for_ObjectExtensions
             path = new($"{nameof(TopLevel.FirstLevel)}.{nameof(FirstLevel.SomeProperty)}");
         }
 
-        void Because() => result = instance.EnsurePath(path, ArrayIndexer.NoIndexers) as FirstLevel;
+        void Because() => result = instance.EnsurePath(path, ArrayIndexers.NoIndexers) as FirstLevel;
 
         [Fact] void should_return_the_instance() => result.ShouldNotBeNull();
     }

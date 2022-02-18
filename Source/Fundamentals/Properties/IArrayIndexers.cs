@@ -9,6 +9,12 @@ namespace Aksio.Cratis.Properties
     public interface IArrayIndexers
     {
         /// <summary>
+        /// Gets all <see cref="ArrayIndexer"/>.
+        /// </summary>
+        /// <returns>Collection of <see cref="ArrayIndexer"/>.</returns>
+        IEnumerable<ArrayIndexer> All { get; }
+
+        /// <summary>
         /// Get an <see cref="ArrayIndexer"/> for a <see cref="PropertyPath"/>.
         /// </summary>
         /// <param name="propertyPath"><see cref="PropertyPath"/> to get for.</param>

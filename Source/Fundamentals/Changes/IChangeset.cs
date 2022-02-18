@@ -42,24 +42,11 @@ namespace Aksio.Cratis.Changes
         /// Applies properties to the <see cref="Changeset{TSource, TTarget}"/>.
         /// </summary>
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
+        /// <param name="arrayIndexers"><see cref="IArrayIndexers"/> for accessing nested objects with arrays.</param>
         /// <remarks>
         /// This will run a diff against the initial state and only produce changes that are new.
         /// </remarks>
-        void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers);
-
-        /// <summary>
-        /// Applies properties for a child to the <see cref="Changeset{TSource, TTarget}"/>.
-        /// </summary>
-        /// <typeparam name="TChild">Type of child.</typeparam>
-        /// <param name="item">The item to add from.</param>
-        /// <param name="childrenProperty">The <see cref="PropertyPath"/> on the parent that holds the children.</param>
-        /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> on the instance that identifies the child.</param>
-        /// <param name="keyResolver">The <see cref="ValueProvider{T}"/> for resolving the key on the event.</param>
-        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
-        /// <remarks>
-        /// This will run a diff against the initial state and only produce changes that are new.
-        /// </remarks>
-        void SetChildProperties<TChild>(TChild item, PropertyPath childrenProperty, PropertyPath identifiedByProperty, ValueProvider<TSource> keyResolver, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers);
+        void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers);
 
         /// <summary>
         /// Applies properties to the child in the model to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -71,7 +58,7 @@ namespace Aksio.Cratis.Changes
         /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers, IEnumerable<ArrayIndexer> arrayIndexers)
+        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
             where TChild : new();
 
         /// <summary>

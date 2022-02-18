@@ -169,14 +169,15 @@ namespace Aksio.Cratis.Properties
             {
                 for (var i = 0; i < segments.Length - 1; i++)
                 {
-                    builder.Append(segments[0].Value);
+                    if (i > 0)
+                    {
+                        builder.Append('.');
+                    }
+                    builder.Append(segments[i].Value);
                 }
-                builder.Append(CultureInfo.InvariantCulture, $"[{segments[^1].Value}]");
+                builder.Append('.');
             }
-            else
-            {
-                builder.Append(segments[0]);
-            }
+            builder.Append(CultureInfo.InvariantCulture, $"[{segments[^1].Value}]");
 
             if (Path.Length == 0)
             {
@@ -191,7 +192,7 @@ namespace Aksio.Cratis.Properties
         /// <param name="target">Object to get from.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>Value, if any.</returns>
-        public bool HasValue(object target, IEnumerable<ArrayIndexer> arrayIndexers)
+        public bool HasValue(object target, IArrayIndexers arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
@@ -210,7 +211,7 @@ namespace Aksio.Cratis.Properties
         /// <param name="target">Object to get from.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>Value, if any.</returns>
-        public object? GetValue(object target, IEnumerable<ArrayIndexer> arrayIndexers)
+        public object? GetValue(object target, IArrayIndexers arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
@@ -229,7 +230,7 @@ namespace Aksio.Cratis.Properties
         /// <param name="target">Object to set to.</param>
         /// <param name="value">Value to set.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-        public void SetValue(object target, object value, IEnumerable<ArrayIndexer> arrayIndexers)
+        public void SetValue(object target, object value, IArrayIndexers arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {

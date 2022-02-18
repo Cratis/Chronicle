@@ -41,8 +41,7 @@ namespace Aksio.Cratis.Objects
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>Instance of the last segment in the path.</returns>
         /// <exception cref="UnableToResolvePropertyPathOnType">Thrown if not able to resolve parts of the property path on the type.</exception>
-        /// <exception cref="UndefinedArrayIndexer">Thrown if a required array indexer is undefined.</exception>
-        public static object EnsurePath(this object source, PropertyPath propertyPath, IEnumerable<ArrayIndexer> arrayIndexers)
+        public static object EnsurePath(this object source, PropertyPath propertyPath, IArrayIndexers arrayIndexers)
         {
             var currentType = source.GetType();
             var currentInstance = source;
@@ -75,12 +74,7 @@ namespace Aksio.Cratis.Objects
                 {
                     case ArrayProperty arrayProperty:
                         {
-                            var indexer = arrayIndexers.SingleOrDefault(_ => _.ArrayProperty.Equals(currentPath));
-                            if (indexer == default)
-                            {
-                                throw new UndefinedArrayIndexer(propertyPath, arrayProperty.Value);
-                            }
-
+                            var indexer = arrayIndexers.GetFor(currentPath);
                             var element = (currentInstance as IEnumerable)!
                                 .Cast<object>()
                                 .SingleOrDefault(_ =>

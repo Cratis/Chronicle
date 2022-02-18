@@ -8,7 +8,15 @@ namespace Aksio.Cratis.Properties
     /// </summary>
     public class ArrayIndexers : IArrayIndexers
     {
+        /// <summary>
+        /// Represents no indexers - used when you don't have any indexers.
+        /// </summary>
+        public static readonly IArrayIndexers NoIndexers = new ArrayIndexers(Array.Empty<ArrayIndexer>());
+
         readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers;
+
+        /// <inheritdoc/>
+        public IEnumerable<ArrayIndexer> All => _arrayIndexers.Values;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArrayIndexers"/> class.
