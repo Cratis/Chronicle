@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reflection;
 
 namespace Aksio.Cratis.Reflection
@@ -81,13 +82,13 @@ namespace Aksio.Cratis.Reflection
         }
 
         /// <summary>
-        /// Check if a type is enumerable. Note that string is an IEnumerable, but in this case the string is excluded.
+        /// Check if a type is enumerable. Note that string is an IEnumerable, but in this case the string is excluded, as well as ExpandoObject.
         /// </summary>
         /// <param name="type"><see cref="Type"/> to check.</param>
         /// <returns>True if type is enumerable, false if not an enumerable.</returns>
         public static bool IsEnumerable(this Type type)
         {
-            return !type.IsAPrimitiveType() && !type.IsString() && typeof(System.Collections.IEnumerable).IsAssignableFrom(type);
+            return !type.IsAPrimitiveType() && type != typeof(ExpandoObject) && !type.IsString() && typeof(System.Collections.IEnumerable).IsAssignableFrom(type);
         }
 
         /// <summary>

@@ -11,12 +11,19 @@ namespace Aksio.Cratis.Changes.for_ObjectsComparer
         dynamic left;
         dynamic right;
 
+        dynamic left_child;
+        dynamic right_child;
+
         bool result;
 
         IEnumerable<PropertyDifference> differences;
 
         void Establish()
         {
+            left_child = new ExpandoObject();
+            left_child.StringValue = "FortySeven";
+            left_child.IntValue = 47;
+
             left = new ExpandoObject();
             left.StringValue = "FortyTwo";
             left.IntValue = 42;
@@ -24,6 +31,11 @@ namespace Aksio.Cratis.Changes.for_ObjectsComparer
             left.Second.StringValue = "FortyThree";
             left.Second.IntValue = 43;
             left.Second.Third = new ThirdLevel("FortyFour", 44);
+            left.Collection = new[] { left_child };
+
+            right_child = new ExpandoObject();
+            right_child.StringValue = "FortyEight";
+            right_child.IntValue = 48;
 
             right = new ExpandoObject();
             right.StringValue = "FortyFour";
@@ -32,6 +44,7 @@ namespace Aksio.Cratis.Changes.for_ObjectsComparer
             right.Second.StringValue = "FortyFive";
             right.Second.IntValue = 45;
             right.Second.Third = new ThirdLevel("FortySix", 46);
+            right.Collection = new[] { right_child };
         }
 
         void Because() => result = comparer.Equals(left, right, out differences);
@@ -57,5 +70,12 @@ namespace Aksio.Cratis.Changes.for_ObjectsComparer
         [Fact] void should_hold_changed_value_for_first_property_on_third_level() => differences.ToArray()[4].Changed.ShouldEqual((string)right.Second.Third.StringValue);
         [Fact] void should_hold_original_value_for_second_property_on_third_level() => differences.ToArray()[5].Original.ShouldEqual((int)left.Second.Third.IntValue);
         [Fact] void should_hold_changed_value_for_second_property_on_third_level() => differences.ToArray()[5].Changed.ShouldEqual((int)right.Second.Third.IntValue);
+
+        [Fact] void should_have_seventh_difference_be_the_first_property_on_child() => differences.ToArray()[6].PropertyPath.Path.ShouldEqual("[collection].stringValue");
+        [Fact] void should_have_seventh_difference_be_the_second_property_on_child() => differences.ToArray()[7].PropertyPath.Path.ShouldEqual("[collection].intValue");
+        [Fact] void should_hold_original_value_for_first_property_on_child() => differences.ToArray()[6].Original.ShouldEqual((string)left_child.StringValue);
+        [Fact] void should_hold_changed_value_for_first_property_on_child() => differences.ToArray()[6].Changed.ShouldEqual((string)right_child.StringValue);
+        [Fact] void should_hold_original_value_for_second_property_on_child() => differences.ToArray()[7].Original.ShouldEqual((int)left_child.IntValue);
+        [Fact] void should_hold_changed_value_for_second_property_on_child() => differences.ToArray()[7].Changed.ShouldEqual((int)right_child.IntValue);
     }
 }

@@ -80,6 +80,10 @@ namespace Aksio.Cratis.Changes
             {
                 differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
             }
+            else if (type.IsAssignableTo(typeof(IDictionary<string, object>)))
+            {
+                CompareDictionaryValues((leftValue as IDictionary<string, object>)!, (rightValue as IDictionary<string, object>)!, propertyPath, differences);
+            }
             else if (!type.IsPrimitive &&
               type != typeof(Guid) &&
               type != typeof(string) &&
@@ -88,10 +92,6 @@ namespace Aksio.Cratis.Changes
               !type.IsComparable())
             {
                 ComparePropertiesFor(type, leftValue, rightValue, propertyPath, differences);
-            }
-            else if (type.IsAssignableTo(typeof(IDictionary<string, object>)))
-            {
-                CompareDictionaryValues((leftValue as IDictionary<string, object>)!, (rightValue as IDictionary<string, object>)!, propertyPath, differences);
             }
             else if (leftValue is not null && rightValue is not null && type.IsEnumerable())
             {
@@ -103,14 +103,31 @@ namespace Aksio.Cratis.Changes
                 }
                 else
                 {
+                    var leftElementType = leftValueAsEnumerable.GetType().GetElementType();
+                    var rightElementType = rightValueAsEnumerable.GetType().GetElementType();
                     var leftElements = leftValueAsEnumerable.ToObjectArray();
                     var rightElements = rightValueAsEnumerable.ToObjectArray();
 
-                    for (var i = 0; i < leftElements.Length; i++)
+                    if (leftElementType == rightElementType &&
+                        (leftElementType?.IsPrimitive == true || leftElementType == typeof(string)))
                     {
-                        var elementDifferences = new List<PropertyDifference>();
-                        CompareValues(leftElements[i].GetType(), leftElements[i], rightElements[i], propertyPath, elementDifferences);
-                        differences.AddRange(elementDifferences);
+                        for (var i = 0; i < leftElements.Length; i++)
+                        {
+                            if (!leftElements[i].Equals(rightElements[i]))
+                            {
+                                differences.Add(new(propertyPath, leftValue, rightValue));
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (var i = 0; i < leftElements.Length; i++)
+                        {
+                            var elementDifferences = new List<PropertyDifference>();
+                            CompareValues(leftElements[i].GetType(), leftElements[i], rightElements[i], propertyPath, elementDifferences);
+                            differences.AddRange(elementDifferences);
+                        }
                     }
                 }
             }
