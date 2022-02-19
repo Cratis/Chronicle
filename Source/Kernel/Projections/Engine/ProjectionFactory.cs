@@ -40,7 +40,7 @@ namespace Aksio.Cratis.Events.Projections
             PropertyPath identifiedByProperty,
             ProjectionPath path)
         {
-            var actualIdentifiedByProperty = ResolveIdentifiedByProperty(identifiedByProperty)!;
+            var actualIdentifiedByProperty = identifiedByProperty.IsRoot ? new PropertyPath("_id") : identifiedByProperty;
 
             var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                     name,
@@ -65,13 +65,12 @@ namespace Aksio.Cratis.Events.Projections
                 childProjections);
 
             // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-            var eventsForProjection = projectionDefinition.From.Select(kvp => new EventTypeWithKeyResolver(
-                kvp.Key,
-                string.IsNullOrEmpty(kvp.Value.ParentKey) ? KeyResolvers.FromEventSourceId(projection, actualIdentifiedByProperty, kvp.Value.Key == null ? null : new PropertyPath(kvp.Value.Key)) : KeyResolvers.FromParentHierarchy(projection, kvp.Value.ParentKey!, actualIdentifiedByProperty))).ToList();
+            var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value, actualIdentifiedByProperty)).ToList();
 
             if (projectionDefinition.RemovedWith != default)
             {
-                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId(projection, actualIdentifiedByProperty)));
+                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId()));
+                projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
             }
 
             foreach (var child in childProjections)
@@ -92,14 +91,26 @@ namespace Aksio.Cratis.Events.Projections
                         propertyMappers);
             }
 
-            if (projectionDefinition.RemovedWith != default)
-            {
-                projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
-            }
-
             return projection;
         }
 
-        PropertyPath ResolveIdentifiedByProperty(PropertyPath identifiedByProperty) => identifiedByProperty.IsRoot ? "_id" : identifiedByProperty;
+        EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, FromDefinition from, PropertyPath actualIdentifiedByProperty)
+        {
+            KeyResolver keyResolver;
+            if (!string.IsNullOrEmpty(from.ParentKey))
+            {
+                keyResolver = KeyResolvers.FromParentHierarchy(projection, from.ParentKey!, actualIdentifiedByProperty);
+            }
+            else if (!string.IsNullOrEmpty(from.Key))
+            {
+                keyResolver = KeyResolvers.FromEventContent(projection, from.Key, actualIdentifiedByProperty);
+            }
+            else
+            {
+                keyResolver = KeyResolvers.FromEventSourceId();
+            }
+
+            return new EventTypeWithKeyResolver(eventType, keyResolver);
+        }
     }
 }
