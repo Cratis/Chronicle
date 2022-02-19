@@ -45,7 +45,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
             second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
         }
 
-        void Because() => result = initial.EnsurePath(property_path, new[] { first_array_indexer, second_array_indexer });
+        void Because() => result = initial.EnsurePath(property_path, new ArrayIndexers(new[] { first_array_indexer, second_array_indexer }));
 
         [Fact] void should_return_existing_object() => ((int)((dynamic)result).fifth_level).ShouldEqual(42);
     }

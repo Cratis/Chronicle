@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
     {
         ExpandoObject result;
 
-        void Because() => result = new ExpandoObject().EnsurePath("first_level.second_level.third_level", ArrayIndexer.NoIndexers);
+        void Because() => result = new ExpandoObject().EnsurePath("first_level.second_level.third_level", ArrayIndexers.NoIndexers);
 
         [Fact] void should_return_object() => result.ShouldNotBeNull();
     }

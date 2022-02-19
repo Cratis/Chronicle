@@ -3,8 +3,10 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
@@ -24,13 +26,27 @@ namespace Aksio.Cratis.Objects
         /// <returns>Cloned instance.</returns>
         public static T Clone<T>(this T source)
         {
+            if (source is null) return default!;
+
             if (source is ExpandoObject expandoObject)
             {
                 return (T)(object)ExpandoObjectExtensions.Clone(expandoObject);
             }
 
+            if (source is Guid)
+            {
+                return (T)Convert.ChangeType(new Guid(source!.ToString()!), typeof(T), CultureInfo.InvariantCulture);
+            }
+
+            var valueType = source.GetType();
+            if (valueType.IsPrimitive || valueType == typeof(string)) return source;
+            if (valueType.IsConcept())
+            {
+                return (T)ConceptFactory.CreateConceptInstance(valueType, source.GetConceptValue());
+            }
+
             var sourceAsString = JsonSerializer.Serialize(source);
-            return JsonSerializer.Deserialize<T>(sourceAsString)!;
+            return (T)JsonSerializer.Deserialize(sourceAsString, valueType)!;
         }
 
         /// <summary>
@@ -41,8 +57,7 @@ namespace Aksio.Cratis.Objects
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>Instance of the last segment in the path.</returns>
         /// <exception cref="UnableToResolvePropertyPathOnType">Thrown if not able to resolve parts of the property path on the type.</exception>
-        /// <exception cref="UndefinedArrayIndexer">Thrown if a required array indexer is undefined.</exception>
-        public static object EnsurePath(this object source, PropertyPath propertyPath, IEnumerable<ArrayIndexer> arrayIndexers)
+        public static object EnsurePath(this object source, PropertyPath propertyPath, IArrayIndexers arrayIndexers)
         {
             var currentType = source.GetType();
             var currentInstance = source;
@@ -75,12 +90,7 @@ namespace Aksio.Cratis.Objects
                 {
                     case ArrayProperty arrayProperty:
                         {
-                            var indexer = arrayIndexers.SingleOrDefault(_ => _.ArrayProperty.Equals(currentPath));
-                            if (indexer == default)
-                            {
-                                throw new UndefinedArrayIndexer(propertyPath, arrayProperty.Value);
-                            }
-
+                            var indexer = arrayIndexers.GetFor(currentPath);
                             var element = (currentInstance as IEnumerable)!
                                 .Cast<object>()
                                 .SingleOrDefault(_ =>

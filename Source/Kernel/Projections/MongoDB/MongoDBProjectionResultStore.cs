@@ -94,33 +94,6 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 return;
             }
 
-            UpdateDefinition<BsonDocument> UpdateProperty(string path, object value)
-            {
-                if (updateBuilder != default)
-                {
-                    updateBuilder = updateBuilder.Set(path, value);
-                }
-                else
-                {
-                    updateBuilder = updateDefinitionBuilder!.Set(path, value);
-                }
-
-                return updateBuilder;
-            }
-
-            bool UpdateChangedProperties(IEnumerable<PropertyDifference> differences, string? prefix = default)
-            {
-                foreach (var propertyDifference in differences)
-                {
-                    var propertyName = string.IsNullOrEmpty(prefix) ?
-                        propertyDifference.PropertyPath.Path :
-                        $"{prefix}.{propertyDifference.PropertyPath.Path}";
-
-                    UpdateProperty(propertyName, propertyDifference.Changed!);
-                }
-                return differences.Any();
-            }
-
             var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
 
             foreach (var change in changeset.Changes)
@@ -129,27 +102,46 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 {
                     case PropertiesChanged<ExpandoObject> propertiesChanged:
                         {
-                            hasChanges = UpdateChangedProperties(propertiesChanged.Differences);
+                            var allArrayFilters = new List<ArrayFilterDefinition>();
+
+                            foreach (var propertyDifference in propertiesChanged.Differences)
+                            {
+                                var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+                                allArrayFilters.AddRange(arrayFilters);
+
+                                if (updateBuilder != default)
+                                {
+                                    updateBuilder = updateBuilder.Set(property, propertyDifference.Changed!);
+                                }
+                                else
+                                {
+                                    updateBuilder = updateDefinitionBuilder!.Set(property, propertyDifference.Changed!);
+                                }
+                            }
+
+                            arrayFiltersForDocument.AddRange(allArrayFilters);
+
+                            hasChanges = propertiesChanged.Differences.Any();
                         }
                         break;
 
                     case ChildAdded childAdded:
                         {
                             var document = childAdded.State.ToBsonDocument();
-                            var (property, arrayFilters) = ConvertToMongoDBProperty(childAdded.ChildrenProperty, key);
+
+                            var segments = childAdded.ChildrenProperty.Segments.ToArray();
+                            var childrenProperty = new PropertyPath(string.Empty);
+                            for (var i = 0; i < segments.Length - 1; i++)
+                            {
+                                childrenProperty += segments[i].ToString()!;
+                            }
+
+                            childrenProperty += segments[^1].Value;
+                            var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
+                            var (property, arrayFilters) = ConvertToMongoDBProperty(childrenProperty, arrayIndexers);
                             arrayFiltersForDocument.AddRange(arrayFilters);
                             updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
                             hasChanges = true;
-                        }
-                        break;
-
-                    case ChildPropertiesChanged<ExpandoObject> childPropertiesChanged:
-                        {
-                            var childValue = Builders<BsonDocument>.Filter.Eq(
-                                $"{childPropertiesChanged.IdentifiedByProperty}", childPropertiesChanged.Key.ToString());
-                            filter &= Builders<BsonDocument>.Filter.ElemMatch(childPropertiesChanged.ChildrenProperty.Path, childValue);
-
-                            hasChanges = UpdateChangedProperties(childPropertiesChanged.Differences, $"{childPropertiesChanged.ChildrenProperty}.$");
                         }
                         break;
                 }
@@ -193,7 +185,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
             GC.SuppressFinalize(this);
         }
 
-        (string Property, IEnumerable<ArrayFilterDefinition> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, Key key)
+        (string Property, IEnumerable<ArrayFilterDefinition> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
         {
             var arrayFilters = new List<ArrayFilterDefinition>();
             var propertyBuilder = new StringBuilder();
@@ -201,6 +193,11 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
 
             foreach (var segment in propertyPath.Segments)
             {
+                if (propertyBuilder.Length > 0)
+                {
+                    propertyBuilder.Append('.');
+                }
+
                 currentPropertyPath += segment;
                 switch (segment)
                 {
@@ -213,12 +210,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                     case ArrayProperty:
                         {
                             var collectionIdentifier = currentPropertyPath.LastSegment.Value.ToCamelCase();
-                            if (propertyBuilder.Length > 0)
-                            {
-                                propertyBuilder.Append('.');
-                            }
-
-                            var arrayIndexer = key.ArrayIndexers.FirstOrDefault(_ => _.ArrayProperty == currentPropertyPath);
+                            var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
                             if (arrayIndexer is not null)
                             {
                                 propertyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0}.$[{1}]", segment.Value, collectionIdentifier);

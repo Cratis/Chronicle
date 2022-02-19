@@ -29,7 +29,7 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
             changeset.SetupGet(_ => _.InitialState).Returns(initial_state);
             changeset.SetupGet(_ => _.Incoming).Returns(@event);
 
-            event_context = new(new(@event.Context.EventSourceId, ArrayIndexer.NoIndexers), @event, changeset.Object);
+            event_context = new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset.Object);
         }
     }
 }

@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
-using System.Text.Json;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
@@ -28,67 +27,37 @@ namespace Aksio.Cratis.Events.Projections
         }
 
         /// <summary>
-        /// Handle a child operation.
-        /// </summary>
-        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-        /// <param name="childrenProperty">The property in which children are stored on the object.</param>
-        /// <param name="identifiedByProperty">The property that identifies a child.</param>
-        /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
-        /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
-        /// <returns>The observable for continuation.</returns>
-        public static IObservable<ProjectionEventContext> Child(
-            this IObservable<ProjectionEventContext> observable,
-            PropertyPath childrenProperty,
-            PropertyPath identifiedByProperty,
-            ValueProvider<AppendedEvent> keyResolver,
-            IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
-        {
-            observable.Subscribe(_ =>
-            {
-                var key = keyResolver(_.Event);
-                var json = JsonSerializer.Serialize(_.Changeset.InitialState);
-                var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty, _.Key.ArrayIndexers);
-
-                if (!items.Contains(identifiedByProperty, key))
-                {
-                    _.Changeset.AddChild(childrenProperty, identifiedByProperty, key, propertyMappers, _.Key.ArrayIndexers);
-                }
-            });
-            return observable;
-        }
-
-        /// <summary>
         /// Project properties from event onto model or child model.
         /// </summary>
         /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
         /// <param name="childrenProperty">The property in which children are stored on the object.</param>
         /// <param name="identifiedByProperty">The property that identifies a child.</param>
-        /// <param name="keyResolver">The resolver for resolving the key from the event.</param>
         /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
         /// <returns>The observable for continuation.</returns>
         public static IObservable<ProjectionEventContext> Project(
             this IObservable<ProjectionEventContext> observable,
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
-            ValueProvider<AppendedEvent> keyResolver,
             IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
         {
             if (childrenProperty.IsRoot)
             {
-                observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers));
+                observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers));
             }
             else
             {
                 observable.Subscribe(_ =>
                 {
-                    var key = keyResolver(_.Event);
-                    if (!_.Changeset.HasChildBeenAddedWithKey(childrenProperty, key))
+                    if (_.Key.ArrayIndexers.HasFor(childrenProperty))
                     {
-                        var child = _.Changeset.GetChildByKey<ExpandoObject>(key);
-                        if (child != default)
+                        var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty, _.Key.ArrayIndexers);
+                        var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+                        if (!items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
                         {
-                            _.Changeset.SetChildProperties(child, childrenProperty, identifiedByProperty, keyResolver, propertyMappers);
+                            _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
+                            return;
                         }
+                        _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers);
                     }
                 });
             }

@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
 
         void Establish() => initial = new { first_level = new { second_level = new { third_level = new { property = 42 } } } }.AsExpandoObject();
 
-        void Because() => result = initial.EnsurePath("first_level.second_level.third_level.property", ArrayIndexer.NoIndexers);
+        void Because() => result = initial.EnsurePath("first_level.second_level.third_level.property", ArrayIndexers.NoIndexers);
 
         [Fact] void should_return_existing_object() => ((int)((dynamic)result).property).ShouldEqual(42);
     }

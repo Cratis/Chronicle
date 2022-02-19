@@ -10,5 +10,5 @@ namespace Aksio.Cratis.Events.Projections
     /// </summary>
     /// <param name="Value">The actual key value.</param>
     /// <param name="ArrayIndexers">Any array indexers.</param>
-    public record Key(object Value, IEnumerable<ArrayIndexer> ArrayIndexers);
+    public record Key(object Value, IArrayIndexers ArrayIndexers);
 }
