@@ -69,7 +69,7 @@ namespace Aksio.Cratis.Events.Projections
 
             if (projectionDefinition.RemovedWith != default)
             {
-                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId()));
+                eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
                 projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
             }
 
@@ -107,7 +107,7 @@ namespace Aksio.Cratis.Events.Projections
             }
             else
             {
-                keyResolver = KeyResolvers.FromEventSourceId();
+                keyResolver = KeyResolvers.FromEventSourceId;
             }
 
             return new EventTypeWithKeyResolver(eventType, keyResolver);

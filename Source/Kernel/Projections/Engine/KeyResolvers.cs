@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections
         /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
         /// </summary>
         /// <returns>A new <see cref="KeyResolver"/>.</returns>
-        public static KeyResolver FromEventSourceId() => (IProjectionEventProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers))!;
+        public static readonly KeyResolver FromEventSourceId = (IProjectionEventProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers))!;
 
         /// <summary>
         /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
