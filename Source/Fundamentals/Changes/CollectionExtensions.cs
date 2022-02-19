@@ -20,7 +20,7 @@ namespace Aksio.Cratis.Changes
         /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
         /// <param name="key">The key value to check for.</param>
         /// <returns>The item or default if not found.</returns>
-        public static TTarget? FindByKey<TTarget>(this IEnumerable<TTarget> items, PropertyPath identityProperty, object key) => items.FirstOrDefault(_ => identityProperty.GetValue(_!, ArrayIndexer.NoIndexers)?.Equals(key) ?? false);
+        public static TTarget? FindByKey<TTarget>(this IEnumerable<TTarget> items, PropertyPath identityProperty, object key) => items.FirstOrDefault(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)?.Equals(key) ?? false);
 
         /// <summary>
         /// Ensures that a collection exists for a specific <see cref="PropertyPath"/>.
@@ -32,7 +32,7 @@ namespace Aksio.Cratis.Changes
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
         /// <exception cref="ChildrenPropertyIsNotEnumerableForType">Thrown if there is an existing property and it is not enumerable.</exception>
-        public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, IEnumerable<ArrayIndexer> arrayIndexers)
+        public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, IArrayIndexers arrayIndexers)
         {
             if (target is ExpandoObject targetAsExpandoObject)
             {
@@ -45,10 +45,10 @@ namespace Aksio.Cratis.Changes
                 throw new ChildrenPropertyIsNotEnumerableForType(typeof(TTarget), childrenProperty);
             }
 
-            if (childrenProperty.GetValue(target!, ArrayIndexer.NoIndexers) is not ICollection<TChild> items)
+            if (childrenProperty.GetValue(target!, ArrayIndexers.NoIndexers) is not ICollection<TChild> items)
             {
                 items = new List<TChild>();
-                childrenProperty.SetValue(target!, items, ArrayIndexer.NoIndexers);
+                childrenProperty.SetValue(target!, items, ArrayIndexers.NoIndexers);
             }
 
             return items;
@@ -65,7 +65,7 @@ namespace Aksio.Cratis.Changes
         public static bool Contains<TChild>(this IEnumerable<TChild> items, PropertyPath identityProperty, object key)
         {
             if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);
-            return items.Any(_ => identityProperty.GetValue(identityProperty, ArrayIndexer.NoIndexers)!.Equals(key));
+            return items.Any(_ => identityProperty.GetValue(identityProperty, ArrayIndexers.NoIndexers)!.Equals(key));
         }
     }
 }

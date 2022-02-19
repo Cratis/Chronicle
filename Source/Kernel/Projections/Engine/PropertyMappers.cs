@@ -22,9 +22,9 @@ namespace Aksio.Cratis.Events.Projections
         /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
         public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
         {
-            return (AppendedEvent @event, ExpandoObject target) =>
+            return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
             {
-                var actualTarget = target.EnsurePath(targetProperty, ArrayIndexer.NoIndexers) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
                 actualTarget[targetProperty.LastSegment.Value] = eventValueProvider(@event);
             };
         }
@@ -37,10 +37,10 @@ namespace Aksio.Cratis.Events.Projections
         /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
         public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
         {
-            return (AppendedEvent @event, ExpandoObject target) =>
+            return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
             {
                 var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.EnsurePath(targetProperty, ArrayIndexer.NoIndexers) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment.Value))
                 {
                     actualTarget[lastSegment.Value] = 0D;
@@ -59,10 +59,10 @@ namespace Aksio.Cratis.Events.Projections
         /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
         public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
         {
-            return (AppendedEvent @event, ExpandoObject target) =>
+            return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
             {
                 var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.EnsurePath(targetProperty, ArrayIndexer.NoIndexers) as IDictionary<string, object>;
+                var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
                 if (!actualTarget.ContainsKey(lastSegment.Value))
                 {
                     actualTarget[lastSegment.Value] = 0D;

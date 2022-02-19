@@ -26,10 +26,10 @@ namespace Aksio.Cratis.Changes
 
             property_mappers = new PropertyMapper<ExpandoObject, ExpandoObject>[]
             {
-                (_, target) => ((dynamic)target).Integer = 44,
-                (_, target) => ((dynamic)target).String = "Forty Four",
-                (_, target) => ((dynamic)target).Nested.Integer = 45,
-                (_, target) => ((dynamic)target).Nested.String = "Forty Five",
+                (_, target, __) => ((dynamic)target).Integer = 44,
+                (_, target, __) => ((dynamic)target).String = "Forty Four",
+                (_, target, __) => ((dynamic)target).Nested.Integer = 45,
+                (_, target, __) => ((dynamic)target).Nested.String = "Forty Five",
             };
 
             source = new ExpandoObject();
@@ -52,7 +52,7 @@ namespace Aksio.Cratis.Changes
             changeset = new(objects_comparer.Object, source, initial_state);
         }
 
-        void Because() => changeset.SetProperties(property_mappers);
+        void Because() => changeset.SetProperties(property_mappers, ArrayIndexers.NoIndexers);
 
         [Fact] void should_add_one_change_of_correct_type() => changeset.Changes.First().ShouldBeOfExactType<PropertiesChanged<ExpandoObject>>();
         [Fact] void should_add_a_property_diff_for_top_level_integer() => ((PropertiesChanged<ExpandoObject>)changeset.Changes.First()).Differences.ToArray()[0].PropertyPath.Path.ShouldEqual("integer");

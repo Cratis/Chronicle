@@ -48,13 +48,10 @@ namespace Aksio.Cratis.Changes
         }
 
         /// <inheritdoc/>
-        public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers)
+        public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
         {
             var workingState = InitialState.Clone()!;
-            foreach (var propertyMapper in propertyMappers)
-            {
-                propertyMapper(Incoming, workingState);
-            }
+            SetProperties(workingState, propertyMappers, arrayIndexers);
 
             if (!_comparer.Equals(InitialState, workingState, out var differences))
             {
@@ -63,37 +60,12 @@ namespace Aksio.Cratis.Changes
         }
 
         /// <inheritdoc/>
-        public void SetChildProperties<TChild>(
-            TChild item,
-            PropertyPath childrenProperty,
-            PropertyPath identifiedByProperty,
-            ValueProvider<TSource> keyResolver,
-            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers)
-        {
-            var workingItem = item.Clone()!;
-            foreach (var propertyMapper in propertyMappers)
-            {
-                propertyMapper(Incoming, workingItem);
-            }
-
-            if (!_comparer.Equals(item, workingItem, out var differences))
-            {
-                Add(new ChildPropertiesChanged<TChild>(
-                    workingItem,
-                    childrenProperty,
-                    identifiedByProperty,
-                    keyResolver(Incoming),
-                    differences));
-            }
-        }
-
-        /// <inheritdoc/>
         public void AddChild<TChild>(
             PropertyPath childrenProperty,
             PropertyPath identifiedByProperty,
             object key,
-            IEnumerable<PropertyMapper<TSource, TChild>> propertyMappers,
-            IEnumerable<ArrayIndexer> arrayIndexers)
+            IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers,
+            IArrayIndexers arrayIndexers)
             where TChild : new()
         {
             var workingState = InitialState.Clone()!;
@@ -102,15 +74,9 @@ namespace Aksio.Cratis.Changes
             if (!items.Contains(identifiedByProperty, key))
             {
                 var item = new TChild();
-
-                foreach (var propertyMapper in propertyMappers)
-                {
-                    propertyMapper(Incoming, item);
-                }
-
-                identifiedByProperty.SetValue(item, key, ArrayIndexer.NoIndexers);
+                identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
                 ((IList<TChild>)items).Add(item);
-
+                SetProperties(workingState, propertyMappers, arrayIndexers);
                 Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
             }
         }
@@ -149,6 +115,14 @@ namespace Aksio.Cratis.Changes
             }
 
             return default!;
+        }
+
+        void SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
+        {
+            foreach (var propertyMapper in propertyMappers)
+            {
+                propertyMapper(Incoming, state, arrayIndexers);
+            }
         }
     }
 }

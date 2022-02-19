@@ -44,7 +44,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projection
             projection.Event.Subscribe(_ => observed = true);
         }
 
-        void Because() => projection.OnNext(new(new(@event.Context.EventSourceId, ArrayIndexer.NoIndexers), @event, changeset));
+        void Because() => projection.OnNext(new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset));
 
         [Fact] void should_not_be_observed() => observed.ShouldBeFalse();
     }

@@ -4,7 +4,9 @@
 using System.Collections;
 using System.Dynamic;
 using Aksio.Cratis.Concepts;
+using Aksio.Cratis.Objects;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Dynamic
 {
@@ -31,7 +33,26 @@ namespace Aksio.Cratis.Dynamic
 
             foreach (var (key, value) in originalAsDictionary)
             {
-                cloneAsDictionary.Add(key, value is ExpandoObject child ? child.Clone() : value);
+                var valueType = value.GetType();
+                if (!valueType.IsPrimitive &&
+                    valueType != typeof(ExpandoObject) &&
+                    valueType != typeof(string) &&
+                    valueType != typeof(Guid) &&
+                    !valueType.IsConcept() &&
+                    value is IEnumerable enumerableValue)
+                {
+                    var elementType = valueType.GetEnumerableElementType();
+                    var list = (Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType)) as IList)!;
+                    foreach (var element in enumerableValue)
+                    {
+                        list.Add(element is ExpandoObject child ? child.Clone() : element.Clone());
+                    }
+                    cloneAsDictionary.Add(key, list);
+                }
+                else
+                {
+                    cloneAsDictionary.Add(key, value is ExpandoObject nested ? nested.Clone() : value.Clone());
+                }
             }
 
             return clone;
@@ -98,9 +119,8 @@ namespace Aksio.Cratis.Dynamic
         /// <param name="property"><see cref="PropertyPath"/> to get or create for.</param>
         /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns><see cref="ExpandoObject"/> at property.</returns>
-        /// <exception cref="UndefinedArrayIndexer">Thrown if a required array indexer is undefined.</exception>
         /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be expando object.</exception>
-        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, IEnumerable<ArrayIndexer> arrayIndexers)
+        public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, IArrayIndexers arrayIndexers)
         {
             var currentTarget = target as IDictionary<string, object>;
             var segments = property.Segments.ToArray();
@@ -129,11 +149,7 @@ namespace Aksio.Cratis.Dynamic
 
                     case ArrayProperty arrayProperty:
                         {
-                            var indexer = arrayIndexers.SingleOrDefault(_ => _.ArrayProperty.Equals(currentPath));
-                            if (indexer == default)
-                            {
-                                throw new UndefinedArrayIndexer(property, arrayProperty.Value);
-                            }
+                            var indexer = arrayIndexers.GetFor(currentPath);
                             IEnumerable<ExpandoObject> collection;
                             if (!currentTarget.ContainsKey(arrayProperty.Value))
                             {
@@ -151,7 +167,7 @@ namespace Aksio.Cratis.Dynamic
 
                             var element = collection
                                 .Cast<IDictionary<string, object>>()
-                                .SingleOrDefault(_ => _.ContainsKey(indexer.IdentifierProperty.Path) && _[indexer.IdentifierProperty.Path] == indexer.Identifier);
+                                .SingleOrDefault(item => item.ContainsKey(indexer.IdentifierProperty.Path) && item[indexer.IdentifierProperty.Path].Equals(indexer.Identifier));
 
                             if (element == default)
                             {
@@ -177,7 +193,7 @@ namespace Aksio.Cratis.Dynamic
         /// <param name="arrayIndexers">Any <see cref="ArrayIndexer">array indexers</see>.</param>
         /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
         /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
-        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, IEnumerable<ArrayIndexer> arrayIndexers)
+        public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, IArrayIndexers arrayIndexers)
         {
             var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
             if (!inner.ContainsKey(childrenProperty.LastSegment.Value))
@@ -208,6 +224,19 @@ namespace Aksio.Cratis.Dynamic
         /// <returns>True if there is an item, false if not.</returns>
         public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
             items!.Any((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
+
+        /// <summary>
+        /// Get an item with a specific key in a collection of <see cref="ExpandoObject"/> items.
+        /// </summary>
+        /// <param name="items">Items to check.</param>
+        /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
+        /// <param name="key">The key value to check for.</param>
+        /// <returns>The item or null if not found.</returns>
+        public static ExpandoObject? GetItem(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key)
+        {
+            var item = items!.SingleOrDefault((IDictionary<string, object> _) => _.ContainsKey(identityProperty.Path) && _[identityProperty.Path].Equals(key));
+            return item is not null ? item as ExpandoObject : null;
+        }
 
         static object GetActualValueFrom(object value)
         {

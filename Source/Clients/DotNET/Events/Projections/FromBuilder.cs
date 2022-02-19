@@ -21,14 +21,14 @@ namespace Aksio.Cratis.Events.Projections
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
         {
-            _key = keyAccessor.GetPropertyInfo().Name;
+            _key = keyAccessor.GetPropertyPath();
             return this;
         }
 
         /// <inheritdoc/>
         public IFromBuilder<TModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
         {
-            _parentKey = keyAccessor.GetPropertyInfo().Name;
+            _parentKey = keyAccessor.GetPropertyPath();
             return this;
         }
 

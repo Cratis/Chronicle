@@ -32,7 +32,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
             };
         }
 
-        void Because() => result = root.EnsureCollection<ExpandoObject>(property, new[] { new ArrayIndexer($"[{first_collection_property}]", parentIdentifierProperty, parent_key) });
+        void Because() => result = root.EnsureCollection<ExpandoObject>(property, new ArrayIndexers(new[] { new ArrayIndexer($"[{first_collection_property}]", parentIdentifierProperty, parent_key) }));
 
         [Fact] void should_add_collection_to_parent() => ((IDictionary<string, object>)parentAsChild)[inner_collection_property].ShouldEqual(result);
         [Fact] void should_create_a_collection() => result.ShouldNotBeNull();

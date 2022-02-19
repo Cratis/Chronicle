@@ -31,7 +31,7 @@ namespace Aksio.Cratis.Events.Projections.for_PropertyMappers
             });
         }
 
-        void Because() => property_mapper(@event, result);
+        void Because() => property_mapper(@event, result, ArrayIndexers.NoIndexers);
 
         [Fact] void should_result_in_expected_value() => ((object)((dynamic)result).deep.nested.property).ShouldEqual(40d);
         [Fact] void should_pass_the_event_to_the_value_provider() => provided_event.ShouldEqual(@event);

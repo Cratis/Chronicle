@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Dynamic.for_ExpandoObjectExtensions
 
         void Establish() => root = new();
 
-        void Because() => result = root.EnsureCollection<ExpandoObject>(property, ArrayIndexer.NoIndexers);
+        void Because() => result = root.EnsureCollection<ExpandoObject>(property, ArrayIndexers.NoIndexers);
 
         [Fact] void should_add_collection_to_root() => ((IDictionary<string, object>)root)[property].ShouldEqual(result);
         [Fact] void should_create_a_collection() => result.ShouldNotBeNull();
