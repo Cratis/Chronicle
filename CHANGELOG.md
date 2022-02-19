@@ -1,3 +1,13 @@
+# [v5.8.11] - 2022-2-19 [PR: #186](https://github.com/aksio-insurtech/Cratis/pull/186)
+
+### Fixed
+
+- Fixes so that children supports being updated at any level.
+- Internal code clean up and refactoring, making it more maintainable.
+- Consistently working with the `PropertyPath` and `ArrayIndexer` internally.
+- Fixing `ExpandoObject` cloning to clone enumerables and every element in it.
+
+
 # [v5.8.10] - 2022-2-17 [PR: #185](https://github.com/aksio-insurtech/Cratis/pull/185)
 
 ### Fixed
