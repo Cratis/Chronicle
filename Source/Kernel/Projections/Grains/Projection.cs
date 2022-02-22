@@ -59,7 +59,7 @@ namespace Aksio.Cratis.Events.Projections.Grains
             {
                 return new JsonObject();
             }
-            var cursor = await _eventLogStorageProvider.GetFromSequenceNumber(EventLogSequenceNumber.First, eventSourceId, _projection.EventTypes);
+            var cursor = await _eventLogStorageProvider.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
             var state = new ExpandoObject();
             while (await cursor.MoveNext())
             {

@@ -10,11 +10,11 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
     /// <param name="State"><see cref="ProjectionState"/>.</param>
     /// <param name="Positions">Positions for all configurations.</param>
     /// <param name="Jobs">All Jobs on the pipeline.</param>
-    public record ProjectionPipelineStatus(IProjection? Projection, ProjectionState State, IDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber> Positions, IEnumerable<IProjectionPipelineJob> Jobs)
+    public record ProjectionPipelineStatus(IProjection? Projection, ProjectionState State, IDictionary<ProjectionSinkConfigurationId, EventSequenceNumber> Positions, IEnumerable<IProjectionPipelineJob> Jobs)
     {
         /// <summary>
         /// The initial status of a pipeline.
         /// </summary>
-        public static readonly ProjectionPipelineStatus Initial = new(default, ProjectionState.Unknown, new Dictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>(), Array.Empty<IProjectionPipelineJob>());
+        public static readonly ProjectionPipelineStatus Initial = new(default, ProjectionState.Unknown, new Dictionary<ProjectionSinkConfigurationId, EventSequenceNumber>(), Array.Empty<IProjectionPipelineJob>());
     }
 }

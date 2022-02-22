@@ -14,10 +14,10 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Events.Store.Grains
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IEventLog"/>.
+    /// Represents an implementation of <see cref="IEventSequence"/>.
     /// </summary>
-    [StorageProvider(ProviderName = EventLogState.StorageProvider)]
-    public class EventLog : Grain<EventLogState>, IEventLog
+    [StorageProvider(ProviderName = EventSequenceState.StorageProvider)]
+    public class EventSequence : Grain<EventSequenceState>, IEventSequence
     {
         /// <summary>
         /// The name of the stream provider.
@@ -25,21 +25,21 @@ namespace Aksio.Cratis.Events.Store.Grains
         public const string StreamProvider = "event-log";
         readonly ISchemaStore _schemaStore;
         readonly IJsonComplianceManager _jsonComplianceManager;
-        readonly ILogger<EventLog> _logger;
-        EventLogId _eventLogId = EventLogId.Unspecified;
+        readonly ILogger<EventSequence> _logger;
+        EventSequenceId _eventLogId = EventSequenceId.Unspecified;
         TenantId _tenantId = TenantId.NotSet;
         IAsyncStream<AppendedEvent>? _stream;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="EventLog"/>.
+        /// Initializes a new instance of <see cref="EventSequence"/>.
         /// </summary>
         /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
         /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
         /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-        public EventLog(
+        public EventSequence(
             ISchemaStore schemaStore,
             IJsonComplianceManager jsonComplianceManager,
-            ILogger<EventLog> logger)
+            ILogger<EventSequence> logger)
         {
             _schemaStore = schemaStore;
             _jsonComplianceManager = jsonComplianceManager;
@@ -105,7 +105,7 @@ namespace Aksio.Cratis.Events.Store.Grains
         }
 
         /// <inheritdoc/>
-        public Task Compensate(EventLogSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default)
+        public Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default)
         {
             _logger.Compensating(eventType, sequenceNumber, _eventLogId);
 

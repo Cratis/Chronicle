@@ -17,19 +17,19 @@ namespace Aksio.Cratis.Events.Store.Observation
         /// <param name="eventLogId">The event log it is for.</param>
         /// <param name="eventSourceId">Event source component.</param>
         /// <returns>Key.</returns>
-        public static string Create(TenantId tenantId, EventLogId eventLogId, EventSourceId eventSourceId) => $"{tenantId}+{eventLogId}+{eventSourceId}";
+        public static string Create(TenantId tenantId, EventSequenceId eventLogId, EventSourceId eventSourceId) => $"{tenantId}+{eventLogId}+{eventSourceId}";
 
         /// <summary>
         /// Parse a key into its components.
         /// </summary>
         /// <param name="key">Key to parse.</param>
         /// <returns>Tuple with tenant, event log and event source.</returns>
-        public static (TenantId TenantId, EventLogId EventLogId, EventSourceId EventSourceId) Parse(string key)
+        public static (TenantId TenantId, EventSequenceId EventLogId, EventSourceId EventSourceId) Parse(string key)
         {
             var elements = key.Split('+');
 
             var tenantId = (TenantId)elements[0];
-            var eventLogId = (EventLogId)elements[1];
+            var eventLogId = (EventSequenceId)elements[1];
             var eventSourceId = (EventSourceId)elements[2];
             return (tenantId, eventLogId, eventSourceId);
         }

@@ -6,7 +6,7 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Events.Store.EventLogs
 {
     /// <summary>
-    /// Represents a <see cref="EventLogSequenceNumber"/> for observers with filter on it.
+    /// Represents a <see cref="EventSequenceNumber"/> for observers with filter on it.
     /// </summary>
     public class EventLogSequenceNumberTokenWithFilter : EventLogSequenceNumberToken
     {
@@ -23,10 +23,10 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogSequenceNumberTokenWithFilter"/> class.
         /// </summary>
-        /// <param name="sequenceNumber"><see cref="EventLogSequenceNumber"/>.</param>
+        /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/>.</param>
         /// <param name="eventTypes"><see cref="EventType">event types</see> the observer is interested in.</param>
         /// <param name="partition">Optional <see cref="EventSourceId"/> partition.</param>
-        public EventLogSequenceNumberTokenWithFilter(EventLogSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSourceId? partition = default) : base(sequenceNumber)
+        public EventLogSequenceNumberTokenWithFilter(EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSourceId? partition = default) : base(sequenceNumber)
         {
             EventTypes = eventTypes;
             Partition = partition ?? EventSourceId.Unspecified;

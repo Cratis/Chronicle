@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Events.Store
         /// <summary>
         /// Gets the sequence number within the event log.
         /// </summary>
-        public EventLogSequenceNumber SequenceNumber { get; }
+        public EventSequenceNumber SequenceNumber { get; }
 
         /// <summary>
         /// Gets the event source identifier.
@@ -38,7 +38,7 @@ namespace Aksio.Cratis.Events.Store
         /// <param name="sequenceNumber">The sequence number that is failing.</param>
         /// <param name="eventSourceId">EventSource it is failing for.</param>
         /// <param name="innerException">The inner exception.</param>
-        public UnableToAppendToEventLog(Guid streamId, TenantId tenantId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, Exception innerException)
+        public UnableToAppendToEventLog(Guid streamId, TenantId tenantId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Exception innerException)
             : base($"Unable to append event at sequence {sequenceNumber} for event source {eventSourceId} on tenant {tenantId} from stream {streamId}", innerException)
         {
             StreamId = streamId;

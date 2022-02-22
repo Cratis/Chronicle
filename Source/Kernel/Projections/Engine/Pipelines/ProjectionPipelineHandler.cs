@@ -22,14 +22,14 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         readonly IProjectionPositions _projectionPositions;
         readonly IObjectsComparer _objectsComparer;
         readonly IChangesetStorage _changesetStorage;
-        readonly ConcurrentDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber> _positions = new();
-        readonly ReplaySubject<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>> _observablePositions = new(1);
+        readonly ConcurrentDictionary<ProjectionSinkConfigurationId, EventSequenceNumber> _positions = new();
+        readonly ReplaySubject<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>> _observablePositions = new(1);
 
         /// <inheritdoc/>
-        public IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>> Positions => _observablePositions;
+        public IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>> Positions => _observablePositions;
 
         /// <inheritdoc/>
-        public IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber> CurrentPositions => new ReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>(_positions);
+        public IReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber> CurrentPositions => new ReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>(_positions);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionPipelineHandler"/> class.
@@ -58,7 +58,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         }
 
         /// <inheritdoc/>
-        public async Task<EventLogSequenceNumber> Handle(AppendedEvent @event, IProjectionPipeline pipeline, IProjectionSink sink, ProjectionSinkConfigurationId configurationId)
+        public async Task<EventSequenceNumber> Handle(AppendedEvent @event, IProjectionPipeline pipeline, IProjectionSink sink, ProjectionSinkConfigurationId configurationId)
         {
             _logger.HandlingEvent(@event.Metadata.SequenceNumber);
             try
@@ -111,10 +111,10 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             }
         }
 
-        void UpdatePositionFor(ProjectionSinkConfigurationId configurationId, EventLogSequenceNumber offset)
+        void UpdatePositionFor(ProjectionSinkConfigurationId configurationId, EventSequenceNumber offset)
         {
             _positions[configurationId] = offset;
-            _observablePositions.OnNext(new ReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>(_positions));
+            _observablePositions.OnNext(new ReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>(_positions));
         }
     }
 }

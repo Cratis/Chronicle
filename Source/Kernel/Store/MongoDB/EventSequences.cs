@@ -12,22 +12,22 @@ using ExecutionContext = Aksio.Cratis.Execution.ExecutionContext;
 namespace Aksio.Cratis.Events.Store.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IEventLogs"/> for MongoDB.
+    /// Represents an implementation of <see cref="IEventSequences"/> for MongoDB.
     /// </summary>
     [SingletonPerTenant]
-    public class EventLogs : IEventLogs
+    public class EventSequences : IEventSequences
     {
-        readonly ILogger<EventLogs> _logger;
+        readonly ILogger<EventSequences> _logger;
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="EventLogs"/>.
+        /// Initializes a new instance of <see cref="EventSequences"/>.
         /// </summary>
         /// <param name="eventStoreDatabase"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
         /// <param name="logger"><see cref="ILogger"/> for logging.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
-        public EventLogs(IEventStoreDatabase eventStoreDatabase, ILogger<EventLogs> logger, IExecutionContextManager executionContextManager)
+        public EventSequences(IEventStoreDatabase eventStoreDatabase, ILogger<EventSequences> logger, IExecutionContextManager executionContextManager)
         {
             _eventStoreDatabase = eventStoreDatabase;
             _logger = logger;
@@ -35,7 +35,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task Append(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, JsonObject content)
+        public async Task Append(EventSequenceId eventLogId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, JsonObject content)
         {
             try
             {
@@ -63,14 +63,14 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         }
 
         /// <inheritdoc/>
-        public Task Compensate(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
+        public Task Compensate(EventSequenceId eventLogId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
 
         /// <inheritdoc/>
-        public Task<IEventStoreFindResult> FindFor(EventLogId eventLogId, EventSourceId eventSourceId)
+        public Task<IEventStoreFindResult> FindFor(EventSequenceId eventLogId, EventSourceId eventSourceId)
         {
             return Task.FromResult<IEventStoreFindResult>(null!);
         }
 
-        IMongoCollection<Event> GetCollectionFor(EventLogId eventLogId) => _eventStoreDatabase.GetEventLogCollectionFor(eventLogId);
+        IMongoCollection<Event> GetCollectionFor(EventSequenceId eventLogId) => _eventStoreDatabase.GetEventLogCollectionFor(eventLogId);
     }
 }

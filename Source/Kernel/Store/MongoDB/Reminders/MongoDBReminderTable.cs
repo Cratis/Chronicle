@@ -30,7 +30,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB.Reminders
         readonly ILogger<MongoDBReminderTable> _logger;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="EventLogPubSubStore"/> class.
+        /// Initializes a new instance of the <see cref="MongoDBReminderTable"/> class.
         /// </summary>
         /// <param name="database"><see cref="ISharedDatabase"/> to keep state in.</param>
         /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types.</param>

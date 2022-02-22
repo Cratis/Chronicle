@@ -16,18 +16,18 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         readonly IQueueAdapterCache _cache;
         readonly IStreamQueueMapper _mapper;
         readonly string _name;
-        readonly ProviderFor<IEventLogs> _eventLogsProvder;
+        readonly ProviderFor<IEventSequences> _eventLogsProvder;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogQueueAdapter"/> class.
         /// </summary>
         /// <param name="name">Name of stream.</param>
-        /// <param name="eventLogsProvder">Provider for <see cref="IEventLogs"/>.</param>
+        /// <param name="eventLogsProvder">Provider for <see cref="IEventSequences"/>.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
         /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
         public EventLogQueueAdapterFactory(
             string name,
-            ProviderFor<IEventLogs> eventLogsProvder,
+            ProviderFor<IEventSequences> eventLogsProvder,
             IExecutionContextManager executionContextManager,
             IEventLogStorageProvider eventLogStorageProvider)
         {
@@ -47,7 +47,7 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         {
             return new(
                 name,
-                serviceProvider.GetService<ProviderFor<IEventLogs>>()!,
+                serviceProvider.GetService<ProviderFor<IEventSequences>>()!,
                 serviceProvider.GetService<IExecutionContextManager>()!,
                 serviceProvider.GetService<IEventLogStorageProvider>()!);
         }

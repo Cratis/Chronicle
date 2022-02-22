@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup
 {
     public class when_catching_up_from_offset_zero_with_events_and_events_are_added_while_catching_up : given.two_cursors_in_sequence_with_ten_events_each
     {
-        void Establish() => positions.Setup(_ => _.GetFor(projection.Object, configuration)).Returns(Task.FromResult<EventLogSequenceNumber>(0));
+        void Establish() => positions.Setup(_ => _.GetFor(projection.Object, configuration)).Returns(Task.FromResult<EventSequenceNumber>(0));
 
         async Task Because() => await catchup.Perform(job_status);
 

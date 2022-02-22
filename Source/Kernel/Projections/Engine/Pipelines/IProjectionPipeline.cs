@@ -38,7 +38,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         /// <summary>
         /// Gets an observable of the position within the event log for each sink configuration.
         /// </summary>
-        IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>> Positions { get; }
+        IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>> Positions { get; }
 
         /// <summary>
         /// Gets the current <see cref="ProjectionState"/>.

@@ -48,7 +48,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB.Observation
         public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
             var observerId = grainReference.GetPrimaryKey(out var eventLogIdAsString);
-            var eventLogId = (EventLogId)eventLogIdAsString;
+            var eventLogId = (EventSequenceId)eventLogIdAsString;
             var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString()!;
             _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
 
@@ -59,8 +59,8 @@ namespace Aksio.Cratis.Events.Store.MongoDB.Observation
                 Id = key,
                 EventLogId = eventLogId,
                 ObserverId = observerId,
-                Offset = EventLogSequenceNumber.First,
-                LastHandled = EventLogSequenceNumber.First
+                Offset = EventSequenceNumber.First,
+                LastHandled = EventSequenceNumber.First
             };
         }
 
@@ -68,7 +68,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB.Observation
         public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
             var observerId = grainReference.GetPrimaryKey(out var eventLogIdAsString);
-            var eventLogId = (EventLogId)eventLogIdAsString;
+            var eventLogId = (EventSequenceId)eventLogIdAsString;
             var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString()!;
             _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
 
@@ -81,6 +81,6 @@ namespace Aksio.Cratis.Events.Store.MongoDB.Observation
                 new ReplaceOptions { IsUpsert = true });
         }
 
-        string GetKeyFrom(EventLogId eventLogId, ObserverId observerId) => $"{eventLogId} : {observerId}";
+        string GetKeyFrom(EventSequenceId eventLogId, ObserverId observerId) => $"{eventLogId} : {observerId}";
     }
 }

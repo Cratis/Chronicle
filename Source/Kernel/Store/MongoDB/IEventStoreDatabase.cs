@@ -21,8 +21,8 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         /// <summary>
         /// Get the <see cref="IMongoCollection{T}"/> for an event log based on identifier.
         /// </summary>
-        /// <param name="eventLogId"><see cref="EventLogId"/> identifier.</param>
+        /// <param name="eventLogId"><see cref="EventSequenceId"/> identifier.</param>
         /// <returns>The collection instance.</returns>
-        IMongoCollection<Event> GetEventLogCollectionFor(EventLogId eventLogId);
+        IMongoCollection<Event> GetEventLogCollectionFor(EventSequenceId eventLogId);
     }
 }

@@ -44,8 +44,8 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLogSequenceNumberToken"/>.
         /// </summary>
-        /// <param name="sequenceNumber">The actual <see cref="EventLogSequenceNumber"/>.</param>
-        public EventLogSequenceNumberToken(EventLogSequenceNumber sequenceNumber)
+        /// <param name="sequenceNumber">The actual <see cref="EventSequenceNumber"/>.</param>
+        public EventLogSequenceNumberToken(EventSequenceNumber sequenceNumber)
         {
             _sequenceNumber = (long)sequenceNumber.Value;
             _eventIndex = 0;

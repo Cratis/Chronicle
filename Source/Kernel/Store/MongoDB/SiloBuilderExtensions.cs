@@ -28,7 +28,7 @@ namespace Orleans.Hosting
             builder.AddMemoryGrainStorage("PubSubStore");
             builder.ConfigureServices(services =>
             {
-                services.AddSingletonNamedService<IGrainStorage>(EventLogState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<EventLogStorageProvider>()!);
+                services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<EventSequenceStorageProvider>()!);
                 services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ObserverStorageProvider>()!);
                 services.AddSingletonNamedService<IGrainStorage>(FailedObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<FailedObserverStorageProvider>()!);
                 services.AddSingleton<IFailedObservers, FailedObservers>();

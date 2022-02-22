@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
         IGrainReminder? _recoverReminder;
         TenantId _tenantId = TenantId.NotSet;
         EventSourceId _eventSourceId = EventSourceId.Unspecified;
-        EventLogId _eventLogId = EventLogId.Unspecified;
+        EventSequenceId _eventLogId = EventSequenceId.Unspecified;
         string _connectionId = string.Empty;
 
         /// <inheritdoc/>
@@ -89,7 +89,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
 
                 await UnregisterReminder(reminder);
 
-                var streamProvider = GetStreamProvider(EventLog.StreamProvider);
+                var streamProvider = GetStreamProvider(EventSequence.StreamProvider);
 
                 var eventLogStream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
                 StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;

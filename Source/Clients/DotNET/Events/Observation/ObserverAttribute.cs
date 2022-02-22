@@ -20,7 +20,7 @@ namespace Aksio.Cratis.Events.Observation
         /// <summary>
         /// Gets the unique identifier for an event log.
         /// </summary>
-        public EventLogId EventLogId { get; } = Guid.Empty;
+        public EventSequenceId EventLogId { get; } = Guid.Empty;
 
         /// <summary>
         /// Initializes a new instance of <see cref="ObserverAttribute"/>.

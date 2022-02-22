@@ -38,7 +38,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         public IObservable<ProjectionState> State => _state;
 
         /// <inheritdoc/>
-        public IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
+        public IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>> Positions => _handler.Positions;
 
         /// <inheritdoc/>
         public ProjectionState CurrentState => _state.Value;

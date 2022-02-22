@@ -58,12 +58,12 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         public IMongoCollection<T> GetCollection<T>(string? name = null) => name == null ? Database.GetCollection<T>() : Database.GetCollection<T>(name);
 
         /// <inheritdoc/>
-        public IMongoCollection<Event> GetEventLogCollectionFor(EventLogId eventLogId)
+        public IMongoCollection<Event> GetEventLogCollectionFor(EventSequenceId eventLogId)
         {
             var collectionName = BaseCollectionName;
-            if (!eventLogId.IsDefault)
+            if (!eventLogId.IsEventLog)
             {
-                if (eventLogId.IsPublic)
+                if (eventLogId.IsOutbox)
                 {
                     collectionName = $"{BaseCollectionName}-public";
                 }

@@ -19,10 +19,10 @@ namespace Aksio.Cratis.Events.Store
         /// <summary>
         /// Get events using a specific sequence number as starting point within the event log.
         /// </summary>
-        /// <param name="sequenceNumber">The <see cref="EventLogSequenceNumber"/> to get from.</param>
+        /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> to get from.</param>
         /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>
         /// <param name="eventTypes">Optional collection of <see cref="EventType">event types</see> to filter for.</param>
         /// <returns><see cref="IEventCursor"/>.</returns>
-        Task<IEventCursor> GetFromSequenceNumber(EventLogSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default);
+        Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default);
     }
 }
