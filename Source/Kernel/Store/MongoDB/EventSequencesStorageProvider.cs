@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
     /// <summary>
     /// Represents an implementation of <see cref="IGrainStorage"/> for handling event log state storage.
     /// </summary>
-    public class EventSequenceStorageProvider : IGrainStorage
+    public class EventSequencesStorageProvider : IGrainStorage
     {
         const string CollectionName = "event-sequences";
 
@@ -22,11 +22,11 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         IMongoCollection<EventSequenceState> Collection => _eventStoreDatabase.GetCollection<EventSequenceState>(CollectionName);
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="EventSequenceStorageProvider"/> class.
+        /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
         /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
-        public EventSequenceStorageProvider(IExecutionContextManager executionContextManager, IEventStoreDatabase eventStoreDatabase)
+        public EventSequencesStorageProvider(IExecutionContextManager executionContextManager, IEventStoreDatabase eventStoreDatabase)
         {
             _executionContextManager = executionContextManager;
             _eventStoreDatabase = eventStoreDatabase;

@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Store
         /// <summary>
         /// The name of the storage provider used for working with this type of state.
         /// </summary>
-        public const string StorageProvider = "event-log-state";
+        public const string StorageProvider = "event-sequence-state";
 
         /// <summary>
         /// Gets or sets the next sequencenumber (tail).
