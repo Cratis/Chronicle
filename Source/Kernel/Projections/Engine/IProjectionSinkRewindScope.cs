@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Events.Projections
     /// <summary>
     /// Defines the scope when doing rewind.
     /// </summary>
-    public interface IProjectionResultStoreRewindScope : IDisposable
+    public interface IProjectionSinkRewindScope : IDisposable
     {
         /// <summary>
         /// Gets the <see cref="Model"/> the scope is for.

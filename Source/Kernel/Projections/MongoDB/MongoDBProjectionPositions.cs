@@ -24,7 +24,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task<EventLogSequenceNumber> GetFor(IProjection projection, ProjectionResultStoreConfigurationId configurationId)
+        public async Task<EventLogSequenceNumber> GetFor(IProjection projection, ProjectionSinkConfigurationId configurationId)
         {
             var identifier = GetIdentifierFor(projection, configurationId);
             var result = await GetCollection().FindAsync(_ => _.Id == identifier);
@@ -33,7 +33,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public async Task Save(IProjection projection, ProjectionResultStoreConfigurationId configurationId, EventLogSequenceNumber position)
+        public async Task Save(IProjection projection, ProjectionSinkConfigurationId configurationId, EventLogSequenceNumber position)
         {
             var identifier = GetIdentifierFor(projection, configurationId);
             await GetCollection().UpdateOneAsync(
@@ -43,12 +43,12 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public Task Reset(IProjection projection, ProjectionResultStoreConfigurationId configurationId)
+        public Task Reset(IProjection projection, ProjectionSinkConfigurationId configurationId)
         {
             return Save(projection, configurationId, EventLogSequenceNumber.First);
         }
 
-        string GetIdentifierFor(IProjection projection, ProjectionResultStoreConfigurationId configurationId) => $"{projection.Identifier}-{configurationId}";
+        string GetIdentifierFor(IProjection projection, ProjectionSinkConfigurationId configurationId) => $"{projection.Identifier}-{configurationId}";
 
         IMongoCollection<ProjectionPosition> GetCollection() => _eventStoreDatabase.GetCollection<ProjectionPosition>("projection-positions");
     }

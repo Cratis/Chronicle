@@ -46,7 +46,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         }
 
         /// <inheritdoc/>
-        public IProjectionPipelineJob Catchup(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId) =>
+        public IProjectionPipelineJob Catchup(IProjectionPipeline pipeline, ProjectionSinkConfigurationId configurationId) =>
             new ProjectionPipelineJob(
                 CatchupJob,
                 new[]
@@ -62,7 +62,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
 
         /// <inheritdoc/>
         public IEnumerable<IProjectionPipelineJob> Catchup(IProjectionPipeline pipeline) =>
-            pipeline.ResultStores.Select(kvp =>
+            pipeline.Sinks.Select(kvp =>
                 new ProjectionPipelineJob(
                     CatchupJob,
                     new[]
@@ -77,7 +77,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
                     })).ToArray();
 
         /// <inheritdoc/>
-        public IProjectionPipelineJob Rewind(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId) =>
+        public IProjectionPipelineJob Rewind(IProjectionPipeline pipeline, ProjectionSinkConfigurationId configurationId) =>
             new ProjectionPipelineJob(
                 RewindJob,
                 new IProjectionPipelineJobStep[]
@@ -97,7 +97,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
                 });
 
         /// <inheritdoc/>
-        public IEnumerable<IProjectionPipelineJob> Rewind(IProjectionPipeline pipeline) => pipeline.ResultStores.Select(kvp =>
+        public IEnumerable<IProjectionPipelineJob> Rewind(IProjectionPipeline pipeline) => pipeline.Sinks.Select(kvp =>
             new ProjectionPipelineJob(
                 RewindJob,
                 new IProjectionPipelineJobStep[]

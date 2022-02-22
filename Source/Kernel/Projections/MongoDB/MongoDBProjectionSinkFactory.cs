@@ -8,24 +8,24 @@ using Aksio.Cratis.Extensions.MongoDB;
 namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionResultStoreFactory"/>.
+    /// Represents an implementation of <see cref="IProjectionSinkFactory"/>.
     /// </summary>
-    public class MongoDBProjectionResultStoreFactory : IProjectionResultStoreFactory
+    public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
     {
         readonly IMongoDBClientFactory _clientFactory;
         readonly IExecutionContextManager _executionContextManager;
         readonly Storage _configuration;
 
         /// <inheritdoc/>
-        public ProjectionResultStoreTypeId TypeId => MongoDBProjectionResultStore.ProjectionResultStoreTypeId;
+        public ProjectionSinkTypeId TypeId => MongoDBProjectionSink.ProjectionResultStoreTypeId;
 
         /// <summary>
-        /// /// Initializes a new instance of the <see cref="MongoDBProjectionResultStoreFactory"/> class.
+        /// /// Initializes a new instance of the <see cref="MongoDBProjectionSinkFactory"/> class.
         /// </summary>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> to use.</param>
         /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-        public MongoDBProjectionResultStoreFactory(
+        public MongoDBProjectionSinkFactory(
             IExecutionContextManager executionContextManager,
             IMongoDBClientFactory clientFactory,
             Storage configuration)
@@ -36,6 +36,6 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public IProjectionResultStore CreateFor(Model model) => new MongoDBProjectionResultStore(model, _executionContextManager, _clientFactory, _configuration);
+        public IProjectionSink CreateFor(Model model) => new MongoDBProjectionSink(model, _executionContextManager, _clientFactory, _configuration);
     }
 }

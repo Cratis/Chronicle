@@ -4,18 +4,18 @@
 namespace Aksio.Cratis.Events.Projections.InMemory
 {
     /// <summary>
-    /// Represents a <see cref="IProjectionResultStoreRewindScope"/> for in-memory.
+    /// Represents a <see cref="IProjectionSinkRewindScope"/> for in-memory.
     /// </summary>
-    public class InMemoryResultStoreRewindScope : IProjectionResultStoreRewindScope
+    public class InMemoryProjectionSinkRewindScope : IProjectionSinkRewindScope
     {
         /// <inheritdoc/>
         public Model Model { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InMemoryResultStoreRewindScope"/> class.
+        /// Initializes a new instance of the <see cref="InMemoryProjectionSinkRewindScope"/> class.
         /// </summary>
         /// <param name="model"><see cref="Model"/> the scope is for.</param>
-        public InMemoryResultStoreRewindScope(Model model) => Model = model;
+        public InMemoryProjectionSinkRewindScope(Model model) => Model = model;
 
         /// <inheritdoc/>
         public void Dispose()

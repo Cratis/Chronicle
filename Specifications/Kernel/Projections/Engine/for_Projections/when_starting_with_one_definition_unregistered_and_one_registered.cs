@@ -32,7 +32,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projections
             unregistered_pipeline_definition = new(
                 unregistered_projection_identifier,
                 "ce35564f-f75c-4429-b91e-b236f48dd88b",
-                Array.Empty<ProjectionResultStoreDefinition>());
+                Array.Empty<ProjectionSinkDefinition>());
 
             pipeline_definitions.Setup(_ => _.GetAll()).Returns(Task.FromResult(new[] { unregistered_pipeline_definition }.AsEnumerable()));
             projection_definitions.Setup(_ => _.HasFor(unregistered_projection_identifier)).Returns(Task.FromResult(true));

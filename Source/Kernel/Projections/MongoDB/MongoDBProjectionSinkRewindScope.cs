@@ -6,9 +6,9 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionResultStoreRewindScope"/> for MongoDB.
+    /// Represents an implementation of <see cref="IProjectionSinkRewindScope"/> for MongoDB.
     /// </summary>
-    public class MongoDBProjectionResultStoreRewindScope : IProjectionResultStoreRewindScope
+    public class MongoDBProjectionSinkRewindScope : IProjectionSinkRewindScope
     {
         readonly IMongoDatabase _database;
         readonly Action _onDispose;
@@ -17,12 +17,12 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         public Model Model { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MongoDBProjectionResultStoreRewindScope"/> class.
+        /// Initializes a new instance of the <see cref="MongoDBProjectionSinkRewindScope"/> class.
         /// </summary>
         /// <param name="database"><see cref="IMongoDatabase"/>.</param>
         /// <param name="model"><see cref="Model"/> the scope is for.</param>
         /// <param name="onDispose"><see cref="Action"/> to call when scope is disposed.</param>
-        public MongoDBProjectionResultStoreRewindScope(
+        public MongoDBProjectionSinkRewindScope(
             IMongoDatabase database,
             Model model,
             Action onDispose)
@@ -35,7 +35,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         /// <inheritdoc/>
         public void Dispose()
         {
-            var rewindName = MongoDBProjectionResultStore.GetRewindCollectionName(Model.Name);
+            var rewindName = MongoDBProjectionSink.GetRewindCollectionName(Model.Name);
             var rewoundCollectionsPrefix = $"{Model.Name}-";
             var collectionNames = _database.ListCollectionNames().ToList();
             var nextCollectionSequenceNumber = 1;

@@ -83,7 +83,7 @@ namespace Aksio.Cratis.Events.Projections
                     "c0c0196f-57e3-4860-9e3b-9823cf45df30", // Cratis default
                     new[]
                     {
-                        new ProjectionResultStoreDefinition(
+                        new ProjectionSinkDefinition(
                             "12358239-a120-4392-96d4-2b48271b904c",
                             "22202c41-2be1-4547-9c00-f0b1f797fd75") // MongoDB
                     });

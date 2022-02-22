@@ -7,13 +7,13 @@ namespace Aksio.Cratis.Events.Projections
     /// Represents the unique identifier of a specific store configuration using in a projection pipeline.
     /// </summary>
     /// <param name="Value">Underlying value.</param>
-    public record ProjectionResultStoreConfigurationId(Guid Value) : ConceptAs<Guid>(Value)
+    public record ProjectionSinkConfigurationId(Guid Value) : ConceptAs<Guid>(Value)
     {
         /// <summary>
-        /// Implicitly convert from <see cref="string"/> representation of <see cref="Guid"/> to <see cref="ProjectionResultStoreConfigurationId"/>.
+        /// Implicitly convert from <see cref="string"/> representation of <see cref="Guid"/> to <see cref="ProjectionSinkConfigurationId"/>.
         /// </summary>
         /// <param name="value"><see cref="string"/> representation of <see cref="Guid"/>.</param>
-        /// <returns>Converted <see cref="ProjectionResultStoreConfigurationId"/> instance.</returns>
-        public static implicit operator ProjectionResultStoreConfigurationId(string value) => new(Guid.Parse(value));
+        /// <returns>Converted <see cref="ProjectionSinkConfigurationId"/> instance.</returns>
+        public static implicit operator ProjectionSinkConfigurationId(string value) => new(Guid.Parse(value));
     }
 }

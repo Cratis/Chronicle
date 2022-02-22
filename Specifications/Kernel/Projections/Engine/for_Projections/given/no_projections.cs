@@ -48,7 +48,7 @@ namespace Aksio.Cratis.Events.Projections.for_Projections.given
             pipeline_definition = new(
                 projection_identifier,
                 "dc5366eb-d453-43c9-859f-64989a858e7c",
-                Array.Empty<ProjectionResultStoreDefinition>());
+                Array.Empty<ProjectionSinkDefinition>());
 
             projection_factory.Setup(_ => _.CreateFrom(projection_definition)).Returns(Task.FromResult(projection.Object));
             pipeline_factory.Setup(_ => _.CreateFrom(projection.Object, pipeline_definition)).Returns(pipeline.Object);

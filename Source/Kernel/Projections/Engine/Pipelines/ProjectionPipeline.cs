@@ -15,9 +15,9 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
     /// </summary>
     public class ProjectionPipeline : IProjectionPipeline
     {
-        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> _resultStores = new();
-        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<AppendedEvent>> _subjectsPerConfiguration = new();
-        readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionSinkConfigurationId, IProjectionSink> _sinks = new();
+        readonly ConcurrentDictionary<ProjectionSinkConfigurationId, ISubject<AppendedEvent>> _subjectsPerConfiguration = new();
+        readonly ConcurrentDictionary<ProjectionSinkConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
         readonly IProjectionPipelineHandler _handler;
         readonly IProjectionPipelineJobs _pipelineJobs;
         readonly ILogger<ProjectionPipeline> _logger;
@@ -32,13 +32,13 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         public IProjectionEventProvider EventProvider { get; }
 
         /// <inheritdoc/>
-        public IDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> ResultStores => _resultStores;
+        public IDictionary<ProjectionSinkConfigurationId, IProjectionSink> Sinks => _sinks;
 
         /// <inheritdoc/>
         public IObservable<ProjectionState> State => _state;
 
         /// <inheritdoc/>
-        public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
+        public IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
 
         /// <inheritdoc/>
         public ProjectionState CurrentState => _state.Value;
@@ -165,7 +165,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         }
 
         /// <inheritdoc/>
-        public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
+        public async Task Rewind(ProjectionSinkConfigurationId configurationId)
         {
             if (Projection.IsPassive)
             {
@@ -207,9 +207,9 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         }
 
         /// <inheritdoc/>
-        public void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
+        public void StoreIn(ProjectionSinkConfigurationId configurationId, IProjectionSink sink)
         {
-            _resultStores[configurationId] = resultStore;
+            _sinks[configurationId] = sink;
             _subjectsPerConfiguration[configurationId] = new ReplaySubject<AppendedEvent>();
             _handler.InitializeFor(this, configurationId);
         }
@@ -241,7 +241,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         {
             foreach (var (configurationId, subject) in _subjectsPerConfiguration)
             {
-                var resultStore = _resultStores[configurationId];
+                var sink = _sinks[configurationId];
                 await EventProvider.ProvideFor(this, subject);
 
                 if (_subscriptionsPerConfiguration.ContainsKey(configurationId))
@@ -251,7 +251,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
                 }
                 _subscriptionsPerConfiguration[configurationId] = Projection
                     .FilterEventTypes(subject)
-                    .Subscribe(@event => _handler.Handle(@event, this, resultStore, configurationId).Wait());
+                    .Subscribe(@event => _handler.Handle(@event, this, sink, configurationId).Wait());
             }
         }
 
@@ -263,7 +263,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
             }
         }
 
-        void ThrowIfRewindAlreadyInProgressForConfiguration(ProjectionResultStoreConfigurationId configurationId)
+        void ThrowIfRewindAlreadyInProgressForConfiguration(ProjectionSinkConfigurationId configurationId)
         {
             var rewindJob = _jobs.FirstOrDefault(_ => _.Name == ProjectionPipelineJobs.RewindJob);
             if (rewindJob != default)

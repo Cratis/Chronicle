@@ -13,27 +13,27 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
         readonly IProjectionPipeline _pipeline;
         readonly IProjectionPositions _projectionPositions;
         readonly ILogger<Rewind> _logger;
-        IProjectionResultStoreRewindScope? _rewindScope;
+        IProjectionSinkRewindScope? _rewindScope;
 
         /// <inheritdoc/>
         public string Name => "Rewind";
 
         /// <summary>
-        /// Gets the <see cref="ProjectionResultStoreConfigurationId"/> for the rewind.
+        /// Gets the <see cref="ProjectionSinkConfigurationId"/> for the rewind.
         /// </summary>
-        public ProjectionResultStoreConfigurationId ConfigurationId { get; }
+        public ProjectionSinkConfigurationId ConfigurationId { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Rewind"/> class.
         /// </summary>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> the rewind is for.</param>
         /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for working with the positions of the projections.</param>
-        /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> to rewind.</param>
+        /// <param name="configurationId"><see cref="ProjectionSinkConfigurationId"/> to rewind.</param>
         /// <param name="logger">For logging.</param>
         public Rewind(
             IProjectionPipeline pipeline,
             IProjectionPositions projectionPositions,
-            ProjectionResultStoreConfigurationId configurationId,
+            ProjectionSinkConfigurationId configurationId,
             ILogger<Rewind> logger)
         {
             _pipeline = pipeline;
@@ -46,17 +46,17 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
         public async Task Perform(ProjectionPipelineJobStatus jobStatus)
         {
             _logger.Rewinding(_pipeline.Projection.Identifier, ConfigurationId);
-            var resultStore = _pipeline.ResultStores[ConfigurationId];
-            _rewindScope = resultStore.BeginRewind();
-            jobStatus.ReportTask($"Resetting positions for '{resultStore.Name}' with configuration id {ConfigurationId}");
+            var sink = _pipeline.Sinks[ConfigurationId];
+            _rewindScope = sink.BeginRewind();
+            jobStatus.ReportTask($"Resetting positions for '{sink.Name}' with configuration id {ConfigurationId}");
             await _projectionPositions.Reset(_pipeline.Projection, ConfigurationId);
         }
 
         /// <inheritdoc/>
         public Task PerformPostJob(ProjectionPipelineJobStatus jobStatus)
         {
-            var resultStore = _pipeline.ResultStores[ConfigurationId];
-            jobStatus.ReportTask($"Ending rewind scope '{resultStore.Name}' with configuration id {ConfigurationId}");
+            var sink = _pipeline.Sinks[ConfigurationId];
+            jobStatus.ReportTask($"Ending rewind scope '{sink.Name}' with configuration id {ConfigurationId}");
             _rewindScope?.Dispose();
             return Task.CompletedTask;
         }

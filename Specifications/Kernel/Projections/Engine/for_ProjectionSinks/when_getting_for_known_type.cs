@@ -1,15 +1,15 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Events.Projections.for_ProjectionResultStores
+namespace Aksio.Cratis.Events.Projections.for_ProjectionSinks
 {
     public class when_getting_for_known_type : Specification
     {
-        static ProjectionResultStoreTypeId type = "df371e5d-b244-48d0-aaad-f298a127dd92";
-        ProjectionResultStores stores;
-        Mock<IProjectionResultStoreFactory> factory;
-        Mock<IProjectionResultStore> store;
-        IProjectionResultStore result;
+        static ProjectionSinkTypeId type = "df371e5d-b244-48d0-aaad-f298a127dd92";
+        ProjectionSinks stores;
+        Mock<IProjectionSinkFactory> factory;
+        Mock<IProjectionSink> store;
+        IProjectionSink result;
         Model model;
 
         void Establish()
@@ -19,7 +19,7 @@ namespace Aksio.Cratis.Events.Projections.for_ProjectionResultStores
             factory = new();
             factory.SetupGet(_ => _.TypeId).Returns(type);
             factory.Setup(_ => _.CreateFor(model)).Returns(store.Object);
-            stores = new ProjectionResultStores(new KnownInstancesOf<IProjectionResultStoreFactory>(new[] { factory.Object }));
+            stores = new ProjectionSinks(new KnownInstancesOf<IProjectionSinkFactory>(new[] { factory.Object }));
         }
 
         void Because() => result = stores.GetForTypeAndModel(type, model);

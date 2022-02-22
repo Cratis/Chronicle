@@ -18,35 +18,35 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Events.Projections.MongoDB
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in MongoDB.
+    /// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in MongoDB.
     /// </summary>
-    public class MongoDBProjectionResultStore : IProjectionResultStore, IDisposable
+    public class MongoDBProjectionSink : IProjectionSink, IDisposable
     {
         /// <summary>
-        /// Gets the identifier of the <see cref="MongoDBProjectionResultStore"/>.
+        /// Gets the identifier of the <see cref="MongoDBProjectionSink"/>.
         /// </summary>
-        public static readonly ProjectionResultStoreTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
+        public static readonly ProjectionSinkTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
 
         readonly Model _model;
         readonly IExecutionContextManager _executionContextManager;
         readonly IMongoDBClientFactory _clientFactory;
         readonly Storage _configuration;
-        IProjectionResultStoreRewindScope? _rewindScope;
+        IProjectionSinkRewindScope? _rewindScope;
 
         /// <inheritdoc/>
-        public ProjectionResultStoreTypeName Name => "MongoDB";
+        public ProjectionSinkTypeName Name => "MongoDB";
 
         /// <inheritdoc/>
-        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
+        public ProjectionSinkTypeId TypeId => ProjectionResultStoreTypeId;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MongoDBProjectionResultStore"/> class.
+        /// Initializes a new instance of the <see cref="MongoDBProjectionSink"/> class.
         /// </summary>
         /// <param name="model"><see cref="Model"/> the store is for.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
         /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
         /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-        public MongoDBProjectionResultStore(
+        public MongoDBProjectionSink(
             Model model,
             IExecutionContextManager executionContextManager,
             IMongoDBClientFactory clientFactory,
@@ -169,9 +169,9 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         }
 
         /// <inheritdoc/>
-        public IProjectionResultStoreRewindScope BeginRewind()
+        public IProjectionSinkRewindScope BeginRewind()
         {
-            _rewindScope = new MongoDBProjectionResultStoreRewindScope(
+            _rewindScope = new MongoDBProjectionSinkRewindScope(
                 GetDatabase(),
                 _model,
                 () => _rewindScope = default);

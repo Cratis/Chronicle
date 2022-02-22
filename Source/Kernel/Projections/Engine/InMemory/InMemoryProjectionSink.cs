@@ -9,31 +9,31 @@ using Aksio.Cratis.Events.Store;
 namespace Aksio.Cratis.Events.Projections.InMemory
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionResultStore"/> for working with projections in memory.
+    /// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in memory.
     /// </summary>
-    public class InMemoryProjectionResultStore : IProjectionResultStore, IDisposable
+    public class InMemoryProjectionSink : IProjectionSink, IDisposable
     {
         /// <summary>
-        /// Gets the identifier of the <see cref="InMemoryProjectionResultStore"/>.
+        /// Gets the identifier of the <see cref="InMemoryProjectionSink"/>.
         /// </summary>
-        public static readonly ProjectionResultStoreTypeId ProjectionResultStoreTypeId = "8a23995d-da0b-4c4c-818b-f97992f26bbf";
+        public static readonly ProjectionSinkTypeId ProjectionResultStoreTypeId = "8a23995d-da0b-4c4c-818b-f97992f26bbf";
 
         readonly Dictionary<object, ExpandoObject> _collection = new();
         readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
         readonly Model _model;
-        IProjectionResultStoreRewindScope? _rewindScope;
+        IProjectionSinkRewindScope? _rewindScope;
 
         /// <inheritdoc/>
-        public ProjectionResultStoreTypeId TypeId => ProjectionResultStoreTypeId;
+        public ProjectionSinkTypeId TypeId => ProjectionResultStoreTypeId;
 
         /// <inheritdoc/>
-        public ProjectionResultStoreTypeName Name => "InMemory";
+        public ProjectionSinkTypeName Name => "InMemory";
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InMemoryProjectionResultStore"/> class.
+        /// Initializes a new instance of the <see cref="InMemoryProjectionSink"/> class.
         /// </summary>
         /// <param name="model"><see cref="Model"/> the store is for.</param>
-        public InMemoryProjectionResultStore(Model model)
+        public InMemoryProjectionSink(Model model)
         {
             _model = model;
         }
@@ -79,7 +79,7 @@ namespace Aksio.Cratis.Events.Projections.InMemory
         }
 
         /// <inheritdoc/>
-        public IProjectionResultStoreRewindScope BeginRewind() => _rewindScope = new InMemoryResultStoreRewindScope(_model);
+        public IProjectionSinkRewindScope BeginRewind() => _rewindScope = new InMemoryProjectionSinkRewindScope(_model);
 
         /// <inheritdoc/>
         public Task PrepareInitialRun()
