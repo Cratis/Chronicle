@@ -1,14 +1,13 @@
-﻿// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Concepts.for_ConceptExtensions
+namespace Aksio.Cratis.Concepts.for_ConceptExtensions;
+
+public class when_checking_is_concept_on_a_concept : given.concepts
 {
-    public class when_checking_is_concept_on_a_concept : Concepts.given.concepts
-    {
-        static bool is_a_concept;
+    static bool is_a_concept;
 
-        void Because() => is_a_concept = value_as_a_long.GetType().IsConcept();
+    void Because() => is_a_concept = value_as_a_long.GetType().IsConcept();
 
-        [Fact] void should_be_a_concept() => is_a_concept.ShouldBeTrue();
-    }
+    [Fact] void should_be_a_concept() => is_a_concept.ShouldBeTrue();
 }

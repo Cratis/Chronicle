@@ -6,30 +6,29 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Exceptions;
 
-namespace Microsoft.Extensions.Hosting
+namespace Microsoft.Extensions.Hosting;
+
+/// <summary>
+/// Extension methods for configuring logging for a host.
+/// </summary>
+public static class LoggingHostBuilderExtensions
 {
     /// <summary>
-    /// Extension methods for configuring logging for a host.
+    /// Use default logging.
     /// </summary>
-    public static class LoggingHostBuilderExtensions
+    /// <param name="builder"><see creF="IHostBuilder"/> to use with.</param>
+    /// <returns><see creF="IHostBuilder"/> for continuation.</returns>
+    public static ILoggerFactory UseDefaultLogging(this IHostBuilder builder)
     {
-        /// <summary>
-        /// Use default logging.
-        /// </summary>
-        /// <param name="builder"><see creF="IHostBuilder"/> to use with.</param>
-        /// <returns><see creF="IHostBuilder"/> for continuation.</returns>
-        public static ILoggerFactory UseDefaultLogging(this IHostBuilder builder)
-        {
-            Log.Logger = new LoggerConfiguration()
-                .Enrich.WithExceptionDetails()
-                .ReadFrom.Configuration(ConfigurationHostBuilderExtensions.Configuration)
-                .CreateLogger();
+        Log.Logger = new LoggerConfiguration()
+            .Enrich.WithExceptionDetails()
+            .ReadFrom.Configuration(ConfigurationHostBuilderExtensions.Configuration)
+            .CreateLogger();
 
-            builder.UseSerilog();
+        builder.UseSerilog();
 
-            Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
+        Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
 
-            return new Serilog.Extensions.Logging.SerilogLoggerFactory();
-        }
+        return new Serilog.Extensions.Logging.SerilogLoggerFactory();
     }
 }

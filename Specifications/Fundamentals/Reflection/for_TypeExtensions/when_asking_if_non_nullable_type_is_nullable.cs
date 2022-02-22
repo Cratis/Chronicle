@@ -1,14 +1,13 @@
-﻿// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Reflection.for_TypeExtensions
+namespace Aksio.Cratis.Reflection.for_TypeExtensions;
+
+public class when_asking_if_non_nullable_type_is_nullable : Specification
 {
-    public class when_asking_if_non_nullable_type_is_nullable : Specification
-    {
-        static bool result;
+    static bool result;
 
-        void Because() => result = typeof(int).IsNullable();
+    void Because() => result = typeof(int).IsNullable();
 
-        [Fact] void should_return_false() => result.ShouldBeFalse();
-    }
+    [Fact] void should_return_false() => result.ShouldBeFalse();
 }

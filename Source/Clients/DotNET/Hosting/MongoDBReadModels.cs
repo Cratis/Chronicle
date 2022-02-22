@@ -15,77 +15,76 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Orleans;
 
-namespace Aksio.Cratis.Hosting
+namespace Aksio.Cratis.Hosting;
+
+/// <summary>
+/// Extension methods for configuring MongoDB based read models.
+/// </summary>
+public static class MongoDBReadModels
 {
+    static readonly MethodInfo _getCollectionMethod = typeof(IMongoDatabase).GetMethod(nameof(IMongoDatabase.GetCollection), BindingFlags.Public | BindingFlags.Instance)!;
+    static readonly ConcurrentDictionary<TenantId, IMongoDatabase> _databasesPerTenant = new();
+
     /// <summary>
-    /// Extension methods for configuring MongoDB based read models.
+    /// Add all services related to being able to use MongoDB for read models.
     /// </summary>
-    public static class MongoDBReadModels
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="types"><see cref="ITypes"/> for discovery.</param>
+    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default)
     {
-        static readonly MethodInfo _getCollectionMethod = typeof(IMongoDatabase).GetMethod(nameof(IMongoDatabase.GetCollection), BindingFlags.Public | BindingFlags.Instance)!;
-        static readonly ConcurrentDictionary<TenantId, IMongoDatabase> _databasesPerTenant = new();
+        var logger = loggerFactory?.CreateLogger("MongodBReadModels");
 
-        /// <summary>
-        /// Add all services related to being able to use MongoDB for read models.
-        /// </summary>
-        /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-        /// <param name="types"><see cref="ITypes"/> for discovery.</param>
-        /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
-        /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-        public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default)
+        services.AddTransient(sp =>
         {
-            var logger = loggerFactory?.CreateLogger("MongodBReadModels");
-
-            services.AddTransient(sp =>
+            var executionContext = sp.GetService<Execution.ExecutionContext>()!;
+            lock (_databasesPerTenant)
             {
-                var executionContext = sp.GetService<Execution.ExecutionContext>()!;
-                lock (_databasesPerTenant)
+                if (_databasesPerTenant.IsEmpty)
                 {
-                    if (_databasesPerTenant.IsEmpty)
-                    {
-                        ConfigureReadModels(sp).Wait();
-                    }
+                    ConfigureReadModels(sp).Wait();
                 }
-                return _databasesPerTenant[executionContext.TenantId];
-            });
-
-            var readModelTypes = types.All.SelectMany(_ => _
-                .GetConstructors().SelectMany(c => c.GetParameters())
-                .Where(_ =>
-                    _.ParameterType.IsGenericType &&
-                    _.ParameterType.IsAssignableTo(typeof(IMongoCollection<>).MakeGenericType(_.ParameterType.GetGenericArguments()[0]))))
-                .Select(_ => _.ParameterType.GetGenericArguments()[0])
-                .ToArray();
-
-            foreach (var readModelType in readModelTypes)
-            {
-                var name = readModelType.Name.Pluralize();
-                var camelCaseName = name.ToCamelCase();
-                logger?.AddingMongoDBCollectionBinding(readModelType, camelCaseName);
-                services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
-                {
-                    var database = sp.GetService<IMongoDatabase>();
-                    var genericMethod = _getCollectionMethod.MakeGenericMethod(readModelType);
-                    return genericMethod.Invoke(database, new object[] { camelCaseName, null! })!;
-                });
             }
+            return _databasesPerTenant[executionContext.TenantId];
+        });
 
-            return services;
+        var readModelTypes = types.All.SelectMany(_ => _
+            .GetConstructors().SelectMany(c => c.GetParameters())
+            .Where(_ =>
+                _.ParameterType.IsGenericType &&
+                _.ParameterType.IsAssignableTo(typeof(IMongoCollection<>).MakeGenericType(_.ParameterType.GetGenericArguments()[0]))))
+            .Select(_ => _.ParameterType.GetGenericArguments()[0])
+            .ToArray();
+
+        foreach (var readModelType in readModelTypes)
+        {
+            var name = readModelType.Name.Pluralize();
+            var camelCaseName = name.ToCamelCase();
+            logger?.AddingMongoDBCollectionBinding(readModelType, camelCaseName);
+            services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
+            {
+                var database = sp.GetService<IMongoDatabase>();
+                var genericMethod = _getCollectionMethod.MakeGenericMethod(readModelType);
+                return genericMethod.Invoke(database, new object[] { camelCaseName, null! })!;
+            });
         }
 
-        static async Task ConfigureReadModels(IServiceProvider serviceProvider)
-        {
-            var configurations = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfigurations>(Guid.Empty);
-            var storage = await configurations.GetStorage();
-            var storageType = storage.Get(WellKnownStorageTypes.ReadModels);
-            var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
+        return services;
+    }
 
-            foreach (var (tenant, config) in storageType.Tenants)
-            {
-                var url = new MongoUrl(config.ToString()!);
-                var client = clientFactory.Create(url);
-                _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
-            }
+    static async Task ConfigureReadModels(IServiceProvider serviceProvider)
+    {
+        var configurations = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfigurations>(Guid.Empty);
+        var storage = await configurations.GetStorage();
+        var storageType = storage.Get(WellKnownStorageTypes.ReadModels);
+        var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
+
+        foreach (var (tenant, config) in storageType.Tenants)
+        {
+            var url = new MongoUrl(config.ToString()!);
+            var client = clientFactory.Create(url);
+            _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
         }
     }
 }

@@ -3,26 +3,25 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Properties.for_PropertyPath.when_checking_if_has_value_from_expando_object
+namespace Aksio.Cratis.Properties.for_PropertyPath.when_checking_if_has_value_from_expando_object;
+
+public class and_it_is_within_a_complex_structure_and_value_is_not_there : Specification
 {
-    public class and_it_is_within_a_complex_structure_and_value_is_not_there : Specification
+    ExpandoObject input;
+    PropertyPath property_path;
+    bool result;
+    ArrayIndexer first_array_indexer;
+    ArrayIndexer second_array_indexer;
+
+    void Establish()
     {
-        ExpandoObject input;
-        PropertyPath property_path;
-        bool result;
-        ArrayIndexer first_array_indexer;
-        ArrayIndexer second_array_indexer;
-
-        void Establish()
-        {
-            input = new();
-            property_path = new("first_level.[second_level].third_level.[forth_level].fifth_level");
-            first_array_indexer = new("first_level.[second_level]", "identifier", "first");
-            second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
-        }
-
-        void Because() => result = property_path.HasValue(input, new ArrayIndexers(new[] { first_array_indexer, second_array_indexer }));
-
-        [Fact] void should_not_have_it() => result.ShouldBeFalse();
+        input = new();
+        property_path = new("first_level.[second_level].third_level.[forth_level].fifth_level");
+        first_array_indexer = new("first_level.[second_level]", "identifier", "first");
+        second_array_indexer = new("first_level.[second_level].third_level.[forth_level]", "identifier", "second");
     }
+
+    void Because() => result = property_path.HasValue(input, new ArrayIndexers(new[] { first_array_indexer, second_array_indexer }));
+
+    [Fact] void should_not_have_it() => result.ShouldBeFalse();
 }

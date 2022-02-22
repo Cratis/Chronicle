@@ -3,16 +3,15 @@
 
 using Aksio.Cratis.Compliance.Concepts.PersonalInformation;
 
-namespace Aksio.Cratis.Compliance.Read.GDPR
-{
-    public record Person(
-        PersonId Id,
-        SocialSecurityNumber SocialSecurityNumber,
-        FirstName FirstName,
-        LastName LastName,
-        Address Address,
-        City City,
-        PostalCode PostalCode,
-        Country Country,
-        IEnumerable<PersonalInformation> PersonalInformation);
-}
+namespace Aksio.Cratis.Compliance.Read.GDPR;
+
+public record Person(
+    PersonId Id,
+    SocialSecurityNumber SocialSecurityNumber,
+    FirstName FirstName,
+    LastName LastName,
+    Address Address,
+    City City,
+    PostalCode PostalCode,
+    Country Country,
+    IEnumerable<PersonalInformation> PersonalInformation);

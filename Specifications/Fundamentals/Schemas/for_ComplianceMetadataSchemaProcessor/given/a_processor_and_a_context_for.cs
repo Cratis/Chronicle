@@ -7,39 +7,38 @@ using Newtonsoft.Json.Serialization;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor.given
+namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor.given;
+
+public class a_processor_and_a_context_for<T> : Specification
+    where T : new()
 {
-    public class a_processor_and_a_context_for<T> : Specification
-        where T : new()
+    protected Mock<IComplianceMetadataResolver> resolver;
+    protected ComplianceMetadataSchemaProcessor processor;
+    protected SchemaProcessorContext context;
+
+    void Establish()
     {
-        protected Mock<IComplianceMetadataResolver> resolver;
-        protected ComplianceMetadataSchemaProcessor processor;
-        protected SchemaProcessorContext context;
-
-        void Establish()
+        resolver = new();
+        processor = new(resolver.Object);
+        var settings = new JsonSchemaGeneratorSettings
         {
-            resolver = new();
-            processor = new(resolver.Object);
-            var settings = new JsonSchemaGeneratorSettings
+            SerializerSettings = new()
             {
-                SerializerSettings = new()
-                {
-                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                    DateParseHandling = DateParseHandling.DateTimeOffset
-                }
-            };
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                DateParseHandling = DateParseHandling.DateTimeOffset
+            }
+        };
 
-            var generator = new NJsonSchemaGenerator(settings);
-            var schema = generator.Generate(typeof(T));
+        var generator = new NJsonSchemaGenerator(settings);
+        var schema = generator.Generate(typeof(T));
 
-            var instance = new T();
-            context = new(
-                typeof(T),
-                schema,
-                new JsonSchemaResolver(instance, settings),
-                generator,
-                settings
-            );
-        }
+        var instance = new T();
+        context = new(
+            typeof(T),
+            schema,
+            new JsonSchemaResolver(instance, settings),
+            generator,
+            settings
+        );
     }
 }

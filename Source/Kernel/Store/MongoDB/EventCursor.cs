@@ -3,52 +3,51 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB;
+
+/// <summary>
+/// Represents an implementation of <see cref="IEventCursor"/> for handling events from event log.
+/// </summary>
+public class EventCursor : IEventCursor
 {
+    readonly IEventConverter _converter;
+    readonly IAsyncCursor<Event>? _innerCursor;
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();
+
     /// <summary>
-    /// Represents an implementation of <see cref="IEventCursor"/> for handling events from event log.
+    /// Initializes a new instance of the <see cref="EventCursor"/> class.
     /// </summary>
-    public class EventCursor : IEventCursor
+    /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
+    /// <param name="innerCursor">The underlying MongoDB cursor.</param>
+    public EventCursor(
+        IEventConverter converter,
+        IAsyncCursor<Event>? innerCursor)
     {
-        readonly IEventConverter _converter;
-        readonly IAsyncCursor<Event>? _innerCursor;
+        _converter = converter;
+        _innerCursor = innerCursor;
+    }
 
-        /// <inheritdoc/>
-        public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EventCursor"/> class.
-        /// </summary>
-        /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
-        /// <param name="innerCursor">The underlying MongoDB cursor.</param>
-        public EventCursor(
-            IEventConverter converter,
-            IAsyncCursor<Event>? innerCursor)
+    /// <inheritdoc/>
+    public async Task<bool> MoveNext()
+    {
+        if (_innerCursor is null) return false;
+        var result = await _innerCursor.MoveNextAsync();
+        if (_innerCursor.Current is not null)
         {
-            _converter = converter;
-            _innerCursor = innerCursor;
+            Current = await Task.WhenAll(_innerCursor.Current.Select(@event => _converter.ToAppendedEvent(@event)));
         }
-
-        /// <inheritdoc/>
-        public async Task<bool> MoveNext()
+        else
         {
-            if (_innerCursor is null) return false;
-            var result = await _innerCursor.MoveNextAsync();
-            if (_innerCursor.Current is not null)
-            {
-                Current = await Task.WhenAll(_innerCursor.Current.Select(@event => _converter.ToAppendedEvent(@event)));
-            }
-            else
-            {
-                Current = Array.Empty<AppendedEvent>();
-            }
-            return result;
+            Current = Array.Empty<AppendedEvent>();
         }
+        return result;
+    }
 
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            _innerCursor?.Dispose();
-        }
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _innerCursor?.Dispose();
     }
 }

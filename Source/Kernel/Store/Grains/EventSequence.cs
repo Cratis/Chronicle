@@ -11,105 +11,104 @@ using Orleans;
 using Orleans.Providers;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.Grains
+namespace Aksio.Cratis.Events.Store.Grains;
+
+/// <summary>
+/// Represents an implementation of <see cref="IEventSequence"/>.
+/// </summary>
+[StorageProvider(ProviderName = EventSequenceState.StorageProvider)]
+public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IEventSequence"/>.
+    /// The name of the stream provider.
     /// </summary>
-    [StorageProvider(ProviderName = EventSequenceState.StorageProvider)]
-    public class EventSequence : Grain<EventSequenceState>, IEventSequence
+    public const string StreamProvider = "event-log";
+    readonly ISchemaStore _schemaStore;
+    readonly IJsonComplianceManager _jsonComplianceManager;
+    readonly ILogger<EventSequence> _logger;
+    EventSequenceId _eventLogId = EventSequenceId.Unspecified;
+    TenantId _tenantId = TenantId.NotSet;
+    IAsyncStream<AppendedEvent>? _stream;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="EventSequence"/>.
+    /// </summary>
+    /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
+    /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+    public EventSequence(
+        ISchemaStore schemaStore,
+        IJsonComplianceManager jsonComplianceManager,
+        ILogger<EventSequence> logger)
     {
-        /// <summary>
-        /// The name of the stream provider.
-        /// </summary>
-        public const string StreamProvider = "event-log";
-        readonly ISchemaStore _schemaStore;
-        readonly IJsonComplianceManager _jsonComplianceManager;
-        readonly ILogger<EventSequence> _logger;
-        EventSequenceId _eventLogId = EventSequenceId.Unspecified;
-        TenantId _tenantId = TenantId.NotSet;
-        IAsyncStream<AppendedEvent>? _stream;
+        _schemaStore = schemaStore;
+        _jsonComplianceManager = jsonComplianceManager;
+        _logger = logger;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of <see cref="EventSequence"/>.
-        /// </summary>
-        /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
-        /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
-        /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-        public EventSequence(
-            ISchemaStore schemaStore,
-            IJsonComplianceManager jsonComplianceManager,
-            ILogger<EventSequence> logger)
+    /// <inheritdoc/>
+    public override async Task OnActivateAsync()
+    {
+        _eventLogId = this.GetPrimaryKey(out var tenantId);
+        _tenantId = tenantId;
+
+        var streamProvider = GetStreamProvider(StreamProvider);
+        _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
+
+        await base.OnActivateAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
+    {
+        _logger.Appending(eventType, eventSourceId, State.SequenceNumber, _eventLogId);
+
+        var updateSequenceNumber = true;
+        try
         {
-            _schemaStore = schemaStore;
-            _jsonComplianceManager = jsonComplianceManager;
-            _logger = logger;
+            var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
+            var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, content);
+
+            var appendedEvent = new AppendedEvent(
+                new EventMetadata(State.SequenceNumber, eventType),
+                new EventContext(eventSourceId, DateTimeOffset.UtcNow),
+                compliantEvent);
+
+            await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));
+        }
+        catch (UnableToAppendToEventLog ex)
+        {
+            _logger.FailedAppending(
+                ex.StreamId,
+                ex.SequenceNumber,
+                ex.TenantId,
+                ex.EventSourceId,
+                ex);
+
+            updateSequenceNumber = false;
+        }
+        catch (Exception ex)
+        {
+            _logger.ErrorAppending(
+                _eventLogId,
+                State.SequenceNumber,
+                _tenantId,
+                eventSourceId,
+                ex);
         }
 
-        /// <inheritdoc/>
-        public override async Task OnActivateAsync()
+        if (updateSequenceNumber)
         {
-            _eventLogId = this.GetPrimaryKey(out var tenantId);
-            _tenantId = tenantId;
-
-            var streamProvider = GetStreamProvider(StreamProvider);
-            _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
-
-            await base.OnActivateAsync();
+            State.SequenceNumber++;
+            await WriteStateAsync();
         }
+    }
 
-        /// <inheritdoc/>
-        public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
-        {
-            _logger.Appending(eventType, eventSourceId, State.SequenceNumber, _eventLogId);
+    /// <inheritdoc/>
+    public Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default)
+    {
+        _logger.Compensating(eventType, sequenceNumber, _eventLogId);
 
-            var updateSequenceNumber = true;
-            try
-            {
-                var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
-                var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, content);
-
-                var appendedEvent = new AppendedEvent(
-                    new EventMetadata(State.SequenceNumber, eventType),
-                    new EventContext(eventSourceId, DateTimeOffset.UtcNow),
-                    compliantEvent);
-
-                await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));
-            }
-            catch (UnableToAppendToEventLog ex)
-            {
-                _logger.FailedAppending(
-                    ex.StreamId,
-                    ex.SequenceNumber,
-                    ex.TenantId,
-                    ex.EventSourceId,
-                    ex);
-
-                updateSequenceNumber = false;
-            }
-            catch (Exception ex)
-            {
-                _logger.ErrorAppending(
-                    _eventLogId,
-                    State.SequenceNumber,
-                    _tenantId,
-                    eventSourceId,
-                    ex);
-            }
-
-            if (updateSequenceNumber)
-            {
-                State.SequenceNumber++;
-                await WriteStateAsync();
-            }
-        }
-
-        /// <inheritdoc/>
-        public Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default)
-        {
-            _logger.Compensating(eventType, sequenceNumber, _eventLogId);
-
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
     }
 }

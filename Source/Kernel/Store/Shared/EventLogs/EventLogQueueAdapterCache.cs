@@ -4,30 +4,29 @@
 using Aksio.Cratis.Execution;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.EventLogs
+namespace Aksio.Cratis.Events.Store.EventLogs;
+
+/// <summary>
+/// Represents an implementation of <see cref="IQueueAdapterCache"/> for MongoDB event log.
+/// </summary>
+public class EventLogQueueAdapterCache : IQueueAdapterCache
 {
+    readonly IExecutionContextManager _executionContextManager;
+    readonly IEventLogStorageProvider _eventLogStorageProvider;
+
     /// <summary>
-    /// Represents an implementation of <see cref="IQueueAdapterCache"/> for MongoDB event log.
+    /// Initializes a new instance of the <see cref="EventLogQueueAdapterCache"/> class.
     /// </summary>
-    public class EventLogQueueAdapterCache : IQueueAdapterCache
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
+    /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    public EventLogQueueAdapterCache(
+        IExecutionContextManager executionContextManager,
+        IEventLogStorageProvider eventLogStorageProvider)
     {
-        readonly IExecutionContextManager _executionContextManager;
-        readonly IEventLogStorageProvider _eventLogStorageProvider;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EventLogQueueAdapterCache"/> class.
-        /// </summary>
-        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-        /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
-        public EventLogQueueAdapterCache(
-            IExecutionContextManager executionContextManager,
-            IEventLogStorageProvider eventLogStorageProvider)
-        {
-            _executionContextManager = executionContextManager;
-            _eventLogStorageProvider = eventLogStorageProvider;
-        }
-
-        /// <inheritdoc/>
-        public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache(_executionContextManager, _eventLogStorageProvider);
+        _executionContextManager = executionContextManager;
+        _eventLogStorageProvider = eventLogStorageProvider;
     }
+
+    /// <inheritdoc/>
+    public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache(_executionContextManager, _eventLogStorageProvider);
 }

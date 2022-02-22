@@ -3,49 +3,48 @@
 
 using System.Globalization;
 
-namespace Aksio.Cratis.Strings
+namespace Aksio.Cratis.Strings;
+
+/// <summary>
+/// Provides a set of extension methods to <see cref="string"/>.
+/// </summary>
+public static class StringExtensions
 {
     /// <summary>
-    /// Provides a set of extension methods to <see cref="string"/>.
+    /// Convert a string into a camel cased string.
     /// </summary>
-    public static class StringExtensions
+    /// <param name="stringToConvert">string to convert.</param>
+    /// <returns>Converted string.</returns>
+    public static string ToCamelCase(this string stringToConvert)
     {
-        /// <summary>
-        /// Convert a string into a camel cased string.
-        /// </summary>
-        /// <param name="stringToConvert">string to convert.</param>
-        /// <returns>Converted string.</returns>
-        public static string ToCamelCase(this string stringToConvert)
+        if (!string.IsNullOrEmpty(stringToConvert))
         {
-            if (!string.IsNullOrEmpty(stringToConvert))
-            {
-                if (stringToConvert.Length == 1)
-                    return stringToConvert.ToLowerInvariant();
+            if (stringToConvert.Length == 1)
+                return stringToConvert.ToLowerInvariant();
 
-                var firstLetter = stringToConvert[0].ToString(CultureInfo.InvariantCulture).ToLowerInvariant();
-                return $"{firstLetter}{stringToConvert.Substring(1)}";
-            }
-
-            return stringToConvert;
+            var firstLetter = stringToConvert[0].ToString(CultureInfo.InvariantCulture).ToLowerInvariant();
+            return $"{firstLetter}{stringToConvert.Substring(1)}";
         }
 
-        /// <summary>
-        /// Convert a string into a pascal cased string.
-        /// </summary>
-        /// <param name="stringToConvert">string to convert.</param>
-        /// <returns>Converted string.</returns>
-        public static string ToPascalCase(this string stringToConvert)
+        return stringToConvert;
+    }
+
+    /// <summary>
+    /// Convert a string into a pascal cased string.
+    /// </summary>
+    /// <param name="stringToConvert">string to convert.</param>
+    /// <returns>Converted string.</returns>
+    public static string ToPascalCase(this string stringToConvert)
+    {
+        if (!string.IsNullOrEmpty(stringToConvert))
         {
-            if (!string.IsNullOrEmpty(stringToConvert))
-            {
-                if (stringToConvert.Length == 1)
-                    return stringToConvert.ToUpperInvariant();
+            if (stringToConvert.Length == 1)
+                return stringToConvert.ToUpperInvariant();
 
-                var firstLetter = stringToConvert[0].ToString(CultureInfo.InvariantCulture).ToUpperInvariant();
-                return $"{firstLetter}{stringToConvert.Substring(1)}";
-            }
-
-            return stringToConvert;
+            var firstLetter = stringToConvert[0].ToString(CultureInfo.InvariantCulture).ToUpperInvariant();
+            return $"{firstLetter}{stringToConvert.Substring(1)}";
         }
+
+        return stringToConvert;
     }
 }

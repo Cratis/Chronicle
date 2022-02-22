@@ -3,94 +3,93 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Changes
+namespace Aksio.Cratis.Changes;
+
+/// <summary>
+/// Represents a changeset of changes that can occur to an object.
+/// </summary>
+/// <typeparam name="TSource">Type of the source object we are working from.</typeparam>
+/// <typeparam name="TTarget">Type of target object we are applying changes to.</typeparam>
+public interface IChangeset<TSource, TTarget>
 {
     /// <summary>
-    /// Represents a changeset of changes that can occur to an object.
+    /// Gets the <see cref="Incoming"/> the <see cref="Changeset{TSource, TTarget}"/> is for.
     /// </summary>
-    /// <typeparam name="TSource">Type of the source object we are working from.</typeparam>
-    /// <typeparam name="TTarget">Type of target object we are applying changes to.</typeparam>
-    public interface IChangeset<TSource, TTarget>
-    {
-        /// <summary>
-        /// Gets the <see cref="Incoming"/> the <see cref="Changeset{TSource, TTarget}"/> is for.
-        /// </summary>
-        TSource Incoming { get; }
+    TSource Incoming { get; }
 
-        /// <summary>
-        /// Gets the initial state of before changes in changeset occurred.
-        /// </summary>
-        TTarget InitialState { get; }
+    /// <summary>
+    /// Gets the initial state of before changes in changeset occurred.
+    /// </summary>
+    TTarget InitialState { get; }
 
-        /// <summary>
-        /// Gets all the changes for the changeset.
-        /// </summary>
-        IEnumerable<Change> Changes { get; }
+    /// <summary>
+    /// Gets all the changes for the changeset.
+    /// </summary>
+    IEnumerable<Change> Changes { get; }
 
-        /// <summary>
-        /// Gets whether or not there are changes in the changeset.
-        /// </summary>
-        bool HasChanges { get; }
+    /// <summary>
+    /// Gets whether or not there are changes in the changeset.
+    /// </summary>
+    bool HasChanges { get; }
 
-        /// <summary>
-        /// Add a change to the changeset.
-        /// </summary>
-        /// <param name="change"><see cref="Change"/> to add.</param>
-        void Add(Change change);
+    /// <summary>
+    /// Add a change to the changeset.
+    /// </summary>
+    /// <param name="change"><see cref="Change"/> to add.</param>
+    void Add(Change change);
 
-        /// <summary>
-        /// Applies properties to the <see cref="Changeset{TSource, TTarget}"/>.
-        /// </summary>
-        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
-        /// <param name="arrayIndexers"><see cref="IArrayIndexers"/> for accessing nested objects with arrays.</param>
-        /// <remarks>
-        /// This will run a diff against the initial state and only produce changes that are new.
-        /// </remarks>
-        void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers);
+    /// <summary>
+    /// Applies properties to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
+    /// <param name="arrayIndexers"><see cref="IArrayIndexers"/> for accessing nested objects with arrays.</param>
+    /// <remarks>
+    /// This will run a diff against the initial state and only produce changes that are new.
+    /// </remarks>
+    void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers);
 
-        /// <summary>
-        /// Applies properties to the child in the model to the <see cref="Changeset{TSource, TTarget}"/>.
-        /// </summary>
-        /// <typeparam name="TChild">Type of child.</typeparam>
-        /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
-        /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
-        /// <param name="key">Key value.</param>
-        /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
-        /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
-        /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-        void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
-            where TChild : new();
+    /// <summary>
+    /// Applies properties to the child in the model to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <typeparam name="TChild">Type of child.</typeparam>
+    /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
+    /// <param name="identifiedByProperty"><see cref="PropertyPath"/> that identifies the child.</param>
+    /// <param name="key">Key value.</param>
+    /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
+    void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
+        where TChild : new();
 
-        /// <summary>
-        /// Apply a remove change to the <see cref="Changeset{TSource, TTarget}"/>.
-        /// </summary>
-        void Remove();
+    /// <summary>
+    /// Apply a remove change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// </summary>
+    void Remove();
 
-        /// <summary>
-        /// Apply a remove child change to the <see cref="Changeset{TSource, TTarget}"/>.
-        /// </summary>
-        void RemoveChild();
+    /// <summary>
+    /// Apply a remove child change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// </summary>
+    void RemoveChild();
 
-        /// <summary>
-        /// Check if changeset contains a <see cref="ChildAdded"/> to a collection with a specific key.
-        /// </summary>
-        /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
-        /// <param name="key">The key of the item.</param>
-        /// <returns>True if it has, false it not.</returns>
-        bool HasChildBeenAddedWithKey(PropertyPath childrenProperty, object key);
+    /// <summary>
+    /// Check if changeset contains a <see cref="ChildAdded"/> to a collection with a specific key.
+    /// </summary>
+    /// <param name="childrenProperty">The <see cref="PropertyPath"/> representing the collection.</param>
+    /// <param name="key">The key of the item.</param>
+    /// <returns>True if it has, false it not.</returns>
+    bool HasChildBeenAddedWithKey(PropertyPath childrenProperty, object key);
 
-        /// <summary>
-        /// Check if there has been issued a remove on the changeset.
-        /// </summary>
-        /// <returns>True if there has, false if not.</returns>
-        bool HasBeenRemoved();
+    /// <summary>
+    /// Check if there has been issued a remove on the changeset.
+    /// </summary>
+    /// <returns>True if there has, false if not.</returns>
+    bool HasBeenRemoved();
 
-        /// <summary>
-        /// Get a specific child from.
-        /// </summary>
-        /// <typeparam name="TChild">Type of child.</typeparam>
-        /// <param name="key">The key of the item.</param>
-        /// <returns>The added child.</returns>
-        TChild GetChildByKey<TChild>(object key);
-    }
+    /// <summary>
+    /// Get a specific child from.
+    /// </summary>
+    /// <typeparam name="TChild">Type of child.</typeparam>
+    /// <param name="key">The key of the item.</param>
+    /// <returns>The added child.</returns>
+    TChild GetChildByKey<TChild>(object key);
 }

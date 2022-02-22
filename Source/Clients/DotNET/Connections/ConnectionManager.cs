@@ -3,29 +3,28 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Connections
+namespace Aksio.Cratis.Connections;
+
+/// <summary>
+/// Represents an implementation of <see cref="IConnectionManager"/>.
+/// </summary>
+[Singleton]
+public class ConnectionManager : IConnectionManager
 {
+    /// <inheritdoc/>
+    public ConnectionId CurrentConnectionId { get; private set; }
+
     /// <summary>
-    /// Represents an implementation of <see cref="IConnectionManager"/>.
+    /// Initializes a new instance of the <see cref="ConnectionManager"/> class.
     /// </summary>
-    [Singleton]
-    public class ConnectionManager : IConnectionManager
+    public ConnectionManager()
     {
-        /// <inheritdoc/>
-        public ConnectionId CurrentConnectionId { get; private set; }
+        CurrentConnectionId = Guid.NewGuid().ToString();
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionManager"/> class.
-        /// </summary>
-        public ConnectionManager()
-        {
-            CurrentConnectionId = Guid.NewGuid().ToString();
-        }
-
-        /// <inheritdoc/>
-        public void SetKernelMode()
-        {
-            CurrentConnectionId = ConnectionId.Kernel;
-        }
+    /// <inheritdoc/>
+    public void SetKernelMode()
+    {
+        CurrentConnectionId = ConnectionId.Kernel;
     }
 }

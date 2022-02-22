@@ -3,37 +3,36 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Rewind.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Rewind.given;
+
+public class a_rewind_step : Specification
 {
-    public class a_rewind_step : Specification
+    protected static ProjectionSinkConfigurationId configuration = "8a1e35ac-567c-4309-957d-61910eb0c581";
+    protected Mock<IProjectionPipeline> pipeline;
+    protected Mock<IProjectionPositions> positions;
+    protected Rewind rewind;
+    protected ProjectionPipelineJobStatus job_status;
+    protected Mock<IProjectionSink> result_store;
+    protected Mock<IProjection> projection;
+    protected Mock<IProjectionSinkRewindScope> rewind_scope;
+
+    void Establish()
     {
-        protected static ProjectionSinkConfigurationId configuration = "8a1e35ac-567c-4309-957d-61910eb0c581";
-        protected Mock<IProjectionPipeline> pipeline;
-        protected Mock<IProjectionPositions> positions;
-        protected Rewind rewind;
-        protected ProjectionPipelineJobStatus job_status;
-        protected Mock<IProjectionSink> result_store;
-        protected Mock<IProjection> projection;
-        protected Mock<IProjectionSinkRewindScope>   rewind_scope;
+        pipeline = new();
+        projection = new();
+        projection.SetupGet(_ => _.Identifier).Returns("12686cc9-3e6f-4161-80ac-2e5a1cbfb509");
+        pipeline.SetupGet(_ => _.Projection).Returns(projection.Object);
 
-        void Establish()
-        {
-            pipeline = new();
-            projection = new();
-            projection.SetupGet(_ => _.Identifier).Returns("12686cc9-3e6f-4161-80ac-2e5a1cbfb509");
-            pipeline.SetupGet(_ => _.Projection).Returns(projection.Object);
-
-            result_store = new();
-            pipeline.SetupGet(_ => _.Sinks)
-                    .Returns(new Dictionary<ProjectionSinkConfigurationId, IProjectionSink>
-                    {
+        result_store = new();
+        pipeline.SetupGet(_ => _.Sinks)
+                .Returns(new Dictionary<ProjectionSinkConfigurationId, IProjectionSink>
+                {
                         { configuration, result_store.Object }
-                    });
-            positions = new();
-            rewind_scope = new();
-            result_store.Setup(_ => _.BeginRewind()).Returns(rewind_scope.Object);
-            rewind = new(pipeline.Object, positions.Object, configuration, Mock.Of<ILogger<Rewind>>());
-            job_status = new();
-        }
+                });
+        positions = new();
+        rewind_scope = new();
+        result_store.Setup(_ => _.BeginRewind()).Returns(rewind_scope.Object);
+        rewind = new(pipeline.Object, positions.Object, configuration, Mock.Of<ILogger<Rewind>>());
+        job_status = new();
     }
 }

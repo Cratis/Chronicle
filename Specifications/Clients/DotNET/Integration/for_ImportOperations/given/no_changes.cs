@@ -3,33 +3,32 @@
 
 using Aksio.Cratis.Changes;
 
-namespace Aksio.Cratis.Integration.for_ImportOperations.given
+namespace Aksio.Cratis.Integration.for_ImportOperations.given;
+
+public class no_changes : all_dependencies
 {
-    public class no_changes : all_dependencies
+    protected Model initial;
+    protected ExternalModel incoming;
+    protected ImportOperations<Model, ExternalModel> operations;
+    protected Mock<IObjectsComparer> objects_comparer;
+
+    void Establish()
     {
-        protected Model initial;
-        protected ExternalModel incoming;
-        protected ImportOperations<Model, ExternalModel> operations;
-        protected Mock<IObjectsComparer> objects_comparer;
+        initial = new(42, "Forty Two");
+        incoming = new(42, "Forty Two");
 
-        void Establish()
-        {
-            initial = new(42, "Forty Two");
-            incoming = new(42, "Forty Two");
+        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(initial));
+        mapper.Setup(_ => _.Map<Model>(incoming)).Returns(initial);
 
-            projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(initial));
-            mapper.Setup(_ => _.Map<Model>(incoming)).Returns(initial);
+        objects_comparer = new();
+        objects_comparer.Setup(_ => _.Equals(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
 
-            objects_comparer = new();
-            objects_comparer.Setup(_ => _.Equals(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
-
-            operations = new(
-                adapter.Object,
-                projection.Object,
-                mapper.Object,
-                objects_comparer.Object,
-                event_log.Object
-            );
-        }
+        operations = new(
+            adapter.Object,
+            projection.Object,
+            mapper.Object,
+            objects_comparer.Object,
+            event_log.Object
+        );
     }
 }

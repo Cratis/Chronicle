@@ -6,27 +6,26 @@ using Aksio.Cratis.Applications.Queries.MongoDB;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Compliance.Read.Microservices
+namespace Aksio.Cratis.Compliance.Read.Microservices;
+
+/// <summary>
+/// Represents the read side API for microservices.
+/// </summary>
+[Route("/api/compliance/microservices")]
+public class Microservices : Controller
 {
+    readonly IMongoCollection<Microservice> _collection;
+
     /// <summary>
-    /// Represents the read side API for microservices.
+    /// Initializes a new instance of the <see cref="Microservices"/> class.
     /// </summary>
-    [Route("/api/compliance/microservices")]
-    public class Microservices : Controller
-    {
-        readonly IMongoCollection<Microservice> _collection;
+    /// <param name="collection">Mongo collection.</param>
+    public Microservices(IMongoCollection<Microservice> collection) => _collection = collection;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Microservices"/> class.
-        /// </summary>
-        /// <param name="collection">Mongo collection.</param>
-        public Microservices(IMongoCollection<Microservice> collection) => _collection = collection;
-
-        /// <summary>
-        /// Get all configured microservices.
-        /// </summary>
-        /// <returns>Client observable of a collection of <see cref="Microservice"/>.</returns>
-        [HttpGet]
-        public Task<ClientObservable<IEnumerable<Microservice>>> AllMicroservices() => _collection.Observe();
-    }
+    /// <summary>
+    /// Get all configured microservices.
+    /// </summary>
+    /// <returns>Client observable of a collection of <see cref="Microservice"/>.</returns>
+    [HttpGet]
+    public Task<ClientObservable<IEnumerable<Microservice>>> AllMicroservices() => _collection.Observe();
 }

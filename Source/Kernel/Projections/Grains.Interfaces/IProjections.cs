@@ -4,29 +4,28 @@
 using Aksio.Cratis.Events.Projections.Definitions;
 using Orleans;
 
-namespace Aksio.Cratis.Events.Projections.Grains
+namespace Aksio.Cratis.Events.Projections.Grains;
+
+/// <summary>
+/// Defines a system that is responsible for supervises projections in the system.
+/// </summary>
+public interface IProjections : IGrainWithGuidKey
 {
     /// <summary>
-    /// Defines a system that is responsible for supervises projections in the system.
+    /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.
     /// </summary>
-    public interface IProjections : IGrainWithGuidKey
-    {
-        /// <summary>
-        /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.
-        /// </summary>
-        /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> to register.</param>
-        /// <param name="pipelineDefinition">The <see cref="ProjectionPipelineDefinition"/> for the projection.</param>
-        /// <returns>Async task.</returns>
-        /// <remarks>
-        /// If the projection is already in the system, the supervisor will see if there are any differences
-        /// and possibly set up the projection for rewind.
-        /// </remarks>
-        Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
+    /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> to register.</param>
+    /// <param name="pipelineDefinition">The <see cref="ProjectionPipelineDefinition"/> for the projection.</param>
+    /// <returns>Async task.</returns>
+    /// <remarks>
+    /// If the projection is already in the system, the supervisor will see if there are any differences
+    /// and possibly set up the projection for rewind.
+    /// </remarks>
+    Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
 
-        /// <summary>
-        /// Start the supervisor.
-        /// </summary>
-        /// <returns>Async task.</returns>
-        Task Start();
-    }
+    /// <summary>
+    /// Start the supervisor.
+    /// </summary>
+    /// <returns>Async task.</returns>
+    Task Start();
 }

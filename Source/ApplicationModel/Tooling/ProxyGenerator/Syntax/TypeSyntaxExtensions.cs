@@ -3,37 +3,36 @@
 
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
+namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax;
+
+/// <summary>
+/// Extension methods for working with <see cref="TypeSyntax"/>.
+/// </summary>
+public static class TypeSyntaxExtensions
 {
     /// <summary>
-    /// Extension methods for working with <see cref="TypeSyntax"/>.
+    /// Get the name from a <see cref="TypeSyntax"/>.
     /// </summary>
-    public static class TypeSyntaxExtensions
+    /// <param name="type"><see cref="TypeSyntax"/> to get from.</param>
+    /// <returns>The name.</returns>
+    public static string GetName(this TypeSyntax type)
     {
-        /// <summary>
-        /// Get the name from a <see cref="TypeSyntax"/>.
-        /// </summary>
-        /// <param name="type"><see cref="TypeSyntax"/> to get from.</param>
-        /// <returns>The name.</returns>
-        public static string GetName(this TypeSyntax type)
+        while (type != null)
         {
-            while (type != null)
+            switch (type)
             {
-                switch (type)
-                {
-                    case IdentifierNameSyntax ins:
-                        return ins.Identifier.Text;
+                case IdentifierNameSyntax ins:
+                    return ins.Identifier.Text;
 
-                    case QualifiedNameSyntax qns:
-                        type = qns.Right;
-                        break;
+                case QualifiedNameSyntax qns:
+                    type = qns.Right;
+                    break;
 
-                    default:
-                        return string.Empty;
-                }
+                default:
+                    return string.Empty;
             }
-
-            return string.Empty;
         }
+
+        return string.Empty;
     }
 }

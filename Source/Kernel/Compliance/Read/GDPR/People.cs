@@ -6,40 +6,39 @@ using Aksio.Cratis.Applications.Queries.MongoDB;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Compliance.Read.GDPR
+namespace Aksio.Cratis.Compliance.Read.GDPR;
+
+/// <summary>
+/// Represents the API for working with people.
+/// </summary>
+[Route("/api/compliance/gdpr/people")]
+public class People : Controller
 {
+    readonly IMongoCollection<Person> _collection;
+
     /// <summary>
-    /// Represents the API for working with people.
+    /// Initializes a new instance of the <see cref="People"/> class.
     /// </summary>
-    [Route("/api/compliance/gdpr/people")]
-    public class People : Controller
+    /// <param name="collection">Mongo collection.</param>
+    public People(IMongoCollection<Person> collection) => _collection = collection;
+
+    /// <summary>
+    /// Get all people.
+    /// </summary>
+    /// <returns>Client observable of a collection of <see cref="Person">people</see>.</returns>
+    [HttpGet]
+    public Task<ClientObservable<IEnumerable<Person>>> AllPeople() => _collection.Observe();
+
+    /// <summary>
+    /// Search for people by an arbitrary string.
+    /// </summary>
+    /// <param name="query">String to search for.</param>
+    /// <returns>Collection of matching <see cref="Person">people</see>.</returns>
+    [HttpGet("search")]
+    public async Task<IEnumerable<Person>> SearchForPeople([FromQuery] string query)
     {
-        readonly IMongoCollection<Person> _collection;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="People"/> class.
-        /// </summary>
-        /// <param name="collection">Mongo collection.</param>
-        public People(IMongoCollection<Person> collection) => _collection = collection;
-
-        /// <summary>
-        /// Get all people.
-        /// </summary>
-        /// <returns>Client observable of a collection of <see cref="Person">people</see>.</returns>
-        [HttpGet]
-        public Task<ClientObservable<IEnumerable<Person>>> AllPeople() => _collection.Observe();
-
-        /// <summary>
-        /// Search for people by an arbitrary string.
-        /// </summary>
-        /// <param name="query">String to search for.</param>
-        /// <returns>Collection of matching <see cref="Person">people</see>.</returns>
-        [HttpGet("search")]
-        public async Task<IEnumerable<Person>> SearchForPeople([FromQuery] string query)
-        {
-            var filter = Builders<Person>.Filter.Text(query, new TextSearchOptions { CaseSensitive = false, DiacriticSensitive = false });
-            var result = await _collection.FindAsync(filter);
-            return result.ToList();
-        }
+        var filter = Builders<Person>.Filter.Text(query, new TextSearchOptions { CaseSensitive = false, DiacriticSensitive = false });
+        var result = await _collection.FindAsync(filter);
+        return result.ToList();
     }
 }

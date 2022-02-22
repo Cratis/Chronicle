@@ -3,17 +3,16 @@
 
 using Orleans;
 
-namespace Aksio.Cratis.Configuration.Grains
+namespace Aksio.Cratis.Configuration.Grains;
+
+/// <summary>
+/// Defines a system for working with configurations.
+/// </summary>
+public interface IConfigurations : IGrainWithGuidKey
 {
     /// <summary>
-    /// Defines a system for working with configurations.
+    /// Gets the <see cref="Storage"/> configuration.
     /// </summary>
-    public interface IConfigurations : IGrainWithGuidKey
-    {
-        /// <summary>
-        /// Gets the <see cref="Storage"/> configuration.
-        /// </summary>
-        /// <returns><see cref="Storage"/> configuration instance.</returns>
-        Task<Storage> GetStorage();
-    }
+    /// <returns><see cref="Storage"/> configuration instance.</returns>
+    Task<Storage> GetStorage();
 }

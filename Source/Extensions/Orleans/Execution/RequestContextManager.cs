@@ -4,18 +4,17 @@
 using Aksio.Cratis.Execution;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Extensions.Orleans.Execution
-{
-    /// <summary>
-    /// Represents an implementation of <see cref="IRequestContextManager"/>.
-    /// </summary>
-    [Singleton]
-    public class RequestContextManager : IRequestContextManager
-    {
-        /// <inheritdoc/>
-        public object Get(string key) => RequestContext.Get(key);
+namespace Aksio.Cratis.Extensions.Orleans.Execution;
 
-        /// <inheritdoc/>
-        public void Set(string key, object value) => RequestContext.Set(key, value);
-    }
+/// <summary>
+/// Represents an implementation of <see cref="IRequestContextManager"/>.
+/// </summary>
+[Singleton]
+public class RequestContextManager : IRequestContextManager
+{
+    /// <inheritdoc/>
+    public object Get(string key) => RequestContext.Get(key);
+
+    /// <inheritdoc/>
+    public void Set(string key, object value) => RequestContext.Set(key, value);
 }

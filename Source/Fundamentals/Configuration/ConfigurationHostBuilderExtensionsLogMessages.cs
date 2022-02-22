@@ -3,14 +3,13 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+/// <summary>
+/// Log messages for <see cref="ConfigurationHostBuilderExtensions"/>.
+/// </summary>
+public static partial class ConfigurationHostBuilderExtensionsLogMessages
 {
-    /// <summary>
-    /// Log messages for <see cref="ConfigurationHostBuilderExtensions"/>.
-    /// </summary>
-    public static partial class ConfigurationHostBuilderExtensionsLogMessages
-    {
-        [LoggerMessage(0, LogLevel.Information, "Building configuration for '{Type}' for file '{File}'")]
-        internal static partial void BuildingConfigurationFor(this ILogger logger, Type type, string file);
-    }
+    [LoggerMessage(0, LogLevel.Information, "Building configuration for '{Type}' for file '{File}'")]
+    internal static partial void BuildingConfigurationFor(this ILogger logger, Type type, string file);
 }

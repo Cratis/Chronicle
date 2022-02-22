@@ -4,25 +4,24 @@
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.Expressions
+namespace Aksio.Cratis.Events.Projections.Expressions;
+
+/// <summary>
+/// Defines a resolver of expressions for providing values from events.
+/// </summary>
+public interface IEventValueProviderExpressionResolver
 {
     /// <summary>
-    /// Defines a resolver of expressions for providing values from events.
+    /// Called to check if the resolver can resolve the expression.
     /// </summary>
-    public interface IEventValueProviderExpressionResolver
-    {
-        /// <summary>
-        /// Called to check if the resolver can resolve the expression.
-        /// </summary>
-        /// <param name="expression">Expression to check.</param>
-        /// <returns>True if it can resolve, false if not.</returns>
-        bool CanResolve(string expression);
+    /// <param name="expression">Expression to check.</param>
+    /// <returns>True if it can resolve, false if not.</returns>
+    bool CanResolve(string expression);
 
-        /// <summary>
-        /// Called to resolve the expression.
-        /// </summary>
-        /// <param name="expression">Expression to resolve.</param>
-        /// <returns><see cref="ValueProvider{Event}"/> it resolves to.</returns>
-        ValueProvider<AppendedEvent> Resolve(string expression);
-    }
+    /// <summary>
+    /// Called to resolve the expression.
+    /// </summary>
+    /// <param name="expression">Expression to resolve.</param>
+    /// <returns><see cref="ValueProvider{Event}"/> it resolves to.</returns>
+    ValueProvider<AppendedEvent> Resolve(string expression);
 }

@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
+namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor;
+
+public class TypeWithoutProperties
 {
-    public class TypeWithoutProperties
-    {
-    }
 }

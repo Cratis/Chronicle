@@ -3,35 +3,34 @@
 
 using AutoMapper;
 
-namespace Aksio.Cratis.Integration.for_Adapters.given
+namespace Aksio.Cratis.Integration.for_Adapters.given;
+
+public class one_adapter : all_dependencies
 {
-    public class one_adapter : all_dependencies
+    protected Adapters adapters;
+    protected Mock<IAdapterFor<Model, ExternalModel>> adapter;
+
+    protected Mock<IAdapterProjectionFor<Model>> adapter_projection;
+    protected Mock<IMapper> mapper;
+
+    async Task Establish()
     {
-        protected Adapters adapters;
-        protected Mock<IAdapterFor<Model, ExternalModel>> adapter;
+        adapter = new Mock<IAdapterFor<Model, ExternalModel>>();
+        var adapterType = adapter.Object.GetType();
+        types.Setup(_ => _.FindMultiple(typeof(IAdapterFor<,>))).Returns(new[] { adapterType });
+        service_provider.Setup(_ => _.GetService(adapterType)).Returns(adapter.Object);
+        adapters = new(
+            types.Object,
+            service_provider.Object,
+            projection_factory.Object,
+            mapper_factory.Object);
 
-        protected Mock<IAdapterProjectionFor<Model>> adapter_projection;
-        protected Mock<IMapper> mapper;
+        mapper = new();
+        mapper_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(mapper.Object);
 
-        async Task Establish()
-        {
-            adapter = new Mock<IAdapterFor<Model, ExternalModel>>();
-            var adapterType = adapter.Object.GetType();
-            types.Setup(_ => _.FindMultiple(typeof(IAdapterFor<,>))).Returns(new[] { adapterType });
-            service_provider.Setup(_ => _.GetService(adapterType)).Returns(adapter.Object);
-            adapters = new(
-                types.Object,
-                service_provider.Object,
-                projection_factory.Object,
-                mapper_factory.Object);
+        adapter_projection = new();
+        projection_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(Task.FromResult(adapter_projection.Object));
 
-            mapper = new();
-            mapper_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(mapper.Object);
-
-            adapter_projection = new();
-            projection_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(Task.FromResult(adapter_projection.Object));
-
-            await adapters.Initialize();
-        }
+        await adapters.Initialize();
     }
 }

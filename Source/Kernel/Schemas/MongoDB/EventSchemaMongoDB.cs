@@ -3,38 +3,37 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Aksio.Cratis.Events.Schemas.MongoDB
+namespace Aksio.Cratis.Events.Schemas.MongoDB;
+
+/// <summary>
+/// Represents the <see cref="EventSchema"/> for MongoDB storage purpose.
+/// </summary>
+public class EventSchemaMongoDB
 {
     /// <summary>
-    /// Represents the <see cref="EventSchema"/> for MongoDB storage purpose.
+    /// Gets or sets the unique identifier.
     /// </summary>
-    public class EventSchemaMongoDB
+    [BsonId]
+    public string Id
     {
-        /// <summary>
-        /// Gets or sets the unique identifier.
-        /// </summary>
-        [BsonId]
-        public string Id
+        get => $"{EventType}-{Generation}";
+        set
         {
-            get => $"{EventType}-{Generation}";
-            set
-            {
-            }
         }
-
-        /// <summary>
-        /// Gets the identifier part of <see cref="EventType"/>.
-        /// </summary>
-        public Guid EventType { get; init; } = EventTypeId.Unknown.Value;
-
-        /// <summary>
-        /// Gets the generation part of the <see cref="EventType"/>>.
-        /// </summary>
-        public uint Generation { get; init; } = EventGeneration.First.Value;
-
-        /// <summary>
-        /// Gets the actual schema as JSON.
-        /// </summary>
-        public string Schema { get; init; } = string.Empty;
     }
+
+    /// <summary>
+    /// Gets the identifier part of <see cref="EventType"/>.
+    /// </summary>
+    public Guid EventType { get; init; } = EventTypeId.Unknown.Value;
+
+    /// <summary>
+    /// Gets the generation part of the <see cref="EventType"/>>.
+    /// </summary>
+    public uint Generation { get; init; } = EventGeneration.First.Value;
+
+    /// <summary>
+    /// Gets the actual schema as JSON.
+    /// </summary>
+    public string Schema { get; init; } = string.Empty;
 }
