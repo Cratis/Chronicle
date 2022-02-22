@@ -42,7 +42,7 @@ namespace Aksio.Cratis.Events.Store.Api
         {
             var jsonDocument = await JsonDocument.ParseAsync(Request.Body);
             var content = JsonObject.Create(jsonDocument.RootElement);
-            var eventLog = _grainFactory.GetGrain<IEventLog>(EventLogId.Default, keyExtension: _executionContextManager.Current.TenantId.ToString());
+            var eventLog = _grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: _executionContextManager.Current.TenantId.ToString());
             await eventLog.Append(
                 eventSourceId,
                 new EventType(eventTypeId, eventGeneration),
@@ -58,9 +58,9 @@ namespace Aksio.Cratis.Events.Store.Api
         [HttpGet("histogram")]
         public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
-        [HttpGet("{eventLogId}/{eventSourceId}")]
+        [HttpGet("{eventSequenceId}/{eventSourceId}")]
         public Task FindFor(
-            [FromRoute] EventLogId eventLogId,
+            [FromRoute] EventSequenceId eventLogId,
             [FromRoute] EventSourceId eventSourceId)
         {
             return Task.CompletedTask;
