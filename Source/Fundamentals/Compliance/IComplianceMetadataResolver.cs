@@ -3,39 +3,38 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Compliance
+namespace Aksio.Cratis.Compliance;
+
+/// <summary>
+/// Defines a resolver of <see cref="ComplianceMetadata"/> for types and properties.
+/// </summary>
+public interface IComplianceMetadataResolver
 {
     /// <summary>
-    /// Defines a resolver of <see cref="ComplianceMetadata"/> for types and properties.
+    /// Check whether or not a specific <see cref="Type"/> has any <see cref="ComplianceMetadata"/> associated with it.
     /// </summary>
-    public interface IComplianceMetadataResolver
-    {
-        /// <summary>
-        /// Check whether or not a specific <see cref="Type"/> has any <see cref="ComplianceMetadata"/> associated with it.
-        /// </summary>
-        /// <param name="type"><see cref="Type"/> to check.</param>
-        /// <returns>True if it has, false if not.</returns>
-        bool HasMetadataFor(Type type);
+    /// <param name="type"><see cref="Type"/> to check.</param>
+    /// <returns>True if it has, false if not.</returns>
+    bool HasMetadataFor(Type type);
 
-        /// <summary>
-        /// Check whether or not a specific <see cref="PropertyInfo"/> has any <see cref="ComplianceMetadata"/> associated with it.
-        /// </summary>
-        /// <param name="property"><see cref="PropertyInfo"/> to check.</param>
-        /// <returns>True if it has, false if not.</returns>
-        bool HasMetadataFor(PropertyInfo property);
+    /// <summary>
+    /// Check whether or not a specific <see cref="PropertyInfo"/> has any <see cref="ComplianceMetadata"/> associated with it.
+    /// </summary>
+    /// <param name="property"><see cref="PropertyInfo"/> to check.</param>
+    /// <returns>True if it has, false if not.</returns>
+    bool HasMetadataFor(PropertyInfo property);
 
-        /// <summary>
-        /// Get the <see cref="ComplianceMetadata"/> associated with a <see cref="Type"/>.
-        /// </summary>
-        /// <param name="type"><see cref="Type"/> to get for.</param>
-        /// <returns>Collection of <see cref="ComplianceMetadata"/> associated with the type.</returns>
-        IEnumerable<ComplianceMetadata> GetMetadataFor(Type type);
+    /// <summary>
+    /// Get the <see cref="ComplianceMetadata"/> associated with a <see cref="Type"/>.
+    /// </summary>
+    /// <param name="type"><see cref="Type"/> to get for.</param>
+    /// <returns>Collection of <see cref="ComplianceMetadata"/> associated with the type.</returns>
+    IEnumerable<ComplianceMetadata> GetMetadataFor(Type type);
 
-        /// <summary>
-        /// Get the <see cref="ComplianceMetadata"/> associated with a <see cref="PropertyInfo"/>.
-        /// </summary>
-        /// <param name="property"><see cref="PropertyInfo"/> to get for.</param>
-        /// <returns>Collection of <see cref="ComplianceMetadata"/> associated with the type.</returns>
-        IEnumerable<ComplianceMetadata> GetMetadataFor(PropertyInfo property);
-    }
+    /// <summary>
+    /// Get the <see cref="ComplianceMetadata"/> associated with a <see cref="PropertyInfo"/>.
+    /// </summary>
+    /// <param name="property"><see cref="PropertyInfo"/> to get for.</param>
+    /// <returns>Collection of <see cref="ComplianceMetadata"/> associated with the type.</returns>
+    IEnumerable<ComplianceMetadata> GetMetadataFor(PropertyInfo property);
 }

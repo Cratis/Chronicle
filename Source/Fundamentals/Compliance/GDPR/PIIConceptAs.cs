@@ -3,18 +3,17 @@
 
 using Aksio.Cratis.Concepts;
 
-namespace Aksio.Cratis.Compliance.GDPR
+namespace Aksio.Cratis.Compliance.GDPR;
+
+/// <summary>
+/// Represents a <see cref="ConceptAs{T}"/> that holds PII according to the definition of GDPR.
+/// </summary>
+/// <param name="Value">Underlying value.</param>
+/// <typeparam name="T">Type of the underlying value.</typeparam>
+public record PIIConceptAs<T>(T Value) : ConceptAs<T>(Value), IHoldPII
 {
     /// <summary>
-    /// Represents a <see cref="ConceptAs{T}"/> that holds PII according to the definition of GDPR.
+    /// Gets the details for the PII.
     /// </summary>
-    /// <param name="Value">Underlying value.</param>
-    /// <typeparam name="T">Type of the underlying value.</typeparam>
-    public record PIIConceptAs<T>(T Value) : ConceptAs<T>(Value), IHoldPII
-    {
-        /// <summary>
-        /// Gets the details for the PII.
-        /// </summary>
-        public virtual string Details => string.Empty;
-    }
+    public virtual string Details => string.Empty;
 }

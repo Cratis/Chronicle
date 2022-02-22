@@ -3,12 +3,11 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections
-{
-    /// <summary>
-    /// Represents the key typically coming from a <see cref="KeyResolver"/>.
-    /// </summary>
-    /// <param name="Value">The actual key value.</param>
-    /// <param name="ArrayIndexers">Any array indexers.</param>
-    public record Key(object Value, IArrayIndexers ArrayIndexers);
-}
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Represents the key typically coming from a <see cref="KeyResolver"/>.
+/// </summary>
+/// <param name="Value">The actual key value.</param>
+/// <param name="ArrayIndexers">Any array indexers.</param>
+public record Key(object Value, IArrayIndexers ArrayIndexers);

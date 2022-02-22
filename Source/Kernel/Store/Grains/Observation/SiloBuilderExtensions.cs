@@ -5,38 +5,37 @@ using Aksio.Cratis.Events.Store.Grains.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Configuration;
 
-namespace Orleans.Hosting
+namespace Orleans.Hosting;
+
+/// <summary>
+/// Extension methods for extending the <see cref="ISiloBuilder"/>.
+/// </summary>
+public static class SiloBuilderExtensions
 {
     /// <summary>
-    /// Extension methods for extending the <see cref="ISiloBuilder"/>.
+    /// Add a tracker of connected clients.
     /// </summary>
-    public static class SiloBuilderExtensions
+    /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
+    /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
+    public static ISiloBuilder AddConnectedClientsTracking(this ISiloBuilder builder)
     {
-        /// <summary>
-        /// Add a tracker of connected clients.
-        /// </summary>
-        /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
-        /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
-        public static ISiloBuilder AddConnectedClientsTracking(this ISiloBuilder builder)
+        builder.Configure<SiloConnectionOptions>(options =>
         {
-            builder.Configure<SiloConnectionOptions>(options =>
+            options.ConfigureGatewayInboundConnection(connectionBuilder =>
             {
-                options.ConfigureGatewayInboundConnection(connectionBuilder =>
+                connectionBuilder.Use(next =>
                 {
-                    connectionBuilder.Use(next =>
+                    var connectedClients = connectionBuilder.ApplicationServices.GetService<IConnectedClients>()!;
+                    return async context =>
                     {
-                        var connectedClients = connectionBuilder.ApplicationServices.GetService<IConnectedClients>()!;
-                        return async context =>
-                        {
-                            await connectedClients.OnClientConnected(context);
-                            await next(context);
-                            await connectedClients.OnClientDisconnected(context);
-                        };
-                    });
+                        await connectedClients.OnClientConnected(context);
+                        await next(context);
+                        await connectedClients.OnClientDisconnected(context);
+                    };
                 });
             });
+        });
 
-            return builder;
-        }
+        return builder;
     }
 }

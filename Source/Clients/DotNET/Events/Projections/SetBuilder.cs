@@ -5,51 +5,50 @@ using System.Linq.Expressions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Represents an implementation of <see cref="ISetBuilder{TModel, TEvent, TProperty}"/>.
+/// </summary>
+/// <typeparam name="TModel">Model to build for.</typeparam>
+/// <typeparam name="TEvent">Event to build for.</typeparam>
+/// <typeparam name="TProperty">The type of the property we're targetting.</typeparam>
+public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent, TProperty>
 {
+    readonly IFromBuilder<TModel, TEvent> _parent;
+    string _expression = string.Empty;
+
+    /// <inheritdoc/>
+    public PropertyPath TargetProperty { get; }
+
     /// <summary>
-    /// Represents an implementation of <see cref="ISetBuilder{TModel, TEvent, TProperty}"/>.
+    /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty}"/> class.
     /// </summary>
-    /// <typeparam name="TModel">Model to build for.</typeparam>
-    /// <typeparam name="TEvent">Event to build for.</typeparam>
-    /// <typeparam name="TProperty">The type of the property we're targetting.</typeparam>
-    public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent, TProperty>
+    /// <param name="parent">Parent builder.</param>
+    /// <param name="targetProperty">Target property we're building for.</param>
+    public SetBuilder(IFromBuilder<TModel, TEvent> parent, PropertyPath targetProperty)
     {
-        readonly IFromBuilder<TModel, TEvent> _parent;
-        string _expression = string.Empty;
+        _parent = parent;
+        TargetProperty = targetProperty;
+    }
 
-        /// <inheritdoc/>
-        public PropertyPath TargetProperty { get; }
+    /// <inheritdoc/>
+    public IFromBuilder<TModel, TEvent> To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
+    {
+        _expression = eventPropertyAccessor.GetPropertyPath();
+        return _parent;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty}"/> class.
-        /// </summary>
-        /// <param name="parent">Parent builder.</param>
-        /// <param name="targetProperty">Target property we're building for.</param>
-        public SetBuilder(IFromBuilder<TModel, TEvent> parent, PropertyPath targetProperty)
-        {
-            _parent = parent;
-            TargetProperty = targetProperty;
-        }
+    /// <inheritdoc/>
+    public IFromBuilder<TModel, TEvent> ToEventSourceId()
+    {
+        _expression = "$eventSourceId";
+        return _parent;
+    }
 
-        /// <inheritdoc/>
-        public IFromBuilder<TModel, TEvent> To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
-        {
-            _expression = eventPropertyAccessor.GetPropertyPath();
-            return _parent;
-        }
-
-        /// <inheritdoc/>
-        public IFromBuilder<TModel, TEvent> ToEventSourceId()
-        {
-            _expression = "$eventSourceId";
-            return _parent;
-        }
-
-        /// <inheritdoc/>
-        public string Build()
-        {
-            return _expression;
-        }
+    /// <inheritdoc/>
+    public string Build()
+    {
+        return _expression;
     }
 }

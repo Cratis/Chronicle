@@ -3,22 +3,21 @@
 
 using Aksio.Cratis.Extensions.Orleans.Execution;
 
-namespace Orleans
+namespace Orleans;
+
+/// <summary>
+/// Extension methods for extending the <see cref="IClientBuilder"/>.
+/// </summary>
+public static class OrleansClientBuilderExtensions
 {
     /// <summary>
-    /// Extension methods for extending the <see cref="IClientBuilder"/>.
+    /// Use <see cref="ExecutionContext"/> for all outgoing grain calls.
     /// </summary>
-    public static class OrleansClientBuilderExtensions
+    /// <param name="builder"><see cref="IClientBuilder"/> to use it for.</param>
+    /// <returns><see cref="IClientBuilder"/> for builder continuation.</returns>
+    public static IClientBuilder UseExecutionContext(this IClientBuilder builder)
     {
-        /// <summary>
-        /// Use <see cref="ExecutionContext"/> for all outgoing grain calls.
-        /// </summary>
-        /// <param name="builder"><see cref="IClientBuilder"/> to use it for.</param>
-        /// <returns><see cref="IClientBuilder"/> for builder continuation.</returns>
-        public static IClientBuilder UseExecutionContext(this IClientBuilder builder)
-        {
-            builder.AddOutgoingGrainCallFilter<ExecutionContextOutgoingCallFilter>();
-            return builder;
-        }
+        builder.AddOutgoingGrainCallFilter<ExecutionContextOutgoingCallFilter>();
+        return builder;
     }
 }

@@ -3,25 +3,24 @@
 
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Events.Store.Api
+namespace Aksio.Cratis.Events.Store.Api;
+
+/// <summary>
+/// Represents the API for working with event logs.
+/// </summary>
+[Route("/api/events/store/logs")]
+public class EventLogs : Controller
 {
     /// <summary>
-    /// Represents the API for working with event logs.
+    /// Gets all event logs.
     /// </summary>
-    [Route("/api/events/store/logs")]
-    public class EventLogs : Controller
+    /// <returns>Collection of event logs.</returns>
+    [HttpGet]
+    public Task<IEnumerable<EventLogInformation>> AllEventLogs()
     {
-        /// <summary>
-        /// Gets all event logs.
-        /// </summary>
-        /// <returns>Collection of event logs.</returns>
-        [HttpGet]
-        public Task<IEnumerable<EventLogInformation>> AllEventLogs()
+        return Task.FromResult(new[]
         {
-            return Task.FromResult(new[]
-            {
                 new EventLogInformation("00000000-0000-0000-0000-000000000000", "Main Event Log")
-            }.AsEnumerable());
-        }
+        }.AsEnumerable());
     }
 }

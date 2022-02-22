@@ -3,11 +3,10 @@
 
 using Microsoft.AspNetCore.Connections;
 
-namespace Aksio.Cratis.Events.Store.Grains.Observation
-{
-    /// <summary>
-    /// Delegate for when a client is disconnected.
-    /// </summary>
-    /// <param name="context">The client <see cref="ConnectionContext"/>.</param>
-    public delegate Task ClientDisconnected(ConnectionContext context);
-}
+namespace Aksio.Cratis.Events.Store.Grains.Observation;
+
+/// <summary>
+/// Delegate for when a client is disconnected.
+/// </summary>
+/// <param name="context">The client <see cref="ConnectionContext"/>.</param>
+public delegate Task ClientDisconnected(ConnectionContext context);

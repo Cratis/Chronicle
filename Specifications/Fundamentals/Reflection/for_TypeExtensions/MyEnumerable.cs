@@ -3,20 +3,19 @@
 
 using System.Collections;
 
-namespace Aksio.Cratis.Reflection.for_TypeExtensions
+namespace Aksio.Cratis.Reflection.for_TypeExtensions;
+
+public class MyEnumerable : IEnumerable<ComplexType>
 {
-    public class MyEnumerable : IEnumerable<ComplexType>
+    IEnumerable<ComplexType> _list = new List<ComplexType>();
+
+    public IEnumerator<ComplexType> GetEnumerator()
     {
-        IEnumerable<ComplexType> _list = new List<ComplexType>();
+        return _list.GetEnumerator();
+    }
 
-        public IEnumerator<ComplexType> GetEnumerator()
-        {
-            return _list.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return _list.GetEnumerator();
-        }
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return _list.GetEnumerator();
     }
 }

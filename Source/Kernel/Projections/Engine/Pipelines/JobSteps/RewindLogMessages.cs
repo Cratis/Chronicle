@@ -3,14 +3,13 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
+
+/// <summary>
+/// Holds log messages for <see cref="Rewind"/>.
+/// </summary>
+public static partial class RewindLogMessages
 {
-    /// <summary>
-    /// Holds log messages for <see cref="Rewind"/>.
-    /// </summary>
-    public static partial class RewindLogMessages
-    {
-        [LoggerMessage(0, LogLevel.Debug, "Rewinding projection '{Projection}' for configuration '{Configuration}'")]
-        internal static partial void Rewinding(this ILogger logger, ProjectionId projection, ProjectionSinkConfigurationId configuration);
-    }
+    [LoggerMessage(0, LogLevel.Debug, "Rewinding projection '{Projection}' for configuration '{Configuration}'")]
+    internal static partial void Rewinding(this ILogger logger, ProjectionId projection, ProjectionSinkConfigurationId configuration);
 }

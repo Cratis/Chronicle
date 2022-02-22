@@ -1,15 +1,14 @@
-﻿// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Concepts.for_ConceptExtensions
+namespace Aksio.Cratis.Concepts.for_ConceptExtensions;
+
+public class when_getting_the_value_from_a_non_concept : given.concepts
 {
-    public class when_getting_the_value_from_a_non_concept : given.concepts
-    {
-        static string primitive_value = "ten";
-        static Exception exception;
+    static string primitive_value = "ten";
+    static Exception exception;
 
-        void Because() => exception = Catch.Exception(() => primitive_value.GetConceptValue());
+    void Because() => exception = Catch.Exception(() => primitive_value.GetConceptValue());
 
-        [Fact] void should_throw_an_argument_exception() => exception.ShouldBeOfExactType<TypeIsNotAConcept>();
-    }
+    [Fact] void should_throw_an_argument_exception() => exception.ShouldBeOfExactType<TypeIsNotAConcept>();
 }

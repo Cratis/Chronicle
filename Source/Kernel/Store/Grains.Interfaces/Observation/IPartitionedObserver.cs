@@ -3,32 +3,31 @@
 
 using Orleans;
 
-namespace Aksio.Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation;
+
+/// <summary>
+/// Defines a partitioned observer.
+/// </summary>
+public interface IPartitionedObserver : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Defines a partitioned observer.
+    /// Try to resume the partition.
     /// </summary>
-    public interface IPartitionedObserver : IGrainWithGuidCompoundKey
-    {
-        /// <summary>
-        /// Try to resume the partition.
-        /// </summary>
-        /// <returns>Awaitable task.</returns>
-        Task TryResume();
+    /// <returns>Awaitable task.</returns>
+    Task TryResume();
 
-        /// <summary>
-        /// Set the current connection identifier.
-        /// </summary>
-        /// <param name="connectionId">The connection identifier.</param>
-        /// <returns>Awaitable task.</returns>
-        Task SetConnectionId(string connectionId);
+    /// <summary>
+    /// Set the current connection identifier.
+    /// </summary>
+    /// <param name="connectionId">The connection identifier.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetConnectionId(string connectionId);
 
-        /// <summary>
-        /// Handle the next event.
-        /// </summary>
-        /// <param name="event">The actual event.</param>
-        /// <param name="eventTypes">Event types to set.</param>
-        /// <returns>Awaitable task.</returns>
-        Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes);
-    }
+    /// <summary>
+    /// Handle the next event.
+    /// </summary>
+    /// <param name="event">The actual event.</param>
+    /// <param name="eventTypes">Event types to set.</param>
+    /// <returns>Awaitable task.</returns>
+    Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes);
 }

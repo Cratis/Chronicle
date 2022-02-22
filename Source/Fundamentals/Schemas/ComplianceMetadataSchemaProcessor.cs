@@ -8,60 +8,59 @@ using Aksio.Cratis.Strings;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
-namespace Aksio.Cratis.Schemas
+namespace Aksio.Cratis.Schemas;
+
+/// <summary>
+/// Represents an implementation of <see cref="ISchemaProcessor"/> for handling compliance metadata.
+/// </summary>
+public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
 {
+    readonly IComplianceMetadataResolver _metadataResolver;
+
     /// <summary>
-    /// Represents an implementation of <see cref="ISchemaProcessor"/> for handling compliance metadata.
+    /// Initializes a new instance of the <see cref="ComplianceMetadataSchemaProcessor"/> class.
     /// </summary>
-    public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
+    /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
+    public ComplianceMetadataSchemaProcessor(IComplianceMetadataResolver metadataResolver)
     {
-        readonly IComplianceMetadataResolver _metadataResolver;
+        _metadataResolver = metadataResolver;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ComplianceMetadataSchemaProcessor"/> class.
-        /// </summary>
-        /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
-        public ComplianceMetadataSchemaProcessor(IComplianceMetadataResolver metadataResolver)
+    /// <inheritdoc/>
+    public void Process(SchemaProcessorContext context)
+    {
+        if (_metadataResolver.HasMetadataFor(context.Type))
         {
-            _metadataResolver = metadataResolver;
+            AddMetadataToSchema(context.Schema, _metadataResolver.GetMetadataFor(context.Type));
         }
 
-        /// <inheritdoc/>
-        public void Process(SchemaProcessorContext context)
+        foreach (var (key, property) in context.Schema.Properties)
         {
-            if (_metadataResolver.HasMetadataFor(context.Type))
+            var propertyName = key.ToPascalCase();
+            var clrProperty = context.Type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            if (clrProperty != default && _metadataResolver.HasMetadataFor(clrProperty))
             {
-                AddMetadataToSchema(context.Schema, _metadataResolver.GetMetadataFor(context.Type));
-            }
-
-            foreach (var (key, property) in context.Schema.Properties)
-            {
-                var propertyName = key.ToPascalCase();
-                var clrProperty = context.Type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                if (clrProperty != default && _metadataResolver.HasMetadataFor(clrProperty))
-                {
-                    AddMetadataToSchema(property, _metadataResolver.GetMetadataFor(clrProperty));
-                }
+                AddMetadataToSchema(property, _metadataResolver.GetMetadataFor(clrProperty));
             }
         }
+    }
 
-        void AddMetadataToSchema(JsonSchema schema, IEnumerable<ComplianceMetadata> metadata) => metadata.ForEach(_ => EnsureMetadata(schema).Add(new ComplianceSchemaMetadata(_.MetadataType.Value, _.Details)));
+    void AddMetadataToSchema(JsonSchema schema, IEnumerable<ComplianceMetadata> metadata) => metadata.ForEach(_ => EnsureMetadata(schema).Add(new ComplianceSchemaMetadata(_.MetadataType.Value, _.Details)));
 
-        List<ComplianceSchemaMetadata> EnsureMetadata(JsonSchema schema)
+    List<ComplianceSchemaMetadata> EnsureMetadata(JsonSchema schema)
+    {
+        EnsureExtensionData(schema);
+
+        if (!schema.ExtensionData.ContainsKey(JsonSchemaGenerator.ComplianceKey))
         {
-            EnsureExtensionData(schema);
-
-            if (!schema.ExtensionData.ContainsKey(JsonSchemaGenerator.ComplianceKey))
-            {
-                schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = new List<ComplianceSchemaMetadata>();
-            }
-
-            return (schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] as List<ComplianceSchemaMetadata>)!;
+            schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = new List<ComplianceSchemaMetadata>();
         }
 
-        void EnsureExtensionData(JsonSchema schema)
-        {
-            if (schema.ExtensionData == null) schema.ExtensionData = new Dictionary<string, object>();
-        }
+        return (schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] as List<ComplianceSchemaMetadata>)!;
+    }
+
+    void EnsureExtensionData(JsonSchema schema)
+    {
+        if (schema.ExtensionData == null) schema.ExtensionData = new Dictionary<string, object>();
     }
 }

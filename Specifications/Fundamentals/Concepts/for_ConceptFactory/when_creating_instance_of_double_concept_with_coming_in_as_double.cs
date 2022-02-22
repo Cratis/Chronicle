@@ -1,14 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Concepts.for_ConceptFactory
+namespace Aksio.Cratis.Concepts.for_ConceptFactory;
+
+public class when_creating_instance_of_double_concept_with_coming_in_as_double : Specification
 {
-    public class when_creating_instance_of_double_concept_with_coming_in_as_double : Specification
-    {
-        DoubleConcept result;
+    DoubleConcept result;
 
-        void Because() => result = ConceptFactory.CreateConceptInstance(typeof(DoubleConcept), 5d) as DoubleConcept;
+    void Because() => result = ConceptFactory.CreateConceptInstance(typeof(DoubleConcept), 5d) as DoubleConcept;
 
-        [Fact] void should_hold_the_double() => result.Value.ShouldEqual(5d);
-    }
+    [Fact] void should_hold_the_double() => result.Value.ShouldEqual(5d);
 }

@@ -3,16 +3,15 @@
 
 #pragma warning disable CS1718
 
-namespace Aksio.Cratis.Concepts.for_ConceptAs
+namespace Aksio.Cratis.Concepts.for_ConceptAs;
+
+public class when_constructing_with_null_value : Specification
 {
-    public class when_constructing_with_null_value : Specification
-    {
-        record RefConcept(string Value) : ConceptAs<string>(Value);
+    record RefConcept(string Value) : ConceptAs<string>(Value);
 
-        Exception result;
+    Exception result;
 
-        void Because() => result = Catch.Exception(() => { var _ = new RefConcept(null); });
+    void Because() => result = Catch.Exception(() => { var _ = new RefConcept(null); });
 
-        [Fact] void should_throw_argument_null_exception() => result.ShouldBeOfExactType<ArgumentNullException>();
-    }
+    [Fact] void should_throw_argument_null_exception() => result.ShouldBeOfExactType<ArgumentNullException>();
 }

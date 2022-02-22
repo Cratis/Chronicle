@@ -4,20 +4,19 @@
 using Aksio.Cratis.Concepts;
 using Newtonsoft.Json;
 
-namespace Aksio.Cratis.Extensions.Newtonsoft
+namespace Aksio.Cratis.Extensions.Newtonsoft;
+
+/// <summary>
+/// Represents a <see cref="JsonConverter"/> for <see cref="ConceptAs{T}"/>.
+/// </summary>
+public class ConceptAsJsonConverter : JsonConverter
 {
-    /// <summary>
-    /// Represents a <see cref="JsonConverter"/> for <see cref="ConceptAs{T}"/>.
-    /// </summary>
-    public class ConceptAsJsonConverter : JsonConverter
-    {
-        /// <inheritdoc/>
-        public override bool CanConvert(Type objectType) => objectType.IsConcept();
+    /// <inheritdoc/>
+    public override bool CanConvert(Type objectType) => objectType.IsConcept();
 
-        /// <inheritdoc/>
-        public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer) => ConceptFactory.CreateConceptInstance(objectType, reader.Value);
+    /// <inheritdoc/>
+    public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer) => ConceptFactory.CreateConceptInstance(objectType, reader.Value);
 
-        /// <inheritdoc/>
-        public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) => writer.WriteValue(value?.GetConceptValue());
-    }
+    /// <inheritdoc/>
+    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer) => writer.WriteValue(value?.GetConceptValue());
 }

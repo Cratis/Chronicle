@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Compliance.GDPR;
 
-namespace Aksio.Cratis.Compliance.Concepts.PersonalInformation
-{
-    public record LastName(string Value) : PIIConceptAs<string>(Value);
-}
+namespace Aksio.Cratis.Compliance.Concepts.PersonalInformation;
+
+public record LastName(string Value) : PIIConceptAs<string>(Value);

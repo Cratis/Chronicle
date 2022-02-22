@@ -3,22 +3,21 @@
 
 using System.Text.Json;
 
-namespace Aksio.Cratis.Json
-{
-    public abstract class when_trying_to_get_value_of_type<T> : Specification
-    {
-        protected bool result;
-        protected T output;
-        protected abstract T expected { get; }
+namespace Aksio.Cratis.Json;
 
-        void Because()
-        {
-            var document = typeof(T).IsPrimitive ?
-                JsonDocument.Parse($"{{\"TheValue\":{expected}}}") :
-                JsonDocument.Parse($"{{\"TheValue\":\"{expected}\"}}");
-            var element = document.RootElement.EnumerateObject().First().Value;
-            result = element.TryGetValue(out var theOutput);
-            output = (T)theOutput!;
-        }
+public abstract class when_trying_to_get_value_of_type<T> : Specification
+{
+    protected bool result;
+    protected T output;
+    protected abstract T expected { get; }
+
+    void Because()
+    {
+        var document = typeof(T).IsPrimitive ?
+            JsonDocument.Parse($"{{\"TheValue\":{expected}}}") :
+            JsonDocument.Parse($"{{\"TheValue\":\"{expected}\"}}");
+        var element = document.RootElement.EnumerateObject().First().Value;
+        result = element.TryGetValue(out var theOutput);
+        output = (T)theOutput!;
     }
 }

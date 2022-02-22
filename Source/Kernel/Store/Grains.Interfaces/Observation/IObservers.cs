@@ -3,17 +3,16 @@
 
 using Orleans;
 
-namespace Aksio.Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation;
+
+/// <summary>
+/// Defines a system for working with observers.
+/// </summary>
+public interface IObservers : IGrainWithGuidKey
 {
     /// <summary>
-    /// Defines a system for working with observers.
+    /// Trigger a retry of all failed observers.
     /// </summary>
-    public interface IObservers : IGrainWithGuidKey
-    {
-        /// <summary>
-        /// Trigger a retry of all failed observers.
-        /// </summary>
-        /// <returns>Awaitable task.</returns>
-        Task RetryFailed();
-    }
+    /// <returns>Awaitable task.</returns>
+    Task RetryFailed();
 }

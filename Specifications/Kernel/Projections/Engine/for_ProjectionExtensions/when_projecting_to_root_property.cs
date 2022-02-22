@@ -5,16 +5,15 @@ using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter
+namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.when_applying_from_filter;
+
+public class when_projecting_to_root_property : given.an_observable_and_event_setup
 {
-    public class when_projecting_to_root_property : given.an_observable_and_event_setup
-    {
-        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<AppendedEvent, ExpandoObject>>();
+    IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<AppendedEvent, ExpandoObject>>();
 
-        void Establish() => observable.Project("", "Id", property_mappers);
+    void Establish() => observable.Project("", "Id", property_mappers);
 
-        void Because() => observable.OnNext(event_context);
+    void Because() => observable.OnNext(event_context);
 
-        [Fact] void should_set_properties_on_changeset() => changeset.Verify(_ => _.SetProperties(property_mappers, event_context.Key.ArrayIndexers), Once());
-    }
+    [Fact] void should_set_properties_on_changeset() => changeset.Verify(_ => _.SetProperties(property_mappers, event_context.Key.ArrayIndexers), Once());
 }

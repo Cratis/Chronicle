@@ -3,21 +3,20 @@
 
 using System.Text.Json.Nodes;
 
-namespace Aksio.Cratis.Json
+namespace Aksio.Cratis.Json;
+
+/// <summary>
+/// Extension methods for working with <see cref="JsonObject"/>.
+/// </summary>
+public static class JsonObjectExtensions
 {
     /// <summary>
-    /// Extension methods for working with <see cref="JsonObject"/>.
+    /// Deep clones a <see cref="JsonObject"/> for a new instance.
     /// </summary>
-    public static class JsonObjectExtensions
+    /// <param name="json"><see cref="JsonObject"/> to clone.</param>
+    /// <returns>A new <see cref="JsonObject"/> instance.</returns>
+    public static JsonObject DeepClone(this JsonObject json)
     {
-        /// <summary>
-        /// Deep clones a <see cref="JsonObject"/> for a new instance.
-        /// </summary>
-        /// <param name="json"><see cref="JsonObject"/> to clone.</param>
-        /// <returns>A new <see cref="JsonObject"/> instance.</returns>
-        public static JsonObject DeepClone(this JsonObject json)
-        {
-            return (JsonNode.Parse(json.ToJsonString()) as JsonObject)!;
-        }
+        return (JsonNode.Parse(json.ToJsonString()) as JsonObject)!;
     }
 }

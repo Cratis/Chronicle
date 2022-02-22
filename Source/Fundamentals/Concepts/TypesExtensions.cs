@@ -4,27 +4,26 @@
 using System.ComponentModel;
 using Aksio.Cratis.Types;
 
-namespace Aksio.Cratis.Concepts
+namespace Aksio.Cratis.Concepts;
+
+/// <summary>
+/// Provides extensions related to working with <see cref="ITypes"/>.
+/// </summary>
+public static class TypesExtensions
 {
     /// <summary>
-    /// Provides extensions related to working with <see cref="ITypes"/>.
+    /// Register type converters for all <see cref="ConceptAs{T}"/> types.
     /// </summary>
-    public static class TypesExtensions
+    /// <param name="types"><see cref="ITypes"/> to extend.</param>
+    /// <returns><see cref="ITypes"/> for continuation.</returns>
+    public static ITypes RegisterTypeConvertersForConcepts(this ITypes types)
     {
-        /// <summary>
-        /// Register type converters for all <see cref="ConceptAs{T}"/> types.
-        /// </summary>
-        /// <param name="types"><see cref="ITypes"/> to extend.</param>
-        /// <returns><see cref="ITypes"/> for continuation.</returns>
-        public static ITypes RegisterTypeConvertersForConcepts(this ITypes types)
+        foreach (var conceptType in types.FindMultiple(typeof(ConceptAs<>)))
         {
-            foreach (var conceptType in types.FindMultiple(typeof(ConceptAs<>)))
-            {
-                var typeConverterType = typeof(ConceptAsTypeConverter<,>).MakeGenericType(conceptType, conceptType.GetConceptValueType());
-                TypeDescriptor.AddAttributes(conceptType, new TypeConverterAttribute(typeConverterType));
-            }
-
-            return types;
+            var typeConverterType = typeof(ConceptAsTypeConverter<,>).MakeGenericType(conceptType, conceptType.GetConceptValueType());
+            TypeDescriptor.AddAttributes(conceptType, new TypeConverterAttribute(typeConverterType));
         }
+
+        return types;
     }
 }

@@ -4,18 +4,17 @@
 using Aksio.Cratis.Extensions.MongoDB;
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB;
+
+/// <summary>
+/// Represents a class map for <see cref="Event"/>.
+/// </summary>
+public class EventClassMap : IBsonClassMapFor<Event>
 {
-    /// <summary>
-    /// Represents a class map for <see cref="Event"/>.
-    /// </summary>
-    public class EventClassMap : IBsonClassMapFor<Event>
+    /// <inheritdoc/>
+    public void Configure(BsonClassMap<Event> classMap)
     {
-        /// <inheritdoc/>
-        public void Configure(BsonClassMap<Event> classMap)
-        {
-            classMap.AutoMap();
-            classMap.MapIdProperty(_ => _.SequenceNumber);
-        }
+        classMap.AutoMap();
+        classMap.MapIdProperty(_ => _.SequenceNumber);
     }
 }

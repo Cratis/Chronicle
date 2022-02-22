@@ -8,77 +8,76 @@ using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Observation
+namespace Aksio.Cratis.Events.Store.MongoDB.Observation;
+
+/// <summary>
+/// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.
+/// </summary>
+public class FailedObserverStorageProvider : IGrainStorage
 {
+    readonly IExecutionContextManager _executionContextManager;
+    readonly IEventStoreDatabase _eventStoreDatabase;
+
+    IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
+
     /// <summary>
-    /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.
+    /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
     /// </summary>
-    public class FailedObserverStorageProvider : IGrainStorage
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to work with.</param>
+    public FailedObserverStorageProvider(
+        IExecutionContextManager executionContextManager,
+        IEventStoreDatabase eventStoreDatabase)
     {
-        readonly IExecutionContextManager _executionContextManager;
-        readonly IEventStoreDatabase _eventStoreDatabase;
+        _executionContextManager = executionContextManager;
+        _eventStoreDatabase = eventStoreDatabase;
+    }
 
-        IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
+    /// <inheritdoc/>
+    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    {
+        return Task.CompletedTask;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
-        /// </summary>
-        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-        /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to work with.</param>
-        public FailedObserverStorageProvider(
-            IExecutionContextManager executionContextManager,
-            IEventStoreDatabase eventStoreDatabase)
+    /// <inheritdoc/>
+    public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    {
+        var observerId = grainReference.GetPrimaryKey(out var key);
+        var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+        _executionContextManager.Establish(tenantId, string.Empty);
+
+        var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
+        var cursor = await Collection.FindAsync(filter);
+        grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedObserverState() { Id = FailedObserverState.CreateKeyFrom(eventLogId, observerId, eventSourceId) };
+    }
+
+    /// <inheritdoc/>
+    public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    {
+        var observerId = grainReference.GetPrimaryKey(out var key);
+        var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+        _executionContextManager.Establish(tenantId, string.Empty);
+
+        var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
+
+        var state = (grainState.State as FailedObserverState)!;
+        if (state.IsFailed)
         {
-            _executionContextManager = executionContextManager;
-            _eventStoreDatabase = eventStoreDatabase;
+            await Collection.ReplaceOneAsync(
+                filter,
+                state!,
+                new ReplaceOptions { IsUpsert = true });
         }
-
-        /// <inheritdoc/>
-        public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        else
         {
-            return Task.CompletedTask;
+            await Collection.FindOneAndDeleteAsync(filter);
         }
+    }
 
-        /// <inheritdoc/>
-        public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
-        {
-            var observerId = grainReference.GetPrimaryKey(out var key);
-            var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
-            _executionContextManager.Establish(tenantId, string.Empty);
-
-            var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
-            var cursor = await Collection.FindAsync(filter);
-            grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedObserverState() { Id = FailedObserverState.CreateKeyFrom(eventLogId, observerId, eventSourceId) };
-        }
-
-        /// <inheritdoc/>
-        public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
-        {
-            var observerId = grainReference.GetPrimaryKey(out var key);
-            var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
-            _executionContextManager.Establish(tenantId, string.Empty);
-
-            var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
-
-            var state = (grainState.State as FailedObserverState)!;
-            if (state.IsFailed)
-            {
-                await Collection.ReplaceOneAsync(
-                    filter,
-                    state!,
-                    new ReplaceOptions { IsUpsert = true });
-            }
-            else
-            {
-                await Collection.FindOneAndDeleteAsync(filter);
-            }
-        }
-
-        FilterDefinition<FailedObserverState> GetFilterFor(Guid eventLogId, Guid observerId, string? eventSourceId)
-        {
-            var key = $"{eventLogId}+{observerId}+{eventSourceId}";
-            return Builders<FailedObserverState>.Filter.Eq(
-                new StringFieldDefinition<FailedObserverState, string>("_id"), key);
-        }
+    FilterDefinition<FailedObserverState> GetFilterFor(Guid eventLogId, Guid observerId, string? eventSourceId)
+    {
+        var key = $"{eventLogId}+{observerId}+{eventSourceId}";
+        return Builders<FailedObserverState>.Filter.Eq(
+            new StringFieldDefinition<FailedObserverState, string>("_id"), key);
     }
 }

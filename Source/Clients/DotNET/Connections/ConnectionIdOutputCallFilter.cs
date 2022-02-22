@@ -5,41 +5,40 @@ using Aksio.Cratis.Extensions.Orleans.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans;
 
-namespace Aksio.Cratis.Connections
+namespace Aksio.Cratis.Connections;
+
+/// <summary>
+/// Represents a <see cref="IOutgoingGrainCallFilter"/> for adding <see cref="ConnectionId"/> to the context.
+/// </summary>
+public class ConnectionIdOutputCallFilter : IOutgoingGrainCallFilter
 {
+    readonly IServiceProvider _serviceProvider;
+    bool _initialized;
+    IRequestContextManager? _requestContextManager;
+    IConnectionManager? _connectionManager;
+
     /// <summary>
-    /// Represents a <see cref="IOutgoingGrainCallFilter"/> for adding <see cref="ConnectionId"/> to the context.
+    /// Initializes a new instance of the <see cref="ConnectionIdOutputCallFilter"/> class.
     /// </summary>
-    public class ConnectionIdOutputCallFilter : IOutgoingGrainCallFilter
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
+    public ConnectionIdOutputCallFilter(IServiceProvider serviceProvider)
     {
-        readonly IServiceProvider _serviceProvider;
-        bool _initialized;
-        IRequestContextManager? _requestContextManager;
-        IConnectionManager? _connectionManager;
+        _serviceProvider = serviceProvider;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionIdOutputCallFilter"/> class.
-        /// </summary>
-        /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-        public ConnectionIdOutputCallFilter(IServiceProvider serviceProvider)
+    /// <inheritdoc/>
+    public async Task Invoke(IOutgoingGrainCallContext context)
+    {
+        if (!_initialized)
         {
-            _serviceProvider = serviceProvider;
+            _initialized = true;
+            _connectionManager = _serviceProvider.GetService<IConnectionManager>();
+            _requestContextManager = _serviceProvider.GetService<IRequestContextManager>();
         }
 
-        /// <inheritdoc/>
-        public async Task Invoke(IOutgoingGrainCallContext context)
-        {
-            if (!_initialized)
-            {
-                _initialized = true;
-                _connectionManager = _serviceProvider.GetService<IConnectionManager>();
-                _requestContextManager = _serviceProvider.GetService<IRequestContextManager>();
-            }
-
-            _requestContextManager!.Set(
-                    RequestContextKeys.ConnectionId,
-                    _connectionManager!.CurrentConnectionId.Value);
-            await context.Invoke();
-        }
+        _requestContextManager!.Set(
+                RequestContextKeys.ConnectionId,
+                _connectionManager!.CurrentConnectionId.Value);
+        await context.Invoke();
     }
 }

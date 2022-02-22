@@ -3,27 +3,26 @@
 
 using Aksio.Cratis.Events.Store;
 
-namespace Aksio.Cratis.Events.Observation
+namespace Aksio.Cratis.Events.Observation;
+
+/// <summary>
+/// Defines a system for working with <see cref="IObserverMiddleware">middlewares</see> that can be called during the observing of events.
+/// </summary>
+public interface IObserverMiddlewares
 {
     /// <summary>
-    /// Defines a system for working with <see cref="IObserverMiddleware">middlewares</see> that can be called during the observing of events.
+    /// Invoked before the actual invoke.
     /// </summary>
-    public interface IObserverMiddlewares
-    {
-        /// <summary>
-        /// Invoked before the actual invoke.
-        /// </summary>
-        /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
-        /// <param name="event">The actual event that it will be called with.</param>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        Task BeforeInvoke(EventContext eventContext, object @event);
+    /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
+    /// <param name="event">The actual event that it will be called with.</param>
+    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+    Task BeforeInvoke(EventContext eventContext, object @event);
 
-        /// <summary>
-        /// Invoked after the actual invoke.
-        /// </summary>
-        /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
-        /// <param name="event">The actual event that it will be called with.</param>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        Task AfterInvoke(EventContext eventContext, object @event);
-    }
+    /// <summary>
+    /// Invoked after the actual invoke.
+    /// </summary>
+    /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
+    /// <param name="event">The actual event that it will be called with.</param>
+    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+    Task AfterInvoke(EventContext eventContext, object @event);
 }

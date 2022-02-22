@@ -4,22 +4,21 @@
 using System.Dynamic;
 using Aksio.Cratis.Dynamic;
 
-namespace Aksio.Cratis.Properties.for_PropertyPath
+namespace Aksio.Cratis.Properties.for_PropertyPath;
+
+public class and_it_is_on_the_first_level : Specification
 {
-    public class and_it_is_on_the_first_level : Specification
+    ExpandoObject input;
+    PropertyPath property_path;
+    object result;
+
+    void Establish()
     {
-        ExpandoObject input;
-        PropertyPath property_path;
-        object result;
-
-        void Establish()
-        {
-            input = new { property = 42 }.AsExpandoObject();
-            property_path = new("property");
-        }
-
-        void Because() => result = property_path.GetValue(input, ArrayIndexers.NoIndexers);
-
-        [Fact] void should_return_value() => result.ShouldEqual(42);
+        input = new { property = 42 }.AsExpandoObject();
+        property_path = new("property");
     }
+
+    void Because() => result = property_path.GetValue(input, ArrayIndexers.NoIndexers);
+
+    [Fact] void should_return_value() => result.ShouldEqual(42);
 }

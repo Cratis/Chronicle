@@ -3,22 +3,21 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Defines a builder of a property expressions.
+/// </summary>
+public interface IPropertyExpressionBuilder
 {
     /// <summary>
-    /// Defines a builder of a property expressions.
+    /// Gets the target property.
     /// </summary>
-    public interface IPropertyExpressionBuilder
-    {
-        /// <summary>
-        /// Gets the target property.
-        /// </summary>
-        PropertyPath TargetProperty { get; }
+    PropertyPath TargetProperty { get; }
 
-        /// <summary>
-        /// Builds the expression.
-        /// </summary>
-        /// <returns>The expression built.</returns>
-        string Build();
-    }
+    /// <summary>
+    /// Builds the expression.
+    /// </summary>
+    /// <returns>The expression built.</returns>
+    string Build();
 }

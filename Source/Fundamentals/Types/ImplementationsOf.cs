@@ -3,36 +3,35 @@
 
 using System.Collections;
 
-namespace Aksio.Cratis.Types
+namespace Aksio.Cratis.Types;
+
+/// <summary>
+/// Represents an implementation of <see cref="IImplementationsOf{T}"/>.
+/// </summary>
+/// <typeparam name="T">Base type to discover for - must be an abstract class or an interface.</typeparam>
+public class ImplementationsOf<T> : IImplementationsOf<T>
+    where T : class
 {
+    readonly IEnumerable<Type> _types;
+
     /// <summary>
-    /// Represents an implementation of <see cref="IImplementationsOf{T}"/>.
+    /// Initializes a new instance of the <see cref="ImplementationsOf{T}"/> class.
     /// </summary>
-    /// <typeparam name="T">Base type to discover for - must be an abstract class or an interface.</typeparam>
-    public class ImplementationsOf<T> : IImplementationsOf<T>
-        where T : class
+    /// <param name="types"><see cref="ITypes"/> to use for finding types.</param>
+    public ImplementationsOf(ITypes types)
     {
-        readonly IEnumerable<Type> _types;
+        _types = types.FindMultiple<T>();
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ImplementationsOf{T}"/> class.
-        /// </summary>
-        /// <param name="types"><see cref="ITypes"/> to use for finding types.</param>
-        public ImplementationsOf(ITypes types)
-        {
-            _types = types.FindMultiple<T>();
-        }
+    /// <inheritdoc/>
+    public IEnumerator<Type> GetEnumerator()
+    {
+        return _types.GetEnumerator();
+    }
 
-        /// <inheritdoc/>
-        public IEnumerator<Type> GetEnumerator()
-        {
-            return _types.GetEnumerator();
-        }
-
-        /// <inheritdoc/>
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return _types.GetEnumerator();
-        }
+    /// <inheritdoc/>
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return _types.GetEnumerator();
     }
 }

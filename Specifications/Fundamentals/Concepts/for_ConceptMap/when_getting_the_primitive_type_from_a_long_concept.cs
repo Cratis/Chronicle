@@ -1,16 +1,15 @@
-﻿// Copyright (c) Aksio Insurtech. All rights reserved.
+// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Concepts.given;
 
-namespace Aksio.Cratis.Concepts.for_ConceptMap
+namespace Aksio.Cratis.Concepts.for_ConceptMap;
+
+public class when_getting_the_primitive_type_from_a_long_concept : Specification
 {
-    public class when_getting_the_primitive_type_from_a_long_concept : Specification
-    {
-        static Type result;
+    static Type result;
 
-        void Because() => result = ConceptMap.GetConceptValueType(typeof(LongConcept));
+    void Because() => result = ConceptMap.GetConceptValueType(typeof(LongConcept));
 
-        [Fact] void should_get_a_long() => result.ShouldEqual(typeof(long));
-    }
+    [Fact] void should_get_a_long() => result.ShouldEqual(typeof(long));
 }

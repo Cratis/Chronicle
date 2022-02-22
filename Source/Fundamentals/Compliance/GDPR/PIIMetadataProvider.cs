@@ -4,42 +4,41 @@
 using System.Reflection;
 using Aksio.Cratis.Reflection;
 
-namespace Aksio.Cratis.Compliance.GDPR
+namespace Aksio.Cratis.Compliance.GDPR;
+
+/// <summary>
+/// Represents a metadata provider for PII.
+/// </summary>
+public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanProvideComplianceMetadataForProperty
 {
-    /// <summary>
-    /// Represents a metadata provider for PII.
-    /// </summary>
-    public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanProvideComplianceMetadataForProperty
+    /// <inheritdoc/>
+    public bool CanProvide(Type type) => type.Implements(typeof(IHoldPII)) || type.GetCustomAttribute<PIIAttribute>() != default;
+
+    /// <inheritdoc/>
+    public bool CanProvide(PropertyInfo property) =>
+        property.GetCustomAttribute<PIIAttribute>() != default ||
+        property.DeclaringType?.GetCustomAttribute<PIIAttribute>() != default ||
+        CanProvide(property.PropertyType);
+
+    /// <inheritdoc/>
+    public ComplianceMetadata Provide(Type type)
     {
-        /// <inheritdoc/>
-        public bool CanProvide(Type type) => type.Implements(typeof(IHoldPII)) || type.GetCustomAttribute<PIIAttribute>() != default;
-
-        /// <inheritdoc/>
-        public bool CanProvide(PropertyInfo property) =>
-            property.GetCustomAttribute<PIIAttribute>() != default ||
-            property.DeclaringType?.GetCustomAttribute<PIIAttribute>() != default ||
-            CanProvide(property.PropertyType);
-
-        /// <inheritdoc/>
-        public ComplianceMetadata Provide(Type type)
+        if (!CanProvide(type))
         {
-            if (!CanProvide(type))
-            {
-                throw new NoComplianceMetadataForType(type);
-            }
-
-            return new ComplianceMetadata(ComplianceMetadataType.PII, type.GetComplianceMetadataDetails());
+            throw new NoComplianceMetadataForType(type);
         }
 
-        /// <inheritdoc/>
-        public ComplianceMetadata Provide(PropertyInfo property)
-        {
-            if (!CanProvide(property))
-            {
-                throw new NoComplianceMetadataForProperty(property);
-            }
+        return new ComplianceMetadata(ComplianceMetadataType.PII, type.GetComplianceMetadataDetails());
+    }
 
-            return new ComplianceMetadata(ComplianceMetadataType.PII, property.GetComplianceMetadataDetails());
+    /// <inheritdoc/>
+    public ComplianceMetadata Provide(PropertyInfo property)
+    {
+        if (!CanProvide(property))
+        {
+            throw new NoComplianceMetadataForProperty(property);
         }
+
+        return new ComplianceMetadata(ComplianceMetadataType.PII, property.GetComplianceMetadataDetails());
     }
 }

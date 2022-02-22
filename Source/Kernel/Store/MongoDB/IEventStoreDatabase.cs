@@ -3,26 +3,25 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Store.MongoDB
+namespace Aksio.Cratis.Events.Store.MongoDB;
+
+/// <summary>
+/// Defines the database used by the event store.
+/// </summary>
+public interface IEventStoreDatabase
 {
     /// <summary>
-    /// Defines the database used by the event store.
+    /// Get a collection - optionally by its name. If no name is given, it will go by convention from the type name.
     /// </summary>
-    public interface IEventStoreDatabase
-    {
-        /// <summary>
-        /// Get a collection - optionally by its name. If no name is given, it will go by convention from the type name.
-        /// </summary>
-        /// <param name="name">Optional name of the collection.</param>
-        /// <typeparam name="T">Type to get collection for.</typeparam>
-        /// <returns>A <see cref="IMongoCollection{T}"/> instance.</returns>
-        IMongoCollection<T> GetCollection<T>(string? name = default);
+    /// <param name="name">Optional name of the collection.</param>
+    /// <typeparam name="T">Type to get collection for.</typeparam>
+    /// <returns>A <see cref="IMongoCollection{T}"/> instance.</returns>
+    IMongoCollection<T> GetCollection<T>(string? name = default);
 
-        /// <summary>
-        /// Get the <see cref="IMongoCollection{T}"/> for an event log based on identifier.
-        /// </summary>
-        /// <param name="eventLogId"><see cref="EventSequenceId"/> identifier.</param>
-        /// <returns>The collection instance.</returns>
-        IMongoCollection<Event> GetEventLogCollectionFor(EventSequenceId eventLogId);
-    }
+    /// <summary>
+    /// Get the <see cref="IMongoCollection{T}"/> for an event log based on identifier.
+    /// </summary>
+    /// <param name="eventLogId"><see cref="EventSequenceId"/> identifier.</param>
+    /// <returns>The collection instance.</returns>
+    IMongoCollection<Event> GetEventLogCollectionFor(EventSequenceId eventLogId);
 }

@@ -3,16 +3,15 @@
 
 using Aksio.Cratis.Events.Projections.Pipelines;
 
-namespace Aksio.Cratis.Events.Projections.for_Projections
+namespace Aksio.Cratis.Events.Projections.for_Projections;
+
+public class when_getting_by_id_for_registered_projection : given.no_projections
 {
-    public class when_getting_by_id_for_registered_projection : given.no_projections
-    {
-        IProjectionPipeline result;
+    IProjectionPipeline result;
 
-        async Task Establish() => await projections.Register(projection_definition, pipeline_definition);
+    async Task Establish() => await projections.Register(projection_definition, pipeline_definition);
 
-        void Because() => result = projections.GetById(projection_identifier);
+    void Because() => result = projections.GetById(projection_identifier);
 
-        [Fact] void should_get_projection() => result.ShouldEqual(pipeline.Object);
-    }
+    [Fact] void should_get_projection() => result.ShouldEqual(pipeline.Object);
 }

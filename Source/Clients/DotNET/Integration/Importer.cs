@@ -4,40 +4,39 @@
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Integration
+namespace Aksio.Cratis.Integration;
+
+/// <summary>
+/// Represents an implementation of <see cref="IImporter"/>.
+/// </summary>
+public class Importer : IImporter
 {
+    readonly IObjectsComparer _objectsComparer;
+    readonly IAdapters _adapters;
+    readonly IEventLog _eventLog;
+
     /// <summary>
-    /// Represents an implementation of <see cref="IImporter"/>.
+    /// Initializes a new instance of the <see cref="Importer"/> class.
     /// </summary>
-    public class Importer : IImporter
+    /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
+    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
+    /// <param name="eventLog"><see cref="IEventLog"/> for appending events.</param>
+    public Importer(
+        IAdapters adapters,
+        IObjectsComparer objectsComparer,
+        IEventLog eventLog)
     {
-        readonly IObjectsComparer _objectsComparer;
-        readonly IAdapters _adapters;
-        readonly IEventLog _eventLog;
+        _objectsComparer = objectsComparer;
+        _adapters = adapters;
+        _eventLog = eventLog;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Importer"/> class.
-        /// </summary>
-        /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
-        /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-        /// <param name="eventLog"><see cref="IEventLog"/> for appending events.</param>
-        public Importer(
-            IAdapters adapters,
-            IObjectsComparer objectsComparer,
-            IEventLog eventLog)
-        {
-            _objectsComparer = objectsComparer;
-            _adapters = adapters;
-            _eventLog = eventLog;
-        }
-
-        /// <inheritdoc/>
-        public IImportOperations<TModel, TExternalModel> For<TModel, TExternalModel>()
-        {
-            var adapter = _adapters.GetFor<TModel, TExternalModel>();
-            var projection = _adapters.GetProjectionFor<TModel, TExternalModel>();
-            var mapper = _adapters.GetMapperFor<TModel, TExternalModel>();
-            return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectsComparer, _eventLog);
-        }
+    /// <inheritdoc/>
+    public IImportOperations<TModel, TExternalModel> For<TModel, TExternalModel>()
+    {
+        var adapter = _adapters.GetFor<TModel, TExternalModel>();
+        var projection = _adapters.GetProjectionFor<TModel, TExternalModel>();
+        var mapper = _adapters.GetMapperFor<TModel, TExternalModel>();
+        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectsComparer, _eventLog);
     }
 }

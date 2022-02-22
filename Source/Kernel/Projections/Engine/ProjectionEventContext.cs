@@ -5,13 +5,12 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 
-namespace Aksio.Cratis.Events.Projections
-{
-    /// <summary>
-    /// Represents the context of an event when being handled by a <see cref="IProjection"/>.
-    /// </summary>
-    /// <param name="Key"><see cref="Key"/> for the context.</param>
-    /// <param name="Event">The <see cref="AppendedEvent"/> that occurred.</param>
-    /// <param name="Changeset">The <see cref="IChangeset{Event, ExpandoObject}"/> to build on.</param>
-    public record ProjectionEventContext(Key Key, AppendedEvent Event, IChangeset<AppendedEvent, ExpandoObject> Changeset);
-}
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Represents the context of an event when being handled by a <see cref="IProjection"/>.
+/// </summary>
+/// <param name="Key"><see cref="Key"/> for the context.</param>
+/// <param name="Event">The <see cref="AppendedEvent"/> that occurred.</param>
+/// <param name="Changeset">The <see cref="IChangeset{Event, ExpandoObject}"/> to build on.</param>
+public record ProjectionEventContext(Key Key, AppendedEvent Event, IChangeset<AppendedEvent, ExpandoObject> Changeset);

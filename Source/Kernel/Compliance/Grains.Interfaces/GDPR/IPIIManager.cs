@@ -3,25 +3,24 @@
 
 using Orleans;
 
-namespace Aksio.Cratis.Compliance.Grains
+namespace Aksio.Cratis.Compliance.Grains;
+
+/// <summary>
+/// Represents a manager of PII in the system.
+/// </summary>
+public interface IPIIManager : IGrainWithGuidKey
 {
     /// <summary>
-    /// Represents a manager of PII in the system.
+    /// Creates a new encryption key and registers it for the specific identifier.
     /// </summary>
-    public interface IPIIManager : IGrainWithGuidKey
-    {
-        /// <summary>
-        /// Creates a new encryption key and registers it for the specific identifier.
-        /// </summary>
-        /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to register for.</param>
-        /// <returns>Awaitable task.</returns>
-        Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier);
+    /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to register for.</param>
+    /// <returns>Awaitable task.</returns>
+    Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier);
 
-        /// <summary>
-        /// Deletes a specific encryption key based on th e<see cref="EncryptionKeyIdentifier"/>.
-        /// </summary>
-        /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to delete.</param>
-        /// <returns>Awaitable task.</returns>
-        Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier);
-    }
+    /// <summary>
+    /// Deletes a specific encryption key based on th e<see cref="EncryptionKeyIdentifier"/>.
+    /// </summary>
+    /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to delete.</param>
+    /// <returns>Awaitable task.</returns>
+    Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier);
 }
