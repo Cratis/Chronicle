@@ -50,7 +50,7 @@ namespace Aksio.Cratis.Events.Observation
                                     return new ObserverHandler(
                                         observer.ObserverId,
                                         _.FullName ?? $"{_.Namespace}.{_.Name}",
-                                        observer.EventLogId,
+                                        observer.EventSequenceId,
                                         eventTypes,
                                         new ObserverInvoker(serviceProvider, eventTypes, middlewares, _),
                                         eventSerializer);
