@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         readonly ConcurrentDictionary<QueueId, EventLogQueueAdapterReceiver> _receivers = new();
 
         readonly IStreamQueueMapper _mapper;
-        readonly ProviderFor<IEventLogs> _eventLogsProvider;
+        readonly ProviderFor<IEventSequences> _eventLogsProvider;
 
         /// <inheritdoc/>
         public string Name { get; }
@@ -31,11 +31,11 @@ namespace Aksio.Cratis.Events.Store.EventLogs
         /// </summary>
         /// <param name="name">Name of stream.</param>
         /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
-        /// <param name="eventLogsProvider">Provider for <see cref="IEventLogs"/>.</param>
+        /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
         public EventLogQueueAdapter(
             string name,
             IStreamQueueMapper mapper,
-            ProviderFor<IEventLogs> eventLogsProvider)
+            ProviderFor<IEventSequences> eventLogsProvider)
         {
             Name = name;
             _mapper = mapper;

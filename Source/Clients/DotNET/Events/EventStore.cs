@@ -35,7 +35,7 @@ namespace Aksio.Cratis.Events
         {
             _clusterClient = clusterClient;
 
-            var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventLog>(EventLogId.Default, keyExtension: executionContextManager.Current.TenantId.ToString());
+            var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventSequence>(EventSequenceId.Log, keyExtension: executionContextManager.Current.TenantId.ToString());
             EventLog = new EventLog(eventTypes, serializer, additionalEventInformationProviders, defaultEventLog);
         }
     }

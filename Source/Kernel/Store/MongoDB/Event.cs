@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB
     /// <param name="Content">The content per event type generation.</param>
     /// <param name="Compensations">Any compensations for the event.</param>
     public record Event(
-        EventLogSequenceNumber SequenceNumber,
+        EventSequenceNumber SequenceNumber,
         CorrelationId CorrelationId,
         CausationId CausationId,
         CausedBy CausedBy,

@@ -37,7 +37,7 @@ namespace Aksio.Cratis.Events.Store.Observation
         /// <summary>
         /// Gets the event log identifier.
         /// </summary>
-        public EventLogId EventLogId { get; private set; }
+        public EventSequenceId EventLogId { get; private set; }
 
         /// <summary>
         /// Gets the observer identifier.
@@ -55,9 +55,9 @@ namespace Aksio.Cratis.Events.Store.Observation
         public bool IsFailed { get; set; }
 
         /// <summary>
-        /// Gets or sets the <see cref="EventLogSequenceNumber"/> of the failure - if any.
+        /// Gets or sets the <see cref="EventSequenceNumber"/> of the failure - if any.
         /// </summary>
-        public EventLogSequenceNumber SequenceNumber { get; set; } = EventLogSequenceNumber.First;
+        public EventSequenceNumber SequenceNumber { get; set; } = EventSequenceNumber.First;
 
         /// <summary>
         /// Gets or sets the event types for the observer.
@@ -91,14 +91,14 @@ namespace Aksio.Cratis.Events.Store.Observation
         /// <param name="observerId">The observer.</param>
         /// <param name="eventSourceId">The event source.</param>
         /// <returns>The composite key.</returns>
-        public static string CreateKeyFrom(EventLogId eventLogId, ObserverId observerId, EventSourceId eventSourceId) => $"{eventLogId}+{observerId}+{eventSourceId}";
+        public static string CreateKeyFrom(EventSequenceId eventLogId, ObserverId observerId, EventSourceId eventSourceId) => $"{eventLogId}+{observerId}+{eventSourceId}";
 
         /// <summary>
         /// Parse a string representation of a composite key.
         /// </summary>
         /// <param name="key">Key to parse.</param>
         /// <returns>Tuple holding event log, observer and event source.</returns>
-        public static (EventLogId EventLogId, ObserverId ObserverId, EventSourceId EventSourceId) Parse(string key)
+        public static (EventSequenceId EventLogId, ObserverId ObserverId, EventSourceId EventSourceId) Parse(string key)
         {
             var segments = key.Split('+');
             return (

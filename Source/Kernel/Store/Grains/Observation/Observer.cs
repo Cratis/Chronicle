@@ -27,7 +27,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
         IAsyncStream<AppendedEvent>? _stream;
         ObserverId _observerId = Guid.Empty;
         TenantId _tenantId = TenantId.NotSet;
-        EventLogId _eventLogId = EventLogId.Unspecified;
+        EventSequenceId _eventLogId = EventSequenceId.Unspecified;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -60,7 +60,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation
             _tenantId = tenantIdAsString!;
             _eventLogId = eventLogIdAsString;
 
-            var streamProvider = GetStreamProvider(EventLog.StreamProvider);
+            var streamProvider = GetStreamProvider(EventSequence.StreamProvider);
             _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
 
             await base.OnActivateAsync();

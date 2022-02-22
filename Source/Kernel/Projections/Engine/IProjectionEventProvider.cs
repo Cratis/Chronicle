@@ -51,6 +51,6 @@ namespace Aksio.Cratis.Events.Projections
         /// <param name="projection"><see cref="IProjection"/> to start get for.</param>
         /// <param name="sequenceNumber">The start number to get from - inclusive.</param>
         /// <returns><see cref="IEventCursor"/>.</returns>
-        Task<IEventCursor> GetFromSequenceNumber(IProjection projection, EventLogSequenceNumber sequenceNumber);
+        Task<IEventCursor> GetFromSequenceNumber(IProjection projection, EventSequenceNumber sequenceNumber);
     }
 }

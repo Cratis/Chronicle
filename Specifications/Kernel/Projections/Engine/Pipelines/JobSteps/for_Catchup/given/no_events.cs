@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
         {
             var cursor = new Mock<IEventCursor>();
             cursor.Setup(_ => _.MoveNext()).Returns(Task.FromResult(false));
-            provider.Setup(_ => _.GetFromSequenceNumber(projection.Object, IsAny<EventLogSequenceNumber>())).Returns(Task.FromResult(cursor.Object));
+            provider.Setup(_ => _.GetFromSequenceNumber(projection.Object, IsAny<EventSequenceNumber>())).Returns(Task.FromResult(cursor.Object));
         }
     }
 }

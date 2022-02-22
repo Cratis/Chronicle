@@ -33,18 +33,18 @@ namespace Aksio.Cratis.Events.Store.MongoDB
                 Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
                 Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-            var collection = _eventStoreDatabase.GetEventLogCollectionFor(EventLogId.Default);
+            var collection = _eventStoreDatabase.GetEventLogCollectionFor(EventSequenceId.Log);
             var @event = await collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleAsync();
             return await _converter.ToAppendedEvent(@event);
         }
 
         /// <inheritdoc/>
         public Task<IEventCursor> GetFromSequenceNumber(
-            EventLogSequenceNumber sequenceNumber,
+            EventSequenceNumber sequenceNumber,
             EventSourceId? eventSourceId = null,
             IEnumerable<EventType>? eventTypes = null)
         {
-            var collection = _eventStoreDatabase.GetEventLogCollectionFor(EventLogId.Default);
+            var collection = _eventStoreDatabase.GetEventLogCollectionFor(EventSequenceId.Log);
             var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)

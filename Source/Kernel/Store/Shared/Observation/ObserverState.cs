@@ -28,7 +28,7 @@ namespace Aksio.Cratis.Events.Store.Observation
         /// <summary>
         /// Gets or sets the <see cref="EventLogId"/> the state is for.
         /// </summary>
-        public EventLogId EventLogId { get; set; } = EventLogId.Unspecified;
+        public EventSequenceId EventLogId { get; set; } = EventSequenceId.Unspecified;
 
         /// <summary>
         /// Gets or sets the <see cref="EventLogId"/> the state is for.
@@ -38,11 +38,11 @@ namespace Aksio.Cratis.Events.Store.Observation
         /// <summary>
         /// Gets or sets the current offset into the event log.
         /// </summary>
-        public EventLogSequenceNumber Offset { get; set; } = EventLogSequenceNumber.First;
+        public EventSequenceNumber Offset { get; set; } = EventSequenceNumber.First;
 
         /// <summary>
         /// Gets or sets the last handled event in the event log, ever. This value will never reset during a rewind.
         /// </summary>
-        public EventLogSequenceNumber LastHandled { get; set; } = EventLogSequenceNumber.First;
+        public EventSequenceNumber LastHandled { get; set; } = EventSequenceNumber.First;
     }
 }

@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
         protected Mock<IProjectionPipelineHandler> pipeline_handler;
         protected Mock<IProjectionPipelineJobs> jobs;
         protected ISubject<AppendedEvent> subject;
-        protected ISubject<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>> positions_per_configuration;
+        protected ISubject<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>> positions_per_configuration;
 
         void Establish()
         {
@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
             projection.SetupGet(_ => _.IsPassive).Returns(false);
             projection.SetupGet(_ => _.IsRewindable).Returns(true);
             pipeline_handler = new();
-            positions_per_configuration = new Subject<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>>();
+            positions_per_configuration = new Subject<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventSequenceNumber>>();
             pipeline_handler.SetupGet(_ => _.Positions).Returns(positions_per_configuration);
             jobs = new();
             subject = new Subject<AppendedEvent>();

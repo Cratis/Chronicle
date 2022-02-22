@@ -7,18 +7,18 @@ namespace Aksio.Cratis.Events
     /// Represents the sequence number within an event log for an event.
     /// </summary>
     /// <param name="Value">The sequence number.</param>
-    public record EventLogSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
+    public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     {
         /// <summary>
         /// Gets the first sequence number.
         /// </summary>
-        public static readonly EventLogSequenceNumber First = 0u;
+        public static readonly EventSequenceNumber First = 0u;
 
         /// <summary>
-        /// Implicitly convert from <see cref="ulong"/> to <see cref="EventLogSequenceNumber"/>.
+        /// Implicitly convert from <see cref="ulong"/> to <see cref="EventSequenceNumber"/>.
         /// </summary>
         /// <param name="value">Value to convert from.</param>
-        /// <returns>A converted <see cref="EventLogSequenceNumber"/>.</returns>;
-        public static implicit operator EventLogSequenceNumber(ulong value) => new(value);
+        /// <returns>A converted <see cref="EventSequenceNumber"/>.</returns>;
+        public static implicit operator EventSequenceNumber(ulong value) => new(value);
     }
 }

@@ -61,7 +61,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
         public Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId) => _eventLogStorageProvider.GetLastInstanceFor(eventTypeId, eventSourceId);
 
         /// <inheritdoc/>
-        public async Task<IEventCursor> GetFromSequenceNumber(IProjection projection, EventLogSequenceNumber sequenceNumber)
+        public async Task<IEventCursor> GetFromSequenceNumber(IProjection projection, EventSequenceNumber sequenceNumber)
         {
             if (!projection.EventTypes.Any())
             {
@@ -79,7 +79,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                 var currentOffset = await _positionsProvider().GetFor(pipeline.Projection, sink.Key);
                 var streamProvider = _clusterClient.GetStreamProvider("event-log");
                 var tenantId = _executionContextManager.Current.TenantId;
-                var stream = streamProvider.GetStream<AppendedEvent>(EventLogId.Default, tenantId.ToString());
+                var stream = streamProvider.GetStream<AppendedEvent>(EventSequenceId.Log, tenantId.ToString());
                 _subscriptionsPerPipeline[pipeline] = await stream.SubscribeAsync(
                     async (@event, _) =>
                     {

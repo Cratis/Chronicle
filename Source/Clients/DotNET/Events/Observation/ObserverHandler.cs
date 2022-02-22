@@ -29,7 +29,7 @@ namespace Aksio.Cratis.Events.Observation
         /// <summary>
         /// Gets the event log for the observer.
         /// </summary>
-        public EventLogId EventLogId { get; }
+        public EventSequenceId EventLogId { get; }
 
         /// <summary>
         /// Gets the event types for the observer.
@@ -48,7 +48,7 @@ namespace Aksio.Cratis.Events.Observation
         public ObserverHandler(
             ObserverId observerId,
             ObserverName name,
-            EventLogId eventLogId,
+            EventSequenceId eventLogId,
             IEventTypes eventTypes,
             IObserverInvoker observerInvoker,
             IEventSerializer eventSerializer)

@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events
         readonly IEventTypes _eventTypes;
         readonly IEventSerializer _serializer;
         readonly IInstancesOf<ICanProvideAdditionalEventInformation> _additionalEventInformationProviders;
-        readonly Store.Grains.IEventLog _eventLog;
+        readonly Store.Grains.IEventSequence _eventLog;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLog"/> class.
@@ -21,12 +21,12 @@ namespace Aksio.Cratis.Events
         /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving the types of events.</param>
         /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
         /// <param name="additionalEventInformationProviders">Providers of additional event information.</param>
-        /// <param name="eventLog">The actual <see cref="Store.Grains.IEventLog"/>.</param>
+        /// <param name="eventLog">The actual <see cref="Store.Grains.IEventSequence"/>.</param>
         public EventLog(
             IEventTypes eventTypes,
             IEventSerializer serializer,
             IInstancesOf<ICanProvideAdditionalEventInformation> additionalEventInformationProviders,
-            Store.Grains.IEventLog eventLog)
+            Store.Grains.IEventSequence eventLog)
         {
             _eventTypes = eventTypes;
             _serializer = serializer;

@@ -13,17 +13,17 @@ namespace Aksio.Cratis.Events.Projections
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to get for.</param>
         /// <param name="configurationId"><see cref="ProjectionSinkConfigurationId"/> to get for.</param>
-        /// <returns>The <see cref="EventLogSequenceNumber"/>.</returns>
-        Task<EventLogSequenceNumber> GetFor(IProjection projection, ProjectionSinkConfigurationId configurationId);
+        /// <returns>The <see cref="EventSequenceNumber"/>.</returns>
+        Task<EventSequenceNumber> GetFor(IProjection projection, ProjectionSinkConfigurationId configurationId);
 
         /// <summary>
         /// Save the last sequence number processed for a given <see cref="IProjection"/>.
         /// </summary>
         /// <param name="projection"><see cref="IProjection"/> to save for.</param>
         /// <param name="configurationId"><see cref="ProjectionSinkConfigurationId"/> to get for.</param>
-        /// <param name="position">The <see cref="EventLogSequenceNumber"/>.</param>
+        /// <param name="position">The <see cref="EventSequenceNumber"/>.</param>
         /// <returns>Asynchronous task.</returns>
-        Task Save(IProjection projection, ProjectionSinkConfigurationId configurationId, EventLogSequenceNumber position);
+        Task Save(IProjection projection, ProjectionSinkConfigurationId configurationId, EventSequenceNumber position);
 
         /// <summary>
         /// Reset the position for a specific <see cref="IProjection"/>.
