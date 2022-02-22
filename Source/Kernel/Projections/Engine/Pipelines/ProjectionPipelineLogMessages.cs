@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         internal static partial void Rewinding(this ILogger logger, ProjectionId projection);
 
         [LoggerMessage(4, LogLevel.Debug, "Rewinding projection '{Projection}' for configuration '{Configuration}'")]
-        internal static partial void RewindingForConfiguration(this ILogger logger, ProjectionId projection, ProjectionResultStoreConfigurationId configuration);
+        internal static partial void RewindingForConfiguration(this ILogger logger, ProjectionId projection, ProjectionSinkConfigurationId configuration);
 
         [LoggerMessage(5, LogLevel.Warning, "Projection '{Projection}' is being suspended with the reason '{Reason}'")]
         internal static partial void Suspended(this ILogger logger, ProjectionId projection, string reason);

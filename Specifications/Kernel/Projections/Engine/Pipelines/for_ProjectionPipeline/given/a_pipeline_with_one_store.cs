@@ -9,8 +9,8 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.for_ProjectionPipeline.given
 {
     public class a_pipeline_with_one_store : a_pipeline
     {
-        protected static ProjectionResultStoreConfigurationId configuration = "a4e5be99-85de-47c5-9399-c233933106d5";
-        protected Mock<IProjectionResultStore> result_store;
+        protected static ProjectionSinkConfigurationId configuration = "a4e5be99-85de-47c5-9399-c233933106d5";
+        protected Mock<IProjectionSink> result_store;
         protected AppendedEvent @event;
 
         void Establish()

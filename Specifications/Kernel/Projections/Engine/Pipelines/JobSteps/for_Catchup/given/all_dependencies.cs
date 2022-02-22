@@ -5,14 +5,14 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
 {
     public class all_dependencies : Specification
     {
-        protected static ProjectionResultStoreConfigurationId configuration = "8a1e35ac-567c-4309-957d-61910eb0c581";
+        protected static ProjectionSinkConfigurationId configuration = "8a1e35ac-567c-4309-957d-61910eb0c581";
         protected Mock<IProjectionPipeline> pipeline;
         protected Mock<IProjectionPositions> positions;
         protected Mock<IProjectionEventProvider> provider;
         protected Mock<IProjectionPipelineHandler> handler;
         protected ProjectionPipelineJobStatus job_status;
         protected Mock<IProjection> projection;
-        protected Mock<IProjectionResultStore> result_store;
+        protected Mock<IProjectionSink> result_store;
 
         void Establish()
         {
@@ -27,8 +27,8 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
             pipeline.SetupGet(_ => _.Projection).Returns(projection.Object);
 
             result_store = new();
-            pipeline.SetupGet(_ => _.ResultStores)
-                    .Returns(new Dictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore>
+            pipeline.SetupGet(_ => _.Sinks)
+                    .Returns(new Dictionary<ProjectionSinkConfigurationId, IProjectionSink>
                     {
                         { configuration, result_store.Object }
                     });

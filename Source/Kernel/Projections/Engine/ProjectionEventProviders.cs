@@ -6,7 +6,7 @@ using Aksio.Cratis.Types;
 namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionResultStores"/>.
+    /// Represents an implementation of <see cref="IProjectionSinks"/>.
     /// </summary>
     public class ProjectionEventProviders : IProjectionEventProviders
     {
@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionEventProviders"/> class.
         /// </summary>
-        /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="IProjectionResultStore"/>.</param>
+        /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="IProjectionSink"/>.</param>
         public ProjectionEventProviders(IInstancesOf<IProjectionEventProvider> stores)
         {
             _stores = stores.ToDictionary(_ => _.TypeId, _ => _);

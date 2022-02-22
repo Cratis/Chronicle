@@ -11,6 +11,6 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
     public static partial class RewindLogMessages
     {
         [LoggerMessage(0, LogLevel.Debug, "Rewinding projection '{Projection}' for configuration '{Configuration}'")]
-        internal static partial void Rewinding(this ILogger logger, ProjectionId projection, ProjectionResultStoreConfigurationId configuration);
+        internal static partial void Rewinding(this ILogger logger, ProjectionId projection, ProjectionSinkConfigurationId configuration);
     }
 }

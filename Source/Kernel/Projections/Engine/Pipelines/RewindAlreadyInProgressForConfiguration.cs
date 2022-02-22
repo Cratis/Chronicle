@@ -12,10 +12,10 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         /// Initializes a new instance of the <see cref="RewindAlreadyInProgress"/> class.
         /// </summary>
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> already rewinding.</param>
-        /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> that is rewinding.</param>
+        /// <param name="configurationId"><see cref="ProjectionSinkConfigurationId"/> that is rewinding.</param>
         public RewindAlreadyInProgressForConfiguration(
             IProjectionPipeline pipeline,
-            ProjectionResultStoreConfigurationId configurationId) : base($"Projection '{pipeline.Projection.Name}' with identifier '{pipeline.Projection.Identifier}' is already rewinding for result store with configuration identifier '{configurationId}'.")
+            ProjectionSinkConfigurationId configurationId) : base($"Projection '{pipeline.Projection.Name}' with identifier '{pipeline.Projection.Identifier}' is already rewinding for sink with configuration identifier '{configurationId}'.")
         {
         }
     }

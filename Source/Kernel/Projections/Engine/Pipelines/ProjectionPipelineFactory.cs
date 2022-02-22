@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
     /// </summary>
     public class ProjectionPipelineFactory : IProjectionPipelineFactory
     {
-        readonly IProjectionResultStores _projectionResultStores;
+        readonly IProjectionSinks _projectionSinks;
         readonly IProjectionEventProviders _projectionEventProviders;
         readonly IProjectionPositions _projectionPositions;
         readonly IObjectsComparer _objectsComparer;
@@ -23,21 +23,21 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         /// <summary>
         /// Initializes a new instance of the <see cref="ProjectionPipelineFactory"/> class.
         /// </summary>
-        /// <param name="projectionResultStores"><see cref="IProjectionResultStores"/> in the system.</param>
+        /// <param name="projectionSinks"><see cref="IProjectionSinks"/> in the system.</param>
         /// <param name="projectionEventProviders"><see cref="IProjectionEventProviders"/> in the system.</param>
         /// <param name="projectionPositions"><see cref="IProjectionPositions"/> to use.</param>
         /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
         /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
         /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
         public ProjectionPipelineFactory(
-            IProjectionResultStores projectionResultStores,
+            IProjectionSinks projectionSinks,
             IProjectionEventProviders projectionEventProviders,
             IProjectionPositions projectionPositions,
             IObjectsComparer objectsComparer,
             IChangesetStorage changesetStorage,
             ILoggerFactory loggerFactory)
         {
-            _projectionResultStores = projectionResultStores;
+            _projectionSinks = projectionSinks;
             _projectionEventProviders = projectionEventProviders;
             _projectionPositions = projectionPositions;
             _objectsComparer = objectsComparer;
@@ -57,10 +57,10 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
                 new ProjectionPipelineJobs(_projectionPositions, eventProvider, handler, _loggerFactory),
                 _loggerFactory.CreateLogger<ProjectionPipeline>());
 
-            foreach (var resultStoreDefinition in definition.ResultStores)
+            foreach (var sinkDefinition in definition.Sinks)
             {
-                var resultStore = _projectionResultStores.GetForTypeAndModel(resultStoreDefinition.TypeId, projection.Model);
-                pipeline.StoreIn(resultStoreDefinition.ConfigurationId, resultStore);
+                var sink = _projectionSinks.GetForTypeAndModel(sinkDefinition.TypeId, projection.Model);
+                pipeline.StoreIn(sinkDefinition.ConfigurationId, sink);
             }
             return pipeline;
         }

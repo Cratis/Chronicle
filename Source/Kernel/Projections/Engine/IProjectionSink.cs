@@ -10,17 +10,17 @@ namespace Aksio.Cratis.Events.Projections
     /// <summary>
     /// Defines the storage for <see cref="IProjection">projections</see>.
     /// </summary>
-    public interface IProjectionResultStore
+    public interface IProjectionSink
     {
         /// <summary>
-        /// Gets the <see cref="ProjectionResultStoreTypeId"/> that identifies the store.
+        /// Gets the <see cref="ProjectionSinkTypeId"/> that identifies the store.
         /// </summary>
-        ProjectionResultStoreTypeId TypeId { get; }
+        ProjectionSinkTypeId TypeId { get; }
 
         /// <summary>
-        /// Gets the display friendly <see cref="ProjectionResultStoreTypeName"/>.
+        /// Gets the display friendly <see cref="ProjectionSinkTypeName"/>.
         /// </summary>
-        ProjectionResultStoreTypeName Name { get; }
+        ProjectionSinkTypeName Name { get; }
 
         /// <summary>
         /// Find a model by key, or return an empty object if not found.
@@ -48,15 +48,15 @@ namespace Aksio.Cratis.Events.Projections
         Task PrepareInitialRun();
 
         /// <summary>
-        /// Begins rewind mode for the result store.
+        /// Begins rewind mode for the sink.
         /// </summary>
-        /// <returns><see cref="IProjectionResultStoreRewindScope"/>.</returns>
+        /// <returns><see cref="IProjectionSinkRewindScope"/>.</returns>
         /// <remarks>
         /// The rewind scope returned is a disposable. When rewind is done, one should
         /// dispose of this. Depending on the implementation of it, it will perform
         /// necessary cleanup after a rewind has been performed.
         /// </remarks>
-        /// <returns>A <see cref="IProjectionResultStoreRewindScope"/>.</returns>.
-        IProjectionResultStoreRewindScope BeginRewind();
+        /// <returns>A <see cref="IProjectionSinkRewindScope"/>.</returns>.
+        IProjectionSinkRewindScope BeginRewind();
     }
 }

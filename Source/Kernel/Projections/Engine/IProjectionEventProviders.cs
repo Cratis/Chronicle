@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
-    /// Defines a system for working with available <see cref="IProjectionEventProvider">projection result stores</see>.
+    /// Defines a system for working with available <see cref="IProjectionEventProvider">projection event provider</see>.
     /// </summary>
     public interface IProjectionEventProviders
     {

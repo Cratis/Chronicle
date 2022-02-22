@@ -21,9 +21,9 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         IProjectionEventProvider EventProvider { get; }
 
         /// <summary>
-        /// Gets the <see cref="IProjectionResultStore">result stores</see> to use for output.
+        /// Gets the <see cref="IProjectionSink">sink</see> to use for output.
         /// </summary>
-        IDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> ResultStores { get; }
+        IDictionary<ProjectionSinkConfigurationId, IProjectionSink> Sinks { get; }
 
         /// <summary>
         /// Gets an <see cref="IObservable{T}"/> of <see cref="ProjectionState">state</see> of the projection.
@@ -36,9 +36,9 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         IObservableCollection<IProjectionPipelineJob> Jobs { get; }
 
         /// <summary>
-        /// Gets an observable of the position within the event log for each result store configuration.
+        /// Gets an observable of the position within the event log for each sink configuration.
         /// </summary>
-        IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions { get; }
+        IObservable<IReadOnlyDictionary<ProjectionSinkConfigurationId, EventLogSequenceNumber>> Positions { get; }
 
         /// <summary>
         /// Gets the current <see cref="ProjectionState"/>.
@@ -69,7 +69,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         Task Pause();
 
         /// <summary>
-        /// Rewind the entire pipeline for all the result stores.
+        /// Rewind the entire pipeline for all the sinks.
         /// </summary>
         /// <returns>A Task for async operations.</returns>
         Task Rewind();
@@ -82,22 +82,22 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         Task Suspend(string reason);
 
         /// <summary>
-        /// Rewind the entire pipeline for a specific result store based on the unique identifier.
+        /// Rewind the entire pipeline for a specific sinks based on the unique identifier.
         /// </summary>
-        /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> to rewind.</param>
+        /// <param name="configurationId"><see cref="ProjectionSinkConfigurationId"/> to rewind.</param>
         /// <returns>A Task for async operations.</returns>
-        Task Rewind(ProjectionResultStoreConfigurationId configurationId);
+        Task Rewind(ProjectionSinkConfigurationId configurationId);
 
         /// <summary>
-        /// Adds a <see cref="IProjectionResultStore"/> for storing results.
+        /// Adds a <see cref="IProjectionSink"/> for storing results.
         /// </summary>
         /// <param name="configurationId">The unique configuration identifier.</param>
-        /// <param name="resultStore"><see cref="IProjectionResultStore">Storage provider</see> to add.</param>
+        /// <param name="sink"><see cref="IProjectionSink">Storage provider</see> to add.</param>
         /// <remarks>
         /// One can have the output of a projection stored in multiple locations. It will treat every
         /// location separately with regards to intermediate results and all. The offset within the source is
         /// also unique per configuration.
         /// </remarks>
-        void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore);
+        void StoreIn(ProjectionSinkConfigurationId configurationId, IProjectionSink sink);
     }
 }

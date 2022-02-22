@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
         readonly IProjectionPositions _projectionPositions;
         readonly IProjectionEventProvider _projectionEventProvider;
         readonly IProjectionPipelineHandler _projectionPipelineHandler;
-        readonly ProjectionResultStoreConfigurationId _configurationId;
+        readonly ProjectionSinkConfigurationId _configurationId;
         readonly ILogger<Catchup> _logger;
 
         /// <inheritdoc/>
@@ -27,14 +27,14 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
         /// <param name="projectionPositions"><see cref="IProjectionPositions"/> for working with the positions of the projections.</param>
         /// <param name="projectionEventProvider"><see cref="IProjectionEventProvider"/> for providing events.</param>
         /// <param name="projectionPipelineHandler"><see cref="IProjectionPipelineHandler"/> for handling events for the pipeline.</param>
-        /// <param name="configurationId"><see cref="ProjectionResultStoreConfigurationId"/> to rewind.</param>
+        /// <param name="configurationId"><see cref="ProjectionSinkConfigurationId"/> to rewind.</param>
         /// <param name="logger">For logging.</param>
         public Catchup(
             IProjectionPipeline pipeline,
             IProjectionPositions projectionPositions,
             IProjectionEventProvider projectionEventProvider,
             IProjectionPipelineHandler projectionPipelineHandler,
-            ProjectionResultStoreConfigurationId configurationId,
+            ProjectionSinkConfigurationId configurationId,
             ILogger<Catchup> logger)
         {
             _pipeline = pipeline;
@@ -49,18 +49,18 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
         public async Task Perform(ProjectionPipelineJobStatus jobStatus)
         {
             _logger.CatchingUp(_pipeline.Projection.Identifier, _configurationId);
-            var resultStore = _pipeline.ResultStores[_configurationId];
-            jobStatus.ReportTask($"Getting positions for '{resultStore.Name}' with configuration id {_configurationId}");
+            var sink = _pipeline.Sinks[_configurationId];
+            jobStatus.ReportTask($"Getting positions for '{sink.Name}' with configuration id {_configurationId}");
             var offset = await _projectionPositions.GetFor(_pipeline.Projection, _configurationId);
             if (offset == 0)
             {
-                jobStatus.ReportTask($"Prepare for initial run for '{resultStore.Name}' with configuration id {_configurationId}");
-                await resultStore.PrepareInitialRun();
+                jobStatus.ReportTask($"Prepare for initial run for '{sink.Name}' with configuration id {_configurationId}");
+                await sink.PrepareInitialRun();
             }
 
             var exhausted = false;
 
-            jobStatus.ReportTask($"Catching up from offset {offset} for '{resultStore.Name}' with configuration id {_configurationId}");
+            jobStatus.ReportTask($"Catching up from offset {offset} for '{sink.Name}' with configuration id {_configurationId}");
 
             while (!exhausted)
             {
@@ -75,13 +75,13 @@ namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
 
                     foreach (var @event in cursor.Current)
                     {
-                        offset = await _projectionPipelineHandler.Handle(@event, _pipeline, resultStore, _configurationId);
+                        offset = await _projectionPipelineHandler.Handle(@event, _pipeline, sink, _configurationId);
                     }
                 }
                 if (!cursor.Current.Any()) exhausted = true;
             }
 
-            jobStatus.ReportTask($"Caught up for '{resultStore.Name}' with configuration id {_configurationId}");
+            jobStatus.ReportTask($"Caught up for '{sink.Name}' with configuration id {_configurationId}");
         }
 
         /// <inheritdoc/>

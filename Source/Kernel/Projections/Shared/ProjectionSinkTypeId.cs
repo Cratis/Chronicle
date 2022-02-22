@@ -4,15 +4,15 @@
 namespace Aksio.Cratis.Events.Projections
 {
     /// <summary>
-    /// Represents the unique identifier of a type of result store.
+    /// Represents the unique identifier of a type of sink.
     /// </summary>
     /// <param name="Value">Underlying value.</param>
-    public record ProjectionResultStoreTypeId(Guid Value) : ConceptAs<Guid>(Value)
+    public record ProjectionSinkTypeId(Guid Value) : ConceptAs<Guid>(Value)
     {
         /// <summary>
-        /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ProjectionResultStoreTypeId"/>.
+        /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ProjectionSinkTypeId"/>.
         /// </summary>
         /// <param name="value">String value to convert from.</param>
-        public static implicit operator ProjectionResultStoreTypeId(string value) => new(Guid.Parse(value));
+        public static implicit operator ProjectionSinkTypeId(string value) => new(Guid.Parse(value));
     }
 }

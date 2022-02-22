@@ -19,7 +19,7 @@ namespace Aksio.Cratis.Events.Projections
         Registering = 1,
 
         /// <summary>
-        /// Projection is in rewind mode for all result stores and catching up.
+        /// Projection is in rewind mode for all sinks and catching up.
         /// </summary>
         Rewinding = 2,
 

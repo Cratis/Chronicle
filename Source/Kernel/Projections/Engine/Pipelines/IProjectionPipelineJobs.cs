@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> to create for.</param>
         /// <param name="configurationId">Optional configuration to rewind. If none is given it will rewind all.</param>
         /// <returns><see cref="IProjectionPipelineJob"/> for rewinding.</returns>
-        IProjectionPipelineJob Rewind(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId);
+        IProjectionPipelineJob Rewind(IProjectionPipeline pipeline, ProjectionSinkConfigurationId configurationId);
 
         /// <summary>
         /// Creates rewind jobs for all storage configurations.
@@ -29,7 +29,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines
         /// <param name="pipeline"><see cref="IProjectionPipeline"/> to create for.</param>
         /// <param name="configurationId">Optional configuration to rewind. If none is given it will rewind all.</param>
         /// <returns><see cref="IProjectionPipelineJob"/> for catching up.</returns>
-        IProjectionPipelineJob Catchup(IProjectionPipeline pipeline, ProjectionResultStoreConfigurationId configurationId);
+        IProjectionPipelineJob Catchup(IProjectionPipeline pipeline, ProjectionSinkConfigurationId configurationId);
 
         /// <summary>
         /// Creates a catchup job for all storage configurations.

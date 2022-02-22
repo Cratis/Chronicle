@@ -6,13 +6,13 @@ namespace Aksio.Cratis.Events.Projections
     /// <summary>
     /// Exception that gets thrown when an unknown <see cref="IProjectionSink"/> is used.
     /// </summary>
-    public class UnknownProjectionEventProvider : Exception
+    public class UnknownProjectionSink : Exception
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="UnknownProjectionEventProvider"/> class.
+        /// Initializes a new instance of the <see cref="UnknownProjectionSink"/> class.
         /// </summary>
-        /// <param name="typeId">The unknown <see cref="ProjectionEventProviderTypeId"/>.</param>
-        public UnknownProjectionEventProvider(ProjectionEventProviderTypeId typeId) : base($"Projection event provider type of '{typeId}' is unknown.")
+        /// <param name="typeId">The unknown <see cref="ProjectionSinkTypeId"/>.</param>
+        public UnknownProjectionSink(ProjectionSinkTypeId typeId) : base($"Projection sink type of '{typeId}' is unknown.")
         {
         }
     }
