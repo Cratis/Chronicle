@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Configuration.Grains;
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Strings;
@@ -49,14 +50,15 @@ namespace Aksio.Cratis.Hosting
                 return _databasesPerTenant[executionContext.TenantId];
             });
 
-            var readModelTypes = types.All.SelectMany(_ => _
-                .GetConstructors().SelectMany(c => c.GetParameters())
-                .Where(_ =>
-                    _.ParameterType.IsGenericType &&
-                    _.ParameterType.IsAssignableTo(typeof(IMongoCollection<>).MakeGenericType(_.ParameterType.GetGenericArguments()[0]))))
-                .Select(_ => _.ParameterType.GetGenericArguments()[0])
-                .ToArray();
+            var readModelTypes = GetMongoCollections(types).ToList();
+            readModelTypes.AddRange(GetProvidersForMongoCollections(types, readModelTypes));
+            RegisterMongoCollectionTypes(services, readModelTypes, logger);
 
+            return services;
+        }
+
+        static void RegisterMongoCollectionTypes(IServiceCollection services, IEnumerable<Type> readModelTypes, ILogger? logger = default)
+        {
             foreach (var readModelType in readModelTypes)
             {
                 var name = readModelType.Name.Pluralize();
@@ -69,8 +71,6 @@ namespace Aksio.Cratis.Hosting
                     return genericMethod.Invoke(database, new object[] { camelCaseName, null! })!;
                 });
             }
-
-            return services;
         }
 
         static async Task ConfigureReadModels(IServiceProvider serviceProvider)
@@ -87,5 +87,23 @@ namespace Aksio.Cratis.Hosting
                 _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
             }
         }
+
+        static IEnumerable<Type> GetMongoCollections(ITypes types) => types.All.SelectMany(_ => _
+                .GetConstructors().SelectMany(c => c.GetParameters())
+                .Where(_ =>
+                    _.ParameterType.IsGenericType && IsMongoCollection(_.ParameterType)))
+                .Select(_ => _.ParameterType.GetGenericArguments()[0]);
+
+        static IEnumerable<Type> GetProvidersForMongoCollections(ITypes types, IEnumerable<Type> typesToSkip) => types.All.Except(typesToSkip).SelectMany(_ => _
+                .GetConstructors().SelectMany(c => c.GetParameters())
+                .Where(_ =>
+                    _.ParameterType.IsGenericType &&
+                    _.ParameterType.GetGenericArguments()[0].IsGenericType &&
+                    IsProviderForMongoCollection(_.ParameterType)))
+                .Select(_ => _.ParameterType.GetGenericArguments()[0].GetGenericArguments()[0]);
+
+        static bool IsMongoCollection(Type type) => type.IsAssignableTo(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0]));
+
+        static bool IsProviderForMongoCollection(Type type) => type.IsAssignableTo(typeof(ProviderFor<>).MakeGenericType(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0].GetGenericArguments()[0])));
     }
 }
