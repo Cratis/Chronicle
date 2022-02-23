@@ -6,7 +6,7 @@ using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Hosting.for_MongoDBReadModels
+namespace Aksio.Cratis.Hosting.for_MongoDBReadModels;
 
 public class when_adding_read_models_with_type_taking_provider_for_collection : Specification
 {

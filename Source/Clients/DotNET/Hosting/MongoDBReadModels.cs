@@ -86,23 +86,23 @@ public static class MongoDBReadModels
             var client = clientFactory.Create(url);
             _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
         }
-
-        static IEnumerable<Type> GetMongoCollections(ITypes types) => types.All.SelectMany(_ => _
-                .GetConstructors().SelectMany(c => c.GetParameters())
-                .Where(_ =>
-                    _.ParameterType.IsGenericType && IsMongoCollection(_.ParameterType)))
-                .Select(_ => _.ParameterType.GetGenericArguments()[0]);
-
-        static IEnumerable<Type> GetProvidersForMongoCollections(ITypes types, IEnumerable<Type> typesToSkip) => types.All.Except(typesToSkip).SelectMany(_ => _
-                .GetConstructors().SelectMany(c => c.GetParameters())
-                .Where(_ =>
-                    _.ParameterType.IsGenericType &&
-                    _.ParameterType.GetGenericArguments()[0].IsGenericType &&
-                    IsProviderForMongoCollection(_.ParameterType)))
-                .Select(_ => _.ParameterType.GetGenericArguments()[0].GetGenericArguments()[0]);
-
-        static bool IsMongoCollection(Type type) => type.IsAssignableTo(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0]));
-
-        static bool IsProviderForMongoCollection(Type type) => type.IsAssignableTo(typeof(ProviderFor<>).MakeGenericType(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0].GetGenericArguments()[0])));
     }
+
+    static IEnumerable<Type> GetMongoCollections(ITypes types) => types.All.SelectMany(_ => _
+            .GetConstructors().SelectMany(c => c.GetParameters())
+            .Where(_ =>
+                _.ParameterType.IsGenericType && IsMongoCollection(_.ParameterType)))
+            .Select(_ => _.ParameterType.GetGenericArguments()[0]);
+
+    static IEnumerable<Type> GetProvidersForMongoCollections(ITypes types, IEnumerable<Type> typesToSkip) => types.All.Except(typesToSkip).SelectMany(_ => _
+            .GetConstructors().SelectMany(c => c.GetParameters())
+            .Where(_ =>
+                _.ParameterType.IsGenericType &&
+                _.ParameterType.GetGenericArguments()[0].IsGenericType &&
+                IsProviderForMongoCollection(_.ParameterType)))
+            .Select(_ => _.ParameterType.GetGenericArguments()[0].GetGenericArguments()[0]);
+
+    static bool IsMongoCollection(Type type) => type.IsAssignableTo(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0]));
+
+    static bool IsProviderForMongoCollection(Type type) => type.IsAssignableTo(typeof(ProviderFor<>).MakeGenericType(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0].GetGenericArguments()[0])));
 }
