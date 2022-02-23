@@ -1,3 +1,10 @@
+# [v5.9.0] - 2022-2-23 [PR: #193](https://github.com/aksio-insurtech/Cratis/pull/193)
+
+### Added
+
+- Supporting discovery and hookup of bindings for `IMongoCollection<ReadModel>` based on constructors that takes `ProviderFor<IMongoCollection<ReadModel>>`. Delivering parts of whats described in #191.
+
+
 # [v5.8.11] - 2022-2-19 [PR: #186](https://github.com/aksio-insurtech/Cratis/pull/186)
 
 ### Fixed
