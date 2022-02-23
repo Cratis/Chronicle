@@ -19,12 +19,23 @@ public interface IExecutionContextManager
     ExecutionContext Current { get; }
 
     /// <summary>
+    /// Set the global <see cref="MicroserviceId"/> for the running process.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to set.</param>
+    /// <remarks>
+    /// The global microservice id is the value being used when not a specific one is used
+    /// while establishing a context for current task context.
+    /// </remarks>
+    void SetGlobalMicroserviceId(MicroserviceId microserviceId);
+
+    /// <summary>
     /// Establish an <see cref="ExecutionContext"/> for current call path.
     /// </summary>
     /// <param name="tenantId"><see cref="TenantId"/> to establish for.</param>
     /// <param name="correlationId"><see cref="CorrelationId"/> to establish for.</param>
+    /// <param name="microserviceId">Optional <see cref="MicroserviceId"/> to establish for Falls back to the global if not explicitly used.</param>
     /// <returns>Established <see cref="ExecutionContext"/>.</returns>
-    ExecutionContext Establish(TenantId tenantId, CorrelationId correlationId);
+    ExecutionContext Establish(TenantId tenantId, CorrelationId correlationId, MicroserviceId? microserviceId = default);
 
     /// <summary>
     /// Set a <see cref="ExecutionContext"/> for current call path.

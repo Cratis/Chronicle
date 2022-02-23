@@ -10,6 +10,7 @@ namespace Aksio.Cratis.Execution;
 public class ExecutionContextManager : IExecutionContextManager
 {
     static readonly AsyncLocal<ExecutionContext> _currentExecutionContext = new();
+    static MicroserviceId _microserviceId = MicroserviceId.Unspecified;
 
     /// <inheritdoc/>
     public bool IsInContext => _currentExecutionContext?.Value != default;
@@ -36,9 +37,13 @@ public class ExecutionContextManager : IExecutionContextManager
     }
 
     /// <inheritdoc/>
-    public ExecutionContext Establish(TenantId tenantId, CorrelationId correlationId)
+    public void SetGlobalMicroserviceId(MicroserviceId microserviceId) => _microserviceId = microserviceId;
+
+    /// <inheritdoc/>
+    public ExecutionContext Establish(TenantId tenantId, CorrelationId correlationId, MicroserviceId? microserviceId = default)
     {
         _currentExecutionContext.Value = new ExecutionContext(
+            microserviceId ?? _microserviceId,
             tenantId,
             correlationId,
             string.Empty,
