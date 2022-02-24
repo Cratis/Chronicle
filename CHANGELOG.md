@@ -1,3 +1,12 @@
+# [v5.10.0] - 2022-2-24 [PR: #194](https://github.com/aksio-insurtech/Cratis/pull/194)
+
+### Added
+
+- Added support for easily ignore property naming conventions through using `[IgnoreConventions]` attribute.
+- Added ability to override model name for read models with the `[ModelName]` attribute. This is honored by the MongoDB collection name hookup and the Projection definitions. (rel. to. #165)
+
+
+
 # [v5.9.0] - 2022-2-23 [PR: #193](https://github.com/aksio-insurtech/Cratis/pull/193)
 
 ### Added
