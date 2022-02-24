@@ -7,7 +7,6 @@ using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using ExecutionContext = Aksio.Cratis.Execution.ExecutionContext;
 
 namespace Aksio.Cratis.Events.Store.MongoDB;
 

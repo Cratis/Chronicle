@@ -14,5 +14,5 @@ public interface IConfigurations : IGrainWithGuidKey
     /// Gets the <see cref="Storage"/> configuration.
     /// </summary>
     /// <returns><see cref="Storage"/> configuration instance.</returns>
-    Task<Storage> GetStorage();
+    Task<StorageForMicroservice> GetStorage();
 }

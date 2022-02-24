@@ -6,7 +6,6 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
-using ExecutionContext = Aksio.Cratis.Execution.ExecutionContext;
 
 namespace Aksio.Cratis.Events.Store.MongoDB;
 
@@ -19,7 +18,7 @@ public class EventStoreDatabase : IEventStoreDatabase
     const string BaseCollectionName = "event-log";
     readonly IServiceProvider _serviceProvider;
     readonly IExecutionContextManager _executionContextManager;
-    Dictionary<TenantId, IMongoDatabase> _databases = new();
+    Dictionary<MicroserviceAndTenant, IMongoDatabase> _databases = new();
 
     IMongoDatabase Database
     {
@@ -29,15 +28,16 @@ public class EventStoreDatabase : IEventStoreDatabase
             {
                 var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
                 var configuration = _serviceProvider.GetService<Storage>()!;
-                _databases = configuration.Get(WellKnownStorageTypes.EventStore).Tenants.ToDictionary(_ => (TenantId)_.Key, _ =>
+
+                _databases = configuration.SelectMany(_ => _.Value.Select(ms =>
                 {
                     var url = new MongoUrl(_.Value.ToString());
                     var client = mongoDBClientFactory.Create(url);
-                    return client.GetDatabase(url.DatabaseName);
-                });
+                    return new KeyValuePair<MicroserviceAndTenant, IMongoDatabase>(new MicroserviceAndTenant(_.Key, ms.Key), client.GetDatabase(url.DatabaseName));
+                })).ToDictionary(_ => _.Key, _ => _.Value);
             }
 
-            return _databases[_executionContextManager.Current.TenantId];
+            return _databases[new(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId)];
         }
     }
 
