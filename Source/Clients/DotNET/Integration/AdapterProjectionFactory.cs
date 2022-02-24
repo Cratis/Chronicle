@@ -44,7 +44,7 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
     public async Task<IAdapterProjectionFor<TModel>> CreateFor<TModel, TExternalModel>(IAdapterFor<TModel, TExternalModel> adapter)
     {
         // TODO: register for all tenants
-        _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
+        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
 
         var projectionBuilder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, _eventTypes, _schemaGenerator);
         adapter.DefineModel(projectionBuilder);

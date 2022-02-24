@@ -36,13 +36,12 @@ public class Observers : Grain, IObservers
     public async Task RetryFailed()
     {
         // TODO: do this for for all tenants
-        const string tenant = "3352d47d-c154-4457-b3fb-8a2efb725113";
-        _executionContextManager.Establish(tenant, CorrelationId.New());
+        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
 
         var observers = await _failedObservers.GetAll();
         foreach (var observer in observers)
         {
-            var key = PartitionedObserverKeyHelper.Create(tenant, observer.EventLogId, observer.EventSourceId);
+            var key = PartitionedObserverKeyHelper.Create(TenantId.Development, observer.EventLogId, observer.EventSourceId);
             var partitionedObserver = _grainFactory.GetGrain<IPartitionedObserver>(observer.ObserverId, keyExtension: key);
             await partitionedObserver.TryResume();
         }
