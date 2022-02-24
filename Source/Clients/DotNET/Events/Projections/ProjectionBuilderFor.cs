@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using System.Reflection;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
@@ -42,7 +44,15 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
         _identifier = identifier;
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
-        _modelName = typeof(TModel).Name.Pluralize().ToCamelCase();
+
+        if (typeof(TModel).HasAttribute<ModelNameAttribute>())
+        {
+            _modelName = typeof(TModel).GetCustomAttribute<ModelNameAttribute>(false)!.Name;
+        }
+        else
+        {
+            _modelName = typeof(TModel).Name.Pluralize().ToCamelCase();
+        }
     }
 
     /// <inheritdoc/>
