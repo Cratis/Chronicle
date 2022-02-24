@@ -15,6 +15,8 @@ public class Observers : Grain, IObservers
     readonly IFailedObservers _failedObservers;
     readonly IExecutionContextManager _executionContextManager;
     readonly IGrainFactory _grainFactory;
+    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
+    TenantId _tenantId = TenantId.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
@@ -33,15 +35,20 @@ public class Observers : Grain, IObservers
     }
 
     /// <inheritdoc/>
+    public override async Task OnActivateAsync()
+    {
+        _microserviceId = _executionContextManager.Current.MicroserviceId;
+        _tenantId = _executionContextManager.Current.TenantId;
+        await base.OnActivateAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task RetryFailed()
     {
-        // TODO: do this for for all tenants
-        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
-
         var observers = await _failedObservers.GetAll();
         foreach (var observer in observers)
         {
-            var key = PartitionedObserverKeyHelper.Create(TenantId.Development, observer.EventLogId, observer.EventSourceId);
+            var key = PartitionedObserverKeyHelper.Create(_microserviceId, _tenantId, observer.EventLogId, observer.EventSourceId);
             var partitionedObserver = _grainFactory.GetGrain<IPartitionedObserver>(observer.ObserverId, keyExtension: key);
             await partitionedObserver.TryResume();
         }
