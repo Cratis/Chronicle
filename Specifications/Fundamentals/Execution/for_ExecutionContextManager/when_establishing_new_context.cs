@@ -6,6 +6,7 @@ namespace Aksio.Cratis.Execution;
 public class when_establishing_new_context : Specification
 {
     ExecutionContextManager manager;
+    MicroserviceId microservice_id;
     TenantId tenant_id;
     CorrelationId correlation_id;
 
@@ -18,7 +19,7 @@ public class when_establishing_new_context : Specification
         tenant_id = Guid.NewGuid();
         correlation_id = Guid.NewGuid().ToString();
 
-        manager.Establish(microservice_id, tenant_id, correlation_id);
+        manager.Establish(tenant_id, correlation_id, microservice_id);
     }
 
     [Fact] void should_have_the_current_context_with_microservice_id() => manager.Current.MicroserviceId.ShouldEqual(microservice_id);
