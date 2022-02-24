@@ -36,8 +36,15 @@ public class ExecutionContextManager : IExecutionContextManager
         return current!;
     }
 
-    /// <inheritdoc/>
-    public void SetGlobalMicroserviceId(MicroserviceId microserviceId) => _microserviceId = microserviceId;
+    /// <summary>
+    /// Set the global <see cref="MicroserviceId"/> for the running process.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to set.</param>
+    /// <remarks>
+    /// The global microservice id is the value being used when not a specific one is used
+    /// while establishing a context for current task context.
+    /// </remarks>
+    public static void SetGlobalMicroserviceId(MicroserviceId microserviceId) => _microserviceId = microserviceId;
 
     /// <inheritdoc/>
     public ExecutionContext Establish(TenantId tenantId, CorrelationId correlationId, MicroserviceId? microserviceId = default)
