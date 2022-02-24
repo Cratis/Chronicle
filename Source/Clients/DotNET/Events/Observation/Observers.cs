@@ -64,7 +64,7 @@ public class Observers : IObservers
     public async Task StartObserving()
     {
         // TODO: Observe for all tenants
-        _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
+        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
         var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
 
         foreach (var handler in _observerHandlers)
@@ -73,7 +73,7 @@ public class Observers : IObservers
             var subscription = await stream.SubscribeAsync(async (@event, _) =>
             {
                 // TODO: Establish in the correct context
-                _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
+                _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
                 await handler.OnNext(@event);
             });
 
