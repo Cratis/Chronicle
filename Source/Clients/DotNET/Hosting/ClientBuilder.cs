@@ -28,9 +28,6 @@ namespace Aksio.Cratis.Hosting;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
-#pragma warning disable IDE0052 // We will be expanding on this.
-    readonly MicroserviceId _microserviceId;
-
     bool _inSilo;
 
     /// <summary>
@@ -39,7 +36,7 @@ public class ClientBuilder : IClientBuilder
     /// <param name="microserviceId">Microservice identifier.</param>
     public ClientBuilder(MicroserviceId microserviceId)
     {
-        _microserviceId = microserviceId;
+        ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
     }
 
     /// <summary>
