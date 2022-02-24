@@ -31,7 +31,7 @@ public class BootProcedure : IPerformBootProcedure
     {
         // TODO: Start for all tenants
         _executionContextManager.Establish(
-            Guid.Parse("3352d47d-c154-4457-b3fb-8a2efb725113"),
+            TenantId.Development,
             Guid.NewGuid().ToString());
 
         var projections = _grainFactory.GetGrain<IProjections>(Guid.Empty);
