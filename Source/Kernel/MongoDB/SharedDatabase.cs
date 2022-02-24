@@ -17,11 +17,13 @@ public class SharedDatabase : ISharedDatabase
     /// <summary>
     /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
     /// </summary>
+    /// <param name="executionContext">The current <see cref="ExecutionContext"/>.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-    public SharedDatabase(IMongoDBClientFactory clientFactory, Storage configuration)
+    public SharedDatabase(ExecutionContext executionContext, IMongoDBClientFactory clientFactory, Storage configuration)
     {
-        var url = new MongoUrl(configuration.Get(WellKnownStorageTypes.EventStore).Shared.ToString());
+        var storageForMicroservice = configuration[executionContext.MicroserviceId];
+        var url = new MongoUrl(storageForMicroservice.Get(WellKnownStorageTypes.EventStore).Shared.ToString());
         var client = clientFactory.Create(url);
         _database = client.GetDatabase(url.DatabaseName);
     }
