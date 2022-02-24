@@ -76,3 +76,65 @@ public class EmployeesController : Controller
 > correct instance for the tenant in the current context.
 
 For more advanced topics on queries and observable queries, read more [here](./cqrs/queries.md).
+
+## Conventions
+
+Out of the box the system applies conventions related to naming of collections and properties on models.
+
+### Properties
+
+For properties the following convention packs are default turned on:
+
+| Type | Description |
+| ---- | ----------- |
+| CamelCase | Turns properties into camelCase from a typical PascalCase casing in C# |
+| IgnoreExtraElements | Ignores extra elements encountered during deserialization |
+
+Turning off the property conventions you have two options, create a type that implements
+the interface `ICanFilterMongoDBConventionPacksForType` or adorn the type(s) with
+`[IgnoreConventions]` attribute.
+
+```csharp
+public class MyCustomFilter : ICanFilterMongoDBConventionPacksForType
+{
+    public bool ShouldInclude(string conventionPackName, IConventionPack conventionPack, Type type) => type == typeof(Employee) && ConventionPack == ConventionPacks.CamelCase;
+}
+```
+
+Using the attribute approach:
+
+```csharp
+[IgnoreConventions(ConventionPacks.CamelCase)]
+public record Employee(Guid Id, string FirstName, string LastName);
+```
+
+> Note: The attribute takes a params of conventions, you can simply just add another parameter with any convention pack to ignore.
+> If you want to ignore all conventions, you can simply use the attribute without any parameters: `[IgnoreConventions]``
+
+### Collection names
+
+By default all collection names are pluralized assuming that the model type is non-pluralized. On top of this it makes the collection name
+camelCase as well.
+
+You can either control this behavior by adding a [class map](https://mongodb.github.io/mongo-csharp-driver/2.10/reference/bson/mapping/).
+You do not have to explicitly register it as the system will automatically discover any implementations of the `IBsonClassMapFor<>` interface:
+
+```csharp
+public class EmployeeClassMap : IBsonClassMapFor<Employee>
+{
+    public void Configure(BsonClassMap<T> classMap)
+    {
+        classMap.AutoMap();
+        classMap.SetDiscriminator("AllEmployees");
+        classMap.MapMember(c => c.FirstName);
+        classMap.MapMember(c => c.LastName);
+    }
+}
+```
+
+To set the model name on the model itself, you can leverage the `[ModelName]` attribute. This is also honored by projection by the Cratis Kernel.
+
+```csharp
+[ModelName("AllEmployees"))]
+public record Employee(Guid Id, string FirstName, string LastName);
+```
