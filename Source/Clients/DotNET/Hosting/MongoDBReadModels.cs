@@ -8,6 +8,8 @@ using Aksio.Cratis.Configuration.Grains;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Models;
+using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Strings;
 using Aksio.Cratis.Types;
 using Humanizer;
@@ -61,14 +63,23 @@ public static class MongoDBReadModels
     {
         foreach (var readModelType in readModelTypes)
         {
-            var name = readModelType.Name.Pluralize();
-            var camelCaseName = name.ToCamelCase();
-            logger?.AddingMongoDBCollectionBinding(readModelType, camelCaseName);
+            var modelName = readModelType.Name;
+            if (readModelType.HasAttribute<ModelNameAttribute>())
+            {
+                var modelNameAttribute = readModelType.GetCustomAttribute<ModelNameAttribute>()!;
+                modelName = modelNameAttribute.Name;
+            }
+            else
+            {
+                modelName = readModelType.Name.Pluralize();
+                modelName = modelName.ToCamelCase();
+            }
+            logger?.AddingMongoDBCollectionBinding(readModelType, modelName);
             services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
             {
                 var database = sp.GetService<IMongoDatabase>();
                 var genericMethod = _getCollectionMethod.MakeGenericMethod(readModelType);
-                return genericMethod.Invoke(database, new object[] { camelCaseName, null! })!;
+                return genericMethod.Invoke(database, new object[] { modelName, null! })!;
             });
         }
     }
