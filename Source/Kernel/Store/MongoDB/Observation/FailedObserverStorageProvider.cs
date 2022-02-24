@@ -43,8 +43,8 @@ public class FailedObserverStorageProvider : IGrainStorage
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
         var observerId = grainReference.GetPrimaryKey(out var key);
-        var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
-        _executionContextManager.Establish(tenantId, string.Empty);
+        var (microserviceId, tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+        _executionContextManager.Establish(tenantId, string.Empty, microserviceId);
 
         var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
         var cursor = await Collection.FindAsync(filter);
@@ -55,8 +55,8 @@ public class FailedObserverStorageProvider : IGrainStorage
     public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
         var observerId = grainReference.GetPrimaryKey(out var key);
-        var (tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
-        _executionContextManager.Establish(tenantId, string.Empty);
+        var (microserviceId, tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
+        _executionContextManager.Establish(tenantId, string.Empty, microserviceId);
 
         var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
 
