@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Events.Store;
 
 /// <summary>
-/// Represents the unique identifier of an event log.
+/// Represents the unique identifier of an event sequence.
 /// </summary>
 /// <param name="Value">Actual value.</param>
 public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
@@ -15,12 +15,12 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public static readonly EventSequenceId Unspecified = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
 
     /// <summary>
-    /// The <see cref="EventSequenceId"/> representing the default event log.
+    /// The <see cref="EventSequenceId"/> representing the event sequence for the default log.
     /// </summary>
     public static readonly EventSequenceId Log = Guid.Empty;
 
     /// <summary>
-    /// The <see cref="EventSequenceId"/> representing the default public event log.
+    /// The <see cref="EventSequenceId"/> representing the default outbox.
     /// </summary>
     public static readonly EventSequenceId Outbox = Guid.Parse("ae99de1e-b19f-4a33-a5c4-3908508ce59f");
 
@@ -37,12 +37,12 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public static implicit operator EventSequenceId(Guid id) => new(id);
 
     /// <summary>
-    /// Get whether or not this is the default event log.
+    /// Get whether or not this is the default log event sequence.
     /// </summary>
     public bool IsEventLog => this == Log;
 
     /// <summary>
-    /// Get whether or not this is the public event log.
+    /// Get whether or not this is the default outbox event sequence.
     /// </summary>
     public bool IsOutbox => this == Outbox;
 }

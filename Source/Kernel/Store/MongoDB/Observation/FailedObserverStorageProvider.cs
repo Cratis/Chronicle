@@ -48,7 +48,7 @@ public class FailedObserverStorageProvider : IGrainStorage
 
         var filter = GetFilterFor(key.EventSequenceId, observerId, key.EventSourceId);
         var cursor = await Collection.FindAsync(filter);
-        grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedObserverState() { Id = FailedObserverState.CreateKeyFrom(eventLogId, observerId, eventSourceId) };
+        grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedObserverState() { Id = FailedObserverState.CreateKeyFrom(key.EventSequenceId, observerId, key.EventSourceId) };
     }
 
     /// <inheritdoc/>
@@ -74,9 +74,9 @@ public class FailedObserverStorageProvider : IGrainStorage
         }
     }
 
-    FilterDefinition<FailedObserverState> GetFilterFor(Guid eventLogId, Guid observerId, string? eventSourceId)
+    FilterDefinition<FailedObserverState> GetFilterFor(Guid eventSequenceId, Guid observerId, string? eventSourceId)
     {
-        var key = $"{eventLogId}+{observerId}+{eventSourceId}";
+        var key = $"{eventSequenceId}+{observerId}+{eventSourceId}";
         return Builders<FailedObserverState>.Filter.Eq(
             new StringFieldDefinition<FailedObserverState, string>("_id"), key);
     }

@@ -65,7 +65,7 @@ public class EventLogQueueAdapter : IQueueAdapter
                 }
                 catch (Exception ex)
                 {
-                    throw new UnableToAppendToEventLog(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, ex);
+                    throw new UnableToAppendToEventSequence(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, ex);
                 }
             }
         }

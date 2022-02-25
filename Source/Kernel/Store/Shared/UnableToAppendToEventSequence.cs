@@ -6,9 +6,9 @@ using Aksio.Cratis.Execution;
 namespace Aksio.Cratis.Events.Store;
 
 /// <summary>
-/// Exception that gets thrown when the storage mechanism is not able to append the event to the event log.
+/// Exception that gets thrown when the storage mechanism is not able to append the event to the event sequence.
 /// </summary>
-public class UnableToAppendToEventLog : Exception
+public class UnableToAppendToEventSequence : Exception
 {
     /// <summary>
     /// Gets the stream identifier.
@@ -21,7 +21,7 @@ public class UnableToAppendToEventLog : Exception
     public TenantId TenantId { get; }
 
     /// <summary>
-    /// Gets the sequence number within the event log.
+    /// Gets the sequence number within the event sequence.
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; }
 
@@ -31,14 +31,14 @@ public class UnableToAppendToEventLog : Exception
     public EventSourceId EventSourceId { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="UnableToAppendToEventLog"/> class.
+    /// Initializes a new instance of the <see cref="UnableToAppendToEventSequence"/> class.
     /// </summary>
     /// <param name="streamId">The stream that is failing.</param>
     /// <param name="tenantId">For which tenant it is.</param>
     /// <param name="sequenceNumber">The sequence number that is failing.</param>
     /// <param name="eventSourceId">EventSource it is failing for.</param>
     /// <param name="innerException">The inner exception.</param>
-    public UnableToAppendToEventLog(Guid streamId, TenantId tenantId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Exception innerException)
+    public UnableToAppendToEventSequence(Guid streamId, TenantId tenantId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Exception innerException)
         : base($"Unable to append event at sequence {sequenceNumber} for event source {eventSourceId} on tenant {tenantId} from stream {streamId}", innerException)
     {
         StreamId = streamId;

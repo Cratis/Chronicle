@@ -33,7 +33,7 @@ public class MongoDBEventLogStorageProvider : IEventLogStorageProvider
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = _eventStoreDatabase.GetEventLogCollectionFor(EventSequenceId.Log);
+        var collection = _eventStoreDatabase.GetEventSequenceCollectionFor(EventSequenceId.Log);
         var @event = await collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleAsync();
         return await _converter.ToAppendedEvent(@event);
     }
@@ -44,7 +44,7 @@ public class MongoDBEventLogStorageProvider : IEventLogStorageProvider
         EventSourceId? eventSourceId = null,
         IEnumerable<EventType>? eventTypes = null)
     {
-        var collection = _eventStoreDatabase.GetEventLogCollectionFor(EventSequenceId.Log);
+        var collection = _eventStoreDatabase.GetEventSequenceCollectionFor(EventSequenceId.Log);
         var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)

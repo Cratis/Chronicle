@@ -29,7 +29,7 @@ public class Observer : Grain<ObserverState>, IObserver
     ObserverId _observerId = Guid.Empty;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
-    EventSequenceId _eventLogId = EventSequenceId.Unspecified;
+    EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -60,13 +60,13 @@ public class Observer : Grain<ObserverState>, IObserver
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        _observerId = this.GetPrimaryKey(out var eventLogIdAsString);
-        _eventLogId = eventLogIdAsString;
+        _observerId = this.GetPrimaryKey(out var eventSequenceIdAsString);
+        _eventSequenceId = eventSequenceIdAsString;
         _microserviceId = _executionContextManager.Current.MicroserviceId;
         _tenantId = _executionContextManager.Current.TenantId;
 
         var streamProvider = GetStreamProvider(EventSequence.StreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
+        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, _tenantId.ToString());
 
         await base.OnActivateAsync();
     }
@@ -83,7 +83,7 @@ public class Observer : Grain<ObserverState>, IObserver
                     return;
                 }
 
-                var key = new PartitionedObserverKey(_microserviceId, _tenantId, _eventLogId, @event.Context.EventSourceId);
+                var key = new PartitionedObserverKey(_microserviceId, _tenantId, _eventSequenceId, @event.Context.EventSourceId);
                 var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key.ToString());
                 try
                 {

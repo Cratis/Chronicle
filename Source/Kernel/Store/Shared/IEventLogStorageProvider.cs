@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Events.Store;
 
 /// <summary>
-/// Defines a storage provider for the event log.
+/// Defines a storage provider for the event sequence.
 /// </summary>
 public interface IEventLogStorageProvider
 {
@@ -17,7 +17,7 @@ public interface IEventLogStorageProvider
     Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId);
 
     /// <summary>
-    /// Get events using a specific sequence number as starting point within the event log.
+    /// Get events using a specific sequence number as starting point within the event sequence.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> to get from.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to filter for.</param>

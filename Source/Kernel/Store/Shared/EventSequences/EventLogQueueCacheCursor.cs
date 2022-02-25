@@ -58,7 +58,7 @@ public class EventLogQueueCacheCursor : IQueueCacheCursor
                 return null!;
             }
 
-            return new EventLogBatchContainer(
+            return new EventSequenceBatchContainer(
                 appendedEvents,
                 _streamIdentity.Guid,
                 _streamIdentity.Namespace,

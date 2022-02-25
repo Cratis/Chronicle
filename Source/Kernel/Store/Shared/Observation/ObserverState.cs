@@ -26,12 +26,12 @@ public class ObserverState
     public IEnumerable<EventType> EventTypes { get; set; } = Array.Empty<EventType>();
 
     /// <summary>
-    /// Gets or sets the <see cref="EventLogId"/> the state is for.
+    /// Gets or sets the <see cref="EventSequenceId"/> the state is for.
     /// </summary>
-    public EventSequenceId EventLogId { get; set; } = EventSequenceId.Unspecified;
+    public EventSequenceId EventSequenceId { get; set; } = EventSequenceId.Unspecified;
 
     /// <summary>
-    /// Gets or sets the <see cref="EventLogId"/> the state is for.
+    /// Gets or sets the <see cref="EventSequenceId"/> the state is for.
     /// </summary>
     public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
 

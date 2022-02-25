@@ -6,7 +6,7 @@ using Orleans;
 namespace Aksio.Cratis.Events.Store.Grains.Observation;
 
 /// <summary>
-/// Defines an observer of an event log.
+/// Defines an observer of an event sequence.
 /// </summary>
 public interface IObserver : IGrainWithGuidCompoundKey
 {

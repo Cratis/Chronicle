@@ -27,8 +27,8 @@ public class FailedObserverState
         set
         {
             _id = value;
-            var (eventLogId, observerId, eventSourceId) = Parse(value);
-            EventLogId = eventLogId;
+            var (eventSequenceId, observerId, eventSourceId) = Parse(value);
+            EventSequenceId = eventSequenceId;
             ObserverId = observerId;
             EventSourceId = eventSourceId;
         }
@@ -37,7 +37,7 @@ public class FailedObserverState
     /// <summary>
     /// Gets the event log identifier.
     /// </summary>
-    public EventSequenceId EventLogId { get; private set; }
+    public EventSequenceId EventSequenceId { get; private set; }
 
     /// <summary>
     /// Gets the observer identifier.
@@ -87,18 +87,18 @@ public class FailedObserverState
     /// <summary>
     /// Create a composite key.
     /// </summary>
-    /// <param name="eventLogId">The Event log.</param>
+    /// <param name="eventSequenceId">The Event sequence.</param>
     /// <param name="observerId">The observer.</param>
     /// <param name="eventSourceId">The event source.</param>
     /// <returns>The composite key.</returns>
-    public static string CreateKeyFrom(EventSequenceId eventLogId, ObserverId observerId, EventSourceId eventSourceId) => $"{eventLogId}+{observerId}+{eventSourceId}";
+    public static string CreateKeyFrom(EventSequenceId eventSequenceId, ObserverId observerId, EventSourceId eventSourceId) => $"{eventSequenceId}+{observerId}+{eventSourceId}";
 
     /// <summary>
     /// Parse a string representation of a composite key.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Tuple holding event log, observer and event source.</returns>
-    public static (EventSequenceId EventLogId, ObserverId ObserverId, EventSourceId EventSourceId) Parse(string key)
+    public static (EventSequenceId EventSequenceId, ObserverId ObserverId, EventSourceId EventSourceId) Parse(string key)
     {
         var segments = key.Split('+');
         return (

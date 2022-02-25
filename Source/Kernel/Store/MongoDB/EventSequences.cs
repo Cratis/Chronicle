@@ -34,7 +34,7 @@ public class EventSequences : IEventSequences
     }
 
     /// <inheritdoc/>
-    public async Task Append(EventSequenceId eventLogId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, JsonObject content)
+    public async Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, JsonObject content)
     {
         try
         {
@@ -52,7 +52,7 @@ public class EventSequences : IEventSequences
                         { eventType.Generation.ToString(), BsonDocument.Parse(content.ToJsonString()) }
                 },
                 Array.Empty<EventCompensation>());
-            await GetCollectionFor(eventLogId).InsertOneAsync(@event);
+            await GetCollectionFor(eventSequenceId).InsertOneAsync(@event);
         }
         catch (Exception ex)
         {
@@ -62,13 +62,13 @@ public class EventSequences : IEventSequences
     }
 
     /// <inheritdoc/>
-    public Task Compensate(EventSequenceId eventLogId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
+    public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<IEventStoreFindResult> FindFor(EventSequenceId eventLogId, EventSourceId eventSourceId)
+    public Task<IEventStoreFindResult> FindFor(EventSequenceId evenSequencegId, EventSourceId eventSourceId)
     {
         return Task.FromResult<IEventStoreFindResult>(null!);
     }
 
-    IMongoCollection<Event> GetCollectionFor(EventSequenceId eventLogId) => _eventStoreDatabase.GetEventLogCollectionFor(eventLogId);
+    IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabase.GetEventSequenceCollectionFor(eventSequenceId);
 }

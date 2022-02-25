@@ -19,9 +19,9 @@ public interface IEventStoreDatabase
     IMongoCollection<T> GetCollection<T>(string? name = default);
 
     /// <summary>
-    /// Get the <see cref="IMongoCollection{T}"/> for an event log based on identifier.
+    /// Get the <see cref="IMongoCollection{T}"/> for an event sequence based on identifier.
     /// </summary>
-    /// <param name="eventLogId"><see cref="EventSequenceId"/> identifier.</param>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> identifier.</param>
     /// <returns>The collection instance.</returns>
-    IMongoCollection<Event> GetEventLogCollectionFor(EventSequenceId eventLogId);
+    IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId);
 }
