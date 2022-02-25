@@ -10,5 +10,6 @@
         <ServiceModelPrimitives>4.8.1</ServiceModelPrimitives>
         <Humanizer>2.11.10</Humanizer>
         <Swashbuckle>6.2.3</Swashbuckle>
+        <MicrosoftExtensions>6.0.0</MicrosoftExtensions>
     </PropertyGroup>
 </Project>
