@@ -10,7 +10,7 @@ using Orleans.Storage;
 namespace Aksio.Cratis.Events.Store.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="IGrainStorage"/> for handling event log state storage.
+/// Represents an implementation of <see cref="IGrainStorage"/> for handling event sequence state storage.
 /// </summary>
 public class EventSequencesStorageProvider : IGrainStorage
 {
@@ -41,9 +41,9 @@ public class EventSequencesStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var eventLogId = grainReference.GetPrimaryKey(out var tenantIdAsString);
+        var eventSequenceId = grainReference.GetPrimaryKey(out var tenantIdAsString);
         _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventLogId);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
         var cursor = await Collection.FindAsync(filter);
         grainState.State = await cursor.FirstOrDefaultAsync() ?? new EventSequenceState();
     }
@@ -51,10 +51,10 @@ public class EventSequencesStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var eventLogId = grainReference.GetPrimaryKey(out var tenantIdAsString);
+        var eventSequenceId = grainReference.GetPrimaryKey(out var tenantIdAsString);
         _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
         var eventLogState = grainState.State as EventSequenceState;
-        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventLogId);
+        var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
         return Collection.UpdateOneAsync(
             filter,
             Builders<EventSequenceState>.Update.Set(_ => _.SequenceNumber, eventLogState!.SequenceNumber),

@@ -48,7 +48,7 @@ public class Observers : Grain, IObservers
         var observers = await _failedObservers.GetAll();
         foreach (var observer in observers)
         {
-            var key = new PartitionedObserverKey(_microserviceId, _tenantId, observer.EventLogId, observer.EventSourceId);
+            var key = new PartitionedObserverKey(_microserviceId, _tenantId, observer.EventSequenceId, observer.EventSourceId);
             var partitionedObserver = _grainFactory.GetGrain<IPartitionedObserver>(observer.ObserverId, keyExtension: key.ToString());
             await partitionedObserver.TryResume();
         }

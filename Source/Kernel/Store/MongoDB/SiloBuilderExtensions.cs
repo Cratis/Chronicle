@@ -14,16 +14,16 @@ using Orleans.Storage;
 namespace Orleans.Hosting;
 
 /// <summary>
-/// Extension methods for <see cref="ISiloBuilder"/> for configuring event log stream.
+/// Extension methods for <see cref="ISiloBuilder"/> for configuring event sequence stream.
 /// </summary>
 public static class SiloBuilderExtensions
 {
     /// <summary>
-    /// Add event log stream support.
+    /// Add event sequence stream support.
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add for.</param>
     /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
-    public static ISiloBuilder AddEventLogStream(this ISiloBuilder builder)
+    public static ISiloBuilder AddEventSequenceStream(this ISiloBuilder builder)
     {
         builder.AddMemoryGrainStorage("PubSubStore");
         builder.ConfigureServices(services =>

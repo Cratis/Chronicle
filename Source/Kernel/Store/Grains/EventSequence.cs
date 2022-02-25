@@ -82,7 +82,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
             await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));
         }
-        catch (UnableToAppendToEventLog ex)
+        catch (UnableToAppendToEventSequence ex)
         {
             _logger.FailedAppending(
                 _microserviceAndTenant.MicroserviceId,

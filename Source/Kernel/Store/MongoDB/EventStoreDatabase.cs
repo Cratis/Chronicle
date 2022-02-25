@@ -58,18 +58,18 @@ public class EventStoreDatabase : IEventStoreDatabase
     public IMongoCollection<T> GetCollection<T>(string? name = null) => name == null ? Database.GetCollection<T>() : Database.GetCollection<T>(name);
 
     /// <inheritdoc/>
-    public IMongoCollection<Event> GetEventLogCollectionFor(EventSequenceId eventLogId)
+    public IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId)
     {
         var collectionName = BaseCollectionName;
-        if (!eventLogId.IsEventLog)
+        if (!eventSequenceId.IsEventLog)
         {
-            if (eventLogId.IsOutbox)
+            if (eventSequenceId.IsOutbox)
             {
                 collectionName = $"{BaseCollectionName}-public";
             }
             else
             {
-                collectionName = $"{BaseCollectionName}-{eventLogId}";
+                collectionName = $"{BaseCollectionName}-{eventSequenceId}";
             }
         }
 

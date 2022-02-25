@@ -8,9 +8,9 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Events.Store.EventLogs;
 
 /// <summary>
-/// Represents an implementation of <see cref="IBatchContainer"/> for MongoDB event log events.
+/// Represents an implementation of <see cref="IBatchContainer"/> for MongoDB event sequence events.
 /// </summary>
-public class EventLogBatchContainer : IBatchContainer
+public class EventSequenceBatchContainer : IBatchContainer
 {
     readonly IEnumerable<AppendedEvent> _events;
     readonly IDictionary<string, object> _requestContext;
@@ -25,13 +25,13 @@ public class EventLogBatchContainer : IBatchContainer
     public StreamSequenceToken SequenceToken { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogBatchContainer"/> class.
+    /// Initializes a new instance of the <see cref="EventSequenceBatchContainer"/> class.
     /// </summary>
     /// <param name="events">The <see cref="AppendedEvent"/>.</param>
     /// <param name="streamGuid">The identifier of the stream.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the batch is for.</param>
     /// <param name="requestContext">The request context.</param>
-    public EventLogBatchContainer(
+    public EventSequenceBatchContainer(
         IEnumerable<AppendedEvent> events,
         Guid streamGuid,
         TenantId tenantId,

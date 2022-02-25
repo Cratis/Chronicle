@@ -6,7 +6,7 @@
 namespace Aksio.Cratis.Events.Store;
 
 /// <summary>
-/// Represents the state used by the event log. This state is meant to be per event log instance.
+/// Represents the state used by the event sequence. This state is meant to be per event sequence instance.
 /// </summary>
 public class EventSequenceState
 {

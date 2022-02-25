@@ -6,7 +6,7 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.Events.Store.MongoDB;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventCursor"/> for handling events from event log.
+/// Represents an implementation of <see cref="IEventCursor"/> for handling events from event sequence.
 /// </summary>
 public class EventCursor : IEventCursor
 {

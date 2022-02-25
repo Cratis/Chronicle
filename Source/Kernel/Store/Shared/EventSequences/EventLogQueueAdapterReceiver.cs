@@ -63,7 +63,7 @@ public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
 
         lock (_eventBatches)
         {
-            _eventBatches.Add(new EventLogBatchContainer(events, streamGuid, tenantId, requestContext));
+            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, tenantId, requestContext));
         }
     }
 }

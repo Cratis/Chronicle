@@ -47,17 +47,17 @@ public class ObserverStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var eventLogIdAsString);
-        var eventLogId = (EventSequenceId)eventLogIdAsString;
+        var observerId = grainReference.GetPrimaryKey(out var eventSequenceIdAsString);
+        var eventSequenceId = (EventSequenceId)eventSequenceIdAsString;
         var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString()!;
         _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
 
-        var key = GetKeyFrom(eventLogId, observerId);
+        var key = GetKeyFrom(eventSequenceId, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
         grainState.State = await cursor.FirstOrDefaultAsync() ?? new ObserverState
         {
             Id = key,
-            EventLogId = eventLogId,
+            EventSequenceId = eventSequenceId,
             ObserverId = observerId,
             Offset = EventSequenceNumber.First,
             LastHandled = EventSequenceNumber.First
@@ -67,13 +67,13 @@ public class ObserverStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var eventLogIdAsString);
-        var eventLogId = (EventSequenceId)eventLogIdAsString;
+        var observerId = grainReference.GetPrimaryKey(out var eventSequenceIdAsString);
+        var eventSequenceId = (EventSequenceId)eventSequenceIdAsString;
         var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString()!;
         _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
 
         var observerState = grainState.State as ObserverState;
-        var key = GetKeyFrom(eventLogId, observerId);
+        var key = GetKeyFrom(eventSequenceId, observerId);
 
         await Collection.ReplaceOneAsync(
             _ => _.Id == key,
@@ -81,5 +81,5 @@ public class ObserverStorageProvider : IGrainStorage
             new ReplaceOptions { IsUpsert = true });
     }
 
-    string GetKeyFrom(EventSequenceId eventLogId, ObserverId observerId) => $"{eventLogId} : {observerId}";
+    string GetKeyFrom(EventSequenceId eventSequenceId, ObserverId observerId) => $"{eventSequenceId} : {observerId}";
 }

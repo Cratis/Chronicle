@@ -7,7 +7,7 @@ using Orleans;
 namespace Aksio.Cratis.Events.Store.Grains;
 
 /// <summary>
-/// Defines an immutable event log.
+/// Defines the event sequence.
 /// </summary>
 public interface IEventSequence : IGrainWithGuidCompoundKey
 {
