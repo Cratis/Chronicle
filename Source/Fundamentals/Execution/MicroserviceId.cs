@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Concepts;
 
-namespace Aksio.Cratis;
+namespace Aksio.Cratis.Execution;
 
 /// <summary>
 /// Represents the concept of the microservice identifier.

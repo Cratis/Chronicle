@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Execution;
 /// <param name="TenantId">The <see cref="TenantId"/>.</param>
 public record MicroserviceAndTenant(MicroserviceId MicroserviceId, TenantId TenantId)
 {
+    /// <summary>
+    /// The value representing the <see cref="MicroserviceAndTenant"/> not being set.
+    /// </summary>
+    public static readonly MicroserviceAndTenant NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
+
     /// <inheritdoc/>
     public override string ToString() => $"{MicroserviceId}+{TenantId}";
 
