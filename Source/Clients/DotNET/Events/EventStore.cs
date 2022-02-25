@@ -35,7 +35,9 @@ public class EventStore : IEventStore
     {
         _clusterClient = clusterClient;
 
-        var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventSequence>(EventSequenceId.Log, keyExtension: executionContextManager.Current.TenantId.ToString());
+        var defaultEventLog = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
+            EventSequenceId.Log,
+            keyExtension: executionContextManager.Current.TenantId.ToString());
         EventLog = new EventLog(eventTypes, serializer, additionalEventInformationProviders, defaultEventLog);
     }
 }
