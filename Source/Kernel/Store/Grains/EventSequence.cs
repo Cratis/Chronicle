@@ -22,12 +22,12 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <summary>
     /// The name of the stream provider.
     /// </summary>
-    public const string StreamProvider = "event-log";
+    public const string StreamProvider = "event-sequence";
     readonly ISchemaStore _schemaStore;
     readonly IJsonComplianceManager _jsonComplianceManager;
     readonly ILogger<EventSequence> _logger;
-    EventSequenceId _eventLogId = EventSequenceId.Unspecified;
-    TenantId _tenantId = TenantId.NotSet;
+    EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
+    MicroserviceAndTenant _microserviceAndTenant = MicroserviceAndTenant.NotSet;
     IAsyncStream<AppendedEvent>? _stream;
 
     /// <summary>
@@ -49,11 +49,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        _eventLogId = this.GetPrimaryKey(out var tenantId);
-        _tenantId = tenantId;
+        _eventSequenceId = this.GetPrimaryKey(out var extension);
+        _microserviceAndTenant = MicroserviceAndTenant.Parse(extension);
 
         var streamProvider = GetStreamProvider(StreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(_eventLogId, _tenantId.ToString());
+        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, extension);
 
         await base.OnActivateAsync();
     }
@@ -61,7 +61,13 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
     {
-        _logger.Appending(eventType, eventSourceId, State.SequenceNumber, _eventLogId);
+        _logger.Appending(
+            _microserviceAndTenant.MicroserviceId,
+            _microserviceAndTenant.TenantId,
+            _eventSequenceId,
+            eventType,
+            eventSourceId,
+            State.SequenceNumber);
 
         var updateSequenceNumber = true;
         try
@@ -79,10 +85,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         catch (UnableToAppendToEventLog ex)
         {
             _logger.FailedAppending(
+                _microserviceAndTenant.MicroserviceId,
+                _microserviceAndTenant.TenantId,
                 ex.StreamId,
-                ex.SequenceNumber,
-                ex.TenantId,
                 ex.EventSourceId,
+                ex.SequenceNumber,
                 ex);
 
             updateSequenceNumber = false;
@@ -90,10 +97,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         catch (Exception ex)
         {
             _logger.ErrorAppending(
-                _eventLogId,
-                State.SequenceNumber,
-                _tenantId,
+                _microserviceAndTenant.MicroserviceId,
+                _microserviceAndTenant.TenantId,
+                _eventSequenceId,
                 eventSourceId,
+                State.SequenceNumber,
                 ex);
         }
 
@@ -107,7 +115,12 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default)
     {
-        _logger.Compensating(eventType, sequenceNumber, _eventLogId);
+        _logger.Compensating(
+            _microserviceAndTenant.MicroserviceId,
+            _microserviceAndTenant.TenantId,
+            eventType,
+            _eventSequenceId,
+            sequenceNumber);
 
         return Task.CompletedTask;
     }

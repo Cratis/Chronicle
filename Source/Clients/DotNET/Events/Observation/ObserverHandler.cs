@@ -41,21 +41,21 @@ public class ObserverHandler
     /// </summary>
     /// <param name="observerId">Unique identifier.</param>
     /// <param name="name">Name of the observer.</param>
-    /// <param name="eventLogId">Event log identifier.</param>
+    /// <param name="eventSequenceId">Event log identifier.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
     /// <param name="observerInvoker">The actual invoker.</param>
     /// <param name="eventSerializer">The serializer to use.</param>
     public ObserverHandler(
         ObserverId observerId,
         ObserverName name,
-        EventSequenceId eventLogId,
+        EventSequenceId eventSequenceId,
         IEventTypes eventTypes,
         IObserverInvoker observerInvoker,
         IEventSerializer eventSerializer)
     {
         ObserverId = observerId;
         Name = name;
-        EventSequenceId = eventLogId;
+        EventSequenceId = eventSequenceId;
         _eventTypes = eventTypes;
         _observerInvoker = observerInvoker;
         _eventSerializer = eventSerializer;
