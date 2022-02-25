@@ -17,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Orleans;
-using Orleans.Configuration;
 using Orleans.Hosting;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
 using OrleansClientBuilder = Orleans.ClientBuilder;
@@ -122,12 +121,7 @@ namespace Aksio.Cratis.Hosting
             {
                 logger?.ConfiguringKernelConnection();
                 var orleansBuilder = new OrleansClientBuilder()
-                    .Configure<ClusterOptions>(options =>
-                    {
-                        options.ClusterId = "asdasd";
-                        options.ServiceId = _microserviceId.ToString();
-                    })
-                    .UseAdoNetClustering(options => options.ConnectionString = "host=localhost;database=cluster;user id=root;password=root")
+                    .UseCluster(_microserviceId, types)
                     .AddEventLogStream()
                     .AddSimpleMessageStreamProvider("observer-handlers")
                     .UseExecutionContext()
