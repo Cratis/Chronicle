@@ -29,7 +29,7 @@ public class ObserverHandler
     /// <summary>
     /// Gets the event log for the observer.
     /// </summary>
-    public EventSequenceId EventLogId { get; }
+    public EventSequenceId EventSequenceId { get; }
 
     /// <summary>
     /// Gets the event types for the observer.
@@ -55,7 +55,7 @@ public class ObserverHandler
     {
         ObserverId = observerId;
         Name = name;
-        EventLogId = eventLogId;
+        EventSequenceId = eventLogId;
         _eventTypes = eventTypes;
         _observerInvoker = observerInvoker;
         _eventSerializer = eventSerializer;

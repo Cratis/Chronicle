@@ -30,12 +30,12 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        _observerId = this.GetPrimaryKey(out var key);
-        var (microserviceId, tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
-        _microserviceId = microserviceId;
-        _tenantId = tenantId;
-        _eventLogId = eventLogId;
-        _eventSourceId = eventSourceId;
+        _observerId = this.GetPrimaryKey(out var extension);
+        var key = PartitionedObserverKey.Parse(extension);
+        _microserviceId = key.MicroserviceId;
+        _tenantId = key.TenantId;
+        _eventLogId = key.EventLogId;
+        _eventSourceId = key.EventSourceId;
 
         _recoverReminder = await GetReminder(RecoverReminder);
         if (State.IsFailed)

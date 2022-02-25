@@ -83,8 +83,8 @@ public class Observer : Grain<ObserverState>, IObserver
                     return;
                 }
 
-                var key = PartitionedObserverKeyHelper.Create(_microserviceId, _tenantId, _eventLogId, @event.Context.EventSourceId);
-                var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
+                var key = new PartitionedObserverKey(_microserviceId, _tenantId, _eventLogId, @event.Context.EventSourceId);
+                var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key.ToString());
                 try
                 {
                     await partitionedObserver.SetConnectionId(connectionId);

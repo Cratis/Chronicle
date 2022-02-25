@@ -42,11 +42,11 @@ public class FailedObserverStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var key);
-        var (microserviceId, tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
-        _executionContextManager.Establish(tenantId, string.Empty, microserviceId);
+        var observerId = grainReference.GetPrimaryKey(out var extension);
+        var key = PartitionedObserverKey.Parse(extension);
+        _executionContextManager.Establish(key.TenantId, string.Empty, key.MicroserviceId);
 
-        var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
+        var filter = GetFilterFor(key.EventSequenceId, observerId, key.EventSourceId);
         var cursor = await Collection.FindAsync(filter);
         grainState.State = await cursor.FirstOrDefaultAsync() ?? new FailedObserverState() { Id = FailedObserverState.CreateKeyFrom(eventLogId, observerId, eventSourceId) };
     }
@@ -54,11 +54,11 @@ public class FailedObserverStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var key);
-        var (microserviceId, tenantId, eventLogId, eventSourceId) = PartitionedObserverKeyHelper.Parse(key);
-        _executionContextManager.Establish(tenantId, string.Empty, microserviceId);
+        var observerId = grainReference.GetPrimaryKey(out var extension);
+        var key = PartitionedObserverKey.Parse(extension);
+        _executionContextManager.Establish(key.TenantId, string.Empty, key.MicroserviceId);
 
-        var filter = GetFilterFor(eventLogId, observerId, eventSourceId);
+        var filter = GetFilterFor(key.EventSequenceId, observerId, key.EventSourceId);
 
         var state = (grainState.State as FailedObserverState)!;
         if (state.IsFailed)
