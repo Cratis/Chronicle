@@ -17,7 +17,10 @@
         <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="8.4.1" />
         <PackageReference Include="Serilog.Sinks.PeriodicBatching" Version="2.3.0" />
         <PackageReference Include="Microsoft.Orleans.Server" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="$(Swashbuckle)" />
+        <PackageReference Include="System.Data.SqlClient" Version="4.8.3" />
     </ItemGroup>
 
     <!-- Compliance -->
@@ -64,9 +67,9 @@
 
     <!-- General -->
     <ItemGroup>
-        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj"/>
-        <ProjectReference Include="../../ApplicationModel/Applications/Applications.csproj"/>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../../ApplicationModel/Applications/Applications.csproj" />
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />
         <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj" />
