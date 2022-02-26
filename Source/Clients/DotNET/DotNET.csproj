@@ -23,5 +23,6 @@
       <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
       <PackageReference Include="Humanizer" Version="$(Humanizer)" />
       <PackageReference Include="automapper" Version="10.1.1" />
+      <PackageReference Include="System.Data.SqlClient" Version="$(SqlDataClient)" />
     </ItemGroup>
 </Project>

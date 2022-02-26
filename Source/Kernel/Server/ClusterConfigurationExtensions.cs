@@ -28,7 +28,7 @@ public static class ClusterConfigurationExtensions
     {
         builder.ConfigureServices(_ =>
         {
-            var clusterConfig = _.FirstOrDefault(service => service.ServiceType == typeof(Cluster))?.ImplementationInstance as Cluster ?? new Cluster();
+            var clusterConfig = _.GetClusterConfig();
 
             builder
                 .Configure<ClusterOptions>(options =>
