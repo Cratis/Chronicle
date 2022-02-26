@@ -4,8 +4,6 @@
 using System.Text.Json;
 using Aksio.Cratis;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
-using Aksio.Cratis.Types;
-using Microsoft.Extensions.DependencyInjection;
 using Orleans.Clustering.AzureStorage;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -26,54 +24,48 @@ public static class ClusterConfigurationExtensions
     /// Use cluster from configuration.
     /// </summary>
     /// <param name="builder"><see cref="IClientBuilder"/> to extend.</param>
+    /// <param name="clusterConfig">The <see cref="Cluster"/> config.</param>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> identifying the microservice.</param>
-    /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
     /// <returns>Builder for continuation.</returns>
-    public static IClientBuilder UseCluster(this IClientBuilder builder, MicroserviceId microserviceId, ITypes types)
+    public static IClientBuilder UseCluster(this IClientBuilder builder, Cluster clusterConfig, MicroserviceId microserviceId)
     {
-        builder.ConfigureServices(_ =>
-        {
-            _.AddConfigurationObjects(types, searchSubPaths: new[] { "config" });
-            var clusterConfig = _.FirstOrDefault(service => service.ServiceType == typeof(Cluster))?.ImplementationInstance as Cluster ?? new Cluster();
-
-            builder
-                .Configure<ClusterOptions>(options =>
-                {
-                    options.ClusterId = clusterConfig.Name;
-                    options.ServiceId = microserviceId.ToString();
-                });
-
-            switch (clusterConfig.Type)
+        builder
+            .Configure<ClusterOptions>(options =>
             {
-                case ClusterTypes.Local:
-                    builder.UseLocalhostClustering();
-                    break;
+                options.ClusterId = clusterConfig.Name;
+                options.ServiceId = microserviceId.ToString();
+            });
 
-                case ClusterTypes.AdoNet:
-                    {
-                        var parsedOptions = JsonSerializer.Deserialize<AdoNetClusteringSiloOptions>(
-                                JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
-                        builder.UseAdoNetClustering(options =>
-                        {
-                            options.ConnectionString = parsedOptions.ConnectionString;
-                            options.Invariant = parsedOptions.Invariant;
-                        });
-                    }
-                    break;
+        switch (clusterConfig.Type)
+        {
+            case ClusterTypes.Local:
+                builder.UseLocalhostClustering();
+                break;
 
-                case ClusterTypes.AzureStorage:
+            case ClusterTypes.AdoNet:
+                {
+                    var parsedOptions = JsonSerializer.Deserialize<AdoNetClusteringSiloOptions>(
+                            JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
+                    builder.UseAdoNetClustering(options =>
                     {
-                        var parsedOptions = JsonSerializer.Deserialize<AzureStorageClusteringOptions>(
-                                JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
-                        builder.UseAzureStorageClustering(options =>
-                        {
-                            options.ConnectionString = parsedOptions.ConnectionString;
-                            options.TableName = parsedOptions.TableName;
-                        });
-                    }
-                    break;
-            }
-        });
+                        options.ConnectionString = parsedOptions.ConnectionString;
+                        options.Invariant = parsedOptions.Invariant;
+                    });
+                }
+                break;
+
+            case ClusterTypes.AzureStorage:
+                {
+                    var parsedOptions = JsonSerializer.Deserialize<AzureStorageClusteringOptions>(
+                            JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
+                    builder.UseAzureStorageClustering(options =>
+                    {
+                        options.ConnectionString = parsedOptions.ConnectionString;
+                        options.TableName = parsedOptions.TableName;
+                    });
+                }
+                break;
+        }
         return builder;
     }
 }

@@ -20,7 +20,7 @@
         <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
         <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="$(Swashbuckle)" />
-        <PackageReference Include="System.Data.SqlClient" Version="4.8.3" />
+        <PackageReference Include="System.Data.SqlClient" Version="$(SqlDataClient)" />
     </ItemGroup>
 
     <!-- Compliance -->
