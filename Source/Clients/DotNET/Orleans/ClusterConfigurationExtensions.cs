@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
+using System.Globalization;
+using System.Net;
 using Aksio.Cratis;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
-using Orleans.Clustering.AzureStorage;
 using Orleans.Configuration;
 using Orleans.Hosting;
 
@@ -15,11 +15,6 @@ namespace Orleans;
 /// </summary>
 public static class ClusterConfigurationExtensions
 {
-    static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
     /// <summary>
     /// Use cluster from configuration.
     /// </summary>
@@ -42,26 +37,32 @@ public static class ClusterConfigurationExtensions
                 builder.UseLocalhostClustering();
                 break;
 
+            case ClusterTypes.Static:
+                {
+                    var staticClusterOptions = clusterConfig.GetStaticClusterOptions();
+                    var endPoints = staticClusterOptions.Gateways.Select(_ => new IPEndPoint(IPAddress.Parse(_.Address), int.Parse(_.Port, CultureInfo.InvariantCulture))).ToArray();
+                    builder.UseStaticClustering(endPoints);
+                }
+                break;
+
             case ClusterTypes.AdoNet:
                 {
-                    var parsedOptions = JsonSerializer.Deserialize<AdoNetClusteringSiloOptions>(
-                            JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
+                    var adoNetOptions = clusterConfig.GetAdoNetClusteringSiloOptions();
                     builder.UseAdoNetClustering(options =>
                     {
-                        options.ConnectionString = parsedOptions.ConnectionString;
-                        options.Invariant = parsedOptions.Invariant;
+                        options.ConnectionString = adoNetOptions.ConnectionString;
+                        options.Invariant = adoNetOptions.Invariant;
                     });
                 }
                 break;
 
             case ClusterTypes.AzureStorage:
                 {
-                    var parsedOptions = JsonSerializer.Deserialize<AzureStorageClusteringOptions>(
-                            JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
+                    var azureOptions = clusterConfig.GetAzureStorageClusteringOptions();
                     builder.UseAzureStorageClustering(options =>
                     {
-                        options.ConnectionString = parsedOptions.ConnectionString;
-                        options.TableName = parsedOptions.TableName;
+                        options.ConnectionString = azureOptions.ConnectionString;
+                        options.TableName = azureOptions.TableName;
                     });
                 }
                 break;

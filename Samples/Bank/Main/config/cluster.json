@@ -1,11 +1,15 @@
 {
     "name": "Cratis",
-    "type": "ado-net",
+    "type": "static",
     "advertisedIP": "127.0.0.1",
     "siloPort": 11111,
     "gatewayPort": 30000,
     "options": {
-        "connectionString": "Data Source=localhost;Initial Catalog=Orleans;User ID=sa;Password=1234Abcd;Pooling=False;Max Pool Size=200;MultipleActiveResultSets=True",
-        "invariant": "System.Data.SqlClient"
+        "gateways": [
+            {
+                "address": "127.0.0.1",
+                "port": 30000
+            }
+        ]
     }
 }

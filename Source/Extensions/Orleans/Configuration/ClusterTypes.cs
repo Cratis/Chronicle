@@ -14,6 +14,11 @@ public static class ClusterTypes
     public const string Local = "local";
 
     /// <summary>
+    /// Gets the value representing an unreliable static cluster configuration.
+    /// </summary>
+    public const string Static = "static";
+
+    /// <summary>
     /// Gets the value representing a cluster based on Azure Storage.
     /// </summary>
     public const string AzureStorage = "azure-storage";
