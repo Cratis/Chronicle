@@ -11,6 +11,9 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
+        <PackageReference Include="System.Data.SqlClient" Version="$(SqlDataClient)" />
     </ItemGroup>
 
 </Project>
