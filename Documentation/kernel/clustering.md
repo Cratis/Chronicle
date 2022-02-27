@@ -13,18 +13,23 @@ leverages it for clustering.
     "advertisedIP": "127.0.0.1",        // For the Kernel, what IP the specific instance is advertising
     "siloPort": 11111,                  // The Orleans silo port. For kernel this is what it exposes
     "gatewayPort": 30000,               // The Orleans gateway port. For kernel this is what it exposes, for client this is that it connects to
-    "options": {
-        "primarySiloIP": "127.0.0.1",   // The IP address of the primary instance
-        "primarySiloPort": 11111        // The port for the primary instance
-    }
+    "options": {}                       // Options specific for the type of cluster configuration configured
 }
 ```
-
 
 ## Development
 
 In local development Cratis leverages the [local development configuration](https://docs.microsoft.com/en-us/dotnet/orleans/host/configuration-guide/local-development-configuration).
 This is the default configuration and behavior for both the Kernel and the connecting client.
+
+Both the Kernel and the client can be configured with the following:
+
+```json
+{
+    "name": "Cratis",                   // Name of cluster
+    "type": "local"                     // The type of clustering (local, static, azure-storage, ado-net)
+}
+```
 
 ## Production
 
@@ -52,17 +57,24 @@ Kernel configuration for static cluster:
 }
 ```
 
+For the client you need to configure the options slightly different with gateways it should connect to.
+
 ```json
 {
     "name": "Cratis",
     "type": "static",
-    "advertisedIP": "127.0.0.1",
-    "siloPort": 11111,
-    "gatewayPort": 30000,
     "options": {
         "gateways": [
             {
                 "address": "127.0.0.1",
+                "port": 30000
+            },
+            {
+                "address": "SECOND_KERNEL_IP",
+                "port": 30000
+            },
+            {
+                "address": "THIRD_KERNEL_IP",
                 "port": 30000
             }
         ]
@@ -70,8 +82,21 @@ Kernel configuration for static cluster:
 }
 ```
 
-
 ### Azure Storage
+
+```json
+{
+    "name": "Cratis",
+    "type": "azure-storage",
+    "advertisedIP": "127.0.0.1",
+    "siloPort": 11111,
+    "gatewayPort": 30000,
+    "options": {
+        "connectionString": "",
+        "tableName": ""
+    }
+}
+```
 
 ## ADO .NET
 
@@ -97,3 +122,5 @@ https://github.com/dotnet/orleans/tree/main/src/AdoNet/Orleans.Clustering.AdoNet
     }
 }
 ```
+
+
