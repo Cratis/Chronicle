@@ -122,7 +122,7 @@ namespace Aksio.Cratis.Hosting
             {
                 logger?.ConfiguringKernelConnection();
                 var orleansBuilder = new OrleansClientBuilder()
-                    .UseCluster(services.GetClusterConfig(), _microserviceId)
+                    .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
                     .AddEventLogStream()
                     .AddSimpleMessageStreamProvider("observer-handlers")
                     .UseExecutionContext()

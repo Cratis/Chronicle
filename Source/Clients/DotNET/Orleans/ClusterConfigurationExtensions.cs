@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Net;
 using Aksio.Cratis;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
+using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Hosting;
 
@@ -21,8 +21,9 @@ public static class ClusterConfigurationExtensions
     /// <param name="builder"><see cref="IClientBuilder"/> to extend.</param>
     /// <param name="clusterConfig">The <see cref="Cluster"/> config.</param>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> identifying the microservice.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <returns>Builder for continuation.</returns>
-    public static IClientBuilder UseCluster(this IClientBuilder builder, Cluster clusterConfig, MicroserviceId microserviceId)
+    public static IClientBuilder UseCluster(this IClientBuilder builder, Cluster clusterConfig, MicroserviceId microserviceId, ILogger? logger)
     {
         builder
             .Configure<ClusterOptions>(options =>
@@ -34,19 +35,22 @@ public static class ClusterConfigurationExtensions
         switch (clusterConfig.Type)
         {
             case ClusterTypes.Local:
+                logger?.UsingLocalHostClustering();
                 builder.UseLocalhostClustering();
                 break;
 
             case ClusterTypes.Static:
                 {
+                    logger?.UsingStaticClustering();
                     var staticClusterOptions = clusterConfig.GetStaticClusterOptions();
-                    var endPoints = staticClusterOptions.Gateways.Select(_ => new IPEndPoint(IPAddress.Parse(_.Address), int.Parse(_.Port, CultureInfo.InvariantCulture))).ToArray();
+                    var endPoints = staticClusterOptions.Gateways.Select(_ => new IPEndPoint(IPAddress.Parse(_.Address), _.Port)).ToArray();
                     builder.UseStaticClustering(endPoints);
                 }
                 break;
 
             case ClusterTypes.AdoNet:
                 {
+                    logger?.UsingAdoNetClustering();
                     var adoNetOptions = clusterConfig.GetAdoNetClusteringSiloOptions();
                     builder.UseAdoNetClustering(options =>
                     {
@@ -58,6 +62,7 @@ public static class ClusterConfigurationExtensions
 
             case ClusterTypes.AzureStorage:
                 {
+                    logger?.UsingAzureStorageClustering();
                     var azureOptions = clusterConfig.GetAzureStorageClusteringOptions();
                     builder.UseAzureStorageClustering(options =>
                     {
