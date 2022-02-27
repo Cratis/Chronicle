@@ -8,6 +8,15 @@ namespace Aksio.Cratis.Extensions.Orleans.Configuration;
 /// <summary>
 /// Represents the configuration of an <see cref="IPEndPoint"/>.
 /// </summary>
-/// <param name="Address">The address.</param>
-/// <param name="Port">The port.</param>
-public record EndPoint(string Address, string Port);
+public class EndPoint
+{
+    /// <summary>
+    /// Gets the IP address.
+    /// </summary>
+    public string Address { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the port.
+    /// </summary>
+    public int Port { get; init; } = 30000;
+}

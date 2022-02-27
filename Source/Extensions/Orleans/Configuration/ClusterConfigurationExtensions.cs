@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Clustering.AzureStorage;
 using Orleans.Configuration;
@@ -13,11 +12,6 @@ namespace Aksio.Cratis.Extensions.Orleans.Configuration;
 /// </summary>
 public static class ClusterConfigurationExtensions
 {
-    static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
     /// <summary>
     /// Get configured cluster config from the configured services.
     /// </summary>
@@ -33,22 +27,19 @@ public static class ClusterConfigurationExtensions
     /// </summary>
     /// <param name="clusterConfig"><see cref="Cluster"/> to get from.</param>
     /// <returns><see cref="StaticClusterOptions"/> instance.</returns>
-    public static StaticClusterOptions GetStaticClusterOptions(this Cluster clusterConfig) => JsonSerializer.Deserialize<StaticClusterOptions>(
-                            JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
+    public static StaticClusterOptions GetStaticClusterOptions(this Cluster clusterConfig) => clusterConfig.Options as StaticClusterOptions ?? new StaticClusterOptions();
 
     /// <summary>
     /// Get specific <see cref="AdoNetClusteringSiloOptions"/> from the options of <see cref="Cluster"/>.
     /// </summary>
     /// <param name="clusterConfig"><see cref="Cluster"/> to get from.</param>
     /// <returns><see cref="AdoNetClusteringSiloOptions"/> instance.</returns>
-    public static AdoNetClusteringSiloOptions GetAdoNetClusteringSiloOptions(this Cluster clusterConfig) => JsonSerializer.Deserialize<AdoNetClusteringSiloOptions>(
-                            JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
+    public static AdoNetClusteringSiloOptions GetAdoNetClusteringSiloOptions(this Cluster clusterConfig) => clusterConfig.Options as AdoNetClusteringSiloOptions ?? new AdoNetClusteringSiloOptions();
 
     /// <summary>
     /// Get specific <see cref="AzureStorageClusteringOptions"/> from the options of <see cref="Cluster"/>.
     /// </summary>
     /// <param name="clusterConfig"><see cref="Cluster"/> to get from.</param>
     /// <returns><see cref="AzureStorageClusteringOptions"/> instance.</returns>
-    public static AzureStorageClusteringOptions GetAzureStorageClusteringOptions(this Cluster clusterConfig) => JsonSerializer.Deserialize<AzureStorageClusteringOptions>(
-                            JsonSerializer.Serialize(clusterConfig.Options), _jsonOptions)!;
+    public static AzureStorageClusteringOptions GetAzureStorageClusteringOptions(this Cluster clusterConfig) => clusterConfig.Options as AzureStorageClusteringOptions ?? new AzureStorageClusteringOptions();
 }

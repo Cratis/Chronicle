@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Net;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
 using Orleans.Configuration;
@@ -44,7 +43,7 @@ public static class ClusterConfigurationExtensions
 
                 case ClusterTypes.Static:
                     var staticClusterOptions = clusterConfig.GetStaticClusterOptions();
-                    builder.UseDevelopmentClustering(new IPEndPoint(IPAddress.Parse(staticClusterOptions.PrimarySiloIP), int.Parse(staticClusterOptions.PrimarySiloPort, CultureInfo.InvariantCulture)));
+                    builder.UseDevelopmentClustering(new IPEndPoint(IPAddress.Parse(staticClusterOptions.PrimarySiloIP), staticClusterOptions.PrimarySiloPort));
                     break;
 
                 case ClusterTypes.AdoNet:

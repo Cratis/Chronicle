@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Aksio.Cratis.Configuration;
 
 namespace Aksio.Cratis.Extensions.Orleans.Configuration;
@@ -40,5 +39,6 @@ public class Cluster
     /// <summary>
     /// Gets the options in the form of a JSON representation for the cluster configuration.
     /// </summary>
-    public ExpandoObject Options { get; init; } = new();
+    [ConfigurationValueResolver(typeof(ClusterOptionsValueResolver))]
+    public object Options { get; init; } = null!;
 }
