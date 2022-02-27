@@ -81,30 +81,31 @@ namespace Microsoft.Extensions.DependencyInjection
                 var fileName = attribute.FileNameSet ? attribute.FileName : configurationObject.Name.ToLowerInvariant();
                 fileName = Path.HasExtension(fileName) ? fileName : $"{fileName}.json";
 
+                var configurationBuilder = new ConfigurationBuilder();
+
                 foreach (var searchPath in allSearchPaths)
                 {
-                    var path = Path.Combine(searchPath, fileName);
-                    if (!File.Exists(path))
-                    {
-                        continue;
-                    }
-
-                    logger?.BuildingConfigurationFor(configurationObject, fileName);
-                    var configuration = new ConfigurationBuilder()
-                        .SetBasePath(searchPath)
-                        .AddJsonFile(fileName, attribute.Optional)
-                        .Build();
-
-                    var configurationInstance = configuration.Get(configurationObject);
-                    services.AddSingleton(configurationObject, configurationInstance);
-
-                    var optionsType = typeof(IOptions<>).MakeGenericType(configurationObject);
-                    var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObject);
-                    var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationInstance });
-
-                    services.AddSingleton(optionsType, optionsWrapperInstance!);
-                    break;
+                    logger?.AddingConfigurationFile(configurationObject, fileName);
+                    var actualFile = Path.Combine(searchPath, fileName);
+                    configurationBuilder.AddJsonFile(actualFile, true);
                 }
+
+                var configuration = configurationBuilder.Build();
+                var configurationInstance = Activator.CreateInstance(configurationObject)!;
+                foreach (var property in configurationObject.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite && _.HasAttribute<ConfigurationValueResolverAttribute>()))
+                {
+                    var resolverAttribute = property.GetCustomAttribute<ConfigurationValueResolverAttribute>()!;
+                    var resolver = (Activator.CreateInstance(resolverAttribute.ResolverType) as IConfigurationValueResolver)!;
+                    property.SetValue(configurationInstance, resolver.Resolve(configuration));
+                }
+                configuration.Bind(configurationInstance);
+                services.AddSingleton(configurationObject, configurationInstance);
+
+                var optionsType = typeof(IOptions<>).MakeGenericType(configurationObject);
+                var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObject);
+                var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationInstance });
+
+                services.AddSingleton(optionsType, optionsWrapperInstance!);
             }
 
             return services;
