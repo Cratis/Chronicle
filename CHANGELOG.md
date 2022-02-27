@@ -1,3 +1,11 @@
+# [v5.11.0] - 2022-2-27 [PR: #197](https://github.com/aksio-insurtech/Cratis/pull/197)
+
+### Added
+
+- Configuration of cluster options supporting local, Azure Storage and ADO.NET for now. All done through a new `cluster.json` file. If the file is missing, localhost clustering is assumed for development purposes.
+- Adding a way to resolve configuration values that differ in type / implementation. See the docs for more details.
+
+
 # [v5.10.0] - 2022-2-24 [PR: #194](https://github.com/aksio-insurtech/Cratis/pull/194)
 
 ### Added
