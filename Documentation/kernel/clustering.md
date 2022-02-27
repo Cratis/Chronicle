@@ -1,10 +1,16 @@
 # Clustering
 
-THe Cratis Kernel is built to support clustering for reliability and scale out scenarios.
+The Cratis Kernel is built to support clustering for reliability and scale out scenarios.
 It is built on top of [Microsoft Orleans](https://docs.microsoft.com/en-us/dotnet/orleans/) and
 leverages it for clustering.
 
 ## cluster.json
+
+To leverage clustering, both the Kernel and the client need a file called `cluster.json`. This can either exist in the root side by side of the
+current working directory where you run the client or the server, or within a sub-folder called `config`.
+If the file is not present, it will default to using the local development setup.
+
+The shape of the file is expected to be as follows:
 
 ```json
 {
@@ -84,6 +90,10 @@ For the client you need to configure the options slightly different with gateway
 
 ### Azure Storage
 
+When running in Azure there is a provider that can be used that leverages the Azure storage tables.
+
+The kernel configuration would be:
+
 ```json
 {
     "name": "Cratis",
@@ -92,22 +102,38 @@ For the client you need to configure the options slightly different with gateway
     "siloPort": 11111,
     "gatewayPort": 30000,
     "options": {
-        "connectionString": "",
-        "tableName": ""
+        "connectionString": "",         // The Azure Storage connection string found in the Azure portal
+        "tableName": ""                 // Optional table name for Orleans instances - defaults to 'OrleansSiloInstances'
     }
 }
 ```
 
+For your client, it would be:
+
+```json
+{
+    "name": "Cratis",
+    "type": "azure-storage",
+    "options": {
+        "connectionString": "",         // The Azure Storage connection string found in the Azure portal
+        "tableName": ""                 // Optional table name for Orleans instances - defaults to 'OrleansSiloInstances'
+    }
+}
+```
+
+Both the Kernel and the client require the same connection string.
+
+> Note: `connectionString` is typically in the following format:
+> DefaultEndpointsProtocol=https;AccountName=[account name];AccountKey=[account key];EndpointSuffix=core.windows.net
+
 ## ADO .NET
 
-https://www.devart.com/dotconnect/connection-strings.html
-https://dotnet.github.io/orleans/docs/host/configuration_guide/configuring_ADO.NET_providers.html
+Another option is to use ADO.NET and supported databases. Out of the box the Kernel and client libraries reference what
+is needed to use Microsoft SQL Server. In order for this to work, there is a need to set up artifacts in the SQL server.
+You'll find the necessary SQL scripts [here](/Samples/Clustering/create-db.sql), or you can go to the original scripts
+from Orleans [here](https://github.com/dotnet/orleans/tree/main/src/AdoNet).
 
-SQL Scripts:
-https://github.com/dotnet/orleans/tree/main/src/AdoNet
-https://github.com/dotnet/orleans/tree/main/src/AdoNet/Shared
-https://github.com/dotnet/orleans/tree/main/src/AdoNet/Orleans.Clustering.AdoNet
-
+The Kernel configuration would then be:
 
 ```json
 {
@@ -117,10 +143,21 @@ https://github.com/dotnet/orleans/tree/main/src/AdoNet/Orleans.Clustering.AdoNet
     "siloPort": 11111,
     "gatewayPort": 30000,
     "options": {
-        "connectionString": "Data Source=localhost;Initial Catalog=Orleans;User ID=sa;Password=1234Abcd;Pooling=False;Max Pool Size=200;MultipleActiveResultSets=True",
+        "connectionString": "Data Source=[sql server];Initial Catalog=Orleans;User ID=[username];Password=[password];Pooling=False;Max Pool Size=200;MultipleActiveResultSets=True",
         "invariant": "System.Data.SqlClient"
     }
 }
 ```
 
+For your client, it would be:
 
+```json
+{
+    "name": "Cratis",
+    "type": "ado-net",
+    "options": {
+        "connectionString": "Data Source=[sql server];Initial Catalog=Orleans;User ID=[username];Password=[password];Pooling=False;Max Pool Size=200;MultipleActiveResultSets=True",
+        "invariant": "System.Data.SqlClient"
+    }
+}
+```
