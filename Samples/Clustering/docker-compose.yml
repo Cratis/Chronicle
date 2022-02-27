@@ -1,0 +1,22 @@
+version: '3.1'
+services:
+  sql-server:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      - ACCEPT_EULA=y
+      - SA_PASSWORD=1234Abcd
+    volumes:
+      - ./create-db.sql:/scripts
+    command:
+      - /bin/bash
+      - -c
+      - |
+        /opt/mssql/bin/sqlservr &
+        sleep 30
+        for script in /scripts/*.sql
+          do /opt/mssql-tools/bin/sqlcmd -U sa -P 1234Abcd -l 30 -e -i $$script
+        done
+        sleep infinity
+
+    ports:
+      - 1433:1433
