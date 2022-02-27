@@ -19,9 +19,9 @@
     <ItemGroup>
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
         <PackageReference Include="Humanizer" Version="$(Humanizer)" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(MicrosoftExtensions)" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensions)" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensions)" />
         <PackageReference Include="Serilog" Version="2.10.0" />
         <PackageReference Include="Serilog.Exceptions" Version="8.0.0" />
         <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />

@@ -64,9 +64,9 @@
 
     <!-- General -->
     <ItemGroup>
-        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj"/>
-        <ProjectReference Include="../../ApplicationModel/Applications/Applications.csproj"/>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../../ApplicationModel/Applications/Applications.csproj" />
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Extensions/Orleans/Orleans.csproj" />
         <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj" />
