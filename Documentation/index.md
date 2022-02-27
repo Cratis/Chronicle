@@ -14,6 +14,7 @@ To get a quick start, head over to our [getting started](./getting-started.md) s
 | ------- | ----------- |
 | [Getting started](./getting-started.md) | Getting started |
 | [Tenancy](./tenancy.md) | What is tenancy and how does it work? |
+| [Kernel](./kernel/index.md) | What the Kernel is and working with it |
 
 ## .NET Client
 
