@@ -1,3 +1,10 @@
+# [v5.11.1] - 2022-3-2 [PR: #200](https://github.com/aksio-insurtech/Cratis/pull/200)
+
+### Fixed
+
+- Fixed type support in proxy generation. It was using `string` for C# types `DateTime`and `DateTimeOffset`, now it uses `Date`. 
+
+
 # [v5.11.0] - 2022-2-27 [PR: #197](https://github.com/aksio-insurtech/Cratis/pull/197)
 
 ### Added
