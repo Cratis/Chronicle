@@ -27,8 +27,8 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
             { typeof(ulong).FullName!, new("number") },
             { typeof(float).FullName!, new("number") },
             { typeof(double).FullName!, new("number") },
-            { typeof(DateTime).FullName!, new("string") },
-            { typeof(DateTimeOffset).FullName!, new("string") },
+            { typeof(DateTime).FullName!, new("Date") },
+            { typeof(DateTimeOffset).FullName!, new("Date") },
             { typeof(Guid).FullName!, new("string") },
             { "System.Text.Json.JsonDocument", new("string") }
         };
