@@ -26,9 +26,9 @@
         "@aksio/cratis-fundamentals": "1.0.0",
         "@fluentui/react-experiments": "8.4.17",
         "@monaco-editor/react": "4.3.1",
-        "echarts": "^5.2.2",
-        "handlebars": "^4.7.7",
-        "@ctrl/tinycolor": "^3.4.0",
+        "echarts": "5.2.2",
+        "handlebars": "4.7.7",
+        "@ctrl/tinycolor": "3.4.0",
         "d3": "7.3.0"
     },
     "devDependencies": {
