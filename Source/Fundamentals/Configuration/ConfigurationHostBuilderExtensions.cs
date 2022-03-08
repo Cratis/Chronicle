@@ -26,9 +26,9 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             Configuration = new ConfigurationBuilder()
                   .SetBasePath(Directory.GetCurrentDirectory())
-                  .AddJsonFile("config/appsettings.json", optional: true, reloadOnChange: true)
                   .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                   .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
+                  .AddJsonFile("config/appsettings.json", optional: true, reloadOnChange: true)
                   .Build();
         }
 
@@ -68,10 +68,14 @@ namespace Microsoft.Extensions.DependencyInjection
             IEnumerable<string>? searchSubPaths = default,
             ILogger? logger = default)
         {
-            var allSearchSubPaths = new List<string>(searchSubPaths ?? Array.Empty<string>())
+            var allSearchSubPaths = new List<string>
             {
                 "./"
             };
+            if (searchSubPaths is not null)
+            {
+                allSearchSubPaths.AddRange(searchSubPaths);
+            }
             var allSearchPaths = allSearchSubPaths.Select(_ => Path.Combine(Directory.GetCurrentDirectory(), baseRelativePath, _)).Distinct().ToArray();
 
             foreach (var configurationObject in types.All.Where(_ => _.HasAttribute<ConfigurationAttribute>()))
