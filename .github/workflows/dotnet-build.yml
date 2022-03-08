@@ -24,10 +24,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
       - name: Setup .Net
         uses: actions/setup-dotnet@v1
         with:
