@@ -1,3 +1,10 @@
+# [v5.11.2] - 2022-3-8 [PR: #206](https://github.com/aksio-insurtech/Cratis/pull/206)
+
+### Fixed
+
+- Fixing order of precedence for config files (#201).
+- Fixing `GetModelInstanceById()`of the Projection Grain to be in line with how the `ProjectionPipelineHandler`handles events. This rises technical debt for later; #205.
+
 # [v5.11.1] - 2022-3-2 [PR: #200](https://github.com/aksio-insurtech/Cratis/pull/200)
 
 ### Fixed
