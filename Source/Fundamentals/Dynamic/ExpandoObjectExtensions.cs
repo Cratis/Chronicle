@@ -65,6 +65,8 @@ namespace Aksio.Cratis.Dynamic
         /// <returns>A new <see cref="ExpandoObject"/> representing the given object.</returns>
         public static ExpandoObject AsExpandoObject(this object original)
         {
+            if (original is ExpandoObject) return (original as ExpandoObject)!;
+
             var expando = new ExpandoObject();
             var expandoAsDictionary = expando as IDictionary<string, object>;
 
