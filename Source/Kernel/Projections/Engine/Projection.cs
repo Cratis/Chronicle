@@ -113,7 +113,7 @@ namespace Aksio.Cratis.Events.Projections
         public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver)
         {
             EventTypesWithKeyResolver = eventTypesWithKeyResolver;
-            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType);
+            EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType).ToArray();
             _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
         }
 
