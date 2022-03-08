@@ -58,8 +58,8 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="logger">Logger for logging.</param>
         /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
         /// <remarks>
-        /// It will always search the current running directory. When given search paths, the current directory will be added as the
-        /// last search path, as a fallback.
+        /// The order of precedence for configuration files is as expected from .NET Configuration.
+        /// See more here: https://devblogs.microsoft.com/premier-developer/order-of-precedence-when-configuring-asp-net-core/.
         /// </remarks>
         public static IServiceCollection AddConfigurationObjects(
             this IServiceCollection services,
