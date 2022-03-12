@@ -19,18 +19,22 @@ namespace Aksio.Cratis.Events.Store.Api
     public class EventLog : Controller
     {
         readonly IGrainFactory _grainFactory;
+        readonly IEventLogs _eventLogs;
         readonly IExecutionContextManager _executionContextManager;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventLog"/> class.
         /// </summary>
         /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
+        /// <param name="eventLogs"><see cref="IEventLogs"/> for accessing events.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
         public EventLog(
             IGrainFactory grainFactory,
+            IEventLogs eventLogs,
             IExecutionContextManager executionContextManager)
         {
             _grainFactory = grainFactory;
+            _eventLogs = eventLogs;
             _executionContextManager = executionContextManager;
         }
 
@@ -50,7 +54,17 @@ namespace Aksio.Cratis.Events.Store.Api
         }
 
         [HttpGet("{eventLogId}")]
-        public Task<IEnumerable<AppendedEvent>> FindFor([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<AppendedEvent>().AsEnumerable());
+        public async Task<IEnumerable<AppendedEvent>> FindFor([FromRoute] string eventLogId)
+        {
+            var result = new List<AppendedEvent>();
+            var cursor = await _eventLogs.FindFor(eventLogId);
+            while (await cursor.MoveNext())
+            {
+                result.AddRange(cursor.Current);
+            }
+
+            return result;
+        }
 
         [HttpGet("{eventLogId}/count")]
         public Task<long> Count() => Task.FromResult(0L);
