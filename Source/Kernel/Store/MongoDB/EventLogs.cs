@@ -20,16 +20,23 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         readonly ILogger<EventLogs> _logger;
         readonly IExecutionContextManager _executionContextManager;
         readonly IEventStoreDatabase _eventStoreDatabase;
+        readonly IEventConverter _converter;
 
         /// <summary>
         /// Initializes a new instance of <see cref="EventLogs"/>.
         /// </summary>
         /// <param name="eventStoreDatabase"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
-        /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+        /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
         /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
-        public EventLogs(IEventStoreDatabase eventStoreDatabase, ILogger<EventLogs> logger, IExecutionContextManager executionContextManager)
+        /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+        public EventLogs(
+            IEventStoreDatabase eventStoreDatabase,
+            IEventConverter converter,
+            IExecutionContextManager executionContextManager,
+            ILogger<EventLogs> logger)
         {
             _eventStoreDatabase = eventStoreDatabase;
+            _converter = converter;
             _logger = logger;
             _executionContextManager = executionContextManager;
         }
@@ -66,9 +73,15 @@ namespace Aksio.Cratis.Events.Store.MongoDB
         public Task Compensate(EventLogId eventLogId, EventLogSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
 
         /// <inheritdoc/>
-        public Task<IEventStoreFindResult> FindFor(EventLogId eventLogId, EventSourceId eventSourceId)
+        public async Task<IEventCursor> FindFor(EventLogId eventLogId, EventSourceId? eventSourceId = default)
         {
-            return Task.FromResult<IEventStoreFindResult>(null!);
+            var collection = _eventStoreDatabase.GetEventLogCollectionFor(eventLogId);
+            var filter = eventSourceId == default ?
+                Builders<Event>.Filter.Empty :
+                Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId);
+
+            var cursor = await collection.Find(filter).ToCursorAsync();
+            return new EventCursor(_converter, cursor);
         }
 
         IMongoCollection<Event> GetCollectionFor(EventLogId eventLogId) => _eventStoreDatabase.GetEventLogCollectionFor(eventLogId);

@@ -30,7 +30,8 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
             { typeof(DateTime).FullName!, new("Date") },
             { typeof(DateTimeOffset).FullName!, new("Date") },
             { typeof(Guid).FullName!, new("string") },
-            { "System.Text.Json.JsonDocument", new("string") }
+            { "System.Text.Json.Nodes", new("any") },
+            { "System.Text.Json.JsonDocument", new("any") }
         };
 
         /// <summary>
