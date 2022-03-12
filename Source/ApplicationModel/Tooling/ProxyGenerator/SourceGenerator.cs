@@ -241,7 +241,11 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
                     var actualType = property.Type;
                     if (isEnumerable)
                     {
-                        actualType = ((INamedTypeSymbol)property.Type).TypeArguments[0];
+                        var namedType = (INamedTypeSymbol)property.Type;
+                        if (namedType.TypeArguments != default && namedType.TypeArguments.Length > 0)
+                        {
+                            actualType = ((INamedTypeSymbol)property.Type).TypeArguments[0];
+                        }
                     }
                     OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
 
