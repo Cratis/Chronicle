@@ -11,10 +11,10 @@ module.exports = (env, argv) => {
         config.devServer.port = 9000;
         config.devServer.proxy = {
             '/api': {
-                target: 'http://localhost:5000',
+                target: 'http://localhost:8080',
                 ws: true
             },
-            '/swagger': 'http://localhost:5000'
+            '/swagger': 'http://localhost:8080'
         };
         config.resolve.alias.API = path.resolve('./API');
     }, 'Cratis Compliance Workbench');
