@@ -1,3 +1,11 @@
+# [v5.12.0] - 2022-3-12 [PR: #209](https://github.com/aksio-insurtech/Cratis/pull/209)
+
+### Added
+
+- Added Elastic search reference, since we're using this ourselves as default supported log sink.
+- Lighting up the EventLog workbench to be able to see events in the event store.
+
+
 # [v5.11.2] - 2022-3-8 [PR: #206](https://github.com/aksio-insurtech/Cratis/pull/206)
 
 ### Fixed
