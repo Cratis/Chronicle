@@ -23,7 +23,10 @@ import { FilterBuilder } from './FilterBuilder';
 import { EventList } from './EventList';
 
 import { AllEventLogs } from 'API/events/store/logs/AllEventLogs';
-import { FindFor } from 'API/events/store/log/FindFor';
+import { FindFor } from 'API/events/store/log/FindFor';
+import { AllEventTypes } from 'API/events/types/AllEventTypes';
+import { AppendedEvent } from 'API/events/store/log/AppendedEvent';
+import { EventType } from 'API/events/types/EventType';
 
 
 function pivotItemHeaderRenderer(
@@ -49,7 +52,9 @@ export const EventLogs = () => {
     const [eventLog, setEventLog] = useState(Guid.empty.toString());
     const [eventLogs, refreshEventLogs] = AllEventLogs.use();
     const [events, refreshEvents] = FindFor.use({ eventLogId: eventLog });
-    const [selectedEvent, setSelectedEvent] = useState<any>(undefined);
+    const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
+    const [selectedEventType, setSelectedEventType] = useState<EventType | undefined>(undefined);
+    const [eventTypes] = AllEventTypes.use();
 
     let commandBarItems: ICommandBarItemProps[] = [];
 
@@ -73,28 +78,30 @@ export const EventLogs = () => {
     }
 
     commandBarItems = [...commandBarItems, ...[
-        {
-            key: 'timeline',
-            name: 'Timeline',
-            iconProps: { iconName: 'Timeline' },
-            onClick: () => {
-                toggleTimeline();
-                if (isFilterOpen) toggleFilter();
-            }
-        },
-        {
-            key: 'filter',
-            name: 'Filter',
-            iconProps: { iconName: 'QueryList' },
-            onClick: () => {
-                toggleFilter();
-                if (isTimelineOpen) toggleTimeline();
-            }
-        },
+        // {
+        //     key: 'timeline',
+        //     name: 'Timeline',
+        //     iconProps: { iconName: 'Timeline' },
+        //     onClick: () => {
+        //         toggleTimeline();
+        //         if (isFilterOpen) toggleFilter();
+        //     }
+        // },
+        // {
+        //     key: 'filter',
+        //     name: 'Filter',
+        //     iconProps: { iconName: 'QueryList' },
+        //     onClick: () => {
+        //         toggleFilter();
+        //         if (isTimelineOpen) toggleTimeline();
+        //     }
+        // },
         {
             key: 'run',
             text: 'Run',
-
+            onClick: () => {
+                refreshEvents({ eventLogId: eventLog });
+            },
             iconProps: { iconName: 'Play' }
         }
     ]];
@@ -125,18 +132,22 @@ export const EventLogs = () => {
         if (item !== selectedEvent) {
             openPanel();
             setSelectedEvent(item);
+
+            setSelectedEventType(eventTypes.data.find(_ => _.identifier == item.metadata.type.id));
         }
     };
 
     const closePanel = () => {
         setSelectedEvent(undefined);
+        setSelectedEventType(undefined);
         dismissPanel();
     };
+
 
     return (
         <>
             <Stack style={{ height: '100%' }}>
-                <Stack.Item>
+                {/* <Stack.Item>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">
                             <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" onRenderItemLink={pivotItemHeaderRenderer} />
@@ -144,7 +155,7 @@ export const EventLogs = () => {
                         </Pivot>
                         <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
                     </Stack>
-                </Stack.Item>
+                </Stack.Item> */}
                 <Stack.Item>
                     <CommandBar items={commandBarItems} />
                 </Stack.Item>
@@ -153,15 +164,15 @@ export const EventLogs = () => {
                     {isFilterOpen && <FilterBuilder />}
                 </Stack.Item>
                 <Stack.Item grow={1}>
-                    <EventList items={events.data} onEventSelected={eventSelected} />
+                    <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected} />
                 </Stack.Item>
             </Stack>
             <Panel
                 isLightDismiss
                 isOpen={isDetailsPanelOpen}
                 onDismiss={closePanel}
-                headerText={selectedEvent?.name}>
-                <TextField label="Occurred" disabled defaultValue={selectedEvent?.occurred} />
+                headerText={selectedEventType?.name}>
+                <TextField label="Occurred" disabled defaultValue={new Date(selectedEvent?.context.occurred || new Date().toISOString()).toLocaleString()} />
                 {
                     (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ => <TextField key={_} label={_} disabled defaultValue={selectedEvent!.content[_]} />)
                 }
