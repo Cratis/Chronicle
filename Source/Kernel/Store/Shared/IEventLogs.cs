@@ -35,8 +35,11 @@ namespace Aksio.Cratis.Events.Store
         /// Find <see cref="AppendedEvent">appended events</see> from the event log.
         /// </summary>
         /// <param name="eventLogId">The <see cref="EventLogId"/> representing the event log to find from.</param>
-        /// <param name="eventSourceId"><see cref="EventSourceId"/> to find for.</param>
-        /// <returns>Awaitable <see cref="Task"/> with <see cref="IEventStoreFindResult"/>.</returns>
-        Task<IEventStoreFindResult> FindFor(EventLogId eventLogId, EventSourceId eventSourceId);
+        /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to find for.</param>
+        /// <returns>Awaitable <see cref="Task"/> with <see cref="IEventCursor"/>.</returns>
+        /// <remarks>
+        /// If no <see cref="EventSourceId"/> has been specified, it will find for all event sources.
+        /// </remarks>
+        Task<IEventCursor> FindFor(EventLogId eventLogId, EventSourceId? eventSourceId = default);
     }
 }
