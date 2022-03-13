@@ -12,7 +12,7 @@ The project comes with scaffolding templates.
 Install it by simply doing the following from your terminal:
 
 ```shell
-dotnet new -i Aksio.Cratis.Applications.Templates
+dotnet new -i Aksio.Templates
 ```
 
 The templates are also supported through Visual Studio
