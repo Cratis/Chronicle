@@ -1,3 +1,10 @@
+# [v5.13.1] - 2022-3-15 [PR: #213](https://github.com/aksio-insurtech/Cratis/pull/213)
+
+### Fixed
+
+- Proxy generator now returns the correct underlying type for nullables and not `Nullable`.
+
+
 # [v5.13.0] - 2022-3-15 [PR: #212](https://github.com/aksio-insurtech/Cratis/pull/212)
 
 ### Added
