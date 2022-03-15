@@ -1,3 +1,11 @@
+# [v5.13.0] - 2022-3-15 [PR: #212](https://github.com/aksio-insurtech/Cratis/pull/212)
+
+### Added
+
+- TS ProxyGenerator support for decimal -> number (#211)
+- TS ProxyGenerator support for nullables (#210)
+
+
 # [v5.12.0] - 2022-3-12 [PR: #209](https://github.com/aksio-insurtech/Cratis/pull/209)
 
 ### Added
