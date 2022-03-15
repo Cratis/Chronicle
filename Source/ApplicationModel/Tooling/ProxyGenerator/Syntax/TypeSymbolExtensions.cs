@@ -27,6 +27,7 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
             { typeof(ulong).FullName!, new("number") },
             { typeof(float).FullName!, new("number") },
             { typeof(double).FullName!, new("number") },
+            { typeof(decimal).FullName!, new("number") },
             { typeof(DateTime).FullName!, new("Date") },
             { typeof(DateTimeOffset).FullName!, new("Date") },
             { typeof(Guid).FullName!, new("string") },
@@ -95,6 +96,11 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
                 if (!string.IsNullOrEmpty(targetType.ImportFromModule))
                 {
                     imports.Add(new(targetType.Type, targetType.ImportFromModule));
+                }
+
+                if (symbol.NullableAnnotation == NullableAnnotation.Annotated)
+                {
+                    return $"{targetType.Type}?";
                 }
                 return targetType.Type;
             }
