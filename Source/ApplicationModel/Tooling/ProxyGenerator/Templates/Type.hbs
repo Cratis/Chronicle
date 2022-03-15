@@ -9,9 +9,17 @@ import { {{Type}} } from '{{Module}}';
 export type {{Name}} = {
     {{#Properties}}
     {{#if IsEnumerable}}
+    {{#if IsNullable}}
+    {{camelcase Name}}?: {{Type}}[];
+    {{else}}
     {{camelcase Name}}: {{Type}}[];
+    {{/if}}
+    {{else}}
+    {{#if IsNullable}}
+    {{camelcase Name}}?: {{Type}};
     {{else}}
     {{camelcase Name}}: {{Type}};
     {{/if}}
-    {{/Properties}}    
+    {{/if}}
+    {{/Properties}}
 };
