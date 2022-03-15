@@ -176,6 +176,11 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
                 symbol = arrayTypeSymbol.ElementType;
             }
 
+            if (symbol.Name.Equals("Nullable", StringComparison.InvariantCulture) && symbol is INamedTypeSymbol namedTypeSymbol)
+            {
+                symbol = namedTypeSymbol.TypeArguments[0];
+            }
+
             return $"{symbol.ContainingNamespace.ToDisplayString()}.{symbol.Name}";
         }
     }
