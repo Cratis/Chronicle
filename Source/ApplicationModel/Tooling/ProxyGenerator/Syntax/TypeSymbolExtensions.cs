@@ -65,10 +65,12 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
             return properties.Select(_ =>
             {
                 var returnType = _.GetMethod!.ReturnType;
+                var isNullable = returnType.NullableAnnotation == NullableAnnotation.Annotated;
                 var descriptor = new PropertyDescriptor(
                     _.Name,
                     returnType.GetTypeScriptType(out var importStatements),
-                    returnType.IsEnumerable());
+                    returnType.IsEnumerable(),
+                    isNullable);
 
                 importStatements.ForEach(_ => allImportStatements.Add(_));
                 return descriptor;
@@ -98,10 +100,6 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax
                     imports.Add(new(targetType.Type, targetType.ImportFromModule));
                 }
 
-                if (symbol.NullableAnnotation == NullableAnnotation.Annotated)
-                {
-                    return $"{targetType.Type}?";
-                }
                 return targetType.Type;
             }
             return AnyType;
