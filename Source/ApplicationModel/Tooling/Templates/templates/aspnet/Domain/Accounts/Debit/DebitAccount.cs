@@ -4,22 +4,21 @@
 using Concepts.Accounts;
 using Events.Accounts.Debit;
 
-namespace Domain.Accounts.Debit
+namespace Domain.Accounts.Debit;
+
+[Route("/api/accounts/debit/{accountId}")]
+public class DebitAccount : Controller
 {
-    [Route("/api/accounts/debit/{accountId}")]
-    public class DebitAccount : Controller
-    {
-        readonly IEventLog _eventLog;
+    readonly IEventLog _eventLog;
 
-        public DebitAccount(IEventLog eventLog) => _eventLog = eventLog;
+    public DebitAccount(IEventLog eventLog) => _eventLog = eventLog;
 
-        [HttpPost("close")]
-        public Task CloseDebitAccount([FromRoute] AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed());
+    [HttpPost("close")]
+    public Task CloseDebitAccount([FromRoute] AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed());
 
-        [HttpPost("deposit/{amount}")]
-        public Task DepositToAccount([FromRoute] AccountId accountId, [FromRoute] double amount) => _eventLog.Append(accountId, new DepositToDebitAccountPerformed(amount));
+    [HttpPost("deposit/{amount}")]
+    public Task DepositToAccount([FromRoute] AccountId accountId, [FromRoute] double amount) => _eventLog.Append(accountId, new DepositToDebitAccountPerformed(amount));
 
-        [HttpPost("withdraw/{amount}")]
-        public Task WithdrawFromAccount([FromRoute] AccountId accountId, [FromRoute] double amount) => _eventLog.Append(accountId, new WithdrawalFromDebitAccountPerformed(amount));
-    }
+    [HttpPost("withdraw/{amount}")]
+    public Task WithdrawFromAccount([FromRoute] AccountId accountId, [FromRoute] double amount) => _eventLog.Append(accountId, new WithdrawalFromDebitAccountPerformed(amount));
 }

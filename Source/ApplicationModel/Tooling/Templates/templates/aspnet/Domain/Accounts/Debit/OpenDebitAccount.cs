@@ -4,7 +4,6 @@
 using Concepts;
 using Concepts.Accounts;
 
-namespace Domain.Accounts.Debit
-{
-    public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
-}
+namespace Domain.Accounts.Debit;
+
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
