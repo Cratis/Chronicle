@@ -19,7 +19,7 @@ public class EventLogQueueAdapterFactory : IQueueAdapterFactory
     readonly ProviderFor<IEventSequences> _eventLogsProvder;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogQueueAdapter"/> class.
+    /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="eventLogsProvder">Provider for <see cref="IEventSequences"/>.</param>
@@ -42,7 +42,7 @@ public class EventLogQueueAdapterFactory : IQueueAdapterFactory
     /// </summary>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to use for service dependencies.</param>
     /// <param name="name">Name of stream.</param>
-    /// <returns>A new <see cref="EventLogQueueAdapter"/>.</returns>
+    /// <returns>A new <see cref="EventSequenceQueueAdapter"/>.</returns>
     public static EventLogQueueAdapterFactory Create(IServiceProvider serviceProvider, string name)
     {
         return new(
@@ -53,7 +53,7 @@ public class EventLogQueueAdapterFactory : IQueueAdapterFactory
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventLogQueueAdapter(_name, _mapper, _eventLogsProvder));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventLogsProvder));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());

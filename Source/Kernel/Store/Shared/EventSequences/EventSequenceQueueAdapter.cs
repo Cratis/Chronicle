@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Events.Store.EventLogs;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapter"/> for MongoDB event log.
 /// </summary>
-public class EventLogQueueAdapter : IQueueAdapter
+public class EventSequenceQueueAdapter : IQueueAdapter
 {
     readonly ConcurrentDictionary<QueueId, EventLogQueueAdapterReceiver> _receivers = new();
 
@@ -27,12 +27,12 @@ public class EventLogQueueAdapter : IQueueAdapter
     public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogQueueAdapter"/> class.
+    /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
-    public EventLogQueueAdapter(
+    public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
         ProviderFor<IEventSequences> eventLogsProvider)
