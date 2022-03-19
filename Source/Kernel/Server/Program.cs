@@ -12,13 +12,13 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.MongoDB;
+using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
 using Serilog;
 
 #pragma warning disable SA1600
-
 namespace Aksio.Cratis.Server;
 
 public static class Program
@@ -32,7 +32,7 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
-            .UseAksio(, _ => _.InSilo())
+            .UseAksio(MicroserviceId.Unspecified, _ => _.InSilo())
             .UseOrleans(_ => _
                 .UseLocalhostClustering()
                 .ConfigureServices(_ => _
@@ -52,7 +52,7 @@ public static class Program
                     options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, 30000);
                 })
                 .AddConnectedClientsTracking()
-                .AddEventLogStream()
+                .AddEventSequenceStream()
                 .UseMongoDBReminderService()
                 .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
                 .AddExecutionContext())
