@@ -62,7 +62,7 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
             value = GetDeserializedValue(valueType, ref bsonReader);
         }
 
-        return (dynamic)ConceptFactory.CreateConceptInstance(ValueType, value);
+        return (T)ConceptFactory.CreateConceptInstance(ValueType, value);
     }
 
     /// <inheritdoc/>

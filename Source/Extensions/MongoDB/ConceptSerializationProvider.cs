@@ -27,7 +27,7 @@ public class ConceptSerializationProvider : IBsonSerializationProvider
         if (type.IsConcept())
         {
             var createConceptSerializerGenericMethod = GetType().GetMethod(nameof(ConceptSerializationProvider.CreateConceptSerializer))!.MakeGenericMethod(type);
-            return (dynamic)createConceptSerializerGenericMethod.Invoke(null, Array.Empty<object>())!;
+            return (createConceptSerializerGenericMethod.Invoke(null, Array.Empty<object>()) as IBsonSerializer)!;
         }
 
         return null!;
