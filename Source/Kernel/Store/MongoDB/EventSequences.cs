@@ -65,7 +65,7 @@ public class EventSequences : IEventSequences
     public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<IEventStoreFindResult> FindFor(EventSequenceId evenSequencegId, EventSourceId eventSourceId)
+    public Task<IEventStoreFindResult> FindFor(EventSequenceId eventSequenceId, EventSourceId eventSourceId)
     {
         return Task.FromResult<IEventStoreFindResult>(null!);
     }
