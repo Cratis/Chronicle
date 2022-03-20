@@ -29,12 +29,13 @@ public class EventStoreDatabase : IEventStoreDatabase
                 var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
                 var configuration = _serviceProvider.GetService<Storage>()!;
 
-                _databases = configuration.Microservices.SelectMany(_ => _.Value.Select(ms =>
-                {
-                    var url = new MongoUrl(_.Value.ToString());
-                    var client = mongoDBClientFactory.Create(url);
-                    return new KeyValuePair<MicroserviceAndTenant, IMongoDatabase>(new MicroserviceAndTenant(_.Key, ms.Key), client.GetDatabase(url.DatabaseName));
-                })).ToDictionary(_ => _.Key, _ => _.Value);
+                _databases = configuration.Microservices.SelectMany(storageForMicroservice =>
+                    storageForMicroservice.Value.Get(WellKnownStorageTypes.EventStore).Tenants.Select(storageForTenant =>
+                    {
+                        var url = new MongoUrl(storageForTenant.Value.ToString());
+                        var client = mongoDBClientFactory.Create(url);
+                        return new KeyValuePair<MicroserviceAndTenant, IMongoDatabase>(new MicroserviceAndTenant(storageForMicroservice.Key, storageForTenant.Key), client.GetDatabase(url.DatabaseName));
+                    })).ToDictionary(_ => _.Key, _ => _.Value);
             }
 
             return _databases[new(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId)];
