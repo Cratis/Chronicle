@@ -5,6 +5,7 @@ using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.Grains.Observation;
+using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Types;
 using Orleans;
@@ -77,7 +78,8 @@ public class Observers : IObservers
                 await handler.OnNext(@event);
             });
 
-            var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventSequenceId.ToString());
+            var key = new ObserverKey(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log);
+            var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: key.ToString());
             var eventTypes = handler.EventTypes.ToArray();
             await observer.Subscribe(eventTypes);
         }
