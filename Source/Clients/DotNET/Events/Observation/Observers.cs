@@ -5,6 +5,7 @@ using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.Grains.Observation;
+using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Types;
 using Orleans;
@@ -65,7 +66,7 @@ public class Observers : IObservers
     {
         // TODO: Observe for all tenants
         _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
-        var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
+        var streamProvider = _clusterClient.GetStreamProvider(ObservationConstants.ObserverHandlersStreamProvider);
 
         foreach (var handler in _observerHandlers)
         {
