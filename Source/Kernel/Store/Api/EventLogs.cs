@@ -20,7 +20,7 @@ public class EventLogs : Controller
     {
         return Task.FromResult(new[]
         {
-                new EventLogInformation("00000000-0000-0000-0000-000000000000", "Main Event Log")
+                new EventLogInformation(Guid.Empty.ToString(), "Main Event Log")
         }.AsEnumerable());
     }
 }
