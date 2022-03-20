@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.EventLogs;
 using Orleans.Hosting;
 
@@ -19,7 +20,7 @@ public static class ClientBuilderExtensions
     public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
     {
         builder.AddPersistentStreams(
-            "event-log",
+            WellKnownProviders.EventSequenceStreamProvider,
             EventLogQueueAdapterFactory.Create,
             _ => { });
         return builder;

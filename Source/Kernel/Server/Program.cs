@@ -12,7 +12,6 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.MongoDB;
-using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Configuration;
@@ -55,7 +54,7 @@ public static class Program
                 .AddConnectedClientsTracking()
                 .AddEventSequenceStream()
                 .UseMongoDBReminderService()
-                .AddSimpleMessageStreamProvider(ObservationConstants.ObserverHandlersStreamProvider, cs => cs.Configure(o => o.FireAndForgetDelivery = false))
+                .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider, cs => cs.Configure(o => o.FireAndForgetDelivery = false))
                 .AddExecutionContext())
             .ConfigureWebHostDefaults(_ => _
                 .UseStartup<Startup>());
