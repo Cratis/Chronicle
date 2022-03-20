@@ -1,6 +1,6 @@
 {
     "microservices": {
-        "fd85af75-ee3b-4672-a62e-2cfdcd3270f8": {
+        "00000000-0000-0000-0000-000000000000": {
             "readModels": {
                 "type": "MongoDB",
                 "tenants": {
