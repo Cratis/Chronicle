@@ -29,5 +29,5 @@ public class Configurations : Grain, IConfigurations
     /// Gets the <see cref="Storage"/> configuration.
     /// </summary>
     /// <returns><see cref="Storage"/> configuration instance.</returns>
-    public Task<StorageForMicroservice> GetStorage() => Task.FromResult(_storage[_executionContextManager.Current.MicroserviceId]);
+    public Task<StorageForMicroservice> GetStorage() => Task.FromResult(_storage.Microservices.Get(_executionContextManager.Current.MicroserviceId));
 }

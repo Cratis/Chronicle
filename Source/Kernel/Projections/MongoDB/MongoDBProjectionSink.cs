@@ -237,7 +237,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     {
         // TODO: Improve this! - Perhaps create a read model repository wrapper that caches per tenant.
         var executionContext = _executionContextManager.Current;
-        var eventStoreConfig = _configuration[executionContext.MicroserviceId].Get(WellKnownStorageTypes.ReadModels);
+        var eventStoreConfig = _configuration.Microservices[executionContext.MicroserviceId].Get(WellKnownStorageTypes.ReadModels);
         var tenantId = executionContext.TenantId.ToString()!;
         var url = new MongoUrl(eventStoreConfig.Tenants[tenantId].ToString());
         var client = _clientFactory.Create(url);

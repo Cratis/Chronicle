@@ -29,7 +29,7 @@ public class EventStoreDatabase : IEventStoreDatabase
                 var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
                 var configuration = _serviceProvider.GetService<Storage>()!;
 
-                _databases = configuration.SelectMany(_ => _.Value.Select(ms =>
+                _databases = configuration.Microservices.SelectMany(_ => _.Value.Select(ms =>
                 {
                     var url = new MongoUrl(_.Value.ToString());
                     var client = mongoDBClientFactory.Create(url);

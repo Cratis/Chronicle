@@ -27,4 +27,10 @@ public record MicroserviceId(Guid Value) : ConceptAs<Guid>(Value)
     /// </summary>
     /// <param name="id"><see cref="Guid"/> to convert from.</param>
     public static implicit operator MicroserviceId(Guid id) => new(id);
+
+    /// <summary>
+    /// Implicitly convert from <see cref="MicroserviceId"/> to string.
+    /// </summary>
+    /// <param name="id"><see cref="MicroserviceId"/> to convert from.</param>
+    public static implicit operator string(MicroserviceId id) => id.ToString();
 }
