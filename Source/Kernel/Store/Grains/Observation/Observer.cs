@@ -21,7 +21,6 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 public class Observer : Grain<ObserverState>, IObserver
 {
     readonly ConcurrentDictionary<Guid, StreamSubscriptionHandle<AppendedEvent>> _subscriptions = new();
-    readonly IExecutionContextManager _executionContextManager;
     readonly IRequestContextManager _requestContextManager;
     readonly IConnectedClients _connectedObservers;
     readonly ILogger<Observer> _logger;
@@ -34,17 +33,14 @@ public class Observer : Grain<ObserverState>, IObserver
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
     /// <param name="connectedClients"><see cref="IConnectedClients"/>.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public Observer(
-        IExecutionContextManager executionContextManager,
         IRequestContextManager requestContextManager,
         IConnectedClients connectedClients,
         ILogger<Observer> logger)
     {
-        _executionContextManager = executionContextManager;
         _requestContextManager = requestContextManager;
         _connectedObservers = connectedClients;
         _logger = logger;
@@ -60,10 +56,11 @@ public class Observer : Grain<ObserverState>, IObserver
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        _observerId = this.GetPrimaryKey(out var eventSequenceIdAsString);
-        _eventSequenceId = eventSequenceIdAsString;
-        _microserviceId = _executionContextManager.Current.MicroserviceId;
-        _tenantId = _executionContextManager.Current.TenantId;
+        _observerId = this.GetPrimaryKey(out var keyAsString);
+        var key = ObserverKey.Parse(keyAsString);
+        _eventSequenceId = key.EventSequenceId;
+        _microserviceId = key.MicroserviceId;
+        _tenantId = key.TenantId;
 
         var streamProvider = GetStreamProvider(EventSequence.StreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, _tenantId.ToString());

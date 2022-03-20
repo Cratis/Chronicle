@@ -12,14 +12,6 @@ namespace Aksio.Cratis.Extensions.Orleans.Execution;
 /// </summary>
 public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
 {
-    static readonly string[] _nonExecutionContextTypes = new[]
-    {
-        "IMembershipTable",
-        "IPersistentStreamPullingManager",
-        "IPersistentStreamPullingAgent",
-        "IDeploymentLoadPublisher"
-    };
-
     readonly IExecutionContextManager _executionContextManager;
     readonly IRequestContextManager _requestContextManager;
 
@@ -39,23 +31,15 @@ public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
     /// <inheritdoc/>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
-        if (IsExecutionContextRequired(context))
+        var microserviceId = _requestContextManager.Get(RequestContextKeys.MicroserviceId);
+        var tenantId = _requestContextManager.Get(RequestContextKeys.TenantId);
+        if (microserviceId is not null && tenantId is not null)
         {
-            var microserviceId = _requestContextManager.Get(RequestContextKeys.MicroserviceId);
-            var tenantId = _requestContextManager.Get(RequestContextKeys.TenantId);
-            if (microserviceId == null || tenantId == null)
-            {
-                throw new UnableToEstablishExecutionContextFromRequestContext();
-            }
-
             var correlationId = _requestContextManager.Get(RequestContextKeys.CorrelationId) ?? "[N/A]";
             var causationId = _requestContextManager.Get(RequestContextKeys.CausationId)?.ToString() ?? "[N/A]";
             var causedBy = Guid.Parse(_requestContextManager.Get(RequestContextKeys.CausedBy)?.ToString() ?? Guid.Empty.ToString());
             _executionContextManager.Set(new ExecutionContext(microserviceId!.ToString()!, tenantId!.ToString()!, correlationId!.ToString()!, causationId, causedBy));
         }
-
         await context.Invoke();
     }
-
-    bool IsExecutionContextRequired(IIncomingGrainCallContext context) => !_nonExecutionContextTypes.Any(_ => context.InterfaceMethod.DeclaringType?.Name.Equals(_, StringComparison.InvariantCulture) ?? false);
 }

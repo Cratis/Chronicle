@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.Orleans.Execution;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
@@ -16,7 +15,6 @@ namespace Aksio.Cratis.Events.Store.MongoDB.Observation;
 /// </summary>
 public class ObserverStorageProvider : IGrainStorage
 {
-    readonly IRequestContextManager _requestContextManager;
     readonly IExecutionContextManager _executionContextManager;
     readonly IEventStoreDatabase _eventStoreDatabase;
 
@@ -25,15 +23,12 @@ public class ObserverStorageProvider : IGrainStorage
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
     /// </summary>
-    /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
     public ObserverStorageProvider(
-        IRequestContextManager requestContextManager,
         IExecutionContextManager executionContextManager,
         IEventStoreDatabase eventStoreDatabase)
     {
-        _requestContextManager = requestContextManager;
         _executionContextManager = executionContextManager;
         _eventStoreDatabase = eventStoreDatabase;
     }
@@ -47,10 +42,10 @@ public class ObserverStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var eventSequenceIdAsString);
-        var eventSequenceId = (EventSequenceId)eventSequenceIdAsString;
-        var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString()!;
-        _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
+        var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
+        var observerKey = ObserverKey.Parse(observerKeyAsString);
+        var eventSequenceId = observerKey.EventSequenceId;
+        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var key = GetKeyFrom(eventSequenceId, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
@@ -67,10 +62,10 @@ public class ObserverStorageProvider : IGrainStorage
     /// <inheritdoc/>
     public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var eventSequenceIdAsString);
-        var eventSequenceId = (EventSequenceId)eventSequenceIdAsString;
-        var tenantIdAsString = _requestContextManager.Get(RequestContextKeys.TenantId)!.ToString()!;
-        _executionContextManager.Establish(Guid.Parse(tenantIdAsString), string.Empty);
+        var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
+        var observerKey = ObserverKey.Parse(observerKeyAsString);
+        var eventSequenceId = observerKey.EventSequenceId;
+        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var observerState = grainState.State as ObserverState;
         var key = GetKeyFrom(eventSequenceId, observerId);
