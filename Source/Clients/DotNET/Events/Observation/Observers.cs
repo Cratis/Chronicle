@@ -64,7 +64,7 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public async Task StartObserving()
     {
-        // TODO: Observe for all tenants
+        // TODO: Observe for all tenants and microservices
         _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
         var streamProvider = _clusterClient.GetStreamProvider(ObservationConstants.ObserverHandlersStreamProvider);
 
