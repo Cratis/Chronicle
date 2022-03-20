@@ -70,7 +70,7 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
     {
         if (_connectionId != connectionId || _stream == default)
         {
-            var streamProvider = GetStreamProvider("observer-handlers");
+            var streamProvider = GetStreamProvider(ObservationConstants.ObserverHandlersStreamProvider);
             _stream = streamProvider.GetStream<AppendedEvent>(_observerId, connectionId);
         }
         _connectionId = connectionId!;
