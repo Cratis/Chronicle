@@ -35,7 +35,7 @@ public static class SiloBuilderExtensions
         });
 
         builder.AddPersistentStreams(
-            "event-log",
+            WellKnownProviders.EventSequenceStreamProvider,
             EventLogQueueAdapterFactory.Create,
             _ =>
             {

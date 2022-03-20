@@ -77,7 +77,7 @@ public class MongoDBProjectionEventProvider : IProjectionEventProvider
         foreach (var sink in pipeline.Sinks)
         {
             var currentOffset = await _positionsProvider().GetFor(pipeline.Projection, sink.Key);
-            var streamProvider = _clusterClient.GetStreamProvider("event-log");
+            var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
             var tenantId = _executionContextManager.Current.TenantId;
             var stream = streamProvider.GetStream<AppendedEvent>(EventSequenceId.Log, tenantId.ToString());
             _subscriptionsPerPipeline[pipeline] = await stream.SubscribeAsync(
