@@ -6,9 +6,9 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.MongoDB;
 
 /// <summary>
-/// Defines the common database for event store that goes across all tenants within a microservice.
+/// Defines the common database for the Cratis cluster that goes across all microservices.
 /// </summary>
-public interface ISharedDatabase
+public interface IClusterDatabase
 {
     /// <summary>
     /// Gets a <see cref="IMongoCollection{T}"/> for a specific type of document.

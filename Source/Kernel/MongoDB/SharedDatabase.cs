@@ -55,7 +55,7 @@ public class SharedDatabase : ISharedDatabase
             return _databases[microserviceId];
         }
 
-        var url = new MongoUrl(_configuration.Get(microserviceId).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
+        var url = new MongoUrl(_configuration.Microservices.Get(microserviceId).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
         var client = _clientFactory.Create(url);
         return _databases[microserviceId] = client.GetDatabase(url.DatabaseName);
     }

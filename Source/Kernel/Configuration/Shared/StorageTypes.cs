@@ -6,12 +6,12 @@ namespace Aksio.Cratis.Configuration;
 /// <summary>
 /// Represents the shared storage configuration for all <see cref="StorageType">storage types</see> within the system.
 /// </summary>
-public class StorageTypesConfig : Dictionary<string, StorageTypeConfig>
+public class StorageTypes : Dictionary<string, StorageType>
 {
     /// <summary>
     /// Get a specific <see cref="StorageType"/>.
     /// </summary>
     /// <param name="storageType">Type of storage to get.</param>
     /// <returns><see cref="StorageType"/> instance.</returns>
-    public StorageTypeConfig Get(string storageType) => this[storageType];
+    public StorageType Get(string storageType) => this[storageType];
 }
