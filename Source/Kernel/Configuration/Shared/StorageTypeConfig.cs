@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Configuration;
 /// <summary>
 /// Represents the configuration for a specific shared storage type.
 /// </summary>
-public record SharedStorageType
+public record StorageTypeConfig
 {
     /// <summary>
     /// The type of storage used.
