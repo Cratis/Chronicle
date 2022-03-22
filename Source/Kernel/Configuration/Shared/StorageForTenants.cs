@@ -6,6 +6,6 @@ namespace Aksio.Cratis.Configuration;
 /// <summary>
 /// Represents all storage configuration for a tenant within a microservice.
 /// </summary>
-public class StorageForTenants : Dictionary<string, StorageTypesConfig>
+public class StorageForTenants : Dictionary<string, StorageTypes>
 {
 }

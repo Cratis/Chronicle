@@ -29,7 +29,7 @@ public class EventStoreDatabase : IEventStoreDatabase
                 var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
                 var configuration = _serviceProvider.GetService<Storage>()!;
 
-                _databases = configuration.SelectMany(storageForMicroservice =>
+                _databases = configuration.Microservices.SelectMany(storageForMicroservice =>
                     storageForMicroservice.Value.Tenants.Select(storageForTenant =>
                     {
                         var eventStoreForTenant = storageForTenant.Value.Get(WellKnownStorageTypes.EventStore);

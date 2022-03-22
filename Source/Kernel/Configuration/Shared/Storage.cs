@@ -1,20 +1,21 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Execution;
-
 namespace Aksio.Cratis.Configuration;
 
 /// <summary>
 /// Represents the storage configuration for all microservices.
 /// </summary>
 [Configuration]
-public class Storage : Dictionary<string, StorageForMicroservice>
+public class Storage
 {
     /// <summary>
-    /// Get a specific <see cref="StorageForMicroservice"/>.
+    /// The storage configuration for the cluster.
     /// </summary>
-    /// <param name="microserviceId">Microservice to get for.</param>
-    /// <returns><see cref="StorageForMicroservice"/> instance.</returns>
-    public StorageForMicroservice Get(MicroserviceId microserviceId) => this[microserviceId];
+    public StorageType Cluster { get; init; } = new();
+
+    /// <summary>
+    /// The storage configuration for all microservices.
+    /// </summary>
+    public StorageForMicroservices Microservices { get; init; } = new();
 }

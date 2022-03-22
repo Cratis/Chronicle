@@ -25,20 +25,20 @@ public class MongoDBReminderTable : IReminderTable
     const string ServiceIdProperty = "serviceId";
 
     readonly JsonSerializerSettings _serializerSettings;
-    readonly ISharedDatabase _database;
+    readonly IClusterDatabase _database;
     readonly IOptions<ClusterOptions> _clusterOptions;
     readonly ILogger<MongoDBReminderTable> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBReminderTable"/> class.
     /// </summary>
-    /// <param name="database"><see cref="ISharedDatabase"/> to keep state in.</param>
+    /// <param name="database"><see cref="IClusterDatabase"/> to keep state in.</param>
     /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for resolving grains during serialization.</param>
     /// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public MongoDBReminderTable(
-        ISharedDatabase database,
+        IClusterDatabase database,
         ITypeResolver typeResolver,
         IGrainFactory grainFactory,
         IOptions<ClusterOptions> clusterOptions,
