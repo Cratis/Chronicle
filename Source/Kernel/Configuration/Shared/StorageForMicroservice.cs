@@ -1,17 +1,22 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Execution;
+
 namespace Aksio.Cratis.Configuration;
 
 /// <summary>
-/// Represents the storage configuration for all <see cref="StorageType">storage types</see> within a microservice.
+/// Represents all storage configurations for all <see cref="MicroserviceId">microservices</see> in the system.
 /// </summary>
-public class StorageForMicroservice : Dictionary<string, StorageType>
+public class StorageForMicroservice
 {
     /// <summary>
-    /// Get a specific <see cref="StorageType"/>.
+    /// The shared database connection configurations for the microservice.
     /// </summary>
-    /// <param name="storageType">Type of storage to get.</param>
-    /// <returns><see cref="StorageType"/> instance.</returns>
-    public StorageType Get(string storageType) => this[storageType];
+    public StorageTypesConfig Shared { get; init; } = new();
+
+    /// <summary>
+    /// The tenant specific configuration.
+    /// </summary>
+    public StorageForTenants Tenants { get; init; } = new();
 }

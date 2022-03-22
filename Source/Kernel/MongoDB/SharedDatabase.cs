@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
@@ -14,20 +15,25 @@ namespace Aksio.Cratis.MongoDB;
 [Singleton]
 public class SharedDatabase : ISharedDatabase
 {
-    readonly IMongoDatabase _database;
+    readonly ConcurrentDictionary<MicroserviceId, IMongoDatabase> _databases = new();
+    readonly IExecutionContextManager _executionContextManager;
+    readonly IMongoDBClientFactory _clientFactory;
+    readonly Storage _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
     /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public SharedDatabase(
+        IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
         Storage configuration)
     {
-        var url = new MongoUrl(configuration.Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
-        var client = clientFactory.Create(url);
-        _database = client.GetDatabase(url.DatabaseName);
+        _executionContextManager = executionContextManager;
+        _clientFactory = clientFactory;
+        _configuration = configuration;
     }
 
     /// <inheritdoc/>
@@ -35,9 +41,22 @@ public class SharedDatabase : ISharedDatabase
     {
         if (collectionName == null)
         {
-            return _database.GetCollection<T>();
+            return GetDatabase().GetCollection<T>();
         }
 
-        return _database.GetCollection<T>(collectionName);
+        return GetDatabase().GetCollection<T>(collectionName);
+    }
+
+    IMongoDatabase GetDatabase()
+    {
+        var microserviceId = _executionContextManager.Current.MicroserviceId;
+        if (_databases.ContainsKey(microserviceId))
+        {
+            return _databases[microserviceId];
+        }
+
+        var url = new MongoUrl(_configuration.Get(microserviceId).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
+        var client = _clientFactory.Create(url);
+        return _databases[microserviceId] = client.GetDatabase(url.DatabaseName);
     }
 }
