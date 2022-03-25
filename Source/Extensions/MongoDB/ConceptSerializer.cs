@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Reflection;
 using Aksio.Cratis.Concepts;
 using MongoDB.Bson;
@@ -91,7 +90,7 @@ namespace Aksio.Cratis.Extensions.MongoDB
             {
                 if (underlyingValue is uint)
                 {
-                    underlyingValue = Convert.ChangeType(underlyingValue, typeof(int), CultureInfo.InvariantCulture)!;
+                    underlyingValue = Convert.ChangeType(underlyingValue, typeof(int))!;
                 }
 
                 bsonWriter.WriteInt32((int)(underlyingValue ?? default(int)));
@@ -100,7 +99,7 @@ namespace Aksio.Cratis.Extensions.MongoDB
             {
                 if (underlyingValue is ulong)
                 {
-                    underlyingValue = Convert.ChangeType(underlyingValue, typeof(long), CultureInfo.InvariantCulture)!;
+                    underlyingValue = Convert.ChangeType(underlyingValue, typeof(long))!;
                 }
 
                 bsonWriter.WriteInt64((long)(underlyingValue ?? default(long)));
@@ -162,7 +161,7 @@ namespace Aksio.Cratis.Extensions.MongoDB
                 var value = bsonReader.ReadInt32();
                 if (valueType == typeof(uint))
                 {
-                    return Convert.ChangeType(value, typeof(uint), CultureInfo.InvariantCulture)!;
+                    return Convert.ChangeType(value, typeof(uint))!;
                 }
                 return value;
             }
@@ -172,7 +171,7 @@ namespace Aksio.Cratis.Extensions.MongoDB
                 var value = bsonReader.ReadInt64();
                 if (valueType == typeof(ulong))
                 {
-                    return Convert.ChangeType(value, typeof(ulong), CultureInfo.InvariantCulture)!;
+                    return Convert.ChangeType(value, typeof(ulong))!;
                 }
                 return value;
             }
