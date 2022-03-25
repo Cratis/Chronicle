@@ -3,7 +3,6 @@
 
 using System.Collections;
 using System.Dynamic;
-using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Concepts;
@@ -35,7 +34,7 @@ public static class ObjectExtensions
 
         if (source is Guid)
         {
-            return (T)Convert.ChangeType(new Guid(source!.ToString()!), typeof(T), CultureInfo.InvariantCulture);
+            return (T)Convert.ChangeType(new Guid(source!.ToString()!), typeof(T));
         }
 
         var valueType = source.GetType();

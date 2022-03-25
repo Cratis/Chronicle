@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -177,7 +176,7 @@ public class PropertyPath
             }
             builder.Append('.');
         }
-        builder.Append(CultureInfo.InvariantCulture, $"[{segments[^1].Value}]");
+        builder.Append('[').Append(segments[^1].Value).Append(']');
 
         if (Path.Length == 0)
         {

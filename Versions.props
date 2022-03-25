@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-        <AksioDefaults>1.5.8</AksioDefaults>
+        <AksioDefaults>1.5.10</AksioDefaults>
         <HotChocolateVersion>11.3.0</HotChocolateVersion>
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
         <Autofac>6.2.0</Autofac>
