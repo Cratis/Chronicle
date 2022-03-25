@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
-
 namespace Aksio.Cratis.Applications.ProxyGenerator
 {
     /// <summary>
@@ -24,7 +22,7 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
                     return stringToConvert.ToLowerInvariant();
                 }
 
-                var firstLetter = stringToConvert[0].ToString(CultureInfo.InvariantCulture).ToLowerInvariant();
+                var firstLetter = stringToConvert[0].ToString().ToLowerInvariant();
                 return $"{firstLetter}{stringToConvert.Substring(1)}";
             }
 
@@ -45,7 +43,7 @@ namespace Aksio.Cratis.Applications.ProxyGenerator
                     return stringToConvert.ToUpperInvariant();
                 }
 
-                var firstLetter = stringToConvert[0].ToString(CultureInfo.InvariantCulture).ToUpperInvariant();
+                var firstLetter = stringToConvert[0].ToString().ToUpperInvariant();
                 return $"{firstLetter}{stringToConvert.Substring(1)}";
             }
 

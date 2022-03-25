@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Globalization;
 using System.Text;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Configuration;
@@ -213,7 +212,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB
                             var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
                             if (arrayIndexer is not null)
                             {
-                                propertyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0}.$[{1}]", segment.Value, collectionIdentifier);
+                                propertyBuilder.AppendFormat("{0}.$[{1}]", segment.Value, collectionIdentifier);
                                 arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(
                                     new BsonDocument(
                                         new Dictionary<string, object>

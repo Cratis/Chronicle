@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Globalization;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
@@ -45,8 +44,8 @@ namespace Aksio.Cratis.Events.Projections
                 {
                     actualTarget[lastSegment.Value] = 0D;
                 }
-                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double), CultureInfo.InvariantCulture);
-                value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);
+                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+                value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
                 actualTarget[lastSegment.Value] = value;
             };
         }
@@ -67,8 +66,8 @@ namespace Aksio.Cratis.Events.Projections
                 {
                     actualTarget[lastSegment.Value] = 0D;
                 }
-                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double), CultureInfo.InvariantCulture);
-                value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double), CultureInfo.InvariantCulture);
+                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+                value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
                 actualTarget[lastSegment.Value] = value;
             };
         }
