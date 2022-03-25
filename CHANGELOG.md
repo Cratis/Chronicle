@@ -1,3 +1,10 @@
+# [v5.13.2] - 2022-3-15 [PR: #216](https://github.com/aksio-insurtech/Cratis/pull/216)
+
+### Fixed
+
+- Nullable annotation was in the wrong place for the proxy generator.
+
+
 # [v5.13.1] - 2022-3-15 [PR: #213](https://github.com/aksio-insurtech/Cratis/pull/213)
 
 ### Fixed
