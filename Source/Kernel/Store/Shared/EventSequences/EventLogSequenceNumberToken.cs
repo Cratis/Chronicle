@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.EventLogs;
@@ -80,6 +79,6 @@ public class EventLogSequenceNumberToken : StreamSequenceToken
     /// <inheritdoc/>
     public override string ToString()
     {
-        return string.Format(CultureInfo.InvariantCulture, "[EventLogSequenceNumberToken: SequenceNumber={0}]", SequenceNumber);
+        return string.Format("[EventLogSequenceNumberToken: SequenceNumber={0}]", SequenceNumber);
     }
 }

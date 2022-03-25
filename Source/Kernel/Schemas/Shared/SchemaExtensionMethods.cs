@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Schemas;
@@ -55,7 +54,7 @@ public static class SchemaExtensionMethods
     /// <returns>Generation.</returns>
     public static uint GetGeneration(this JsonSchema schema)
     {
-        return uint.Parse(schema.ExtensionData?[GenerationExtension]?.ToString() ?? "1", CultureInfo.InvariantCulture);
+        return uint.Parse(schema.ExtensionData?[GenerationExtension]?.ToString() ?? "1");
     }
 
     static void EnsureExtensionData(this JsonSchema schema)
