@@ -2,7 +2,8 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/debit/{{accountId}}/deposit/{{amount}}');
@@ -12,9 +13,17 @@ export interface IDepositToAccount {
     amount?: number;
 }
 
+export class DepositToAccountValidator extends CommandValidator {
+    readonly properties: CommandPropertyValidators = {
+        accountId: new Validator(),
+        amount: new Validator(),
+    };
+}
+
 export class DepositToAccount extends Command implements IDepositToAccount {
     readonly route: string = '/api/accounts/debit/{{accountId}}/deposit/{{amount}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+    readonly validation: CommandValidator = new DepositToAccountValidator();
 
     private _accountId!: string;
     private _amount!: number;
