@@ -26,6 +26,9 @@
         },
         "./dialogs": {
             "default": "./dist/dialogs/index.js"
+        },
+        "./validation": {
+            "default": "./dist/validation/index.js"
         }
     },
     "scripts": {

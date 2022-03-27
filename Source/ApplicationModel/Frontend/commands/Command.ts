@@ -3,6 +3,7 @@
 
 import { ICommand, PropertyChanged } from './ICommand';
 import { CommandResult } from "./CommandResult";
+import { CommandValidator } from './CommandValidator';
 
 /**
  * Represents an implementation of {@link ICommand} that works with HTTP fetch.
@@ -10,6 +11,7 @@ import { CommandResult } from "./CommandResult";
 export abstract class Command implements ICommand {
     abstract readonly route: string;
     abstract readonly routeTemplate: Handlebars.TemplateDelegate;
+    abstract readonly validation: CommandValidator;
     abstract get requestArguments(): string[];
     abstract get properties(): string[];
 
