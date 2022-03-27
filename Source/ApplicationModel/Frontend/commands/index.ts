@@ -4,3 +4,5 @@
 export * from './ICommand';
 export * from './Command';
 export * from './CommandResult';
+export * from './useCommand';
+export * from './CommandTracker';
