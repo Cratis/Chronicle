@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command } from '@aksio/cratis-applications-frontend/commands';
+import { Command, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
@@ -10,9 +10,27 @@ import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('{{Route}}');
 
-export class {{Name}} extends Command {
+export interface I{{Name}} {
+    {{#Properties}}
+    {{#if Enumerable}}
+    {{camelcase Name}}?: {{Type}}[];
+    {{else}}
+    {{camelcase Name}}?: {{Type}};
+    {{/if}}
+    {{/Properties}}
+}
+
+export class {{Name}} extends Command implements I{{Name}} {
     readonly route: string = '{{Route}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+
+    {{#Properties}}
+    {{#if Enumerable}}
+    private _{{camelcase Name}}!: {{Type}}[];
+    {{else}}
+    private _{{camelcase Name}}!: {{Type}};
+    {{/if}}
+    {{/Properties}}
 
     get requestArguments(): string[] {
         return [
@@ -22,11 +40,37 @@ export class {{Name}} extends Command {
         ];
     }
 
+    get properties(): string[] {
+        return [
+            {{#Properties}}
+            '{{camelcase Name}}',
+            {{/Properties}}
+        ];
+    }
+
     {{#Properties}}
     {{#if Enumerable}}
-    {{camelcase Name}}!: {{Type}}[];
+    get {{camelcase Name}}(): {{Type}}[] {
+        return this._{{camelcase Name}};
+    }
+
+    set {{camelcase Name}}(value: {{Type}}[]) {
+        this._{{camelcase Name}} = value;
+        this.propertyChanged('{{camelcase Name}}');
+    }
     {{else}}
-    {{camelcase Name}}!: {{Type}};
+    get {{camelcase Name}}(): {{Type}} {
+        return this._{{camelcase Name}};
+    }
+
+    set {{camelcase Name}}(value: {{Type}}) {
+        this._{{camelcase Name}} = value;
+        this.propertyChanged('{{camelcase Name}}');
+    }
     {{/if}}
     {{/Properties}}
+
+    static use(initialValues?: I{{Name}}): [{{Name}}, SetCommandValues<I{{Name}}>] {
+        return useCommand<{{Name}}, I{{Name}}>({{Name}}, initialValues);
+    }
 }
