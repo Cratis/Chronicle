@@ -2,7 +2,8 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Validator } from '@aksio/cratis-applications-frontend/validation';
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
@@ -20,9 +21,18 @@ export interface I{{Name}} {
     {{/Properties}}
 }
 
+export class {{Name}}Validator extends CommandValidator {
+    readonly properties: CommandPropertyValidators = {
+        {{#Properties}}
+        {{camelcase Name}}: new Validator(),
+        {{/Properties}}
+    };
+}
+
 export class {{Name}} extends Command implements I{{Name}} {
     readonly route: string = '{{Route}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+    readonly validation: CommandValidator = new {{Name}}Validator();
 
     {{#Properties}}
     {{#if Enumerable}}
