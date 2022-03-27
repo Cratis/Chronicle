@@ -3,8 +3,10 @@
 
 import { Command } from '../Command';
 import Handlebars from 'handlebars';
+import { CommandValidator } from '../CommandValidator';
 
 export class SomeCommand extends Command {
+    validation!: CommandValidator;
     route = '';
     routeTemplate!: Handlebars.TemplateDelegate<any>;
 
