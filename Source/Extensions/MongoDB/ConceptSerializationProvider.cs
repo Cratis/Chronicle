@@ -27,7 +27,7 @@ namespace Aksio.Cratis.Extensions.MongoDB
             if (type.IsConcept())
             {
                 var createConceptSerializerGenericMethod = GetType().GetMethod(nameof(ConceptSerializationProvider.CreateConceptSerializer))!.MakeGenericMethod(type);
-                return (dynamic)createConceptSerializerGenericMethod.Invoke(null, Array.Empty<object>())!;
+                return (IBsonSerializer)createConceptSerializerGenericMethod.Invoke(null, Array.Empty<object>())!;
             }
 
             return null!;
