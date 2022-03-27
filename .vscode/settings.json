@@ -55,6 +55,7 @@
         "camelcase",
         "Cratis",
         "decryptor",
+        "deref",
         "echarts",
         "encryptor",
         "Expando",
