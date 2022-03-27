@@ -2,7 +2,8 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/debit/{{accountId}}/close');
@@ -11,9 +12,16 @@ export interface ICloseDebitAccount {
     accountId?: string;
 }
 
+export class CloseDebitAccountValidator extends CommandValidator {
+    readonly properties: CommandPropertyValidators = {
+        accountId: new Validator(),
+    };
+}
+
 export class CloseDebitAccount extends Command implements ICloseDebitAccount {
     readonly route: string = '/api/accounts/debit/{{accountId}}/close';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
+    readonly validation: CommandValidator = new CloseDebitAccountValidator();
 
     private _accountId!: string;
 

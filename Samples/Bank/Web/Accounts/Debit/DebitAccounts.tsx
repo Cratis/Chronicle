@@ -42,17 +42,19 @@ const columns: IColumn[] = [
 
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
+    const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use({ owner: 'edd60145-a6df-493f-b48d-35ffdaaefc4c' });
+
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();
     const [accountsStartingWith, queryAccountsStartingWith] = StartingWith.use({ filter: '' });
     const [searching, setSearching] = useState<boolean>(false);
     const [selectedItem, setSelectedItem] = useState<any>(undefined);
     const [showCreateAccount, createAccountDialogProps] = useDialog<any, CreateAccountDialogResult>(async (result, output?) => {
         if (result === DialogResult.Success && output) {
-            const command = new OpenDebitAccount();
-            command.accountId = Guid.create().toString(),
-                command.name = output.name;
-            command.owner = 'edd60145-a6df-493f-b48d-35ffdaaefc4c';
-            await command.execute();
+            setOpenDebitAccountValues({
+                accountId: Guid.create().toString(),
+                name: output.name
+            });
+            await openDebitAccount.execute();
         }
     });
 
