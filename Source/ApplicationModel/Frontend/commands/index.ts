@@ -6,3 +6,4 @@ export * from './Command';
 export * from './CommandResult';
 export * from './useCommand';
 export * from './CommandTracker';
+export * from './CommandValidator';
