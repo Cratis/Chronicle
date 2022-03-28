@@ -3,20 +3,34 @@
 
 import { Command } from '@aksio/cratis-applications-frontend/commands';
 import React, { useCallback, useState } from 'react';
+import { CommandResult } from './CommandResult';
 
-export const CommandTrackerContext = React.createContext<ICommandTrackerContext>({});
 
-export type CommandTrackerChangedChanged = (hasChanges: boolean) => void;
+export interface ICommandTracker {
+    addCommand: AddCommand;
+    hasChanges: boolean;
+    execute: CommandTrackerExecute;
+}
+
+export const CommandTrackerContext = React.createContext<ICommandTracker>({
+    addCommand: () => { },
+    execute: async () => {
+        return new Map();
+    },
+    hasChanges: false,
+});
+
+export type CommandTrackerChanged = (hasChanges: boolean) => void;
+export type CommandTrackerExecute = () => Promise<Map<Command, CommandResult>>;
 
 export type AddCommand = (command: Command) => void;
 
-export interface ICommandTrackerContext {
+export interface ICommandTrackerProps {
     children?: JSX.Element | JSX.Element[];
-    addCommand?: AddCommand;
-    onChange?: CommandTrackerChangedChanged;
+    setHasChanges?: CommandTrackerChanged;
 }
 
-export const CommandTracker = (props: ICommandTrackerContext) => {
+export const CommandTracker = (props: ICommandTrackerProps) => {
     const commands: Command[] = [];
     const [hasChanges, setHasChanges] = useState(false);
 
@@ -29,14 +43,10 @@ export const CommandTracker = (props: ICommandTrackerContext) => {
         });
 
         setHasChanges(hasCommandChanges);
-
-        if (hasCommandChanges) {
-            props.onChange?.(hasChanges);
-        }
     }, []);
 
     const addCommand = (command: Command) => {
-        if( commands.some(_ => _ == command) ) {
+        if (commands.some(_ => _ == command)) {
             return;
         }
 
@@ -44,9 +54,25 @@ export const CommandTracker = (props: ICommandTrackerContext) => {
         command.onPropertyChanged(propertyChanged);
     };
 
+    const execute = async () => {
+        const commandsToCommandResult = new Map();
+
+        for( const command of commands.filter(_ => _.hasChanges === true) )
+        {
+            const commandResult = await command.execute();
+            commandsToCommandResult.set(command, commandResult);
+        }
+        return commandsToCommandResult;
+    };
+
     return (
-        <CommandTrackerContext.Provider value={{ addCommand }} {...props}>
+        <CommandTrackerContext.Provider value={{ hasChanges, addCommand, execute, }}>
             {props.children}
         </CommandTrackerContext.Provider>
     );
 };
+
+
+export function useCommandTracker() {
+    return React.useContext(CommandTrackerContext);
+}
