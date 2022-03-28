@@ -34,7 +34,6 @@ export abstract class Command implements ICommand {
             },
             body: JSON.stringify(this)
         });
-
         this.setInitialValuesFromCurrentValues();
 
         return new CommandResult(response);
