@@ -29,7 +29,7 @@ export class {{Name}}Validator extends CommandValidator {
     };
 }
 
-export class {{Name}} extends Command implements I{{Name}} {
+export class {{Name}} extends Command<I{{Name}}> implements I{{Name}} {
     readonly route: string = '{{Route}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new {{Name}}Validator();
