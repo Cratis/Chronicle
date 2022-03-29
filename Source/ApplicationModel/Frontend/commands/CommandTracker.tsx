@@ -73,6 +73,4 @@ export const CommandTracker = (props: ICommandTrackerProps) => {
 };
 
 
-export function useCommandTracker() {
-    return React.useContext(CommandTrackerContext);
-}
+

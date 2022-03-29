@@ -3,7 +3,10 @@
 
 export * from './ICommand';
 export * from './Command';
+export * from './ICommandResult';
 export * from './CommandResult';
-export * from './useCommand';
+export * from './CommandResults';
 export * from './CommandTracker';
 export * from './CommandValidator';
+export * from './useCommand';
+export * from './useCommandTracker';
