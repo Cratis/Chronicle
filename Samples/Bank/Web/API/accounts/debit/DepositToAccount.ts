@@ -20,7 +20,7 @@ export class DepositToAccountValidator extends CommandValidator {
     };
 }
 
-export class DepositToAccount extends Command implements IDepositToAccount {
+export class DepositToAccount extends Command<IDepositToAccount> implements IDepositToAccount {
     readonly route: string = '/api/accounts/debit/{{accountId}}/deposit/{{amount}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new DepositToAccountValidator();
