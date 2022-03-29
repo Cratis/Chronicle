@@ -29,6 +29,24 @@ export const Toolbar = () => {
 };
 ```
 
+Alternatively
+
+```typescript
+export const Toolbar = () => {
+    return (
+        <div>
+            <CommandTrackerContext.Consumer>
+                {value => {
+                    return (
+                        <button disabled={!value.hasChanges}>Save</button>
+                    )
+                }}
+            </CommandTrackerContext.Consumer>
+        </div>
+    );
+};
+```
+
 ```typescript
 export const FirstComponent = () => {
     const myCommand = MyCommand.use();
