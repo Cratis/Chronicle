@@ -25,6 +25,12 @@ export abstract class Command implements ICommand {
         if (this.requestArguments && this.requestArguments.length > 0) {
             actualRoute = this.routeTemplate(this);
         }
+        const payload = {};
+
+        this.properties.forEach(property => {
+            payload[property] = this[property];
+        });
+
 
         const response = await fetch(actualRoute, {
             method: 'POST',
@@ -32,7 +38,7 @@ export abstract class Command implements ICommand {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(this)
+            body: JSON.stringify(payload)
         });
         this.setInitialValuesFromCurrentValues();
 
