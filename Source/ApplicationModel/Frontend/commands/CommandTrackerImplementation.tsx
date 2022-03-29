@@ -30,7 +30,7 @@ export class CommandTrackerImplementation implements ICommandTracker {
 
         this._commands.push(command);
         this.evaluateHasChanges();
-        command.onPropertyChanged(this.evaluateHasChanges);
+        command.onPropertyChanged(this.evaluateHasChanges, this);
     }
 
     async execute(): Promise<CommandResults> {
