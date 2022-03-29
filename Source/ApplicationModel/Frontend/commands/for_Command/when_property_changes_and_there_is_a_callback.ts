@@ -7,7 +7,7 @@ import { SomeCommand } from './SomeCommand';
 describe('when property changes and there is a callback', () => {
     const command = new SomeCommand();
     const callback = sinon.stub();
-    command.onPropertyChanged(callback);
+    command.onPropertyChanged(callback, command);
 
     command.propertyChanged('someProperty');
 

@@ -5,6 +5,12 @@ import { ICommand, PropertyChanged } from './ICommand';
 import { CommandResult } from "./CommandResult";
 import { CommandValidator } from './CommandValidator';
 
+
+type Callback = {
+    callback: WeakRef<PropertyChanged>;
+    thisArg: WeakRef<any>;
+}
+
 /**
  * Represents an implementation of {@link ICommand} that works with HTTP fetch.
  */
@@ -17,7 +23,7 @@ export abstract class Command<TCommandContent = {}> implements ICommand<TCommand
 
     private _initialValues: any = {};
     private _hasChanges = false;
-    private _callbacks: WeakRef<PropertyChanged>[] = [];
+    private _callbacks: Callback[] = [];
 
     /** @inheritdoc */
     async execute(): Promise<CommandResult> {
@@ -75,19 +81,23 @@ export abstract class Command<TCommandContent = {}> implements ICommand<TCommand
     propertyChanged(property: string) {
         this.updateHasChanges();
 
-        this._callbacks.forEach(callbackRef => {
-            const callback = callbackRef.deref();
-            if (callback) {
-                callback(property);
+        this._callbacks.forEach(callbackContainer => {
+            const callback = callbackContainer.callback.deref();
+            const thisArg = callbackContainer.thisArg.deref();
+            if (callback && thisArg) {
+                callback.call(thisArg, property);
             } else {
-                this._callbacks = this._callbacks.filter(_ => _ !== callbackRef);
+                this._callbacks = this._callbacks.filter(_ => _.callback !== callbackContainer.callback);
             }
         });
     }
 
     /** @inheritdoc */
-    onPropertyChanged(callback: PropertyChanged) {
-        this._callbacks.push(new WeakRef(callback));
+    onPropertyChanged(callback: PropertyChanged, thisArg: any) {
+        this._callbacks.push({
+            callback: new WeakRef(callback),
+            thisArg: new WeakRef(thisArg)
+        });
     }
 
     private updateHasChanges() {

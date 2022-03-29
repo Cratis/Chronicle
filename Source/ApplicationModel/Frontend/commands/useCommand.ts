@@ -25,7 +25,7 @@ export function useCommand<TCommand extends Command, TCommandContent>(commandTyp
             instance.setInitialValues(initialValues);
         }
 
-        instance.onPropertyChanged(propertyChangedCallback);
+        instance.onPropertyChanged(propertyChangedCallback, instance);
     }, []);
 
     const context = React.useContext(CommandTrackerContext);

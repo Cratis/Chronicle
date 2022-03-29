@@ -50,6 +50,7 @@ export interface ICommand<TCommandContent = {}> {
     /**
      * Register callback that gets called when a property changes.
      * @param {PropertyChanged} callback Callback to register.
+     * @param {*} thisArg The this arg to use when calling.
      */
-    onPropertyChanged(callback: PropertyChanged): void;
+    onPropertyChanged(callback: PropertyChanged, thisArg: any): void;
 }

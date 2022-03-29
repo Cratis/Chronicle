@@ -26,39 +26,12 @@ import { StartingWith } from 'API/accounts/debit/StartingWith';
 import { LatestTransactions } from 'API/accounts/debit/LatestTransactions';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
 import { CommandTracker, CommandTrackerContext, useCommandTracker } from '@aksio/cratis-applications-frontend/commands';
-import { SetDebitAccountName } from 'API/accounts/debit/SetDebitAccountName';
+import { DebitAccountsList } from './DebitAccountsList';
+
 
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
     const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use({ owner: 'edd60145-a6df-493f-b48d-35ffdaaefc4c' });
-
-
-    const columns: IColumn[] = [
-        {
-            key: 'name',
-            name: 'Name',
-            fieldName: 'name',
-            minWidth: 200,
-            onRender: (item: DebitAccount, index?: number) => {
-                return (
-                    <TextField defaultValue={item.name} onKeyUp={(event) => {
-                        if (event.code == 'Enter' && item.name != event.currentTarget.value) {
-                            const command = new SetDebitAccountName();
-                            command.accountId = item.id;
-                            command.name = event.currentTarget.value;
-                            command.execute();
-                        }
-                    }} />
-                );
-            }
-        },
-        {
-            key: 'balance',
-            name: 'Balance',
-            fieldName: 'balance',
-            minWidth: 200
-        }
-    ];
 
 
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();
@@ -162,19 +135,6 @@ export const DebitAccounts = () => {
 
     const items = searching ? accountsStartingWith.data : accounts.data;
 
-    const [setDebitAccountCommands, setSetDebitAccountCommands] = useState<SetDebitAccountName[]>([]);
-
-    useEffect(() => {
-        setSetDebitAccountCommands(accounts.data.map(_ => {
-            const command = new SetDebitAccountName();
-            command.setInitialValues({
-                accountId: _.id,
-                name: _.name
-            });
-            return command;
-        }));
-    }, [accounts.data]);
-
     return (
         <>
             <CommandTracker>
@@ -199,7 +159,7 @@ export const DebitAccounts = () => {
                         </CommandTrackerContext.Consumer>
                     </Stack.Item>
                     <Stack.Item>
-                        <DetailsList columns={columns} items={items} selection={selection} />
+                        <DebitAccountsList accounts={items} selection={selection}/>
                     </Stack.Item>
                 </Stack>
             </CommandTracker>
