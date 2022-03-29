@@ -20,7 +20,7 @@ export class WithdrawFromAccountValidator extends CommandValidator {
     };
 }
 
-export class WithdrawFromAccount extends Command implements IWithdrawFromAccount {
+export class WithdrawFromAccount extends Command<IWithdrawFromAccount> implements IWithdrawFromAccount {
     readonly route: string = '/api/accounts/debit/{{accountId}}/withdraw/{{amount}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new WithdrawFromAccountValidator();

@@ -22,7 +22,7 @@ export class OpenDebitAccountValidator extends CommandValidator {
     };
 }
 
-export class OpenDebitAccount extends Command implements IOpenDebitAccount {
+export class OpenDebitAccount extends Command<IOpenDebitAccount> implements IOpenDebitAccount {
     readonly route: string = '/api/accounts/debit';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new OpenDebitAccountValidator();

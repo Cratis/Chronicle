@@ -18,7 +18,7 @@ export class CloseDebitAccountValidator extends CommandValidator {
     };
 }
 
-export class CloseDebitAccount extends Command implements ICloseDebitAccount {
+export class CloseDebitAccount extends Command<ICloseDebitAccount> implements ICloseDebitAccount {
     readonly route: string = '/api/accounts/debit/{{accountId}}/close';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new CloseDebitAccountValidator();
