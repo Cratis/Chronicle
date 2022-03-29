@@ -8,7 +8,7 @@ import { CommandValidator } from './CommandValidator';
 /**
  * Represents an implementation of {@link ICommand} that works with HTTP fetch.
  */
-export abstract class Command implements ICommand {
+export abstract class Command<TCommandContent = {}> implements ICommand<TCommandContent> {
     abstract readonly route: string;
     abstract readonly routeTemplate: Handlebars.TemplateDelegate;
     abstract readonly validation: CommandValidator;
@@ -22,15 +22,15 @@ export abstract class Command implements ICommand {
     /** @inheritdoc */
     async execute(): Promise<CommandResult> {
         let actualRoute = this.route;
-        if (this.requestArguments && this.requestArguments.length > 0) {
-            actualRoute = this.routeTemplate(this);
-        }
         const payload = {};
 
         this.properties.forEach(property => {
             payload[property] = this[property];
         });
 
+        if (this.requestArguments && this.requestArguments.length > 0) {
+            actualRoute = this.routeTemplate(payload);
+        }
 
         const response = await fetch(actualRoute, {
             method: 'POST',
@@ -46,9 +46,9 @@ export abstract class Command implements ICommand {
     }
 
     /** @inheritdoc */
-    setInitialValues(values: any) {
+    setInitialValues(values: TCommandContent) {
         this.properties.forEach(property => {
-            if (values.hasOwnProperty(property)) {
+            if ((values as any).hasOwnProperty(property)) {
                 this._initialValues[property] = values[property];
                 this[property] = values[property];
             }

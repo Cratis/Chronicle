@@ -12,7 +12,7 @@ export type PropertyChanged = (property: string) => void;
 /**
  * Defines the base of a command.
  */
-export interface ICommand {
+export interface ICommand<TCommandContent = {}> {
     /**
      * Gets the route information for the command.
      */
@@ -29,7 +29,7 @@ export interface ICommand {
      * Set the initial values for the command. This is used for tracking if there are changes to a command or not.
      * @param {*} values Values to set.
      */
-    setInitialValues(values: any): void;
+    setInitialValues(values: TCommandContent): void;
 
     /**
      * Set the initial values for the command to be the current value of the properties.
