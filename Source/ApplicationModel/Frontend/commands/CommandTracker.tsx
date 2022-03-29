@@ -1,24 +1,24 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Command } from '@aksio/cratis-applications-frontend/commands';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Command } from './Command';
 import { CommandResult } from './CommandResult';
+import { CommandResults } from './CommandResults';
+import { CommandTrackerImplementation } from './CommandTrackerImplementation';
+import { ICommandTracker } from './ICommandTracker';
 
 
-export interface ICommandTracker {
-    addCommand: AddCommand;
-    hasChanges: boolean;
-    execute: CommandTrackerExecute;
-}
-
-export const CommandTrackerContext = React.createContext<ICommandTracker>({
+const defaultCommandTrackerContext: ICommandTracker = {
     addCommand: () => { },
     execute: async () => {
-        return new Map();
+        return new CommandResults(new Map());
     },
     hasChanges: false,
-});
+};
+
+
+export const CommandTrackerContext = React.createContext<ICommandTracker>(defaultCommandTrackerContext);
 
 export type CommandTrackerChanged = (hasChanges: boolean) => void;
 export type CommandTrackerExecute = () => Promise<Map<Command, CommandResult>>;
@@ -31,46 +31,20 @@ export interface ICommandTrackerProps {
 }
 
 export const CommandTracker = (props: ICommandTrackerProps) => {
-    const commands: Command[] = [];
     const [hasChanges, setHasChanges] = useState(false);
+    const [commandTracker, setCommandTracker] = useState<ICommandTracker>(defaultCommandTrackerContext);
 
-    const propertyChanged = useCallback((property) => {
-        let hasCommandChanges = false;
-        commands.forEach(command => {
-            if (command.hasChanges) {
-                hasCommandChanges = true;
-            }
-        });
-
-        setHasChanges(hasCommandChanges);
+    useEffect(() => {
+        setCommandTracker(new CommandTrackerImplementation(setHasChanges));
     }, []);
 
-    const addCommand = (command: Command) => {
-        if (commands.some(_ => _ == command)) {
-            return;
-        }
-
-        commands.push(command);
-        command.onPropertyChanged(propertyChanged);
-    };
-
-    const execute = async () => {
-        const commandsToCommandResult = new Map();
-
-        for( const command of commands.filter(_ => _.hasChanges === true) )
-        {
-            const commandResult = await command.execute();
-            commandsToCommandResult.set(command, commandResult);
-        }
-        return commandsToCommandResult;
-    };
+    if (commandTracker) {
+        (commandTracker as any).hasChanges = hasChanges;
+    }
 
     return (
-        <CommandTrackerContext.Provider value={{ hasChanges, addCommand, execute, }}>
+        <CommandTrackerContext.Provider value={commandTracker!}>
             {props.children}
         </CommandTrackerContext.Provider>
     );
 };
-
-
-
