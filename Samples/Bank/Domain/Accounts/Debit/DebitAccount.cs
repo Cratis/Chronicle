@@ -13,6 +13,9 @@ namespace Domain.Accounts.Debit
 
         public DebitAccount(IEventLog eventLog) => _eventLog = eventLog;
 
+        [HttpPost("name/{name}")]
+        public Task SetDebitAccountName([FromRoute] AccountId accountId, [FromRoute] AccountName name) => _eventLog.Append(accountId, new DebitAccountNameChanged(name));
+
         [HttpPost("close")]
         public Task CloseDebitAccount([FromRoute] AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed());
 
