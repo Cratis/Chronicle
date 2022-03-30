@@ -133,7 +133,11 @@ export const DebitAccounts = () => {
             items: accounts.data as any
         }), [accounts.data]);
 
-    const items = searching ? accountsStartingWith.data : accounts.data;
+    const [accountItems, setAccountItems] = useState<DebitAccount[]>([]);
+
+    useEffect(() => {
+        setAccountItems(searching ? accountsStartingWith.data : accounts.data);
+    }, [accountsStartingWith.data, accounts.data]);
 
     return (
         <>
@@ -141,7 +145,7 @@ export const DebitAccounts = () => {
                 <Stack>
                     <Stack.Item disableShrink>
                         <CommandTrackerContext.Consumer>
-                            {({hasChanges, execute}) => {
+                            {({hasChanges, execute, revertChanges}) => {
                                 const actualItems: ICommandBarItemProps[] = [{
                                     key: 'save',
                                     name: 'Save',
@@ -149,6 +153,15 @@ export const DebitAccounts = () => {
                                     disabled: !hasChanges,
                                     onClick: (e) => {
                                         execute();
+                                    },
+                                }, {
+                                    key: 'undo',
+                                    name: 'Undo',
+                                    iconProps: { iconName: 'Undo' },
+                                    disabled: !hasChanges,
+                                    onClick: (e) => {
+                                        revertChanges();
+                                        setAccountItems([...accountItems]);
                                     }
                                 }, ...commandBarItems];
 
@@ -159,7 +172,7 @@ export const DebitAccounts = () => {
                         </CommandTrackerContext.Consumer>
                     </Stack.Item>
                     <Stack.Item>
-                        <DebitAccountsList accounts={items} selection={selection}/>
+                        <DebitAccountsList accounts={accountItems} selection={selection}/>
                     </Stack.Item>
                 </Stack>
             </CommandTracker>

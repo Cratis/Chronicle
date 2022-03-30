@@ -24,9 +24,10 @@ export const DebitAccountsList = (props: IDebitAccountsListProps) => {
             fieldName: 'name',
             minWidth: 200,
             onRender: (item: DebitAccount, index?: number) => {
+                const command = setDebitAccountCommands[index!];
                 return (
                     <TextField defaultValue={item.name} onChange={(event, newValue) => {
-                        setDebitAccountCommands[index!].name = newValue!;
+                        command.name = newValue!;
                     }} />
                 );
             }
@@ -38,7 +39,6 @@ export const DebitAccountsList = (props: IDebitAccountsListProps) => {
             minWidth: 200
         }
     ];
-
 
     useEffect(() => {
         setSetDebitAccountCommands(props.accounts.map(_ => {
