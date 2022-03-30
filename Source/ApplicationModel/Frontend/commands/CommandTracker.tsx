@@ -17,7 +17,6 @@ const defaultCommandTrackerContext: ICommandTracker = {
     hasChanges: false,
 };
 
-
 export const CommandTrackerContext = React.createContext<ICommandTracker>(defaultCommandTrackerContext);
 
 export type CommandTrackerChanged = (hasChanges: boolean) => void;
@@ -35,7 +34,10 @@ export const CommandTracker = (props: ICommandTrackerProps) => {
     const [commandTracker, setCommandTracker] = useState<ICommandTracker>(defaultCommandTrackerContext);
 
     useEffect(() => {
-        setCommandTracker(new CommandTrackerImplementation(setHasChanges));
+        const commandTrackerImplementation = new CommandTrackerImplementation((value) => {
+            setHasChanges(value);
+        });
+        setCommandTracker(commandTrackerImplementation);
     }, []);
 
     if (commandTracker) {
@@ -43,7 +45,11 @@ export const CommandTracker = (props: ICommandTrackerProps) => {
     }
 
     return (
-        <CommandTrackerContext.Provider value={commandTracker!}>
+        <CommandTrackerContext.Provider value={{
+            addCommand: (command) => commandTracker!.addCommand(command),
+            execute: () => commandTracker.execute(),
+            hasChanges
+        }}>
             {props.children}
         </CommandTrackerContext.Provider>
     );
