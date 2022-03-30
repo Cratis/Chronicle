@@ -37,6 +37,11 @@ export interface ICommand<TCommandContent = {}> {
     setInitialValuesFromCurrentValues(): void;
 
     /**
+     * Revert any changes on the command.
+     */
+    revertChanges(): void;
+
+    /**
      * Gets whether or not there are changes to any properties.
      */
     readonly hasChanges: boolean;
