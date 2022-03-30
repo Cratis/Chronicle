@@ -16,6 +16,14 @@ To get a quick start, head over to our [getting started](./getting-started.md) s
 | [Tenancy](./tenancy.md) | What is tenancy and how does it work? |
 | [Kernel](./kernel/index.md) | What the Kernel is and working with it |
 
+## Fundamentals
+
+| Topic | Description |
+| ------- | ----------- |
+| [Fundamentals](./fundamentals/index.md) | What is fundamentals and what does it bring to the table. |
+| [Concepts](./fundamentals/concepts.md) | What are concepts and how to work with them. |
+| [Types](./fundamentals/types.md) | How to work with the type discovery mechanism. |
+
 ## .NET Client
 
 | Topic | Description |
