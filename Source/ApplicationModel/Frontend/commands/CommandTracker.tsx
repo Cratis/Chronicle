@@ -15,6 +15,7 @@ const defaultCommandTrackerContext: ICommandTracker = {
         return new CommandResults(new Map());
     },
     hasChanges: false,
+    revertChanges: () => { }
 };
 
 export const CommandTrackerContext = React.createContext<ICommandTracker>(defaultCommandTrackerContext);
@@ -48,6 +49,7 @@ export const CommandTracker = (props: ICommandTrackerProps) => {
         <CommandTrackerContext.Provider value={{
             addCommand: (command) => commandTracker!.addCommand(command),
             execute: () => commandTracker.execute(),
+            revertChanges: () => commandTracker.revertChanges(),
             hasChanges
         }}>
             {props.children}

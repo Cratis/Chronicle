@@ -7,7 +7,9 @@ import { CommandResults } from './CommandResults';
 import { ICommandTracker } from './ICommandTracker';
 
 
-
+/**
+ * Represents an implementation of {@link ICommandTracker}.
+ */
 export class CommandTrackerImplementation implements ICommandTracker {
     private _commands: ICommand[] = [];
     private _hasChanges = false;
@@ -15,6 +17,7 @@ export class CommandTrackerImplementation implements ICommandTracker {
     constructor(private readonly _setHasChanges: React.Dispatch<React.SetStateAction<boolean>>) {
     }
 
+    /** @inheritdoc */
     get hasChanges(): boolean {
         return this._hasChanges;
     }
@@ -23,6 +26,7 @@ export class CommandTrackerImplementation implements ICommandTracker {
         this._hasChanges = value;
     }
 
+    /** @inheritdoc */
     addCommand(command: ICommand): void {
         if (this._commands.some(_ => _ == command)) {
             return;
@@ -33,6 +37,7 @@ export class CommandTrackerImplementation implements ICommandTracker {
         command.onPropertyChanged(this.evaluateHasChanges, this);
     }
 
+    /** @inheritdoc */
     async execute(): Promise<CommandResults> {
         const commandsToCommandResult = new Map();
 
@@ -40,7 +45,14 @@ export class CommandTrackerImplementation implements ICommandTracker {
             const commandResult = await command.execute();
             commandsToCommandResult.set(command, commandResult);
         }
+        this.evaluateHasChanges();
         return new CommandResults(commandsToCommandResult);
+    }
+
+    /** @inheritdoc */
+    revertChanges() {
+        this._commands.forEach(command => command.revertChanges());
+        this.evaluateHasChanges();
     }
 
     private evaluateHasChanges() {

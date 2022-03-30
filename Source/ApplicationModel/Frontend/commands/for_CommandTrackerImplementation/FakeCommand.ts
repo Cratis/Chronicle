@@ -7,13 +7,27 @@ import { ICommand, PropertyChanged } from '../ICommand';
 
 export class FakeCommand implements ICommand {
     route = '';
+    private _hasChanges: boolean;
 
-    constructor(readonly hasChanges: boolean) {
-        this.execute = sinon.stub();
+    constructor(hasChanges: boolean) {
+        this._hasChanges = hasChanges;
+        this.execute = sinon.fake(() => {
+            this._hasChanges = false;
+            return new Promise<CommandResult>(resolve => {
+                resolve(new CommandResult({ok: true}));
+            });
+        });
         this.setInitialValues = sinon.stub();
         this.setInitialValues = sinon.stub();
         this.propertyChanged = sinon.stub();
         this.onPropertyChanged = sinon.stub();
+        this.revertChanges = sinon.fake(() => {
+            this._hasChanges = false;
+        });
+    }
+
+    get hasChanges() {
+        return this._hasChanges;
     }
 
     revertChanges(): void {
