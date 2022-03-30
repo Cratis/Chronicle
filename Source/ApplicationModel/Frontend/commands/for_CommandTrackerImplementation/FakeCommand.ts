@@ -16,6 +16,10 @@ export class FakeCommand implements ICommand {
         this.onPropertyChanged = sinon.stub();
     }
 
+    revertChanges(): void {
+        throw new Error('Method not implemented.');
+    }
+
     execute(): Promise<CommandResult> {
         throw new Error('Method not implemented.');
     }

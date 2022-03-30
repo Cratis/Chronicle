@@ -73,6 +73,13 @@ export abstract class Command<TCommandContent = {}> implements ICommand<TCommand
     }
 
     /** @inheritdoc */
+    revertChanges(): void {
+        this.properties.forEach(property => {
+            this[property] = this._initialValues[property];
+        });
+    }
+
+    /** @inheritdoc */
     get hasChanges() {
         return this._hasChanges;
     }
