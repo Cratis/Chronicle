@@ -28,7 +28,7 @@ export class FakeCommand implements ICommand {
     propertyChanged(property: string): void {
         throw new Error('Method not implemented.');
     }
-    onPropertyChanged(callback: PropertyChanged): void {
+    onPropertyChanged(callback: PropertyChanged, thisArg: any): void {
         throw new Error('Method not implemented.');
     }
 }
