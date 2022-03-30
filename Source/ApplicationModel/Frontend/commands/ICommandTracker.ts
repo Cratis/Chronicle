@@ -6,6 +6,7 @@ import { CommandResults } from './CommandResults';
 
 /**
  * Defines the system for tracking commands.
+ *
  */
 export interface ICommandTracker {
     /**
