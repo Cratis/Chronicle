@@ -1,3 +1,12 @@
+# [v5.14.0] - 2022-3-30 [PR: #220](https://github.com/aksio-insurtech/Cratis/pull/220)
+
+### Added
+
+- Introduced a way to consume commands using React hooks - this is now then consistent with how we do queries.
+- Support for tracking changes to a command.
+- Adding a `CommandTracker` that can be used as an aggregation of commands to see if there are changes or not to any commands within it.
+
+
 # [v5.13.2] - 2022-3-15 [PR: #216](https://github.com/aksio-insurtech/Cratis/pull/216)
 
 ### Fixed
