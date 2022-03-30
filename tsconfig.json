@@ -18,6 +18,10 @@
         "noImplicitAny": false,
         "skipLibCheck": true,
         "target": "ES2015",
+        "lib": [
+            "ESNext",
+            "DOM"
+        ],
         "moduleResolution": "node",
         "jsx": "react-jsx",
         "esModuleInterop": true,

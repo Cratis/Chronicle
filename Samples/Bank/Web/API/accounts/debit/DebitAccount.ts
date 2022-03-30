@@ -7,5 +7,5 @@ export type DebitAccount = {
     id: string;
     name: string;
     owner: string;
-    balance: number;
+    balance?: number;
 };

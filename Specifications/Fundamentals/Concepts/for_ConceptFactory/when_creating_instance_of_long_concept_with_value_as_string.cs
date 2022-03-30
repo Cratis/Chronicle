@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
-
 namespace Aksio.Cratis.Concepts.for_ConceptFactory
 {
     public class when_creating_instance_of_long_concept_with_value_as_string : Specification
@@ -13,6 +11,6 @@ namespace Aksio.Cratis.Concepts.for_ConceptFactory
 
         void Because() => result = ConceptFactory.CreateConceptInstance(typeof(LongConcept), long_value_as_string) as LongConcept;
 
-        [Fact] void should_hold_the_correct_long_value() => result.Value.ToString(CultureInfo.InvariantCulture).ShouldEqual(long_value_as_string);
+        [Fact] void should_hold_the_correct_long_value() => result.Value.ToString().ShouldEqual(long_value_as_string);
     }
 }

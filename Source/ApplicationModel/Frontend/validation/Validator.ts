@@ -1,9 +1,15 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Concepts.Applications;
+/**
+ * Represents a validator.
+ */
+export class Validator {
 
-namespace Read.Applications
-{
-    public record DeployableOnMicroservice(DeployableId DeployableId, DeployableName Name);
+    /**
+     * Gets whether or not is valid.
+     */
+    get isValid() {
+        return true;
+    }
 }
