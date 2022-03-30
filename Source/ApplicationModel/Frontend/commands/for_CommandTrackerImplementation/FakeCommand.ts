@@ -14,7 +14,7 @@ export class FakeCommand implements ICommand {
         this.execute = sinon.fake(() => {
             this._hasChanges = false;
             return new Promise<CommandResult>(resolve => {
-                resolve(new CommandResult({ok: true}));
+                resolve(new CommandResult({ok: true} as any));
             });
         });
         this.setInitialValues = sinon.stub();
