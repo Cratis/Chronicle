@@ -141,14 +141,14 @@ export const DebitAccounts = () => {
                 <Stack>
                     <Stack.Item disableShrink>
                         <CommandTrackerContext.Consumer>
-                            {value => {
+                            {({hasChanges, execute}) => {
                                 const actualItems: ICommandBarItemProps[] = [{
                                     key: 'save',
                                     name: 'Save',
                                     iconProps: { iconName: 'Save' },
-                                    disabled: !value.hasChanges,
+                                    disabled: !hasChanges,
                                     onClick: (e) => {
-                                        value.execute();
+                                        execute();
                                     }
                                 }, ...commandBarItems];
 
