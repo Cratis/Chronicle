@@ -62,6 +62,34 @@ With this you get full interchangeability:
     string unwrapped = formalized;
 ```
 
+## Nullability
+
+While the formalized domain concept is a representation, or a wrapper of another type. The nullability of the underlying type is not important.
+The `ConceptAs<>` constructor does not allow for the value to be null. The reason for this is that you would be camouflaging whether or not
+null is an allowed value for the concept.
+
+Imagine:
+
+```csharp
+public record Person(SocialSecurityNumber SocialSecurityNumber)
+```
+
+If null is valid and the `ConceptAs<>` didn't have this constraint, you would end up with an instance for `SocialSecurityNumber` with a null value within it.
+This would hide the intent and possibly create problems down the line. While a more clearer approach, if null is allowed, to make it nullable and very clear.
+
+```csharp
+public record Person(SocialSecurityNumber? SocialSecurityNumber)
+```
+
+You can now see clearly that this value can be null. If this is a common theme for the concept, you can make the implicit operator handle nullables as well.
+
+```csharp
+public record SocialSecurityNumber(string value) : ConceptAs<string>(value)
+{
+    public static implicit operator SocialSecurityNumber?(string value) => value == default ? default : new(value);
+}
+```
+
 ## System.Text.Json
 
 Within the **Fundamentals** package you'll find a namespace called `Json`. This holds converters for serializing and deserializing concept types.
