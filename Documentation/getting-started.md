@@ -39,8 +39,13 @@ The result will be the following
 
 ```shell
 <your microservice folder>
-└───Main
-└───Web
+└─── Concepts
+└─── Domain
+└─── Integration
+└─── Main
+└─── Reactions
+└─── Read
+└─── Web
 ```
 
 The template will do a post action to restore all **NuGet packages** as well as **node modules** if you
