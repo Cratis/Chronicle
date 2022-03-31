@@ -97,7 +97,7 @@ var options = new JsonSerializerOptions
     {
         new ConceptAsJsonConverterFactory()
     }
-}
+};
 
 var person = new Person("12345678901"); // Implicit operator converting it to SocialSecurityNumber
 var serialized = JsonSerializer.Serialize(person, options);
@@ -123,7 +123,7 @@ var options = new JsonSerializerOptions
     {
         new ConceptAsJsonConverterFactory()
     }
-}
+};
 
 var json = "{ \"SocialSecurityNumber\": \"12345678901\" }";
 var person = JsonSerializer.Deserialize<Person>(json, options);
