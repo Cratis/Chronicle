@@ -7,6 +7,7 @@ model aimed at solving common problems.
 If you want to contribute, please read more [here](./contributing.md).
 
 To get a quick start, head over to our [getting started](./getting-started.md) section.
+The platform is built on top of a set of concepts that is vital to understand, you can find them [here](./concepts/index.md).
 
 ## General
 
