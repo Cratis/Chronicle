@@ -5,6 +5,7 @@
 - [Docker](https://www.docker.com/products/docker-desktop)
 - [.NET Core 6](https://dotnet.microsoft.com/download/dotnet/6.0)
 - [Node JS version 16](https://nodejs.org/)
+- [Yarn](https://yarnpkg.com)
 
 ## Install
 
