@@ -68,11 +68,13 @@ public class Observers : IObservers
          The plan:
          - Let Kernel do the heavy lifting of setting up underlying observers for all tenants
          - Connect
-         - Add Tenant, Correlation, Causation, CausedBy to the EventContext
          - Establish execution context based on what is in the event context
          - Add array of event types for the observer to the definition
+         - Extend on ExecutionContextManager Establish to include causation and caused by
          - Implement the Observer replay
             - Replay automatically if definition changed (event types) when observer observing new type that already has events
+
+         - Add Tenant, Correlation, Causation, CausedBy to the EventContext
          */
 
         // TODO: Observe for all tenants and microservices
@@ -85,7 +87,7 @@ public class Observers : IObservers
             var subscription = await stream.SubscribeAsync(async (@event, _) =>
             {
                 // TODO: Establish in the correct context
-                _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
+                _executionContextManager.Establish(@event.Context.TenantId, @event.Context.CorrelationId);
                 await handler.OnNext(@event);
             });
 
