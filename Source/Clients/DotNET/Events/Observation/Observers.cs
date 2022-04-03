@@ -64,6 +64,17 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public async Task StartObserving()
     {
+        /*
+         The plan:
+         - Let Kernel do the heavy lifting of setting up underlying observers for all tenants
+         - Connect
+         - Add Tenant, Correlation, Causation, CausedBy to the EventContext
+         - Establish execution context based on what is in the event context
+         - Add array of event types for the observer to the definition
+         - Implement the Observer replay
+            - Replay automatically if definition changed (event types) when observer observing new type that already has events
+         */
+
         // TODO: Observe for all tenants and microservices
         _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
         var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
