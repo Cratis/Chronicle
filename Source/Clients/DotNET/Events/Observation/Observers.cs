@@ -73,6 +73,7 @@ public class Observers : IObservers
          - Extend on ExecutionContextManager Establish to include causation and caused by
          - Implement the Observer replay
             - Replay automatically if definition changed (event types) when observer observing new type that already has events
+        - Namespace of stream should be per microservice
 
          - Add Tenant, Correlation, Causation, CausedBy to the EventContext
          */
