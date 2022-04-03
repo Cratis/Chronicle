@@ -21,7 +21,6 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
     ObserverId _observerId = ObserverId.Unspecified;
     IAsyncStream<AppendedEvent>? _stream;
     IGrainReminder? _recoverReminder;
-    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
@@ -32,7 +31,6 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
     {
         _observerId = this.GetPrimaryKey(out var extension);
         var key = PartitionedObserverKey.Parse(extension);
-        _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
         _eventSequenceId = key.EventSequenceId;
         _eventSourceId = key.EventSourceId;
