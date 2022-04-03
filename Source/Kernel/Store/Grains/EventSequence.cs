@@ -24,6 +24,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// </summary>
     public const string StreamProvider = "event-sequence";
     readonly ISchemaStore _schemaStore;
+    readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
     readonly ILogger<EventSequence> _logger;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
@@ -34,14 +35,17 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
     /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
         ISchemaStore schemaStore,
+        IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManager,
         ILogger<EventSequence> logger)
     {
         _schemaStore = schemaStore;
+        _executionContextManager = executionContextManager;
         _jsonComplianceManager = jsonComplianceManager;
         _logger = logger;
     }
@@ -77,7 +81,13 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
             var appendedEvent = new AppendedEvent(
                 new EventMetadata(State.SequenceNumber, eventType),
-                new EventContext(eventSourceId, DateTimeOffset.UtcNow),
+                new EventContext(
+                    eventSourceId,
+                    DateTimeOffset.UtcNow,
+                    _microserviceAndTenant.TenantId,
+                    _executionContextManager.Current.CorrelationId,
+                    _executionContextManager.Current.CausationId,
+                    _executionContextManager.Current.CausedBy),
                 compliantEvent);
 
             await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));

@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Events.Store.MongoDB;
 
@@ -13,18 +14,22 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 public class EventConverter : IEventConverter
 {
     readonly ISchemaStore _schemaStore;
+    readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
     /// </summary>
     /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     public EventConverter(
         ISchemaStore schemaStore,
+        IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManager)
     {
         _schemaStore = schemaStore;
+        _executionContextManager = executionContextManager;
         _jsonComplianceManager = jsonComplianceManager;
     }
 
@@ -38,7 +43,7 @@ public class EventConverter : IEventConverter
 
         return new AppendedEvent(
             new EventMetadata(@event.SequenceNumber, eventType),
-            new EventContext(@event.EventSourceId, @event.Occurred),
+            new EventContext(@event.EventSourceId, @event.Occurred, _executionContextManager.Current.TenantId, @event.CorrelationId, @event.CausationId, @event.CausedBy),
             releasedContent);
     }
 }
