@@ -49,7 +49,7 @@ public class Observers : Grain, IObservers
         foreach (var observer in observers)
         {
             var key = new PartitionedObserverKey(_microserviceId, _tenantId, observer.EventSequenceId, observer.EventSourceId);
-            var partitionedObserver = _grainFactory.GetGrain<IPartitionedObserver>(observer.ObserverId, keyExtension: key.ToString());
+            var partitionedObserver = _grainFactory.GetGrain<IPartitionedObserver>(observer.ObserverId, keyExtension: key);
             await partitionedObserver.TryResume();
         }
     }

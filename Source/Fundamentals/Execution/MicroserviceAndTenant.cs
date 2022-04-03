@@ -15,6 +15,12 @@ public record MicroserviceAndTenant(MicroserviceId MicroserviceId, TenantId Tena
     /// </summary>
     public static readonly MicroserviceAndTenant NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
 
+    /// <summary>
+    /// Implicitly convert to string.
+    /// </summary>
+    /// <param name="key">Key to convert.</param>
+    public static implicit operator string(MicroserviceAndTenant key) => key.ToString();
+
     /// <inheritdoc/>
     public override string ToString() => $"{MicroserviceId}+{TenantId}";
 

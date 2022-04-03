@@ -14,6 +14,12 @@ namespace Aksio.Cratis.Events.Store.Observation;
 /// <param name="EventSourceId">The event source.</param>
 public record PartitionedObserverKey(MicroserviceId MicroserviceId, TenantId TenantId, EventSequenceId EventSequenceId, EventSourceId EventSourceId)
 {
+    /// <summary>
+    /// Implicitly convert from <see cref="PartitionedObserverKey"/> to string.
+    /// </summary>
+    /// <param name="key"><see cref="PartitionedObserverKey"/> to convert from.</param>
+    public static implicit operator string(PartitionedObserverKey key) => key.ToString();
+
     /// <inheritdoc/>
     public override string ToString() => $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{EventSourceId}";
 
