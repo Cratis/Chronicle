@@ -33,7 +33,6 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
         _observerId = this.GetPrimaryKey(out var extension);
         var key = PartitionedObserverKey.Parse(extension);
         _microserviceId = key.MicroserviceId;
-        Console.WriteLine(_microserviceId);
         _tenantId = key.TenantId;
         _eventSequenceId = key.EventSequenceId;
         _eventSourceId = key.EventSourceId;

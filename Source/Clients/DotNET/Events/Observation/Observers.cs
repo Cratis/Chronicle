@@ -79,7 +79,7 @@ public class Observers : IObservers
             });
 
             var key = new ObserverKey(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log);
-            var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: key.ToString());
+            var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: key);
             var eventTypes = handler.EventTypes.ToArray();
             await observer.Subscribe(eventTypes);
         }
