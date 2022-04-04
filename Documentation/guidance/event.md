@@ -47,7 +47,7 @@ During registration, it might be necessary to capture all the details about a pe
     "firstName": "John",
     "middleName": "David",
     "lastName": "Doe",
-    "address" "32nd & Main street"
+    "address": "32nd & Main street",
     "postalCode": "123456",
     "city": "Somewhere",
     "country": "Atlantis"
@@ -72,7 +72,7 @@ Similar for address:
 
 ```json
 {
-    "address" "32nd & Main street"
+    "address": "32nd & Main street",
     "postalCode": "123456",
     "city": "Somewhere",
     "country": "Atlantis"
