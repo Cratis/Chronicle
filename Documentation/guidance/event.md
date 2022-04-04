@@ -37,6 +37,8 @@ The things that needs to go together to represent a meaningful change in the sys
 If we take a system that holds personal details, the name and social security numbers would be separate from
 the address.
 
+Below are some samples of events.
+
 ### PersonRegistered
 
 During registration, it might be necessary to capture all the details about a person as below:
