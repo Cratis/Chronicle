@@ -1,0 +1,16 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Application model",
+  "steps": [
+    {
+      "title": "Introduction",
+      "description": "The purpose of the application model is to setup and scaffold a typical setup. The setup is opinionated but is possible hook into and customize. It builds on top of what is idiomatic C# supporting both the host builder approach and the more traditional `Startup.cs` approach."
+    },
+    {
+      "file": "Source/ApplicationModel/Applications/HostBuilderExtensions.cs",
+      "description": "When using the entire stack of the application model, this is the entrypoint. It is used when building the host, typically Program.cs.",
+      "line": 27
+    }
+  ],
+  "ref": "code-tour"
+}
