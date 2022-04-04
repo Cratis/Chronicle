@@ -11,7 +11,12 @@ public class when_accessing_event_source_id : Specification
     AppendedEvent @event;
     object result;
 
-    void Establish() => @event = new(new(0, new("efd7d03b-21f3-4f09-99f3-355779eb5a11", 1)), new("463f43c9-16b7-4fd9-9f37-d4d340d89ce8", DateTimeOffset.UtcNow), new JsonObject());
+    void Establish() =>
+            @event = new(
+                new(0,
+                new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
+                new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", "50308963-d8b5-4b6e-97c7-e2486e8237e1", "bfb7fd4a-1822-4937-a6d1-52464a173f84"),
+                new JsonObject());
 
     void Because() => result = EventValueProviders.FromEventSourceId(@event);
 
