@@ -21,7 +21,7 @@ It should not be holding information for multiple purposes. For instance holding
 for specific purposes. Doing so makes the event unclear to reason about and requires logic in all observers and consumers
 of the event.
 
-## Avoid nullables
+## Avoid nullables / empty values
 
 An event has happened, its not supposed to represent unclear states.
 As with singular purpose, nullables means its up for interpretation and logic needs to be in place to reason about it
