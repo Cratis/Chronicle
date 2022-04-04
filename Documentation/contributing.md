@@ -1,6 +1,6 @@
 # Contributing
 
-Before you start contributing, you should read our guidelines [here](https://github.com/aksio-insurtech/Home/blob/main/README.md).
+Before you start contributing, you should read our guidelines [here](https://github.com/aksio-insurtech/.github/blob/main/contributing.md).
 
 ## Prerequisites
 
