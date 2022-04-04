@@ -16,7 +16,7 @@ All events should be named as past tense, something that has happened:
 
 ## Singular purpose
 
-An event should never be unambiguous. It should have a clear meaning and purpose.
+An event should never be ambiguous. It should have a clear meaning and purpose.
 It should not be holding information for multiple purposes. For instance holding properties that are empty and only used
 for specific purposes. Doing so makes the event unclear to reason about and requires logic in all observers and consumers
 of the event.
