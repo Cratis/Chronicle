@@ -68,13 +68,13 @@ public class Observers : IObservers
          The plan:
          - Let Kernel do the heavy lifting of setting up underlying observers for all tenants
          - Connect
-         - Establish execution context based on what is in the event context
          - Add array of event types for the observer to the definition
          - Extend on ExecutionContextManager Establish to include causation and caused by
          - Implement the Observer replay
             - Replay automatically if definition changed (event types) when observer observing new type that already has events
         - Namespace of stream should be per microservice
 
+         - Establish execution context based on what is in the event context
          - Add Tenant, Correlation, Causation, CausedBy to the EventContext
          */
 
