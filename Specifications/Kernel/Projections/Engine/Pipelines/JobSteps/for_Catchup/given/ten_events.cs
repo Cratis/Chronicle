@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given;
 
@@ -16,7 +17,7 @@ public class ten_events : a_catchup_step
                     .Range(0, 10)
                     .Select(_ => new AppendedEvent(
                                     new((uint)_, new EventType(Guid.NewGuid(), 1)),
-                                    new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow),
+                                    new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
                                     new JsonObject())).ToArray();
 
         var first_cursor = new Mock<IEventCursor>();
