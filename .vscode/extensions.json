@@ -8,7 +8,6 @@
         "josefpihrt-vscode.roslynator",
         "EditorConfig.EditorConfig",
         "GitHub.vscode-pull-request-github",
-        "vscode.git",
         "stevencl.addDocComments",
         "salbert.comment-ts",
         "dbaeumer.vscode-eslint",
