@@ -5,7 +5,6 @@ using System.IO.Compression;
 using Aksio.Cratis.Applications;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
