@@ -14,6 +14,8 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
             .From<DebitAccountOpened>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
                 .Set(model => model.Owner).To(@event => @event.Owner))
+            .From<DebitAccountNameChanged>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name))
             .From<DepositToDebitAccountPerformed>(_ => _
                 .Add(model => model.Balance).With(@event => @event.Amount))
             .From<WithdrawalFromDebitAccountPerformed>(_ => _

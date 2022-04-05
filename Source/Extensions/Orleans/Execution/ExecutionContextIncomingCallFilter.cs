@@ -40,6 +40,7 @@ public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
             var causedBy = Guid.Parse(_requestContextManager.Get(RequestContextKeys.CausedBy)?.ToString() ?? Guid.Empty.ToString());
             _executionContextManager.Set(new ExecutionContext(microserviceId!.ToString()!, tenantId!.ToString()!, correlationId!.ToString()!, causationId, causedBy));
         }
+
         await context.Invoke();
     }
 }

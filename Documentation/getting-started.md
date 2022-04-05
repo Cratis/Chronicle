@@ -5,6 +5,7 @@
 - [Docker](https://www.docker.com/products/docker-desktop)
 - [.NET Core 6](https://dotnet.microsoft.com/download/dotnet/6.0)
 - [Node JS version 16](https://nodejs.org/)
+- [Yarn](https://yarnpkg.com)
 
 ## Install
 
@@ -39,8 +40,13 @@ The result will be the following
 
 ```shell
 <your microservice folder>
-└───Main
-└───Web
+└─── Concepts
+└─── Domain
+└─── Integration
+└─── Main
+└─── Reactions
+└─── Read
+└─── Web
 ```
 
 The template will do a post action to restore all **NuGet packages** as well as **node modules** if you

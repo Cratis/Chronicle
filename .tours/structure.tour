@@ -1,0 +1,48 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Structure",
+  "steps": [
+    {
+      "directory": "Samples",
+      "description": "This folder holds the different samples."
+    },
+    {
+      "directory": "Documentation",
+      "description": "All the documentation can be found here. This does not include the API documentation, as that is part of the source code written with Xml Doc for C# and JSDoc for the TypeScript code."
+    },
+    {
+      "directory": "Source/ApplicationModel",
+      "description": "The purpose of the application model is to setup and scaffold a typical setup. The setup is opinionated but is possible hook into and customize. It builds on top of what is idiomatic C# supporting both the host builder approach and the more traditional `Startup.cs` approach.\nWithin the application model you'll also find formalizations that enables working with CQRS (Command Query Responsibility Segregation, read more [here](https://docs.microsoft.com/en-us/azure/architecture/patterns/cqrs)).\nThe application model is a holistic approach that includes both the backend and the frontend and with tooling providing a bridge between them."
+    },
+    {
+      "directory": "Source/ApplicationModel/Applications",
+      "description": "This is the main project for the application model for the backend. This is what ends up as the NuGet package one typically consumes (Aksio.Cratis.Applications). It references the other packages of the application model."
+    },
+    {
+      "directory": "Source/ApplicationModel/CQRS",
+      "description": "This project holds what is needed to support CQRS for the application model. It holds setup for ASP.NET and more."
+    },
+    {
+      "directory": "Source/ApplicationModel/CQRS.MongoDB",
+      "description": "This holds the MongoDB specific parts of CQRS for the application model. Helpers to make it easier to work with MongoDB, typically around observing changes in collections and such."
+    },
+    {
+      "directory": "Source/ApplicationModel/Frontend",
+      "description": "This holds the frontend parts for the application model. Here you'll find reusable utilities, React hooks and the base types used by for instance the proxy generators."
+    },
+    {
+      "directory": "Source/Kernel",
+      "description": "The Kernel, which is the server part sits here. It holds also projects that are shared with the client containing common types and also Orleans Grain interfaces.\n\nYou'll find within the Kernel different areas, within these there is a certain structure of projects:\n\n| Name | Description |\n| ---- | ----------- |\n| Api  | The public REST Api surface |\n| Grains | The Grain implementations |\n| Grains.Interfaces | The interfaces for the Grains, making them possible to be shared with clients without bringing in the implementation |\n| Shared | Shared types that is shared within the area, but also possible to be used by clients |\n| MongoDB | Those areas that has persistent state typically has a MongoDB project as well |"
+    },
+    {
+      "directory": "Source/Kernel/Server",
+      "description": "The Server project is the entrypoint of the Kernel. This is where you'll find the entrypoint."
+    },
+    {
+      "directory": "Source/Kernel/Store",
+      "description": "The Store area represents the event store. It holds everything related to persistence and managing of state related to events and sequences."
+    }
+  ],
+  "ref": "code-tour",
+  "isPrimary": true
+}

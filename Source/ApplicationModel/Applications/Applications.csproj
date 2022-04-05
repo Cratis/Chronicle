@@ -19,13 +19,15 @@
     <ItemGroup>
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
         <PackageReference Include="Humanizer" Version="$(Humanizer)" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(MicrosoftExtensions)" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensions)" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensions)" />
         <PackageReference Include="Serilog" Version="2.10.0" />
         <PackageReference Include="Serilog.Exceptions" Version="8.0.0" />
         <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
         <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+        <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="8.4.1" />
+        <PackageReference Include="Serilog.Sinks.PeriodicBatching" Version="2.3.0" />
         <PackageReference Include="serilog.aspnetcore" Version="4.0.0" />
         <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.2" />

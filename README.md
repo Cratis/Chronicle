@@ -28,7 +28,7 @@ Make sure you have the following installed:
 - [Node JS version 16](https://nodejs.org/)
 
 The sample consists of a backend and a frontend.
-Navigate to the [Sample](./Samples/Bank) folder.
+Navigate to the [Bank Sample](./Samples/Bank) folder.
 
 Before running the microservice backend and frontend, we will need to run the Cratis Kernel.
 

@@ -26,9 +26,9 @@ public static class ConfigurationHostBuilderExtensions
     {
         Configuration = new ConfigurationBuilder()
               .SetBasePath(Directory.GetCurrentDirectory())
-              .AddJsonFile("config/appsettings.json", optional: true, reloadOnChange: true)
               .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
               .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
+              .AddJsonFile("config/appsettings.json", optional: true, reloadOnChange: true)
               .Build();
     }
 
@@ -58,8 +58,8 @@ public static class ConfigurationHostBuilderExtensions
     /// <param name="logger">Logger for logging.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
-    /// It will always search the current running directory. When given search paths, the current directory will be added as the
-    /// last search path, as a fallback.
+    /// The order of precedence for configuration files is as expected from .NET Configuration.
+    /// See more here: https://devblogs.microsoft.com/premier-developer/order-of-precedence-when-configuring-asp-net-core/.
     /// </remarks>
     public static IServiceCollection AddConfigurationObjects(
         this IServiceCollection services,
@@ -68,10 +68,14 @@ public static class ConfigurationHostBuilderExtensions
         IEnumerable<string>? searchSubPaths = default,
         ILogger? logger = default)
     {
-        var allSearchSubPaths = new List<string>(searchSubPaths ?? Array.Empty<string>())
+        var allSearchSubPaths = new List<string>
             {
                 "./"
             };
+        if (searchSubPaths is not null)
+        {
+            allSearchSubPaths.AddRange(searchSubPaths);
+        }
         var allSearchPaths = allSearchSubPaths.Select(_ => Path.Combine(Directory.GetCurrentDirectory(), baseRelativePath, _)).Distinct().ToArray();
 
         foreach (var configurationObject in types.All.Where(_ => _.HasAttribute<ConfigurationAttribute>()))
@@ -81,30 +85,31 @@ public static class ConfigurationHostBuilderExtensions
             var fileName = attribute.FileNameSet ? attribute.FileName : configurationObject.Name.ToLowerInvariant();
             fileName = Path.HasExtension(fileName) ? fileName : $"{fileName}.json";
 
+            var configurationBuilder = new ConfigurationBuilder();
+
             foreach (var searchPath in allSearchPaths)
             {
-                var path = Path.Combine(searchPath, fileName);
-                if (!File.Exists(path))
-                {
-                    continue;
-                }
-
-                logger?.BuildingConfigurationFor(configurationObject, fileName);
-                var configuration = new ConfigurationBuilder()
-                    .SetBasePath(searchPath)
-                    .AddJsonFile(fileName, attribute.Optional)
-                    .Build();
-
-                var configurationInstance = configuration.Get(configurationObject);
-                services.AddSingleton(configurationObject, configurationInstance);
-
-                var optionsType = typeof(IOptions<>).MakeGenericType(configurationObject);
-                var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObject);
-                var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationInstance });
-
-                services.AddSingleton(optionsType, optionsWrapperInstance!);
-                break;
+                logger?.AddingConfigurationFile(configurationObject, fileName);
+                var actualFile = Path.Combine(searchPath, fileName);
+                configurationBuilder.AddJsonFile(actualFile, true);
             }
+
+            var configuration = configurationBuilder.Build();
+            var configurationInstance = Activator.CreateInstance(configurationObject)!;
+            foreach (var property in configurationObject.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite && _.HasAttribute<ConfigurationValueResolverAttribute>()))
+            {
+                var resolverAttribute = property.GetCustomAttribute<ConfigurationValueResolverAttribute>()!;
+                var resolver = (Activator.CreateInstance(resolverAttribute.ResolverType) as IConfigurationValueResolver)!;
+                property.SetValue(configurationInstance, resolver.Resolve(configuration));
+            }
+            configuration.Bind(configurationInstance);
+            services.AddSingleton(configurationObject, configurationInstance);
+
+            var optionsType = typeof(IOptions<>).MakeGenericType(configurationObject);
+            var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObject);
+            var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationInstance });
+
+            services.AddSingleton(optionsType, optionsWrapperInstance!);
         }
 
         return services;

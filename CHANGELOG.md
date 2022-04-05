@@ -1,3 +1,73 @@
+# [v5.14.0] - 2022-3-30 [PR: #220](https://github.com/aksio-insurtech/Cratis/pull/220)
+
+### Added
+
+- Introduced a way to consume commands using React hooks - this is now then consistent with how we do queries.
+- Support for tracking changes to a command.
+- Adding a `CommandTracker` that can be used as an aggregation of commands to see if there are changes or not to any commands within it.
+
+
+# [v5.13.2] - 2022-3-15 [PR: #216](https://github.com/aksio-insurtech/Cratis/pull/216)
+
+### Fixed
+
+- Nullable annotation was in the wrong place for the proxy generator.
+
+
+# [v5.13.1] - 2022-3-15 [PR: #213](https://github.com/aksio-insurtech/Cratis/pull/213)
+
+### Fixed
+
+- Proxy generator now returns the correct underlying type for nullables and not `Nullable`.
+
+
+# [v5.13.0] - 2022-3-15 [PR: #212](https://github.com/aksio-insurtech/Cratis/pull/212)
+
+### Added
+
+- TS ProxyGenerator support for decimal -> number (#211)
+- TS ProxyGenerator support for nullables (#210)
+
+
+# [v5.12.0] - 2022-3-12 [PR: #209](https://github.com/aksio-insurtech/Cratis/pull/209)
+
+### Added
+
+- Added Elastic search reference, since we're using this ourselves as default supported log sink.
+- Lighting up the EventLog workbench to be able to see events in the event store.
+
+
+# [v5.11.2] - 2022-3-8 [PR: #206](https://github.com/aksio-insurtech/Cratis/pull/206)
+
+### Fixed
+
+- Fixing order of precedence for config files (#201).
+- Fixing `GetModelInstanceById()`of the Projection Grain to be in line with how the `ProjectionPipelineHandler`handles events. This rises technical debt for later; #205.
+
+# [v5.11.1] - 2022-3-2 [PR: #200](https://github.com/aksio-insurtech/Cratis/pull/200)
+
+### Fixed
+
+- Fixed type support in proxy generation. It was using `string` for C# types `DateTime`and `DateTimeOffset`, now it uses `Date`. 
+
+
+# [v5.11.0] - 2022-2-27 [PR: #197](https://github.com/aksio-insurtech/Cratis/pull/197)
+
+### Added
+
+- Configuration of cluster options supporting local, Azure Storage and ADO.NET for now. All done through a new `cluster.json` file. If the file is missing, localhost clustering is assumed for development purposes.
+- Adding a way to resolve configuration values that differ in type / implementation. See the docs for more details.
+
+
+# [v5.10.0] - 2022-2-24 [PR: #194](https://github.com/aksio-insurtech/Cratis/pull/194)
+
+### Added
+
+- Added support for easily ignore property naming conventions through using `[IgnoreConventions]` attribute.
+- Added ability to override model name for read models with the `[ModelName]` attribute. This is honored by the MongoDB collection name hookup and the Projection definitions. (rel. to. #165)
+
+
+
 # [v5.9.0] - 2022-2-23 [PR: #193](https://github.com/aksio-insurtech/Cratis/pull/193)
 
 ### Added

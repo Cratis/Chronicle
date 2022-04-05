@@ -27,10 +27,12 @@ public static class TypeSymbolExtensions
         { typeof(ulong).FullName!, new("number") },
         { typeof(float).FullName!, new("number") },
         { typeof(double).FullName!, new("number") },
-        { typeof(DateTime).FullName!, new("string") },
-        { typeof(DateTimeOffset).FullName!, new("string") },
+        { typeof(decimal).FullName!, new("number") },
+        { typeof(DateTime).FullName!, new("Date") },
+        { typeof(DateTimeOffset).FullName!, new("Date") },
         { typeof(Guid).FullName!, new("string") },
-        { "System.Text.Json.JsonDocument", new("string") }
+        { "System.Text.Json.Nodes", new("any") },
+        { "System.Text.Json.JsonDocument", new("any") }
     };
 
     /// <summary>
@@ -63,10 +65,12 @@ public static class TypeSymbolExtensions
         return properties.Select(_ =>
         {
             var returnType = _.GetMethod!.ReturnType;
+            var isNullable = returnType.NullableAnnotation == NullableAnnotation.Annotated;
             var descriptor = new PropertyDescriptor(
                 _.Name,
                 returnType.GetTypeScriptType(out var importStatements),
-                returnType.IsEnumerable());
+                returnType.IsEnumerable(),
+                isNullable);
 
             importStatements.ForEach(_ => allImportStatements.Add(_));
             return descriptor;
@@ -167,6 +171,11 @@ public static class TypeSymbolExtensions
         if (symbol is IArrayTypeSymbol arrayTypeSymbol)
         {
             symbol = arrayTypeSymbol.ElementType;
+        }
+
+        if (symbol.Name.Equals("Nullable", StringComparison.InvariantCulture) && symbol is INamedTypeSymbol namedTypeSymbol)
+        {
+            symbol = namedTypeSymbol.TypeArguments[0];
         }
 
         return $"{symbol.ContainingNamespace.ToDisplayString()}.{symbol.Name}";

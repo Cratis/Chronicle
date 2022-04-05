@@ -11,6 +11,7 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Extensions.Orleans.Configuration;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
@@ -119,7 +120,7 @@ public class ClientBuilder : IClientBuilder
         {
             logger?.ConfiguringKernelConnection();
             var orleansBuilder = new OrleansClientBuilder()
-                .UseLocalhostClustering()
+                .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
                 .AddEventLogStream()
                 .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider)
                 .UseExecutionContext()

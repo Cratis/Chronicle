@@ -74,6 +74,7 @@ public static class MongoDBReadModels
                 modelName = readModelType.Name.Pluralize();
                 modelName = modelName.ToCamelCase();
             }
+
             logger?.AddingMongoDBCollectionBinding(readModelType, modelName);
             services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
             {

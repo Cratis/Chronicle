@@ -11,6 +11,10 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
+        <PackageReference Include="System.Data.SqlClient" Version="$(SqlDataClient)" />
+        <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
     </ItemGroup>
 
 </Project>

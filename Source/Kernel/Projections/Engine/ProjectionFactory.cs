@@ -78,7 +78,7 @@ public class ProjectionFactory : IProjectionFactory
             child.SetParent(projection);
             eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
         }
-        projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType));
+        projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType).ToArray());
 
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {

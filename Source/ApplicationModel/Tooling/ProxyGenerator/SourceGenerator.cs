@@ -80,12 +80,14 @@ public class SourceGenerator : ISourceGenerator
             var importStatements = new HashSet<ImportStatement>();
             foreach (var parameter in commandMethod.Parameters)
             {
+                var isNullable = parameter.Type.NullableAnnotation == NullableAnnotation.Annotated;
                 if (parameter.Type.IsKnownType())
                 {
                     properties.Add(new(
                         parameter.Name,
                         parameter.Type.GetTypeScriptType(out var additionalImportStatements),
-                        parameter.Type.IsEnumerable()
+                        parameter.Type.IsEnumerable(),
+                        isNullable
                     ));
                     additionalImportStatements.ForEach(_ => importStatements.Add(_));
                 }
@@ -236,20 +238,24 @@ public class SourceGenerator : ISourceGenerator
             var targetType = property.Type.GetTypeScriptType(out var additionalImportStatements);
             additionalImportStatements.ForEach(_ => typeImportStatements.Add(_));
             var isEnumerable = property.Type.IsEnumerable();
+            var isNullable = property.Type.NullableAnnotation == NullableAnnotation.Annotated;
             if (targetType == TypeSymbolExtensions.AnyType)
             {
                 var actualType = property.Type;
                 if (isEnumerable)
                 {
-                    actualType = ((INamedTypeSymbol)property.Type).TypeArguments[0];
+                    var namedType = (INamedTypeSymbol)property.Type;
+                    if (namedType.TypeArguments != default && namedType.TypeArguments.Length > 0)
+                    {
+                        actualType = ((INamedTypeSymbol)property.Type).TypeArguments[0];
+                    }
                 }
                 OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
-
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, isEnumerable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, isEnumerable, isNullable));
             }
             else
             {
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType, isEnumerable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType, isEnumerable, isNullable));
             }
         }
 

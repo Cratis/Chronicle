@@ -11,38 +11,54 @@ import {
 
 import { default as styles } from './EventList.module.scss';
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
+import { AppendedEvent } from 'API/events/store/log/AppendedEvent';
+import { EventType } from 'API/events/types/EventType';
 
 export type EventSelected = (item: any) => void;
 
 export interface EventListProps {
     items: any[];
+    eventTypes: EventType[];
     onEventSelected?: EventSelected;
 }
 
-const eventListColumns: IColumn[] = [
-
-    {
-        key: 'sequence',
-        name: 'Sequence',
-        fieldName: 'sequence',
-        minWidth: 100,
-        maxWidth: 100
-    },
-    {
-        key: 'name',
-        name: 'Name',
-        fieldName: 'name',
-        minWidth: 200
-    },
-    {
-        key: 'occurred',
-        name: 'Occurred',
-        fieldName: 'occurred',
-        minWidth: 300
-    }
-];
-
 export const EventList = (props: EventListProps) => {
+    const eventListColumns: IColumn[] = [
+
+        {
+            key: 'sequence',
+            name: 'Sequence',
+            minWidth: 100,
+            maxWidth: 100,
+            onRender: (item: AppendedEvent) => {
+                return (
+                    <span>{item.metadata.sequenceNumber}</span>
+                );
+            }
+        },
+        {
+            key: 'name',
+            name: 'Name',
+            minWidth: 200,
+            onRender: (item: AppendedEvent) => {
+                const eventType = props.eventTypes.find(_ => _.identifier == item.metadata.type.id);
+                return (
+                    <span>{eventType?.name || '[n/a]'}</span>
+                );
+            }
+        },
+        {
+            key: 'occurred',
+            name: 'Occurred',
+            minWidth: 300,
+            onRender: (item: AppendedEvent) => {
+                return (
+                    <span>{new Date(item.context.occurred).toLocaleString()}</span>
+                );
+            }
+        }
+    ];
+
     const selection = useMemo(
         () => new Selection({
             selectionMode: SelectionMode.single,
