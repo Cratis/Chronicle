@@ -5,23 +5,22 @@ using Aksio.Cratis.Applications.Commands;
 using Aksio.Cratis.Applications.Queries;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+/// <summary>
+/// Extension methods for working with <see cref="MvcOptions"/>.
+/// </summary>
+public static class MvcOptionsExtensions
 {
     /// <summary>
-    /// Extension methods for working with <see cref="MvcOptions"/>.
+    /// Add CQRS setup.
     /// </summary>
-    public static class MvcOptionsExtensions
+    /// <param name="options"><see cref="MvcOptions"/> to build on.</param>
+    /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
+    public static MvcOptions AddCQRS(this MvcOptions options)
     {
-        /// <summary>
-        /// Add CQRS setup.
-        /// </summary>
-        /// <param name="options"><see cref="MvcOptions"/> to build on.</param>
-        /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
-        public static MvcOptions AddCQRS(this MvcOptions options)
-        {
-            options.Filters.Add<CommandActionFilter>();
-            options.Filters.Add<QueryActionFilter>();
-            return options;
-        }
+        options.Filters.Add<CommandActionFilter>();
+        options.Filters.Add<QueryActionFilter>();
+        return options;
     }
 }

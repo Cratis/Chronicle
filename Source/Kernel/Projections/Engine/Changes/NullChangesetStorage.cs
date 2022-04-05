@@ -6,14 +6,13 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Events.Projections.Changes
+namespace Aksio.Cratis.Events.Projections.Changes;
+
+/// <summary>
+/// Represents a null <see cref="IChangesetStorage"/> that does nothing.
+/// </summary>
+public class NullChangesetStorage : IChangesetStorage
 {
-    /// <summary>
-    /// Represents a null <see cref="IChangesetStorage"/> that does nothing.
-    /// </summary>
-    public class NullChangesetStorage : IChangesetStorage
-    {
-        /// <inheritdoc/>
-        public Task Save(CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> associatedChangeset) => Task.CompletedTask;
-    }
+    /// <inheritdoc/>
+    public Task Save(CorrelationId correlationId, IChangeset<AppendedEvent, ExpandoObject> associatedChangeset) => Task.CompletedTask;
 }

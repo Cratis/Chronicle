@@ -4,21 +4,20 @@
 using Aksio.Cratis.Extensions.MongoDB;
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Cratis.Compliance.MongoDB
+namespace Aksio.Cratis.Compliance.MongoDB;
+
+/// <summary>
+/// Represents a class map for <see cref="EncryptionKeyForIdentifier"/>.
+/// </summary>
+public class EncryptionKeyForIdentifierClassMap : IBsonClassMapFor<EncryptionKeyForIdentifier>
 {
-    /// <summary>
-    /// Represents a class map for <see cref="EncryptionKeyForIdentifier"/>.
-    /// </summary>
-    public class EncryptionKeyForIdentifierClassMap : IBsonClassMapFor<EncryptionKeyForIdentifier>
+    /// <inheritdoc/>
+    public void Configure(BsonClassMap<EncryptionKeyForIdentifier> classMap)
     {
-        /// <inheritdoc/>
-        public void Configure(BsonClassMap<EncryptionKeyForIdentifier> classMap)
-        {
-            classMap.AutoMap();
-            classMap.MapIdProperty(_ => _.Identifier);
-            var serializer = new EncryptionKeySerializer();
-            classMap.MapField(_ => _.PublicKey).SetSerializer(serializer);
-            classMap.MapField(_ => _.PrivateKey).SetSerializer(serializer);
-        }
+        classMap.AutoMap();
+        classMap.MapIdProperty(_ => _.Identifier);
+        var serializer = new EncryptionKeySerializer();
+        classMap.MapField(_ => _.PublicKey).SetSerializer(serializer);
+        classMap.MapField(_ => _.PrivateKey).SetSerializer(serializer);
     }
 }

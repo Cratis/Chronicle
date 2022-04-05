@@ -4,8 +4,7 @@
 using Aksio.Cratis.Compliance.Concepts.PersonalInformation;
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Compliance.Events
-{
-    [EventType("12b88453-12c9-4f99-a60c-abb21282aede")]
-    public record PersonRegistered(FirstName FirstName, LastName LastName, SocialSecurityNumber SocialSecurityNumber);
-}
+namespace Aksio.Cratis.Compliance.Events;
+
+[EventType("12b88453-12c9-4f99-a60c-abb21282aede")]
+public record PersonRegistered(FirstName FirstName, LastName LastName, SocialSecurityNumber SocialSecurityNumber);

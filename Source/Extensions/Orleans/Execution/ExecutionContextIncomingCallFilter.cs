@@ -4,36 +4,35 @@
 using Aksio.Cratis.Execution;
 using Orleans;
 
-namespace Aksio.Cratis.Extensions.Orleans.Execution
+namespace Aksio.Cratis.Extensions.Orleans.Execution;
+
+/// <summary>
+/// Represents an Orleans <see cref="IIncomingGrainCallFilter">grain call filter</see> that establishes
+/// the correct <see cref="ExecutionContext"/> based on values on the request context.
+/// </summary>
+public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
 {
+    readonly IRequestContextManager _requestContextManager;
+
     /// <summary>
-    /// Represents an Orleans <see cref="IIncomingGrainCallFilter">grain call filter</see> that establishes
-    /// the correct <see cref="ExecutionContext"/> based on values on the request context.
+    /// Initializes a new instance of the <see cref="ExecutionContextIncomingCallFilter"/> class.
     /// </summary>
-    public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
+    /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with state in requests.</param>
+    public ExecutionContextIncomingCallFilter(IRequestContextManager requestContextManager)
     {
-        readonly IRequestContextManager _requestContextManager;
+        _requestContextManager = requestContextManager;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExecutionContextIncomingCallFilter"/> class.
-        /// </summary>
-        /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with state in requests.</param>
-        public ExecutionContextIncomingCallFilter(IRequestContextManager requestContextManager)
+    /// <inheritdoc/>
+    public async Task Invoke(IIncomingGrainCallContext context)
+    {
+        var tenantId = _requestContextManager.Get(RequestContextKeys.TenantId);
+        if (tenantId != null)
         {
-            _requestContextManager = requestContextManager;
+            var correlationId = _requestContextManager.Get(RequestContextKeys.CorrelationId) ?? "[N/A]";
+            ExecutionContextManager.SetCurrent(new ExecutionContext(tenantId!.ToString()!, correlationId!.ToString()!, string.Empty, Guid.Empty));
         }
 
-        /// <inheritdoc/>
-        public async Task Invoke(IIncomingGrainCallContext context)
-        {
-            var tenantId = _requestContextManager.Get(RequestContextKeys.TenantId);
-            if (tenantId != null)
-            {
-                var correlationId = _requestContextManager.Get(RequestContextKeys.CorrelationId) ?? "[N/A]";
-                ExecutionContextManager.SetCurrent(new ExecutionContext(tenantId!.ToString()!, correlationId!.ToString()!, string.Empty, Guid.Empty));
-            }
-
-            await context.Invoke();
-        }
+        await context.Invoke();
     }
 }

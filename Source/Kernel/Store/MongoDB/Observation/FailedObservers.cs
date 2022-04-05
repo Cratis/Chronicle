@@ -4,27 +4,26 @@
 using Aksio.Cratis.Events.Store.Observation;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Observation
+namespace Aksio.Cratis.Events.Store.MongoDB.Observation;
+
+/// <summary>
+/// Represents an implementation of <see cref="IFailedObservers"/>.
+/// </summary>
+public class FailedObservers : IFailedObservers
 {
+    readonly IEventStoreDatabase _eventStoreDatabase;
+
+    IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
+
     /// <summary>
-    /// Represents an implementation of <see cref="IFailedObservers"/>.
+    /// Initializes a new instance of the <see cref="FailedObservers"/> class.
     /// </summary>
-    public class FailedObservers : IFailedObservers
+    /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to work with.</param>
+    public FailedObservers(IEventStoreDatabase eventStoreDatabase)
     {
-        readonly IEventStoreDatabase _eventStoreDatabase;
-
-        IMongoCollection<FailedObserverState> Collection => _eventStoreDatabase.GetCollection<FailedObserverState>(CollectionNames.FailedObservers);
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FailedObservers"/> class.
-        /// </summary>
-        /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to work with.</param>
-        public FailedObservers(IEventStoreDatabase eventStoreDatabase)
-        {
-            _eventStoreDatabase = eventStoreDatabase;
-        }
-
-        /// <inheritdoc/>
-        public async Task<IEnumerable<FailedObserverState>> GetAll() => (await Collection.FindAsync(FilterDefinition<FailedObserverState>.Empty)).ToList();
+        _eventStoreDatabase = eventStoreDatabase;
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<FailedObserverState>> GetAll() => (await Collection.FindAsync(FilterDefinition<FailedObserverState>.Empty)).ToList();
 }

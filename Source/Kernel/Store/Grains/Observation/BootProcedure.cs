@@ -4,29 +4,28 @@
 using Aksio.Cratis.Boot;
 using Orleans;
 
-namespace Aksio.Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation;
+
+/// <summary>
+/// Represents a <see cref="IPerformBootProcedure"/> for the event store.
+/// </summary>
+public class BootProcedure : IPerformBootProcedure
 {
+    readonly IGrainFactory _grainFactory;
+
     /// <summary>
-    /// Represents a <see cref="IPerformBootProcedure"/> for the event store.
+    /// Initializes a new instance of the <see cref="BootProcedure"/> class.
     /// </summary>
-    public class BootProcedure : IPerformBootProcedure
+    /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
+    public BootProcedure(IGrainFactory grainFactory)
     {
-        readonly IGrainFactory _grainFactory;
+        _grainFactory = grainFactory;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BootProcedure"/> class.
-        /// </summary>
-        /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
-        public BootProcedure(IGrainFactory grainFactory)
-        {
-            _grainFactory = grainFactory;
-        }
-
-        /// <inheritdoc/>
-        public void Perform()
-        {
-            var observers = _grainFactory.GetGrain<IObservers>(Guid.Empty);
-            observers.RetryFailed();
-        }
+    /// <inheritdoc/>
+    public void Perform()
+    {
+        var observers = _grainFactory.GetGrain<IObservers>(Guid.Empty);
+        observers.RetryFailed();
     }
 }

@@ -3,19 +3,18 @@
 
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.MongoDB
+namespace Aksio.Cratis.MongoDB;
+
+/// <summary>
+/// Defines the common database for event store that goes across all tenants.
+/// </summary>
+public interface ISharedDatabase
 {
     /// <summary>
-    /// Defines the common database for event store that goes across all tenants.
+    /// Gets a <see cref="IMongoCollection{T}"/> for a specific type of document.
     /// </summary>
-    public interface ISharedDatabase
-    {
-        /// <summary>
-        /// Gets a <see cref="IMongoCollection{T}"/> for a specific type of document.
-        /// </summary>
-        /// <param name="collectionName">Optional name of collection.</param>
-        /// <typeparam name="T">Type of document.</typeparam>
-        /// <returns><see cref="IMongoCollection{T}"/> instance.</returns>
-        IMongoCollection<T> GetCollection<T>(string? collectionName = null);
-    }
+    /// <param name="collectionName">Optional name of collection.</param>
+    /// <typeparam name="T">Type of document.</typeparam>
+    /// <returns><see cref="IMongoCollection{T}"/> instance.</returns>
+    IMongoCollection<T> GetCollection<T>(string? collectionName = null);
 }

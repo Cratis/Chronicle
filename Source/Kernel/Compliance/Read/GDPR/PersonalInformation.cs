@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Compliance.Concepts.PersonalInformation;
 
-namespace Aksio.Cratis.Compliance.Read.GDPR
-{
-    public record PersonalInformation(PersonalInformationId Identifier, PersonalInformationType Type, PersonalInformationValue Value);
-}
+namespace Aksio.Cratis.Compliance.Read.GDPR;
+
+public record PersonalInformation(PersonalInformationId Identifier, PersonalInformationType Type, PersonalInformationValue Value);

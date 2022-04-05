@@ -4,42 +4,41 @@
 using System.Collections.Concurrent;
 using Aksio.Cratis.Types;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Represents an implementation of <see cref="IProjectionResultStoreFactory"/>.
+/// </summary>
+public class ProjectionResultStores : IProjectionResultStores
 {
+    record Key(ProjectionResultStoreTypeId TypeId, Model Model);
+
+    readonly IDictionary<ProjectionResultStoreTypeId, IProjectionResultStoreFactory> _factories;
+    readonly ConcurrentDictionary<Key, IProjectionResultStore> _stores = new();
+
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionResultStoreFactory"/>.
+    /// Initializes a new instance of the <see cref="ProjectionResultStores"/> class.
     /// </summary>
-    public class ProjectionResultStores : IProjectionResultStores
+    /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="IProjectionResultStoreFactory"/>.</param>
+    public ProjectionResultStores(IInstancesOf<IProjectionResultStoreFactory> stores)
     {
-        record Key(ProjectionResultStoreTypeId TypeId, Model Model);
+        _factories = stores.ToDictionary(_ => _.TypeId, _ => _);
+    }
 
-        readonly IDictionary<ProjectionResultStoreTypeId, IProjectionResultStoreFactory> _factories;
-        readonly ConcurrentDictionary<Key, IProjectionResultStore> _stores = new();
+    /// <inheritdoc/>
+    public IProjectionResultStore GetForTypeAndModel(ProjectionResultStoreTypeId typeId, Model model)
+    {
+        ThrowIfUnknownProjectionResultStore(typeId);
+        var key = new Key(typeId, model);
+        if (_stores.ContainsKey(key)) return _stores[key];
+        return _stores[key] = _factories[typeId].CreateFor(model);
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProjectionResultStores"/> class.
-        /// </summary>
-        /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="IProjectionResultStoreFactory"/>.</param>
-        public ProjectionResultStores(IInstancesOf<IProjectionResultStoreFactory> stores)
-        {
-            _factories = stores.ToDictionary(_ => _.TypeId, _ => _);
-        }
+    /// <inheritdoc/>
+    public bool HasType(ProjectionResultStoreTypeId typeId) => _factories.ContainsKey(typeId);
 
-        /// <inheritdoc/>
-        public IProjectionResultStore GetForTypeAndModel(ProjectionResultStoreTypeId typeId, Model model)
-        {
-            ThrowIfUnknownProjectionResultStore(typeId);
-            var key = new Key(typeId, model);
-            if (_stores.ContainsKey(key)) return _stores[key];
-            return _stores[key] = _factories[typeId].CreateFor(model);
-        }
-
-        /// <inheritdoc/>
-        public bool HasType(ProjectionResultStoreTypeId typeId) => _factories.ContainsKey(typeId);
-
-        void ThrowIfUnknownProjectionResultStore(ProjectionResultStoreTypeId typeId)
-        {
-            if (!HasType(typeId)) throw new UnknownProjectionResultStore(typeId);
-        }
+    void ThrowIfUnknownProjectionResultStore(ProjectionResultStoreTypeId typeId)
+    {
+        if (!HasType(typeId)) throw new UnknownProjectionResultStore(typeId);
     }
 }

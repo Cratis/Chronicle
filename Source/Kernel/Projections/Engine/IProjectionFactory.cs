@@ -3,18 +3,17 @@
 
 using Aksio.Cratis.Events.Projections.Definitions;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Defines a factory for creating <see cref="IProjection"/>.
+/// </summary>
+public interface IProjectionFactory
 {
     /// <summary>
-    /// Defines a factory for creating <see cref="IProjection"/>.
+    /// Create a <see cref="IProjection"/> from a <see cref="ProjectionDefinition"/>.
     /// </summary>
-    public interface IProjectionFactory
-    {
-        /// <summary>
-        /// Create a <see cref="IProjection"/> from a <see cref="ProjectionDefinition"/>.
-        /// </summary>
-        /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
-        /// <returns>A new <see cref="IProjection"/> instance.</returns>
-        Task<IProjection> CreateFrom(ProjectionDefinition definition);
-    }
+    /// <param name="definition"><see cref="ProjectionDefinition"/> to create from.</param>
+    /// <returns>A new <see cref="IProjection"/> instance.</returns>
+    Task<IProjection> CreateFrom(ProjectionDefinition definition);
 }

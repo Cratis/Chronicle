@@ -3,21 +3,20 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Reflection
+namespace Aksio.Cratis.Reflection;
+
+/// <summary>
+/// Provides a set of methods for working with <see cref="PropertyInfo"/>.
+/// </summary>
+public static class PropertyExtensions
 {
     /// <summary>
-    /// Provides a set of methods for working with <see cref="PropertyInfo"/>.
+    /// Check if a type has an attribute associated with it.
     /// </summary>
-    public static class PropertyExtensions
-    {
-        /// <summary>
-        /// Check if a type has an attribute associated with it.
-        /// </summary>
-        /// <typeparam name="T">Attribute type to check for.</typeparam>
-        /// <param name="property"><see cref="PropertyInfo"/> to check.</param>
-        /// <returns>True if there is an attribute, false if not.</returns>
-        public static bool HasAttribute<T>(this PropertyInfo property)
-            where T : Attribute
-            => property.GetCustomAttribute<T>() != default;
-    }
+    /// <typeparam name="T">Attribute type to check for.</typeparam>
+    /// <param name="property"><see cref="PropertyInfo"/> to check.</param>
+    /// <returns>True if there is an attribute, false if not.</returns>
+    public static bool HasAttribute<T>(this PropertyInfo property)
+        where T : Attribute
+        => property.GetCustomAttribute<T>() != default;
 }

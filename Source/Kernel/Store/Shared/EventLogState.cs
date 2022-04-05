@@ -3,21 +3,20 @@
 
 #nullable disable
 
-namespace Aksio.Cratis.Events.Store
+namespace Aksio.Cratis.Events.Store;
+
+/// <summary>
+/// Represents the state used by the event log. This state is meant to be per event log instance.
+/// </summary>
+public class EventLogState
 {
     /// <summary>
-    /// Represents the state used by the event log. This state is meant to be per event log instance.
+    /// The name of the storage provider used for working with this type of state.
     /// </summary>
-    public class EventLogState
-    {
-        /// <summary>
-        /// The name of the storage provider used for working with this type of state.
-        /// </summary>
-        public const string StorageProvider = "event-log-state";
+    public const string StorageProvider = "event-log-state";
 
-        /// <summary>
-        /// Gets or sets the next sequencenumber (tail).
-        /// </summary>
-        public EventLogSequenceNumber SequenceNumber { get; set; } = EventLogSequenceNumber.First;
-    }
+    /// <summary>
+    /// Gets or sets the next sequencenumber (tail).
+    /// </summary>
+    public EventLogSequenceNumber SequenceNumber { get; set; } = EventLogSequenceNumber.First;
 }

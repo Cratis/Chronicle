@@ -3,14 +3,13 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
+
+/// <summary>
+/// Holds log messages for <see cref="Catchup"/>.
+/// </summary>
+public static partial class CatchupLogMessages
 {
-    /// <summary>
-    /// Holds log messages for <see cref="Catchup"/>.
-    /// </summary>
-    public static partial class CatchupLogMessages
-    {
-        [LoggerMessage(0, LogLevel.Debug, "Catching up projection '{Projection}' for result store configuration '{ConfigurationId}'")]
-        internal static partial void CatchingUp(this ILogger logger, ProjectionId projection, ProjectionResultStoreConfigurationId configurationId);
-    }
+    [LoggerMessage(0, LogLevel.Debug, "Catching up projection '{Projection}' for result store configuration '{ConfigurationId}'")]
+    internal static partial void CatchingUp(this ILogger logger, ProjectionId projection, ProjectionResultStoreConfigurationId configurationId);
 }

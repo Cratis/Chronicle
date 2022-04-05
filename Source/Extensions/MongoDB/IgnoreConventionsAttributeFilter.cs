@@ -3,26 +3,25 @@
 
 using MongoDB.Bson.Serialization.Conventions;
 
-namespace Aksio.Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB;
+
+/// <summary>
+/// Represents an implementation of <see cref="ICanFilterMongoDBConventionPacksForType"/> for filtering based on <see cref="IgnoreConventionsAttribute"/>.
+/// </summary>
+public class IgnoreConventionsAttributeFilter : ICanFilterMongoDBConventionPacksForType
 {
-    /// <summary>
-    /// Represents an implementation of <see cref="ICanFilterMongoDBConventionPacksForType"/> for filtering based on <see cref="IgnoreConventionsAttribute"/>.
-    /// </summary>
-    public class IgnoreConventionsAttributeFilter : ICanFilterMongoDBConventionPacksForType
+    /// <inheritdoc/>
+    public bool ShouldInclude(string conventionPackName, IConventionPack conventionPack, Type type)
     {
-        /// <inheritdoc/>
-        public bool ShouldInclude(string conventionPackName, IConventionPack conventionPack, Type type)
+        var attributes = type.GetCustomAttributes(typeof(IgnoreConventionsAttribute), false) as IgnoreConventionsAttribute[];
+        if (attributes?.Length > 0)
         {
-            var attributes = type.GetCustomAttributes(typeof(IgnoreConventionsAttribute), false) as IgnoreConventionsAttribute[];
-            if (attributes?.Length > 0)
+            foreach (var attribute in attributes)
             {
-                foreach (var attribute in attributes)
-                {
-                    if (attribute.IgnoreAll) return false;
-                    if (attribute.ConventionPacks.Contains(conventionPackName)) return false;
-                }
+                if (attribute.IgnoreAll) return false;
+                if (attribute.ConventionPacks.Contains(conventionPackName)) return false;
             }
-            return true;
         }
+        return true;
     }
 }

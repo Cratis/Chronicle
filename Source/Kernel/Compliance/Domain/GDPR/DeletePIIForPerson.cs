@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Compliance.Concepts.PersonalInformation;
 
-namespace Aksio.Cratis.Compliance.Domain.GDPR
-{
-    public record DeletePIIForPerson(PersonId PersonId);
-}
+namespace Aksio.Cratis.Compliance.Domain.GDPR;
+
+public record DeletePIIForPerson(PersonId PersonId);

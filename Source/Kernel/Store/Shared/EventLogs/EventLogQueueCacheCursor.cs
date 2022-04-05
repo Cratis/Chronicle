@@ -5,108 +5,107 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.EventLogs
+namespace Aksio.Cratis.Events.Store.EventLogs;
+
+/// <summary>
+/// Represents an implementation of <see cref="IQueueCacheCursor"/> for MongoDB event log.
+/// </summary>
+public class EventLogQueueCacheCursor : IQueueCacheCursor
 {
+    readonly IExecutionContextManager _executionContextManager;
+    readonly IEventLogStorageProvider _eventLogStorageProvider;
+    readonly IStreamIdentity _streamIdentity;
+    readonly IEnumerable<EventType> _eventTypes;
+    readonly EventSourceId? _partition;
+    IEventCursor? _cursor;
+
     /// <summary>
-    /// Represents an implementation of <see cref="IQueueCacheCursor"/> for MongoDB event log.
+    /// Initializes a new instance of the <see cref="EventLogQueueCacheCursor"/>.
     /// </summary>
-    public class EventLogQueueCacheCursor : IQueueCacheCursor
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
+    /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
+    /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
+    /// <param name="eventTypes">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
+    /// <param name="partition">Optional <see cref="EventSourceId"/> partition to filter for.</param>
+    public EventLogQueueCacheCursor(
+        IExecutionContextManager executionContextManager,
+        IEventLogStorageProvider eventLogStorageProvider,
+        IStreamIdentity streamIdentity,
+        StreamSequenceToken token,
+        IEnumerable<EventType>? eventTypes = default,
+        EventSourceId? partition = default)
     {
-        readonly IExecutionContextManager _executionContextManager;
-        readonly IEventLogStorageProvider _eventLogStorageProvider;
-        readonly IStreamIdentity _streamIdentity;
-        readonly IEnumerable<EventType> _eventTypes;
-        readonly EventSourceId? _partition;
-        IEventCursor? _cursor;
+        _executionContextManager = executionContextManager;
+        _eventLogStorageProvider = eventLogStorageProvider;
+        _streamIdentity = streamIdentity;
+        _eventTypes = eventTypes ?? Array.Empty<EventType>();
+        _partition = partition;
+        FindEventsFrom(token);
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EventLogQueueCacheCursor"/>.
-        /// </summary>
-        /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-        /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
-        /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
-        /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
-        /// <param name="eventTypes">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
-        /// <param name="partition">Optional <see cref="EventSourceId"/> partition to filter for.</param>
-        public EventLogQueueCacheCursor(
-            IExecutionContextManager executionContextManager,
-            IEventLogStorageProvider eventLogStorageProvider,
-            IStreamIdentity streamIdentity,
-            StreamSequenceToken token,
-            IEnumerable<EventType>? eventTypes = default,
-            EventSourceId? partition = default)
+    /// <inheritdoc/>
+    public IBatchContainer GetCurrent(out Exception exception)
+    {
+        exception = null!;
+        if (_cursor == null) return null!;
+
+        try
         {
-            _executionContextManager = executionContextManager;
-            _eventLogStorageProvider = eventLogStorageProvider;
-            _streamIdentity = streamIdentity;
-            _eventTypes = eventTypes ?? Array.Empty<EventType>();
-            _partition = partition;
-            FindEventsFrom(token);
-        }
-
-        /// <inheritdoc/>
-        public IBatchContainer GetCurrent(out Exception exception)
-        {
-            exception = null!;
-            if (_cursor == null) return null!;
-
-            try
+            var appendedEvents = _cursor.Current.ToArray();
+            if (appendedEvents.Length == 0)
             {
-                var appendedEvents = _cursor.Current.ToArray();
-                if (appendedEvents.Length == 0)
-                {
-                    return null!;
-                }
-
-                return new EventLogBatchContainer(
-                    appendedEvents,
-                    _streamIdentity.Guid,
-                    _streamIdentity.Namespace,
-                    new Dictionary<string, object> { { RequestContextKeys.TenantId, _streamIdentity.Namespace } });
-            }
-            catch (Exception ex)
-            {
-                exception = ex;
+                return null!;
             }
 
-            return null!;
+            return new EventLogBatchContainer(
+                appendedEvents,
+                _streamIdentity.Guid,
+                _streamIdentity.Namespace,
+                new Dictionary<string, object> { { RequestContextKeys.TenantId, _streamIdentity.Namespace } });
         }
-
-        /// <inheritdoc/>
-        public bool MoveNext()
+        catch (Exception ex)
         {
-            if (_cursor is null) return false;
-
-            var task = _cursor.MoveNext();
-            task.Wait();
-            return task.Result;
+            exception = ex;
         }
 
-        /// <inheritdoc/>
-        public void RecordDeliveryFailure()
-        {
-        }
+        return null!;
+    }
 
-        /// <inheritdoc/>
-        public void Refresh(StreamSequenceToken token)
-        {
-            FindEventsFrom(token);
-        }
+    /// <inheritdoc/>
+    public bool MoveNext()
+    {
+        if (_cursor is null) return false;
 
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            _cursor?.Dispose();
-            _cursor = null!;
-        }
+        var task = _cursor.MoveNext();
+        task.Wait();
+        return task.Result;
+    }
 
-        void FindEventsFrom(StreamSequenceToken token)
-        {
-            TenantId tenantId = _streamIdentity.Namespace;
-            _executionContextManager.Establish(tenantId, CorrelationId.New());
-            var task = _eventLogStorageProvider.GetFromSequenceNumber((ulong)token.SequenceNumber, _partition, _eventTypes);
-            task.Wait();
-            _cursor = task.Result;
-        }
+    /// <inheritdoc/>
+    public void RecordDeliveryFailure()
+    {
+    }
+
+    /// <inheritdoc/>
+    public void Refresh(StreamSequenceToken token)
+    {
+        FindEventsFrom(token);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _cursor?.Dispose();
+        _cursor = null!;
+    }
+
+    void FindEventsFrom(StreamSequenceToken token)
+    {
+        TenantId tenantId = _streamIdentity.Namespace;
+        _executionContextManager.Establish(tenantId, CorrelationId.New());
+        var task = _eventLogStorageProvider.GetFromSequenceNumber((ulong)token.SequenceNumber, _partition, _eventTypes);
+        task.Wait();
+        _cursor = task.Result;
     }
 }

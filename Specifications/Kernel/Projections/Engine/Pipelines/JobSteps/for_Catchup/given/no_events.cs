@@ -3,15 +3,14 @@
 
 using Aksio.Cratis.Events.Store;
 
-namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given
+namespace Aksio.Cratis.Events.Projections.Pipelines.JobSteps.for_Catchup.given;
+
+public class no_events : a_catchup_step
 {
-    public class no_events : a_catchup_step
+    void Establish()
     {
-        void Establish()
-        {
-            var cursor = new Mock<IEventCursor>();
-            cursor.Setup(_ => _.MoveNext()).Returns(Task.FromResult(false));
-            provider.Setup(_ => _.GetFromSequenceNumber(projection.Object, IsAny<EventLogSequenceNumber>())).Returns(Task.FromResult(cursor.Object));
-        }
+        var cursor = new Mock<IEventCursor>();
+        cursor.Setup(_ => _.MoveNext()).Returns(Task.FromResult(false));
+        provider.Setup(_ => _.GetFromSequenceNumber(projection.Object, IsAny<EventLogSequenceNumber>())).Returns(Task.FromResult(cursor.Object));
     }
 }

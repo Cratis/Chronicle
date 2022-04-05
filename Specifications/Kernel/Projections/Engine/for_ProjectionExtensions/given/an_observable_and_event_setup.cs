@@ -8,28 +8,27 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given
+namespace Aksio.Cratis.Events.Projections.for_ProjectionExtensions.given;
+
+public class an_observable_and_event_setup : Specification
 {
-    public class an_observable_and_event_setup : Specification
+    protected Subject<ProjectionEventContext> observable;
+    protected List<ProjectionEventContext> received = new();
+    protected ProjectionEventContext event_context;
+    protected AppendedEvent @event;
+    protected Mock<IChangeset<AppendedEvent, ExpandoObject>> changeset;
+    protected ExpandoObject initial_state;
+
+    void Establish()
     {
-        protected Subject<ProjectionEventContext> observable;
-        protected List<ProjectionEventContext> received = new();
-        protected ProjectionEventContext event_context;
-        protected AppendedEvent @event;
-        protected Mock<IChangeset<AppendedEvent, ExpandoObject>> changeset;
-        protected ExpandoObject initial_state;
+        observable = new();
 
-        void Establish()
-        {
-            observable = new();
+        @event = new(new(1, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
+        initial_state = new();
+        changeset = new();
+        changeset.SetupGet(_ => _.InitialState).Returns(initial_state);
+        changeset.SetupGet(_ => _.Incoming).Returns(@event);
 
-            @event = new(new(1, new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)), new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", DateTimeOffset.UtcNow), new JsonObject());
-            initial_state = new();
-            changeset = new();
-            changeset.SetupGet(_ => _.InitialState).Returns(initial_state);
-            changeset.SetupGet(_ => _.Incoming).Returns(@event);
-
-            event_context = new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset.Object);
-        }
+        event_context = new(new(@event.Context.EventSourceId, ArrayIndexers.NoIndexers), @event, changeset.Object);
     }
 }

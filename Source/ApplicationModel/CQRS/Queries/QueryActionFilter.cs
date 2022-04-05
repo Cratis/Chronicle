@@ -6,57 +6,56 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Applications.Queries
+namespace Aksio.Cratis.Applications.Queries;
+
+/// <summary>
+/// Represents a <see cref="IAsyncActionFilter"/> for providing a proper <see cref="QueryResult"/> for post actions.
+/// </summary>
+public class QueryActionFilter : IAsyncActionFilter
 {
+    readonly JsonOptions _options;
+
     /// <summary>
-    /// Represents a <see cref="IAsyncActionFilter"/> for providing a proper <see cref="QueryResult"/> for post actions.
+    /// Initializes a new instance of the <see cref="QueryActionFilter"/> class.
     /// </summary>
-    public class QueryActionFilter : IAsyncActionFilter
+    /// <param name="options"><see cref="JsonOptions"/>.</param>
+    public QueryActionFilter(IOptions<JsonOptions> options)
     {
-        readonly JsonOptions _options;
+        _options = options.Value;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="QueryActionFilter"/> class.
-        /// </summary>
-        /// <param name="options"><see cref="JsonOptions"/>.</param>
-        public QueryActionFilter(IOptions<JsonOptions> options)
+    /// <inheritdoc/>
+    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    {
+        if (context.HttpContext.Request.Method == HttpMethod.Get.Method
+            && context.ActionDescriptor is ControllerActionDescriptor)
         {
-            _options = options.Value;
-        }
-
-        /// <inheritdoc/>
-        public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
-        {
-            if (context.HttpContext.Request.Method == HttpMethod.Get.Method
-                && context.ActionDescriptor is ControllerActionDescriptor)
+            var result = await next();
+            if (result.Result is ObjectResult objectResult)
             {
-                var result = await next();
-                if (result.Result is ObjectResult objectResult)
+                switch (objectResult.Value)
                 {
-                    switch (objectResult.Value)
-                    {
-                        case IClientObservable clientObservable:
+                    case IClientObservable clientObservable:
+                        {
+                            if (context.HttpContext.WebSockets.IsWebSocketRequest)
                             {
-                                if (context.HttpContext.WebSockets.IsWebSocketRequest)
-                                {
-                                    await clientObservable.HandleConnection(context, _options);
-                                    result.Result = null;
-                                }
+                                await clientObservable.HandleConnection(context, _options);
+                                result.Result = null;
                             }
-                            break;
+                        }
+                        break;
 
-                        default:
-                            {
-                                result.Result = new ObjectResult(new QueryResult(objectResult.Value!, true));
-                            }
-                            break;
-                    }
+                    default:
+                        {
+                            result.Result = new ObjectResult(new QueryResult(objectResult.Value!, true));
+                        }
+                        break;
                 }
             }
-            else
-            {
-                await next();
-            }
+        }
+        else
+        {
+            await next();
         }
     }
 }

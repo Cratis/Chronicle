@@ -4,18 +4,17 @@
 using System.Text.Json.Nodes;
 using Orleans;
 
-namespace Aksio.Cratis.Events.Projections.Grains
+namespace Aksio.Cratis.Events.Projections.Grains;
+
+/// <summary>
+/// Defines a projection.
+/// </summary>
+public interface IProjection : IGrainWithGuidKey
 {
     /// <summary>
-    /// Defines a projection.
+    /// Get a model instance by its <see cref="EventSourceId">identifier</see>.
     /// </summary>
-    public interface IProjection : IGrainWithGuidKey
-    {
-        /// <summary>
-        /// Get a model instance by its <see cref="EventSourceId">identifier</see>.
-        /// </summary>
-        /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
-        /// <returns>A projected model in the form of a <see cref="JsonObject"/>.</returns>
-        Task<JsonObject> GetModelInstanceById(EventSourceId eventSourceId);
-    }
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
+    /// <returns>A projected model in the form of a <see cref="JsonObject"/>.</returns>
+    Task<JsonObject> GetModelInstanceById(EventSourceId eventSourceId);
 }

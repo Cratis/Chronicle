@@ -3,14 +3,13 @@
 
 using Aksio.Cratis.Concepts.given;
 
-namespace Aksio.Cratis.Concepts.for_ConceptMap
+namespace Aksio.Cratis.Concepts.for_ConceptMap;
+
+public class when_getting_the_primitive_type_from_a_string_concept : Specification
 {
-    public class when_getting_the_primitive_type_from_a_string_concept : Specification
-    {
-        static Type result;
+    static Type result;
 
-        void Because() => result = ConceptMap.GetConceptValueType(typeof(StringConcept));
+    void Because() => result = ConceptMap.GetConceptValueType(typeof(StringConcept));
 
-        [Fact] void should_get_a_string() => result.ShouldEqual(typeof(string));
-    }
+    [Fact] void should_get_a_string() => result.ShouldEqual(typeof(string));
 }

@@ -6,70 +6,69 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Represents utilities for creating <see cref="PropertyMapper{Event, ExpandoObject}"/> for different scenarios.
+/// </summary>
+public static class PropertyMappers
 {
     /// <summary>
-    /// Represents utilities for creating <see cref="PropertyMapper{Event, ExpandoObject}"/> for different scenarios.
+    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can copies content provided by a <see cref="ValueProvider{Event}"/> to a target property.
     /// </summary>
-    public static class PropertyMappers
+    /// <param name="targetProperty">Target property.</param>
+    /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
+    /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
+    public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
-        /// <summary>
-        /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can copies content provided by a <see cref="ValueProvider{Event}"/> to a target property.
-        /// </summary>
-        /// <param name="targetProperty">Target property.</param>
-        /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
-        /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
-        public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
+        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
         {
-            return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
-            {
-                var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-                actualTarget[targetProperty.LastSegment.Value] = eventValueProvider(@event);
-            };
-        }
+            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            actualTarget[targetProperty.LastSegment.Value] = eventValueProvider(@event);
+        };
+    }
 
-        /// <summary>
-        /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can add a property with a value provided by a <see cref="ValueProvider{Event}"/> onto a target property.
-        /// </summary>
-        /// <param name="targetProperty">Target property.</param>
-        /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
-        /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
-        public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
+    /// <summary>
+    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can add a property with a value provided by a <see cref="ValueProvider{Event}"/> onto a target property.
+    /// </summary>
+    /// <param name="targetProperty">Target property.</param>
+    /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
+    /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
+    public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
+    {
+        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
         {
-            return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
+            var lastSegment = targetProperty.LastSegment;
+            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            if (!actualTarget.ContainsKey(lastSegment.Value))
             {
-                var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-                if (!actualTarget.ContainsKey(lastSegment.Value))
-                {
-                    actualTarget[lastSegment.Value] = 0D;
-                }
-                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
-                value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
-                actualTarget[lastSegment.Value] = value;
-            };
-        }
+                actualTarget[lastSegment.Value] = 0D;
+            }
+            var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+            value += (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
+            actualTarget[lastSegment.Value] = value;
+        };
+    }
 
-        /// <summary>
-        /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can add a property with a value provided by a <see cref="ValueProvider{Event}"/> onto a target property.
-        /// </summary>
-        /// <param name="targetProperty">Target property.</param>
-        /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
-        /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
-        public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
+    /// <summary>
+    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can add a property with a value provided by a <see cref="ValueProvider{Event}"/> onto a target property.
+    /// </summary>
+    /// <param name="targetProperty">Target property.</param>
+    /// <param name="eventValueProvider"><see cref="ValueProvider{Event}"/> to use as source.</param>
+    /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
+    public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
+    {
+        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
         {
-            return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
+            var lastSegment = targetProperty.LastSegment;
+            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            if (!actualTarget.ContainsKey(lastSegment.Value))
             {
-                var lastSegment = targetProperty.LastSegment;
-                var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
-                if (!actualTarget.ContainsKey(lastSegment.Value))
-                {
-                    actualTarget[lastSegment.Value] = 0D;
-                }
-                var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
-                value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
-                actualTarget[lastSegment.Value] = value;
-            };
-        }
+                actualTarget[lastSegment.Value] = 0D;
+            }
+            var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+            value -= (double)Convert.ChangeType(eventValueProvider(@event), typeof(double));
+            actualTarget[lastSegment.Value] = value;
+        };
     }
 }

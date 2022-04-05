@@ -3,21 +3,20 @@
 
 using MongoDB.Bson.Serialization.Conventions;
 
-namespace Aksio.Cratis.Extensions.MongoDB.for_IgnoreConventionsAttributeFilter
+namespace Aksio.Cratis.Extensions.MongoDB.for_IgnoreConventionsAttributeFilter;
+
+public class when_asking_should_include_for_convention_pack_other_than_specified_in_ignore_attribute_on_type : Specification
 {
-    public class when_asking_should_include_for_convention_pack_other_than_specified_in_ignore_attribute_on_type : Specification
-    {
-        [IgnoreConventions("TheOther")]
-        record TheType();
+    [IgnoreConventions("TheOther")]
+    record TheType();
 
-        IgnoreConventionsAttributeFilter filter;
+    IgnoreConventionsAttributeFilter filter;
 
-        bool result;
+    bool result;
 
-        void Establish() => filter = new();
+    void Establish() => filter = new();
 
-        void Because() => result = filter.ShouldInclude("SomePack", Mock.Of<IConventionPack>(), typeof(TheType));
+    void Because() => result = filter.ShouldInclude("SomePack", Mock.Of<IConventionPack>(), typeof(TheType));
 
-        [Fact] void should_include_it() => result.ShouldBeTrue();
-    }
+    [Fact] void should_include_it() => result.ShouldBeTrue();
 }

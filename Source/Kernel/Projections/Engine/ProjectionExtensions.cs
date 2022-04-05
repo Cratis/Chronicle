@@ -8,83 +8,82 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Extension methods for building up a projection.
+/// </summary>
+public static class ProjectionExtensions
 {
     /// <summary>
-    /// Extension methods for building up a projection.
+    /// Filter an observable for a specific <see cref="EventType"/>.
     /// </summary>
-    public static class ProjectionExtensions
+    /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
+    /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
+    /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
+    public static IObservable<ProjectionEventContext> From(this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
-        /// <summary>
-        /// Filter an observable for a specific <see cref="EventType"/>.
-        /// </summary>
-        /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
-        /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
-        /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
-        public static IObservable<ProjectionEventContext> From(this IObservable<ProjectionEventContext> observable, EventType eventType)
-        {
-            return observable.Where(_ => _.Event.Metadata.Type == eventType);
-        }
+        return observable.Where(_ => _.Event.Metadata.Type == eventType);
+    }
 
-        /// <summary>
-        /// Project properties from event onto model or child model.
-        /// </summary>
-        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-        /// <param name="childrenProperty">The property in which children are stored on the object.</param>
-        /// <param name="identifiedByProperty">The property that identifies a child.</param>
-        /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
-        /// <returns>The observable for continuation.</returns>
-        public static IObservable<ProjectionEventContext> Project(
-            this IObservable<ProjectionEventContext> observable,
-            PropertyPath childrenProperty,
-            PropertyPath identifiedByProperty,
-            IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
+    /// <summary>
+    /// Project properties from event onto model or child model.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="childrenProperty">The property in which children are stored on the object.</param>
+    /// <param name="identifiedByProperty">The property that identifies a child.</param>
+    /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> Project(
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty,
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
+    {
+        if (childrenProperty.IsRoot)
         {
-            if (childrenProperty.IsRoot)
+            observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers));
+        }
+        else
+        {
+            observable.Subscribe(_ =>
             {
-                observable.Subscribe(_ => _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers));
-            }
-            else
-            {
-                observable.Subscribe(_ =>
+                if (_.Key.ArrayIndexers.HasFor(childrenProperty))
                 {
-                    if (_.Key.ArrayIndexers.HasFor(childrenProperty))
+                    var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty, _.Key.ArrayIndexers);
+                    var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+                    if (!items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
                     {
-                        var items = _.Changeset.InitialState.EnsureCollection<ExpandoObject>(childrenProperty, _.Key.ArrayIndexers);
-                        var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
-                        if (!items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
-                        {
-                            _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
-                            return;
-                        }
-                        _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers);
+                        _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
+                        return;
                     }
-                });
-            }
-            return observable;
+                    _.Changeset.SetProperties(propertyMappers, _.Key.ArrayIndexers);
+                }
+            });
         }
+        return observable;
+    }
 
-        /// <summary>
-        /// Remove item based on event.
-        /// </summary>
-        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-        /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
-        /// <returns>The observable for continuation.</returns>
-        public static IObservable<ProjectionEventContext> RemovedWith(this IObservable<ProjectionEventContext> observable, EventType eventType)
-        {
-            observable.Where(_ => _.Event.Metadata.Type == eventType).Subscribe(_ => _.Changeset.Remove());
-            return observable;
-        }
+    /// <summary>
+    /// Remove item based on event.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="eventType"><see cref="EventType"/> causing the remove.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> RemovedWith(this IObservable<ProjectionEventContext> observable, EventType eventType)
+    {
+        observable.Where(_ => _.Event.Metadata.Type == eventType).Subscribe(_ => _.Changeset.Remove());
+        return observable;
+    }
 
-        /// <summary>
-        /// Join with a specific <see cref="EventType"/>.
-        /// </summary>
-        /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-        /// <param name="eventType"><see cref="EventType"/> to join with.</param>
-        /// <returns>The observable for continuation.</returns>
-        public static IObservable<ProjectionEventContext> Join(this IObservable<ProjectionEventContext> observable, EventType eventType)
-        {
-            return observable.Where(_ => _.Event.Metadata.Type == eventType);
-        }
+    /// <summary>
+    /// Join with a specific <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="eventType"><see cref="EventType"/> to join with.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> Join(this IObservable<ProjectionEventContext> observable, EventType eventType)
+    {
+        return observable.Where(_ => _.Event.Metadata.Type == eventType);
     }
 }

@@ -3,17 +3,16 @@
 
 using Autofac;
 
-namespace Aksio.Cratis.Execution
+namespace Aksio.Cratis.Execution;
+
+/// <summary>
+/// Represents an Autofac <see cref="Module"/> for configuring dependencies related to <see cref="ExecutionContext"/>.
+/// </summary>
+public class ExecutionContextModule : Module
 {
-    /// <summary>
-    /// Represents an Autofac <see cref="Module"/> for configuring dependencies related to <see cref="ExecutionContext"/>.
-    /// </summary>
-    public class ExecutionContextModule : Module
+    /// <inheritdoc/>
+    protected override void Load(ContainerBuilder builder)
     {
-        /// <inheritdoc/>
-        protected override void Load(ContainerBuilder builder)
-        {
-            builder.Register(_ => ExecutionContextManager.GetCurrent()).As<ExecutionContext>().InstancePerDependency();
-        }
+        builder.Register(_ => ExecutionContextManager.GetCurrent()).As<ExecutionContext>().InstancePerDependency();
     }
 }

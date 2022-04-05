@@ -3,31 +3,30 @@
 
 using Microsoft.Extensions.Hosting;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Represents a <see cref="IHostedService"/> for working with projections.
+/// </summary>
+public class ProjectionsService : IHostedService
 {
+    readonly IProjectionsRegistrar _projectionsRegistrar;
+
     /// <summary>
-    /// Represents a <see cref="IHostedService"/> for working with projections.
+    /// Initializes a new instance of the <see cref="ProjectionsService"/> class.
     /// </summary>
-    public class ProjectionsService : IHostedService
+    /// <param name="projectionsRegistrar">The <see cref="IProjectionsRegistrar"/> system.</param>
+    public ProjectionsService(IProjectionsRegistrar projectionsRegistrar)
     {
-        readonly IProjectionsRegistrar _projectionsRegistrar;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProjectionsService"/> class.
-        /// </summary>
-        /// <param name="projectionsRegistrar">The <see cref="IProjectionsRegistrar"/> system.</param>
-        public ProjectionsService(IProjectionsRegistrar projectionsRegistrar)
-        {
-            _projectionsRegistrar = projectionsRegistrar;
-        }
-
-        /// <inheritdoc/>
-        public async Task StartAsync(CancellationToken cancellationToken)
-        {
-            await _projectionsRegistrar.StartAll();
-        }
-
-        /// <inheritdoc/>
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        _projectionsRegistrar = projectionsRegistrar;
     }
+
+    /// <inheritdoc/>
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await _projectionsRegistrar.StartAll();
+    }
+
+    /// <inheritdoc/>
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

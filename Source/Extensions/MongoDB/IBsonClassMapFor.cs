@@ -3,18 +3,17 @@
 
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Cratis.Extensions.MongoDB
+namespace Aksio.Cratis.Extensions.MongoDB;
+
+/// <summary>
+/// Defines a map for mapping a type to bson for MongoDB.
+/// </summary>
+/// <typeparam name="T">Type the class map is for.</typeparam>
+public interface IBsonClassMapFor<T>
 {
     /// <summary>
-    /// Defines a map for mapping a type to bson for MongoDB.
+    /// Configure the given class map.
     /// </summary>
-    /// <typeparam name="T">Type the class map is for.</typeparam>
-    public interface IBsonClassMapFor<T>
-    {
-        /// <summary>
-        /// Configure the given class map.
-        /// </summary>
-        /// <param name="classMap"><see cref="BsonClassMap{T}"/> to register.</param>
-        void Configure(BsonClassMap<T> classMap);
-    }
+    /// <param name="classMap"><see cref="BsonClassMap{T}"/> to register.</param>
+    void Configure(BsonClassMap<T> classMap);
 }

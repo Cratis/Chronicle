@@ -3,24 +3,23 @@
 
 using Aksio.Cratis.Concepts;
 
-namespace Aksio.Cratis.Integration
+namespace Aksio.Cratis.Integration;
+
+/// <summary>
+/// Represents the unique identifier of a projection.
+/// </summary>
+/// <param name="Value">The value.</param>
+public record AdapterId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
-    /// Represents the unique identifier of a projection.
+    /// Implicitly convert from <see cref="Guid"/> to <see cref="AdapterId"/>.
     /// </summary>
-    /// <param name="Value">The value.</param>
-    public record AdapterId(Guid Value) : ConceptAs<Guid>(Value)
-    {
-        /// <summary>
-        /// Implicitly convert from <see cref="Guid"/> to <see cref="AdapterId"/>.
-        /// </summary>
-        /// <param name="value"><see cref="Guid"/> to convert from.</param>
-        public static implicit operator AdapterId(Guid value) => new(value);
+    /// <param name="value"><see cref="Guid"/> to convert from.</param>
+    public static implicit operator AdapterId(Guid value) => new(value);
 
-        /// <summary>
-        /// Implicitly convert from string representation of a <see cref="Guid"/> to <see cref="AdapterId"/>.
-        /// </summary>
-        /// <param name="value"><see cref="Guid"/> to convert from.</param>
-        public static implicit operator AdapterId(string value) => new(Guid.Parse(value));
-    }
+    /// <summary>
+    /// Implicitly convert from string representation of a <see cref="Guid"/> to <see cref="AdapterId"/>.
+    /// </summary>
+    /// <param name="value"><see cref="Guid"/> to convert from.</param>
+    public static implicit operator AdapterId(string value) => new(Guid.Parse(value));
 }
