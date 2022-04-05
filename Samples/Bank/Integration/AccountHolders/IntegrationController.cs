@@ -1,23 +1,22 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Integration.AccountHolders
+namespace Integration.AccountHolders;
+
+[Route("/api/integration")]
+
+public class IntegrationController : Controller
 {
-    [Route("/api/integration")]
+    readonly KontoEierConnector _connector;
 
-    public class IntegrationController : Controller
+    public IntegrationController(KontoEierConnector connector)
     {
-        readonly KontoEierConnector _connector;
+        _connector = connector;
+    }
 
-        public IntegrationController(KontoEierConnector connector)
-        {
-            _connector = connector;
-        }
-
-        [HttpGet]
-        public async Task Trigger()
-        {
-            await _connector.ImportOne("03050712345");
-        }
+    [HttpGet]
+    public async Task Trigger()
+    {
+        await _connector.ImportOne("03050712345");
     }
 }
