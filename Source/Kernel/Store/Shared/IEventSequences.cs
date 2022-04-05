@@ -30,12 +30,4 @@ public interface IEventSequences
     /// <param name="content">The JSON payload of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content);
-
-    /// <summary>
-    /// Find <see cref="AppendedEvent">appended events</see> from the event sequence.
-    /// </summary>
-    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to find from.</param>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to find for.</param>
-    /// <returns>Awaitable <see cref="Task"/> with <see cref="IEventStoreFindResult"/>.</returns>
-    Task<IEventStoreFindResult> FindFor(EventSequenceId eventSequenceId, EventSourceId eventSourceId);
 }
