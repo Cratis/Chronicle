@@ -2,11 +2,9 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Nullable } from './Nullable';
+import { Boolean } from './Boolean';
 
-export type DebitAccount = {
-    id: string;
-    name: string;
-    owner: string;
-    balance: Nullable;
+export type Nullable = {
+    hasValue: Boolean;
+    value: number;
 };

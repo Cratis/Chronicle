@@ -17,9 +17,9 @@ export const App = () => {
                 </div>
                 <div style={{ width: '100%' }}>
                     <Routes>
-                        <Route path="/" element={<Home/>}/>
-                        <Route path="/accounts/debit" element={<DebitAccounts/>}/>
-                        <Route path="/integration" element={<AccountHolders/>}/>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/accounts/debit" element={<DebitAccounts />} />
+                        <Route path="/integration" element={<AccountHolders />} />
                     </Routes>
                 </div>
             </div>
