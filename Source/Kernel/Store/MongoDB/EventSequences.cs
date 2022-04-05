@@ -64,11 +64,5 @@ public class EventSequences : IEventSequences
     /// <inheritdoc/>
     public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
 
-    /// <inheritdoc/>
-    public Task<IEventStoreFindResult> FindFor(EventSequenceId eventSequenceId, EventSourceId eventSourceId)
-    {
-        return Task.FromResult<IEventStoreFindResult>(null!);
-    }
-
     IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabase.GetEventSequenceCollectionFor(eventSequenceId);
 }
