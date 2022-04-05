@@ -9,8 +9,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
-      <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="5.0.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensions)" />
+      <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="$(MicrosoftExtensions)" />
       <PackageReference Include="NJsonSchema" Version="10.6.6"/>
       <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0"/>
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)"/>

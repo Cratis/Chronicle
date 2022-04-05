@@ -4,6 +4,6 @@
 
 
 export type EventHistogramEntry = {
-    date: string;
+    date: Date;
     count: number;
 };

@@ -16,8 +16,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-      <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensions)" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensions)" />
       <PackageReference Include="Microsoft.Orleans.Client" Version="$(Orleans)" />
       <PackageReference Include="Humanizer" Version="$(Humanizer)" />
       <PackageReference Include="automapper" Version="10.1.1" />

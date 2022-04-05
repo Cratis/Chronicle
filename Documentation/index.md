@@ -7,6 +7,8 @@ model aimed at solving common problems.
 If you want to contribute, please read more [here](./contributing.md).
 
 To get a quick start, head over to our [getting started](./getting-started.md) section.
+The platform is built on top of a set of concepts that is vital to understand, you can find them [here](./concepts/index.md).
+We also have [guidance](./guidance/index.md) for how to work with Cratis and other more general concepts.
 
 ## General
 
@@ -14,6 +16,15 @@ To get a quick start, head over to our [getting started](./getting-started.md) s
 | ------- | ----------- |
 | [Getting started](./getting-started.md) | Getting started |
 | [Tenancy](./tenancy.md) | What is tenancy and how does it work? |
+| [Kernel](./kernel/index.md) | What the Kernel is and working with it |
+
+## Fundamentals
+
+| Topic | Description |
+| ------- | ----------- |
+| [Fundamentals](./fundamentals/index.md) | What is fundamentals and what does it bring to the table. |
+| [Concepts](./fundamentals/concepts.md) | What are concepts and how to work with them. |
+| [Types](./fundamentals/types.md) | How to work with the type discovery mechanism. |
 
 ## .NET Client
 
@@ -39,4 +50,5 @@ To get a quick start, head over to our [getting started](./getting-started.md) s
 | ----- | ----------- |
 | [Proxy Generation](./application-model/frontend/cqrs/proxy-generation.md) | How the proxy generator tool can be used. |
 | [Commands](./application-model/frontend/cqrs/commands.md) | How to leverage commands from the frontend. |
+| [Command Tracker](./application-model/frontend/cqrs/command-tracker.md) | How to leverage the command tracker context in React apps. |
 | [Queries](./application-model/frontend/cqrs/queries.md) | How to leverage queries from the frontend. |

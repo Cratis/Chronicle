@@ -8,5 +8,6 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates;
 /// </summary>
 /// <param name="Name">Name of the property.</param>
 /// <param name="Type">Type of the property.</param>
-/// <param name="isEnumerable">Whether or not the property is an enumerable or not.</param>
-public record PropertyDescriptor(string Name, string Type, bool isEnumerable);
+/// <param name="IsEnumerable">Whether or not the property is an enumerable or not.</param>
+/// <param name="IsNullable">Whether or not the property is nullable or not.</param>
+public record PropertyDescriptor(string Name, string Type, bool IsEnumerable, bool IsNullable);

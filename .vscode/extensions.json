@@ -1,5 +1,26 @@
 {
     "recommendations": [
-        "netcorext.hash"
+        "netcorext.hash",
+        "vsls-contrib.codetour",
+        "jchannon.csharpextensions",
+        "ms-dotnettools.csharp",
+        "k--kato.docomment",
+        "josefpihrt-vscode.roslynator",
+        "EditorConfig.EditorConfig",
+        "GitHub.vscode-pull-request-github",
+        "stevencl.addDocComments",
+        "salbert.comment-ts",
+        "dbaeumer.vscode-eslint",
+        "heaths.vscode-guid",
+        "qub.qub-msbuild",
+        "eg2.vscode-npm-script",
+        "mohsen1.prettify-json",
+        "sibiraj-s.vscode-scss-formatter",
+        "eternalphane.tsfmt-vscode",
+        "formulahendry.auto-close-tag",
+        "amodio.tsl-problem-matcher",
+        "pmneo.tsimporter",
+        "nsoult.typescript-imports-sort",
+        "DSKWRK.vscode-generate-getter-setter"
     ]
 }

@@ -1,6 +1,6 @@
 # Contributing
 
-Before you start contributing, you should read our guidelines [here](https://github.com/aksio-insurtech/Home/blob/main/README.md).
+Before you start contributing, you should read our guidelines [here](https://github.com/aksio-insurtech/.github/blob/main/contributing.md).
 
 ## Prerequisites
 
@@ -9,6 +9,12 @@ This repository requires the following:
 - [Docker](https://www.docker.com/products/docker-desktop)
 - [.NET Core 6](https://dotnet.microsoft.com/download/dotnet/6.0)
 - [Node JS version 16](https://nodejs.org/)
+
+## Code Tour
+
+This project has a set of [code tours](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour) that guide you through
+the project structure and where to find what. Install the [VSCode extension](https://marketplace.visualstudio.com/items?itemName=vsls-contrib.codetour)
+and open the **Code Tour explorer** for different tours.
 
 ## Build and Test
 

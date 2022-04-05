@@ -10,6 +10,6 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static partial class ConfigurationHostBuilderExtensionsLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Building configuration for '{Type}' for file '{File}'")]
-    internal static partial void BuildingConfigurationFor(this ILogger logger, Type type, string file);
+    [LoggerMessage(0, LogLevel.Information, "Adding optional configuration file '{File}' for type '{Type}'")]
+    internal static partial void AddingConfigurationFile(this ILogger logger, Type type, string file);
 }

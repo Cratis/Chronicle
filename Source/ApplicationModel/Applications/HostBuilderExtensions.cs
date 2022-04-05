@@ -23,15 +23,9 @@ public static class HostBuilderExtensions
     /// Use Aksio defaults with the <see cref="IHostBuilder"/>.
     /// </summary>
     /// <param name="builder"><see cref="IHostBuilder"/> to extend.</param>
-    /// <param name="microserviceId">Optional <see cref="MicroserviceId"/>.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
     /// <returns><see cref="IHostBuilder"/> for building continuation.</returns>
-    /// <remarks>
-    /// If the microservice identifier is not specified, it is assumed that the solution is
-    /// not a microservice based solution, or that the  Kernel being connected to is for the
-    /// microservice alone.
-    /// </remarks>
-    public static IHostBuilder UseAksio(this IHostBuilder builder, MicroserviceId? microserviceId = default, Action<IClientBuilder>? configureDelegate = default)
+    public static IHostBuilder UseAksio(this IHostBuilder builder, Action<IClientBuilder>? configureDelegate = default)
     {
         var loggerFactory = builder.UseDefaultLogging();
         var logger = loggerFactory.CreateLogger("Aksio setup");
@@ -42,7 +36,7 @@ public static class HostBuilderExtensions
 
         builder
             .UseMongoDB(types)
-            .UseCratis(microserviceId ?? MicroserviceId.Unspecified, types, configureDelegate, loggerFactory)
+            .UseCratis(types, configureDelegate, loggerFactory)
             .ConfigureServices(_ =>
             {
                 _
@@ -60,7 +54,7 @@ public static class HostBuilderExtensions
                 })
                 .Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.SmallestSize)
 
-                // Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
+                // Todo: Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
                 .AddRazorPages();
 
                 _.AddMvc();

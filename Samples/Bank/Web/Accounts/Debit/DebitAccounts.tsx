@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, ReactElement, useEffect } from 'react';
 import { useDialog, DialogResult } from '@aksio/cratis-applications-frontend/dialogs';
 import { CreateAccountDialog, CreateAccountDialogResult } from './CreateAccountDialog';
 import { Guid } from '@aksio/cratis-fundamentals';
@@ -14,7 +14,8 @@ import {
     Selection,
     SelectionMode,
     Stack,
-    SearchBox
+    SearchBox,
+    TextField
 } from '@fluentui/react';
 import { AmountDialog, AmountDialogInput, AmountDialogResult } from './AmountDialog';
 import { OpenDebitAccount } from 'API/accounts/debit/OpenDebitAccount';
@@ -24,35 +25,26 @@ import { AllAccounts } from 'API/accounts/debit/AllAccounts';
 import { StartingWith } from 'API/accounts/debit/StartingWith';
 import { LatestTransactions } from 'API/accounts/debit/LatestTransactions';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
+import { CommandTracker, CommandTrackerContext, useCommandTracker } from '@aksio/cratis-applications-frontend/commands';
+import { DebitAccountsList } from './DebitAccountsList';
 
-const columns: IColumn[] = [
-    {
-        key: 'name',
-        name: 'Name',
-        fieldName: 'name',
-        minWidth: 200
-    },
-    {
-        key: 'balance',
-        name: 'Balance',
-        fieldName: 'balance',
-        minWidth: 200
-    }
-];
 
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
+    const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use({ owner: 'edd60145-a6df-493f-b48d-35ffdaaefc4c' });
+
+
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();
     const [accountsStartingWith, queryAccountsStartingWith] = StartingWith.use({ filter: '' });
     const [searching, setSearching] = useState<boolean>(false);
     const [selectedItem, setSelectedItem] = useState<any>(undefined);
     const [showCreateAccount, createAccountDialogProps] = useDialog<any, CreateAccountDialogResult>(async (result, output?) => {
         if (result === DialogResult.Success && output) {
-            const command = new OpenDebitAccount();
-            command.accountId = Guid.create().toString(),
-                command.name = output.name;
-            command.owner = 'edd60145-a6df-493f-b48d-35ffdaaefc4c';
-            await command.execute();
+            setOpenDebitAccountValues({
+                accountId: Guid.create().toString(),
+                name: output.name
+            });
+            await openDebitAccount.execute();
         }
     });
 
@@ -141,18 +133,49 @@ export const DebitAccounts = () => {
             items: accounts.data as any
         }), [accounts.data]);
 
-    const items = searching ? accountsStartingWith.data : accounts.data;
+    const [accountItems, setAccountItems] = useState<DebitAccount[]>([]);
+
+    useEffect(() => {
+        setAccountItems(searching ? accountsStartingWith.data : accounts.data);
+    }, [accountsStartingWith.data, accounts.data]);
 
     return (
         <>
-            <Stack>
-                <Stack.Item disableShrink>
-                    <CommandBar items={commandBarItems} />
-                </Stack.Item>
-                <Stack.Item>
-                    <DetailsList columns={columns} items={items} selection={selection} />
-                </Stack.Item>
-            </Stack>
+            <CommandTracker>
+                <Stack>
+                    <Stack.Item disableShrink>
+                        <CommandTrackerContext.Consumer>
+                            {({hasChanges, execute, revertChanges}) => {
+                                const actualItems: ICommandBarItemProps[] = [{
+                                    key: 'save',
+                                    name: 'Save',
+                                    iconProps: { iconName: 'Save' },
+                                    disabled: !hasChanges,
+                                    onClick: (e) => {
+                                        execute();
+                                    },
+                                }, {
+                                    key: 'undo',
+                                    name: 'Undo',
+                                    iconProps: { iconName: 'Undo' },
+                                    disabled: !hasChanges,
+                                    onClick: (e) => {
+                                        revertChanges();
+                                        setAccountItems([...accountItems]);
+                                    }
+                                }, ...commandBarItems];
+
+                                return (
+                                    <CommandBar items={actualItems} />
+                                );
+                            }}
+                        </CommandTrackerContext.Consumer>
+                    </Stack.Item>
+                    <Stack.Item>
+                        <DebitAccountsList accounts={accountItems} selection={selection}/>
+                    </Stack.Item>
+                </Stack>
+            </CommandTracker>
 
             <CreateAccountDialog {...createAccountDialogProps} />
             <AmountDialog {...depositAmountDialogProps} />

@@ -4,6 +4,7 @@
         <ProjectReference Include="../Domain/Domain.csproj" />
         <ProjectReference Include="../Events/Events.csproj" />
         <ProjectReference Include="../Integration/Integration.csproj" />
+        <ProjectReference Include="../Reactions/Reactions.csproj" />
         <ProjectReference Include="../Read/Read.csproj" />
     </ItemGroup>
     <ItemGroup>
