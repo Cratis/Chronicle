@@ -4,22 +4,21 @@
 using Aksio.Cratis.Integration;
 using Microsoft.Extensions.Hosting;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+/// <summary>
+/// Extensions for using Aksio.Cratis with a <see cref="IServiceCollection"/>.
+/// </summary>
+public static class IntegrationCollectionExtensions
 {
     /// <summary>
-    /// Extensions for using Aksio.Cratis with a <see cref="IServiceCollection"/>.
+    /// Configure use of integration.
     /// </summary>
-    public static class IntegrationCollectionExtensions
+    /// <param name="services"><see cref="IServiceCollection"/> to build on.</param>
+    /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
+    public static IServiceCollection AddIntegration(this IServiceCollection services)
     {
-        /// <summary>
-        /// Configure use of integration.
-        /// </summary>
-        /// <param name="services"><see cref="IServiceCollection"/> to build on.</param>
-        /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
-        public static IServiceCollection AddIntegration(this IServiceCollection services)
-        {
-            services.AddSingleton<IHostedService, AdaptersService>();
-            return services;
-        }
+        services.AddSingleton<IHostedService, AdaptersService>();
+        return services;
     }
 }

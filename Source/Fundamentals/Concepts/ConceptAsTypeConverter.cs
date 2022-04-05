@@ -4,22 +4,21 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace Aksio.Cratis.Concepts
-{
-    /// <summary>
-    /// Represents a <see cref="TypeConverter"/> for handling conversion of concept as represented as its value type.
-    /// </summary>
-    /// <typeparam name="TConcept">Type of concept.</typeparam>
-    /// <typeparam name="TValue">Type of value.</typeparam>
-    public class ConceptAsTypeConverter<TConcept, TValue> : TypeConverter
-    {
-        /// <inheritdoc/>
-        public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType) => sourceType == typeof(TValue) || sourceType == typeof(string);
+namespace Aksio.Cratis.Concepts;
 
-        /// <inheritdoc/>
-        public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
-        {
-            return ConceptFactory.CreateConceptInstance(typeof(TConcept), value);
-        }
+/// <summary>
+/// Represents a <see cref="TypeConverter"/> for handling conversion of concept as represented as its value type.
+/// </summary>
+/// <typeparam name="TConcept">Type of concept.</typeparam>
+/// <typeparam name="TValue">Type of value.</typeparam>
+public class ConceptAsTypeConverter<TConcept, TValue> : TypeConverter
+{
+    /// <inheritdoc/>
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType) => sourceType == typeof(TValue) || sourceType == typeof(string);
+
+    /// <inheritdoc/>
+    public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
+    {
+        return ConceptFactory.CreateConceptInstance(typeof(TConcept), value);
     }
 }

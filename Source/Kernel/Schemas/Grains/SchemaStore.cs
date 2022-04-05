@@ -5,30 +5,29 @@ using Aksio.Cratis.Schemas;
 using NJsonSchema;
 using Orleans;
 
-namespace Aksio.Cratis.Events.Schemas.Grains
+namespace Aksio.Cratis.Events.Schemas.Grains;
+
+/// <summary>
+/// Represents an implementation of <see cref="ISchemaStore"/>.
+/// </summary>
+public class SchemaStore : Grain, ISchemaStore
 {
+    readonly Schemas.ISchemaStore _underlyingSchemaStore;
+
     /// <summary>
-    /// Represents an implementation of <see cref="ISchemaStore"/>.
+    /// Initializes a new instance of the <see cref="SchemaStore"/> class.
     /// </summary>
-    public class SchemaStore : Grain, ISchemaStore
+    /// <param name="underlyingSchemaStore"><see cref="Schemas.ISchemaStore"/> underlying schema store.</param>
+    public SchemaStore(Schemas.ISchemaStore underlyingSchemaStore)
     {
-        readonly Schemas.ISchemaStore _underlyingSchemaStore;
+        _underlyingSchemaStore = underlyingSchemaStore;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SchemaStore"/> class.
-        /// </summary>
-        /// <param name="underlyingSchemaStore"><see cref="Schemas.ISchemaStore"/> underlying schema store.</param>
-        public SchemaStore(Schemas.ISchemaStore underlyingSchemaStore)
-        {
-            _underlyingSchemaStore = underlyingSchemaStore;
-        }
-
-        /// <inheritdoc/>
-        public async Task Register(EventType type, string friendlyName, string schema)
-        {
-            var jsonSchema = await JsonSchema.FromJsonAsync(schema);
-            jsonSchema.EnsureCorrectMetadata();
-            await _underlyingSchemaStore.Register(type, friendlyName, jsonSchema);
-        }
+    /// <inheritdoc/>
+    public async Task Register(EventType type, string friendlyName, string schema)
+    {
+        var jsonSchema = await JsonSchema.FromJsonAsync(schema);
+        jsonSchema.EnsureCorrectMetadata();
+        await _underlyingSchemaStore.Register(type, friendlyName, jsonSchema);
     }
 }

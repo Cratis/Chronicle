@@ -4,22 +4,21 @@
 using Aksio.Cratis.Events.Projections;
 using Microsoft.Extensions.Hosting;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+/// <summary>
+/// Extensions for using Aksio.Cratis with a <see cref="IServiceCollection"/>.
+/// </summary>
+public static class ProjectionsServiceCollectionExtensions
 {
     /// <summary>
-    /// Extensions for using Aksio.Cratis with a <see cref="IServiceCollection"/>.
+    /// Configure use of projections.
     /// </summary>
-    public static class ProjectionsServiceCollectionExtensions
+    /// <param name="services"><see cref="IServiceCollection"/> to build on.</param>
+    /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
+    public static IServiceCollection AddProjections(this IServiceCollection services)
     {
-        /// <summary>
-        /// Configure use of projections.
-        /// </summary>
-        /// <param name="services"><see cref="IServiceCollection"/> to build on.</param>
-        /// <returns><see cref="IServiceCollection"/> for configuration continuation.</returns>
-        public static IServiceCollection AddProjections(this IServiceCollection services)
-        {
-            services.AddSingleton<IHostedService, ProjectionsService>();
-            return services;
-        }
+        services.AddSingleton<IHostedService, ProjectionsService>();
+        return services;
     }
 }

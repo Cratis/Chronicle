@@ -4,32 +4,31 @@
 using Aksio.Cratis.Events.Projections.Definitions;
 using Orleans;
 
-namespace Aksio.Cratis.Events.Projections.Grains
+namespace Aksio.Cratis.Events.Projections.Grains;
+
+/// <summary>
+/// Represents an implementation of <see cref="IProjections"/>.
+/// </summary>
+public class Projections : Grain, IProjections
 {
+    readonly Events.Projections.IProjections _projections;
+
     /// <summary>
-    /// Represents an implementation of <see cref="IProjections"/>.
+    /// Initializes a new instance of the <see cref="Projections"/> clas.
     /// </summary>
-    public class Projections : Grain, IProjections
+    /// <param name="projections">The underlying <see cref="Events.Projections.IProjections"/>.</param>
+    public Projections(Events.Projections.IProjections projections)
     {
-        readonly Events.Projections.IProjections _projections;
+        _projections = projections;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Projections"/> clas.
-        /// </summary>
-        /// <param name="projections">The underlying <see cref="Events.Projections.IProjections"/>.</param>
-        public Projections(Events.Projections.IProjections projections)
-        {
-            _projections = projections;
-        }
+    /// <inheritdoc/>
+    public Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition) => _projections.Register(projectionDefinition, pipelineDefinition);
 
-        /// <inheritdoc/>
-        public Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition) => _projections.Register(projectionDefinition, pipelineDefinition);
-
-        /// <inheritdoc/>
-        public Task Start()
-        {
-            _projections.Start();
-            return Task.CompletedTask;
-        }
+    /// <inheritdoc/>
+    public Task Start()
+    {
+        _projections.Start();
+        return Task.CompletedTask;
     }
 }

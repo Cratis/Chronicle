@@ -4,25 +4,24 @@
 using Aksio.Cratis.Events.Store.EventLogs;
 using Orleans.Hosting;
 
-namespace Orleans
+namespace Orleans;
+
+/// <summary>
+/// Extension methods for <see cref="IClientBuilder"/>.
+/// </summary>
+public static class ClientBuilderExtensions
 {
     /// <summary>
-    /// Extension methods for <see cref="IClientBuilder"/>.
+    /// Add the event log stream.
     /// </summary>
-    public static class ClientBuilderExtensions
+    /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
+    /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
+    public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
     {
-        /// <summary>
-        /// Add the event log stream.
-        /// </summary>
-        /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
-        /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
-        public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
-        {
-            builder.AddPersistentStreams(
-                "event-log",
-                EventLogQueueAdapterFactory.Create,
-                _ => { });
-            return builder;
-        }
+        builder.AddPersistentStreams(
+            "event-log",
+            EventLogQueueAdapterFactory.Create,
+            _ => { });
+        return builder;
     }
 }

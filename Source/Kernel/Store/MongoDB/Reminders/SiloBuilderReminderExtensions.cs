@@ -4,22 +4,21 @@
 using Aksio.Cratis.Events.Store.MongoDB.Reminders;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Orleans.Hosting
+namespace Orleans.Hosting;
+
+/// <summary>
+/// Extensions for <see cref="ISiloBuilder"/>.
+/// </summary>
+public static class SiloBuilderReminderExtensions
 {
     /// <summary>
-    /// Extensions for <see cref="ISiloBuilder"/>.
+    /// Use MongoDB for persisting Grain reminders.
     /// </summary>
-    public static class SiloBuilderReminderExtensions
+    /// <param name="builder"><see cref="ISiloBuilder"/> to extend.</param>
+    /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
+    public static ISiloBuilder UseMongoDBReminderService(this ISiloBuilder builder)
     {
-        /// <summary>
-        /// Use MongoDB for persisting Grain reminders.
-        /// </summary>
-        /// <param name="builder"><see cref="ISiloBuilder"/> to extend.</param>
-        /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
-        public static ISiloBuilder UseMongoDBReminderService(this ISiloBuilder builder)
-        {
-            builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
-            return builder;
-        }
+        builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
+        return builder;
     }
 }

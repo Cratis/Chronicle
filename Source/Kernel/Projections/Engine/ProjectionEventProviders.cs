@@ -3,37 +3,36 @@
 
 using Aksio.Cratis.Types;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Represents an implementation of <see cref="IProjectionResultStores"/>.
+/// </summary>
+public class ProjectionEventProviders : IProjectionEventProviders
 {
+    readonly IDictionary<ProjectionEventProviderTypeId, IProjectionEventProvider> _stores;
+
     /// <summary>
-    /// Represents an implementation of <see cref="IProjectionResultStores"/>.
+    /// Initializes a new instance of the <see cref="ProjectionEventProviders"/> class.
     /// </summary>
-    public class ProjectionEventProviders : IProjectionEventProviders
+    /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="IProjectionResultStore"/>.</param>
+    public ProjectionEventProviders(IInstancesOf<IProjectionEventProvider> stores)
     {
-        readonly IDictionary<ProjectionEventProviderTypeId, IProjectionEventProvider> _stores;
+        _stores = stores.ToDictionary(_ => _.TypeId, _ => _);
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProjectionEventProviders"/> class.
-        /// </summary>
-        /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="IProjectionResultStore"/>.</param>
-        public ProjectionEventProviders(IInstancesOf<IProjectionEventProvider> stores)
-        {
-            _stores = stores.ToDictionary(_ => _.TypeId, _ => _);
-        }
+    /// <inheritdoc/>
+    public IProjectionEventProvider GetForType(ProjectionEventProviderTypeId typeId)
+    {
+        ThrowIfUnknownProjectionEventProvider(typeId);
+        return _stores[typeId];
+    }
 
-        /// <inheritdoc/>
-        public IProjectionEventProvider GetForType(ProjectionEventProviderTypeId typeId)
-        {
-            ThrowIfUnknownProjectionEventProvider(typeId);
-            return _stores[typeId];
-        }
+    /// <inheritdoc/>
+    public bool HasType(ProjectionEventProviderTypeId typeId) => _stores.ContainsKey(typeId);
 
-        /// <inheritdoc/>
-        public bool HasType(ProjectionEventProviderTypeId typeId) => _stores.ContainsKey(typeId);
-
-        void ThrowIfUnknownProjectionEventProvider(ProjectionEventProviderTypeId typeId)
-        {
-            if (!HasType(typeId)) throw new UnknownProjectionEventProvider(typeId);
-        }
+    void ThrowIfUnknownProjectionEventProvider(ProjectionEventProviderTypeId typeId)
+    {
+        if (!HasType(typeId)) throw new UnknownProjectionEventProvider(typeId);
     }
 }

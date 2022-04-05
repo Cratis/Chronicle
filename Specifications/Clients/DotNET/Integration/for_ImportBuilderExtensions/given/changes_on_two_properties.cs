@@ -3,17 +3,17 @@
 
 using Aksio.Cratis.Changes;
 
-namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given
-{
-    public class changes_on_two_properties : no_changes
-    {
-        void Establish()
-        {
-            modified_model = new Model(43, "Forty Three");
-            original_model = new Model(42, "Forty Two");
+namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given;
 
-            changeset.Add(new PropertiesChanged<Model>(modified_model, new[]
-            {
+public class changes_on_two_properties : no_changes
+{
+    void Establish()
+    {
+        modified_model = new Model(43, "Forty Three");
+        original_model = new Model(42, "Forty Two");
+
+        changeset.Add(new PropertiesChanged<Model>(modified_model, new[]
+        {
                 new PropertyDifference(
                     new(nameof(Model.SomeInteger)),
                     original_model,
@@ -24,6 +24,5 @@ namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given
                     original_model,
                     modified_model)
             }));
-        }
     }
 }

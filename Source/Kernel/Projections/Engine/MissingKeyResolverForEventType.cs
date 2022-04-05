@@ -3,19 +3,18 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections
+namespace Aksio.Cratis.Events.Projections;
+
+/// <summary>
+/// Exception that gets thrown when there is no <see cref="ValueProvider{Event}"/> providing the key value for a specific <see cref="EventType"/>.
+/// </summary>
+public class MissingKeyResolverForEventType : Exception
 {
     /// <summary>
-    /// Exception that gets thrown when there is no <see cref="ValueProvider{Event}"/> providing the key value for a specific <see cref="EventType"/>.
+    /// Initializes a new instance of the <see cref="MissingKeyResolverForEventType"/>.
     /// </summary>
-    public class MissingKeyResolverForEventType : Exception
+    /// <param name="eventType">The <see cref="EventType"/>.</param>
+    public MissingKeyResolverForEventType(EventType eventType) : base($"Missing key resolver for '{eventType}'")
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MissingKeyResolverForEventType"/>.
-        /// </summary>
-        /// <param name="eventType">The <see cref="EventType"/>.</param>
-        public MissingKeyResolverForEventType(EventType eventType) : base($"Missing key resolver for '{eventType}'")
-        {
-        }
     }
 }

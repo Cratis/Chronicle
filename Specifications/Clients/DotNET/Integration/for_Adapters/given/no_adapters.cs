@@ -1,18 +1,15 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.Extensions.Logging;
+namespace Aksio.Cratis.Integration.for_Adapters.given;
 
-namespace Aksio.Cratis.Integration.for_Adapters.given
+public class no_adapters : all_dependencies
 {
-    public class no_adapters : all_dependencies
-    {
-        protected Adapters adapters;
+    protected Adapters adapters;
 
-        void Establish() => adapters = new(
-                types.Object,
-                service_provider.Object,
-                projection_factory.Object,
-                mapper_factory.Object);
-    }
+    void Establish() => adapters = new(
+            types.Object,
+            service_provider.Object,
+            projection_factory.Object,
+            mapper_factory.Object);
 }

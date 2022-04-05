@@ -22,129 +22,128 @@ using Orleans.Hosting;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
 using OrleansClientBuilder = Orleans.ClientBuilder;
 
-namespace Aksio.Cratis.Hosting
+namespace Aksio.Cratis.Hosting;
+
+/// <summary>
+/// Represents an implementation of <see cref="IClientBuilder"/>.
+/// </summary>
+public class ClientBuilder : IClientBuilder
 {
-    /// <summary>
-    /// Represents an implementation of <see cref="IClientBuilder"/>.
-    /// </summary>
-    public class ClientBuilder : IClientBuilder
-    {
 #pragma warning disable IDE0052 // We will be expanding on this.
-        readonly MicroserviceId _microserviceId;
+    readonly MicroserviceId _microserviceId;
 
-        bool _inSilo;
+    bool _inSilo;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
-        /// </summary>
-        /// <param name="microserviceId">Microservice identifier.</param>
-        public ClientBuilder(MicroserviceId microserviceId)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
+    /// </summary>
+    /// <param name="microserviceId">Microservice identifier.</param>
+    public ClientBuilder(MicroserviceId microserviceId)
+    {
+        _microserviceId = microserviceId;
+    }
+
+    /// <summary>
+    /// Start configuring <see cref="IClientBuilder"/> for a specific <see cref="MicroserviceId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="MicroserviceId"/>.</param>
+    /// <returns><see cref="IClientBuilder"/> to build.</returns>
+    public static IClientBuilder ForMicroservice(MicroserviceId id)
+    {
+        return new ClientBuilder(id);
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder InSilo()
+    {
+        _inSilo = true;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public void Build(
+        HostBuilderContext hostBuilderContext,
+        IServiceCollection services,
+        ITypes? types = default,
+        ILoggerFactory? loggerFactory = default)
+    {
+        var logger = loggerFactory?.CreateLogger<ClientBuilder>();
+        logger?.Configuring();
+
+        if (types == default)
         {
-            _microserviceId = microserviceId;
+            types = new Types.Types();
         }
 
-        /// <summary>
-        /// Start configuring <see cref="IClientBuilder"/> for a specific <see cref="MicroserviceId"/>.
-        /// </summary>
-        /// <param name="id"><see cref="MicroserviceId"/>.</param>
-        /// <returns><see cref="IClientBuilder"/> to build.</returns>
-        public static IClientBuilder ForMicroservice(MicroserviceId id)
+        services
+            .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
+            .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
+
+        if (_inSilo)
         {
-            return new ClientBuilder(id);
+            return;
         }
 
-        /// <inheritdoc/>
-        public IClientBuilder InSilo()
-        {
-            _inSilo = true;
-            return this;
-        }
+        logger?.ConfiguringServices();
+        var connectionManager = new ConnectionManager();
+        services
+            .AddSingleton<IConnectionManager>(connectionManager)
+            .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
+            .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
+            .AddTransient<IEventStore, EventStore>()
+            .AddSingleton(types)
+            .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
+            .AddProjections()
+            .AddIntegration()
+            .AddSingleton<IObservers, Observers>()
+            .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
+            .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
+            .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
+            .AddSingleton<ISchemas, Events.Schemas.Schemas>()
+            .AddSingleton<IEventTypes, EventTypes>()
+            .AddSingleton<IEventSerializer, EventSerializer>()
+            .AddSingleton<IHostedService, ObserversService>()
+            .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+            .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
+            .AddSingleton<IRequestContextManager, RequestContextManager>();
 
-        /// <inheritdoc/>
-        public void Build(
-            HostBuilderContext hostBuilderContext,
-            IServiceCollection services,
-            ITypes? types = default,
-            ILoggerFactory? loggerFactory = default)
-        {
-            var logger = loggerFactory?.CreateLogger<ClientBuilder>();
-            logger?.Configuring();
+        types.AllObservers().ForEach(_ => services.AddTransient(_));
 
-            if (types == default)
+        logger?.ConfiguringCompliance();
+
+        types.All.Where(_ =>
+            _ != typeof(ICanProvideComplianceMetadataForType) &&
+            _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
+        types.All.Where(_ =>
+            _ != typeof(ICanProvideComplianceMetadataForProperty) &&
+            _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
+
+        services.AddSingleton(sp =>
+        {
+            logger?.ConfiguringKernelConnection();
+            var orleansBuilder = new OrleansClientBuilder()
+                .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
+                .AddEventLogStream()
+                .AddSimpleMessageStreamProvider("observer-handlers")
+                .UseExecutionContext()
+                .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
+                .ConfigureServices(services => services
+                    .AddSingleton<IConnectionManager>(connectionManager)
+                    .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                    .AddSingleton<IRequestContextManager, RequestContextManager>()
+                    .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
+
+            var orleansClient = orleansBuilder.Build();
+
+            logger?.ConnectingToKernel();
+            orleansClient.Connect(async (_) =>
             {
-                types = new Types.Types();
-            }
+                await Task.Delay(1000);
+                return true;
+            }).Wait();
+            logger?.ConnectedToKernel();
 
-            services
-                .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
-                .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
-
-            if (_inSilo)
-            {
-                return;
-            }
-
-            logger?.ConfiguringServices();
-            var connectionManager = new ConnectionManager();
-            services
-                .AddSingleton<IConnectionManager>(connectionManager)
-                .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
-                .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
-                .AddTransient<IEventStore, EventStore>()
-                .AddSingleton(types)
-                .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
-                .AddProjections()
-                .AddIntegration()
-                .AddSingleton<IObservers, Observers>()
-                .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
-                .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
-                .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
-                .AddSingleton<ISchemas, Events.Schemas.Schemas>()
-                .AddSingleton<IEventTypes, EventTypes>()
-                .AddSingleton<IEventSerializer, EventSerializer>()
-                .AddSingleton<IHostedService, ObserversService>()
-                .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-                .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
-                .AddSingleton<IRequestContextManager, RequestContextManager>();
-
-            types.AllObservers().ForEach(_ => services.AddTransient(_));
-
-            logger?.ConfiguringCompliance();
-
-            types.All.Where(_ =>
-                _ != typeof(ICanProvideComplianceMetadataForType) &&
-                _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
-            types.All.Where(_ =>
-                _ != typeof(ICanProvideComplianceMetadataForProperty) &&
-                _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
-
-            services.AddSingleton(sp =>
-            {
-                logger?.ConfiguringKernelConnection();
-                var orleansBuilder = new OrleansClientBuilder()
-                    .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
-                    .AddEventLogStream()
-                    .AddSimpleMessageStreamProvider("observer-handlers")
-                    .UseExecutionContext()
-                    .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
-                    .ConfigureServices(services => services
-                        .AddSingleton<IConnectionManager>(connectionManager)
-                        .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-                        .AddSingleton<IRequestContextManager, RequestContextManager>()
-                        .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
-
-                var orleansClient = orleansBuilder.Build();
-
-                logger?.ConnectingToKernel();
-                orleansClient.Connect(async (_) =>
-                {
-                    await Task.Delay(1000);
-                    return true;
-                }).Wait();
-                logger?.ConnectedToKernel();
-
-                return orleansClient;
-            });
-        }
+            return orleansClient;
+        });
     }
 }

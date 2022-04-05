@@ -3,18 +3,17 @@
 
 using NJsonSchema;
 
-namespace Aksio.Cratis.Schemas
+namespace Aksio.Cratis.Schemas;
+
+/// <summary>
+/// Defines a generator that can generate <see cref="JsonSchema"/>.
+/// </summary>
+public interface IJsonSchemaGenerator
 {
     /// <summary>
-    /// Defines a generator that can generate <see cref="JsonSchema"/>.
+    /// Generate a <see cref="JsonSchema"/> for a specific type.
     /// </summary>
-    public interface IJsonSchemaGenerator
-    {
-        /// <summary>
-        /// Generate a <see cref="JsonSchema"/> for a specific type.
-        /// </summary>
-        /// <param name="type"><see cref="Type"/> to generate for.</param>
-        /// <returns>A generated <see cref="JsonSchema"/>.</returns>
-        JsonSchema Generate(Type type);
-    }
+    /// <param name="type"><see cref="Type"/> to generate for.</param>
+    /// <returns>A generated <see cref="JsonSchema"/>.</returns>
+    JsonSchema Generate(Type type);
 }

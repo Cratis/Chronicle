@@ -5,42 +5,41 @@ using System.Collections.Concurrent;
 using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Connections;
 
-namespace Aksio.Cratis.Events.Store.Grains.Observation
+namespace Aksio.Cratis.Events.Store.Grains.Observation;
+
+/// <summary>
+/// Represents an implementation of <see cref="IConnectedClients"/>.
+/// </summary>
+[Singleton]
+public class ConnectedClients : IConnectedClients
 {
-    /// <summary>
-    /// Represents an implementation of <see cref="IConnectedClients"/>.
-    /// </summary>
-    [Singleton]
-    public class ConnectedClients : IConnectedClients
+    readonly ConcurrentBag<ConnectionContext> _connectedClients = new();
+
+    /// <inheritdoc/>
+    public int Count => _connectedClients.Count;
+
+    /// <inheritdoc/>
+    public bool AnyConnectedClients => !_connectedClients.IsEmpty;
+
+    /// <inheritdoc/>
+    public event ClientDisconnected ClientDisconnected = (_) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task OnClientConnected(ConnectionContext context)
     {
-        readonly ConcurrentBag<ConnectionContext> _connectedClients = new();
+        _connectedClients.Add(context);
+        return Task.CompletedTask;
+    }
 
-        /// <inheritdoc/>
-        public int Count => _connectedClients.Count;
-
-        /// <inheritdoc/>
-        public bool AnyConnectedClients => !_connectedClients.IsEmpty;
-
-        /// <inheritdoc/>
-        public event ClientDisconnected ClientDisconnected = (_) => Task.CompletedTask;
-
-        /// <inheritdoc/>
-        public Task OnClientConnected(ConnectionContext context)
+    /// <inheritdoc/>
+    public async Task OnClientDisconnected(ConnectionContext context)
+    {
+        var remaining = _connectedClients.Except(new[] { context }).ToArray();
+        _connectedClients.Clear();
+        foreach (var remainingClient in remaining)
         {
-            _connectedClients.Add(context);
-            return Task.CompletedTask;
+            _connectedClients.Add(remainingClient);
         }
-
-        /// <inheritdoc/>
-        public async Task OnClientDisconnected(ConnectionContext context)
-        {
-            var remaining = _connectedClients.Except(new[] { context }).ToArray();
-            _connectedClients.Clear();
-            foreach (var remainingClient in remaining)
-            {
-                _connectedClients.Add(remainingClient);
-            }
-            await ClientDisconnected(context);
-        }
+        await ClientDisconnected(context);
     }
 }

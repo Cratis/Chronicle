@@ -3,14 +3,13 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor
-{
-    public class TypeWithProperties
-    {
-        public string First { get; set; }
-        public string Second { get; set; }
+namespace Aksio.Cratis.Schemas.for_ComplianceMetadataSchemaProcessor;
 
-        public static PropertyInfo FirstProperty = typeof(TypeWithProperties).GetProperty(nameof(First), BindingFlags.Public | BindingFlags.Instance);
-        public static PropertyInfo SecondProperty = typeof(TypeWithProperties).GetProperty(nameof(Second), BindingFlags.Public | BindingFlags.Instance);
-    }
+public class TypeWithProperties
+{
+    public string First { get; set; }
+    public string Second { get; set; }
+
+    public static PropertyInfo FirstProperty = typeof(TypeWithProperties).GetProperty(nameof(First), BindingFlags.Public | BindingFlags.Instance);
+    public static PropertyInfo SecondProperty = typeof(TypeWithProperties).GetProperty(nameof(Second), BindingFlags.Public | BindingFlags.Instance);
 }

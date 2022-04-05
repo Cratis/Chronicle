@@ -5,26 +5,25 @@ using System.Text.Json.Nodes;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
-namespace Aksio.Cratis.Compliance.for_JsonComplianceManager.given
-{
-    public class a_type_with_one_property : Specification
-    {
-        record TypeHoldingValue(int Something);
-        protected const string property_name = nameof(TypeHoldingValue.Something);
-        protected const int value_in_type = 42;
-        protected JsonSchema schema;
-        protected JsonObject input;
+namespace Aksio.Cratis.Compliance.for_JsonComplianceManager.given;
 
-        void Establish()
+public class a_type_with_one_property : Specification
+{
+    record TypeHoldingValue(int Something);
+    protected const string property_name = nameof(TypeHoldingValue.Something);
+    protected const int value_in_type = 42;
+    protected JsonSchema schema;
+    protected JsonObject input;
+
+    void Establish()
+    {
+        var instance = new TypeHoldingValue(value_in_type);
+        var settings = new JsonSchemaGeneratorSettings();
+        var generator = new JsonSchemaGenerator(settings);
+        schema = generator.Generate(instance.GetType());
+        input = new JsonObject
         {
-            var instance = new TypeHoldingValue(value_in_type);
-            var settings = new JsonSchemaGeneratorSettings();
-            var generator = new JsonSchemaGenerator(settings);
-            schema = generator.Generate(instance.GetType());
-            input = new JsonObject
-            {
-                [property_name] = value_in_type
-            };
-        }
+            [property_name] = value_in_type
+        };
     }
 }

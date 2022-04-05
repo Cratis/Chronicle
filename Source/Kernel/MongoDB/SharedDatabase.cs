@@ -5,36 +5,35 @@ using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Extensions.MongoDB;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.MongoDB
+namespace Aksio.Cratis.MongoDB;
+
+/// <summary>
+/// Represents an implementation of <see cref="ISharedDatabase"/>.
+/// </summary>
+public class SharedDatabase : ISharedDatabase
 {
+    readonly IMongoDatabase _database;
+
     /// <summary>
-    /// Represents an implementation of <see cref="ISharedDatabase"/>.
+    /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
     /// </summary>
-    public class SharedDatabase : ISharedDatabase
+    /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
+    /// <param name="configuration"><see cref="Storage"/> configuration.</param>
+    public SharedDatabase(IMongoDBClientFactory clientFactory, Storage configuration)
     {
-        readonly IMongoDatabase _database;
+        var url = new MongoUrl(configuration.Get(WellKnownStorageTypes.EventStore).Shared.ToString());
+        var client = clientFactory.Create(url);
+        _database = client.GetDatabase(url.DatabaseName);
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
-        /// </summary>
-        /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
-        /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-        public SharedDatabase(IMongoDBClientFactory clientFactory, Storage configuration)
+    /// <inheritdoc/>
+    public IMongoCollection<T> GetCollection<T>(string? collectionName = null)
+    {
+        if (collectionName == null)
         {
-            var url = new MongoUrl(configuration.Get(WellKnownStorageTypes.EventStore).Shared.ToString());
-            var client = clientFactory.Create(url);
-            _database = client.GetDatabase(url.DatabaseName);
+            return _database.GetCollection<T>();
         }
 
-        /// <inheritdoc/>
-        public IMongoCollection<T> GetCollection<T>(string? collectionName = null)
-        {
-            if (collectionName == null)
-            {
-                return _database.GetCollection<T>();
-            }
-
-            return _database.GetCollection<T>(collectionName);
-        }
+        return _database.GetCollection<T>(collectionName);
     }
 }

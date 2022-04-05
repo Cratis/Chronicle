@@ -5,17 +5,16 @@ using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.Expressions
-{
-    /// <summary>
-    /// Represents a <see cref="IPropertyMapperExpressionResolver"/> for resolving value from <see cref="EventSourceId"/> of the <see cref="AppendedEvent"/>.
-    /// </summary>
-    public class EventSourceIdExpressionResolver : IPropertyMapperExpressionResolver
-    {
-        /// <inheritdoc/>
-        public bool CanResolve(PropertyPath targetProperty, string expression) => expression == "$eventSourceId";
+namespace Aksio.Cratis.Events.Projections.Expressions;
 
-        /// <inheritdoc/>
-        public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventSourceId);
-    }
+/// <summary>
+/// Represents a <see cref="IPropertyMapperExpressionResolver"/> for resolving value from <see cref="EventSourceId"/> of the <see cref="AppendedEvent"/>.
+/// </summary>
+public class EventSourceIdExpressionResolver : IPropertyMapperExpressionResolver
+{
+    /// <inheritdoc/>
+    public bool CanResolve(PropertyPath targetProperty, string expression) => expression == "$eventSourceId";
+
+    /// <inheritdoc/>
+    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, EventValueProviders.FromEventSourceId);
 }

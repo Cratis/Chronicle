@@ -3,21 +3,20 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_asking_if_can_provide_for_property
+namespace Aksio.Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_asking_if_can_provide_for_property;
+
+public class and_property_is_adorned_with_pii_attribute : given.a_provider
 {
-    public class and_property_is_adorned_with_pii_attribute : given.a_provider
+    class MyClass
     {
-        class MyClass
-        {
-            [PII]
-            public string Something { get; set; }
+        [PII]
+        public string Something { get; set; }
 
-            public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
-        }
-
-        bool result;
-        void Because() => result = provider.CanProvide(MyClass.SomethingProperty);
-
-        [Fact] void should_be_able_to_provide() => result.ShouldBeTrue();
+        public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
     }
+
+    bool result;
+    void Because() => result = provider.CanProvide(MyClass.SomethingProperty);
+
+    [Fact] void should_be_able_to_provide() => result.ShouldBeTrue();
 }

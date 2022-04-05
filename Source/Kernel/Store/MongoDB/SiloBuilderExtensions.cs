@@ -11,38 +11,37 @@ using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Orleans.Hosting
+namespace Orleans.Hosting;
+
+/// <summary>
+/// Extension methods for <see cref="ISiloBuilder"/> for configuring event log stream.
+/// </summary>
+public static class SiloBuilderExtensions
 {
     /// <summary>
-    /// Extension methods for <see cref="ISiloBuilder"/> for configuring event log stream.
+    /// Add event log stream support.
     /// </summary>
-    public static class SiloBuilderExtensions
+    /// <param name="builder"><see cref="ISiloBuilder"/> to add for.</param>
+    /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
+    public static ISiloBuilder AddEventLogStream(this ISiloBuilder builder)
     {
-        /// <summary>
-        /// Add event log stream support.
-        /// </summary>
-        /// <param name="builder"><see cref="ISiloBuilder"/> to add for.</param>
-        /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
-        public static ISiloBuilder AddEventLogStream(this ISiloBuilder builder)
+        builder.AddMemoryGrainStorage("PubSubStore");
+        builder.ConfigureServices(services =>
         {
-            builder.AddMemoryGrainStorage("PubSubStore");
-            builder.ConfigureServices(services =>
-            {
-                services.AddSingletonNamedService<IGrainStorage>(EventLogState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<EventLogStorageProvider>()!);
-                services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ObserverStorageProvider>()!);
-                services.AddSingletonNamedService<IGrainStorage>(FailedObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<FailedObserverStorageProvider>()!);
-                services.AddSingleton<IFailedObservers, FailedObservers>();
-            });
+            services.AddSingletonNamedService<IGrainStorage>(EventLogState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<EventLogStorageProvider>()!);
+            services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ObserverStorageProvider>()!);
+            services.AddSingletonNamedService<IGrainStorage>(FailedObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<FailedObserverStorageProvider>()!);
+            services.AddSingleton<IFailedObservers, FailedObservers>();
+        });
 
-            builder.AddPersistentStreams(
-                "event-log",
-                EventLogQueueAdapterFactory.Create,
-                _ =>
-                {
-                    _.Configure<HashRingStreamQueueMapperOptions>(ob => ob.Configure(options => options.TotalQueueCount = 8));
-                    _.ConfigureStreamPubSub();
-                });
-            return builder;
-        }
+        builder.AddPersistentStreams(
+            "event-log",
+            EventLogQueueAdapterFactory.Create,
+            _ =>
+            {
+                _.Configure<HashRingStreamQueueMapperOptions>(ob => ob.Configure(options => options.TotalQueueCount = 8));
+                _.ConfigureStreamPubSub();
+            });
+        return builder;
     }
 }

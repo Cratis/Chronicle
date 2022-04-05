@@ -5,34 +5,33 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Json;
 
-namespace Aksio.Cratis.Events
-{
-    /// <summary>
-    /// Represents an implementation of <see cref="IEventSerializer"/>.
-    /// </summary>
-    public class EventSerializer : IEventSerializer
-    {
-        readonly JsonSerializerOptions _serializerOptions;
+namespace Aksio.Cratis.Events;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EventSerializer"/> class.
-        /// </summary>
-        public EventSerializer()
+/// <summary>
+/// Represents an implementation of <see cref="IEventSerializer"/>.
+/// </summary>
+public class EventSerializer : IEventSerializer
+{
+    readonly JsonSerializerOptions _serializerOptions;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventSerializer"/> class.
+    /// </summary>
+    public EventSerializer()
+    {
+        _serializerOptions = new()
         {
-            _serializerOptions = new()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters =
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters =
                 {
                     new ConceptAsJsonConverterFactory()
                 }
-            };
-        }
-
-        /// <inheritdoc/>
-        public object Deserialize(Type type, JsonObject json) => json.Deserialize(type, _serializerOptions)!;
-
-        /// <inheritdoc/>
-        public JsonObject Serialize(object @event) => (JsonSerializer.SerializeToNode(@event, _serializerOptions) as JsonObject)!;
+        };
     }
+
+    /// <inheritdoc/>
+    public object Deserialize(Type type, JsonObject json) => json.Deserialize(type, _serializerOptions)!;
+
+    /// <inheritdoc/>
+    public JsonObject Serialize(object @event) => (JsonSerializer.SerializeToNode(@event, _serializerOptions) as JsonObject)!;
 }
