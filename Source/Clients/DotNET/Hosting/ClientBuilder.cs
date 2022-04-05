@@ -30,6 +30,7 @@ namespace Aksio.Cratis.Hosting;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
+    readonly MicroserviceId _microserviceId;
     bool _inSilo;
 
     /// <summary>
@@ -39,6 +40,7 @@ public class ClientBuilder : IClientBuilder
     public ClientBuilder(MicroserviceId microserviceId)
     {
         ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
+        _microserviceId = microserviceId;
     }
 
     /// <summary>
