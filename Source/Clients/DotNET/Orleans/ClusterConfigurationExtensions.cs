@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
-using Aksio.Cratis;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
 using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
