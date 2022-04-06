@@ -82,7 +82,7 @@ public static class ConfigurationHostBuilderExtensions
         {
             var attribute = configurationObject.GetCustomAttribute<ConfigurationAttribute>()!;
 
-            var fileName = attribute.FileNameSet ? attribute.FileName : configurationObject.Name.ToLowerInvariant();
+            var fileName = attribute.NameSet ? attribute.Name : configurationObject.Name.ToLowerInvariant();
             fileName = Path.HasExtension(fileName) ? fileName : $"{fileName}.json";
 
             var configurationBuilder = new ConfigurationBuilder();
@@ -105,6 +105,8 @@ public static class ConfigurationHostBuilderExtensions
             configuration.Bind(configurationInstance);
             services.AddSingleton(configurationObject, configurationInstance);
 
+            services.AddChildConfigurationObjects(configurationObject, configurationInstance);
+
             var optionsType = typeof(IOptions<>).MakeGenericType(configurationObject);
             var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObject);
             var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationInstance });
@@ -112,6 +114,11 @@ public static class ConfigurationHostBuilderExtensions
             services.AddSingleton(optionsType, optionsWrapperInstance!);
         }
 
+        return services;
+    }
+
+    static IServiceCollection AddChildConfigurationObjects(this IServiceCollection services, Type configurationObjectType, object configurationObject)
+    {
         return services;
     }
 }
