@@ -4,7 +4,7 @@
 const fileTypes = /\.(js|json|css|html|png|jpg|jpeg|gif)$/;
 
 module.exports = (basePath, port) => {
-    const actualPort = process.env.port || port || 9000;
+    const actualPort = process.env.port || port || 9000;
 
     return {
         historyApiFallback: { index: basePath },
