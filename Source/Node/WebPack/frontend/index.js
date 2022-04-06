@@ -24,7 +24,12 @@ module.exports = (env, argv, basePath, callback, port, title) => {
         },
         plugins: plugins(basePath, title),
         devtool: production ? false : 'inline-source-map',
-        devServer: devServer(basePath, port)
+        devServer: devServer(basePath, port),
+        watchOptions: {
+            ignored: [
+                '**/for_*/**/*.ts'
+            ]
+        }
     };
 
     if (callback) {
