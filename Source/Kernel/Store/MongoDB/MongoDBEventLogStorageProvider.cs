@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.DependencyInversion;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Events.Store.MongoDB;
@@ -11,19 +12,19 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 public class MongoDBEventLogStorageProvider : IEventLogStorageProvider
 {
     readonly IEventConverter _converter;
-    readonly IEventStoreDatabase _eventStoreDatabase;
+    readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBEventLogStorageProvider"/> class.
     /// </summary>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
-    /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/> to use.</param>
     public MongoDBEventLogStorageProvider(
         IEventConverter converter,
-        IEventStoreDatabase eventStoreDatabase)
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
     {
         _converter = converter;
-        _eventStoreDatabase = eventStoreDatabase;
+        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
     /// <inheritdoc/>
@@ -33,7 +34,7 @@ public class MongoDBEventLogStorageProvider : IEventLogStorageProvider
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = _eventStoreDatabase.GetEventSequenceCollectionFor(EventSequenceId.Log);
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(EventSequenceId.Log);
         var @event = await collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleAsync();
         return await _converter.ToAppendedEvent(@event);
     }
@@ -44,7 +45,7 @@ public class MongoDBEventLogStorageProvider : IEventLogStorageProvider
         EventSourceId? eventSourceId = null,
         IEnumerable<EventType>? eventTypes = null)
     {
-        var collection = _eventStoreDatabase.GetEventSequenceCollectionFor(EventSequenceId.Log);
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(EventSequenceId.Log);
         var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)
