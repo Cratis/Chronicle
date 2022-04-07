@@ -19,10 +19,6 @@ namespace Aksio.Cratis.Events.Store.Grains;
 [StorageProvider(ProviderName = EventSequenceState.StorageProvider)]
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
-    /// <summary>
-    /// The name of the stream provider.
-    /// </summary>
-    public const string StreamProvider = "event-sequence";
     readonly ISchemaStore _schemaStore;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
@@ -53,11 +49,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        _eventSequenceId = this.GetPrimaryKey(out var extension);
-        _microserviceAndTenant = MicroserviceAndTenant.Parse(extension);
+        _eventSequenceId = this.GetPrimaryKey(out var streamNamespace);
+        _microserviceAndTenant = MicroserviceAndTenant.Parse(streamNamespace);
 
-        var streamProvider = GetStreamProvider(StreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, extension);
+        var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
+        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, streamNamespace);
 
         await base.OnActivateAsync();
     }

@@ -16,6 +16,12 @@ public record MicroserviceAndTenant(MicroserviceId MicroserviceId, TenantId Tena
     public static readonly MicroserviceAndTenant NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet);
 
     /// <summary>
+    /// Implicitly convert from string to <see cref="MicroserviceAndTenant"/>.
+    /// </summary>
+    /// <param name="input">String to parse.</param>
+    public static implicit operator MicroserviceAndTenant(string input) => Parse(input);
+
+    /// <summary>
     /// Implicitly convert to string.
     /// </summary>
     /// <param name="key">Key to convert.</param>

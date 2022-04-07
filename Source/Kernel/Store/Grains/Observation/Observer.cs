@@ -62,15 +62,38 @@ public class Observer : Grain<ObserverState>, IObserver
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
 
-        var streamProvider = GetStreamProvider(EventSequence.StreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, _tenantId.ToString());
+        var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
+        var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
+        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
 
         await base.OnActivateAsync();
     }
 
     /// <inheritdoc/>
+    public async Task Rewind()
+    {
+        State.Offset = 0;
+        foreach (var subscription in _subscriptions.Keys)
+        {
+            await Unsubscribe(subscription);
+        }
+        foreach (var subscription in _subscriptions.Keys)
+        {
+            await Subscribe(State.EventTypes);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task Subscribe(IEnumerable<EventType> eventTypes)
     {
+        if (HasDefinitionChanged(eventTypes))
+        {
+            State.Offset = 0;
+        }
+
+        State.EventTypes = eventTypes;
+        await WriteStateAsync();
+
         var connectionId = _requestContextManager.Get(RequestContextKeys.ConnectionId).ToString()!;
         var subscriptionHandle = await _stream!.SubscribeAsync(
             async (@event, _) =>
@@ -118,4 +141,6 @@ public class Observer : Grain<ObserverState>, IObserver
             _subscriptions.Remove(subscriptionId, out _);
         }
     }
+
+    bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) => !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
 }

@@ -58,10 +58,12 @@ public class EventLogQueueCacheCursor : IQueueCacheCursor
                 return null!;
             }
 
+            var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
             return new EventSequenceBatchContainer(
                 appendedEvents,
                 _streamIdentity.Guid,
-                _streamIdentity.Namespace,
+                microserviceAndTenant.MicroserviceId,
+                microserviceAndTenant.TenantId,
                 new Dictionary<string, object> { { RequestContextKeys.TenantId, _streamIdentity.Namespace } });
         }
         catch (Exception ex)
@@ -102,8 +104,8 @@ public class EventLogQueueCacheCursor : IQueueCacheCursor
 
     void FindEventsFrom(StreamSequenceToken token)
     {
-        TenantId tenantId = _streamIdentity.Namespace;
-        _executionContextManager.Establish(tenantId, CorrelationId.New());
+        var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
+        _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
         var task = _eventLogStorageProvider.GetFromSequenceNumber((ulong)token.SequenceNumber, _partition, _eventTypes);
         task.Wait();
         _cursor = task.Result;

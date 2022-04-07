@@ -35,8 +35,8 @@ public class EventLogQueueCache : IQueueCache
     /// <inheritdoc/>
     public IQueueCacheCursor GetCacheCursor(IStreamIdentity streamIdentity, StreamSequenceToken token)
     {
-        var tenantId = (TenantId)streamIdentity.Namespace;
-        _executionContextManager.Establish(tenantId, CorrelationId.New());
+        var microserviceAndTenant = (MicroserviceAndTenant)streamIdentity.Namespace;
+        _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
         if (token is EventLogSequenceNumberTokenWithFilter tokenWithFilter)
         {

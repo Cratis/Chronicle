@@ -22,6 +22,6 @@ public class Startup
         app.ApplicationServices.GetService<IConnectionManager>()!.SetKernelMode();
         app.ApplicationServices.GetService<IRequestContextManager>()!.Set(RequestContextKeys.ConnectionId, ConnectionId.Kernel);
         app.ApplicationServices.GetService<IProjectionsRegistrar>()!.StartAll().Wait();
-        app.ApplicationServices.GetService<IObservers>()!.StartObserving().Wait();
+        app.ApplicationServices.GetService<IObservers>()!.RegisterAndObserveAll().Wait();
     }
 }
