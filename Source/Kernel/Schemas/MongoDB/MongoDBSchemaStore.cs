@@ -40,11 +40,16 @@ public class MongoDBSchemaStore : ISchemaStore
         schema.SetDisplayName(friendlyName);
         schema.SetGeneration(type.Generation);
 
-        var eventSchema = new EventSchema(type, schema).ToMongoDB();
-
+        var eventSchema = new EventSchema(type, schema);
+        if (!_schemasByTypeAndGeneration.ContainsKey(type.Id))
+        {
+            _schemasByTypeAndGeneration[type.Id] = new();
+        }
+        _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
+        var mongoEventSchema = eventSchema.ToMongoDB();
         await GetCollection().ReplaceOneAsync(
-            _ => _.Id == eventSchema.Id,
-            eventSchema,
+            _ => _.Id == mongoEventSchema.Id,
+            mongoEventSchema,
             new ReplaceOptions { IsUpsert = true });
     }
 
