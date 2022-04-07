@@ -12,34 +12,33 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreDatabase"/>.
 /// </summary>
-[Singleton]
+[SingletonPerMicroserviceAndTenant]
 public class EventStoreDatabase : IEventStoreDatabase
 {
     const string BaseCollectionName = "event-log";
     readonly IServiceProvider _serviceProvider;
     readonly IExecutionContextManager _executionContextManager;
-    Dictionary<MicroserviceAndTenant, IMongoDatabase> _databases = new();
+    IMongoDatabase? _database;
 
     IMongoDatabase Database
     {
         get
         {
-            if (_databases.Count == 0)
+            if (_database is null)
             {
                 var mongoDBClientFactory = _serviceProvider.GetService<IMongoDBClientFactory>()!;
                 var configuration = _serviceProvider.GetService<Storage>()!;
 
-                _databases = configuration.Microservices.SelectMany(storageForMicroservice =>
-                    storageForMicroservice.Value.Tenants.Select(storageForTenant =>
-                    {
-                        var eventStoreForTenant = storageForTenant.Value.Get(WellKnownStorageTypes.EventStore);
-                        var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
-                        var client = mongoDBClientFactory.Create(url);
-                        return new KeyValuePair<MicroserviceAndTenant, IMongoDatabase>(new MicroserviceAndTenant(storageForMicroservice.Key, storageForTenant.Key), client.GetDatabase(url.DatabaseName));
-                    })).ToDictionary(_ => _.Key, _ => _.Value);
+                var microserviceId = _executionContextManager.Current.MicroserviceId;
+                var tenantId = _executionContextManager.Current.TenantId;
+                var storageTypes = configuration.Microservices.Get(microserviceId).Tenants.Get(tenantId);
+                var eventStoreForTenant = storageTypes.Get(WellKnownStorageTypes.EventStore);
+                var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
+                var client = mongoDBClientFactory.Create(url);
+                _database = client.GetDatabase(url.DatabaseName);
             }
 
-            return _databases[new(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId)];
+            return _database;
         }
     }
 
