@@ -41,7 +41,8 @@
         },
     },
     "exclude": [
-        "**/dist"
+        "**/dist",
+        "**/for_*/**"
     ],
     "references": [
         {
