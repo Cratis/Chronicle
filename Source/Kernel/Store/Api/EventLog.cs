@@ -42,7 +42,7 @@ public class EventLog : Controller
     {
         var jsonDocument = await JsonDocument.ParseAsync(Request.Body);
         var content = JsonObject.Create(jsonDocument.RootElement);
-        var eventLog = _grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: _executionContextManager.Current.TenantId.ToString());
+        var eventLog = _grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: _executionContextManager.Current.ToMicroserviceAndTenant());
         await eventLog.Append(
             eventSourceId,
             new EventType(eventTypeId, eventGeneration),
