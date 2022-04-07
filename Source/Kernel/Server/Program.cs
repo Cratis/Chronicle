@@ -11,7 +11,6 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.MongoDB;
-using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
@@ -28,27 +27,27 @@ public static class Program
         return CreateHostBuilder(args).RunConsoleAsync();
     }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-             Host.CreateDefaultBuilder(args)
-                .UseAksio(_ => _.InSilo())
-                .UseOrleans(_ => _
-                    .UseCluster()
-                    .ConfigureServices(_ => _
-                        .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
-                        .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
-                        .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
-                        .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
-                        .AddSingleton<IEventLogStorageProvider, MongoDBEventLogStorageProvider>()
-                        .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
-                        .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
-                        .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
-                    .AddConnectedClientsTracking()
-                    .AddEventLogStream()
-                    .UseMongoDBReminderService()
-                    .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
-                    .AddExecutionContext())
-                .ConfigureWebHostDefaults(_ => _
-                    .UseStartup<Startup>());
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+         Host.CreateDefaultBuilder(args)
+            .UseAksio(_ => _.InSilo())
+            .UseOrleans(_ => _
+                .UseCluster()
+                .ConfigureServices(_ => _
+                    .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
+                    .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
+                    .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
+                    .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
+                    .AddSingleton<IEventLogStorageProvider, MongoDBEventLogStorageProvider>()
+                    .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
+                    .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
+                    .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
+                .AddConnectedClientsTracking()
+                .AddEventSequenceStream()
+                .UseMongoDBReminderService()
+                .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
+                .AddExecutionContext())
+            .ConfigureWebHostDefaults(_ => _
+                .UseStartup<Startup>());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)
     {
