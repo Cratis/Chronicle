@@ -123,7 +123,7 @@ public class ClientBuilder : IClientBuilder
             logger?.ConfiguringKernelConnection();
             var orleansBuilder = new OrleansClientBuilder()
                 .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
-                .AddEventLogStream()
+                .AddEventSequenceStream()
                 .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider)
                 .UseExecutionContext()
                 .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
