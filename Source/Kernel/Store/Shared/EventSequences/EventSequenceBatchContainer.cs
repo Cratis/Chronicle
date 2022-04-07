@@ -29,18 +29,20 @@ public class EventSequenceBatchContainer : IBatchContainer
     /// </summary>
     /// <param name="events">The <see cref="AppendedEvent"/>.</param>
     /// <param name="streamGuid">The identifier of the stream.</param>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the batch is for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the batch is for.</param>
     /// <param name="requestContext">The request context.</param>
     public EventSequenceBatchContainer(
         IEnumerable<AppendedEvent> events,
         Guid streamGuid,
+        MicroserviceId microserviceId,
         TenantId tenantId,
         IDictionary<string, object> requestContext)
     {
         _events = events;
         StreamGuid = streamGuid;
         _requestContext = requestContext;
-        StreamNamespace = tenantId.ToString();
+        StreamNamespace = new MicroserviceAndTenant(microserviceId, tenantId);
         if (_events.Any())
         {
             SequenceToken = new EventLogSequenceNumberToken(_events.First().Metadata.SequenceNumber);

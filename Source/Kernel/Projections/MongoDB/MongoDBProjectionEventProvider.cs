@@ -78,12 +78,12 @@ public class MongoDBProjectionEventProvider : IProjectionEventProvider
         {
             var currentOffset = await _positionsProvider().GetFor(pipeline.Projection, sink.Key);
             var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-            var tenantId = _executionContextManager.Current.TenantId;
-            var stream = streamProvider.GetStream<AppendedEvent>(EventSequenceId.Log, tenantId.ToString());
+            var microserviceAndTenant = new MicroserviceAndTenant(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+            var stream = streamProvider.GetStream<AppendedEvent>(EventSequenceId.Log, microserviceAndTenant);
             _subscriptionsPerPipeline[pipeline] = await stream.SubscribeAsync(
                 async (@event, _) =>
                 {
-                    _executionContextManager.Establish(tenantId, CorrelationId.New());
+                    _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
                     var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
                     subject.OnNext(new(@event.Metadata, @event.Context, @event.Content));
                 },

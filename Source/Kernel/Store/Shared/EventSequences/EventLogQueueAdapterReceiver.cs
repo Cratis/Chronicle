@@ -60,10 +60,12 @@ public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
     {
         var tenantIdAsString = requestContext[RequestContextKeys.TenantId]?.ToString() ?? TenantId.NotSet.ToString();
         var tenantId = (TenantId)tenantIdAsString;
+        var microserviceIdAsString = requestContext[RequestContextKeys.MicroserviceId]?.ToString() ?? MicroserviceId.Unspecified.ToString();
+        var microserviceId = (MicroserviceId)microserviceIdAsString;
 
         lock (_eventBatches)
         {
-            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, tenantId, requestContext));
+            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceId, tenantId, requestContext));
         }
     }
 }

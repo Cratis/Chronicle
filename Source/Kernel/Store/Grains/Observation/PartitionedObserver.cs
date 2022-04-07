@@ -23,6 +23,7 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
     IGrainReminder? _recoverReminder;
     TenantId _tenantId = TenantId.NotSet;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
+    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     string _connectionId = string.Empty;
 
@@ -34,6 +35,7 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
         _tenantId = key.TenantId;
         _eventSequenceId = key.EventSequenceId;
         _eventSourceId = key.EventSourceId;
+        _microserviceId = key.MicroserviceId;
 
         _recoverReminder = await GetReminder(RecoverReminder);
         if (State.IsFailed)
@@ -89,9 +91,9 @@ public class PartitionedObserver : Grain<FailedObserverState>, IPartitionedObser
 
             await UnregisterReminder(reminder);
 
-            var streamProvider = GetStreamProvider(EventSequence.StreamProvider);
-
-            var eventLogStream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, _tenantId.ToString());
+            var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
+            var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
+            var eventLogStream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
             StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
 
             subscriptionId = await eventLogStream.SubscribeAsync(

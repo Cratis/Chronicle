@@ -4,7 +4,6 @@
 using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Types;
 using Orleans;
@@ -61,19 +60,18 @@ public class Observers : IObservers
     }
 
     /// <inheritdoc/>
-    public async Task StartObserving()
+    public async Task RegisterAndObserveAll()
     {
         /*
          The plan:
-         - Let Kernel do the heavy lifting of setting up underlying observers for all tenants
-         - Connect
-         - Add array of event types for the observer to the definition
-         - Extend on ExecutionContextManager Establish to include causation and caused by
+         - Add array of event types for the observer to the definition - persist this
          - Implement the Observer replay
             - Replay automatically if definition changed (event types) when observer observing new type that already has events
-         - Namespace of stream should be per microservice
+         - Extend on ExecutionContextManager Establish to include causation and caused by
          - Retry failed when observer is registered (Move from BootProcedure)
 
+         - Let Kernel do the heavy lifting of setting up underlying observers for all tenants
+         - Connect
          - Establish execution context based on what is in the event context
          - Add Tenant, Correlation, Causation, CausedBy to the EventContext
          */
@@ -89,7 +87,6 @@ public class Observers : IObservers
                 await handler.OnNext(@event);
             });
 
-            var key = new ObserverKey(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log);
             var observers = _clusterClient.GetGrain<Store.Grains.Observation.IObservers>(Guid.Empty);
             var eventTypes = handler.EventTypes.ToArray();
             await observers.Subscribe(handler.ObserverId, EventSequenceId.Log, eventTypes);

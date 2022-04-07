@@ -11,6 +11,12 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 public interface IObserver : IGrainWithGuidCompoundKey
 {
     /// <summary>
+    /// Rewind the observer.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Rewind();
+
+    /// <summary>
     /// Subscribe to observer.
     /// </summary>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
