@@ -3,16 +3,15 @@
 
 using Events.Accounts.Debit;
 
-namespace Domain.Accounts.Debit
+namespace Domain.Accounts.Debit;
+
+[Route("/api/accounts/debit")]
+public class DebitAccounts : Controller
 {
-    [Route("/api/accounts/debit")]
-    public class DebitAccounts : Controller
-    {
-        readonly IEventLog _eventLog;
+    readonly IEventLog _eventLog;
 
-        public DebitAccounts(IEventLog eventLog) => _eventLog = eventLog;
+    public DebitAccounts(IEventLog eventLog) => _eventLog = eventLog;
 
-        [HttpPost]
-        public Task OpenDebitAccount([FromBody] OpenDebitAccount create) => _eventLog.Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
-    }
+    [HttpPost]
+    public Task OpenDebitAccount([FromBody] OpenDebitAccount create) => _eventLog.Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
 }

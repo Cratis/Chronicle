@@ -3,9 +3,5 @@
  *--------------------------------------------------------------------------------------------*/
 
 
-export type DebitAccount = {
-    id: string;
-    name: string;
-    owner: string;
-    balance?: number;
+export type Boolean = {
 };
