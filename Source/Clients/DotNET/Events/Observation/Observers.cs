@@ -4,7 +4,6 @@
 using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.Grains.Observation;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Types;
@@ -79,8 +78,6 @@ public class Observers : IObservers
          - Add Tenant, Correlation, Causation, CausedBy to the EventContext
          */
 
-        // TODO: Observe for all tenants and microservices
-        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
         var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         foreach (var handler in _observerHandlers)
@@ -88,15 +85,14 @@ public class Observers : IObservers
             var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.CurrentConnectionId.Value);
             var subscription = await stream.SubscribeAsync(async (@event, _) =>
             {
-                // TODO: Establish in the correct context
                 _executionContextManager.Establish(@event.Context.TenantId, @event.Context.CorrelationId);
                 await handler.OnNext(@event);
             });
 
             var key = new ObserverKey(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log);
-            var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: key);
+            var observers = _clusterClient.GetGrain<Store.Grains.Observation.IObservers>(Guid.Empty);
             var eventTypes = handler.EventTypes.ToArray();
-            await observer.Subscribe(eventTypes);
+            await observers.Subscribe(handler.ObserverId, EventSequenceId.Log, eventTypes);
         }
     }
 }
