@@ -4,9 +4,9 @@
 namespace Aksio.Cratis.Execution;
 
 /// <summary>
-/// Attribute to adorn types for the IoC hookup to recognize it as a singleton per tenant.
+/// Attribute to adorn types for the IoC hookup to recognize it as a singleton per microservice.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
-public sealed class SingletonPerTenantAttribute : Attribute
+public sealed class SingletonPerMicroserviceAttribute : Attribute
 {
 }

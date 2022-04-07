@@ -43,6 +43,8 @@ public static class ContainerBuilderExtensions
         containerBuilder.RegisterBuildCallback(_ => Container = (IContainer)_!);
 
         containerBuilder.RegisterSource(new SingletonPerTenantRegistrationSource(Types));
+        containerBuilder.RegisterSource(new SingletonPerMicroserviceRegistrationSource(Types));
+        containerBuilder.RegisterSource(new SingletonPerMicroserviceAndTenantRegistrationSource(Types));
         containerBuilder.RegisterSource(new ProviderForRegistrationSource());
 
         return containerBuilder;
