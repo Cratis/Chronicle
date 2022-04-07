@@ -8,6 +8,7 @@ namespace Aksio.Cratis.Configuration;
 /// <summary>
 /// Represents all the configured tenants.
 /// </summary>
+[Configuration]
 public class Tenants : Dictionary<string, Tenant>
 {
     /// <summary>
