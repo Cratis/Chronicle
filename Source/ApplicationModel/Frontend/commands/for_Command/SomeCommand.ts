@@ -21,3 +21,4 @@ export class SomeCommand extends Command {
 
     someProperty!: string;
 }
+
