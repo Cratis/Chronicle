@@ -17,7 +17,7 @@ public static class ClientBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
     /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
-    public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
+    public static IClientBuilder AddEventSequenceStream(this IClientBuilder builder)
     {
         builder.AddPersistentStreams(
             WellKnownProviders.EventSequenceStreamProvider,
