@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using MongoDB.Driver;
 using Orleans;
@@ -17,19 +18,19 @@ public class EventSequencesStorageProvider : IGrainStorage
     const string CollectionName = "event-sequences";
 
     readonly IExecutionContextManager _executionContextManager;
-    readonly IEventStoreDatabase _eventStoreDatabase;
+    readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
-    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabase.GetCollection<EventSequenceState>(CollectionName);
+    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(CollectionName);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventStoreDatabase">Provider for <see cref="IMongoDatabase"/>.</param>
-    public EventSequencesStorageProvider(IExecutionContextManager executionContextManager, IEventStoreDatabase eventStoreDatabase)
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    public EventSequencesStorageProvider(IExecutionContextManager executionContextManager, ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
     {
         _executionContextManager = executionContextManager;
-        _eventStoreDatabase = eventStoreDatabase;
+        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
     /// <inheritdoc/>

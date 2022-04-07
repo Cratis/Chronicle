@@ -15,8 +15,9 @@ namespace Aksio.Cratis.Events.Projections.MongoDB;
 /// </summary>
 public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
 {
+    readonly ISharedDatabase _sharedDatabase;
     readonly IJsonProjectionSerializer _projectionSerializer;
-    readonly IMongoCollection<BsonDocument> _collection;
+    IMongoCollection<BsonDocument> Collection => _sharedDatabase.GetCollection<BsonDocument>("projection-definitions");
 
     /// <summary>
     /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
@@ -25,14 +26,14 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
     /// <param name="projectionSerializer">Serializer for <see cref="ProjectionDefinition"/>.</param>
     public MongoDBProjectionDefinitionsStorage(ISharedDatabase sharedDatabase, IJsonProjectionSerializer projectionSerializer)
     {
+        _sharedDatabase = sharedDatabase;
         _projectionSerializer = projectionSerializer;
-        _collection = sharedDatabase.GetCollection<BsonDocument>("projection-definitions");
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
-        var result = await _collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
+        var result = await Collection.FindAsync(FilterDefinition<BsonDocument>.Empty);
         var definitionsAsBson = result.ToList();
         return definitionsAsBson.Select(_ =>
         {
@@ -50,7 +51,7 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
         var id = new BsonBinaryData(definition.Identifier.Value, GuidRepresentation.Standard);
         document["_id"] = id;
 
-        await _collection.ReplaceOneAsync(
+        await Collection.ReplaceOneAsync(
             filter: new BsonDocument("_id", id),
             options: new ReplaceOptions { IsUpsert = true },
             replacement: document);

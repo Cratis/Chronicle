@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequences"/> for MongoDB.
 /// </summary>
-[SingletonPerTenant]
+[SingletonPerMicroserviceAndTenant]
 public class EventSequences : IEventSequences
 {
     readonly ILogger<EventSequences> _logger;

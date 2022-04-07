@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Events.Projections.Definitions;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionDefinitions"/>.
 /// </summary>
-[Singleton]
+[SingletonPerMicroservice]
 public class ProjectionDefinitions : IProjectionDefinitions
 {
     readonly IProjectionDefinitionsStorage _storage;

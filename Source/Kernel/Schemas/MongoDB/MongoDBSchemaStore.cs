@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Events.Schemas.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="ISchemaStore"/>.
 /// </summary>
-[Singleton]
+[SingletonPerMicroservice]
 public class MongoDBSchemaStore : ISchemaStore
 {
     const string SchemasCollection = "schemas";

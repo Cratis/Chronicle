@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
-[Singleton]
+[SingletonPerMicroservice]
 public class ConnectedClients : IConnectedClients
 {
     readonly ConcurrentBag<ConnectionContext> _connectedClients = new();
