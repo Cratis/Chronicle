@@ -6,34 +6,39 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/accounts/debit/{{accountId}}/close');
+const routeTemplate = Handlebars.compile('/api/accounts/debit/{{accountId}}/name/{{name}}');
 
-export interface ICloseDebitAccount {
+export interface ISetDebitAccountName {
     accountId?: string;
+    name?: string;
 }
 
-export class CloseDebitAccountValidator extends CommandValidator {
+export class SetDebitAccountNameValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
         accountId: new Validator(),
+        name: new Validator(),
     };
 }
 
-export class CloseDebitAccount extends Command<ICloseDebitAccount> implements ICloseDebitAccount {
-    readonly route: string = '/api/accounts/debit/{{accountId}}/close';
+export class SetDebitAccountName extends Command<ISetDebitAccountName> implements ISetDebitAccountName {
+    readonly route: string = '/api/accounts/debit/{{accountId}}/name/{{name}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly validation: CommandValidator = new CloseDebitAccountValidator();
+    readonly validation: CommandValidator = new SetDebitAccountNameValidator();
 
     private _accountId!: string;
+    private _name!: string;
 
     get requestArguments(): string[] {
         return [
             'accountId',
+            'name',
         ];
     }
 
     get properties(): string[] {
         return [
             'accountId',
+            'name',
         ];
     }
 
@@ -45,8 +50,16 @@ export class CloseDebitAccount extends Command<ICloseDebitAccount> implements IC
         this._accountId = value;
         this.propertyChanged('accountId');
     }
+    get name(): string {
+        return this._name;
+    }
 
-    static use(initialValues?: ICloseDebitAccount): [CloseDebitAccount, SetCommandValues<ICloseDebitAccount>] {
-        return useCommand<CloseDebitAccount, ICloseDebitAccount>(CloseDebitAccount, initialValues);
+    set name(value: string) {
+        this._name = value;
+        this.propertyChanged('name');
+    }
+
+    static use(initialValues?: ISetDebitAccountName): [SetDebitAccountName, SetCommandValues<ISetDebitAccountName>] {
+        return useCommand<SetDebitAccountName, ISetDebitAccountName>(SetDebitAccountName, initialValues);
     }
 }
