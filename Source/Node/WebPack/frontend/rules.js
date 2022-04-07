@@ -4,7 +4,10 @@
 module.exports = [
     {
         test: /\.[tj]s[x]*$/i,
-        exclude: /(node_modules)/,
+        exclude: [
+            /(node_modules)/,
+            /(for_)/
+        ],
         loader: 'ts-loader',
         options: {
             transpileOnly: true,
