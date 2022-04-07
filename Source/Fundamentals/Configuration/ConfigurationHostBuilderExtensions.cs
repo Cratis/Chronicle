@@ -95,18 +95,21 @@ public static class ConfigurationHostBuilderExtensions
             }
 
             var configuration = configurationBuilder.Build();
-            var configurationObject = Activator.CreateInstance(configurationObjectType)!;
-            ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
-            configuration.Bind(configurationObject);
-            services.AddSingleton(configurationObjectType, configurationObject);
+            var configurationObject = configuration.Get(configurationObjectType);
 
-            services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
+            if (configurationObject is not null)
+            {
+                ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
+                services.AddSingleton(configurationObjectType, configurationObject);
 
-            var optionsType = typeof(IOptions<>).MakeGenericType(configurationObjectType);
-            var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObjectType);
-            var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationObject });
+                services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
 
-            services.AddSingleton(optionsType, optionsWrapperInstance!);
+                var optionsType = typeof(IOptions<>).MakeGenericType(configurationObjectType);
+                var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObjectType);
+                var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationObject });
+
+                services.AddSingleton(optionsType, optionsWrapperInstance!);
+            }
         }
 
         return services;
@@ -124,7 +127,7 @@ public static class ConfigurationHostBuilderExtensions
 
     static IServiceCollection AddChildConfigurationObjects(this IServiceCollection services, Type configurationObjectType, object configurationObject)
     {
-        foreach (var childProperty in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.PropertyType.HasAttribute<ConfigurationAttribute>()))
+        foreach (var childProperty in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.PropertyType.HasAttribute<ConfigurationAttribute>()))
         {
             var childConfigurationObject = childProperty.GetValue(configurationObject)!;
             services.AddSingleton(childProperty.PropertyType, childConfigurationObject);
