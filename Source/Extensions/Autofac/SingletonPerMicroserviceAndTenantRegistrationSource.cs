@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Extensions.Autofac;
 public class SingletonPerMicroserviceAndTenantRegistrationSource : IRegistrationSource
 {
     record ImplementationTypeAndMicroserviceAndTenant(Type ImplementationType, MicroserviceId MicroserviceId, TenantId TenantId);
-    readonly ConcurrentDictionary<ImplementationTypeAndMicroserviceAndTenant, object> _instancesPerMicroservice = new();
+    static readonly ConcurrentDictionary<ImplementationTypeAndMicroserviceAndTenant, object> _instancesPerMicroservice = new();
 
     readonly ContractToImplementorsMap _implementorsMap = new();
 
@@ -52,7 +52,7 @@ public class SingletonPerMicroserviceAndTenantRegistrationSource : IRegistration
         return new[] { registration };
     }
 
-    object Resolve(Type implementationType)
+    static object Resolve(Type implementationType)
     {
         var executionContext = ExecutionContextManager.GetCurrent();
         var key = new ImplementationTypeAndMicroserviceAndTenant(implementationType, executionContext.MicroserviceId, executionContext.TenantId);
