@@ -38,6 +38,7 @@ public static class Program
                     .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
                     .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
                     .AddSingleton<IEventLogStorageProvider, MongoDBEventLogStorageProvider>()
+                    .AddSingleton<IEventSequences, MongoDBEventSequences>()
                     .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
                     .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
                     .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
