@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Orleans.Streams;
 
@@ -12,7 +13,7 @@ namespace Aksio.Cratis.Events.Store.EventLogs;
 public class EventLogQueueAdapterCache : IQueueAdapterCache
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly IEventLogStorageProvider _eventLogStorageProvider;
+    readonly ProviderFor<IEventLogStorageProvider> _eventLogStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventLogQueueAdapterCache"/> class.
@@ -21,7 +22,7 @@ public class EventLogQueueAdapterCache : IQueueAdapterCache
     /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
     public EventLogQueueAdapterCache(
         IExecutionContextManager executionContextManager,
-        IEventLogStorageProvider eventLogStorageProvider)
+        ProviderFor<IEventLogStorageProvider> eventLogStorageProvider)
     {
         _executionContextManager = executionContextManager;
         _eventLogStorageProvider = eventLogStorageProvider;

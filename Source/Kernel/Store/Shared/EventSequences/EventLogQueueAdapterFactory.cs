@@ -22,19 +22,19 @@ public class EventLogQueueAdapterFactory : IQueueAdapterFactory
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
-    /// <param name="eventLogsProvder">Provider for <see cref="IEventSequences"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
+    /// <param name="eventLogStorageProvider">Provider for <see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
     public EventLogQueueAdapterFactory(
         string name,
-        ProviderFor<IEventSequences> eventLogsProvder,
         IExecutionContextManager executionContextManager,
-        IEventLogStorageProvider eventLogStorageProvider)
+        ProviderFor<IEventSequences> eventLogsProvider,
+        ProviderFor<IEventLogStorageProvider> eventLogStorageProvider)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventLogQueueAdapterCache(executionContextManager, eventLogStorageProvider);
         _name = name;
-        _eventLogsProvder = eventLogsProvder;
+        _eventLogsProvder = eventLogsProvider;
     }
 
     /// <summary>
@@ -47,9 +47,9 @@ public class EventLogQueueAdapterFactory : IQueueAdapterFactory
     {
         return new(
             name,
-            serviceProvider.GetService<ProviderFor<IEventSequences>>()!,
             serviceProvider.GetService<IExecutionContextManager>()!,
-            serviceProvider.GetService<IEventLogStorageProvider>()!);
+            serviceProvider.GetService<ProviderFor<IEventSequences>>()!,
+            serviceProvider.GetService<ProviderFor<IEventLogStorageProvider>>()!);
     }
 
     /// <inheritdoc/>
