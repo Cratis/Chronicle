@@ -53,12 +53,16 @@ public class DefaultConventionModule : Module
             {
                 var result = builder.RegisterGeneric(conventionBasedType).As(interfaceToBind);
                 if (conventionBasedType.HasAttribute<SingletonAttribute>()) result.SingleInstance();
+                if (conventionBasedType.HasAttribute<SingletonPerTenantAttribute>()) result.InstancePerTenant();
+                if (conventionBasedType.HasAttribute<SingletonPerMicroserviceAttribute>()) result.InstancePerMicroservice();
                 if (conventionBasedType.HasAttribute<SingletonPerMicroserviceAndTenantAttribute>()) result.InstancePerMicroserviceAndTenant();
             }
             else
             {
                 var result = builder.RegisterType(conventionBasedType).As(interfaceToBind);
                 if (conventionBasedType.HasAttribute<SingletonAttribute>()) result.SingleInstance();
+                if (conventionBasedType.HasAttribute<SingletonPerTenantAttribute>()) result.InstancePerTenant();
+                if (conventionBasedType.HasAttribute<SingletonPerMicroserviceAttribute>()) result.InstancePerMicroservice();
                 if (conventionBasedType.HasAttribute<SingletonPerMicroserviceAndTenantAttribute>()) result.InstancePerMicroserviceAndTenant();
             }
         }

@@ -11,9 +11,11 @@ using Autofac.Core.Resolving;
 namespace Aksio.Cratis.Extensions.Autofac;
 
 /// <summary>
-/// Represents an implementation of <see cref="ISharingLifetimeScope"/>.
+/// Represents an implementation of <see cref="ISharingLifetimeScope"/> used in different singleton scenarios.
 /// </summary>
-public class SingletonPerMicroserviceAndTenantLifetimeScope : ISharingLifetimeScope
+/// <typeparam name="TComponentLifetime">Type of <see cref="IComponentLifetime"/>.</typeparam>
+public class SingletonLifetimeScope<TComponentLifetime> : ISharingLifetimeScope
+    where TComponentLifetime : IComponentLifetime
 {
     readonly ConcurrentDictionary<Guid, object> _instances = new();
 
@@ -42,11 +44,11 @@ public class SingletonPerMicroserviceAndTenantLifetimeScope : ISharingLifetimeSc
     public event EventHandler<ResolveOperationBeginningEventArgs> ResolveOperationBeginning = (s, e) => { };
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SingletonPerMicroserviceAndTenantLifetimeScope"/> class.
+    /// Initializes a new instance of the <see cref="SingletonLifetimeScope{T}"/> class.
     /// </summary>
     /// <param name="rootLifetimeScope">The root lifetime scope.</param>
     /// <param name="parentLifetimeScope">The parent lifetime scope.</param>
-    public SingletonPerMicroserviceAndTenantLifetimeScope(ISharingLifetimeScope rootLifetimeScope, ISharingLifetimeScope parentLifetimeScope)
+    public SingletonLifetimeScope(ISharingLifetimeScope rootLifetimeScope, ISharingLifetimeScope parentLifetimeScope)
     {
         RootLifetimeScope = rootLifetimeScope;
         ParentLifetimeScope = parentLifetimeScope;
@@ -72,7 +74,7 @@ public class SingletonPerMicroserviceAndTenantLifetimeScope : ISharingLifetimeSc
     public object CreateSharedInstance(Guid primaryId, Guid? qualifyingId, Func<object> creator)
     {
         var registration = ComponentRegistry.Registrations.Single(_ => _.Id == primaryId);
-        if (registration.Lifetime is not SingletonPerMicroserviceAndTenantComponentLifetime)
+        if (registration.Lifetime is not TComponentLifetime)
         {
             return RootLifetimeScope.CreateSharedInstance(primaryId, qualifyingId, creator);
         }
