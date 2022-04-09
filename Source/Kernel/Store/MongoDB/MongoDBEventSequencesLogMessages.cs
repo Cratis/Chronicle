@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Events.Store.MongoDB;
 
 /// <summary>
-/// Holds log messages for <see cref="EventSequences"/>.
+/// Holds log messages for <see cref="MongoDBEventSequences"/>.
 /// </summary>
-public static partial class EventSequencesLogMessages
+public static partial class MongoDBEventSequencesLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Appending event with '{SequenceNumber}' as sequence number")]
     internal static partial void Appending(this ILogger logger, ulong sequenceNumber);
