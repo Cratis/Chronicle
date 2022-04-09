@@ -14,42 +14,22 @@ namespace Aksio.Cratis.MongoDB;
 [SingletonPerMicroservice]
 public class SharedDatabase : ISharedDatabase
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly IMongoDBClientFactory _clientFactory;
-    readonly Storage _configuration;
-
-    IMongoDatabase? _database;
-
-    IMongoDatabase Database
-    {
-        get
-        {
-            if (_database is null)
-            {
-                var microserviceId = _executionContextManager.Current.MicroserviceId;
-                var url = new MongoUrl(_configuration.Microservices.Get(microserviceId).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
-                var client = _clientFactory.Create(url);
-                _database = client.GetDatabase(url.DatabaseName);
-            }
-
-            return _database;
-        }
-    }
+    readonly IMongoDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SharedDatabase"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="executionContext">Current <see cref="ExecutionContext"/>.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public SharedDatabase(
-        IExecutionContextManager executionContextManager,
+        ExecutionContext executionContext,
         IMongoDBClientFactory clientFactory,
         Storage configuration)
     {
-        _executionContextManager = executionContextManager;
-        _clientFactory = clientFactory;
-        _configuration = configuration;
+        var url = new MongoUrl(configuration.Microservices.Get(executionContext.MicroserviceId).Shared.Get(WellKnownStorageTypes.EventStore).ConnectionDetails.ToString());
+        var client = clientFactory.Create(url);
+        _database = client.GetDatabase(url.DatabaseName);
     }
 
     /// <inheritdoc/>
@@ -57,9 +37,9 @@ public class SharedDatabase : ISharedDatabase
     {
         if (collectionName == null)
         {
-            return Database.GetCollection<T>();
+            return _database.GetCollection<T>();
         }
 
-        return Database.GetCollection<T>(collectionName);
+        return _database.GetCollection<T>(collectionName);
     }
 }
