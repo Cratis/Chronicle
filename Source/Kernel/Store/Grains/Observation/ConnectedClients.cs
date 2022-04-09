@@ -2,15 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Connections;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation;
 
+/*
+TODO:
+using Aksio.Cratis.Execution;
+[SingletonPerMicroservice]
+*/
+
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
-[SingletonPerMicroservice]
 public class ConnectedClients : IConnectedClients
 {
     readonly ConcurrentBag<ConnectionContext> _connectedClients = new();
