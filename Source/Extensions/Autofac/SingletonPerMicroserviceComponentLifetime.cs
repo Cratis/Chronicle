@@ -8,27 +8,26 @@ using Autofac.Core;
 namespace Aksio.Cratis.Extensions.Autofac;
 
 /// <summary>
-/// Represents an implementation of <see cref="IComponentLifetime"/> for scoping per microservice and tenant.
+/// Represents an implementation of <see cref="IComponentLifetime"/> for scoping per microservice.
 /// </summary>
-public class SingletonPerMicroserviceAndTenantComponentLifetime : IComponentLifetime
+public class SingletonPerMicroserviceComponentLifetime : IComponentLifetime
 {
     /// <summary>
     /// Gets the global instance.
     /// </summary>
     public static readonly SingletonPerMicroserviceAndTenantComponentLifetime Instance = new();
 
-    readonly ConcurrentDictionary<MicroserviceAndTenant, SingletonLifetimeScope<SingletonPerMicroserviceAndTenantComponentLifetime>> _scopes = new();
+    readonly ConcurrentDictionary<MicroserviceId, SingletonLifetimeScope<SingletonPerMicroserviceComponentLifetime>> _scopes = new();
 
     /// <inheritdoc/>
     public ISharingLifetimeScope FindScope(ISharingLifetimeScope mostNestedVisibleScope)
     {
         var context = ExecutionContextManager.GetCurrent();
-        var key = new MicroserviceAndTenant(context.MicroserviceId, context.TenantId);
-        if (!_scopes.ContainsKey(key))
+        if (!_scopes.ContainsKey(context.MicroserviceId))
         {
-            _scopes[key] = new SingletonLifetimeScope<SingletonPerMicroserviceAndTenantComponentLifetime>(mostNestedVisibleScope.RootLifetimeScope, mostNestedVisibleScope);
+            _scopes[context.MicroserviceId] = new SingletonLifetimeScope<SingletonPerMicroserviceComponentLifetime>(mostNestedVisibleScope.RootLifetimeScope, mostNestedVisibleScope);
         }
 
-        return _scopes[key];
+        return _scopes[context.MicroserviceId];
     }
 }
