@@ -13,22 +13,24 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequences"/> for MongoDB.
 /// </summary>
-[SingletonPerMicroserviceAndTenant]
-public class EventSequences : IEventSequences
+public class MongoDBEventSequences : IEventSequences
 {
-    readonly ILogger<EventSequences> _logger;
+    readonly ILogger<MongoDBEventSequences> _logger;
     readonly IExecutionContextManager _executionContextManager;
-    readonly IEventStoreDatabase _eventStoreDatabase;
+    readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
     /// <summary>
-    /// Initializes a new instance of <see cref="EventSequences"/>.
+    /// Initializes a new instance of <see cref="MongoDBEventSequences"/>.
     /// </summary>
-    /// <param name="eventStoreDatabase"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
-    public EventSequences(IEventStoreDatabase eventStoreDatabase, ILogger<EventSequences> logger, IExecutionContextManager executionContextManager)
+    /// <param name="eventStoreDatabaseProvider"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    public MongoDBEventSequences(
+        IExecutionContextManager executionContextManager,
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ILogger<MongoDBEventSequences> logger)
     {
-        _eventStoreDatabase = eventStoreDatabase;
+        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
         _logger = logger;
         _executionContextManager = executionContextManager;
     }
@@ -64,5 +66,5 @@ public class EventSequences : IEventSequences
     /// <inheritdoc/>
     public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
 
-    IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabase.GetEventSequenceCollectionFor(eventSequenceId);
+    IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
 }
