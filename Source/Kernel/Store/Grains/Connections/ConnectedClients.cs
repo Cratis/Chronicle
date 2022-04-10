@@ -14,6 +14,7 @@ public class ConnectedClients : Grain, IConnectedClients
 {
     readonly ConcurrentDictionary<string, List<IConnectedClientObserver>> _observers = new();
     readonly ILogger<ConnectedClients> _logger;
+    string _lastConnectedClient = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
@@ -27,6 +28,7 @@ public class ConnectedClients : Grain, IConnectedClients
     /// <inheritdoc/>
     public Task OnClientConnected(string connectionId)
     {
+        _lastConnectedClient = connectionId;
         _logger.ClientConnected(connectionId);
         _observers[connectionId] = new List<IConnectedClientObserver>();
         return Task.CompletedTask;
@@ -66,5 +68,11 @@ public class ConnectedClients : Grain, IConnectedClients
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<string> GetLastConnectedClientConnectionId()
+    {
+        return Task.FromResult(_lastConnectedClient);
     }
 }

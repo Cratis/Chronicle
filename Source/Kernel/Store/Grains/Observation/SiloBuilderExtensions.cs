@@ -28,7 +28,6 @@ public static class SiloBuilderExtensions
                     var connectedClients = connectionBuilder.ApplicationServices.GetService<IGrainFactory>()!.GetGrain<IConnectedClients>(Guid.Empty);
                     return async context =>
                     {
-                        Console.WriteLine(context.ConnectionId);
                         await connectedClients.OnClientConnected(context.ConnectionId);
                         await next(context);
                         await connectedClients.OnClientDisconnected(context.ConnectionId);

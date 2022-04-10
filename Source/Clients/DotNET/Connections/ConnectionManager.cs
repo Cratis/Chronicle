@@ -16,7 +16,7 @@ public class ConnectionManager : IConnectionManager
     /// </summary>
     public const string KernelConnectionId = "kernel-internal";
 
-    internal static string InternalConnectionId = "[n/a]";
+    internal static string InternalConnectionId = "[not set]";
 
     bool _isKernel;
 

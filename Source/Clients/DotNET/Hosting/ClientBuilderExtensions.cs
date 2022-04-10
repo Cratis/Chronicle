@@ -45,7 +45,6 @@ public static class ClientBuilderExtensions
                         {
                             return async context =>
                             {
-                                ConnectionManager.InternalConnectionId = context.ConnectionId;
                                 await next(context);
 
                                 // TODO: Kernel disconnected, we can start retrying
