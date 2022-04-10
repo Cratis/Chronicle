@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Events.Store.Grains.Connections;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation;
@@ -15,8 +17,10 @@ public class Observers : Grain, IObservers
 {
     readonly IFailedObservers _failedObservers;
     readonly IExecutionContextManager _executionContextManager;
+    readonly IRequestContextManager _requestContextManager;
     readonly IGrainFactory _grainFactory;
     readonly Tenants _tenants;
+    IConnectedClients? _connectedClients;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
 
     /// <summary>
@@ -24,16 +28,19 @@ public class Observers : Grain, IObservers
     /// </summary>
     /// <param name="failedObservers"><see cref="IFailedObservers"/> for getting all failed observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for activating failed observers.</param>
+    /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
+    /// <param name="grainFactory"><see cref="IGrainFactory"/> for activating other grains.</param>
     /// <param name="tenants">All configured <see cref="Tenants"/>.</param>
     public Observers(
         IFailedObservers failedObservers,
         IExecutionContextManager executionContextManager,
+        IRequestContextManager requestContextManager,
         IGrainFactory grainFactory,
         Tenants tenants)
     {
         _failedObservers = failedObservers;
         _executionContextManager = executionContextManager;
+        _requestContextManager = requestContextManager;
         _grainFactory = grainFactory;
         _tenants = tenants;
     }
@@ -42,17 +49,20 @@ public class Observers : Grain, IObservers
     public override async Task OnActivateAsync()
     {
         _microserviceId = _executionContextManager.Current.MicroserviceId;
+        _connectedClients = _grainFactory.GetGrain<IConnectedClients>(Guid.Empty);
         await base.OnActivateAsync();
     }
 
     /// <inheritdoc/>
     public async Task Subscribe(ObserverId observerId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes)
     {
+        var connectionId = _requestContextManager.Get(RequestContextKeys.ConnectionId).ToString()!;
         foreach (var tenantId in _tenants.GetTenantIds())
         {
             var observerKey = new ObserverKey(_microserviceId, tenantId, eventSequenceId);
             var observer = _grainFactory.GetGrain<IObserver>(observerId, observerKey);
             await observer.Subscribe(eventTypes);
+            await _connectedClients!.SubscribeOnDisconnected(connectionId, observer);
         }
     }
 

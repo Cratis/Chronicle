@@ -11,20 +11,21 @@ namespace Aksio.Cratis.Connections;
 [Singleton]
 public class ConnectionManager : IConnectionManager
 {
-    /// <inheritdoc/>
-    public ConnectionId CurrentConnectionId { get; private set; }
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectionManager"/> class.
+    /// The string identifying a kernel internal connection.
     /// </summary>
-    public ConnectionManager()
-    {
-        CurrentConnectionId = Guid.NewGuid().ToString();
-    }
+    public const string KernelConnectionId = "kernel-internal";
+
+    internal static string InternalConnectionId = "[n/a]";
+
+    bool _isKernel;
+
+    /// <inheritdoc/>
+    public string ConnectionId => _isKernel ? KernelConnectionId : InternalConnectionId;
 
     /// <inheritdoc/>
     public void SetKernelMode()
     {
-        CurrentConnectionId = ConnectionId.Kernel;
+        _isKernel = true;
     }
 }

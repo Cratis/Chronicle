@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store.Grains.Connections;
 using Orleans;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation;
@@ -8,7 +9,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 /// <summary>
 /// Defines an observer of an event sequence.
 /// </summary>
-public interface IObserver : IGrainWithGuidCompoundKey
+public interface IObserver : IGrainWithGuidCompoundKey, IConnectedClientObserver
 {
     /// <summary>
     /// Rewind the observer.
@@ -26,7 +27,6 @@ public interface IObserver : IGrainWithGuidCompoundKey
     /// <summary>
     /// Unsubscribe from the observer.
     /// </summary>
-    /// <param name="subscriptionId">Subscription to unsubscribe.</param>
     /// <returns>Awaitable task.</returns>
-    Task Unsubscribe(Guid subscriptionId);
+    Task Unsubscribe();
 }

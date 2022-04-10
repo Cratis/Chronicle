@@ -10,6 +10,12 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 /// </summary>
 public static partial class ObserverLogMesssages
 {
-    [LoggerMessage(0, LogLevel.Information, "Subscription with identifier '{SubscriptionId}' is unavailable and can't be unsubscribed.")]
-    internal static partial void UnsubscribeFailedSubscriptionUnavailable(this ILogger logger, Guid subscriptionId);
+    [LoggerMessage(0, LogLevel.Information, "Subscribing for microservice ({MicroserviceId}) on sequence ({EventSequenceId}) for tenant ({TenantId})")]
+    internal static partial void Subscribing(this ILogger logger, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+
+    [LoggerMessage(1, LogLevel.Information, "Subscribing for microservice ({MicroserviceId}) on sequence ({EventSequenceId}) for tenant ({TenantId})")]
+    internal static partial void Unsubscribing(this ILogger logger, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+
+    [LoggerMessage(2, LogLevel.Information, "Rewinding for microservice ({MicroserviceId}) on sequence ({EventSequenceId}) for tenant ({TenantId})")]
+    internal static partial void Rewinding(this ILogger logger, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
 }

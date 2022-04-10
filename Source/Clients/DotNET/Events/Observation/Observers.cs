@@ -80,7 +80,7 @@ public class Observers : IObservers
 
         foreach (var handler in _observerHandlers)
         {
-            var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.CurrentConnectionId.Value);
+            var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.ConnectionId);
             var subscription = await stream.SubscribeAsync(async (@event, _) =>
             {
                 _executionContextManager.Establish(@event.Context.TenantId, @event.Context.CorrelationId);
