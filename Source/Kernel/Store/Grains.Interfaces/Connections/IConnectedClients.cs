@@ -39,4 +39,10 @@ public interface IConnectedClients : IGrainWithGuidKey
     /// <param name="observer">Observer to call.</param>
     /// <returns>Awaitable task.</returns>
     Task UnsubscribeOnDisconnected(string connectionId, IConnectedClientObserver observer);
+
+    /// <summary>
+    /// Gets the last connected clients connection id.
+    /// </summary>
+    /// <returns>Connection id.</returns>
+    Task<string> GetLastConnectedClientConnectionId();
 }

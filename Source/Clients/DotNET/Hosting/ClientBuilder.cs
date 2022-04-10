@@ -9,6 +9,7 @@ using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Grains.Connections;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
@@ -142,6 +143,11 @@ public class ClientBuilder : IClientBuilder
                 return true;
             }).Wait();
             logger?.ConnectedToKernel();
+
+#pragma warning disable CA2008
+            orleansClient
+                .GetGrain<IConnectedClients>(Guid.Empty)
+                .GetLastConnectedClientConnectionId().ContinueWith(_ => ConnectionManager.InternalConnectionId = _.Result);
 
             return orleansClient;
         });
