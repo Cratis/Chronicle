@@ -126,7 +126,7 @@ public class ClientBuilder : IClientBuilder
                 .AddEventSequenceStream()
                 .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider)
                 .UseExecutionContext()
-                .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
+                .UseConnectionIdFromConnectionContextForOutgoingCalls()
                 .ConfigureServices(services => services
                     .AddSingleton<IConnectionManager>(connectionManager)
                     .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
