@@ -61,6 +61,7 @@ public class Observer : Grain<ObserverState>, IObserver
     {
         _logger.Rewinding(_microserviceId, _eventSequenceId, _tenantId);
         State.Offset = 0;
+        await WriteStateAsync();
         await Unsubscribe();
         await Subscribe(State.EventTypes);
     }
@@ -85,20 +86,13 @@ public class Observer : Grain<ObserverState>, IObserver
             {
                 var key = new PartitionedObserverKey(_microserviceId, _tenantId, _eventSequenceId, @event.Context.EventSourceId);
                 var partitionedObserver = GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
-                try
-                {
-                    await partitionedObserver.SetConnectionId(connectionId);
-                    await partitionedObserver.OnNext(@event, eventTypes);
 
-                    State.Offset = @event.Metadata.SequenceNumber + 1;
-                    State.LastHandled = @event.Metadata.SequenceNumber + 1;
-                    await WriteStateAsync();
-                }
-                catch (Exception)
-                {
-                    var i = 0;
-                    i++;
-                }
+                await partitionedObserver.SetConnectionId(connectionId);
+                await partitionedObserver.OnNext(@event, eventTypes);
+
+                State.Offset = @event.Metadata.SequenceNumber + 1;
+                State.LastHandled = @event.Metadata.SequenceNumber + 1;
+                await WriteStateAsync();
             },
             new EventLogSequenceNumberTokenWithFilter(State.Offset, eventTypes));
     }
