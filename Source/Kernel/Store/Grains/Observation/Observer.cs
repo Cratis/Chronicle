@@ -18,7 +18,10 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 [StorageProvider(ProviderName = ObserverState.StorageProvider)]
 public class Observer : Grain<ObserverState>, IObserver, IRemindable
 {
-    const string RecoverReminder = "observer-failure-recovery";
+    /// <summary>
+    /// The name of the recover reminder.
+    /// </summary>
+    public const string RecoverReminder = "observer-failure-recovery";
     readonly ILogger<Observer> _logger;
     StreamSubscriptionHandle<AppendedEvent>? _subscription;
     IAsyncStream<AppendedEvent>? _stream;
@@ -153,47 +156,55 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
 
             foreach (var failedPartition in State.FailedPartitions)
             {
-                StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
-
-                if (State.IsRecoveringPartition(failedPartition.EventSourceId))
-                {
-                    continue;
-                }
-
-                State.StartRecoveringPartition(failedPartition.EventSourceId);
-                subscriptionId = await _stream.SubscribeAsync(
-                    async (@event, _) =>
-                    {
-                        await HandleEventForPartitionedObserver(@event, _);
-                        if (State.IsPartitionFailed(@event.Context.EventSourceId))
-                        {
-                            await subscriptionId!.UnsubscribeAsync();
-                        }
-                        else
-                        {
-                            var partitionRecovery = State.GetPartitionRecovery(@event.Context.EventSourceId);
-                            partitionRecovery.SequenceNumber++;
-                            await WriteStateAsync();
-
-                            var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
-                            if (partitionRecovery.SequenceNumber == nextSequenceNumber)
-                            {
-                                State.PartitionRecovered(@event.Context.EventSourceId);
-                            }
-                        }
-                    },
-                    new EventLogSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, failedPartition.EventSourceId));
+                await TryResumePartition(failedPartition.EventSourceId);
             }
         }
     }
 
     /// <inheritdoc/>
-    public Task TryResumePartition(EventSourceId eventSourceId)
+    public async Task TryResumePartition(EventSourceId eventSourceId)
     {
-        return Task.CompletedTask;
+        if (!State.IsPartitionFailed(eventSourceId))
+        {
+            return;
+        }
+
+        var failedPartition = State.GetFailedPartition(eventSourceId);
+
+        if (State.IsRecoveringPartition(failedPartition.EventSourceId))
+        {
+            return;
+        }
+
+        StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
+        State.StartRecoveringPartition(eventSourceId);
+        subscriptionId = await _stream.SubscribeAsync(
+            async (@event, token) => await HandleEventForRecoveringPartitionedObserver(@event, token, subscriptionId),
+            new EventLogSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, eventSourceId));
     }
 
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) => !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
+
+    async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, StreamSequenceToken token, StreamSubscriptionHandle<AppendedEvent>? subscriptionId)
+    {
+        await HandleEventForPartitionedObserver(@event, token);
+        if (State.IsPartitionFailed(@event.Context.EventSourceId))
+        {
+            await subscriptionId!.UnsubscribeAsync();
+        }
+        else
+        {
+            var partitionRecovery = State.GetPartitionRecovery(@event.Context.EventSourceId);
+            partitionRecovery.SequenceNumber++;
+            await WriteStateAsync();
+
+            var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
+            if (partitionRecovery.SequenceNumber == nextSequenceNumber)
+            {
+                State.PartitionRecovered(@event.Context.EventSourceId);
+            }
+        }
+    }
 
     async Task HandleEventForPartitionedObserver(AppendedEvent @event, StreamSequenceToken token)
     {

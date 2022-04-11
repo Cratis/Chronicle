@@ -6,6 +6,7 @@ using Orleans;
 using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
+using Orleans.Timers;
 
 namespace Aksio.Cratis.Common.Grains;
 
@@ -17,6 +18,8 @@ public abstract class GrainSpecification<TState> : Specification
     protected Mock<IStorage<TState>> storage;
     protected Mock<IServiceProvider> service_provider;
     protected Mock<IKeyedServiceCollection<string, IStreamProvider>> stream_provider_collection;
+    protected Mock<IReminderRegistry> reminder_registry;
+    protected Mock<ITimerRegistry> timer_registry;
     protected TState state;
     protected Mock<IGrainFactory> grain_factory;
 
@@ -40,6 +43,12 @@ public abstract class GrainSpecification<TState> : Specification
 
         grain_factory = new();
         runtime.SetupGet(_ => _.GrainFactory).Returns(grain_factory.Object);
+
+        reminder_registry = new();
+        runtime.SetupGet(_ => _.ReminderRegistry).Returns(reminder_registry.Object);
+
+        timer_registry = new();
+        runtime.SetupGet(_ => _.TimerRegistry).Returns(timer_registry.Object);
 
         service_provider = new Mock<IServiceProvider>();
         runtime.SetupGet(_ => _.ServiceProvider).Returns(service_provider.Object);
