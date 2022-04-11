@@ -214,7 +214,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             var partitionedObserver = GetPartitionedObserverFor(@event.Context.EventSourceId);
 
             await partitionedObserver.SetConnectionId(_connectionId);
-            await partitionedObserver.OnNext(@event, State.EventTypes);
+            await partitionedObserver.OnNext(@event);
 
             State.Offset = @event.Metadata.SequenceNumber + 1;
             State.LastHandled = @event.Metadata.SequenceNumber + 1;

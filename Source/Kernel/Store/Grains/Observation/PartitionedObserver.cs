@@ -24,7 +24,7 @@ public class PartitionedObserver : Grain, IPartitionedObserver
     }
 
     /// <inheritdoc/>
-    public async Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes)
+    public async Task OnNext(AppendedEvent @event)
     {
         await _stream!.OnNextAsync(@event);
     }
