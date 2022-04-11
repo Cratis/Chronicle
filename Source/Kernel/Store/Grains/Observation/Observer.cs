@@ -149,11 +149,6 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
-            if (!IsConnected)
-            {
-                return;
-            }
-
             foreach (var failedPartition in State.FailedPartitions)
             {
                 await TryResumePartition(failedPartition.EventSourceId);
@@ -164,13 +159,12 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// <inheritdoc/>
     public async Task TryResumePartition(EventSourceId eventSourceId)
     {
-        if (!State.IsPartitionFailed(eventSourceId))
+        if (!IsConnected || !State.IsPartitionFailed(eventSourceId))
         {
             return;
         }
 
         var failedPartition = State.GetFailedPartition(eventSourceId);
-
         if (State.IsRecoveringPartition(failedPartition.EventSourceId))
         {
             return;
