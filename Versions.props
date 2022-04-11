@@ -1,16 +1,17 @@
 <Project>
     <PropertyGroup>
         <AksioDefaults>1.5.10</AksioDefaults>
-        <HotChocolateVersion>11.3.0</HotChocolateVersion>
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
-        <Autofac>6.2.0</Autofac>
-        <AutofacExtensions>7.1.0</AutofacExtensions>
-        <Orleans>3.5.1</Orleans>
-        <MongoDB>2.14.1</MongoDB>
-        <ServiceModelPrimitives>4.8.1</ServiceModelPrimitives>
-        <Humanizer>2.11.10</Humanizer>
-        <Swashbuckle>6.2.3</Swashbuckle>
+        <Autofac>6.3.0</Autofac>
+        <AutofacExtensions>7.2.0</AutofacExtensions>
+        <Orleans>3.6.1</Orleans>
+        <MongoDB>2.15.0</MongoDB>
+        <ServiceModelPrimitives>4.9.0</ServiceModelPrimitives>
+        <Humanizer>2.14.1</Humanizer>
+        <Swashbuckle>6.3.0</Swashbuckle>
         <MicrosoftExtensions>6.0.0</MicrosoftExtensions>
         <SqlDataClient>4.8.3</SqlDataClient>
+        <SystemReactive>5.0.0</SystemReactive>
+        <NJsonSchema>10.6.10</NJsonSchema>
     </PropertyGroup>
 </Project>
