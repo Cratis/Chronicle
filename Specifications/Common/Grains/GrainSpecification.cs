@@ -18,6 +18,7 @@ public abstract class GrainSpecification<TState> : Specification
     protected Mock<IServiceProvider> service_provider;
     protected Mock<IKeyedServiceCollection<string, IStreamProvider>> stream_provider_collection;
     protected TState state;
+    protected Mock<IGrainFactory> grain_factory;
 
     protected abstract Grain GetGrainInstance();
 
@@ -36,6 +37,9 @@ public abstract class GrainSpecification<TState> : Specification
         var runtimeProperty = typeof(Grain).GetProperty("Runtime", BindingFlags.Instance | BindingFlags.NonPublic);
         runtime = new Mock<IGrainRuntime>();
         runtimeProperty.SetValue(grain, runtime.Object);
+
+        grain_factory = new();
+        runtime.SetupGet(_ => _.GrainFactory).Returns(grain_factory.Object);
 
         service_provider = new Mock<IServiceProvider>();
         runtime.SetupGet(_ => _.ServiceProvider).Returns(service_provider.Object);
