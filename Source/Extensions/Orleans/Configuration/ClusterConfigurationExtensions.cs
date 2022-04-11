@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Clustering.AzureStorage;
 using Orleans.Configuration;
 
 namespace Aksio.Cratis.Extensions.Orleans.Configuration;
@@ -37,9 +36,9 @@ public static class ClusterConfigurationExtensions
     public static AdoNetClusteringSiloOptions GetAdoNetClusteringSiloOptions(this Cluster clusterConfig) => clusterConfig.Options as AdoNetClusteringSiloOptions ?? new AdoNetClusteringSiloOptions();
 
     /// <summary>
-    /// Get specific <see cref="AzureStorageClusteringOptions"/> from the options of <see cref="Cluster"/>.
+    /// Get specific <see cref="AzureStorageClusteringConfiguration"/> from the options of <see cref="Cluster"/>.
     /// </summary>
     /// <param name="clusterConfig"><see cref="Cluster"/> to get from.</param>
-    /// <returns><see cref="AzureStorageClusteringOptions"/> instance.</returns>
-    public static AzureStorageClusteringOptions GetAzureStorageClusteringOptions(this Cluster clusterConfig) => clusterConfig.Options as AzureStorageClusteringOptions ?? new AzureStorageClusteringOptions();
+    /// <returns><see cref="AzureStorageClusteringConfiguration"/> instance.</returns>
+    public static AzureStorageClusteringConfiguration GetAzureStorageClusteringOptions(this Cluster clusterConfig) => clusterConfig.Options as AzureStorageClusteringConfiguration ?? new AzureStorageClusteringConfiguration();
 }

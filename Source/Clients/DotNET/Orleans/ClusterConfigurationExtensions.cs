@@ -66,7 +66,7 @@ public static class ClusterConfigurationExtensions
                     var azureOptions = clusterConfig.GetAzureStorageClusteringOptions();
                     builder.UseAzureStorageClustering(options =>
                     {
-                        options.ConnectionString = azureOptions.ConnectionString;
+                        options.ConfigureTableServiceClient(azureOptions.ConnectionString);
                         options.TableName = azureOptions.TableName;
                     });
                 }
