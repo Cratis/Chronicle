@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.EventLogs;
+using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
@@ -66,7 +66,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         _logger.Rewinding(_microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Rewinding;
-        State.Offset = 0;
+        State.Offset = EventSequenceNumber.First;
         await WriteStateAsync();
         await Unsubscribe();
         await Subscribe(State.EventTypes);
@@ -82,13 +82,18 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         if (HasDefinitionChanged(eventTypes))
         {
             State.RunningState = ObserverRunningState.Rewinding;
-            State.Offset = 0;
+            State.Offset = EventSequenceNumber.First;
         }
 
         var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
         if (State.Offset < nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.CatchingUp;
+        }
+
+        if (State.Offset == nextSequenceNumber)
+        {
+            State.RunningState = ObserverRunningState.Active;
         }
 
         State.EventTypes = eventTypes;
