@@ -61,7 +61,13 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 var appendedEvent = (@event as AppendedEvent)!;
                 try
                 {
-                    await _eventLogsProvider().Append(streamGuid, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, appendedEvent.Metadata.Type, appendedEvent.Content);
+                    await _eventLogsProvider().Append(
+                        streamGuid,
+                        appendedEvent.Metadata.SequenceNumber,
+                        appendedEvent.Context.EventSourceId,
+                        appendedEvent.Metadata.Type,
+                        appendedEvent.Context.ValidFrom,
+                        appendedEvent.Content);
                 }
                 catch (Exception ex)
                 {

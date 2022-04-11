@@ -35,7 +35,7 @@ public class EventLog : IEventLog
     }
 
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, object @event)
+    public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default)
     {
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
         var eventAsJson = _serializer.Serialize(@event!);
@@ -43,6 +43,6 @@ public class EventLog : IEventLog
         {
             await provider.ProvideFor(eventAsJson);
         }
-        await _eventLog.Append(eventSourceId, eventType, eventAsJson);
+        await _eventLog.Append(eventSourceId, eventType, eventAsJson, validFrom);
     }
 }

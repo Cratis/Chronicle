@@ -65,7 +65,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
+    public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default)
     {
         _logger.Appending(
             _microserviceAndTenant.MicroserviceId,
@@ -86,6 +86,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 new EventContext(
                     eventSourceId,
                     DateTimeOffset.UtcNow,
+                    validFrom ?? DateTimeOffset.MinValue,
                     _microserviceAndTenant.TenantId,
                     _executionContextManager.Current.CorrelationId,
                     _executionContextManager.Current.CausationId,
