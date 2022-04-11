@@ -29,4 +29,18 @@ public interface IObserver : IGrainWithGuidCompoundKey, IConnectedClientObserver
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Unsubscribe();
+
+    /// <summary>
+    /// Try to resume the partition.
+    /// </summary>
+    /// <param name="eventSourceId">The partition to try to resume.</param>
+    /// <returns>Awaitable task.</returns>
+    Task TryResumePartition(EventSourceId eventSourceId);
+
+    /// <summary>
+    /// Set the current connection identifier.
+    /// </summary>
+    /// <param name="connectionId">The connection identifier.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetConnectionId(string connectionId);
 }

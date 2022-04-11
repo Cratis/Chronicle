@@ -1,12 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Events.Store.Grains.Observation;
+namespace Aksio.Cratis.Events.Store.Observation;
 
 /// <summary>
-/// Defines the states a <see cref="IObserver"/> can be in.
+/// Defines the status of an observer.
 /// </summary>
-public enum ObserverRuntimeState
+public enum ObserverRunningState
 {
     /// <summary>
     /// Observer is in an unknown state.
@@ -44,7 +44,12 @@ public enum ObserverRuntimeState
     Stopped = 6,
 
     /// <summary>
-    /// Observer is suspended, most likely due to failure.
+    /// Observer is suspended.
     /// </summary>
     Suspended = 7,
+
+    /// <summary>
+    /// Observer is failed.
+    /// </summary>
+    Failed = 8,
 }
