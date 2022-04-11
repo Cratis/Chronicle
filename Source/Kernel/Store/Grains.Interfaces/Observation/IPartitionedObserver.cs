@@ -21,7 +21,6 @@ public interface IPartitionedObserver : IGrainWithGuidCompoundKey
     /// Handle the next event.
     /// </summary>
     /// <param name="event">The actual event.</param>
-    /// <param name="eventTypes">Event types to set.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnNext(AppendedEvent @event, IEnumerable<EventType> eventTypes);
+    Task OnNext(AppendedEvent @event);
 }

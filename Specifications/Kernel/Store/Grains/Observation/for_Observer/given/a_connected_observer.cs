@@ -13,23 +13,34 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.given;
 public class a_connected_observer : GrainSpecification<ObserverState>
 {
     protected Observer observer;
+    protected ObserverId observer_id;
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IEventSequence> event_sequence;
     protected Mock<IAsyncStream<AppendedEvent>> stream;
     protected EventLogSequenceNumberTokenWithFilter subscribed_token;
     protected List<EventLogSequenceNumberTokenWithFilter> subscribed_tokens;
 
+    protected MicroserviceId microservice_id;
+    protected TenantId tenant_id;
+    protected EventSequenceId event_sequence_id;
+    protected string connection_id;
+
     protected override Grain GetGrainInstance()
     {
         observer = new Observer(Mock.Of<ILogger<Observer>>());
-        observer.SetConnectionId(Guid.NewGuid().ToString());
+        connection_id = Guid.NewGuid().ToString();
+        observer.SetConnectionId(connection_id);
         return observer;
     }
 
     protected override void OnBeforeGrainActivate()
     {
-        var key = new ObserverKey(MicroserviceId.Unspecified, TenantId.Development, EventSequenceId.Log).ToString();
-        grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(Guid.NewGuid());
+        microservice_id = Guid.NewGuid();
+        tenant_id = Guid.NewGuid();
+        event_sequence_id = EventSequenceId.Log;
+        var key = new ObserverKey(microservice_id, tenant_id, event_sequence_id).ToString();
+        observer_id = Guid.NewGuid();
+        grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(observer_id);
 
         event_sequence = new();
         grain_factory.Setup(_ => _.GetGrain<IEventSequence>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(event_sequence.Object);
