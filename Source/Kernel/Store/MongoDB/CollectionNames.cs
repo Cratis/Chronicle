@@ -12,11 +12,6 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 internal static class CollectionNames
 {
     /// <summary>
-    /// The collection name that holds <see cref="FailedObserverState"/>.
-    /// </summary>
-    internal const string FailedObservers = "failed-observers";
-
-    /// <summary>
     /// The collection that holds <see cref="ObserverState"/>.
     /// </summary>
     internal const string Observers = "observers";

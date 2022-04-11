@@ -11,12 +11,6 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 public interface IPartitionedObserver : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Try to resume the partition.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task TryResume();
-
-    /// <summary>
     /// Set the current connection identifier.
     /// </summary>
     /// <param name="connectionId">The connection identifier.</param>
