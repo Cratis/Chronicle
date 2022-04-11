@@ -36,7 +36,13 @@ public class MongoDBEventSequences : IEventSequences
     }
 
     /// <inheritdoc/>
-    public async Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, JsonObject content)
+    public async Task Append(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        EventSourceId eventSourceId,
+        EventType eventType,
+        DateTimeOffset validFrom,
+        JsonObject content)
     {
         try
         {
@@ -48,6 +54,7 @@ public class MongoDBEventSequences : IEventSequences
                 _executionContextManager.Current.CausedBy,
                 eventType.Id,
                 DateTimeOffset.UtcNow,
+                validFrom,
                 eventSourceId,
                 new Dictionary<string, BsonDocument>
                 {
@@ -64,7 +71,12 @@ public class MongoDBEventSequences : IEventSequences
     }
 
     /// <inheritdoc/>
-    public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content) => throw new NotImplementedException();
+    public Task Compensate(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        EventType eventType,
+        DateTimeOffset validFrom,
+        JsonObject content) => throw new NotImplementedException();
 
     IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
 }

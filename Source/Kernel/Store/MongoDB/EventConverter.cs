@@ -43,7 +43,7 @@ public class EventConverter : IEventConverter
 
         return new AppendedEvent(
             new EventMetadata(@event.SequenceNumber, eventType),
-            new EventContext(@event.EventSourceId, @event.Occurred, _executionContextManager.Current.TenantId, @event.CorrelationId, @event.CausationId, @event.CausedBy),
+            new EventContext(@event.EventSourceId, @event.Occurred, @event.ValidFrom, _executionContextManager.Current.TenantId, @event.CorrelationId, @event.CausationId, @event.CausedBy),
             releasedContent);
     }
 }

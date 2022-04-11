@@ -23,8 +23,9 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
     /// <param name="content">The JSON payload of the event.</param>
+    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content);
+    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default);
 
     /// <summary>
     /// Compensate a specific event in the event store.
