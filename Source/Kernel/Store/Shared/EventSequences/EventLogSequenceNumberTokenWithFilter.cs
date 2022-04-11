@@ -3,7 +3,7 @@
 
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.EventLogs;
+namespace Aksio.Cratis.Events.Store.EventSequences;
 
 /// <summary>
 /// Represents a <see cref="EventSequenceNumber"/> for observers with filter on it.

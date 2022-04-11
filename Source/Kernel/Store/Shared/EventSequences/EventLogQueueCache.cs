@@ -5,7 +5,7 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.EventLogs;
+namespace Aksio.Cratis.Events.Store.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueCache"/> for MongoDB event log.

@@ -6,7 +6,7 @@ using Aksio.Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.EventLogs;
+namespace Aksio.Cratis.Events.Store.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapterFactory"/> for our persistent event store.

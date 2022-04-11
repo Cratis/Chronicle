@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.EventLogs;
+using Aksio.Cratis.Events.Store.EventSequences;
 using Orleans.Configuration;
 using Orleans.Hosting;
 

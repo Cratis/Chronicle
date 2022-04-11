@@ -3,7 +3,7 @@
 
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.EventLogs;
+namespace Aksio.Cratis.Events.Store.EventSequences;
 
 /// <summary>
 /// Stream sequence token that tracks sequence number and event index.

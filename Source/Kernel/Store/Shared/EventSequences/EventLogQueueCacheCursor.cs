@@ -5,7 +5,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.EventLogs;
+namespace Aksio.Cratis.Events.Store.EventSequences;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueCacheCursor"/> for MongoDB event log.
