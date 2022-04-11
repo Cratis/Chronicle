@@ -28,6 +28,9 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
     string _connectionId = string.Empty;
+    IEventSequence? _eventSequence;
+
+    bool IsConnected => !string.IsNullOrEmpty(_connectionId);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -47,24 +50,14 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
 
+        _eventSequence = GrainFactory.GetGrain<IEventSequence>(_eventSequenceId, new MicroserviceAndTenant(_microserviceId, _tenantId));
+
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
 
         _recoverReminder = await GetReminder(RecoverReminder);
-        foreach (var failedPartition in State.FailedPartitions)
-        {
-            if (_recoverReminder == default)
-            {
-                await HandleReminderRegistration(failedPartition.EventSourceId);
-            }
-        }
-
-        if (!State.HasFailedPartitions && _recoverReminder != default)
-        {
-            await UnregisterReminder(_recoverReminder);
-        }
-
+        await HandleReminderRegistration();
         await base.OnActivateAsync();
     }
 
@@ -83,11 +76,19 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     public async Task Subscribe(IEnumerable<EventType> eventTypes)
     {
         _logger.Subscribing(_microserviceId, _eventSequenceId, _tenantId);
+        State.RunningState = ObserverRunningState.Subscribing;
         _subscription?.UnsubscribeAsync();
 
         if (HasDefinitionChanged(eventTypes))
         {
+            State.RunningState = ObserverRunningState.Rewinding;
             State.Offset = 0;
+        }
+
+        var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
+        if (State.Offset < nextSequenceNumber)
+        {
+            State.RunningState = ObserverRunningState.CatchingUp;
         }
 
         State.EventTypes = eventTypes;
@@ -129,31 +130,55 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         if (reminderName == RecoverReminder)
         {
             var reminder = await GetReminder(RecoverReminder);
-
             if (reminder == default)
             {
                 return;
             }
 
-            await UnregisterReminder(reminder);
+            if (!State.HasFailedPartitions)
+            {
+                await UnregisterReminder(reminder);
+                return;
+            }
 
-            // TODO: When an observer is recovering. We need to catch it up before we let register it as recovered.
-            //       While it is catching up, we should ignore trying to recover it.
-            // var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-            // var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
-            // var eventLogStream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
-            // StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
-            // subscriptionId = await eventLogStream.SubscribeAsync(
-            //     async (@event, _) =>
-            //     {
-            //         await HandleEventForPartitionedObserver(@event, _);
-            //         if (!State.IsPartitionFailed(@event.Context.EventSourceId))
-            //         {
-            //             await WriteStateAsync();
-            //             await subscriptionId!.UnsubscribeAsync();
-            //         }
-            //     },
-            //     new EventLogSequenceNumberTokenWithFilter(State.SequenceNumber, State.EventTypes, _eventSourceId));
+            if (!IsConnected)
+            {
+                return;
+            }
+
+            foreach (var failedPartition in State.FailedPartitions)
+            {
+                StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
+
+                if (State.IsRecoveringPartition(failedPartition.EventSourceId))
+                {
+                    continue;
+                }
+
+                State.StartRecoveringPartition(failedPartition.EventSourceId);
+                subscriptionId = await _stream.SubscribeAsync(
+                    async (@event, _) =>
+                    {
+                        await HandleEventForPartitionedObserver(@event, _);
+                        if (State.IsPartitionFailed(@event.Context.EventSourceId))
+                        {
+                            await subscriptionId!.UnsubscribeAsync();
+                        }
+                        else
+                        {
+                            var partitionRecovery = State.GetPartitionRecovery(@event.Context.EventSourceId);
+                            partitionRecovery.SequenceNumber++;
+                            await WriteStateAsync();
+
+                            var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
+                            if (partitionRecovery.SequenceNumber == nextSequenceNumber)
+                            {
+                                State.PartitionRecovered(@event.Context.EventSourceId);
+                            }
+                        }
+                    },
+                    new EventLogSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, failedPartition.EventSourceId));
+            }
         }
     }
 
@@ -169,7 +194,9 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         try
         {
-            if (State.IsPartitionFailed(@event.Context.EventSourceId) || string.IsNullOrEmpty(_connectionId))
+            if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
+                State.IsRecoveringPartition(@event.Context.EventSourceId) ||
+                !IsConnected)
             {
                 return;
             }
@@ -181,6 +208,12 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
 
             State.Offset = @event.Metadata.SequenceNumber + 1;
             State.LastHandled = @event.Metadata.SequenceNumber + 1;
+
+            var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
+            if (State.Offset == nextSequenceNumber)
+            {
+                State.RunningState = ObserverRunningState.Active;
+            }
             await WriteStateAsync();
         }
         catch (Exception ex)
@@ -192,7 +225,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
                 ex.StackTrace ?? string.Empty);
 
             await WriteStateAsync();
-            await HandleReminderRegistration(@event.Context.EventSourceId);
+            await HandleReminderRegistration();
         }
     }
 
@@ -202,29 +235,33 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         return GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
     }
 
-    async Task HandleReminderRegistration(EventSourceId eventSourceId)
+    async Task HandleReminderRegistration()
     {
-        // TODO: Reminder needs to be for the observer and we check all failed partitions.
-        // if (State.IsPartitionFailed(eventSourceId))
-        // {
-        //     var failedPartition = State.GetFailedPartition(eventSourceId);
-        //     if (failedPartition.Attempts <= 10)
-        //     {
-        //         _recoverReminder = await RegisterOrUpdateReminder(
-        //             RecoverReminder,
-        //             TimeSpan.FromSeconds(60),
-        //             TimeSpan.FromSeconds(60) * failedPartition.Attempts);
-        //     }
-        //     else
-        //     {
-        //         var reminder = await GetReminder(RecoverReminder);
-        //         if (reminder != null)
-        //         {
-        //             await UnregisterReminder(reminder);
-        //         }
-        //     }
-        // }
-        Console.WriteLine(eventSourceId);
+        if (!State.HasFailedPartitions && _recoverReminder != default)
+        {
+            await UnregisterReminder(_recoverReminder);
+        }
+        if (State.HasFailedPartitions && _recoverReminder == default)
+        {
+            var anyPartitionedToRetry = State.FailedPartitions.Any(_ => _.Attempts <= 10);
+            if (anyPartitionedToRetry)
+            {
+                _recoverReminder = await RegisterOrUpdateReminder(
+                    RecoverReminder,
+                    TimeSpan.FromSeconds(10),
+                    TimeSpan.FromSeconds(60));
+            }
+            else
+            {
+                var reminder = await GetReminder(RecoverReminder);
+                if (reminder is not null)
+                {
+                    await UnregisterReminder(reminder);
+                }
+                _recoverReminder = null;
+            }
+        }
+
         await Task.CompletedTask;
     }
 

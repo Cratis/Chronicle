@@ -14,9 +14,9 @@ public enum ObserverRunningState
     Unknown = 0,
 
     /// <summary>
-    /// Observer is being registered.
+    /// Observer is subscribing.
     /// </summary>
-    Registering = 1,
+    Subscribing = 1,
 
     /// <summary>
     /// Observer is in rewind mode for all sinks and catching up.

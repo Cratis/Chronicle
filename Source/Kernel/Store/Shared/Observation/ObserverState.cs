@@ -60,11 +60,21 @@ public class ObserverState
     }
 
     /// <summary>
+    /// Gets or sets the failed partitions for the observer.
+    /// </summary>
+    public IEnumerable<RecoveringFailedObserverPartition> RecoveringPartitions
+    {
+        get => _partitionsBeingRecovered;
+        set => _partitionsBeingRecovered = new(value);
+    }
+
+    /// <summary>
     /// Gets whether or not there are any failed partitions.
     /// </summary>
     public bool HasFailedPartitions => _failedPartitions.Count > 0;
 
     List<FailedObserverPartition> _failedPartitions = new();
+    List<RecoveringFailedObserverPartition> _partitionsBeingRecovered = new();
 
     /// <summary>
     /// Fail a partition. If the partition is already failed, it will update it with the details.
@@ -89,17 +99,57 @@ public class ObserverState
     }
 
     /// <summary>
+    /// Start the recovery of a failed partition.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to start recovery on.</param>
+    /// <remarks>If the partition is not failed, it will not register it for recovering.</remarks>
+    public void StartRecoveringPartition(EventSourceId eventSourceId)
+    {
+        if (!IsPartitionFailed(eventSourceId) || IsRecoveringPartition(eventSourceId))
+        {
+            return;
+        }
+
+        var failedPartition = GetFailedPartition(eventSourceId);
+        _partitionsBeingRecovered.Add(new()
+        {
+            EventSourceId = eventSourceId,
+            SequenceNumber = failedPartition.SequenceNumber,
+            StartedRecoveryAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Check whether or not a partition is being recovered.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to check.</param>
+    /// <returns>True if being recovered, false if not.</returns>
+    public bool IsRecoveringPartition(EventSourceId eventSourceId) => _partitionsBeingRecovered.Any(_ => _.EventSourceId == eventSourceId);
+
+    /// <summary>
     /// Recover a failed partition.
     /// </summary>
     /// <param name="eventSourceId">Partition to recover.</param>
-    public void RecoverPartition(EventSourceId eventSourceId)
+    public void PartitionRecovered(EventSourceId eventSourceId)
     {
         var partition = _failedPartitions.Find(_ => _.EventSourceId == eventSourceId);
         if (partition is not null)
         {
             _failedPartitions.Remove(partition);
         }
+        var recoveringPartition = _partitionsBeingRecovered.Find(_ => _.EventSourceId == eventSourceId);
+        if (recoveringPartition is not null)
+        {
+            _partitionsBeingRecovered.Remove(recoveringPartition);
+        }
     }
+
+    /// <summary>
+    /// Get the recovery information for a partition being recovered.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to get for.</param>
+    /// <returns>Recovery information.</returns>
+    public RecoveringFailedObserverPartition GetPartitionRecovery(EventSourceId eventSourceId) => _partitionsBeingRecovered.Find(_ => _.EventSourceId == eventSourceId);
 
     /// <summary>
     /// Check whether or not a partition is failed.
