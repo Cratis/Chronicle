@@ -3,9 +3,9 @@
 
 namespace Aksio.Cratis.Events.Store.Observation.for_ObserverState;
 
-public class when_recovering_failed_partition : given.a_failed_partition
+public class when_failed_partition_is_recovered : given.a_failed_partition
 {
-    void Because() => state.RecoverPartition(partition);
+    void Because() => state.PartitionRecovered(partition);
 
     [Fact] void should_not_have_any_failed_partitions() => state.FailedPartitions.ShouldBeEmpty();
 }

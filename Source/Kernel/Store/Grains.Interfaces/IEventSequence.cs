@@ -12,6 +12,12 @@ namespace Aksio.Cratis.Events.Store.Grains;
 public interface IEventSequence : IGrainWithGuidCompoundKey
 {
     /// <summary>
+    /// Get the next sequence number.
+    /// </summary>
+    /// <returns>Next sequence number.</returns>
+    Task<EventSequenceNumber> GetNextSequenceNumber();
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>

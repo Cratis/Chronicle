@@ -59,6 +59,12 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetNextSequenceNumber()
+    {
+        return Task.FromResult(State.SequenceNumber);
+    }
+
+    /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content)
     {
         _logger.Appending(
