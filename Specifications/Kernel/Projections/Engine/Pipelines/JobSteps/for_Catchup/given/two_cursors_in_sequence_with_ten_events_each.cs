@@ -18,14 +18,14 @@ public class two_cursors_in_sequence_with_ten_events_each : a_catchup_step
                     .Range(0, 10)
                     .Select(_ => new AppendedEvent(
                                         new((uint)_, new EventType(Guid.NewGuid(), 1)),
-                                        new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+                                        new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
                                         new JsonObject())).ToArray();
 
         second_cursor_events = Enumerable
                     .Range(0, 10)
                     .Select(_ => new AppendedEvent(
                                         new((uint)_, new EventType(Guid.NewGuid(), 1)),
-                                        new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+                                        new(Guid.NewGuid().ToString(), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
                                         new JsonObject())).ToArray();
 
         var first_cursor = new Mock<IEventCursor>();
