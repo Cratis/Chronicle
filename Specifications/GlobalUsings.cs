@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 global using Aksio.Cratis.Common;
+global using Aksio.Cratis.Common.Grains;
 global using Aksio.Specifications;
 global using Moq;
 global using Xunit;
