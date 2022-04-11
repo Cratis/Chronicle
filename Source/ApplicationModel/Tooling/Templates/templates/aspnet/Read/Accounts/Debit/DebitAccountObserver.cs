@@ -8,9 +8,10 @@ namespace Read.Accounts.Debit;
 [Observer("b195adfb-e743-4457-b295-5637368436e3")]
 public class DebitAccountObserver
 {
-    public Task Opened(DebitAccountOpened @event)
+    public Task Opened(DebitAccountOpened @event, EventContext context)
     {
         Console.WriteLine(@event);
-        return Task.CompletedTask;
+        Console.WriteLine(context);
+        throw new NotImplementedException();
     }
 }
