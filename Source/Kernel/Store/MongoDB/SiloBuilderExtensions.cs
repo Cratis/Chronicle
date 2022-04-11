@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.EventLogs;
+using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.MongoDB;
 using Aksio.Cratis.Events.Store.MongoDB.Observation;
 using Aksio.Cratis.Events.Store.Observation;

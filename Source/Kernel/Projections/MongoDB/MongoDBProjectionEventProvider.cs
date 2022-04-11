@@ -7,7 +7,7 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.EventLogs;
+using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.MongoDB;
 using Aksio.Cratis.Execution;
 using MongoDB.Driver;
