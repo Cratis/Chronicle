@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.given;
 
-public class an_observer_and_two_event_types : an_observer
+public class a_connected_observer_and_two_event_types : a_connected_observer
 {
     protected IEnumerable<EventType> event_types = new EventType[]
     {

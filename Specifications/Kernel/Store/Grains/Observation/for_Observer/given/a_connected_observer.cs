@@ -10,17 +10,19 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.given;
 
-public class an_observer : GrainSpecification<ObserverState>
+public class a_connected_observer : GrainSpecification<ObserverState>
 {
     protected Observer observer;
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IEventSequence> event_sequence;
     protected Mock<IAsyncStream<AppendedEvent>> stream;
     protected EventLogSequenceNumberTokenWithFilter subscribed_token;
+    protected List<EventLogSequenceNumberTokenWithFilter> subscribed_tokens;
 
     protected override Grain GetGrainInstance()
     {
         observer = new Observer(Mock.Of<ILogger<Observer>>());
+        observer.SetConnectionId(Guid.NewGuid().ToString());
         return observer;
     }
 
@@ -38,11 +40,14 @@ public class an_observer : GrainSpecification<ObserverState>
         stream = new();
         stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<Guid>(), IsAny<string>())).Returns(stream.Object);
 
+        subscribed_tokens = new();
+
         var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
         stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> _, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
                 subscribed_token = token as EventLogSequenceNumberTokenWithFilter;
+                subscribed_tokens.Add(subscribed_token);
                 return Task.FromResult(subscription.Object);
             });
     }
