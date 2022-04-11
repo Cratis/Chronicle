@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 [StorageProvider(ProviderName = ObserverState.StorageProvider)]
 public class Observer : Grain<ObserverState>, IObserver, IRemindable
 {
-    const string RecoverReminder = "partitioned-observer-failure-recovery";
+    const string RecoverReminder = "observer-failure-recovery";
     readonly ILogger<Observer> _logger;
     StreamSubscriptionHandle<AppendedEvent>? _subscription;
     IAsyncStream<AppendedEvent>? _stream;
