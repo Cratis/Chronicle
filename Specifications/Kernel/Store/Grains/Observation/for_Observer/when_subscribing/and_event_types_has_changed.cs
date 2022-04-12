@@ -25,7 +25,7 @@ public class and_event_types_has_changed : given.a_connected_observer_and_two_ev
     async Task Because() => await observer.Subscribe(new_event_types);
 
     [Fact] void should_set_state_to_catching_up() => state.RunningState.ShouldEqual(ObserverRunningState.CatchingUp);
-    [Fact] void should_subscribe_to_sequences_stream() => stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
+    [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
     [Fact] void should_subscribe_with_offset_at_beginning() => subscribed_token.SequenceNumber.ShouldEqual((long)EventSequenceNumber.First.Value);
     [Fact] void should_subscribe_with_event_types() => subscribed_token.EventTypes.ShouldEqual(new_event_types);
 }

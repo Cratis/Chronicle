@@ -21,5 +21,5 @@ public class and_two_failed_partitions_but_is_disconnected : given.a_connected_o
 
     async Task Because() => await observer.ReceiveReminder(Observer.RecoverReminder, new TickStatus());
 
-    [Fact] void should_not_subscribe_to_sequences_stream_for_any_partitions() => stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
+    [Fact] void should_not_subscribe_to_sequences_stream_for_any_partitions() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
 }

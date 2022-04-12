@@ -32,6 +32,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     IGrainReminder? _recoverReminder;
     string _connectionId = string.Empty;
     IEventSequence? _eventSequence;
+    IStreamProvider? _observerStreamProvider;
 
     bool IsConnected => !string.IsNullOrEmpty(_connectionId);
 
@@ -54,6 +55,8 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         _tenantId = key.TenantId;
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(_eventSequenceId, new MicroserviceAndTenant(_microserviceId, _tenantId));
+
+        _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
@@ -176,6 +179,8 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
 
         StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
         State.StartRecoveringPartition(eventSourceId);
+        await WriteStateAsync();
+
         subscriptionId = await _stream.SubscribeAsync(
             async (@event, token) => await HandleEventForRecoveringPartitionedObserver(@event, token, subscriptionId),
             new EventLogSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, eventSourceId));
@@ -200,6 +205,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             if (partitionRecovery.SequenceNumber == nextSequenceNumber)
             {
                 State.PartitionRecovered(@event.Context.EventSourceId);
+                await WriteStateAsync();
             }
         }
     }
@@ -215,10 +221,8 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
-            var partitionedObserver = GetPartitionedObserverFor(@event.Context.EventSourceId);
-
-            await partitionedObserver.SetConnectionId(_connectionId);
-            await partitionedObserver.OnNext(@event);
+            var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, _connectionId);
+            await stream.OnNextAsync(@event);
 
             State.Offset = @event.Metadata.SequenceNumber + 1;
             State.LastHandled = @event.Metadata.SequenceNumber + 1;
@@ -242,12 +246,6 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             await WriteStateAsync();
             await HandleReminderRegistration();
         }
-    }
-
-    IPartitionedObserver GetPartitionedObserverFor(EventSourceId eventSourceId)
-    {
-        var key = new PartitionedObserverKey(_microserviceId, _tenantId, _eventSequenceId, eventSourceId);
-        return GrainFactory.GetGrain<IPartitionedObserver>(_observerId, keyExtension: key);
     }
 
     async Task HandleReminderRegistration()

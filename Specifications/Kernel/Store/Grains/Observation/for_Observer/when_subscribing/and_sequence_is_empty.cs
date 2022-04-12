@@ -17,7 +17,7 @@ public class and_sequence_is_empty : given.a_connected_observer_and_two_event_ty
 
     [Fact] void should_set_state_to_active() => state.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_write_state() => storage.Verify(_ => _.WriteStateAsync(), Once());
-    [Fact] void should_subscribe_to_sequences_stream() => stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
+    [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
     [Fact] void should_subscribe_with_offset_at_beginning() => subscribed_token.SequenceNumber.ShouldEqual((long)EventSequenceNumber.First.Value);
     [Fact] void should_subscribe_with_event_types() => subscribed_token.EventTypes.ShouldEqual(event_types);
 }
