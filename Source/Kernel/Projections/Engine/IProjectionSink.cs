@@ -46,16 +46,4 @@ public interface IProjectionSink
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task PrepareInitialRun();
-
-    /// <summary>
-    /// Begins rewind mode for the sink.
-    /// </summary>
-    /// <returns><see cref="IProjectionSinkRewindScope"/>.</returns>
-    /// <remarks>
-    /// The rewind scope returned is a disposable. When rewind is done, one should
-    /// dispose of this. Depending on the implementation of it, it will perform
-    /// necessary cleanup after a rewind has been performed.
-    /// </remarks>
-    /// <returns>A <see cref="IProjectionSinkRewindScope"/>.</returns>.
-    IProjectionSinkRewindScope BeginRewind();
 }

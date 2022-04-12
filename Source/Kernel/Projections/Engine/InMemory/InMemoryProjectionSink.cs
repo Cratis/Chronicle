@@ -20,23 +20,12 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 
     readonly Dictionary<object, ExpandoObject> _collection = new();
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
-    readonly Model _model;
-    IProjectionSinkRewindScope? _rewindScope;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeId TypeId => ProjectionResultStoreTypeId;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "InMemory";
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryProjectionSink"/> class.
-    /// </summary>
-    /// <param name="model"><see cref="Model"/> the store is for.</param>
-    public InMemoryProjectionSink(Model model)
-    {
-        _model = model;
-    }
 
     /// <inheritdoc/>
     public Task<ExpandoObject> FindOrDefault(Key key)
@@ -79,9 +68,6 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public IProjectionSinkRewindScope BeginRewind() => _rewindScope = new InMemoryProjectionSinkRewindScope(_model);
-
-    /// <inheritdoc/>
     public Task PrepareInitialRun()
     {
         GetCollection().Clear();
@@ -91,11 +77,10 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _rewindScope?.Dispose();
         GC.SuppressFinalize(this);
     }
 
     Dictionary<object, ExpandoObject> GetCollection() => IsRewinding ? _rewindCollection : _collection;
 
-    bool IsRewinding => _rewindScope != default;
+    static bool IsRewinding => false;
 }

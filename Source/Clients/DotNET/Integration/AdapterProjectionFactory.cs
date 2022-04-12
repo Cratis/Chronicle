@@ -50,7 +50,6 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
         adapter.DefineModel(projectionBuilder);
         var projectionDefinition = projectionBuilder
             .WithName($"Adapter: {adapter.GetType().Name} - {typeof(TModel).Name}")
-            .Passive()
             .NotRewindable()
             .Build();
 

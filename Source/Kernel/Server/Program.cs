@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Compliance.MongoDB;
-using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.MongoDB;
@@ -33,7 +32,6 @@ public static class Program
             .UseOrleans(_ => _
                 .UseCluster()
                 .ConfigureServices(_ => _
-                    .AddSingleton<IProjectionPositions, MongoDBProjectionPositions>()
                     .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
                     .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
                     .AddSingleton<ISchemaStore, MongoDBSchemaStore>()

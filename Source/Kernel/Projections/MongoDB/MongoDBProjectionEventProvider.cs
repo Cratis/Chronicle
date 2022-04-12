@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store;
@@ -24,7 +23,6 @@ public class MongoDBProjectionEventProvider : IProjectionEventProvider
     readonly IEventLogStorageProvider _eventLogStorageProvider;
     readonly IEventConverter _converter;
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IProjectionPositions> _positionsProvider;
     readonly ISchemaStore _schemaStore;
     readonly IClusterClient _clusterClient;
     readonly ConcurrentDictionary<IProjectionPipeline, StreamSubscriptionHandle<AppendedEvent>> _subscriptionsPerPipeline = new();
@@ -38,21 +36,18 @@ public class MongoDBProjectionEventProvider : IProjectionEventProvider
     /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="positionsProvider">Provider for <see cref="IProjectionPositions"/>.</param>
     /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
     /// <param name="clusterClient"><see cref="IClusterClient"/> for working with the Orleans cluster.</param>
     public MongoDBProjectionEventProvider(
         IEventLogStorageProvider eventLogStorageProvider,
         IEventConverter converter,
         IExecutionContextManager executionContextManager,
-        ProviderFor<IProjectionPositions> positionsProvider,
         ISchemaStore schemaStore,
         IClusterClient clusterClient)
     {
         _eventLogStorageProvider = eventLogStorageProvider;
         _converter = converter;
         _executionContextManager = executionContextManager;
-        _positionsProvider = positionsProvider;
         _schemaStore = schemaStore;
         _clusterClient = clusterClient;
     }
@@ -74,21 +69,17 @@ public class MongoDBProjectionEventProvider : IProjectionEventProvider
     /// <inheritdoc/>
     public async Task ProvideFor(IProjectionPipeline pipeline, ISubject<AppendedEvent> subject)
     {
-        foreach (var sink in pipeline.Sinks)
-        {
-            var currentOffset = await _positionsProvider().GetFor(pipeline.Projection, sink.Key);
-            var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-            var microserviceAndTenant = new MicroserviceAndTenant(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
-            var stream = streamProvider.GetStream<AppendedEvent>(EventSequenceId.Log, microserviceAndTenant);
-            _subscriptionsPerPipeline[pipeline] = await stream.SubscribeAsync(
-                async (@event, _) =>
-                {
-                    _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
-                    var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
-                    subject.OnNext(new(@event.Metadata, @event.Context, @event.Content));
-                },
-                new EventLogSequenceNumberTokenWithFilter(currentOffset, pipeline.Projection.EventTypes.ToArray()));
-        }
+        var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
+        var microserviceAndTenant = new MicroserviceAndTenant(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId);
+        var stream = streamProvider.GetStream<AppendedEvent>(EventSequenceId.Log, microserviceAndTenant);
+        _subscriptionsPerPipeline[pipeline] = await stream.SubscribeAsync(
+            async (@event, _) =>
+            {
+                _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
+                var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+                subject.OnNext(new(@event.Metadata, @event.Context, @event.Content));
+            },
+            new EventLogSequenceNumberTokenWithFilter(0, pipeline.Projection.EventTypes.ToArray()));
     }
 
     /// <inheritdoc/>

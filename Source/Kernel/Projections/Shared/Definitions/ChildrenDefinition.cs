@@ -18,4 +18,4 @@ public record ChildrenDefinition(
     ModelDefinition Model,
     IDictionary<EventType, FromDefinition> From,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
-    RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, false, true, From, Children, RemovedWith);
+    RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, true, From, Children, RemovedWith);

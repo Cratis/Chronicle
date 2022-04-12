@@ -47,11 +47,6 @@ public interface IProjection
     Model Model { get; }
 
     /// <summary>
-    /// Gets whether or not the projection is a passive projection.
-    /// </summary>
-    bool IsPassive { get; }
-
-    /// <summary>
     /// Gets whether or not the projection is rewindable.
     /// </summary>
     bool IsRewindable { get; }
