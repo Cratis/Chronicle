@@ -14,12 +14,13 @@ public class a_connected_observer : GrainSpecification<ObserverState>
 {
     protected Observer observer;
     protected ObserverId observer_id;
-    protected Mock<IStreamProvider> stream_provider;
+    protected Mock<IStreamProvider> sequence_stream_provider;
+    protected Mock<IStreamProvider> observer_stream_provider;
     protected Mock<IEventSequence> event_sequence;
-    protected Mock<IAsyncStream<AppendedEvent>> stream;
+    protected Mock<IAsyncStream<AppendedEvent>> sequence_stream;
+    protected Mock<IAsyncStream<AppendedEvent>> observer_stream;
     protected EventLogSequenceNumberTokenWithFilter subscribed_token;
     protected List<EventLogSequenceNumberTokenWithFilter> subscribed_tokens;
-
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
@@ -45,16 +46,22 @@ public class a_connected_observer : GrainSpecification<ObserverState>
         event_sequence = new();
         grain_factory.Setup(_ => _.GetGrain<IEventSequence>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(event_sequence.Object);
 
-        stream_provider = new();
-        stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(stream_provider.Object);
+        sequence_stream_provider = new();
+        stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
 
-        stream = new();
-        stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<Guid>(), IsAny<string>())).Returns(stream.Object);
+        sequence_stream = new();
+        sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<Guid>(), IsAny<string>())).Returns(sequence_stream.Object);
+
+        observer_stream_provider = new();
+        stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.ObserverHandlersStreamProvider)).Returns(observer_stream_provider.Object);
+
+        observer_stream = new();
+        observer_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<Guid>(), IsAny<string>())).Returns(observer_stream.Object);
 
         subscribed_tokens = new();
 
         var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
-        stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
+        sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> _, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
                 subscribed_token = token as EventLogSequenceNumberTokenWithFilter;

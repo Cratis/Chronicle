@@ -16,5 +16,5 @@ public class and_partition_is_failed_but_is_disconnected : given.a_connected_obs
 
     async Task Because() => await observer.TryResumePartition(partition);
 
-    [Fact] void should_not_subscribe_to_sequences_stream() => stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
+    [Fact] void should_not_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
 }

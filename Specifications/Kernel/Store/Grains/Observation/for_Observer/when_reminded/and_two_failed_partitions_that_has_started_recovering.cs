@@ -23,5 +23,5 @@ public class and_two_failed_partitions_that_has_started_recovering : given.a_con
 
     [Fact] void should_start_recovering_first_partition() => state.IsRecoveringPartition(first_partition);
     [Fact] void should_start_recovering_second_partition() => state.IsRecoveringPartition(second_partition);
-    [Fact] void should_not_subscribe_to_sequences_stream() => stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
+    [Fact] void should_not_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
 }

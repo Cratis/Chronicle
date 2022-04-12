@@ -15,7 +15,7 @@ public class and_partition_is_failed : given.a_connected_observer_and_two_event_
 
     async Task Because() => await observer.TryResumePartition(partition);
 
-    [Fact] void should_not_subscribe_to_sequences_stream() => stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
+    [Fact] void should_not_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
     [Fact] void should_subscribe_with_offset_at_failed_partition_stopped() => subscribed_token.SequenceNumber.ShouldEqual((long)state.FailedPartitions.ToArray()[0].SequenceNumber.Value);
     [Fact] void should_subscribe_with_event_types_for_failed_partition() => subscribed_token.EventTypes.ShouldEqual(event_types);
 }
