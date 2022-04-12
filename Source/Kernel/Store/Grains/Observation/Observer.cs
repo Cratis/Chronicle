@@ -67,7 +67,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// <inheritdoc/>
     public async Task Rewind()
     {
-        _logger.Rewinding(_microserviceId, _eventSequenceId, _tenantId);
+        _logger.Rewinding(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Rewinding;
         State.Offset = EventSequenceNumber.First;
         await WriteStateAsync();
@@ -78,7 +78,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// <inheritdoc/>
     public async Task Subscribe(IEnumerable<EventType> eventTypes)
     {
-        _logger.Subscribing(_microserviceId, _eventSequenceId, _tenantId);
+        _logger.Subscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Subscribing;
         _subscription?.UnsubscribeAsync();
 
@@ -92,11 +92,13 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         if (State.Offset < nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.CatchingUp;
+            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
         if (State.Offset == nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.Active;
+            _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
         State.EventTypes = eventTypes;
@@ -110,7 +112,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
-        _logger.Unsubscribing(_microserviceId, _eventSequenceId, _tenantId);
+        _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         if (_subscription is not null)
         {
             await _subscription.UnsubscribeAsync();
@@ -123,12 +125,14 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         _connectionId = string.Empty;
         Unsubscribe().Wait();
+        _logger.Disconnected(_observerId, _microserviceId, _eventSequenceId, _tenantId);
     }
 
     /// <inheritdoc/>
     public Task SetConnectionId(string connectionId)
     {
         _connectionId = connectionId;
+        _logger.Connected(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         return Task.CompletedTask;
     }
 
@@ -223,6 +227,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             if (State.Offset == nextSequenceNumber)
             {
                 State.RunningState = ObserverRunningState.Active;
+                _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             }
             await WriteStateAsync();
         }
