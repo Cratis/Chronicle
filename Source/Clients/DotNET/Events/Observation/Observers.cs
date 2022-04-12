@@ -62,20 +62,6 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public async Task RegisterAndObserveAll()
     {
-        /*
-         The plan:
-         - Add array of event types for the observer to the definition - persist this
-         - Implement the Observer replay
-            - Replay automatically if definition changed (event types) when observer observing new type that already has events
-         - Extend on ExecutionContextManager Establish to include causation and caused by
-         - Retry failed when observer is registered (Move from BootProcedure)
-
-         - Let Kernel do the heavy lifting of setting up underlying observers for all tenants
-         - Connect
-         - Establish execution context based on what is in the event context
-         - Add Tenant, Correlation, Causation, CausedBy to the EventContext
-         */
-
         var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         foreach (var handler in _observerHandlers)
