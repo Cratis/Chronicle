@@ -27,12 +27,6 @@ public interface IProjectionBuilderFor<TModel>
     IProjectionBuilderFor<TModel> ModelName(string modelName);
 
     /// <summary>
-    /// Set the projection to be passive, not responding to events as they happen.
-    /// </summary>
-    /// <returns>Builder continuation.</returns>
-    IProjectionBuilderFor<TModel> Passive();
-
-    /// <summary>
     /// Set the projection to not be rewindable - its a moving forward only projection.
     /// </summary>
     /// <returns>Builder continuation.</returns>

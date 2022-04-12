@@ -19,18 +19,6 @@ public static partial class ProjectionPipelineLogMessages
     [LoggerMessage(2, LogLevel.Debug, "Resuming projection '{Projection}'")]
     internal static partial void Resuming(this ILogger logger, ProjectionId projection);
 
-    [LoggerMessage(3, LogLevel.Debug, "Rewinding projection '{Projection}'")]
-    internal static partial void Rewinding(this ILogger logger, ProjectionId projection);
-
-    [LoggerMessage(4, LogLevel.Debug, "Rewinding projection '{Projection}' for configuration '{Configuration}'")]
-    internal static partial void RewindingForConfiguration(this ILogger logger, ProjectionId projection, ProjectionSinkConfigurationId configuration);
-
-    [LoggerMessage(5, LogLevel.Warning, "Projection '{Projection}' is being suspended with the reason '{Reason}'")]
+    [LoggerMessage(3, LogLevel.Warning, "Projection '{Projection}' is being suspended with the reason '{Reason}'")]
     internal static partial void Suspended(this ILogger logger, ProjectionId projection, string reason);
-
-    [LoggerMessage(6, LogLevel.Warning, "Projection '{Projection}' is a passive projection and the {Operation} operation will be ignored.")]
-    internal static partial void IgnoringOperationForPassive(this ILogger logger, ProjectionId projection, string operation);
-
-    [LoggerMessage(7, LogLevel.Warning, "Projection '{Projection}' is non-rewindable. Ignoring rewind operation")]
-    internal static partial void IgnoringRewind(this ILogger logger, ProjectionId projection);
 }

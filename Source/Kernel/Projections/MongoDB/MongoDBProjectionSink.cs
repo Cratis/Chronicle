@@ -30,7 +30,6 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     readonly IExecutionContextManager _executionContextManager;
     readonly IMongoDBClientFactory _clientFactory;
     readonly Storage _configuration;
-    IProjectionSinkRewindScope? _rewindScope;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "MongoDB";
@@ -168,19 +167,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public IProjectionSinkRewindScope BeginRewind()
-    {
-        _rewindScope = new MongoDBProjectionSinkRewindScope(
-            GetDatabase(),
-            _model,
-            () => _rewindScope = default);
-        return _rewindScope;
-    }
-
-    /// <inheritdoc/>
     public void Dispose()
     {
-        _rewindScope?.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -249,5 +237,5 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         return IsRewinding ? database.GetCollection<BsonDocument>(GetRewindCollectionName(_model.Name)) : database.GetCollection<BsonDocument>(_model.Name);
     }
 
-    bool IsRewinding => _rewindScope != default;
+    static bool IsRewinding => false;
 }

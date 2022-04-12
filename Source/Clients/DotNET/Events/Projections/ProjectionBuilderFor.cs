@@ -24,7 +24,6 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     readonly IJsonSchemaGenerator _schemaGenerator;
     readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
     readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
-    bool _isPassive;
     bool _isRewindable = true;
     string _modelName;
     string? _name;
@@ -66,13 +65,6 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     public IProjectionBuilderFor<TModel> ModelName(string modelName)
     {
         _modelName = modelName;
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> Passive()
-    {
-        _isPassive = true;
         return this;
     }
 
@@ -121,7 +113,6 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
             _identifier,
             _name ?? typeof(TModel).FullName ?? "[N/A]",
             new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TModel)).ToJson()),
-            _isPassive,
             _isRewindable,
             _fromDefintions,
             _childrenDefinitions,

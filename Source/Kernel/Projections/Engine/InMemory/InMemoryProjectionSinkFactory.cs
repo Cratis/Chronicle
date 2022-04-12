@@ -12,5 +12,5 @@ public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
     public ProjectionSinkTypeId TypeId => InMemoryProjectionSink.ProjectionResultStoreTypeId;
 
     /// <inheritdoc/>
-    public IProjectionSink CreateFor(Model model) => new InMemoryProjectionSink(model);
+    public IProjectionSink CreateFor(Model model) => new InMemoryProjectionSink();
 }

@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using Aksio.Cratis.Applications.Queries;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,17 +12,6 @@ namespace Aksio.Cratis.Events.Projections.Api;
 [Route("/api/events/projections")]
 public class Projections : Controller
 {
-    readonly IProjections _projections;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Projections"/> class.
-    /// </summary>
-    /// <param name="projections">Underlying <see cref="IProjections"/>.</param>
-    public Projections(IProjections projections)
-    {
-        _projections = projections;
-    }
-
     /// <summary>
     /// Gets all projections.
     /// </summary>
@@ -31,64 +19,12 @@ public class Projections : Controller
     [HttpGet]
     public ClientObservable<IEnumerable<Projection>> AllProjections()
     {
-        var observable = new ClientObservable<IEnumerable<Projection>>();
-
-        var statusSubscriptions = new List<IDisposable>();
-        var subscription = _projections.Pipelines.Subscribe(pipelines =>
+        return new ClientObservable<IEnumerable<Projection>>
         {
-            statusSubscriptions.ForEach(_ => _.Dispose());
-
-            var projections = pipelines.Select(p => new Projection(
-                    p.Projection.Identifier,
-                    p.Projection.Name,
-                    p.Projection.IsPassive,
-                    p.Projection.IsRewindable,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty)).ToList();
-
-            observable.OnNext(projections);
-
-            foreach (var statusObservable in pipelines.Select(_ => _.Status))
+            ClientDisconnected = () =>
             {
-                statusObservable.Subscribe(status =>
-                {
-                    var stateString = Enum.GetName(typeof(ProjectionState), status.State) ?? "[N/A]";
-                    var positionsString = string.Join("-", status.Positions.Values);
-                    var jobInformation = string.Join("\n", status.Jobs.Select(_ => $"{_.Status.Progress.Value} - {_.Status.Task.Value}"));
-
-                    var newItem = new Projection(
-                        status.Projection!.Identifier,
-                        status.Projection!.Name,
-                        status.Projection!.IsPassive,
-                        status.Projection!.IsRewindable,
-                        stateString,
-                        jobInformation,
-                        positionsString);
-
-                    var existing = projections.Find(p => p.Id == status.Projection?.Identifier.Value);
-                    if (existing != default)
-                    {
-                        var index = projections.IndexOf(existing);
-                        projections.Remove(existing);
-                        projections.Insert(index, newItem);
-                    }
-                    else
-                    {
-                        projections.Add(newItem);
-                    }
-
-                    observable.OnNext(projections);
-                });
             }
-        });
-
-        observable.ClientDisconnected = () =>
-        {
-            subscription.Dispose();
-            statusSubscriptions.ForEach(_ => _.Dispose());
         };
-        return observable;
     }
 
     /// <summary>
@@ -98,7 +34,7 @@ public class Projections : Controller
     [HttpPost("{projectionId}/rewind")]
     public void Rewind([FromRoute] Guid projectionId)
     {
-        _projections.GetById(projectionId).Rewind();
+        Console.WriteLine(projectionId);
     }
 
     /// <summary>
