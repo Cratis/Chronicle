@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.Grains.Connections;
+using Aksio.Cratis.Events.Store.Observation;
 using Orleans;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation;
@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 /// <summary>
 /// Defines an observer of an event sequence.
 /// </summary>
-public interface IObserver : IGrainWithGuidCompoundKey, IConnectedClientObserver
+public interface IObserver : IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Rewind the observer.
@@ -21,8 +21,9 @@ public interface IObserver : IGrainWithGuidCompoundKey, IConnectedClientObserver
     /// Subscribe to observer.
     /// </summary>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
+    /// <param name="observerNamespace">The namespace to use for handler stream.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe(IEnumerable<EventType> eventTypes);
+    Task Subscribe(IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace);
 
     /// <summary>
     /// Unsubscribe from the observer.
@@ -36,11 +37,4 @@ public interface IObserver : IGrainWithGuidCompoundKey, IConnectedClientObserver
     /// <param name="eventSourceId">The partition to try to resume.</param>
     /// <returns>Awaitable task.</returns>
     Task TryResumePartition(EventSourceId eventSourceId);
-
-    /// <summary>
-    /// Set the current connection identifier.
-    /// </summary>
-    /// <param name="connectionId">The connection identifier.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SetConnectionId(string connectionId);
 }

@@ -24,10 +24,4 @@ public static partial class ObserverLogMesssages
 
     [LoggerMessage(4, LogLevel.Information, "Observer {ObserverId} is now active up for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Active(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
-
-    [LoggerMessage(5, LogLevel.Information, "Observer {ObserverId} is connected for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
-    internal static partial void Connected(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
-
-    [LoggerMessage(6, LogLevel.Information, "Observer {ObserverId} is disconnected for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
-    internal static partial void Disconnected(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
 }

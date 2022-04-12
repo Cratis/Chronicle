@@ -13,5 +13,6 @@ public interface IConnectedClientObserver : IGrainObserver
     /// <summary>
     /// Called when the client is disconnected.
     /// </summary>
-    void Disconnected();
+    /// <param name="connectionId">The identifier of the connection.</param>
+    void Disconnected(string connectionId);
 }
