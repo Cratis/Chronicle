@@ -30,6 +30,7 @@ public static class SiloBuilderExtensions
         {
             services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<EventSequencesStorageProvider>()!);
             services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ObserverStorageProvider>()!);
+            services.AddSingletonNamedService<IGrainStorage>(ClientObserversState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ClientObserversStorageProvider>()!);
         });
 
         builder.AddPersistentStreams(

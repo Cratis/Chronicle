@@ -35,10 +35,7 @@ public class ObserverStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
-    {
-        return Task.CompletedTask;
-    }
+    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)

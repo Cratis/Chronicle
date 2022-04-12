@@ -30,11 +30,10 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
-    string _connectionId = string.Empty;
     IEventSequence? _eventSequence;
     IStreamProvider? _observerStreamProvider;
 
-    bool IsConnected => !string.IsNullOrEmpty(_connectionId);
+    bool IsConnected => State.CurrentNamespace != ObserverNamespace.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -75,11 +74,11 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         State.Offset = EventSequenceNumber.First;
         await WriteStateAsync();
         await Unsubscribe();
-        await Subscribe(State.EventTypes);
+        await Subscribe(State.EventTypes, State.CurrentNamespace);
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe(IEnumerable<EventType> eventTypes)
+    public async Task Subscribe(IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace)
     {
         _logger.Subscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Subscribing;
@@ -116,27 +115,13 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     public async Task Unsubscribe()
     {
         _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+        State.CurrentNamespace = ObserverNamespace.NotSet;
+        await WriteStateAsync();
         if (_subscription is not null)
         {
             await _subscription.UnsubscribeAsync();
             _subscription = null;
         }
-    }
-
-    /// <inheritdoc/>
-    public void Disconnected()
-    {
-        _connectionId = string.Empty;
-        Unsubscribe().Wait();
-        _logger.Disconnected(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-    }
-
-    /// <inheritdoc/>
-    public Task SetConnectionId(string connectionId)
-    {
-        _connectionId = connectionId;
-        _logger.Connected(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -221,7 +206,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
-            var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, _connectionId);
+            var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
             await stream.OnNextAsync(@event);
 
             State.Offset = @event.Metadata.SequenceNumber + 1;

@@ -42,7 +42,7 @@ public class ConnectedClients : Grain, IConnectedClients
         {
             foreach (var observer in observers)
             {
-                observer.Disconnected();
+                observer.Disconnected(connectionId);
             }
         }
         return Task.CompletedTask;

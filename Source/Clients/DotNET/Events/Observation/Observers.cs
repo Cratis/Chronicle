@@ -73,7 +73,7 @@ public class Observers : IObservers
                 await handler.OnNext(@event);
             });
 
-            var observers = _clusterClient.GetGrain<Store.Grains.Observation.IObservers>(Guid.Empty);
+            var observers = _clusterClient.GetGrain<Store.Grains.Observation.IClientObservers>(Guid.Empty);
             var eventTypes = handler.EventTypes.ToArray();
             await observers.Subscribe(handler.ObserverId, EventSequenceId.Log, eventTypes);
         }
