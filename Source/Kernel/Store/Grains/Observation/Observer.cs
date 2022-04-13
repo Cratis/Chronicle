@@ -82,6 +82,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         _logger.Subscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Subscribing;
+        State.CurrentNamespace = observerNamespace;
         _subscription?.UnsubscribeAsync();
 
         if (HasDefinitionChanged(eventTypes))
@@ -107,7 +108,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         await WriteStateAsync();
 
         _subscription = await _stream!.SubscribeAsync(
-            HandleEventForPartitionedObserver,
+            HandleEventForPartitionedObserverWhenSubscribing,
             new EventLogSequenceNumberTokenWithFilter(State.Offset, eventTypes));
     }
 
@@ -195,19 +196,29 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         }
     }
 
+    Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event, StreamSequenceToken token)
+    {
+        if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
+            State.IsRecoveringPartition(@event.Context.EventSourceId) ||
+            !IsConnected)
+        {
+            return Task.CompletedTask;
+        }
+
+        return HandleEventForPartitionedObserver(@event, token);
+    }
+
     async Task HandleEventForPartitionedObserver(AppendedEvent @event, StreamSequenceToken token)
     {
         try
         {
-            if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
-                State.IsRecoveringPartition(@event.Context.EventSourceId) ||
-                !IsConnected)
+            if (!IsConnected)
             {
                 return;
             }
 
             var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
-            await stream.OnNextAsync(@event);
+            await stream.OnNextAsync(@event, token);
 
             State.Offset = @event.Metadata.SequenceNumber + 1;
             State.LastHandled = @event.Metadata.SequenceNumber + 1;
