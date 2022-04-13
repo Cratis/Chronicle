@@ -6,7 +6,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer;
 
-public class and_event_types_has_changed : given.a_connected_observer_and_two_event_types
+public class and_event_types_has_changed : given.an_observer_and_two_event_types
 {
     protected IEnumerable<EventType> new_event_types = new EventType[]
     {
@@ -22,7 +22,7 @@ public class and_event_types_has_changed : given.a_connected_observer_and_two_ev
         event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)1));
     }
 
-    async Task Because() => await observer.Subscribe(new_event_types);
+    async Task Because() => await observer.Subscribe(new_event_types, Guid.NewGuid().ToString());
 
     [Fact] void should_set_state_to_catching_up() => state.RunningState.ShouldEqual(ObserverRunningState.CatchingUp);
     [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());

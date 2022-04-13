@@ -7,7 +7,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.given;
 
-public class a_connected_observer_and_two_event_types_and_one_event_in_sequence : a_connected_observer_and_two_event_types
+public class an_observer_and_two_event_types_and_one_event_in_sequence : an_observer_and_two_event_types
 {
     protected EventSourceId event_source_id;
     protected AppendedEvent appended_event;

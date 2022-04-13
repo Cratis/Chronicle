@@ -5,7 +5,7 @@ using Orleans.Runtime;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_reminded.given;
 
-public class a_connected_observer_with_event_types_and_reminder : for_Observer.given.a_connected_observer_and_two_event_types
+public class an_observer_with_event_types_and_reminder : for_Observer.given.an_observer_and_two_event_types
 {
     protected Mock<IGrainReminder> reminder;
 
@@ -13,5 +13,7 @@ public class a_connected_observer_with_event_types_and_reminder : for_Observer.g
     {
         reminder = new();
         reminder_registry.Setup(_ => _.GetReminder(Observer.RecoverReminder)).Returns(Task.FromResult(reminder.Object));
+
+        state.CurrentNamespace = observer_namespace;
     }
 }

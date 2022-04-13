@@ -5,7 +5,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_resuming;
 
-public class and_partition_is_failed : given.a_connected_observer_and_two_event_types
+public class and_partition_is_failed : given.an_observer_and_two_event_types
 {
     const string partition = "ca517fc7-6a93-4878-9ccd-8e5b94b264d5";
     void Establish()
