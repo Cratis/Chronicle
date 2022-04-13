@@ -33,7 +33,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     IEventSequence? _eventSequence;
     IStreamProvider? _observerStreamProvider;
 
-    bool IsConnected => State.CurrentNamespace != ObserverNamespace.NotSet;
+    bool HasSubscribedObserver => State.CurrentNamespace != ObserverNamespace.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -152,7 +152,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// <inheritdoc/>
     public async Task TryResumePartition(EventSourceId eventSourceId)
     {
-        if (!IsConnected || !State.IsPartitionFailed(eventSourceId))
+        if (!HasSubscribedObserver || !State.IsPartitionFailed(eventSourceId))
         {
             return;
         }
@@ -200,7 +200,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
             State.IsRecoveringPartition(@event.Context.EventSourceId) ||
-            !IsConnected)
+            !HasSubscribedObserver)
         {
             return Task.CompletedTask;
         }
@@ -212,7 +212,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         try
         {
-            if (!IsConnected)
+            if (!HasSubscribedObserver)
             {
                 return;
             }
