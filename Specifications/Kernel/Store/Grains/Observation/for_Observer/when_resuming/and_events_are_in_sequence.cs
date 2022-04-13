@@ -6,7 +6,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_resuming;
 
-public class and_events_are_in_sequence : given.a_connected_observer_and_two_event_types_and_one_event_in_sequence
+public class and_events_are_in_sequence : given.an_observer_and_two_event_types_and_one_event_in_sequence
 {
     const string partition = "ca517fc7-6a93-4878-9ccd-8e5b94b264d5";
     void Establish()

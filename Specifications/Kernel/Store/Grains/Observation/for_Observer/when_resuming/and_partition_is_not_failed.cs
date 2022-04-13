@@ -5,7 +5,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_resuming;
 
-public class and_partition_is_not_failed : given.a_connected_observer_and_two_event_types
+public class and_partition_is_not_failed : given.an_observer_and_two_event_types
 {
     async Task Because() => await observer.TryResumePartition(Guid.NewGuid());
 

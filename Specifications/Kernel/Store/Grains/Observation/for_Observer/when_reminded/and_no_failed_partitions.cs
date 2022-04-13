@@ -5,7 +5,7 @@ using Orleans.Runtime;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_reminded;
 
-public class and_no_failed_partitions : given.a_connected_observer_with_event_types_and_reminder
+public class and_no_failed_partitions : given.an_observer_with_event_types_and_reminder
 {
     async Task Because() => await observer.ReceiveReminder(Observer.RecoverReminder, new TickStatus());
 

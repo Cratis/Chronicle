@@ -6,15 +6,16 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer;
 
-public class and_sequence_is_empty : given.a_connected_observer_and_two_event_types
+public class and_sequence_is_empty : given.an_observer_and_two_event_types
 {
     void Establish()
     {
         event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)0));
     }
 
-    async Task Because() => await observer.Subscribe(event_types);
+    async Task Because() => await observer.Subscribe(event_types, observer_namespace);
 
+    [Fact] void should_set_current_namespace_in_state() => state.CurrentNamespace.ShouldEqual(observer_namespace);
     [Fact] void should_set_state_to_active() => state.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_write_state() => storage.Verify(_ => _.WriteStateAsync(), Once());
     [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());

@@ -10,7 +10,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.given;
 
-public class a_connected_observer : GrainSpecification<ObserverState>
+public class an_observer : GrainSpecification<ObserverState>
 {
     protected Observer observer;
     protected ObserverId observer_id;
@@ -24,18 +24,19 @@ public class a_connected_observer : GrainSpecification<ObserverState>
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
-    protected string connection_id;
+    protected ObserverNamespace observer_namespace;
 
     protected override Grain GetGrainInstance()
     {
         observer = new Observer(Mock.Of<ILogger<Observer>>());
-        connection_id = Guid.NewGuid().ToString();
-        observer.SetConnectionId(connection_id);
+        observer_namespace = Guid.NewGuid().ToString();
         return observer;
     }
 
     protected override void OnBeforeGrainActivate()
     {
+        state.CurrentNamespace = observer_namespace;
+
         microservice_id = Guid.NewGuid();
         tenant_id = Guid.NewGuid();
         event_sequence_id = EventSequenceId.Log;
@@ -50,13 +51,13 @@ public class a_connected_observer : GrainSpecification<ObserverState>
         stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
 
         sequence_stream = new();
-        sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<Guid>(), IsAny<string>())).Returns(sequence_stream.Object);
+        sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(event_sequence_id.Value, new MicroserviceAndTenant(microservice_id, tenant_id))).Returns(sequence_stream.Object);
 
         observer_stream_provider = new();
         stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.ObserverHandlersStreamProvider)).Returns(observer_stream_provider.Object);
 
         observer_stream = new();
-        observer_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<Guid>(), IsAny<string>())).Returns(observer_stream.Object);
+        observer_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(observer_id, observer_namespace.Value)).Returns(observer_stream.Object);
 
         subscribed_tokens = new();
 
