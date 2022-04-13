@@ -16,7 +16,7 @@ public class and_two_failed_partitions_that_has_started_recovering : given.an_ob
 
     async Task Because() => await observer.ReceiveReminder(Observer.RecoverReminder, new TickStatus());
 
-    [Fact] void should_start_recovering_first_partition() => state.IsRecoveringPartition(first_partition);
-    [Fact] void should_start_recovering_second_partition() => state.IsRecoveringPartition(second_partition);
+    [Fact] void should_start_recovering_first_partition() => state.IsRecoveringPartition(first_partition).ShouldBeTrue();
+    [Fact] void should_start_recovering_second_partition() => state.IsRecoveringPartition(second_partition).ShouldBeTrue();
     [Fact] void should_not_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
 }
