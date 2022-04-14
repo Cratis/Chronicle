@@ -20,7 +20,6 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly IRequestContextManager _requestContextManager;
-    readonly IGrainFactory _grainFactory;
     readonly Tenants _tenants;
     readonly ILogger<ClientObservers> _logger;
     IConnectedClients? _connectedClients;
@@ -31,19 +30,16 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with the Orleans request context.</param>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for activating other grains.</param>
     /// <param name="tenants">All configured <see cref="Tenants"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public ClientObservers(
         IExecutionContextManager executionContextManager,
         IRequestContextManager requestContextManager,
-        IGrainFactory grainFactory,
         Tenants tenants,
         ILogger<ClientObservers> logger)
     {
         _executionContextManager = executionContextManager;
         _requestContextManager = requestContextManager;
-        _grainFactory = grainFactory;
         _tenants = tenants;
         _logger = logger;
     }
@@ -52,7 +48,7 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
     public override async Task OnActivateAsync()
     {
         _microserviceId = _executionContextManager.Current.MicroserviceId;
-        _connectedClients = _grainFactory.GetGrain<IConnectedClients>(Guid.Empty);
+        _connectedClients = GrainFactory.GetGrain<IConnectedClients>(Guid.Empty);
 
         // TODO: Subscribe any observers from state, but only if the client is actually still connected.
         await base.OnActivateAsync();
@@ -72,7 +68,7 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
             var observerKey = new ObserverKey(_microserviceId, tenantId, eventSequenceId);
             State.AssociateObserverWithConnectionId(connectionId, new(observerId, observerKey));
 
-            var observer = _grainFactory.GetGrain<IObserver>(observerId, observerKey);
+            var observer = GrainFactory.GetGrain<IObserver>(observerId, observerKey);
             await observer.Subscribe(eventTypes, connectionId);
         }
 
@@ -88,13 +84,13 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
             return;
         }
 
-        State.Disconnected(connectionId);
-        WriteStateAsync().Wait();
-
         foreach (var observerIdentifier in State.GetObserversForConnectionId(connectionId))
         {
-            var observer = _grainFactory.GetGrain<IObserver>(observerIdentifier.ObserverId, observerIdentifier.ObserverKey);
+            var observer = GrainFactory.GetGrain<IObserver>(observerIdentifier.ObserverId, observerIdentifier.ObserverKey);
             observer.Unsubscribe().Wait();
         }
+
+        State.Disconnected(connectionId);
+        WriteStateAsync().Wait();
     }
 }
