@@ -17,6 +17,11 @@ internal static class CollectionNames
     internal const string Observers = "observers";
 
     /// <summary>
+    /// The collection that holds <see cref="ClientObserversState"/>.
+    /// </summary>
+    internal const string ClientObservers = "client-observers";
+
+    /// <summary>
     /// The collection that holds <see cref="ReminderEntry"/>.
     /// </summary>
     internal const string Reminders = "reminders";
