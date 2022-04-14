@@ -257,8 +257,8 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             {
                 _recoverReminder = await RegisterOrUpdateReminder(
                     RecoverReminder,
-                    TimeSpan.FromSeconds(10),
-                    TimeSpan.FromSeconds(60));
+                    TimeSpan.FromSeconds(30),
+                    TimeSpan.FromSeconds(30));
             }
             else
             {
