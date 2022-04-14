@@ -91,6 +91,6 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
         }
 
         State.Disconnected(connectionId);
-        WriteStateAsync().Wait();
+        WriteStateAsync();
     }
 }
