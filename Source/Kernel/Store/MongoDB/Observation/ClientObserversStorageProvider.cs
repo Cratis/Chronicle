@@ -19,7 +19,6 @@ public class ClientObserversStorageProvider : IGrainStorage
 
     IMongoCollection<ClientObserversState> Collection => _database.GetCollection<ClientObserversState>();
 
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserversStorageProvider"/> class.
     /// </summary>
