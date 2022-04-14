@@ -88,6 +88,9 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
             return;
         }
 
+        State.Disconnected(connectionId);
+        WriteStateAsync().Wait();
+
         foreach (var observerIdentifier in State.GetObserversForConnectionId(connectionId))
         {
             var observer = _grainFactory.GetGrain<IObserver>(observerIdentifier.ObserverId, observerIdentifier.ObserverKey);

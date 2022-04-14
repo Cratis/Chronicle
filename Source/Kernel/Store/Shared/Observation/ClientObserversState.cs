@@ -59,4 +59,10 @@ public class ClientObserversState
 
         observerKeys.Add(observerKey);
     }
+
+    /// <summary>
+    /// Remove all registrations for a specific connection id.
+    /// </summary>
+    /// <param name="connectionId">Identifier to get for.</param>
+    public void Disconnected(string connectionId) => ObserverKeysByConnections.Remove(connectionId);
 }
