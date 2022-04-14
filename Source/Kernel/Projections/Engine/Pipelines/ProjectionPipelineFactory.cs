@@ -46,8 +46,14 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     {
         var eventProvider = _projectionEventProviders.GetForType(definition.ProjectionEventProviderTypeId);
 
-        var sinkDefinition = definition.Sinks.First();
-        var sink = _projectionSinks.GetForTypeAndModel(sinkDefinition.TypeId, projection.Model);
+        // TODO: This should be taken out when we have the ImmediateProjection support.
+        IProjectionSink sink = default!;
+        if (definition.Sinks.Any())
+        {
+            var sinkDefinition = definition.Sinks.First();
+            sink = _projectionSinks.GetForTypeAndModel(sinkDefinition.TypeId, projection.Model);
+        }
+
         return new ProjectionPipeline(
             projection,
             eventProvider,
