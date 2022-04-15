@@ -18,14 +18,8 @@ public interface IProjections : IGrainWithGuidKey
     /// <param name="pipelineDefinition">The <see cref="ProjectionPipelineDefinition"/> for the projection.</param>
     /// <returns>Async task.</returns>
     /// <remarks>
-    /// If the projection is already in the system, the supervisor will see if there are any differences
-    /// and possibly set up the projection for rewind.
+    /// If the projection is already in the system, it will look for changes in the definition differences
+    /// and possibly rewind the projection.
     /// </remarks>
     Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
-
-    /// <summary>
-    /// Start the supervisor.
-    /// </summary>
-    /// <returns>Async task.</returns>
-    Task Start();
 }

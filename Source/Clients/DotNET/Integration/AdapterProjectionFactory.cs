@@ -60,7 +60,7 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
             Array.Empty<ProjectionSinkDefinition>());
 
         await projections.Register(projectionDefinition, pipelineDefinition);
-        var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value);
+        var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value, null!);
         return new AdapterProjectionFor<TModel>(projection);
     }
 }

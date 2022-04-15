@@ -8,6 +8,7 @@
         <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj" />
         <ProjectReference Include="../Engine/Engine.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
+        <ProjectReference Include="../../Store/Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>
