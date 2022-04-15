@@ -109,7 +109,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
 
         _subscription = await _stream!.SubscribeAsync(
             HandleEventForPartitionedObserverWhenSubscribing,
-            new EventLogSequenceNumberTokenWithFilter(State.Offset, eventTypes));
+            new EventSequenceNumberTokenWithFilter(State.Offset, eventTypes));
     }
 
     /// <inheritdoc/>
@@ -169,7 +169,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
 
         subscriptionId = await _stream.SubscribeAsync(
             async (@event, token) => await HandleEventForRecoveringPartitionedObserver(@event, token, subscriptionId),
-            new EventLogSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, eventSourceId));
+            new EventSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, eventSourceId));
     }
 
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) => !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));

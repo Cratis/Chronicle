@@ -19,8 +19,8 @@ public class an_observer : GrainSpecification<ObserverState>
     protected Mock<IEventSequence> event_sequence;
     protected Mock<IAsyncStream<AppendedEvent>> sequence_stream;
     protected Mock<IAsyncStream<AppendedEvent>> observer_stream;
-    protected EventLogSequenceNumberTokenWithFilter subscribed_token;
-    protected List<EventLogSequenceNumberTokenWithFilter> subscribed_tokens;
+    protected EventSequenceNumberTokenWithFilter subscribed_token;
+    protected List<EventSequenceNumberTokenWithFilter> subscribed_tokens;
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
@@ -65,7 +65,7 @@ public class an_observer : GrainSpecification<ObserverState>
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> _, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
-                subscribed_token = token as EventLogSequenceNumberTokenWithFilter;
+                subscribed_token = token as EventSequenceNumberTokenWithFilter;
                 subscribed_tokens.Add(subscribed_token);
                 return Task.FromResult(subscription.Object);
             });

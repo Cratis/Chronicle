@@ -45,17 +45,17 @@ public class EventSequenceBatchContainer : IBatchContainer
         StreamNamespace = new MicroserviceAndTenant(microserviceId, tenantId);
         if (_events.Any())
         {
-            SequenceToken = new EventLogSequenceNumberToken(_events.First().Metadata.SequenceNumber);
+            SequenceToken = new EventSequenceNumberToken(_events.First().Metadata.SequenceNumber);
         }
         else
         {
-            SequenceToken = new EventLogSequenceNumberToken();
+            SequenceToken = new EventSequenceNumberToken();
         }
     }
 
     /// <inheritdoc/>
     public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>() =>
-        _events.Select(_ => new Tuple<T, StreamSequenceToken>((T)(object)_, new EventLogSequenceNumberToken(_.Metadata.SequenceNumber))).ToArray();
+        _events.Select(_ => new Tuple<T, StreamSequenceToken>((T)(object)_, new EventSequenceNumberToken(_.Metadata.SequenceNumber))).ToArray();
 
     /// <inheritdoc/>
     public bool ImportRequestContext()

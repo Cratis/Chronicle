@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueCacheCursor"/> for MongoDB event log.
 /// </summary>
-public class EventLogQueueCacheCursor : IQueueCacheCursor
+public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly IEventLogStorageProvider _eventLogStorageProvider;
@@ -20,7 +20,7 @@ public class EventLogQueueCacheCursor : IQueueCacheCursor
     IEventCursor? _cursor;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogQueueCacheCursor"/>.
+    /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/>.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
@@ -28,7 +28,7 @@ public class EventLogQueueCacheCursor : IQueueCacheCursor
     /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
     /// <param name="partition">Optional <see cref="EventSourceId"/> partition to filter for.</param>
-    public EventLogQueueCacheCursor(
+    public EventSequenceQueueCacheCursor(
         IExecutionContextManager executionContextManager,
         IEventLogStorageProvider eventLogStorageProvider,
         IStreamIdentity streamIdentity,

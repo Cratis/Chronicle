@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapterFactory"/> for our persistent event store.
 /// </summary>
-public class EventLogQueueAdapterFactory : IQueueAdapterFactory
+public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
 {
     readonly IQueueAdapterCache _cache;
     readonly IStreamQueueMapper _mapper;
@@ -25,25 +25,25 @@ public class EventLogQueueAdapterFactory : IQueueAdapterFactory
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
     /// <param name="eventLogStorageProvider">Provider for <see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
-    public EventLogQueueAdapterFactory(
+    public EventSequenceQueueAdapterFactory(
         string name,
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequences> eventLogsProvider,
         ProviderFor<IEventLogStorageProvider> eventLogStorageProvider)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-        _cache = new EventLogQueueAdapterCache(executionContextManager, eventLogStorageProvider);
+        _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider);
         _name = name;
         _eventLogsProvder = eventLogsProvider;
     }
 
     /// <summary>
-    /// Creates a <see cref="EventLogQueueAdapterFactory"/>.
+    /// Creates a <see cref="EventSequenceQueueAdapterFactory"/>.
     /// </summary>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to use for service dependencies.</param>
     /// <param name="name">Name of stream.</param>
     /// <returns>A new <see cref="EventSequenceQueueAdapter"/>.</returns>
-    public static EventLogQueueAdapterFactory Create(IServiceProvider serviceProvider, string name)
+    public static EventSequenceQueueAdapterFactory Create(IServiceProvider serviceProvider, string name)
     {
         return new(
             name,

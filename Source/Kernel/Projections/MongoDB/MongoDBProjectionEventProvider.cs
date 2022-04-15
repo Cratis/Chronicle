@@ -79,7 +79,7 @@ public class MongoDBProjectionEventProvider : IProjectionEventProvider
                 var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
                 subject.OnNext(new(@event.Metadata, @event.Context, @event.Content));
             },
-            new EventLogSequenceNumberTokenWithFilter(0, pipeline.Projection.EventTypes.ToArray()));
+            new EventSequenceNumberTokenWithFilter(0, pipeline.Projection.EventTypes.ToArray()));
     }
 
     /// <inheritdoc/>

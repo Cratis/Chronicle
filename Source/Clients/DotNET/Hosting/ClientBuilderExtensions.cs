@@ -23,7 +23,7 @@ public static class ClientBuilderExtensions
     {
         builder.AddPersistentStreams(
             WellKnownProviders.EventSequenceStreamProvider,
-            EventLogQueueAdapterFactory.Create,
+            EventSequenceQueueAdapterFactory.Create,
             _ => { });
         return builder;
     }

@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// <summary>
 /// Stream sequence token that tracks sequence number and event index.
 /// </summary>
-public class EventLogSequenceNumberToken : StreamSequenceToken
+public class EventSequenceNumberToken : StreamSequenceToken
 {
     long _sequenceNumber;
     int _eventIndex;
@@ -32,33 +32,33 @@ public class EventLogSequenceNumberToken : StreamSequenceToken
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogSequenceNumberToken"/>.
+    /// Initializes a new instance of the <see cref="EventSequenceNumberToken"/>.
     /// </summary>
-    public EventLogSequenceNumberToken()
+    public EventSequenceNumberToken()
     {
         _sequenceNumber = -1;
         _eventIndex = 0;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogSequenceNumberToken"/>.
+    /// Initializes a new instance of the <see cref="EventSequenceNumberToken"/>.
     /// </summary>
     /// <param name="sequenceNumber">The actual <see cref="EventSequenceNumber"/>.</param>
-    public EventLogSequenceNumberToken(EventSequenceNumber sequenceNumber)
+    public EventSequenceNumberToken(EventSequenceNumber sequenceNumber)
     {
         _sequenceNumber = (long)sequenceNumber.Value;
         _eventIndex = 0;
     }
 
     /// <inheritdoc/>
-    public override bool Equals(object? obj) => Equals((EventLogSequenceNumberToken)obj!);
+    public override bool Equals(object? obj) => Equals((EventSequenceNumberToken)obj!);
 
     /// <inheritdoc/>
     public override bool Equals(StreamSequenceToken other)
     {
         return
             other is not null &&
-            other is EventLogSequenceNumberToken token &&
+            other is EventSequenceNumberToken token &&
             token.SequenceNumber == SequenceNumber &&
             token.EventIndex == EventIndex;
     }

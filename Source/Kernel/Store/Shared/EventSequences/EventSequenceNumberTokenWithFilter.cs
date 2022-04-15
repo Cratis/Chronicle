@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// <summary>
 /// Represents a <see cref="EventSequenceNumber"/> for observers with filter on it.
 /// </summary>
-public class EventLogSequenceNumberTokenWithFilter : EventLogSequenceNumberToken
+public class EventSequenceNumberTokenWithFilter : EventSequenceNumberToken
 {
     /// <summary>
     /// Gets the collection of <see cref="EventType">event types</see> the observer is interested in.
@@ -21,12 +21,12 @@ public class EventLogSequenceNumberTokenWithFilter : EventLogSequenceNumberToken
     public EventSourceId Partition { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogSequenceNumberTokenWithFilter"/> class.
+    /// Initializes a new instance of the <see cref="EventSequenceNumberTokenWithFilter"/> class.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/>.</param>
     /// <param name="eventTypes"><see cref="EventType">event types</see> the observer is interested in.</param>
     /// <param name="partition">Optional <see cref="EventSourceId"/> partition.</param>
-    public EventLogSequenceNumberTokenWithFilter(EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSourceId? partition = default) : base(sequenceNumber)
+    public EventSequenceNumberTokenWithFilter(EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, EventSourceId? partition = default) : base(sequenceNumber)
     {
         EventTypes = eventTypes;
         Partition = partition ?? EventSourceId.Unspecified;
@@ -35,7 +35,7 @@ public class EventLogSequenceNumberTokenWithFilter : EventLogSequenceNumberToken
     /// <inheritdoc/>
     public override bool Equals(StreamSequenceToken other)
     {
-        if (other is EventLogSequenceNumberTokenWithFilter observerToken)
+        if (other is EventSequenceNumberTokenWithFilter observerToken)
         {
             return
                 observerToken.EventTypes.SequenceEqual(EventTypes) &&
