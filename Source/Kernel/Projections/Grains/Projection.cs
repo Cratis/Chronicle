@@ -8,7 +8,10 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Grains.Observation;
+using Aksio.Cratis.Events.Store.Observation;
 using Orleans;
+using Orleans.Streams;
 using EngineProjection = Aksio.Cratis.Events.Projections.IProjection;
 
 namespace Aksio.Cratis.Events.Projections.Grains;
@@ -25,6 +28,7 @@ public class Projection : Grain, IProjection
     readonly IEventLogStorageProvider _eventLogStorageProvider;
     EngineProjection? _projection;
     IProjectionEventProvider? _projectionEventProvider;
+    IObserver? _observer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -51,11 +55,27 @@ public class Projection : Grain, IProjection
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        var projectionId = this.GetPrimaryKey();
+        var projectionId = this.GetPrimaryKey(out var keyAsString);
+        var key = ProjectionKey.Parse(keyAsString);
         var definition = await _projectionDefinitions.GetFor(projectionId);
         _projection = await _projectionFactory.CreateFrom(definition);
         _projectionEventProvider = _projectionEventProviders.GetForType("c0c0196f-57e3-4860-9e3b-9823cf45df30");
+
+        _observer = GrainFactory.GetGrain<IObserver>(projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+
+        var observerNamespace = new ObserverNamespace(projectionId.ToString());
+        var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
+        var stream = streamProvider.GetStream<AppendedEvent>(projectionId, observerNamespace);
+        await stream.SubscribeAsync(HandleEvent);
+
+        await _observer.Subscribe(_projection.EventTypes, observerNamespace);
+
+        // var projection = await _projectionFactory.CreateFrom(projectionDefinition);
+        // var pipeline = _pipelineFactory.CreateFrom(projection, pipelineDefinition);
     }
+
+    /// <inheritdoc/>
+    public Task Ensure() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task<JsonObject> GetModelInstanceById(EventSourceId eventSourceId)
@@ -103,6 +123,20 @@ public class Projection : Grain, IProjection
         var json = JsonSerializer.Serialize(state);
         var jsonObject = JsonNode.Parse(json)!;
         return (jsonObject as JsonObject)!;
+    }
+
+    /// <inheritdoc/>
+    public Task Rewind()
+    {
+        _observer?.Rewind();
+        return Task.CompletedTask;
+    }
+
+    Task HandleEvent(AppendedEvent @event, StreamSequenceToken streamSequenceToken)
+    {
+        Console.WriteLine(@event);
+        Console.WriteLine(streamSequenceToken);
+        return Task.CompletedTask;
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
