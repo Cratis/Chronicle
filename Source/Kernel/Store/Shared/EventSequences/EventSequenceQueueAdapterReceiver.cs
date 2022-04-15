@@ -9,9 +9,9 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Events.Store.EventSequences;
 
 /// <summary>
-/// Represents an implementation of <see cref="EventLogQueueAdapterReceiver"/> for MongoDB event log.
+/// Represents an implementation of <see cref="EventSequenceQueueAdapterReceiver"/> for MongoDB event log.
 /// </summary>
-public class EventLogQueueAdapterReceiver : IQueueAdapterReceiver
+public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
 {
     readonly ConcurrentBag<IBatchContainer> _eventBatches = new();
     readonly List<IBatchContainer> _empty = new();

@@ -35,7 +35,7 @@ public static class SiloBuilderExtensions
 
         builder.AddPersistentStreams(
             WellKnownProviders.EventSequenceStreamProvider,
-            EventLogQueueAdapterFactory.Create,
+            EventSequenceQueueAdapterFactory.Create,
             _ =>
             {
                 _.Configure<HashRingStreamQueueMapperOptions>(ob => ob.Configure(options => options.TotalQueueCount = 8));

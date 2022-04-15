@@ -10,17 +10,17 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapterCache"/> for MongoDB event log.
 /// </summary>
-public class EventLogQueueAdapterCache : IQueueAdapterCache
+public class EventSequenceQueueAdapterCache : IQueueAdapterCache
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventLogStorageProvider> _eventLogStorageProvider;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogQueueAdapterCache"/> class.
+    /// Initializes a new instance of the <see cref="EventSequenceQueueAdapterCache"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
-    public EventLogQueueAdapterCache(
+    public EventSequenceQueueAdapterCache(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventLogStorageProvider> eventLogStorageProvider)
     {
@@ -29,5 +29,5 @@ public class EventLogQueueAdapterCache : IQueueAdapterCache
     }
 
     /// <inheritdoc/>
-    public IQueueCache CreateQueueCache(QueueId queueId) => new EventLogQueueCache(_executionContextManager, _eventLogStorageProvider);
+    public IQueueCache CreateQueueCache(QueueId queueId) => new EventSequenceQueueCache(_executionContextManager, _eventLogStorageProvider);
 }

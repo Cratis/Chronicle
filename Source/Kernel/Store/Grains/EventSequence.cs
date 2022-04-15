@@ -93,7 +93,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                     _executionContextManager.Current.CausedBy),
                 compliantEvent);
 
-            await _stream!.OnNextAsync(appendedEvent, new EventLogSequenceNumberToken(State.SequenceNumber));
+            await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
         }
         catch (UnableToAppendToEventSequence ex)
         {

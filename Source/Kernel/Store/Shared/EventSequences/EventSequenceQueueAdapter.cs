@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// </summary>
 public class EventSequenceQueueAdapter : IQueueAdapter
 {
-    readonly ConcurrentDictionary<QueueId, EventLogQueueAdapterReceiver> _receivers = new();
+    readonly ConcurrentDictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
 
     readonly IStreamQueueMapper _mapper;
     readonly ProviderFor<IEventSequences> _eventLogsProvider;
@@ -45,7 +45,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     /// <inheritdoc/>
     public IQueueAdapterReceiver CreateReceiver(QueueId queueId)
     {
-        var receiver = new EventLogQueueAdapterReceiver();
+        var receiver = new EventSequenceQueueAdapterReceiver();
         _receivers[queueId] = receiver;
         return receiver;
     }

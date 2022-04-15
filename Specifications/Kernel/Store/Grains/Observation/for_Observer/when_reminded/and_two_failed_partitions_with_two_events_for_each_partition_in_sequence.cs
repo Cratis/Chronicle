@@ -34,7 +34,7 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
         observer_stream.Setup(_ => _.OnNextAsync(IsAny<AppendedEvent>(), IsAny<StreamSequenceToken>()))
             .Returns((AppendedEvent @event, StreamSequenceToken token) =>
             {
-                var actualToken = token as EventLogSequenceNumberTokenWithFilter;
+                var actualToken = token as EventSequenceNumberTokenWithFilter;
                 events_received[actualToken.Partition] = @event;
                 return Task.CompletedTask;
             });
@@ -43,7 +43,7 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
-                subscribed_token = token as EventLogSequenceNumberTokenWithFilter;
+                subscribed_token = token as EventSequenceNumberTokenWithFilter;
                 subscribed_tokens.Add(subscribed_token);
 
                 if (subscribed_token.Partition == first_partition)
