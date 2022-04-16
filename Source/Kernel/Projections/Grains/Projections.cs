@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Configuration;
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
@@ -14,8 +15,8 @@ namespace Aksio.Cratis.Events.Projections.Grains;
 /// </summary>
 public class Projections : Grain, IProjections
 {
-    readonly IProjectionDefinitions _projectionDefinitions;
-    readonly IProjectionPipelineDefinitions _projectionPipelineDefinitions;
+    readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
+    readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitions;
     readonly Tenants _tenants;
     readonly ILogger<Projections> _logger;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
@@ -23,13 +24,13 @@ public class Projections : Grain, IProjections
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="projectionDefinitions">The <see cref="IProjectionDefinitions"/> to use.</param>
-    /// <param name="projectionPipelineDefinitions">The <see cref="IProjectionPipelineDefinitions"/> to use.</param>
+    /// <param name="projectionDefinitions">Provider for the <see cref="IProjectionDefinitions"/> to use.</param>
+    /// <param name="projectionPipelineDefinitions">Provider for the <see cref="IProjectionPipelineDefinitions"/> to use.</param>
     /// <param name="tenants">All configured tenants.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Projections(
-        IProjectionDefinitions projectionDefinitions,
-        IProjectionPipelineDefinitions projectionPipelineDefinitions,
+        ProviderFor<IProjectionDefinitions> projectionDefinitions,
+        ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitions,
         Tenants tenants,
         ILogger<Projections> logger)
     {
@@ -43,10 +44,10 @@ public class Projections : Grain, IProjections
     public override async Task OnActivateAsync()
     {
         _microserviceId = this.GetPrimaryKey();
-        var projectionPipelineDefinitions = await _projectionPipelineDefinitions.GetAll();
+        var projectionPipelineDefinitions = await _projectionPipelineDefinitions().GetAll();
         foreach (var pipeline in projectionPipelineDefinitions)
         {
-            if (await _projectionDefinitions.HasFor(pipeline.ProjectionId))
+            if (await _projectionDefinitions().HasFor(pipeline.ProjectionId))
             {
                 foreach (var tenant in _tenants.GetTenantIds())
                 {
@@ -61,14 +62,16 @@ public class Projections : Grain, IProjections
     public async Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition)
     {
         _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
+        var projectionDefinitions = _projectionDefinitions();
+        var projectionPipelineDefinitions = _projectionPipelineDefinitions();
 
-        var isNew = !await _projectionDefinitions.HasFor(projectionDefinition.Identifier);
-        var hasChanged = await _projectionDefinitions.HasChanged(projectionDefinition);
+        var isNew = !await projectionDefinitions.HasFor(projectionDefinition.Identifier);
+        var hasChanged = await projectionDefinitions.HasChanged(projectionDefinition);
 
         if (hasChanged || isNew)
         {
-            await _projectionDefinitions.Register(projectionDefinition);
-            await _projectionPipelineDefinitions.Register(pipelineDefinition);
+            await projectionDefinitions.Register(projectionDefinition);
+            await projectionPipelineDefinitions.Register(pipelineDefinition);
 
             foreach (var tenant in _tenants.GetTenantIds())
             {
