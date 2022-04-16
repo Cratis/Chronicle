@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Execution;
 using Orleans;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Extensions.Orleans.Execution;
 
@@ -13,32 +14,55 @@ namespace Aksio.Cratis.Extensions.Orleans.Execution;
 public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly IRequestContextManager _requestContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionContextIncomingCallFilter"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    /// <param name="requestContextManager"><see cref="IRequestContextManager"/> for working with state in requests.</param>
     public ExecutionContextIncomingCallFilter(
-        IExecutionContextManager executionContextManager,
-        IRequestContextManager requestContextManager)
+        IExecutionContextManager executionContextManager)
     {
         _executionContextManager = executionContextManager;
-        _requestContextManager = requestContextManager;
+    }
+
+    /// <summary>
+    /// Try to resolve execution context from the request context.
+    /// </summary>
+    /// <param name="context">Resolved context, default if not able to resolve.</param>
+    /// <returns>True if it could resolve, false if not.</returns>
+    public static bool TryResolveExecutionContext(out ExecutionContext context)
+    {
+        var microserviceId = RequestContext.Get(RequestContextKeys.MicroserviceId);
+        var tenantId = RequestContext.Get(RequestContextKeys.TenantId);
+        var correlationId = RequestContext.Get(RequestContextKeys.CorrelationId);
+        var causationId = RequestContext.Get(RequestContextKeys.CausationId);
+        var causedBy = RequestContext.Get(RequestContextKeys.CausedBy);
+
+        if (microserviceId is not null
+            || tenantId is not null
+            || correlationId is not null
+            || causationId is not null
+            || causedBy is not null)
+        {
+            context = new ExecutionContext(
+                microserviceId?.ToString() ?? MicroserviceId.Unspecified,
+                tenantId?.ToString() ?? TenantId.NotSet,
+                correlationId?.ToString() ?? CorrelationId.New(),
+                causationId?.ToString() ?? "[n/a]",
+                causedBy?.ToString() ?? CausedBy.System);
+            return true;
+        }
+
+        context = null!;
+        return false;
     }
 
     /// <inheritdoc/>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
-        var microserviceId = _requestContextManager.Get(RequestContextKeys.MicroserviceId);
-        var tenantId = _requestContextManager.Get(RequestContextKeys.TenantId);
-        if (microserviceId is not null && tenantId is not null)
+        if (TryResolveExecutionContext(out var executionContext))
         {
-            var correlationId = _requestContextManager.Get(RequestContextKeys.CorrelationId) ?? "[N/A]";
-            var causationId = _requestContextManager.Get(RequestContextKeys.CausationId)?.ToString() ?? "[N/A]";
-            var causedBy = Guid.Parse(_requestContextManager.Get(RequestContextKeys.CausedBy)?.ToString() ?? Guid.Empty.ToString());
-            _executionContextManager.Set(new ExecutionContext(microserviceId!.ToString()!, tenantId!.ToString()!, correlationId!.ToString()!, causationId, causedBy));
+            _executionContextManager.Set(executionContext);
         }
 
         await context.Invoke();
