@@ -65,7 +65,7 @@ public class Projection : Grain, IProjection
 
         var observerNamespace = new ObserverNamespace(projectionId.ToString());
         var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
-        var stream = streamProvider.GetStream<AppendedEvent>(projectionId, observerNamespace);
+        var stream = streamProvider.GetStream<AppendedEvent>(projectionId, key);
         await stream.SubscribeAsync(HandleEvent);
 
         await _observer.Subscribe(_projection.EventTypes, observerNamespace);
