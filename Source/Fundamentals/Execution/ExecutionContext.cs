@@ -11,4 +11,5 @@ namespace Aksio.Cratis.Execution;
 /// <param name="CorrelationId">The <see cref="CorrelationId"/>.</param>
 /// <param name="CausationId">The <see cref="CausationId"/>.</param>
 /// <param name="CausedBy">The person or system that is the cause.</param>
-public record ExecutionContext(MicroserviceId MicroserviceId, TenantId TenantId, CorrelationId CorrelationId, CausationId CausationId, CausedBy CausedBy);
+/// <param name="IsInKernel">Whether or not we're running inside the kernel. Defaults to false.</param>
+public record ExecutionContext(MicroserviceId MicroserviceId, TenantId TenantId, CorrelationId CorrelationId, CausationId CausationId, CausedBy CausedBy, bool IsInKernel = false);
