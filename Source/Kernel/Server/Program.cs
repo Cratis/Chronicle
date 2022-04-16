@@ -28,7 +28,7 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
-            .UseAksio(_ => _.InSilo())
+            .UseAksio(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
                 .ConfigureServices(_ => _

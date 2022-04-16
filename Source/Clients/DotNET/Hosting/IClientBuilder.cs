@@ -14,10 +14,10 @@ namespace Aksio.Cratis.Hosting;
 public interface IClientBuilder
 {
     /// <summary>
-    /// Instruct the builder that the client is within a silo.
+    /// Instruct the builder that the client is within the kernel.
     /// </summary>
     /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
-    IClientBuilder InSilo();
+    IClientBuilder InKernel();
 
     /// <summary>
     /// Build the client.
