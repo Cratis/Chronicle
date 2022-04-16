@@ -21,6 +21,13 @@ public interface IExecutionContextManager
     /// <summary>
     /// Establish an <see cref="ExecutionContext"/> for current call path.
     /// </summary>
+    /// <param name="microserviceId">Optional <see cref="MicroserviceId"/> to establish for Falls back to the global if not explicitly used.</param>
+    /// <returns>Established <see cref="ExecutionContext"/>.</returns>
+    ExecutionContext Establish(MicroserviceId microserviceId);
+
+    /// <summary>
+    /// Establish an <see cref="ExecutionContext"/> for current call path.
+    /// </summary>
     /// <param name="tenantId"><see cref="TenantId"/> to establish for.</param>
     /// <param name="correlationId"><see cref="CorrelationId"/> to establish for.</param>
     /// <param name="microserviceId">Optional <see cref="MicroserviceId"/> to establish for Falls back to the global if not explicitly used.</param>
