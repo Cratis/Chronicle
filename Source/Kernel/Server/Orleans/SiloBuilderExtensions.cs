@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 
 namespace Orleans.Hosting;
@@ -19,6 +20,8 @@ public static class SiloBuilderExtensions
     {
         builder.AddOutgoingGrainCallFilter<ExecutionContextOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<ExecutionContextIncomingCallFilter>();
+
+        ExecutionContextManager.Resolver = ExecutionContextIncomingCallFilter.TryResolveExecutionContext;
         return builder;
     }
 }
