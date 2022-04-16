@@ -168,15 +168,15 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         await WriteStateAsync();
 
         subscriptionId = await _stream.SubscribeAsync(
-            async (@event, token) => await HandleEventForRecoveringPartitionedObserver(@event, token, subscriptionId),
+            async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, subscriptionId),
             new EventSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, eventSourceId));
     }
 
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) => !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
 
-    async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, StreamSequenceToken token, StreamSubscriptionHandle<AppendedEvent>? subscriptionId)
+    async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, StreamSubscriptionHandle<AppendedEvent>? subscriptionId)
     {
-        await HandleEventForPartitionedObserver(@event, token);
+        await HandleEventForPartitionedObserver(@event);
         if (State.IsPartitionFailed(@event.Context.EventSourceId))
         {
             await subscriptionId!.UnsubscribeAsync();
@@ -205,10 +205,10 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             return Task.CompletedTask;
         }
 
-        return HandleEventForPartitionedObserver(@event, token);
+        return HandleEventForPartitionedObserver(@event);
     }
 
-    async Task HandleEventForPartitionedObserver(AppendedEvent @event, StreamSequenceToken token)
+    async Task HandleEventForPartitionedObserver(AppendedEvent @event)
     {
         try
         {
@@ -218,7 +218,7 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             }
 
             var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
-            await stream.OnNextAsync(@event, token);
+            await stream.OnNextAsync(@event);
 
             State.Offset = @event.Metadata.SequenceNumber + 1;
             State.LastHandled = @event.Metadata.SequenceNumber + 1;
