@@ -32,7 +32,7 @@ namespace Aksio.Cratis.Hosting;
 public class ClientBuilder : IClientBuilder
 {
     readonly MicroserviceId _microserviceId;
-    bool _inSilo;
+    bool _inKernel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
@@ -55,9 +55,10 @@ public class ClientBuilder : IClientBuilder
     }
 
     /// <inheritdoc/>
-    public IClientBuilder InSilo()
+    public IClientBuilder InKernel()
     {
-        _inSilo = true;
+        ExecutionContextManager.SetKernelMode();
+        _inKernel = true;
         return this;
     }
 
@@ -80,7 +81,7 @@ public class ClientBuilder : IClientBuilder
             .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
 
-        if (_inSilo)
+        if (_inKernel)
         {
             return;
         }
