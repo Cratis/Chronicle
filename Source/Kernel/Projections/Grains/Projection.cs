@@ -68,7 +68,7 @@ public class Projection : Grain, IProjection
         var stream = streamProvider.GetStream<AppendedEvent>(projectionId, key);
         await stream.SubscribeAsync(HandleEvent);
 
-        await _observer.Subscribe(_projection.EventTypes, observerNamespace);
+        await _observer.Subscribe(_projection.EventTypes, key);
 
         // var projection = await _projectionFactory.CreateFrom(projectionDefinition);
         // var pipeline = _pipelineFactory.CreateFrom(projection, pipelineDefinition);
