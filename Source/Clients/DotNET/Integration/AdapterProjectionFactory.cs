@@ -60,7 +60,9 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
             Array.Empty<ProjectionSinkDefinition>());
 
         await projections.Register(projectionDefinition, pipelineDefinition);
-        var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value, null!);
+
+        // TODO: This has to be registered correctly. We want to be using immediate projections.
+        var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value, new ProjectionKey(MicroserviceId.Unspecified, TenantId.Development, Events.Store.EventSequenceId.Log));
         return new AdapterProjectionFor<TModel>(projection);
     }
 }
