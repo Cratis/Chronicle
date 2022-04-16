@@ -72,10 +72,15 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     /// <inheritdoc/>
     public async Task StartAll()
     {
-        // TODO: Observe for all tenants
-        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
+        if (ExecutionContextManager.IsInKernel)
+        {
+            // TODO: This is where we want to run through all microservices and register the internal Silo projections
+            // for each of the microservices.
+            return;
+        }
 
-        var projections = _clusterClient.GetGrain<Grains.IProjections>(Guid.Empty);
+        _executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
+        var projections = _clusterClient.GetGrain<Grains.IProjections>(ExecutionContextManager.GlobalMicroserviceId);
         foreach (var projectionDefinition in _projections)
         {
             var pipelineDefinition = new ProjectionPipelineDefinition(

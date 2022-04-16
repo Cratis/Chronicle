@@ -30,10 +30,7 @@ public class BootProcedure : IPerformBootProcedure
     public void Perform()
     {
         // TODO: Start for all Microservices
-        _executionContextManager.Establish(
-            TenantId.Development,
-            Guid.NewGuid().ToString(),
-            MicroserviceId.Unspecified);
+        _executionContextManager.Establish(MicroserviceId.Unspecified);
 
         _ = _grainFactory.GetGrain<IProjections>(MicroserviceId.Unspecified);
     }
