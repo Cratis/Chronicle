@@ -21,7 +21,7 @@ public class Startup
         // In a regular client, this is hooked up with a hosted service, that is too early within the kernel
         app.ApplicationServices.GetService<IConnectionManager>()!.SetKernelMode();
         app.ApplicationServices.GetService<IRequestContextManager>()!.Set(RequestContextKeys.ConnectionId, ConnectionManager.KernelConnectionId);
-        app.ApplicationServices.GetService<IProjectionsRegistrar>()!.StartAll().Wait();
+        app.ApplicationServices.GetService<IProjectionsRegistrar>()!.DiscoverAndRegisterAll().Wait();
         app.ApplicationServices.GetService<IObservers>()!.RegisterAndObserveAll().Wait();
     }
 }
