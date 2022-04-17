@@ -18,12 +18,10 @@ public class ProjectionPipeline : IProjectionPipeline
     readonly IObjectsComparer _objectsComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ILogger<ProjectionPipeline> _logger;
+    readonly IEventLogStorageProvider _eventProvider;
 
     /// <inheritdoc/>
     public IProjection Projection { get; }
-
-    /// <inheritdoc/>
-    public IProjectionEventProvider EventProvider { get; }
 
     /// <inheritdoc/>
     public IProjectionSink Sink { get; }
@@ -32,20 +30,20 @@ public class ProjectionPipeline : IProjectionPipeline
     /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
     /// </summary>
     /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
-    /// <param name="eventProvider"><see cref="IProjectionEventProvider"/> to use.</param>
+    /// <param name="eventProvider"><see cref="IEventLogStorageProvider"/> to use.</param>
     /// <param name="sink"><see cref="IProjectionSink"/> to use.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ProjectionPipeline(
         IProjection projection,
-        IProjectionEventProvider eventProvider,
+        IEventLogStorageProvider eventProvider,
         IProjectionSink sink,
         IObjectsComparer objectsComparer,
         IChangesetStorage changesetStorage,
         ILogger<ProjectionPipeline> logger)
     {
-        EventProvider = eventProvider;
+        _eventProvider = eventProvider;
         Sink = sink;
         _objectsComparer = objectsComparer;
         _changesetStorage = changesetStorage;
@@ -59,7 +57,7 @@ public class ProjectionPipeline : IProjectionPipeline
         _logger.HandlingEvent(@event.Metadata.SequenceNumber);
         var correlationId = CorrelationId.New();
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
-        var key = await keyResolver(EventProvider, @event);
+        var key = await keyResolver(_eventProvider, @event);
         _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
         var initialState = await Sink.FindOrDefault(key);
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, initialState);

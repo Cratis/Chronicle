@@ -4,6 +4,7 @@
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Store;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines;
@@ -14,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines;
 public class ProjectionPipelineFactory : IProjectionPipelineFactory
 {
     readonly IProjectionSinks _projectionSinks;
-    readonly IProjectionEventProviders _projectionEventProviders;
+    readonly IEventLogStorageProvider _eventProvider;
     readonly IObjectsComparer _objectsComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ILoggerFactory _loggerFactory;
@@ -23,19 +24,19 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// Initializes a new instance of the <see cref="ProjectionPipelineFactory"/> class.
     /// </summary>
     /// <param name="projectionSinks"><see cref="IProjectionSinks"/> in the system.</param>
-    /// <param name="projectionEventProviders"><see cref="IProjectionEventProviders"/> in the system.</param>
+    /// <param name="eventProvider"><see cref="IEventLogStorageProvider"/> in the system.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public ProjectionPipelineFactory(
         IProjectionSinks projectionSinks,
-        IProjectionEventProviders projectionEventProviders,
+        IEventLogStorageProvider eventProvider,
         IObjectsComparer objectsComparer,
         IChangesetStorage changesetStorage,
         ILoggerFactory loggerFactory)
     {
         _projectionSinks = projectionSinks;
-        _projectionEventProviders = projectionEventProviders;
+        _eventProvider = eventProvider;
         _objectsComparer = objectsComparer;
         _changesetStorage = changesetStorage;
         _loggerFactory = loggerFactory;
@@ -44,8 +45,6 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// <inheritdoc/>
     public IProjectionPipeline CreateFrom(IProjection projection, ProjectionPipelineDefinition definition)
     {
-        var eventProvider = _projectionEventProviders.GetForType(definition.ProjectionEventProviderTypeId);
-
         // TODO: This should be taken out when we have the ImmediateProjection support.
         IProjectionSink sink = default!;
         if (definition.Sinks.Any())
@@ -56,7 +55,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
 
         return new ProjectionPipeline(
             projection,
-            eventProvider,
+            _eventProvider,
             sink,
             _objectsComparer,
             _changesetStorage,

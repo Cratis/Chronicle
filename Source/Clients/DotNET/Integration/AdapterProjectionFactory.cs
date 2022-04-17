@@ -56,7 +56,6 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
         var projections = _clusterClient.GetGrain<IProjections>(Guid.Empty);
         var pipelineDefinition = new ProjectionPipelineDefinition(
             projectionDefinition.Identifier,
-            "c0c0196f-57e3-4860-9e3b-9823cf45df30", // Cratis default
             Array.Empty<ProjectionSinkDefinition>());
 
         await projections.Register(projectionDefinition, pipelineDefinition);

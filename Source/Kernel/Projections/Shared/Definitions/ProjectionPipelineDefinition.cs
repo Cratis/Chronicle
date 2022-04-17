@@ -7,6 +7,5 @@ namespace Aksio.Cratis.Events.Projections.Definitions;
 /// Represents the definition of a projection pipeline.
 /// </summary>
 /// <param name="ProjectionId">Projection it is for.</param>
-/// <param name="ProjectionEventProviderTypeId">Type of event provider.</param>
 /// <param name="Sinks">Collection of <see cref="ProjectionSinkDefinition"/>.</param>
-public record ProjectionPipelineDefinition(ProjectionId ProjectionId, ProjectionEventProviderTypeId ProjectionEventProviderTypeId, IEnumerable<ProjectionSinkDefinition> Sinks);
+public record ProjectionPipelineDefinition(ProjectionId ProjectionId, IEnumerable<ProjectionSinkDefinition> Sinks);

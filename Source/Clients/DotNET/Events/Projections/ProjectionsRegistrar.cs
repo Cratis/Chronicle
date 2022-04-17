@@ -85,7 +85,6 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
         {
             var pipelineDefinition = new ProjectionPipelineDefinition(
                 projectionDefinition.Identifier,
-                "c0c0196f-57e3-4860-9e3b-9823cf45df30", // Cratis default
                 new[]
                 {
                         new ProjectionSinkDefinition(
