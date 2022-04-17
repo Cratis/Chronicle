@@ -1,3 +1,10 @@
+# [v5.14.1] - 2022-4-7 [PR: #243](https://github.com/aksio-insurtech/Cratis/pull/243)
+
+### Fixed
+
+- Problems with local development inside Cratis and possibly anything using the WebPack setup. (#234)
+
+
 # [v5.14.0] - 2022-3-30 [PR: #220](https://github.com/aksio-insurtech/Cratis/pull/220)
 
 ### Added
