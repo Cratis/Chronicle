@@ -69,7 +69,8 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
             State.AssociateObserverWithConnectionId(connectionId, new(observerId, observerKey));
 
             var observer = GrainFactory.GetGrain<IObserver>(observerId, observerKey);
-            await observer.Subscribe(name, eventTypes, connectionId);
+            await observer.SetMetadata(name, ObserverType.Client);
+            await observer.Subscribe(eventTypes, connectionId);
         }
 
         await WriteStateAsync();
