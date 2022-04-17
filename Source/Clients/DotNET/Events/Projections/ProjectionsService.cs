@@ -24,7 +24,7 @@ public class ProjectionsService : IHostedService
     /// <inheritdoc/>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await _projectionsRegistrar.StartAll();
+        await _projectionsRegistrar.DiscoverAndRegisterAll();
     }
 
     /// <inheritdoc/>

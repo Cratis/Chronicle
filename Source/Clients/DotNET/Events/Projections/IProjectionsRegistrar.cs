@@ -9,8 +9,8 @@ namespace Aksio.Cratis.Events.Projections;
 public interface IProjectionsRegistrar
 {
     /// <summary>
-    /// Start all projections.
+    /// Discover all projections and register them.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task StartAll();
+    Task DiscoverAndRegisterAll();
 }
