@@ -55,7 +55,7 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe(ObserverId observerId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes)
+    public async Task Subscribe(ObserverName name, ObserverId observerId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes)
     {
         var connectionId = _requestContextManager.Get(RequestContextKeys.ConnectionId).ToString()!;
         if (!State.HasConnectionId(connectionId))
@@ -69,7 +69,7 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
             State.AssociateObserverWithConnectionId(connectionId, new(observerId, observerKey));
 
             var observer = GrainFactory.GetGrain<IObserver>(observerId, observerKey);
-            await observer.Subscribe(eventTypes, connectionId);
+            await observer.Subscribe(name, eventTypes, connectionId);
         }
 
         await WriteStateAsync();

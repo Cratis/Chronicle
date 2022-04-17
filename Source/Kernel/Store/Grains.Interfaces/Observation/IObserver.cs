@@ -20,10 +20,11 @@ public interface IObserver : IGrainWithGuidCompoundKey
     /// <summary>
     /// Subscribe to observer.
     /// </summary>
+    /// <param name="name">Friendly name of the observer.</param>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
     /// <param name="observerNamespace">The namespace to use for handler stream.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe(IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace);
+    Task Subscribe(ObserverName name, IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace);
 
     /// <summary>
     /// Unsubscribe from the observer.
