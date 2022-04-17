@@ -16,6 +16,9 @@
         {
             "path": "../Node/FluentUI/tsconfig.json"
         }
-
+    ],
+    "exclude": [
+        "wwwroot",
+        "**/for_*/**"
     ]
 }

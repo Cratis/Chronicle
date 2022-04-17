@@ -12,6 +12,6 @@ public class DebitAccountObserver
     {
         Console.WriteLine(@event);
         Console.WriteLine(context);
-        throw new NotImplementedException();
+        return Task.CompletedTask;
     }
 }
