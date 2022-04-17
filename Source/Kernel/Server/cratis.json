@@ -10,6 +10,11 @@
             "name": "tenant-2"
         }
     },
+    "microservices": {
+        "00000000-0000-0000-0000-000000000000": {
+            "name": "Bank"
+        }
+    },
     "cluster": {
         "name": "Cratis",
         "type": "local",

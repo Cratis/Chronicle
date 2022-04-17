@@ -17,6 +17,11 @@ public class KernelConfiguration
     public Tenants Tenants { get; init; } = new();
 
     /// <summary>
+    /// Gets the <see cref="Microservice"/> configuration.
+    /// </summary>
+    public Microservices Microservices { get; init; } = new();
+
+    /// <summary>
     /// Gets the <see cref="Cluster"/> configuration.
     /// </summary>
     public Cluster Cluster { get; init; } = new();
