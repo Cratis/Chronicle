@@ -27,10 +27,8 @@ public class Projection : Grain, IProjection
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly IObjectsComparer _objectsComparer;
-    readonly IProjectionEventProviders _projectionEventProviders;
-    readonly IEventLogStorageProvider _eventLogStorageProvider;
+    readonly IEventLogStorageProvider _eventProvider;
     EngineProjection? _projection;
-    IProjectionEventProvider? _projectionEventProvider;
     IProjectionPipeline? _pipeline;
     IObserver? _observer;
 
@@ -41,25 +39,22 @@ public class Projection : Grain, IProjection
     /// <param name="projectionPipelineDefinitions"><see cref="IProjectionPipelineDefinitions"/> for working with pipelines.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating the pipeline for the projection.</param>
-    /// <param name="projectionEventProviders"><see cref="IProjectionEventProviders"/> in the system.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
     public Projection(
         IProjectionDefinitions projectionDefinitions,
         IProjectionPipelineDefinitions projectionPipelineDefinitions,
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory,
-        IProjectionEventProviders projectionEventProviders,
         IObjectsComparer objectsComparer,
-        IEventLogStorageProvider eventLogStorageProvider)
+        IEventLogStorageProvider eventProvider)
     {
         _projectionDefinitions = projectionDefinitions;
         _projectionPipelineDefinitions = projectionPipelineDefinitions;
         _projectionFactory = projectionFactory;
         _projectionPipelineFactory = projectionPipelineFactory;
         _objectsComparer = objectsComparer;
-        _projectionEventProviders = projectionEventProviders;
-        _eventLogStorageProvider = eventLogStorageProvider;
+        _eventProvider = eventProvider;
     }
 
     /// <inheritdoc/>
@@ -70,7 +65,6 @@ public class Projection : Grain, IProjection
         var projectionDefinition = await _projectionDefinitions.GetFor(projectionId);
         var pipelineDefinition = await _projectionPipelineDefinitions.GetFor(projectionId);
         _projection = await _projectionFactory.CreateFrom(projectionDefinition);
-        _projectionEventProvider = _projectionEventProviders.GetForType("c0c0196f-57e3-4860-9e3b-9823cf45df30");
         _pipeline = _projectionPipelineFactory.CreateFrom(_projection, pipelineDefinition);
 
         _observer = GrainFactory.GetGrain<IObserver>(projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
@@ -93,7 +87,7 @@ public class Projection : Grain, IProjection
         {
             return new JsonObject();
         }
-        var cursor = await _eventLogStorageProvider.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
+        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         var state = new ExpandoObject();
         while (await cursor.MoveNext())
         {
@@ -106,7 +100,7 @@ public class Projection : Grain, IProjection
             {
                 var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, state);
                 var keyResolver = _projection.GetKeyResolverFor(@event.Metadata.Type);
-                var key = await keyResolver(_projectionEventProvider!, @event);
+                var key = await keyResolver(_eventProvider!, @event);
                 var context = new ProjectionEventContext(key, @event, changeset);
 
                 await HandleEventFor(_projection!, context);

@@ -16,11 +16,6 @@ public interface IProjectionPipeline
     IProjection Projection { get; }
 
     /// <summary>
-    /// Gets the <see cref="IProjectionEventProvider"/> used in the pipeline.
-    /// </summary>
-    IProjectionEventProvider EventProvider { get; }
-
-    /// <summary>
     /// Gets the <see cref="IProjectionSink">sink</see> to use for output.
     /// </summary>
     IProjectionSink Sink { get; }
