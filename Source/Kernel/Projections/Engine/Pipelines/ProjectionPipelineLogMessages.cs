@@ -10,15 +10,18 @@ namespace Aksio.Cratis.Events.Projections.Pipelines;
 /// </summary>
 public static partial class ProjectionPipelineLogMessages
 {
-    [LoggerMessage(0, LogLevel.Debug, "Starting projection '{Projection}'")]
-    internal static partial void Starting(this ILogger logger, ProjectionId projection);
+    [LoggerMessage(0, LogLevel.Debug, "Handling event with sequence number {SequenceNumber}")]
+    internal static partial void HandlingEvent(this ILogger logger, ulong sequenceNumber);
 
-    [LoggerMessage(1, LogLevel.Debug, "Pausing projection '{Projection}'")]
-    internal static partial void Pausing(this ILogger logger, ProjectionId projection);
+    [LoggerMessage(1, LogLevel.Trace, "Getting initial values for event with sequence number {SequenceNumber}")]
+    internal static partial void GettingInitialValues(this ILogger logger, ulong sequenceNumber);
 
-    [LoggerMessage(2, LogLevel.Debug, "Resuming projection '{Projection}'")]
-    internal static partial void Resuming(this ILogger logger, ProjectionId projection);
+    [LoggerMessage(2, LogLevel.Trace, "Projecting for event with sequence number {SequenceNumber}")]
+    internal static partial void Projecting(this ILogger logger, ulong sequenceNumber);
 
-    [LoggerMessage(3, LogLevel.Warning, "Projection '{Projection}' is being suspended with the reason '{Reason}'")]
-    internal static partial void Suspended(this ILogger logger, ProjectionId projection, string reason);
+    [LoggerMessage(3, LogLevel.Trace, "Saving result for event with sequence number {SequenceNumber}")]
+    internal static partial void SavingResult(this ILogger logger, ulong sequenceNumber);
+
+    [LoggerMessage(4, LogLevel.Trace, "Projection '{Name} - {Path}' is not accepting event of type '{EventType}' at sequence number {SequenceNumber}")]
+    internal static partial void EventNotAccepted(this ILogger logger, ulong sequenceNumber, ProjectionName name, ProjectionPath path, EventType eventType);
 }
