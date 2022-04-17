@@ -128,7 +128,7 @@ public class MongoDBReminderTable : IReminderTable
         try
         {
             var json = JsonConvert.SerializeObject(entry, _serializerSettings);
-            json = json.Replace("\"$", "\"__", StringComparison.InvariantCulture);
+            json = json.Replace("\"$", "\"__");
             var filter = GetKeyFilterFor(key);
             var bson = BsonDocument.Parse(json);
             var hash = (long)entry.GrainRef.GetUniformHashCode();
@@ -153,7 +153,7 @@ public class MongoDBReminderTable : IReminderTable
     {
         document.Remove(GrainHashProperty);
         var json = document.ToJson();
-        json = json.Replace("\"__", "\"$", StringComparison.InvariantCulture);
+        json = json.Replace("\"__", "\"$");
         return JsonConvert.DeserializeObject<ReminderEntry>(json, _serializerSettings)!;
     }
 
