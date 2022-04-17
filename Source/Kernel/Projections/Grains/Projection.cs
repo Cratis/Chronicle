@@ -74,7 +74,8 @@ public class Projection : Grain, IProjection
         var stream = streamProvider.GetStream<AppendedEvent>(projectionId, key);
         await stream.SubscribeAsync(HandleEvent);
 
-        await _observer.Subscribe(projectionDefinition.Name.Value, _projection.EventTypes, key.ToString());
+        await _observer.SetMetadata(projectionDefinition.Name.Value, ObserverType.Projection);
+        await _observer.Subscribe(_projection.EventTypes, key.ToString());
     }
 
     /// <inheritdoc/>

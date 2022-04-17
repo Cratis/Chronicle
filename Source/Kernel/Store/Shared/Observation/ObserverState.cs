@@ -41,6 +41,11 @@ public class ObserverState
     public ObserverName Name { get; set; } = ObserverName.NotSpecified;
 
     /// <summary>
+    /// Gets or sets the <see cref="ObserverType"/>.
+    /// </summary>
+    public ObserverType Type { get; set; } = ObserverType.Unknown;
+
+    /// <summary>
     /// Gets or sets the current offset into the event log.
     /// </summary>
     public EventSequenceNumber Offset { get; set; } = EventSequenceNumber.First;
