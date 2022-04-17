@@ -74,15 +74,16 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         State.Offset = EventSequenceNumber.First;
         await WriteStateAsync();
         await Unsubscribe();
-        await Subscribe(State.EventTypes, State.CurrentNamespace);
+        await Subscribe(State.Name, State.EventTypes, State.CurrentNamespace);
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe(IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace)
+    public async Task Subscribe(ObserverName name, IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace)
     {
         _logger.Subscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        State.RunningState = ObserverRunningState.Subscribing;
+        State.Name = name;
         State.CurrentNamespace = observerNamespace;
+        State.RunningState = ObserverRunningState.Subscribing;
         _subscription?.UnsubscribeAsync();
 
         if (HasDefinitionChanged(eventTypes))

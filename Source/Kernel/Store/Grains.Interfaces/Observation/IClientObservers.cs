@@ -15,9 +15,10 @@ public interface IClientObservers : IGrainWithGuidKey, IConnectedClientObserver
     /// <summary>
     /// Subscribes a specific observer to an <see cref="EventSequenceId"/> for specific event types.
     /// </summary>
+    /// <param name="name">Friendly name of the observer.</param>
     /// <param name="observerId">The <see cref="ObserverId"/>.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/>.</param>
     /// <param name="eventTypes">The collection of <see cref="EventType">event types</see>.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe(ObserverId observerId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
+    Task Subscribe(ObserverName name, ObserverId observerId, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
 }
