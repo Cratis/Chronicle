@@ -125,7 +125,7 @@ public class SourceGenerator : ISourceGenerator
                     continue;
                 }
 
-                if (modelTypeAsNamedType.ConstructedFrom.ToString().StartsWith(typeof(Task).FullName, StringComparison.InvariantCulture) && modelTypeAsNamedType.IsGenericType)
+                if (modelTypeAsNamedType.ConstructedFrom.ToString().StartsWith(typeof(Task).FullName) && modelTypeAsNamedType.IsGenericType)
                 {
                     modelTypeAsNamedType = (modelTypeAsNamedType.TypeArguments[0] as INamedTypeSymbol)!;
                 }
@@ -289,11 +289,11 @@ public class SourceGenerator : ISourceGenerator
             baseApiRoute = _routeRegex.Replace(baseApiRoute, string.Empty);
             baseApiRoute = baseApiRoute.Replace("//", "/");
             const string apiPrefix = "/api";
-            if (baseApiRoute.StartsWith(apiPrefix, StringComparison.InvariantCultureIgnoreCase))
+            if (baseApiRoute.StartsWith(apiPrefix))
             {
                 baseApiRoute = baseApiRoute.Substring(apiPrefix.Length);
             }
-            if (baseApiRoute.StartsWith("/", StringComparison.InvariantCulture)) baseApiRoute = baseApiRoute.Substring(1);
+            if (baseApiRoute.StartsWith("/")) baseApiRoute = baseApiRoute.Substring(1);
 
             relativePath = baseApiRoute.Replace('/', Path.DirectorySeparatorChar);
         }
