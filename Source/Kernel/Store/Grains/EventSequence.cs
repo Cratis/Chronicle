@@ -82,8 +82,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, content);
 
             var appendedEvent = new AppendedEvent(
-                new EventMetadata(State.SequenceNumber, eventType),
-                new EventContext(
+                new(State.SequenceNumber, eventType),
+                new(
                     eventSourceId,
                     DateTimeOffset.UtcNow,
                     validFrom ?? DateTimeOffset.MinValue,
