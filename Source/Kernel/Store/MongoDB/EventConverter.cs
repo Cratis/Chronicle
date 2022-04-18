@@ -42,8 +42,8 @@ public class EventConverter : IEventConverter
         var releasedContent = await _jsonComplianceManager.Release(eventSchema.Schema, @event.EventSourceId, content);
 
         return new AppendedEvent(
-            new EventMetadata(@event.SequenceNumber, eventType),
-            new EventContext(@event.EventSourceId, @event.Occurred, @event.ValidFrom, _executionContextManager.Current.TenantId, @event.CorrelationId, @event.CausationId, @event.CausedBy),
+            new(@event.SequenceNumber, eventType),
+            new(@event.EventSourceId, @event.Occurred, @event.ValidFrom, _executionContextManager.Current.TenantId, @event.CorrelationId, @event.CausationId, @event.CausedBy),
             releasedContent);
     }
 }
