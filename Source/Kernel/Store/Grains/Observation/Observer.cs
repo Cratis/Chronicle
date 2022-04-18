@@ -132,6 +132,8 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         State.Offset = EventSequenceNumber.First;
         await WriteStateAsync();
         await Unsubscribe();
+
+        // TODO: Enter replay mode, do not subscribe we have replayed
         await Subscribe(State.EventTypes, State.CurrentNamespace);
     }
 

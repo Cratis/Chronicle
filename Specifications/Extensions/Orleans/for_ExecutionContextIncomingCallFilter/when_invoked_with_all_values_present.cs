@@ -3,13 +3,13 @@
 
 using Aksio.Cratis.Execution;
 using Orleans;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Extensions.Orleans.Execution.for_ExecutionContextIncomingCallFilter;
 
 public class when_invoked_with_all_values_present : Specification
 {
     Mock<IExecutionContextManager> execution_context_manager;
-    Mock<IRequestContextManager> request_context_manager;
     Mock<IIncomingGrainCallContext> call_context;
     ExecutionContextIncomingCallFilter filter;
 
@@ -24,15 +24,14 @@ public class when_invoked_with_all_values_present : Specification
     void Establish()
     {
         execution_context_manager = new();
-        request_context_manager = new();
         call_context = new();
-        filter = new(execution_context_manager.Object, request_context_manager.Object);
+        filter = new(execution_context_manager.Object);
 
-        request_context_manager.Setup(_ => _.Get(RequestContextKeys.MicroserviceId)).Returns(microservice_id);
-        request_context_manager.Setup(_ => _.Get(RequestContextKeys.TenantId)).Returns(tenant_id);
-        request_context_manager.Setup(_ => _.Get(RequestContextKeys.CorrelationId)).Returns(correlation_id);
-        request_context_manager.Setup(_ => _.Get(RequestContextKeys.CausationId)).Returns(causation_id);
-        request_context_manager.Setup(_ => _.Get(RequestContextKeys.CausedBy)).Returns(caused_by);
+        RequestContext.Set(RequestContextKeys.MicroserviceId, microservice_id);
+        RequestContext.Set(RequestContextKeys.TenantId, tenant_id);
+        RequestContext.Set(RequestContextKeys.CorrelationId, correlation_id);
+        RequestContext.Set(RequestContextKeys.CausationId, causation_id);
+        RequestContext.Set(RequestContextKeys.CausedBy, caused_by);
 
         execution_context_manager.Setup(_ => _.Set(IsAny<ExecutionContext>())).Callback((ExecutionContext ec) => execution_context = ec);
     }
