@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using Orleans;
@@ -74,6 +73,8 @@ public abstract class GrainSpecification<TState> : Specification
             state_on_write = JsonSerializer.Deserialize<TState>(serialized);
             return Task.CompletedTask;
         });
+
+        Orleans.GrainReferenceExtensions.GetReferenceOverride = (grain) => grain;
 
         grain.OnActivateAsync();
     }
