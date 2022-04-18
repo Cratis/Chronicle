@@ -133,7 +133,12 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         await WriteStateAsync();
         await Unsubscribe();
 
-        // TODO: Enter replay mode, do not subscribe we have replayed
+        // TODO: Enter replay mode, do not subscribe until we have replayed all
+        // If it holds any failures, clear the failures and any pending resuming
+        // We will stop the replay at the end of what we know is the end at the time of
+        // replay started - or more accurately, last handled event.
+        // Anything after last handled event is not considered replay - that is a regular
+        // first time / initial time we see the event for the observer.
         await Subscribe(State.EventTypes, State.CurrentNamespace);
     }
 
