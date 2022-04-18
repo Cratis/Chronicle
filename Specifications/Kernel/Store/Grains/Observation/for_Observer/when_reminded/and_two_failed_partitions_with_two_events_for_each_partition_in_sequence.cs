@@ -27,15 +27,14 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
 
         second_partition_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First, event_types.ToArray()[0]),
-            new(first_partition, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(second_partition, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
         events_received = new();
         observer_stream.Setup(_ => _.OnNextAsync(IsAny<AppendedEvent>(), IsAny<StreamSequenceToken>()))
-            .Returns((AppendedEvent @event, StreamSequenceToken token) =>
+            .Returns((AppendedEvent @event, StreamSequenceToken _) =>
             {
-                var actualToken = token as EventSequenceNumberTokenWithFilter;
-                events_received[actualToken.Partition] = @event;
+                events_received[@event.Context.EventSourceId] = @event;
                 return Task.CompletedTask;
             });
 
@@ -63,5 +62,5 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
     async Task Because() => await observer.ReceiveReminder(Observer.RecoverReminder, new TickStatus());
 
     [Fact] void should_forward_first_partition_event_to_first_partition_observer_stream() => events_received[first_partition].ShouldEqual(first_partition_appended_event);
-    [Fact] void should_forward_second_partition_event_to_second_partition_observer_stream() => events_received[first_partition].ShouldEqual(first_partition_appended_event);
+    [Fact] void should_forward_second_partition_event_to_second_partition_observer_stream() => events_received[second_partition].ShouldEqual(second_partition_appended_event);
 }
