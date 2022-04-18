@@ -15,4 +15,13 @@ namespace Aksio.Cratis.Events.Store;
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
 /// <param name="CausationId">The <see cref="CausationId"/> for what caused the event.</param>
 /// <param name="CausedBy">Identity of what caused the event.</param>
-public record EventContext(EventSourceId EventSourceId, DateTimeOffset Occurred, DateTimeOffset ValidFrom, TenantId TenantId, CorrelationId CorrelationId, CausationId CausationId, CausedBy CausedBy);
+/// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
+public record EventContext(
+    EventSourceId EventSourceId,
+    DateTimeOffset Occurred,
+    DateTimeOffset ValidFrom,
+    TenantId TenantId,
+    CorrelationId CorrelationId,
+    CausationId CausationId,
+    CausedBy CausedBy,
+    EventObservationState ObservationState = EventObservationState.Initial);
