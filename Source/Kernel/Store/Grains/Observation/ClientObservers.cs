@@ -60,7 +60,7 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
         var connectionId = _requestContextManager.Get(RequestContextKeys.ConnectionId).ToString()!;
         if (!State.HasConnectionId(connectionId))
         {
-            await _connectedClients!.SubscribeOnDisconnected(connectionId, this.AsReference<IConnectedClientObserver>());
+            await _connectedClients!.SubscribeOnDisconnected(connectionId, this.GetReference<IConnectedClientObserver>());
         }
 
         foreach (var tenantId in _tenants.GetTenantIds())
