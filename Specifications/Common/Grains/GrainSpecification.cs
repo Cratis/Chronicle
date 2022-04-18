@@ -1,7 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
 using Orleans;
 using Orleans.Core;
 using Orleans.Runtime;
@@ -21,6 +23,7 @@ public abstract class GrainSpecification<TState> : Specification
     protected Mock<IReminderRegistry> reminder_registry;
     protected Mock<ITimerRegistry> timer_registry;
     protected TState state;
+    protected TState state_on_write;
     protected Mock<IGrainFactory> grain_factory;
 
     protected abstract Grain GetGrainInstance();
@@ -64,6 +67,13 @@ public abstract class GrainSpecification<TState> : Specification
         storage.SetupGet(_ => _.State).Returns(state);
 
         OnBeforeGrainActivate();
+
+        storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
+        {
+            var serialized = JsonSerializer.Serialize(state);
+            state_on_write = JsonSerializer.Deserialize<TState>(serialized);
+            return Task.CompletedTask;
+        });
 
         grain.OnActivateAsync();
     }
