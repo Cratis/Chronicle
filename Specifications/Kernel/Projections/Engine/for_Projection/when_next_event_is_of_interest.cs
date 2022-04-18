@@ -33,7 +33,6 @@ public class when_next_event_is_of_interest : Specification
             string.Empty,
             string.Empty,
             new Model(string.Empty, new JsonSchema()),
-            false,
             true,
             Array.Empty<IProjection>());
         projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
