@@ -7,7 +7,7 @@ public class when_disconnecting_and_there_is_observer_associated : given.two_ten
 {
     async Task Establish()
     {
-        await observers.Subscribe(observer_id, event_sequence_id, event_types);
+        await observers.Subscribe("My observer", observer_id, event_sequence_id, event_types);
         storage.Invocations.Clear();
     }
 
@@ -15,6 +15,5 @@ public class when_disconnecting_and_there_is_observer_associated : given.two_ten
 
     [Fact] void should_unsubscribe_observer_for_first_tenant() => first_tenant_observer.Verify(_ => _.Unsubscribe(), Once());
     [Fact] void should_unsubscribe_observer_for_second_tenant() => second_tenant_observer.Verify(_ => _.Unsubscribe(), Once());
-    [Fact] void should_disconnect_in_state() => state.HasConnectionId(connection_id).ShouldBeFalse();
-    [Fact] void should_write_state() => storage.Verify(_ => _.WriteStateAsync(), Once());
+    [Fact] void should_disconnect_in_state() => state_on_write.HasConnectionId(connection_id).ShouldBeFalse();
 }

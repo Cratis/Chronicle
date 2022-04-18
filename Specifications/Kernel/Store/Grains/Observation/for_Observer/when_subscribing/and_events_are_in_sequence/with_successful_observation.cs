@@ -10,10 +10,9 @@ public class with_successful_observation : given.an_observer_and_two_event_types
 {
     async Task Because() => await observer.Subscribe(event_types, observer_namespace);
 
-    [Fact] void should_set_current_namespace_in_state() => state.CurrentNamespace.ShouldEqual(observer_namespace);
     [Fact] void should_forward_event_to_observer_stream() => observer_stream.Verify(_ => _.OnNextAsync(appended_event, IsAny<StreamSequenceToken>()), Once());
-    [Fact] void should_set_offset_to_next_event_sequence() => state.Offset.Value.ShouldEqual(appended_event.Metadata.SequenceNumber.Value + 1);
-    [Fact] void should_set_last_handled_to_next_event_sequence() => state.Offset.Value.ShouldEqual(appended_event.Metadata.SequenceNumber.Value + 1);
-    [Fact] void should_set_running_state_to_active() => state.RunningState.ShouldEqual(ObserverRunningState.Active);
-    [Fact] void should_write_state() => storage.Verify(_ => _.WriteStateAsync(), Exactly(2));
+    [Fact] void should_set_current_namespace_in_state() => state_on_write.CurrentNamespace.ShouldEqual(observer_namespace);
+    [Fact] void should_set_offset_to_next_event_sequence() => state_on_write.Offset.Value.ShouldEqual(appended_event.Metadata.SequenceNumber.Value + 1);
+    [Fact] void should_set_last_handled_to_next_event_sequence() => state_on_write.Offset.Value.ShouldEqual(appended_event.Metadata.SequenceNumber.Value + 1);
+    [Fact] void should_set_running_state_to_active() => state_on_write.RunningState.ShouldEqual(ObserverRunningState.Active);
 }
