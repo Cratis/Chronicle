@@ -43,7 +43,7 @@ public class ObserverState
     /// <summary>
     /// Gets or sets the <see cref="ObserverType"/>.
     /// </summary>
-    public ObserverType Type { get; set; } = ObserverType.Unknown;
+    public ObserverType Type { get; set; } = ObserverType.Unknown;
 
     /// <summary>
     /// Gets or sets the current offset into the event log.
@@ -87,6 +87,11 @@ public class ObserverState
     /// Gets whether or not there are any failed partitions.
     /// </summary>
     public bool HasFailedPartitions => _failedPartitions.Count > 0;
+
+    /// <summary>
+    /// Gets whether or not there are any partitions being recovered.
+    /// </summary>
+    public bool IsRecoveringAnyPartition => _partitionsBeingRecovered.Count > 0;
 
     List<FailedObserverPartition> _failedPartitions = new();
     List<RecoveringFailedObserverPartition> _partitionsBeingRecovered = new();
@@ -192,5 +197,21 @@ public class ObserverState
             partition.Attempts++;
             partition.LastAttempt = DateTimeOffset.UtcNow;
         }
+    }
+
+    /// <summary>
+    /// Clear any failed partitions.
+    /// </summary>
+    public void ClearFailedPartitions()
+    {
+        _failedPartitions.Clear();
+    }
+
+    /// <summary>
+    /// Clear any recovering partitions.
+    /// </summary>
+    public void ClearRecoveringPartitions()
+    {
+        _partitionsBeingRecovered.Clear();
     }
 }
