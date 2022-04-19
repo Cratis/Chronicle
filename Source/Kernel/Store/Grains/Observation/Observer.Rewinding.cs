@@ -19,7 +19,7 @@ public partial class Observer
         State.RunningState = ObserverRunningState.Rewinding;
         State.Offset = EventSequenceNumber.First;
         await WriteStateAsync();
-        await Unsubscribe();
+        await UnsubscribeStream();
         await Replay();
     }
 
