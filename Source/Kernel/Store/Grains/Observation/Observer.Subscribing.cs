@@ -26,6 +26,8 @@ public partial class Observer
 
         if (HasDefinitionChanged(eventTypes))
         {
+            State.EventTypes = eventTypes;
+            await WriteStateAsync();
             await Rewind();
             return;
         }

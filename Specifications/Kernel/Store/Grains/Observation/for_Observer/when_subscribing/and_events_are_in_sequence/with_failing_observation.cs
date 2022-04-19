@@ -12,7 +12,11 @@ public class with_failing_observation : given.an_observer_and_two_event_types_an
         observer_stream.Setup(_ => _.OnNextAsync(appended_event, IsAny<StreamSequenceToken>())).Callback((AppendedEvent _, StreamSequenceToken __) => throw new NotImplementedException());
     }
 
-    async Task Because() => await observer.Subscribe(event_types, observer_namespace);
+    async Task Because()
+    {
+        await observer.Subscribe(event_types, observer_namespace);
+        await observers[0].OnNextAsync(appended_event);
+    }
 
     [Fact] void should_set_current_namespace_in_state() => state.CurrentNamespace.ShouldEqual(observer_namespace);
     [Fact] void should_not_modify_offset() => state.Offset.Value.ShouldEqual(0u);

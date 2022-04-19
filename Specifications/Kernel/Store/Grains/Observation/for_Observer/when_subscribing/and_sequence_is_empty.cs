@@ -4,7 +4,7 @@
 using Aksio.Cratis.Events.Store.Observation;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer;
+namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_subscribing;
 
 public class and_sequence_is_empty : given.an_observer_and_two_event_types
 {
