@@ -21,6 +21,8 @@ public class an_observer : GrainSpecification<ObserverState>
     protected Mock<IAsyncStream<AppendedEvent>> observer_stream;
     protected EventSequenceNumberTokenWithFilter subscribed_token;
     protected List<EventSequenceNumberTokenWithFilter> subscribed_tokens;
+    protected List<Mock<StreamSubscriptionHandle<AppendedEvent>>> subscription_handles;
+    protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
@@ -28,7 +30,8 @@ public class an_observer : GrainSpecification<ObserverState>
 
     protected override Grain GetGrainInstance()
     {
-        observer = new Observer(Mock.Of<ILogger<Observer>>());
+        event_sequence_storage_provider = new();
+        observer = new Observer(event_sequence_storage_provider.Object, Mock.Of<ILogger<Observer>>());
         observer_namespace = Guid.NewGuid().ToString();
         return observer;
     }
@@ -60,13 +63,16 @@ public class an_observer : GrainSpecification<ObserverState>
         observer_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(observer_id, observer_namespace.Value)).Returns(observer_stream.Object);
 
         subscribed_tokens = new();
+        subscription_handles = new();
 
-        var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> _, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
+                var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
+                subscription_handles.Add(subscription);
                 subscribed_token = token as EventSequenceNumberTokenWithFilter;
                 subscribed_tokens.Add(subscribed_token);
+
                 return Task.FromResult(subscription.Object);
             });
     }

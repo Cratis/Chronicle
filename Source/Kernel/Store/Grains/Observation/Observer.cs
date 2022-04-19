@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
@@ -15,15 +14,21 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObserver"/>.
 /// </summary>
+/// <remarks>
+/// This is a partial class. For structural, navigation and maintenance purposes, you'll find partial implementations
+/// representing different aspects.
+/// </remarks>
 [StorageProvider(ProviderName = ObserverState.StorageProvider)]
-public class Observer : Grain<ObserverState>, IObserver, IRemindable
+public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 {
     /// <summary>
     /// The name of the recover reminder.
     /// </summary>
     public const string RecoverReminder = "observer-failure-recovery";
+    readonly IEventSequenceStorageProvider _eventSequenceStorageProvider;
     readonly ILogger<Observer> _logger;
-    StreamSubscriptionHandle<AppendedEvent>? _subscription;
+    readonly Dictionary<EventSourceId, StreamSubscriptionHandle<AppendedEvent>> _streamSubscriptionsByEventSourceId = new();
+    StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
     IAsyncStream<AppendedEvent>? _stream;
     ObserverId _observerId = Guid.Empty;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
@@ -38,9 +43,13 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
+    /// <param name="eventSequenceStorageProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-    public Observer(ILogger<Observer> logger)
+    public Observer(
+        IEventSequenceStorageProvider eventSequenceStorageProvider,
+        ILogger<Observer> logger)
     {
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;
     }
 
@@ -75,157 +84,9 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         await WriteStateAsync();
     }
 
-    /// <inheritdoc/>
-    public async Task Subscribe(IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace)
-    {
-        _logger.Subscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-
-        State.CurrentNamespace = observerNamespace;
-        State.RunningState = ObserverRunningState.Subscribing;
-        _subscription?.UnsubscribeAsync();
-
-        if (HasDefinitionChanged(eventTypes))
-        {
-            State.RunningState = ObserverRunningState.Rewinding;
-            State.Offset = EventSequenceNumber.First;
-        }
-
-        var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
-        if (State.Offset < nextSequenceNumber)
-        {
-            State.RunningState = ObserverRunningState.CatchingUp;
-            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        }
-
-        if (State.Offset == nextSequenceNumber)
-        {
-            State.RunningState = ObserverRunningState.Active;
-            _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        }
-
-        State.EventTypes = eventTypes;
-        await WriteStateAsync();
-
-        _subscription = await _stream!.SubscribeAsync(
-            HandleEventForPartitionedObserverWhenSubscribing,
-            new EventSequenceNumberTokenWithFilter(State.Offset, eventTypes));
-    }
-
-    /// <inheritdoc/>
-    public async Task Unsubscribe()
-    {
-        _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        State.CurrentNamespace = ObserverNamespace.NotSet;
-        await WriteStateAsync();
-        if (_subscription is not null)
-        {
-            await _subscription.UnsubscribeAsync();
-            _subscription = null;
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task Rewind()
-    {
-        _logger.Rewinding(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        State.RunningState = ObserverRunningState.Rewinding;
-        State.Offset = EventSequenceNumber.First;
-        await WriteStateAsync();
-        await Unsubscribe();
-
-        // TODO: Enter replay mode, do not subscribe until we have replayed all
-        // If it holds any failures, clear the failures and any pending resuming
-        // We will stop the replay at the end of what we know is the end at the time of
-        // replay started - or more accurately, last handled event.
-        // Anything after last handled event is not considered replay - that is a regular
-        // first time / initial time we see the event for the observer.
-        await Subscribe(State.EventTypes, State.CurrentNamespace);
-    }
-
-    /// <inheritdoc/>
-    public async Task TryResumePartition(EventSourceId eventSourceId)
-    {
-        if (!HasSubscribedObserver || !State.IsPartitionFailed(eventSourceId))
-        {
-            return;
-        }
-
-        var failedPartition = State.GetFailedPartition(eventSourceId);
-        if (State.IsRecoveringPartition(failedPartition.EventSourceId))
-        {
-            return;
-        }
-
-        StreamSubscriptionHandle<AppendedEvent>? subscriptionId = null;
-        State.StartRecoveringPartition(eventSourceId);
-        await WriteStateAsync();
-
-        subscriptionId = await _stream.SubscribeAsync(
-            async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, subscriptionId),
-            new EventSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, eventSourceId));
-    }
-
-    /// <inheritdoc/>
-    public async Task ReceiveReminder(string reminderName, TickStatus status)
-    {
-        if (reminderName == RecoverReminder)
-        {
-            var reminder = await GetReminder(RecoverReminder);
-            if (reminder == default)
-            {
-                return;
-            }
-
-            if (!State.HasFailedPartitions)
-            {
-                await UnregisterReminder(reminder);
-                return;
-            }
-
-            foreach (var failedPartition in State.FailedPartitions)
-            {
-                await TryResumePartition(failedPartition.EventSourceId);
-            }
-        }
-    }
-
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) => !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
 
-    async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, StreamSubscriptionHandle<AppendedEvent>? subscriptionId)
-    {
-        await HandleEventForPartitionedObserver(@event);
-        if (State.IsPartitionFailed(@event.Context.EventSourceId))
-        {
-            await subscriptionId!.UnsubscribeAsync();
-        }
-        else
-        {
-            var partitionRecovery = State.GetPartitionRecovery(@event.Context.EventSourceId);
-            partitionRecovery.SequenceNumber++;
-            await WriteStateAsync();
-
-            var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
-            if (partitionRecovery.SequenceNumber == nextSequenceNumber)
-            {
-                State.PartitionRecovered(@event.Context.EventSourceId);
-                await WriteStateAsync();
-            }
-        }
-    }
-
-    Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event, StreamSequenceToken token)
-    {
-        if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
-            State.IsRecoveringPartition(@event.Context.EventSourceId) ||
-            !HasSubscribedObserver)
-        {
-            return Task.CompletedTask;
-        }
-
-        return HandleEventForPartitionedObserver(@event);
-    }
-
-    async Task HandleEventForPartitionedObserver(AppendedEvent @event)
+    async Task HandleEventForPartitionedObserver(AppendedEvent @event, bool setLastHandled = false)
     {
         try
         {
@@ -238,7 +99,11 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
             await stream.OnNextAsync(@event);
 
             State.Offset = @event.Metadata.SequenceNumber + 1;
-            State.LastHandled = @event.Metadata.SequenceNumber + 1;
+
+            if (setLastHandled)
+            {
+                State.LastHandled = @event.Metadata.SequenceNumber;
+            }
 
             var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
             if (State.Offset == nextSequenceNumber)
@@ -261,34 +126,13 @@ public class Observer : Grain<ObserverState>, IObserver, IRemindable
         }
     }
 
-    async Task HandleReminderRegistration()
+    async Task UnsubscribeStream()
     {
-        if (!State.HasFailedPartitions && _recoverReminder != default)
+        if (_streamSubscription is not null)
         {
-            await UnregisterReminder(_recoverReminder);
+            await _streamSubscription.UnsubscribeAsync();
+            _streamSubscription = null;
         }
-        if (State.HasFailedPartitions && _recoverReminder == default)
-        {
-            var anyPartitionedToRetry = State.FailedPartitions.Any(_ => _.Attempts <= 10);
-            if (anyPartitionedToRetry)
-            {
-                _recoverReminder = await RegisterOrUpdateReminder(
-                    RecoverReminder,
-                    TimeSpan.FromSeconds(60),
-                    TimeSpan.FromSeconds(60));
-            }
-            else
-            {
-                var reminder = await GetReminder(RecoverReminder);
-                if (reminder is not null)
-                {
-                    await UnregisterReminder(reminder);
-                }
-                _recoverReminder = null;
-            }
-        }
-
-        await Task.CompletedTask;
     }
 
     string[] GetMessagesFromException(Exception ex)

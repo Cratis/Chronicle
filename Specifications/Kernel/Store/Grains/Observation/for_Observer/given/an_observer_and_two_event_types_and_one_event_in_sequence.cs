@@ -21,11 +21,13 @@ public class an_observer_and_two_event_types_and_one_event_in_sequence : an_obse
             new(event_source_id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
-        var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
-        event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)1));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, event_source_id)).Returns(Task.FromResult((EventSequenceNumber)1));
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken _, StreamFilterPredicate __, object ___) =>
             {
+                var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
+                subscription_handles.Add(subscription);
+
                 observer.OnNextAsync(appended_event);
 
                 return Task.FromResult(subscription.Object);
