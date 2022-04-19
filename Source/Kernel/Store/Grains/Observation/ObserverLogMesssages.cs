@@ -24,4 +24,16 @@ public static partial class ObserverLogMesssages
 
     [LoggerMessage(4, LogLevel.Information, "Observer {ObserverId} is now active up for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Active(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+
+    [LoggerMessage(5, LogLevel.Information, "Replaying observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void Replaying(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+
+    [LoggerMessage(6, LogLevel.Information, "Offset is at tail for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void OffsetIsAtTail(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+
+    [LoggerMessage(7, LogLevel.Debug, "Clearing out failed partitions for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void ClearingFailedPartitions(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+
+    [LoggerMessage(8, LogLevel.Debug, "Clearing out recovering partitions for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void ClearingRecoveringPartitions(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
 }
