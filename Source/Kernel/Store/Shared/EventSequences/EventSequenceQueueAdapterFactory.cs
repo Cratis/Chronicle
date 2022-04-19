@@ -24,12 +24,12 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     /// <param name="name">Name of stream.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
-    /// <param name="eventLogStorageProvider">Provider for <see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventLogStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequences> eventLogsProvider,
-        ProviderFor<IEventLogStorageProvider> eventLogStorageProvider)
+        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider);
@@ -49,7 +49,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
             name,
             serviceProvider.GetService<IExecutionContextManager>()!,
             serviceProvider.GetService<ProviderFor<IEventSequences>>()!,
-            serviceProvider.GetService<ProviderFor<IEventLogStorageProvider>>()!);
+            serviceProvider.GetService<ProviderFor<IEventSequenceStorageProvider>>()!);
     }
 
     /// <inheritdoc/>

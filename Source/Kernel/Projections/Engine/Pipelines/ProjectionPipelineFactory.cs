@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections.Pipelines;
 public class ProjectionPipelineFactory : IProjectionPipelineFactory
 {
     readonly IProjectionSinks _projectionSinks;
-    readonly IEventLogStorageProvider _eventProvider;
+    readonly IEventSequenceStorageProvider _eventProvider;
     readonly IObjectsComparer _objectsComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ILoggerFactory _loggerFactory;
@@ -24,13 +24,13 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// Initializes a new instance of the <see cref="ProjectionPipelineFactory"/> class.
     /// </summary>
     /// <param name="projectionSinks"><see cref="IProjectionSinks"/> in the system.</param>
-    /// <param name="eventProvider"><see cref="IEventLogStorageProvider"/> in the system.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> in the system.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public ProjectionPipelineFactory(
         IProjectionSinks projectionSinks,
-        IEventLogStorageProvider eventProvider,
+        IEventSequenceStorageProvider eventProvider,
         IObjectsComparer objectsComparer,
         IChangesetStorage changesetStorage,
         ILoggerFactory loggerFactory)

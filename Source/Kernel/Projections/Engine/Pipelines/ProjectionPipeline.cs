@@ -18,7 +18,7 @@ public class ProjectionPipeline : IProjectionPipeline
     readonly IObjectsComparer _objectsComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ILogger<ProjectionPipeline> _logger;
-    readonly IEventLogStorageProvider _eventProvider;
+    readonly IEventSequenceStorageProvider _eventProvider;
 
     /// <inheritdoc/>
     public IProjection Projection { get; }
@@ -30,14 +30,14 @@ public class ProjectionPipeline : IProjectionPipeline
     /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
     /// </summary>
     /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
-    /// <param name="eventProvider"><see cref="IEventLogStorageProvider"/> to use.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> to use.</param>
     /// <param name="sink"><see cref="IProjectionSink"/> to use.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ProjectionPipeline(
         IProjection projection,
-        IEventLogStorageProvider eventProvider,
+        IEventSequenceStorageProvider eventProvider,
         IProjectionSink sink,
         IObjectsComparer objectsComparer,
         IChangesetStorage changesetStorage,

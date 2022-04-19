@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly IEventLogStorageProvider _eventLogStorageProvider;
+    readonly IEventSequenceStorageProvider _eventLogStorageProvider;
     readonly IStreamIdentity _streamIdentity;
     readonly IEnumerable<EventType> _eventTypes;
     readonly EventSourceId? _partition;
@@ -23,14 +23,14 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/>.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventLogStorageProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
     /// <param name="token"><see cref="StreamSequenceToken"/> that represents the starting point to get from.</param>
     /// <param name="eventTypes">Optional collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
     /// <param name="partition">Optional <see cref="EventSourceId"/> partition to filter for.</param>
     public EventSequenceQueueCacheCursor(
         IExecutionContextManager executionContextManager,
-        IEventLogStorageProvider eventLogStorageProvider,
+        IEventSequenceStorageProvider eventLogStorageProvider,
         IStreamIdentity streamIdentity,
         StreamSequenceToken token,
         IEnumerable<EventType>? eventTypes = default,
