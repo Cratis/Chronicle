@@ -27,7 +27,7 @@ public class Projection : Grain, IProjection
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly IObjectsComparer _objectsComparer;
-    readonly IEventLogStorageProvider _eventProvider;
+    readonly IEventSequenceStorageProvider _eventProvider;
     EngineProjection? _projection;
     IProjectionPipeline? _pipeline;
     IObserver? _observer;
@@ -40,14 +40,14 @@ public class Projection : Grain, IProjection
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating the pipeline for the projection.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     public Projection(
         IProjectionDefinitions projectionDefinitions,
         IProjectionPipelineDefinitions projectionPipelineDefinitions,
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory,
         IObjectsComparer objectsComparer,
-        IEventLogStorageProvider eventProvider)
+        IEventSequenceStorageProvider eventProvider)
     {
         _projectionDefinitions = projectionDefinitions;
         _projectionPipelineDefinitions = projectionPipelineDefinitions;

@@ -13,16 +13,16 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 public class EventSequenceQueueCache : IQueueCache
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventLogStorageProvider> _eventLogStorageProvider;
+    readonly ProviderFor<IEventSequenceStorageProvider> _eventLogStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCache"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventLogStorageProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     public EventSequenceQueueCache(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventLogStorageProvider> eventLogStorageProvider)
+        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider)
     {
         _executionContextManager = executionContextManager;
         _eventLogStorageProvider = eventLogStorageProvider;

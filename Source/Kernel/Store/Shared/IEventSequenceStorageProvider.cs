@@ -6,8 +6,16 @@ namespace Aksio.Cratis.Events.Store;
 /// <summary>
 /// Defines a storage provider for the event sequence.
 /// </summary>
-public interface IEventLogStorageProvider
+public interface IEventSequenceStorageProvider
 {
+    /// <summary>
+    /// Get the sequence number of the last event as part of the filtered event types.
+    /// </summary>
+    /// <param name="eventTypes">Even types to get for.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. It won't filter by this if omitted.</param>
+    /// <returns>The highest number for the event type filter.</returns>
+    Task<EventSequenceNumber> GetTailSequenceNumber(IEnumerable<EventType> eventTypes, EventSourceId? eventSourceId = null);
+
     /// <summary>
     /// Get the last instance of a specific event type for an event source.
     /// </summary>
