@@ -24,4 +24,13 @@ public record EventContext(
     CorrelationId CorrelationId,
     CausationId CausationId,
     CausedBy CausedBy,
-    EventObservationState ObservationState = EventObservationState.Initial);
+    EventObservationState ObservationState = EventObservationState.Initial)
+{
+    /// <summary>
+    /// Creates a copy of the context object with the new desired state.
+    /// </summary>
+    /// <param name="desiredState">The desired state.</param>
+    /// <returns>A new copy with the desired state set.</returns>
+    public EventContext WithState(EventObservationState desiredState) =>
+        new(EventSourceId, Occurred, ValidFrom, TenantId, CorrelationId, CausationId, CausedBy, desiredState);
+}
