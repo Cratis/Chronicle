@@ -25,4 +25,5 @@ public class when_failing_partition_first_time : Specification
     [Fact] void should_set_correct_messages() => state.FailedPartitions.First().Messages.ShouldEqual(messages);
     [Fact] void should_set_correct_stack_trace() => state.FailedPartitions.First().StackTrace.ShouldEqual(stack_trace);
     [Fact] void should_set_attempts_count_to_one() => state.FailedPartitions.First().Attempts.ShouldEqual(1);
+    [Fact] void should_have_failed_partitions_state() => state.HasFailedPartitions.ShouldBeTrue();
 }
