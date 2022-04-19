@@ -23,6 +23,7 @@ public class an_observer : GrainSpecification<ObserverState>
     protected List<EventSequenceNumberTokenWithFilter> subscribed_tokens;
     protected List<Mock<StreamSubscriptionHandle<AppendedEvent>>> subscription_handles;
     protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
+    protected List<IAsyncObserver<AppendedEvent>> observers;
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
@@ -64,14 +65,16 @@ public class an_observer : GrainSpecification<ObserverState>
 
         subscribed_tokens = new();
         subscription_handles = new();
+        observers = new();
 
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
-            .Returns((IAsyncObserver<AppendedEvent> _, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
+            .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
                 var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
                 subscription_handles.Add(subscription);
                 subscribed_token = token as EventSequenceNumberTokenWithFilter;
                 subscribed_tokens.Add(subscribed_token);
+                observers.Add(observer);
 
                 return Task.FromResult(subscription.Object);
             });

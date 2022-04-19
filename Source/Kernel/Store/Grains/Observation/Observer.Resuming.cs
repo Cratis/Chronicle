@@ -20,7 +20,7 @@ public partial class Observer
         }
 
         var failedPartition = State.GetFailedPartition(eventSourceId);
-        if (State.IsRecoveringPartition(failedPartition.EventSourceId) && _streamSubscription is not null)
+        if (State.IsRecoveringPartition(failedPartition.EventSourceId))
         {
             return;
         }

@@ -8,7 +8,11 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_subscri
 
 public class with_successful_observation : given.an_observer_and_two_event_types_and_one_event_in_sequence
 {
-    async Task Because() => await observer.Subscribe(event_types, observer_namespace);
+    async Task Because()
+    {
+        await observer.Subscribe(event_types, observer_namespace);
+        await observers[0].OnNextAsync(appended_event);
+    }
 
     [Fact] void should_forward_event_to_observer_stream() => observer_stream.Verify(_ => _.OnNextAsync(appended_event, IsAny<StreamSequenceToken>()), Once());
     [Fact] void should_set_current_namespace_in_state() => state_on_write.CurrentNamespace.ShouldEqual(observer_namespace);
