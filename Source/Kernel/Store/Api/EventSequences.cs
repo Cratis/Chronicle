@@ -8,19 +8,19 @@ namespace Aksio.Cratis.Events.Store.Api;
 /// <summary>
 /// Represents the API for working with event logs.
 /// </summary>
-[Route("/api/events/store/logs")]
-public class EventLogs : Controller
+[Route("/api/events/store/sequences")]
+public class EventSequences : Controller
 {
     /// <summary>
-    /// Gets all event logs.
+    /// Gets all event sequences.
     /// </summary>
     /// <returns>Collection of event logs.</returns>
     [HttpGet]
-    public Task<IEnumerable<EventLogInformation>> AllEventLogs()
+    public Task<IEnumerable<EventSequenceInformation>> AllEventSequences()
     {
         return Task.FromResult(new[]
         {
-            new EventLogInformation(Guid.Empty.ToString(), "Main Event Log")
+            new EventSequenceInformation(EventSequenceId.Log.ToString(), "Log")
         }.AsEnumerable());
     }
 }

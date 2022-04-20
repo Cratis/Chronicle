@@ -3,4 +3,4 @@
 
 namespace Aksio.Cratis.Events.Store.Api;
 
-public record EventLogInformation(string Id, string Name);
+public record EventSequenceInformation(string Id, string Name);

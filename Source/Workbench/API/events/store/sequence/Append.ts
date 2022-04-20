@@ -6,7 +6,7 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/log/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}');
+const routeTemplate = Handlebars.compile('/api/events/store/sequence/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}');
 
 export interface IAppend {
     eventSourceId?: string;
@@ -23,7 +23,7 @@ export class AppendValidator extends CommandValidator {
 }
 
 export class Append extends Command<IAppend> implements IAppend {
-    readonly route: string = '/api/events/store/log/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}';
+    readonly route: string = '/api/events/store/sequence/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendValidator();
 

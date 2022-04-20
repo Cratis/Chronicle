@@ -3,8 +3,8 @@
 
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
-import { default as styles } from './EventLogs.module.scss';
-import { Histogram } from 'API/events/store/log/Histogram';
+import { default as styles } from './EventHistogram.module.scss';
+import { Histogram } from 'API/events/store/sequence/Histogram';
 
 type EChartsOption = echarts.EChartsOption;
 
