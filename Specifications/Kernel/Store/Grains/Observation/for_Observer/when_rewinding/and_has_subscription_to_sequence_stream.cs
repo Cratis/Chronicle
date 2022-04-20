@@ -5,7 +5,7 @@ using Aksio.Cratis.Events.Store.Observation;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_rewinding;
 
-public class and_is_subscribed : given.an_observer_and_two_event_types_and_one_event_in_sequence
+public class and_has_subscription_to_sequence_stream : given.an_observer_and_two_event_types_and_one_event_in_sequence
 {
     async Task Establish()
     {
