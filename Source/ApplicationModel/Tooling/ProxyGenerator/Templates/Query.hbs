@@ -8,7 +8,7 @@ import { {{Type}} } from '{{Module}}';
 {{/Imports}}
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('{{Route}}');
+const routeTemplate = Handlebars.compile('{{{Route}}}');
 
 {{#if Arguments.[0]}}
 export interface {{Name}}Arguments {
@@ -32,7 +32,7 @@ export class {{Name}} extends QueryFor<{{Model}}[]> {
 export class {{Name}} extends QueryFor<{{Model}}> {
 {{/if}}
 {{/if}}
-    readonly route: string = '{{Route}}';
+    readonly route: string = '{{{Route}}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
 {{#if IsEnumerable}}
     readonly defaultValue: {{Model}}[] = [];
