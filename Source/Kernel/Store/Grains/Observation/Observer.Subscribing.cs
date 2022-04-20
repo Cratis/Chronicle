@@ -19,6 +19,18 @@ public partial class Observer
 
         State.CurrentNamespace = observerNamespace;
 
+        if (State.RunningState == ObserverRunningState.Rewinding)
+        {
+            await Rewind();
+            return;
+        }
+
+        if (State.RunningState == ObserverRunningState.Replaying)
+        {
+            await Replay();
+            return;
+        }
+
         await TryResumeAnyFailedPartitions();
 
         State.RunningState = ObserverRunningState.Subscribing;
