@@ -27,7 +27,7 @@ import { EventList } from './EventList';
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 
-import { FindFor } from 'API/events/store/sequence/FindFor';
+import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
 import { AppendedEvent } from 'API/events/store/sequence/AppendedEvent';
 import { AllEventTypes } from 'API/events/types/AllEventTypes';
 import { EventType } from 'API/events/types/EventType';
@@ -68,7 +68,17 @@ export const EventSequences = () => {
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
     const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
-    const [events, refreshEvents] = FindFor.use({ eventSequenceId: selectedEventSequence?.id || undefined!, microserviceId: selectedMicroservice?.id || undefined! });
+
+    const getFindForArguments = () => {
+        return {
+            eventSequenceId: selectedEventSequence?.id || undefined!,
+            microserviceId: selectedMicroservice?.id || undefined!,
+            tenantId: selectedTenant?.id || undefined
+        } as FindForArguments;
+    };
+
+    const [events, refreshEvents] = FindFor.use(getFindForArguments());
+
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
     const [selectedEventType, setSelectedEventType] = useState<EventType | undefined>(undefined);
     const [eventTypes] = AllEventTypes.use();
@@ -113,6 +123,12 @@ export const EventSequences = () => {
             setSelectedTenant(tenants.data[0]);
         }
     }, [tenants.data]);
+
+    useEffect(() => {
+        if (selectedEventSequence && selectedMicroservice && selectedTenant) {
+            refreshEvents(getFindForArguments());
+        }
+    }, [selectedEventSequence, selectedMicroservice, selectedTenant]);
 
 
     commandBarItems = [...commandBarItems, ...[
@@ -183,7 +199,7 @@ export const EventSequences = () => {
             key: 'run',
             text: 'Run',
             onClick: () => {
-                refreshEvents({ eventSequenceId: selectedEventSequence!.id, microserviceId: selectedMicroservice!.id });
+                refreshEvents(getFindForArguments());
             },
             iconProps: { iconName: 'Play' }
         }

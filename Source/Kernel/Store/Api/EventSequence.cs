@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Store.Grains;
 using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
@@ -19,18 +20,22 @@ namespace Aksio.Cratis.Events.Store.Api;
 public class EventSequence : Controller
 {
     readonly IGrainFactory _grainFactory;
+    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
+    /// <param name="eventSequenceStorageProviderProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventSequence(
         IGrainFactory grainFactory,
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
         IExecutionContextManager executionContextManager)
     {
         _grainFactory = grainFactory;
+        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -50,11 +55,19 @@ public class EventSequence : Controller
     }
 
     [HttpGet("{eventSequenceId}")]
-    public Task<IEnumerable<AppendedEvent>> FindFor(
-        [FromRoute] string eventSequenceId,
-        [FromQuery] string microserviceId)
+    public async Task<IEnumerable<AppendedEvent>> FindFor(
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromQuery] MicroserviceId microserviceId,
+        [FromQuery] TenantId tenantId)
     {
-        return Task.FromResult(Array.Empty<AppendedEvent>().AsEnumerable());
+        var result = new List<AppendedEvent>();
+        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(EventSequenceNumber.First);
+        while (await cursor.MoveNext())
+        {
+            result.AddRange(cursor.Current);
+        }
+        return result;
     }
 
     [HttpGet("{eventSequenceId}/count")]
@@ -64,8 +77,8 @@ public class EventSequence : Controller
     public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
     [HttpGet("{eventSequenceId}/{eventSourceId}")]
-    public Task FindFor(
-        [FromRoute] EventSequenceId eventLogId,
+    public Task FindForEventSourceId(
+        [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] EventSourceId eventSourceId)
     {
         return Task.CompletedTask;
