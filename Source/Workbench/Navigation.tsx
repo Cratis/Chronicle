@@ -54,32 +54,32 @@ const groups: INavLinkGroup[] = [
                 ]
             },
             {
-                name: 'Events',
+                name: 'Event Store',
                 url: '',
                 links: [
                     {
                         name: 'Types',
                         key: 'types',
                         url: '',
-                        route: '/events/types'
+                        route: '/events/store/types'
                     },
                     {
-                        name: 'EventLog',
-                        key: 'event-log',
+                        name: 'EventSequence',
+                        key: 'event-sequence',
                         url: '',
-                        route: '/events/eventlogs'
+                        route: '/events/store/sequence'
                     },
                     {
                         name: 'Observers',
                         key: 'observers',
                         url: '',
-                        route: '/events/observers'
+                        route: '/events/store/observers'
                     },
                     {
                         name: "Projections",
                         key: 'projections',
                         url: '',
-                        route: '/events/projections'
+                        route: '/events/store/projections'
                     }
                 ]
             }

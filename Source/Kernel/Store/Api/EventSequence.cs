@@ -15,18 +15,18 @@ namespace Aksio.Cratis.Events.Store.Api;
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
-[Route("/api/events/store/log")]
-public class EventLog : Controller
+[Route("/api/events/store/sequence")]
+public class EventSequence : Controller
 {
     readonly IGrainFactory _grainFactory;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLog"/> class.
+    /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
-    public EventLog(
+    public EventSequence(
         IGrainFactory grainFactory,
         IExecutionContextManager executionContextManager)
     {
@@ -49,10 +49,15 @@ public class EventLog : Controller
             content!);
     }
 
-    [HttpGet("{eventLogId}")]
-    public Task<IEnumerable<AppendedEvent>> FindFor([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<AppendedEvent>().AsEnumerable());
+    [HttpGet("{eventSequenceId}")]
+    public Task<IEnumerable<AppendedEvent>> FindFor(
+        [FromRoute] string eventSequenceId,
+        [FromQuery] string microserviceId)
+    {
+        return Task.FromResult(Array.Empty<AppendedEvent>().AsEnumerable());
+    }
 
-    [HttpGet("{eventLogId}/count")]
+    [HttpGet("{eventSequenceId}/count")]
     public Task<long> Count() => Task.FromResult(0L);
 
     [HttpGet("histogram")]
@@ -66,8 +71,8 @@ public class EventLog : Controller
         return Task.CompletedTask;
     }
 
-    [HttpGet("{eventLogId}/types")]
-    public Task Types([FromRoute] string eventLogId)
+    [HttpGet("{eventSequenceId}/types")]
+    public Task Types([FromRoute] string eventSequenceId)
     {
         return Task.CompletedTask;
     }

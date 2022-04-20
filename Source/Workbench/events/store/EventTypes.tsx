@@ -8,7 +8,7 @@ import {
     PivotItem,
     SelectionMode
 } from '@fluentui/react';
-import { useDataFrom } from '../useDataFrom';
+import { useDataFrom } from '../../useDataFrom';
 
 import { default as styles } from './EventTypes.module.scss';
 import { useState } from 'react';

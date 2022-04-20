@@ -6,13 +6,13 @@ import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-app
 import { EventHistogramEntry } from './EventHistogramEntry';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/log/histogram');
+const routeTemplate = Handlebars.compile('/api/events/store/sequence/histogram');
 
 export interface HistogramArguments {
     eventLogId: string;
 }
 export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArguments> {
-    readonly route: string = '/api/events/store/log/histogram';
+    readonly route: string = '/api/events/store/sequence/histogram';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventHistogramEntry[] = [];
     readonly requiresArguments: boolean = true;

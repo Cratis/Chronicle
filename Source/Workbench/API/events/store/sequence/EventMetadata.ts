@@ -2,8 +2,9 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { EventType } from './EventType';
 
-export type EventLogInformation = {
-    id: string;
-    name: string;
+export type EventMetadata = {
+    sequenceNumber: number;
+    type: EventType;
 };

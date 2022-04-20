@@ -6,13 +6,14 @@ import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-app
 import { AppendedEvent } from './AppendedEvent';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/log/{{eventLogId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}');
 
 export interface FindForArguments {
-    eventLogId: string;
+    eventSequenceId: string;
+    microserviceId: string;
 }
 export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
-    readonly route: string = '/api/events/store/log/{{eventLogId}}';
+    readonly route: string = '/api/events/store/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
     readonly requiresArguments: boolean = true;
