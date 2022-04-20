@@ -10,6 +10,7 @@ import { People } from './GDPR/People';
 import { EventTypes } from './events/EventTypes';
 import { Projections } from './events/Projections';
 import { EventLogs } from './events/EventLogs';
+import { Observers } from './events/Observers';
 
 
 export const App = () => {
@@ -27,6 +28,7 @@ export const App = () => {
                     <Route path="/gdpr/people" element={<People />}/>
                     <Route path="/events/types" element={<EventTypes />}/>
                     <Route path="/events/eventlogs" element={<EventLogs />}/>
+                    <Route path="/events/observers" element={<Observers />}/>
                     <Route path="/events/projections" element={<Projections />}/>
                 </Routes>
             </div>
