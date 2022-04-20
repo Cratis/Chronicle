@@ -18,6 +18,12 @@ public partial class Observer
         _logger.Rewinding(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Rewinding;
         State.Offset = EventSequenceNumber.First;
+
+        if (!HasSubscribedObserver)
+        {
+            return;
+        }
+
         await WriteStateAsync();
         await UnsubscribeStream();
         await Replay();
@@ -25,8 +31,6 @@ public partial class Observer
 
     async Task Replay()
     {
-        await UnsubscribeStream();
-
         if (State.Offset > State.LastHandled)
         {
             _logger.OffsetIsAtTail(_observerId, _microserviceId, _eventSequenceId, _tenantId);
@@ -48,6 +52,15 @@ public partial class Observer
         if (State.IsRecoveringAnyPartition)
         {
             _logger.ClearingRecoveringPartitions(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+
+            foreach (var recoveringPartition in State.RecoveringPartitions)
+            {
+                if (_streamSubscriptionsByEventSourceId.ContainsKey(recoveringPartition.EventSourceId))
+                {
+                    await _streamSubscriptionsByEventSourceId[recoveringPartition.EventSourceId].UnsubscribeAsync();
+                }
+            }
+
             State.ClearRecoveringPartitions();
         }
 
