@@ -26,9 +26,20 @@ const groups: INavLinkGroup[] = [
                 route: '/'
             },
             {
-                name: 'Microservices',
+                name: 'Configuration',
                 url: '',
-                route: '/microservices'
+                links: [
+                    {
+                        name: 'Microservices',
+                        url: '',
+                        route: '/configuration/microservices'
+                    },
+                    {
+                        name: 'Tenants',
+                        url: '',
+                        route: '/configuration/tenants'
+                    }
+                ]
             },
             {
                 name: 'GDPR',

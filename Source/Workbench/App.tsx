@@ -5,12 +5,13 @@ import { Route, Routes } from 'react-router-dom';
 import { Navigation } from './Navigation';
 
 import { default as styles } from './App.module.scss';
-import { Microservices } from './microservices/Microservices';
+import { Microservices } from './configuration/Microservices';
 import { People } from './GDPR/People';
 import { EventTypes } from './events/EventTypes';
 import { Projections } from './events/Projections';
 import { EventLogs } from './events/EventLogs';
 import { Observers } from './events/Observers';
+import { Tenants } from './configuration/Tenants';
 
 
 export const App = () => {
@@ -24,7 +25,8 @@ export const App = () => {
                     <Route path="/">
                         Home
                     </Route>
-                    <Route path="/microservices" element={<Microservices/>} />
+                    <Route path="/configuration/microservices" element={<Microservices/>} />
+                    <Route path="/configuration/tenants" element={<Tenants/>} />
                     <Route path="/gdpr/people" element={<People />}/>
                     <Route path="/events/types" element={<EventTypes />}/>
                     <Route path="/events/eventlogs" element={<EventLogs />}/>
