@@ -79,7 +79,9 @@ export const EventSequences = () => {
 
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
     const [selectedEventType, setSelectedEventType] = useState<EventType | undefined>(undefined);
-    const [eventTypes] = AllEventTypes.use();
+    const [eventTypes] = AllEventTypes.use({
+        microserviceId: selectedMicroservice?.id || undefined!,
+    });
 
     const eventSequenceOptions = eventSequences.data.map(_ => {
         return {
