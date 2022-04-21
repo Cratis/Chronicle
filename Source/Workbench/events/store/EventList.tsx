@@ -12,7 +12,7 @@ import {
 import { default as styles } from './EventList.module.scss';
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 import { AppendedEvent } from 'API/events/store/sequence/AppendedEvent';
-import { EventType } from 'API/events/types/EventType';
+import { EventType } from 'API/events/store/types/EventType';
 
 export type EventSelected = (item: any) => void;
 

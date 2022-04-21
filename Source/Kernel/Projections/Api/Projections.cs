@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Events.Projections.Api;
 /// <summary>
 /// Represents the API for projections.
 /// </summary>
-[Route("/api/events/projections")]
+[Route("/api/events/store/projections")]
 public class Projections : Controller
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
@@ -35,8 +35,8 @@ public class Projections : Controller
     /// </summary>
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get projections for.</param>
     /// <returns><see cref="Projection"/> containing all projections.</returns>
-    [HttpGet("{microserviceId}")]
-    public async Task<IEnumerable<Projection>> AllProjections([FromRoute] MicroserviceId microserviceId)
+    [HttpGet]
+    public async Task<IEnumerable<Projection>> AllProjections([FromQuery] MicroserviceId microserviceId)
     {
         _executionContextManager.Establish(microserviceId);
 
@@ -50,11 +50,14 @@ public class Projections : Controller
     /// <summary>
     /// Get all collections for projection.
     /// </summary>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get projection collections for.</param>
     /// <param name="projectionId">Id of projection to get for.</param>
     /// <returns>Collection of all the projection collections.</returns>
     [HttpGet("{projectionId}/collections")]
 #pragma warning disable IDE0060
-    public IEnumerable<ProjectionCollection> Collections([FromRoute] Guid projectionId)
+    public IEnumerable<ProjectionCollection> Collections(
+        [FromQuery] MicroserviceId microserviceId,
+        [FromRoute] ProjectionId projectionId)
     {
         return new ProjectionCollection[]
         {

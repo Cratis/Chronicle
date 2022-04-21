@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DetailsList, IColumn, IDetailsListStyles } from '@fluentui/react';
-import { Collections as ProjectionCollections } from 'API/events/projections/Collections';
+import { Collections as ProjectionCollections } from 'API/events/store/projections/Collections';
 
 const gridStyles: Partial<IDetailsListStyles> = {
     root: {
@@ -47,11 +47,12 @@ const columns: IColumn[] = [
 ];
 
 export interface CollectionsProps {
+    microserviceId: string;
     projectionId: string;
 }
 
 export const Collections = (props: CollectionsProps) => {
-    const [collections] = ProjectionCollections.use({ projectionId: props.projectionId });
+    const [collections] = ProjectionCollections.use({ microserviceId: props.microserviceId, projectionId: props.projectionId });
 
     return (
         <DetailsList

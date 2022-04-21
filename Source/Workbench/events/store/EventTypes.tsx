@@ -3,16 +3,24 @@
 
 import {
     DetailsList,
+    Dropdown,
     IColumn,
+    IDropdownOption,
+    IDropdownStyles,
     Pivot,
     PivotItem,
-    SelectionMode
+    SelectionMode,
+    Stack
 } from '@fluentui/react';
-import { useDataFrom } from '../../useDataFrom';
 
 import { default as styles } from './EventTypes.module.scss';
 import { useState } from 'react';
 import { EventTypeSchema } from './EventTypeSchema';
+import { Microservices } from 'API/configuration/Microservices';
+import { Microservice } from 'API/configuration/Microservice';
+import { useEffect } from 'react';
+import { AllEventTypes, AllEventTypesArguments } from 'API/events/store/types/AllEventTypes';
+import { GenerationSchemasForType } from '../../API/events/store/types/GenerationSchemasForType';
 
 const eventTypesColumns: IColumn[] = [
     {
@@ -44,32 +52,78 @@ const eventSchemaColumns: IColumn[] = [
     }
 ];
 
+const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
+
 export const EventTypes = () => {
+    const [microservices] = Microservices.use();
+    const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
     const [eventType, setEventType] = useState();
-    const [generationalSchemas, reloadGenerationalSchemas] = useDataFrom(
-        {
-            template: '/api/events/types/schemas/{{eventTypeId}}',
-            arguments: {
-                eventTypeId: eventType
-            }
-        });
-    const [eventTypes, reloadEventTypes] = useDataFrom('/api/events/types');
+
+    const getAllEventTypesArguments = () => {
+        return {
+            microserviceId: selectedMicroservice?.id || undefined!
+        } as AllEventTypesArguments;
+    };
+
+    const getGenerationalSchemasForTypeArguments = () => {
+        return {
+            microserviceId: selectedMicroservice?.id || undefined!,
+            eventTypeId: eventType!
+        };
+    };
+
+    const [generationalSchemas, reloadGenerationalSchemas] = GenerationSchemasForType.use(getGenerationalSchemasForTypeArguments());
+    const [eventTypes, refreshEventTypes] = AllEventTypes.use(getAllEventTypesArguments());
+
+    const microserviceOptions = microservices.data.map(_ => {
+        return {
+            key: _.id,
+            text: _.name
+        } as IDropdownOption;
+    });
+
+    useEffect(() => {
+        if (microservices.data.length > 0) {
+            setSelectedMicroservice(microservices.data[0]);
+        }
+    }, [microservices.data]);
+
+    useEffect(() => {
+        if (selectedMicroservice) {
+            refreshEventTypes(getAllEventTypesArguments());
+        }
+    }, [selectedMicroservice]);
+
+    useEffect(() => {
+        reloadGenerationalSchemas(getGenerationalSchemasForTypeArguments());
+    }, [eventType]);
+
     return (
         <div className={styles.container}>
             <div className={styles.eventList}>
-                <DetailsList
-                    items={eventTypes}
-                    columns={eventTypesColumns}
-                    selectionMode={SelectionMode.single}
-                    onActiveItemChanged={(item: any) => {
-                        setEventType(item.identifier);
-                    }}
-                />
+                <Stack>
+                    <Dropdown
+                        styles={commandBarDropdownStyles}
+                        options={microserviceOptions}
+                        selectedKey={selectedMicroservice?.id}
+                        onChange={(e, option) => {
+                            setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
+                        }} />
+
+                    <DetailsList
+                        items={eventTypes.data}
+                        columns={eventTypesColumns}
+                        selectionMode={SelectionMode.single}
+                        onActiveItemChanged={(item: any) => {
+                            setEventType(item.identifier);
+                        }}
+                    />
+                </Stack>
             </div>
             <div className={styles.eventDetails}>
                 <Pivot linkFormat="tabs" defaultSelectedKey="2">
-                    {generationalSchemas.map((schema: EventTypeSchema) => {
-                        const properties = Object.keys(schema.properties).map(_ => {
+                    {generationalSchemas.data.map((schema: EventTypeSchema) => {
+                        const properties = Object.keys(schema.properties || []).map(_ => {
                             let type = schema.properties[_].type;
                             if (Array.isArray(type)) {
                                 type = type[0];

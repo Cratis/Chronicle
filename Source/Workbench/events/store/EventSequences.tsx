@@ -28,8 +28,8 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 
 import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
 import { AppendedEvent } from 'API/events/store/sequence/AppendedEvent';
-import { AllEventTypes } from 'API/events/types/AllEventTypes';
-import { EventType } from 'API/events/types/EventType';
+import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
+import { EventType } from 'API/events/store/types/EventType';
 import { Microservice } from 'API/configuration/Microservice';
 import { Microservices } from 'API/configuration/Microservices';
 import { Tenant } from 'API/configuration/Tenant';
