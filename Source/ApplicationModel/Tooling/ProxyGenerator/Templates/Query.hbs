@@ -39,11 +39,14 @@ export class {{Name}} extends QueryFor<{{Model}}> {
 {{else}}
     readonly defaultValue: {{Model}} = {} as any;
 {{/if}}
-{{#if Arguments.[0]}}
-    readonly requiresArguments: boolean = true;
-{{else}}
-    readonly requiresArguments: boolean = false;
-{{/if}}
+
+    get requestArguments(): string[] {
+        return [
+            {{#Arguments}}
+            '{{camelcase Name}}',
+            {{/Arguments}}
+        ];
+    }
 
 {{#if Arguments.[0]}}
 {{#if IsEnumerable}}
