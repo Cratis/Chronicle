@@ -19,7 +19,6 @@ import {
 import { useBoolean } from '@fluentui/react-hooks';
 
 import { EventHistogram } from './EventHistogram';
-import { Guid } from '@aksio/cratis-fundamentals';
 import { useState } from 'react';
 import { FilterBuilder } from './FilterBuilder';
 import { EventList } from './EventList';
@@ -36,7 +35,6 @@ import { Microservices } from 'API/configuration/Microservices';
 import { Tenant } from 'API/configuration/Tenant';
 import { Tenants } from 'API/configuration/Tenants';
 import { useEffect } from 'react';
-
 
 function pivotItemHeaderRenderer(
     link?: IPivotItemProps,

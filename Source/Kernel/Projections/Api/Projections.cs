@@ -1,7 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Applications.Queries;
+using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Events.Projections.Api;
@@ -12,29 +14,37 @@ namespace Aksio.Cratis.Events.Projections.Api;
 [Route("/api/events/projections")]
 public class Projections : Controller
 {
+    readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
+    readonly IExecutionContextManager _executionContextManager;
+
     /// <summary>
-    /// Gets all projections.
+    /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <returns><see cref="ClientObservable{T}"/> containing all projections.</returns>
-    [HttpGet]
-    public ClientObservable<IEnumerable<Projection>> AllProjections()
+    /// <param name="projectionDefinitionsProvider">Provider for <see cref="IProjectionDefinitions"/>.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
+    public Projections(
+        ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
+        IExecutionContextManager executionContextManager)
     {
-        return new ClientObservable<IEnumerable<Projection>>
-        {
-            ClientDisconnected = () =>
-            {
-            }
-        };
+        _projectionDefinitionsProvider = projectionDefinitionsProvider;
+        _executionContextManager = executionContextManager;
     }
 
     /// <summary>
-    /// Rewind a specific projection.
+    /// Gets all projections.
     /// </summary>
-    /// <param name="projectionId">Id of projection to rewind.</param>
-    [HttpPost("{projectionId}/rewind")]
-    public void Rewind([FromRoute] Guid projectionId)
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get projections for.</param>
+    /// <returns><see cref="Projection"/> containing all projections.</returns>
+    [HttpGet("{microserviceId}")]
+    public async Task<IEnumerable<Projection>> AllProjections([FromRoute] MicroserviceId microserviceId)
     {
-        Console.WriteLine(projectionId);
+        _executionContextManager.Establish(microserviceId);
+
+        var projections = await _projectionDefinitionsProvider().GetAll();
+        return projections.Select(_ => new Projection(
+            _.Identifier,
+            _.Name,
+            _.Model.Name)).ToArray();
     }
 
     /// <summary>

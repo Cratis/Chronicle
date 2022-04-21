@@ -12,7 +12,7 @@ public interface IProjectionDefinitions
     /// Get all projection definitions.
     /// </summary>
     /// <returns>Collection of <see cref="ProjectionDefinition"/>.</returns>
-    IEnumerable<ProjectionDefinition> GetAll();
+    Task<IEnumerable<ProjectionDefinition>> GetAll();
 
     /// <summary>
     /// Register <see cref="ProjectionDefinition"/> in the system.
