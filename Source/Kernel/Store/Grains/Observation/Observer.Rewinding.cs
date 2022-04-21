@@ -89,7 +89,7 @@ public partial class Observer
 
         if (tail)
         {
-            await Unsubscribe();
+            await UnsubscribeStream();
             if (HasSubscribedObserver)
             {
                 await Subscribe(State.EventTypes, State.CurrentNamespace);
