@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Microservices } from 'API/configuration/Microservices';
 import { Microservice } from 'API/configuration/Microservice';
 import { AllObservers } from 'API/events/store/observers/AllObservers';
@@ -9,13 +9,19 @@ import { Tenants } from 'API/configuration/Tenants';
 import { Tenant } from 'API/configuration/Tenant';
 import { AllObserversArguments } from 'API/events/store/observers/AllObservers';
 import {
+    CommandBar,
     Dropdown,
     IColumn,
+    ICommandBarItemProps,
     IDropdownOption,
     IDropdownStyles,
+    Selection,
+    SelectionMode,
     Stack
 } from '@fluentui/react';
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
+import { ObserverState } from 'API/events/store/observers/ObserverState';
+import { Rewind } from 'API/events/store/observers/Rewind';
 
 const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
 
@@ -55,6 +61,8 @@ export const Observers = () => {
     const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
     const [selectedTenant, setSelectedTenant] = useState<Tenant>();
 
+    const [selectedObserver, setSelectedObserver] = useState<ObserverState>();
+
     const getAllObserversArguments = () => {
         return {
             microserviceId: selectedMicroservice?.id || undefined,
@@ -90,35 +98,73 @@ export const Observers = () => {
         }
     }, [tenants.data]);
 
-    useEffect(() => {
-        if (selectedMicroservice) {
-            // refreshEventTypes(getAllEventTypesArguments());
+    const selection = useMemo(
+        () => new Selection({
+            selectionMode: SelectionMode.single,
+            onSelectionChanged: () => {
+                const selected = selection.getSelection();
+                if (selected.length == 1) {
+                    setSelectedObserver(selected[0] as ObserverState);
+                }
+            }
+        }), [observers.data]);
+
+    const [rewindCommand, setRewindCommandVales] = Rewind.use();
+
+    const commandBarItems: ICommandBarItemProps[] = [
+        {
+            key: 'microservice',
+            text: 'Microservice',
+            onRender: () => {
+                return (
+                    <Dropdown
+                        styles={commandBarDropdownStyles}
+                        options={microserviceOptions}
+                        selectedKey={selectedMicroservice?.id}
+                        onChange={(e, option) => {
+                            setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
+                        }} />
+                );
+            }
+        },
+        {
+            key: 'tenant',
+            text: 'Tenant',
+            onRender: () => {
+                return (
+                    <Dropdown
+                        styles={commandBarDropdownStyles}
+                        options={tenantOptions}
+                        selectedKey={selectedTenant?.id}
+                        onChange={(e, option) => {
+                            setSelectedTenant(tenants.data.find(_ => _.id == option!.key));
+                        }} />
+                );
+            }
+        },
+        {
+            key: 'rewind',
+            text: 'Rewind',
+            disabled: !selectedObserver,
+            onClick: () => {
+                setRewindCommandVales({
+                    observerId: selectedObserver?.observerId,
+                    microserviceId: selectedMicroservice?.id,
+                    tenantId: selectedTenant?.id
+                });
+                rewindCommand.execute();
+            },
+            iconProps: { iconName: 'Rewind' }
         }
-    }, [selectedMicroservice]);
+    ];
 
     return (
         <Stack>
-            <Stack horizontal>
-
-                <Dropdown
-                    styles={commandBarDropdownStyles}
-                    options={microserviceOptions}
-                    selectedKey={selectedMicroservice?.id}
-                    onChange={(e, option) => {
-                        setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
-                    }} />
-
-                <Dropdown
-                    styles={commandBarDropdownStyles}
-                    options={tenantOptions}
-                    selectedKey={selectedTenant?.id}
-                    onChange={(e, option) => {
-                        setSelectedTenant(tenants.data.find(_ => _.id == option!.key));
-                    }} />
-            </Stack>
+            <CommandBar items={commandBarItems} />
 
             <ScrollableDetailsList
                 columns={columns}
+                selection={selection}
                 items={observers.data}
             />
         </Stack>
