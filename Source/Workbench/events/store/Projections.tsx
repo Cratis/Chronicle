@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useMemo, useState } from 'react';
-import { AllProjections } from 'API/events/projections/AllProjections';
+import { AllProjections, AllProjectionsArguments } from 'API/events/projections/AllProjections';
 import { Projection } from 'API/events/projections/Projection';
 
-
 import {
-    CommandBar,
     DetailsList,
+    Dropdown,
     IColumn,
-    ICommandBarItemProps,
     IDetailsListStyles,
+    IDropdownOption,
+    IDropdownStyles,
     Pivot,
     PivotItem,
     Selection,
@@ -19,6 +19,9 @@ import {
     Stack
 } from '@fluentui/react';
 import { Collections } from './Collections';
+import { useEffect } from 'react';
+import { Microservices } from 'API/configuration/Microservices';
+import { Microservice } from 'API/configuration/Microservice';
 
 const gridStyles: Partial<IDetailsListStyles> = {
     root: {
@@ -46,6 +49,13 @@ const gridStyles: Partial<IDetailsListStyles> = {
 
 const columns: IColumn[] = [
     {
+        key: 'id',
+        name: 'Id',
+        fieldName: 'id',
+        minWidth: 250,
+        maxWidth: 250,
+    },
+    {
         key: 'name',
         name: 'Name',
         fieldName: 'name',
@@ -53,51 +63,47 @@ const columns: IColumn[] = [
         isResizable: true
     },
     {
-        key: 'state',
-        name: 'State',
-        fieldName: 'state',
+        key: 'model-name',
+        name: 'Model Name',
+        fieldName: 'modelName',
         minWidth: 200,
         isResizable: true
     },
-    {
-        key: 'jobInformation',
-        name: 'Job Information',
-        fieldName: 'jobInformation',
-        minWidth: 200,
-        isResizable: true
-    },
-    {
-        key: 'position',
-        name: 'Positions',
-        fieldName: 'positions',
-        minWidth: 200,
-        isResizable: true
-    }
 ];
 
-const rewind = (id: string) => {
-    (async () => {
-        const response = await fetch(`/api/events/projections/${id}/rewind`, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
-    })();
-};
-
+const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
 
 export const Projections = () => {
-    const [projections] = AllProjections.use();
-    const commandBarItems: ICommandBarItemProps[] = [
-        {
-            key: 'add',
-            name: 'Add',
-            iconProps: { iconName: 'Add' }
-        }
-    ];
+    const [microservices] = Microservices.use();
+    const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
+
+    const getAllProjectionsArguments = () => {
+        return {
+            microserviceId: selectedMicroservice?.id || undefined!
+        } as AllProjectionsArguments;
+    }
+
+    const [projections, refreshProjections] = AllProjections.use(getAllProjectionsArguments());
     const [selected, setSelected] = useState<Projection>();
+
+    const microserviceOptions = microservices.data.map(_ => {
+        return {
+            key: _.id,
+            text: _.name
+        } as IDropdownOption;
+    });
+
+    useEffect(() => {
+        if (microservices.data.length > 0) {
+            setSelectedMicroservice(microservices.data[0]);
+        }
+    }, [microservices.data]);
+
+    useEffect(() => {
+        if (selectedMicroservice) {
+            refreshProjections(getAllProjectionsArguments());
+        }
+    }, [selectedMicroservice]);
 
     const selection = useMemo(
         () => new Selection({
@@ -112,19 +118,17 @@ export const Projections = () => {
             },
         }), [projections.data]);
 
-    if (selected && selected.rewindable) {
-        commandBarItems.push({
-            key: 'rewind',
-            name: 'Rewind',
-            iconProps: { iconName: 'Rewind' },
-            onClick: () => rewind(selected.id)
-        });
-    }
-
     return (
         <Stack style={{ height: '100%' }}>
             <Stack.Item>
-                <CommandBar items={commandBarItems} />
+                <Dropdown
+                    styles={commandBarDropdownStyles}
+                    options={microserviceOptions}
+                    selectedKey={selectedMicroservice?.id}
+                    onChange={(e, option) => {
+                        setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
+                    }} />
+
             </Stack.Item>
             <Stack.Item grow={1}>
                 <DetailsList
