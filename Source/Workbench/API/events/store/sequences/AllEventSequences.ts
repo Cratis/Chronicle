@@ -12,7 +12,11 @@ export class AllEventSequences extends QueryFor<EventSequenceInformation[]> {
     readonly route: string = '/api/events/store/sequences';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventSequenceInformation[] = [];
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<EventSequenceInformation[]>, PerformQuery] {
         return useQuery<EventSequenceInformation[], AllEventSequences>(AllEventSequences);

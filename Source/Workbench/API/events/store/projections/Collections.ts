@@ -16,7 +16,13 @@ export class Collections extends QueryFor<ProjectionCollection[], CollectionsArg
     readonly route: string = '/api/events/store/projections/{{projectionId}}/collections?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ProjectionCollection[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'microserviceId',
+            'projectionId',
+        ];
+    }
 
     static use(args?: CollectionsArguments): [QueryResult<ProjectionCollection[]>, PerformQuery<CollectionsArguments>] {
         return useQuery<ProjectionCollection[], Collections, CollectionsArguments>(Collections, args);

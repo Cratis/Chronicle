@@ -15,7 +15,12 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments>
     readonly route: string = '/api/events/store/types?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventType[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'microserviceId',
+        ];
+    }
 
     static use(args?: AllEventTypesArguments): [QueryResult<EventType[]>, PerformQuery<AllEventTypesArguments>] {
         return useQuery<EventType[], AllEventTypes, AllEventTypesArguments>(AllEventTypes, args);

@@ -17,7 +17,14 @@ export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
     readonly route: string = '/api/events/store/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'eventSequenceId',
+            'microserviceId',
+            'tenantId',
+        ];
+    }
 
     static use(args?: FindForArguments): [QueryResult<AppendedEvent[]>, PerformQuery<FindForArguments>] {
         return useQuery<AppendedEvent[], FindFor, FindForArguments>(FindFor, args);

@@ -15,7 +15,12 @@ export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArgument
     readonly route: string = '/api/events/store/sequence/histogram';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventHistogramEntry[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'eventLogId',
+        ];
+    }
 
     static use(args?: HistogramArguments): [QueryResult<EventHistogramEntry[]>, PerformQuery<HistogramArguments>] {
         return useQuery<EventHistogramEntry[], Histogram, HistogramArguments>(Histogram, args);
