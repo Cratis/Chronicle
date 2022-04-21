@@ -9,7 +9,7 @@ import { default as styles } from './Navigation.module.scss';
 
 const navStyles: Partial<INavStyles> = {
     root: {
-        width: 158
+        width: 200
     },
     link: {
         whiteSpace: 'normal',
@@ -64,7 +64,7 @@ const groups: INavLinkGroup[] = [
                         route: '/events/store/types'
                     },
                     {
-                        name: 'EventSequence',
+                        name: 'Sequences',
                         key: 'event-sequence',
                         url: '',
                         route: '/events/store/sequence'
