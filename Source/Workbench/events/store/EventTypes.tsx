@@ -14,13 +14,12 @@ import {
 } from '@fluentui/react';
 
 import { default as styles } from './EventTypes.module.scss';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EventTypeSchema } from './EventTypeSchema';
 import { Microservices } from 'API/configuration/Microservices';
 import { Microservice } from 'API/configuration/Microservice';
-import { useEffect } from 'react';
 import { AllEventTypes, AllEventTypesArguments } from 'API/events/store/types/AllEventTypes';
-import { GenerationSchemasForType } from '../../API/events/store/types/GenerationSchemasForType';
+import { GenerationSchemasForType } from 'API/events/store/types/GenerationSchemasForType';
 
 const eventTypesColumns: IColumn[] = [
     {
