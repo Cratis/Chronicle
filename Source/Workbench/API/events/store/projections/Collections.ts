@@ -6,13 +6,14 @@ import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-app
 import { ProjectionCollection } from './ProjectionCollection';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/projections/{{projectionId}}/collections');
+const routeTemplate = Handlebars.compile('/api/events/store/projections/{{projectionId}}/collections?microserviceId={{microserviceId}}');
 
 export interface CollectionsArguments {
+    microserviceId: string;
     projectionId: string;
 }
 export class Collections extends QueryFor<ProjectionCollection[], CollectionsArguments> {
-    readonly route: string = '/api/events/projections/{{projectionId}}/collections';
+    readonly route: string = '/api/events/store/projections/{{projectionId}}/collections?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ProjectionCollection[] = [];
     readonly requiresArguments: boolean = true;

@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useMemo, useState } from 'react';
-import { AllProjections, AllProjectionsArguments } from 'API/events/projections/AllProjections';
-import { Projection } from 'API/events/projections/Projection';
+import { AllProjections, AllProjectionsArguments } from 'API/events/store/projections/AllProjections';
+import { Projection } from 'API/events/store/projections/Projection';
 
 import {
     DetailsList,
@@ -81,7 +81,7 @@ export const Projections = () => {
         return {
             microserviceId: selectedMicroservice?.id || undefined!
         } as AllProjectionsArguments;
-    }
+    };
 
     const [projections, refreshProjections] = AllProjections.use(getAllProjectionsArguments());
     const [selected, setSelected] = useState<Projection>();
@@ -141,7 +141,7 @@ export const Projections = () => {
                 <Stack.Item grow={1}>
                     <Pivot linkFormat="links">
                         <PivotItem headerText="Collections">
-                            <Collections projectionId={selected.id} />
+                            <Collections microserviceId={selectedMicroservice?.id || ''} projectionId={selected.id} />
                         </PivotItem>
                     </Pivot>
                 </Stack.Item>
