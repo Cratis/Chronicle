@@ -10,6 +10,8 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.MongoDB;
+using Aksio.Cratis.Events.Store.MongoDB.Observation;
+using Aksio.Cratis.Events.Store.Observation;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
@@ -37,6 +39,7 @@ public static class Program
                     .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
                     .AddSingleton<IEventSequenceStorageProvider, MongoDBEventSequenceStorageProvider>()
                     .AddSingleton<IEventSequences, MongoDBEventSequences>()
+                    .AddSingleton<IObserversState, MongoDBObserversState>()
                     .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
                     .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
                     .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
