@@ -12,7 +12,11 @@ export class AllPeople extends ObservableQueryFor<Person[]> {
     readonly route: string = '/api/compliance/gdpr/people';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Person[] = [];
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<Person[]>] {
         return useObservableQuery<Person[], AllPeople>(AllPeople);

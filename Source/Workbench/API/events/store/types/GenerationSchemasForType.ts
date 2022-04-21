@@ -15,7 +15,13 @@ export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasF
     readonly route: string = '/api/events/store/types/schemas/{{eventTypeId}}?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: any[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'microserviceId',
+            'eventTypeId',
+        ];
+    }
 
     static use(args?: GenerationSchemasForTypeArguments): [QueryResult<any[]>, PerformQuery<GenerationSchemasForTypeArguments>] {
         return useQuery<any[], GenerationSchemasForType, GenerationSchemasForTypeArguments>(GenerationSchemasForType, args);

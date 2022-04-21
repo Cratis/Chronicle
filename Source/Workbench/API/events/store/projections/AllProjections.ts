@@ -15,7 +15,12 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
     readonly route: string = '/api/events/store/projections?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Projection[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'microserviceId',
+        ];
+    }
 
     static use(args?: AllProjectionsArguments): [QueryResult<Projection[]>, PerformQuery<AllProjectionsArguments>] {
         return useQuery<Projection[], AllProjections, AllProjectionsArguments>(AllProjections, args);

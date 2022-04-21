@@ -12,7 +12,11 @@ export class Microservices extends QueryFor<Microservice[]> {
     readonly route: string = '/api/configuration/microservices';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Microservice[] = [];
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<Microservice[]>, PerformQuery] {
         return useQuery<Microservice[], Microservices>(Microservices);

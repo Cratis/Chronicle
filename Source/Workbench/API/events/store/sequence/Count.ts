@@ -11,7 +11,11 @@ export class Count extends QueryFor<number> {
     readonly route: string = '/api/events/store/sequence/{eventSequenceId}/count';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: number = {} as any;
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<number>, PerformQuery] {
         return useQuery<number, Count>(Count);

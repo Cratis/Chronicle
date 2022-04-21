@@ -12,7 +12,11 @@ export class AllMicroservices extends ObservableQueryFor<Microservice[]> {
     readonly route: string = '/api/compliance/microservices';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Microservice[] = [];
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<Microservice[]>] {
         return useObservableQuery<Microservice[], AllMicroservices>(AllMicroservices);

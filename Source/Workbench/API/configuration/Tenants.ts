@@ -12,7 +12,11 @@ export class Tenants extends QueryFor<Tenant[]> {
     readonly route: string = '/api/configuration/tenants';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Tenant[] = [];
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<Tenant[]>, PerformQuery] {
         return useQuery<Tenant[], Tenants>(Tenants);

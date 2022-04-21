@@ -15,7 +15,12 @@ export class SearchForPeople extends QueryFor<Person[], SearchForPeopleArguments
     readonly route: string = '/api/compliance/gdpr/people/search?query={{query}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Person[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'query',
+        ];
+    }
 
     static use(args?: SearchForPeopleArguments): [QueryResult<Person[]>, PerformQuery<SearchForPeopleArguments>] {
         return useQuery<Person[], SearchForPeople, SearchForPeopleArguments>(SearchForPeople, args);
