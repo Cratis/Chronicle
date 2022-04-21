@@ -1,12 +1,16 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-export type DataReceived<TDataType> = (data: TDataType) => void;
+import { IObservableQueryConnection } from './IObservableQueryConnection';
+import { QueryResult } from './QueryResult';
+
+
+export type DataReceived<TDataType> = (data: QueryResult<TDataType>) => void;
 
 /**
  * Represents the connection for an observable query.
  */
-export class ObservableQueryConnection<TDataType> {
+export class ObservableQueryConnection<TDataType> implements IObservableQueryConnection<TDataType> {
 
     private _socket!: WebSocket;
     private _disconnected = false;
@@ -18,10 +22,7 @@ export class ObservableQueryConnection<TDataType> {
     constructor(private readonly _route: string) {
     }
 
-    /**
-     * Connect to a specific route.
-     * @param {DataReceived<TDataType> dataReceived Callback that will receive the data.
-     */
+    /** @inheritdoc */
     connect(dataReceived: DataReceived<TDataType>) {
         const secure = document.location.protocol.indexOf('https') === 0;
         const url = `${secure ? 'wss' : 'ws'}://${document.location.host}${this._route}`;
@@ -66,9 +67,7 @@ export class ObservableQueryConnection<TDataType> {
         connectSocket();
     }
 
-    /**
-     * Disconnect the connection.
-     */
+    /** @inheritdoc */
     disconnect() {
         console.log(`Disconnecting '${this._route}'`);
         this._disconnected = true;

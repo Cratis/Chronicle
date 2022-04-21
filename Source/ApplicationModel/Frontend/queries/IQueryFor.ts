@@ -12,9 +12,8 @@ import Handlebars from 'handlebars';
 export interface IQueryFor<TDataType, TArguments = {}> {
     readonly route: string;
     readonly routeTemplate: Handlebars.TemplateDelegate;
-
+    readonly requestArguments: string[];
     readonly defaultValue: TDataType;
-    readonly requiresArguments: boolean;
 
     /**
      * Perform the query.
