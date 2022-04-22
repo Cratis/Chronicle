@@ -16,7 +16,7 @@ export type ObserverState = {
     observerId: string;
     name: string;
     type: ObserverType;
-    offset: number;
+    nextEventSequenceNumber: number;
     lastHandled: number;
     runningState: ObserverRunningState;
     currentNamespace: string;

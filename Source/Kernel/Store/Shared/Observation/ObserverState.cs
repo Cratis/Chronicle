@@ -46,9 +46,9 @@ public class ObserverState
     public ObserverType Type { get; set; } = ObserverType.Unknown;
 
     /// <summary>
-    /// Gets or sets the current offset into the event log.
+    /// Gets or sets the expected next event sequence number into the event log.
     /// </summary>
-    public EventSequenceNumber Offset { get; set; } = EventSequenceNumber.First;
+    public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.First;
 
     /// <summary>
     /// Gets or sets the last handled event in the event log, ever. This value will never reset during a rewind.

@@ -100,7 +100,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
             await stream.OnNextAsync(@event);
 
-            State.Offset = @event.Metadata.SequenceNumber + 1;
+            State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
 
             if (setLastHandled)
             {
@@ -108,7 +108,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             }
 
             var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
-            if (State.Offset == nextSequenceNumber)
+            if (State.NextEventSequenceNumber == nextSequenceNumber)
             {
                 State.RunningState = ObserverRunningState.Active;
                 _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
@@ -132,7 +132,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         _streamSubscription = await _stream!.SubscribeAsync(
             (@event, _) => handler(@event),
-            new EventSequenceNumberTokenWithFilter(State.Offset, State.EventTypes));
+            new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes));
 
         // Note: Add a warm up event. The internals of Orleans will not do the producer / consumer handshake only after an event has gone through the
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
