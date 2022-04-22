@@ -28,19 +28,23 @@ public class MongoDBObserversState : IObserversState
             var cursor = Collection.Watch();
             _ = Task.Run(async () =>
             {
-                if (observable.IsDisposed)
-                {
-                    cursor.Dispose();
-                    return;
-                }
 
                 try
                 {
                     while (await cursor.MoveNextAsync())
                     {
+                        if (observable.IsDisposed)
+                        {
+                            cursor.Dispose();
+                            return;
+                        }
+
                         if (!cursor.Current.Any()) continue;
                         var observers = await Collection.FindAsync(_ => true);
-                        observable.OnNext(observers.ToList());
+                        if (!observable.IsDisposed)
+                        {
+                            observable.OnNext(observers.ToList());
+                        }
                     }
                 }
                 catch (Exception ex)
