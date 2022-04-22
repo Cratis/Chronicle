@@ -52,7 +52,7 @@ public class ObserverStorageProvider : IGrainStorage
             Id = key,
             EventSequenceId = eventSequenceId,
             ObserverId = observerId,
-            Offset = EventSequenceNumber.First,
+            NextEventSequenceNumber = EventSequenceNumber.First,
             LastHandled = EventSequenceNumber.First
         };
     }

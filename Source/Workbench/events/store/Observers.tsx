@@ -80,9 +80,9 @@ const columns: IColumn[] = [
         }
     },
     {
-        key: 'offset',
-        name: 'Offset',
-        fieldName: 'offset',
+        key: 'next-event',
+        name: 'Next Event',
+        fieldName: 'nextEventSequenceNumber',
         minWidth: 200,
     },
 ];

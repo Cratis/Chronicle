@@ -43,13 +43,13 @@ public partial class Observer
         }
 
         var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
-        if (State.Offset < nextSequenceNumber)
+        if (State.NextEventSequenceNumber < nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.CatchingUp;
             _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
-        if (State.Offset == nextSequenceNumber)
+        if (State.NextEventSequenceNumber == nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.Active;
             _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
