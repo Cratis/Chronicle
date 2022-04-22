@@ -57,4 +57,9 @@ public enum ObserverRunningState
     /// Observer is failed.
     /// </summary>
     Failed = 9,
+
+    /// <summary>
+    /// Observer is at the tail of replay.
+    /// </summary>
+    TailOfReplay = 10,
 }

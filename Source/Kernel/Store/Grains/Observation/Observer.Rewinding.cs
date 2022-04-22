@@ -34,6 +34,8 @@ public partial class Observer
         if (State.Offset > State.LastHandled)
         {
             _logger.OffsetIsAtTail(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+            State.RunningState = ObserverRunningState.TailOfReplay;
+            await WriteStateAsync();
             await Subscribe(State.EventTypes, State.CurrentNamespace);
             return;
         }
@@ -89,6 +91,8 @@ public partial class Observer
 
         if (tail)
         {
+            State.RunningState = ObserverRunningState.TailOfReplay;
+            await WriteStateAsync();
             await UnsubscribeStream();
             if (HasSubscribedObserver)
             {
