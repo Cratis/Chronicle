@@ -1,9 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.Observation;
-using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation;
 
