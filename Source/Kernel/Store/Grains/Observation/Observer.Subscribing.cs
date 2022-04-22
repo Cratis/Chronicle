@@ -65,6 +65,7 @@ public partial class Observer
     {
         _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.CurrentNamespace = ObserverNamespace.NotSet;
+        State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
         await UnsubscribeStream();
     }

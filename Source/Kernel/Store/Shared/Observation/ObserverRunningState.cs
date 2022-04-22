@@ -62,4 +62,9 @@ public enum ObserverRunningState
     /// Observer is at the tail of replay.
     /// </summary>
     TailOfReplay = 10,
+
+    /// <summary>
+    /// Observer is disconnected.
+    /// </summary>
+    Disconnected = 11,
 }
