@@ -25,6 +25,20 @@ import { Rewind } from 'API/events/store/observers/Rewind';
 
 const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
 
+const observerRunningStates: { [key: number]: string; } = {
+    0: 'Unknown',
+    1: 'Subscribing',
+    2: 'Rewinding',
+    3: 'Replaying',
+    4: 'Catching up',
+    5: 'Active',
+    6: 'Paused',
+    7: 'Stopped',
+    8: 'Suspended',
+    9: 'Failed',
+    10: 'Tail of replay'
+};
+
 const columns: IColumn[] = [
     {
         key: 'id',
@@ -50,6 +64,11 @@ const columns: IColumn[] = [
         name: 'State',
         fieldName: 'runningState',
         minWidth: 200,
+        onRender: (item: ObserverState) => {
+            return (
+                <>{observerRunningStates[item.runningState as number]}</>
+            );
+        }
     },
 
 ];
