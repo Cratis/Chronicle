@@ -58,14 +58,17 @@ public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
     /// <param name="requestContext">The request context.</param>
     public void AddAppendedEvent(Guid streamGuid, IEnumerable<AppendedEvent> events, IDictionary<string, object> requestContext)
     {
-        var tenantIdAsString = requestContext[RequestContextKeys.TenantId]?.ToString() ?? TenantId.NotSet.ToString();
-        var tenantId = (TenantId)tenantIdAsString;
+        if (!events.Any())
+        {
+            return;
+        }
+
         var microserviceIdAsString = requestContext[RequestContextKeys.MicroserviceId]?.ToString() ?? MicroserviceId.Unspecified.ToString();
         var microserviceId = (MicroserviceId)microserviceIdAsString;
 
         lock (_eventBatches)
         {
-            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceId, tenantId, requestContext));
+            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceId, events.First().Context.TenantId, requestContext));
         }
     }
 }
