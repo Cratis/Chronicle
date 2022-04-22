@@ -36,7 +36,8 @@ const observerRunningStates: { [key: number]: string; } = {
     7: 'Stopped',
     8: 'Suspended',
     9: 'Failed',
-    10: 'Tail of replay'
+    10: 'Tail of replay',
+    11: 'Disconnected'
 };
 
 const observerTypes: { [key: number]: string; } = {
