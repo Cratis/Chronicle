@@ -28,7 +28,6 @@ public class MongoDBObserversState : IObserversState
             var cursor = Collection.Watch();
             _ = Task.Run(async () =>
             {
-
                 try
                 {
                     while (await cursor.MoveNextAsync())
