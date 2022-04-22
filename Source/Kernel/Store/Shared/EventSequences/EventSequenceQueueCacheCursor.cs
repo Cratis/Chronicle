@@ -104,6 +104,12 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 
     void FindEventsFrom(StreamSequenceToken token)
     {
+        // When the sequence number is -1, it is a warm up event causing it. We don't want to go to the event store to get events.
+        if (token.SequenceNumber == -1)
+        {
+            return;
+        }
+
         var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
         var task = _eventLogStorageProvider.GetFromSequenceNumber((ulong)token.SequenceNumber, _partition, _eventTypes);
