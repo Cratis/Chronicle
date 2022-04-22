@@ -40,6 +40,10 @@ public class ExecutionContextOutgoingCallFilter : IOutgoingGrainCallFilter
             _requestContextManager.Set(RequestContextKeys.CausationId, executionContext.CausationId.ToString());
             _requestContextManager.Set(RequestContextKeys.CausedBy, executionContext.CausedBy.ToString());
         }
+        else
+        {
+            _requestContextManager.Set(RequestContextKeys.MicroserviceId, ExecutionContextManager.GlobalMicroserviceId.ToString());
+        }
         await context.Invoke();
     }
 }
