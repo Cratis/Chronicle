@@ -12,7 +12,7 @@ public class and_has_subscription_to_sequence_stream : given.an_observer_and_two
         await observer.Subscribe(event_types, observer_namespace);
 
         state.RunningState = ObserverRunningState.Active;
-        state.Offset = 1;
+        state.NextEventSequenceNumber = 1;
     }
 
     async Task Because() => await observer.Rewind();
