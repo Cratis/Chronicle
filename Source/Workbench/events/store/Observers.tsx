@@ -192,7 +192,7 @@ export const Observers = () => {
     ];
 
     return (
-        <Stack>
+        <Stack style={{ height: '100%' }}>
             <CommandBar items={commandBarItems} />
 
             <ScrollableDetailsList
