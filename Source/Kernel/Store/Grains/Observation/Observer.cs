@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
@@ -124,6 +126,22 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             await WriteStateAsync();
             await HandleReminderRegistration();
         }
+    }
+
+    async Task SubscribeStream(Func<AppendedEvent, Task> handler)
+    {
+        _streamSubscription = await _stream!.SubscribeAsync(
+            (@event, _) => handler(@event),
+            new EventSequenceNumberTokenWithFilter(State.Offset, State.EventTypes));
+
+        // Note: Add a warm up event. The internals of Orleans will not do the producer / consumer handshake only after an event has gone through the
+        // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
+        const long sequence = -1;
+        var @event = new AppendedEvent(
+            new(new EventSequenceNumber(unchecked((ulong)sequence)), new EventType(EventTypeId.Unknown, 1)),
+            new(EventSourceId.Unspecified, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, _tenantId, CorrelationId.New(), CausationId.System, CausedBy.System, EventObservationState.Initial),
+            new JsonObject());
+        await _stream!.OnNextAsync(@event, new EventSequenceNumberToken());
     }
 
     async Task UnsubscribeStream()

@@ -1,8 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Execution;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.Grains.Observation;
@@ -70,9 +72,7 @@ public partial class Observer
         State.RunningState = ObserverRunningState.Replaying;
         await WriteStateAsync();
 
-        _streamSubscription = await _stream!.SubscribeAsync(
-            (@event, _) => HandleEventForPartitionedObserverWhenReplaying(@event),
-            new EventSequenceNumberTokenWithFilter(State.Offset, State.EventTypes));
+        await SubscribeStream(HandleEventForPartitionedObserverWhenReplaying);
     }
 
     async Task HandleEventForPartitionedObserverWhenReplaying(AppendedEvent @event)

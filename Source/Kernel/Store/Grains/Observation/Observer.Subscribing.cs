@@ -59,10 +59,7 @@ public partial class Observer
 
         State.EventTypes = eventTypes;
         await WriteStateAsync();
-
-        _streamSubscription = await _stream!.SubscribeAsync(
-            HandleEventForPartitionedObserverWhenSubscribing,
-            new EventSequenceNumberTokenWithFilter(State.Offset, eventTypes));
+        await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
     }
 
     /// <inheritdoc/>
@@ -74,7 +71,7 @@ public partial class Observer
         await UnsubscribeStream();
     }
 
-    Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event, StreamSequenceToken token)
+    Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event)
     {
         if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
             State.IsRecoveringPartition(@event.Context.EventSourceId) ||
