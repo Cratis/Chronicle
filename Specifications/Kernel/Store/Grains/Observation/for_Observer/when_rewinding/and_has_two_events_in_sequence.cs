@@ -24,7 +24,7 @@ public class and_has_two_events_in_sequence : given.an_observer_and_two_event_ty
         await observer.Subscribe(event_types, observer_namespace);
         state.RunningState = ObserverRunningState.Active;
 
-        state.Offset = EventSequenceNumber.First + 2;
+        state.NextEventSequenceNumber = EventSequenceNumber.First + 2;
 
         event_source_id = Guid.NewGuid().ToString();
 

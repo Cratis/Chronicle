@@ -10,7 +10,7 @@ public class and_observer_has_been_put_into_rewind_state : given.an_observer_and
 {
     async Task Establish()
     {
-        state.Offset = 42;
+        state.NextEventSequenceNumber = 42;
         state.CurrentNamespace = ObserverNamespace.NotSet;
         await observer.Rewind();
     }

@@ -10,7 +10,7 @@ public class and_observer_is_in_interrupted_replay_state : given.an_observer_and
 {
     void Establish()
     {
-        state.Offset = 42;
+        state.NextEventSequenceNumber = 42;
         state.LastHandled = 43;
         state.CurrentNamespace = ObserverNamespace.NotSet;
         state.RunningState = ObserverRunningState.Replaying;

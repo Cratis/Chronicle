@@ -18,7 +18,7 @@ public class and_event_types_has_changed : given.an_observer_and_two_event_types
     void Establish()
     {
         state.RunningState = ObserverRunningState.Active;
-        state.Offset = 1;
+        state.NextEventSequenceNumber = 1;
         event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)1));
     }
 

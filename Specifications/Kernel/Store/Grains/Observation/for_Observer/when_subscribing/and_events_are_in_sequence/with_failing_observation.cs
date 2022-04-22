@@ -19,8 +19,8 @@ public class with_failing_observation : given.an_observer_and_two_event_types_an
     }
 
     [Fact] void should_set_current_namespace_in_state() => state.CurrentNamespace.ShouldEqual(observer_namespace);
-    [Fact] void should_not_modify_offset() => state.Offset.Value.ShouldEqual(0u);
-    [Fact] void should_not_modify_last_handled() => state.Offset.Value.ShouldEqual(0u);
+    [Fact] void should_not_modify_offset() => state.NextEventSequenceNumber.Value.ShouldEqual(0u);
+    [Fact] void should_not_modify_last_handled() => state.NextEventSequenceNumber.Value.ShouldEqual(0u);
     [Fact] void should_fail_the_partition() => state.IsPartitionFailed(event_source_id).ShouldBeTrue();
     [Fact] void should_register_reminder() => reminder_registry.Verify(_ => _.RegisterOrUpdateReminder(Observer.RecoverReminder, IsAny<TimeSpan>(), IsAny<TimeSpan>()), Once());
 }
