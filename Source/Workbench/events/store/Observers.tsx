@@ -39,6 +39,12 @@ const observerRunningStates: { [key: number]: string; } = {
     10: 'Tail of replay'
 };
 
+const observerTypes: { [key: number]: string; } = {
+    0: 'Unknown',
+    1: 'Client',
+    2: 'Projection'
+};
+
 const columns: IColumn[] = [
     {
         key: 'id',
@@ -54,15 +60,18 @@ const columns: IColumn[] = [
         minWidth: 300,
     },
     {
-        key: 'offset',
-        name: 'Offset',
-        fieldName: 'offset',
+        key: 'type',
+        name: 'Type',
         minWidth: 200,
+        onRender: (item: ObserverState) => {
+            return (
+                <>{observerTypes[item.type as number]}</>
+            );
+        }
     },
     {
         key: 'running-state',
         name: 'State',
-        fieldName: 'runningState',
         minWidth: 200,
         onRender: (item: ObserverState) => {
             return (
@@ -70,7 +79,12 @@ const columns: IColumn[] = [
             );
         }
     },
-
+    {
+        key: 'offset',
+        name: 'Offset',
+        fieldName: 'offset',
+        minWidth: 200,
+    },
 ];
 
 export const Observers = () => {
