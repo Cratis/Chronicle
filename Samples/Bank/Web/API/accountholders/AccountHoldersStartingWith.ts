@@ -15,7 +15,12 @@ export class AccountHoldersStartingWith extends QueryFor<AccountHolder[], Accoun
     readonly route: string = '/api/accountholders/starting-with?filter={{filter}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AccountHolder[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'filter',
+        ];
+    }
 
     static use(args?: AccountHoldersStartingWithArguments): [QueryResult<AccountHolder[]>, PerformQuery<AccountHoldersStartingWithArguments>] {
         return useQuery<AccountHolder[], AccountHoldersStartingWith, AccountHoldersStartingWithArguments>(AccountHoldersStartingWith, args);
