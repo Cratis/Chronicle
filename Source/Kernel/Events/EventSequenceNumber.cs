@@ -15,6 +15,11 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     public static readonly EventSequenceNumber First = 0u;
 
     /// <summary>
+    /// Gets the value when the sequence number is unavailable.
+    /// </summary>
+    public static readonly EventSequenceNumber Unavailable = ulong.MaxValue;
+
+    /// <summary>
     /// Implicitly convert from <see cref="ulong"/> to <see cref="EventSequenceNumber"/>.
     /// </summary>
     /// <param name="value">Value to convert from.</param>
