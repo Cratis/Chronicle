@@ -7,7 +7,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Observation.for_Observer.when_reminde
 
 public class and_two_failed_partitions : given.an_observer_with_event_types_a_reminder_and_two_failing_partitions
 {
-    void Establish() => event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)84));
+    void Establish() => event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)83));
 
     async Task Because() => await observer.ReceiveReminder(Observer.RecoverReminder, new TickStatus());
 

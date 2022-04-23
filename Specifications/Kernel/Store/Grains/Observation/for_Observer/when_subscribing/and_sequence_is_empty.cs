@@ -10,7 +10,7 @@ public class and_sequence_is_empty : given.an_observer_and_two_event_types
 {
     void Establish()
     {
-        event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)0));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult(EventSequenceNumber.Unavailable));
     }
 
     async Task Because() => await observer.Subscribe(event_types, observer_namespace);
