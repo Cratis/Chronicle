@@ -45,7 +45,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var highest = await collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleOrDefaultAsync();
-        return highest?.SequenceNumber ?? EventSequenceNumber.First;
+        return highest?.SequenceNumber ?? EventSequenceNumber.Unavailable;
     }
 
     /// <inheritdoc/>
