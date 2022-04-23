@@ -18,7 +18,7 @@ public class and_has_two_events_in_sequence : given.an_observer_and_two_event_ty
 
     async Task Establish()
     {
-        event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)2));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, event_source_id)).Returns(Task.FromResult((EventSequenceNumber)2));
 
         await observer.Subscribe(event_types, observer_namespace);

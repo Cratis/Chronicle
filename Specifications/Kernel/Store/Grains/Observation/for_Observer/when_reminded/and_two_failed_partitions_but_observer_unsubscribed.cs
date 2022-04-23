@@ -10,7 +10,7 @@ public class and_two_failed_partitions_but_observer_unsubscribed : given.an_obse
 {
     async Task Establish()
     {
-        event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)84));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)83));
         await observer.Unsubscribe();
     }
 

@@ -37,7 +37,6 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
-    IEventSequence? _eventSequence;
     IStreamProvider? _observerStreamProvider;
 
     bool HasSubscribedObserver => State.CurrentNamespace != ObserverNamespace.NotSet;
@@ -63,8 +62,6 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _eventSequenceId = key.EventSequenceId;
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
-
-        _eventSequence = GrainFactory.GetGrain<IEventSequence>(_eventSequenceId, new MicroserviceAndTenant(_microserviceId, _tenantId));
 
         _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
@@ -107,8 +104,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 State.LastHandled = @event.Metadata.SequenceNumber;
             }
 
-            var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
-            if (State.NextEventSequenceNumber == nextSequenceNumber)
+            var nextSequenceNumber = await _eventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
+            if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
             {
                 State.RunningState = ObserverRunningState.Active;
                 _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);

@@ -9,7 +9,7 @@ public class and_observer_is_subscribed : given.an_observer_and_two_event_types
 {
     async Task Establish()
     {
-        event_sequence.Setup(_ => _.GetNextSequenceNumber()).Returns(Task.FromResult((EventSequenceNumber)1));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
         await observer.Subscribe(event_types, observer_namespace);
     }
 

@@ -42,14 +42,16 @@ public partial class Observer
             return;
         }
 
-        var nextSequenceNumber = await _eventSequence!.GetNextSequenceNumber();
+        var lastSequenceNumber = await _eventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
+
+        var nextSequenceNumber = lastSequenceNumber + 1;
         if (State.NextEventSequenceNumber < nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.CatchingUp;
             _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
-        if (State.NextEventSequenceNumber == nextSequenceNumber)
+        if (lastSequenceNumber == EventSequenceNumber.Unavailable || State.NextEventSequenceNumber == nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.Active;
             _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
