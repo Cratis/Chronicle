@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
@@ -27,7 +28,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// The name of the recover reminder.
     /// </summary>
     public const string RecoverReminder = "observer-failure-recovery";
-    readonly IEventSequenceStorageProvider _eventSequenceStorageProvider;
+    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
+    readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<Observer> _logger;
     readonly Dictionary<EventSourceId, StreamSubscriptionHandle<AppendedEvent>> _streamSubscriptionsByEventSourceId = new();
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
@@ -40,17 +42,29 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     IStreamProvider? _observerStreamProvider;
 
     bool HasSubscribedObserver => State.CurrentNamespace != ObserverNamespace.NotSet;
+    IEventSequenceStorageProvider EventSequenceStorageProvider
+    {
+        get
+        {
+            // TODO: This is a temporary work-around till we fix #264 & #265
+            _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
+            return _eventSequenceStorageProviderProvider();
+        }
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
-    /// <param name="eventSequenceStorageProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
+    /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public Observer(
-        IEventSequenceStorageProvider eventSequenceStorageProvider,
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
+        IExecutionContextManager executionContextManager,
         ILogger<Observer> logger)
     {
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
+        _executionContextManager = executionContextManager;
         _logger = logger;
     }
 
@@ -104,7 +118,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 State.LastHandled = @event.Metadata.SequenceNumber;
             }
 
-            var nextSequenceNumber = await _eventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
+            var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
             if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
             {
                 State.RunningState = ObserverRunningState.Active;

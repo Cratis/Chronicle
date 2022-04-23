@@ -31,7 +31,7 @@ public class an_observer : GrainSpecification<ObserverState>
     protected override Grain GetGrainInstance()
     {
         event_sequence_storage_provider = new();
-        observer = new Observer(event_sequence_storage_provider.Object, Mock.Of<ILogger<Observer>>());
+        observer = new Observer(() => event_sequence_storage_provider.Object, Mock.Of<IExecutionContextManager>(), Mock.Of<ILogger<Observer>>());
         observer_namespace = Guid.NewGuid().ToString();
         return observer;
     }
