@@ -33,7 +33,7 @@ public partial class Observer
             await _streamSubscriptionsByEventSourceId[eventSourceId]!.UnsubscribeAsync();
         }
 
-        var tailSequenceNumber = await _eventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes, eventSourceId);
+        var tailSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes, eventSourceId);
 
         _streamSubscriptionsByEventSourceId[eventSourceId] = await _stream!.SubscribeAsync(
             async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, tailSequenceNumber),
@@ -56,7 +56,7 @@ public partial class Observer
 
             if (partitionRecovery.SequenceNumber >= tailSequenceNumber)
             {
-                var actualTailSequenceNumber = await _eventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes, @event.Context.EventSourceId);
+                var actualTailSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes, @event.Context.EventSourceId);
                 if (actualTailSequenceNumber == tailSequenceNumber)
                 {
                     State.PartitionRecovered(@event.Context.EventSourceId);

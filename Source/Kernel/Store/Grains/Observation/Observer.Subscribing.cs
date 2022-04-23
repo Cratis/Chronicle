@@ -42,7 +42,7 @@ public partial class Observer
             return;
         }
 
-        var lastSequenceNumber = await _eventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
+        var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
 
         var nextSequenceNumber = lastSequenceNumber + 1;
         if (State.NextEventSequenceNumber < nextSequenceNumber)
