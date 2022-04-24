@@ -68,19 +68,24 @@ public partial class Observer
         State.RunningState = ObserverRunningState.Replaying;
         await WriteStateAsync();
 
-        await SubscribeStream(HandleEventForPartitionedObserverWhenReplaying);
+        var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventTypes);
+        await SubscribeStream(_ => HandleEventForPartitionedObserverWhenReplaying(_, headSequenceNumber));
     }
 
-    async Task HandleEventForPartitionedObserverWhenReplaying(AppendedEvent @event)
+    async Task HandleEventForPartitionedObserverWhenReplaying(AppendedEvent @event, EventSequenceNumber headSequenceNumber)
     {
         var tail = @event.Metadata.SequenceNumber == State.LastHandled;
-        if (!tail)
+        if (headSequenceNumber == @event.Metadata.SequenceNumber)
         {
-            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.Replay), @event.Content);
+            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.HeadOfReplay), @event.Content);
+        }
+        else if (tail)
+        {
+            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.TailOfReplay), @event.Content);
         }
         else
         {
-            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.TailOfReplay), @event.Content);
+            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.Replay), @event.Content);
         }
 
         await HandleEventForPartitionedObserver(@event);

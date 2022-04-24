@@ -14,12 +14,17 @@ public enum EventObservationState
     Initial = 0,
 
     /// <summary>
+    /// The head of the replay, the first event for the replay.
+    /// </summary>
+    HeadOfReplay = 1,
+
+    /// <summary>
     /// Replay observation, this is not the first time its observed for the observer.
     /// </summary>
-    Replay = 1,
+    Replay = 2,
 
     /// <summary>
     /// The tail of the replay, the last event for the replay.
     /// </summary>
-    TailOfReplay = 2,
+    TailOfReplay = 3,
 }
