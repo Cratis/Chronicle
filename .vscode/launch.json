@@ -42,6 +42,29 @@
             }
         },
         {
+            "name": ".NET Core Launch (Bank Sample - not just my code)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build bank sample",
+            "program": "${workspaceFolder}/Samples/Bank/Main/bin/Debug/net6.0/Main.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Samples/Bank/Main",
+            "stopAtEntry": false,
+            "justMyCode": false,
+            "requireExactSource": false,
+            "symbolOptions": {
+                "searchPaths": [],
+                "searchMicrosoftSymbolServer": false,
+                "searchNuGetOrgSymbolServer": true
+            },
+            "suppressJITOptimizations": true,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+            }
+        },
+        {
             "name": ".NET Core Launch (Bank Sample)",
             "type": "coreclr",
             "request": "launch",
@@ -54,6 +77,7 @@
                 "ASPNETCORE_ENVIRONMENT": "Development"
             }
         },
+
         {
             "name": ".NET Core Attach",
             "type": "coreclr",
@@ -66,6 +90,13 @@
             "configurations": [
                 ".NET Core Launch (Server)",
                 ".NET Core Launch (Bank Sample)"
+            ]
+        },
+        {
+            "name": "Server and Client (Not just my code",
+            "configurations": [
+                ".NET Core Launch (Server - not just my code)",
+                ".NET Core Launch (Bank Sample - not just my code)"
             ]
         }
     ]

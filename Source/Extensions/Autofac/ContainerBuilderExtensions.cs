@@ -41,8 +41,6 @@ public static class ContainerBuilderExtensions
         containerBuilder.RegisterSource<SelfBindingRegistrationSource>();
         containerBuilder.Register(_ => Container!).As<IContainer>().SingleInstance();
         containerBuilder.RegisterBuildCallback(_ => Container = (IContainer)_!);
-
-        containerBuilder.RegisterSource(new SingletonPerTenantRegistrationSource(Types));
         containerBuilder.RegisterSource(new ProviderForRegistrationSource());
 
         return containerBuilder;

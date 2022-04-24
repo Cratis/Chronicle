@@ -1,7 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.EventLogs;
+using Aksio.Cratis.Connections;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.EventSequences;
+using Orleans.Configuration;
 using Orleans.Hosting;
 
 namespace Orleans;
@@ -16,12 +19,38 @@ public static class ClientBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
     /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
-    public static IClientBuilder AddEventLogStream(this IClientBuilder builder)
+    public static IClientBuilder AddEventSequenceStream(this IClientBuilder builder)
     {
         builder.AddPersistentStreams(
-            "event-log",
-            EventLogQueueAdapterFactory.Create,
+            WellKnownProviders.EventSequenceStreamProvider,
+            EventSequenceQueueAdapterFactory.Create,
             _ => { });
         return builder;
+    }
+
+    /// <summary>
+    /// Sets up a outgoing call filter that adds the connection identifier from the connection context to every call.
+    /// </summary>
+    /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
+    /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
+    public static IClientBuilder UseConnectionIdFromConnectionContextForOutgoingCalls(this IClientBuilder builder)
+    {
+        return builder
+                .AddOutgoingGrainCallFilter<ConnectionIdOutgoingCallFilter>()
+                .Configure<ClientConnectionOptions>(options =>
+                {
+                    options.ConfigureConnection(connectionBuilder =>
+                    {
+                        connectionBuilder.Use(next =>
+                        {
+                            return async context =>
+                            {
+                                await next(context);
+
+                                // TODO: Kernel disconnected, we can start retrying
+                            };
+                        });
+                    });
+                });
     }
 }

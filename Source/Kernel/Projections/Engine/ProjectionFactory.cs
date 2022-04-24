@@ -60,7 +60,6 @@ public class ProjectionFactory : IProjectionFactory
             path,
             childrenAccessorProperty,
             model,
-            projectionDefinition.IsPassive,
             projectionDefinition.IsRewindable,
             childProjections);
 

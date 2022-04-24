@@ -22,7 +22,7 @@ public static class JsonElementExtensions
         if (element.ValueKind == JsonValueKind.String)
         {
             var valueAsString = element.GetString();
-            if ((valueAsString?.Contains('+', StringComparison.InvariantCulture) ?? false) &&
+            if ((valueAsString?.Contains('+') ?? false) &&
                 DateTimeOffset.TryParse(valueAsString, out var dateTimeOffsetValue))
             {
                 value = dateTimeOffsetValue;

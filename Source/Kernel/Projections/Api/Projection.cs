@@ -3,4 +3,4 @@
 
 namespace Aksio.Cratis.Events.Projections.Api;
 
-public record Projection(Guid Id, string Name, bool Passive, bool Rewindable, string State, string JobInformation, string Positions);
+public record Projection(ProjectionId Id, ProjectionName Name, ModelName ModelName);

@@ -99,7 +99,6 @@ public static class TypeSymbolExtensions
             {
                 imports.Add(new(targetType.Type, targetType.ImportFromModule));
             }
-
             return targetType.Type;
         }
         return AnyType;
@@ -164,7 +163,7 @@ public static class TypeSymbolExtensions
     /// <returns>True if it is an observable client, false if not.</returns>
     public static bool IsObservableClient(this ITypeSymbol symbol)
     {
-        return symbol.ToDisplayString().StartsWith("Aksio.Cratis.Applications.Queries.ClientObservable<", StringComparison.InvariantCulture);
+        return symbol.ToDisplayString().StartsWith("Aksio.Cratis.Applications.Queries.ClientObservable<");
     }
 
     static string GetTypeName(ITypeSymbol symbol)
@@ -174,7 +173,7 @@ public static class TypeSymbolExtensions
             symbol = arrayTypeSymbol.ElementType;
         }
 
-        if (symbol.Name.Equals("Nullable", StringComparison.InvariantCulture) && symbol is INamedTypeSymbol namedTypeSymbol)
+        if (symbol.Name.Equals("Nullable") && symbol is INamedTypeSymbol namedTypeSymbol)
         {
             symbol = namedTypeSymbol.TypeArguments[0];
         }

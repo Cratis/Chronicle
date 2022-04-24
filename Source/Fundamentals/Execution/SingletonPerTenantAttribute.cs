@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Execution;
 
 /// <summary>
-/// Attribute to adorn types for the IoC hookup to recognize it as a Singleton.
+/// Attribute to adorn types for the IoC hookup to recognize it as a singleton per tenant.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class SingletonPerTenantAttribute : Attribute

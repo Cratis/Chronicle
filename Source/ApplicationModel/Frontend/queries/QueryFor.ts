@@ -4,6 +4,7 @@
 import { IQueryFor } from './IQueryFor';
 import { QueryResult } from "./QueryResult";
 import Handlebars from 'handlebars';
+import { ValidateRequestArguments } from './ValidateRequestArguments';
 
 /**
  * Represents an implementation of {@link IQueryFor}.
@@ -12,17 +13,20 @@ import Handlebars from 'handlebars';
 export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<TDataType, TArguments> {
     abstract readonly route: string;
     abstract readonly routeTemplate: Handlebars.TemplateDelegate;
-
+    abstract get requestArguments(): string[];
     abstract defaultValue: TDataType;
-    abstract requiresArguments: boolean;
 
     /** @inheritdoc */
     async perform(args?: TArguments): Promise<QueryResult<TDataType>> {
         let actualRoute = this.route;
-        if (args && Object.keys(args).length > 0) {
-            actualRoute = this.routeTemplate(args);
+
+        if (!ValidateRequestArguments(this.constructor.name, this.requestArguments, args)) {
+            return new Promise<QueryResult<TDataType>>((resolve) => {
+                resolve(new QueryResult(this.defaultValue, true));
+            });
         }
 
+        actualRoute = this.routeTemplate(args);
         const response = await fetch(actualRoute, {
             method: 'GET',
             headers: {

@@ -9,8 +9,8 @@ namespace Aksio.Cratis.Events.Observation;
 public interface IObservers
 {
     /// <summary>
-    /// Start observing for all observers.
+    /// Register and start observing for all observers.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task StartObserving();
+    Task RegisterAndObserveAll();
 }

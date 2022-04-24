@@ -9,7 +9,7 @@ import { default as styles } from './Navigation.module.scss';
 
 const navStyles: Partial<INavStyles> = {
     root: {
-        width: 158
+        width: 200
     },
     link: {
         whiteSpace: 'normal',
@@ -26,9 +26,20 @@ const groups: INavLinkGroup[] = [
                 route: '/'
             },
             {
-                name: 'Microservices',
+                name: 'Configuration',
                 url: '',
-                route: '/microservices'
+                links: [
+                    {
+                        name: 'Microservices',
+                        url: '',
+                        route: '/configuration/microservices'
+                    },
+                    {
+                        name: 'Tenants',
+                        url: '',
+                        route: '/configuration/tenants'
+                    }
+                ]
             },
             {
                 name: 'GDPR',
@@ -43,26 +54,32 @@ const groups: INavLinkGroup[] = [
                 ]
             },
             {
-                name: 'Events',
+                name: 'Event Store',
                 url: '',
                 links: [
                     {
                         name: 'Types',
                         key: 'types',
                         url: '',
-                        route: '/events/types'
+                        route: '/events/store/types'
                     },
                     {
-                        name: 'EventLog',
-                        key: 'event-log',
+                        name: 'Sequences',
+                        key: 'event-sequence',
                         url: '',
-                        route: '/events/eventlogs'
+                        route: '/events/store/sequence'
+                    },
+                    {
+                        name: 'Observers',
+                        key: 'observers',
+                        url: '',
+                        route: '/events/store/observers'
                     },
                     {
                         name: "Projections",
                         key: 'projections',
                         url: '',
-                        route: '/events/projections'
+                        route: '/events/store/projections'
                     }
                 ]
             }

@@ -9,7 +9,7 @@ import { {{Type}} } from '{{Module}}';
 {{/Imports}}
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('{{Route}}');
+const routeTemplate = Handlebars.compile('{{{Route}}}');
 
 export interface I{{Name}} {
     {{#Properties}}
@@ -30,7 +30,7 @@ export class {{Name}}Validator extends CommandValidator {
 }
 
 export class {{Name}} extends Command<I{{Name}}> implements I{{Name}} {
-    readonly route: string = '{{Route}}';
+    readonly route: string = '{{{Route}}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new {{Name}}Validator();
 

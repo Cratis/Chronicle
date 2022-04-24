@@ -53,7 +53,7 @@ public static class HostBuilderExtensions
                 })
                 .Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.SmallestSize)
 
-                // Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
+                // Todo: Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
                 .AddRazorPages();
 
                 _.AddMvc();

@@ -33,8 +33,9 @@
 
     <!-- Configuration -->
     <ItemGroup>
-        <ProjectReference Include="../Configuration/Shared/Shared.csproj" />
+        <ProjectReference Include="../Configuration/Api/Api.csproj" />
         <ProjectReference Include="../Configuration/Grains/Grains.csproj" />
+        <ProjectReference Include="../Configuration/Shared/Shared.csproj" />
     </ItemGroup>
 
     <!-- Projections -->

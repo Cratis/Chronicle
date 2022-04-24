@@ -11,12 +11,12 @@ or .NET 6. The **EventId** must be unique within every class, its a sequential n
 Below is an example:
 
 ```csharp
-    public static class EventLogLoggerMessages
-    {
-        [LoggerMessage(0, LogLevel.Information, "Committing event with '{SequenceNumber}' as sequence number")]
-        internal static partial void Committing(this ILogger logger, EventType eventType, EventSourceId eventSource, uint sequenceNumber, EventLogId eventLog);
+public static class EventSequenceLogMessages
+{
+    [LoggerMessage(0, LogLevel.Information, "Committing event with '{SequenceNumber}' as sequence number into sequence {Sequence}")]
+    internal static partial void Committing(this ILogger logger, EventType eventType, EventSourceId eventSource, uint sequenceNumber, EventSequenceId sequence);
 
-        [LoggerMessage(1, LogLevel.Error, "Problem committing event to storage")]
-        internal static partial void CommitFailure(this ILogger logger, Exception exception);
-    }
+    [LoggerMessage(1, LogLevel.Error, "Problem committing event to storage")]
+    internal static partial void CommitFailure(this ILogger logger, Exception exception);
+}
 ```

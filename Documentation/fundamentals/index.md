@@ -4,5 +4,6 @@ Fundamentals is a [package](https://www.nuget.org/packages/Aksio.Cratis.Fundamen
 
 | Topic | Description |
 | ------- | ----------- |
+| [Configuration](./configuration.md) | How the configuration system is setup |
 | [Concepts](./concepts.md) | What are concepts and how to work with them. |
 | [Types](./types.md) | How to work with the type discovery mechanism. |

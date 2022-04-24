@@ -21,7 +21,6 @@ public class when_getting_key_resolver_for_event_type : Specification
             string.Empty,
             string.Empty,
             new Model(string.Empty, new JsonSchema()),
-            false,
             true,
             Array.Empty<IProjection>());
         projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]

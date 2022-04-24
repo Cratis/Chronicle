@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.Grains.Observation;
+using Aksio.Cratis.Events.Store.Grains.Connections;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Configuration;
 
@@ -25,12 +25,12 @@ public static class SiloBuilderExtensions
             {
                 connectionBuilder.Use(next =>
                 {
-                    var connectedClients = connectionBuilder.ApplicationServices.GetService<IConnectedClients>()!;
+                    var connectedClients = connectionBuilder.ApplicationServices.GetService<IGrainFactory>()!.GetGrain<IConnectedClients>(Guid.Empty);
                     return async context =>
                     {
-                        await connectedClients.OnClientConnected(context);
+                        await connectedClients.OnClientConnected(context.ConnectionId);
                         await next(context);
-                        await connectedClients.OnClientDisconnected(context);
+                        await connectedClients.OnClientDisconnected(context.ConnectionId);
                     };
                 });
             });

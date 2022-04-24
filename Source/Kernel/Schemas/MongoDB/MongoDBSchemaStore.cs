@@ -11,11 +11,11 @@ namespace Aksio.Cratis.Events.Schemas.MongoDB;
 /// <summary>
 /// Represents an implementation of <see cref="ISchemaStore"/>.
 /// </summary>
-[Singleton]
+[SingletonPerMicroservice]
 public class MongoDBSchemaStore : ISchemaStore
 {
     const string SchemasCollection = "schemas";
-    readonly IMongoCollection<EventSchemaMongoDB> _collection;
+    readonly ISharedDatabase _sharedDatabase;
     Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
 
     /// <summary>
@@ -24,7 +24,7 @@ public class MongoDBSchemaStore : ISchemaStore
     /// <param name="sharedDatabase">The <see cref="ISharedDatabase"/>.</param>
     public MongoDBSchemaStore(ISharedDatabase sharedDatabase)
     {
-        _collection = sharedDatabase.GetCollection<EventSchemaMongoDB>(SchemasCollection);
+        _sharedDatabase = sharedDatabase;
     }
 
     /// <inheritdoc/>
@@ -40,11 +40,16 @@ public class MongoDBSchemaStore : ISchemaStore
         schema.SetDisplayName(friendlyName);
         schema.SetGeneration(type.Generation);
 
-        var eventSchema = new EventSchema(type, schema).ToMongoDB();
-
-        await _collection.ReplaceOneAsync(
-            _ => _.Id == eventSchema.Id,
-            eventSchema,
+        var eventSchema = new EventSchema(type, schema);
+        if (!_schemasByTypeAndGeneration.ContainsKey(type.Id))
+        {
+            _schemasByTypeAndGeneration[type.Id] = new();
+        }
+        _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
+        var mongoEventSchema = eventSchema.ToMongoDB();
+        await GetCollection().ReplaceOneAsync(
+            _ => _.Id == mongoEventSchema.Id,
+            mongoEventSchema,
             new ReplaceOptions { IsUpsert = true });
     }
 
@@ -53,7 +58,7 @@ public class MongoDBSchemaStore : ISchemaStore
     {
         await PopulateIfNotPopulated();
 
-        var result = await _collection.FindAsync(_ => true);
+        var result = await GetCollection().FindAsync(_ => true);
         var schemas = await result.ToListAsync();
         return schemas
             .GroupBy(_ => _.EventType)
@@ -64,9 +69,9 @@ public class MongoDBSchemaStore : ISchemaStore
     public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
     {
         await PopulateIfNotPopulated();
+        var collection = GetCollection();
         var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
-        var all = _collection.Find(_ => _.EventType == eventType.Id.Value).ToList();
-        var result = await _collection.FindAsync(filter);
+        var result = await collection.FindAsync(filter);
         var schemas = await result.ToListAsync();
         return schemas
             .OrderBy(_ => _.Generation)
@@ -84,7 +89,7 @@ public class MongoDBSchemaStore : ISchemaStore
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = await _collection.FindAsync(filter);
+        var result = await GetCollection().FindAsync(filter);
         var schemas = await result.ToListAsync();
         _schemasByTypeAndGeneration[type] = schemas.ToDictionary(_ => (EventGeneration)_.Generation, _ => _.ToEventSchema());
 
@@ -101,10 +106,12 @@ public class MongoDBSchemaStore : ISchemaStore
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = await _collection.FindAsync(filter);
+        var result = await GetCollection().FindAsync(filter);
         var schemas = await result.ToListAsync();
         return schemas.Count == 1;
     }
+
+    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(SchemasCollection);
 
     FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),
@@ -120,7 +127,7 @@ public class MongoDBSchemaStore : ISchemaStore
 
     async Task Populate()
     {
-        var findResult = await _collection.FindAsync(_ => true);
+        var findResult = await GetCollection().FindAsync(_ => true);
         var allSchemas = await findResult.ToListAsync();
 
         _schemasByTypeAndGeneration =

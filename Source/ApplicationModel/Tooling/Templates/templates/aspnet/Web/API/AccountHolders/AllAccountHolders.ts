@@ -12,7 +12,11 @@ export class AllAccountHolders extends QueryFor<AccountHolder[]> {
     readonly route: string = '/api/accountholders';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AccountHolder[] = [];
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<AccountHolder[]>, PerformQuery] {
         return useQuery<AccountHolder[], AllAccountHolders>(AllAccountHolders);

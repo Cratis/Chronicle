@@ -4,15 +4,18 @@
 namespace Aksio.Cratis.Configuration;
 
 /// <summary>
-/// Represents the storage configuration for all <see cref="StorageType">storage types</see>.
+/// Represents the storage configuration for all microservices.
 /// </summary>
 [Configuration]
-public class Storage : Dictionary<string, StorageType>
+public class Storage
 {
     /// <summary>
-    /// Get a specific <see cref="StorageType"/>.
+    /// The storage configuration for the cluster.
     /// </summary>
-    /// <param name="storageType">Type of storage to get.</param>
-    /// <returns><see cref="StorageType"/> instance.</returns>
-    public StorageType Get(string storageType) => this[storageType];
+    public StorageType Cluster { get; init; } = new();
+
+    /// <summary>
+    /// The storage configuration for all microservices.
+    /// </summary>
+    public StorageForMicroservices Microservices { get; init; } = new();
 }

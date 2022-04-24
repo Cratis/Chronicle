@@ -12,6 +12,11 @@ namespace Aksio.Cratis.Extensions.Orleans.Execution;
 public static class RequestContextKeys
 {
     /// <summary>
+    /// The microservice identifier key.
+    /// </summary>
+    public const string MicroserviceId = "MicroserviceId";
+
+    /// <summary>
     /// The tenant identifier key.
     /// </summary>
     public const string TenantId = "TenantId";

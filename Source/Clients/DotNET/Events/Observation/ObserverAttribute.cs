@@ -20,16 +20,16 @@ public sealed class ObserverAttribute : Attribute
     /// <summary>
     /// Gets the unique identifier for an event log.
     /// </summary>
-    public EventLogId EventLogId { get; } = Guid.Empty;
+    public EventSequenceId EventSequenceId { get; } = EventSequenceId.Log;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ObserverAttribute"/>.
     /// </summary>
     /// <param name="observerIdAsString">Unique identifier as string.</param>
-    /// <param name="eventLogIdAsString">Optional eventLog identifier as string.</param>
-    public ObserverAttribute(string observerIdAsString, string? eventLogIdAsString = null)
+    /// <param name="eventSequenceIdAsString">Optional <see cref="EventSequenceId">event sequence identifier</see> as string.</param>
+    public ObserverAttribute(string observerIdAsString, string? eventSequenceIdAsString = null)
     {
         ObserverId = observerIdAsString;
-        if (eventLogIdAsString != null) EventLogId = eventLogIdAsString;
+        if (eventSequenceIdAsString != null) EventSequenceId = eventSequenceIdAsString;
     }
 }

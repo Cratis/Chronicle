@@ -282,8 +282,8 @@ public class PropertyPath
     public override string ToString() => Path;
 
     /// <inheritdoc/>
-    public override bool Equals(object? obj) => (obj as PropertyPath)?.Path.Equals(Path, StringComparison.InvariantCulture) ?? false;
+    public override bool Equals(object? obj) => (obj as PropertyPath)?.Path.Equals(Path) ?? false;
 
     /// <inheritdoc/>
-    public override int GetHashCode() => Path.GetHashCode(StringComparison.InvariantCulture);
+    public override int GetHashCode() => Path.GetHashCode();
 }

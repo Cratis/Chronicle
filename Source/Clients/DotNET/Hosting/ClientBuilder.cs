@@ -8,6 +8,8 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Grains.Connections;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
@@ -29,10 +31,8 @@ namespace Aksio.Cratis.Hosting;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
-#pragma warning disable IDE0052 // We will be expanding on this.
     readonly MicroserviceId _microserviceId;
-
-    bool _inSilo;
+    bool _inKernel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
@@ -40,6 +40,7 @@ public class ClientBuilder : IClientBuilder
     /// <param name="microserviceId">Microservice identifier.</param>
     public ClientBuilder(MicroserviceId microserviceId)
     {
+        ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
         _microserviceId = microserviceId;
     }
 
@@ -54,9 +55,10 @@ public class ClientBuilder : IClientBuilder
     }
 
     /// <inheritdoc/>
-    public IClientBuilder InSilo()
+    public IClientBuilder InKernel()
     {
-        _inSilo = true;
+        ExecutionContextManager.SetKernelMode();
+        _inKernel = true;
         return this;
     }
 
@@ -79,7 +81,7 @@ public class ClientBuilder : IClientBuilder
             .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
 
-        if (_inSilo)
+        if (_inKernel)
         {
             return;
         }
@@ -123,10 +125,10 @@ public class ClientBuilder : IClientBuilder
             logger?.ConfiguringKernelConnection();
             var orleansBuilder = new OrleansClientBuilder()
                 .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
-                .AddEventLogStream()
-                .AddSimpleMessageStreamProvider("observer-handlers")
+                .AddEventSequenceStream()
+                .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider)
                 .UseExecutionContext()
-                .AddOutgoingGrainCallFilter<ConnectionIdOutputCallFilter>()
+                .UseConnectionIdFromConnectionContextForOutgoingCalls()
                 .ConfigureServices(services => services
                     .AddSingleton<IConnectionManager>(connectionManager)
                     .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
@@ -142,6 +144,11 @@ public class ClientBuilder : IClientBuilder
                 return true;
             }).Wait();
             logger?.ConnectedToKernel();
+
+#pragma warning disable CA2008
+            orleansClient
+                .GetGrain<IConnectedClients>(Guid.Empty)
+                .GetLastConnectedClientConnectionId().ContinueWith(_ => ConnectionManager.InternalConnectionId = _.Result);
 
             return orleansClient;
         });

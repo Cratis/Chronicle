@@ -12,7 +12,11 @@ export class AllAccounts extends ObservableQueryFor<DebitAccount[]> {
     readonly route: string = '/api/accounts/debit';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: DebitAccount[] = [];
-    readonly requiresArguments: boolean = false;
+
+    get requestArguments(): string[] {
+        return [
+        ];
+    }
 
     static use(): [QueryResult<DebitAccount[]>] {
         return useObservableQuery<DebitAccount[], AllAccounts>(AllAccounts);

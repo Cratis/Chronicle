@@ -10,4 +10,4 @@ namespace Aksio.Cratis.Events.Projections;
 /// </summary>
 /// <param name="Name">Name of the model.</param>
 /// <param name="Schema">The <see cref="JsonSchema"/> for the model.</param>
-public record Model(string Name, JsonSchema Schema);
+public record Model(ModelName Name, JsonSchema Schema);

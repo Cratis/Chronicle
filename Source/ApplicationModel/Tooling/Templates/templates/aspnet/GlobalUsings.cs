@@ -12,6 +12,7 @@ global using Aksio.Cratis.Events.Observation;
 global using Aksio.Cratis.Events.Projections;
 global using Aksio.Cratis.Events.Store;
 global using Aksio.Cratis.Integration;
+global using Aksio.Cratis.Models;
 global using AutoMapper;
 global using Microsoft.AspNetCore.Mvc;
 global using MongoDB.Driver;

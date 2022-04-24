@@ -24,7 +24,7 @@ public class ObserversService : IHostedService
     /// <inheritdoc/>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await _observers.StartObserving();
+        await _observers.RegisterAndObserveAll();
     }
 
     /// <inheritdoc/>

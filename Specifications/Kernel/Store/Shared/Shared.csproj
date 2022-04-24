@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Events.Store.Shared.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Events.Store</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../../Source/Kernel/Store/Shared/Shared.csproj"/>
+    </ItemGroup>
+
+</Project>

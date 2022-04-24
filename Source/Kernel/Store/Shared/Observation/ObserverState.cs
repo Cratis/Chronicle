@@ -26,22 +26,192 @@ public class ObserverState
     public IEnumerable<EventType> EventTypes { get; set; } = Array.Empty<EventType>();
 
     /// <summary>
-    /// Gets or sets the <see cref="EventLogId"/> the state is for.
+    /// Gets or sets the <see cref="EventSequenceId"/> the state is for.
     /// </summary>
-    public EventLogId EventLogId { get; set; } = EventLogId.Unspecified;
+    public EventSequenceId EventSequenceId { get; set; } = EventSequenceId.Unspecified;
 
     /// <summary>
-    /// Gets or sets the <see cref="EventLogId"/> the state is for.
+    /// Gets or sets the <see cref="EventSequenceId"/> the state is for.
     /// </summary>
     public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
 
     /// <summary>
-    /// Gets or sets the current offset into the event log.
+    /// Gets or sets a friendly name for the observer.
     /// </summary>
-    public EventLogSequenceNumber Offset { get; set; } = EventLogSequenceNumber.First;
+    public ObserverName Name { get; set; } = ObserverName.NotSpecified;
+
+    /// <summary>
+    /// Gets or sets the <see cref="ObserverType"/>.
+    /// </summary>
+    public ObserverType Type { get; set; } = ObserverType.Unknown;
+
+    /// <summary>
+    /// Gets or sets the expected next event sequence number into the event log.
+    /// </summary>
+    public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.First;
 
     /// <summary>
     /// Gets or sets the last handled event in the event log, ever. This value will never reset during a rewind.
     /// </summary>
-    public EventLogSequenceNumber LastHandled { get; set; } = EventLogSequenceNumber.First;
+    public EventSequenceNumber LastHandled { get; set; } = EventSequenceNumber.First;
+
+    /// <summary>
+    /// Gets or sets the running state.
+    /// </summary>
+    public ObserverRunningState RunningState { get; set; } = ObserverRunningState.New;
+
+    /// <summary>
+    /// The current namespace we want to target stream to.
+    /// </summary>
+    public ObserverNamespace CurrentNamespace { get; set; } = ObserverNamespace.NotSet;
+
+    /// <summary>
+    /// Gets or sets the failed partitions for the observer.
+    /// </summary>
+    public IEnumerable<FailedObserverPartition> FailedPartitions
+    {
+        get => _failedPartitions;
+        set => _failedPartitions = new(value);
+    }
+
+    /// <summary>
+    /// Gets or sets the failed partitions for the observer.
+    /// </summary>
+    public IEnumerable<RecoveringFailedObserverPartition> RecoveringPartitions
+    {
+        get => _partitionsBeingRecovered;
+        set => _partitionsBeingRecovered = new(value);
+    }
+
+    /// <summary>
+    /// Gets whether or not there are any failed partitions.
+    /// </summary>
+    public bool HasFailedPartitions => _failedPartitions.Count > 0;
+
+    /// <summary>
+    /// Gets whether or not there are any partitions being recovered.
+    /// </summary>
+    public bool IsRecoveringAnyPartition => _partitionsBeingRecovered.Count > 0;
+
+    List<FailedObserverPartition> _failedPartitions = new();
+    List<RecoveringFailedObserverPartition> _partitionsBeingRecovered = new();
+
+    /// <summary>
+    /// Fail a partition. If the partition is already failed, it will update it with the details.
+    /// </summary>
+    /// <param name="eventSourceId">The partition to fail.</param>
+    /// <param name="sequenceNumber">Sequence number it failed at.</param>
+    /// <param name="messages">Messages describing the failure.</param>
+    /// <param name="stackTrace">Stack trace, if any.</param>
+    public void FailPartition(EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, string[] messages, string stackTrace)
+    {
+        var partition = _failedPartitions.Find(_ => _.EventSourceId == eventSourceId);
+        if (partition is null)
+        {
+            partition = new();
+            _failedPartitions.Add(partition);
+        }
+        partition.EventSourceId = eventSourceId;
+        partition.SequenceNumber = sequenceNumber;
+        partition.Messages = messages;
+        partition.StackTrace = stackTrace;
+        AddAttemptToFailedPartition(eventSourceId);
+    }
+
+    /// <summary>
+    /// Start the recovery of a failed partition.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to start recovery on.</param>
+    /// <remarks>If the partition is not failed, it will not register it for recovering.</remarks>
+    public void StartRecoveringPartition(EventSourceId eventSourceId)
+    {
+        if (!IsPartitionFailed(eventSourceId) || IsRecoveringPartition(eventSourceId))
+        {
+            return;
+        }
+
+        var failedPartition = GetFailedPartition(eventSourceId);
+        _partitionsBeingRecovered.Add(new()
+        {
+            EventSourceId = eventSourceId,
+            SequenceNumber = failedPartition.SequenceNumber,
+            StartedRecoveryAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Check whether or not a partition is being recovered.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to check.</param>
+    /// <returns>True if being recovered, false if not.</returns>
+    public bool IsRecoveringPartition(EventSourceId eventSourceId) => _partitionsBeingRecovered.Any(_ => _.EventSourceId == eventSourceId);
+
+    /// <summary>
+    /// Recover a failed partition.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to recover.</param>
+    public void PartitionRecovered(EventSourceId eventSourceId)
+    {
+        var partition = _failedPartitions.Find(_ => _.EventSourceId == eventSourceId);
+        if (partition is not null)
+        {
+            _failedPartitions.Remove(partition);
+        }
+        var recoveringPartition = _partitionsBeingRecovered.Find(_ => _.EventSourceId == eventSourceId);
+        if (recoveringPartition is not null)
+        {
+            _partitionsBeingRecovered.Remove(recoveringPartition);
+        }
+    }
+
+    /// <summary>
+    /// Get the recovery information for a partition being recovered.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to get for.</param>
+    /// <returns>Recovery information.</returns>
+    public RecoveringFailedObserverPartition GetPartitionRecovery(EventSourceId eventSourceId) => _partitionsBeingRecovered.Find(_ => _.EventSourceId == eventSourceId);
+
+    /// <summary>
+    /// Check whether or not a partition is failed.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to check.</param>
+    /// <returns>True if failed, false if not.</returns>
+    public bool IsPartitionFailed(EventSourceId eventSourceId) => _failedPartitions.Any(_ => _.EventSourceId == eventSourceId);
+
+    /// <summary>
+    /// Gets a failed partition by its partition identifier.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to get.</param>
+    /// <returns>The failed partition.</returns>
+    public FailedObserverPartition GetFailedPartition(EventSourceId eventSourceId) => _failedPartitions.Find(_ => _.EventSourceId == eventSourceId);
+
+    /// <summary>
+    /// Add an attempt to a failed partition.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to add to.</param>
+    public void AddAttemptToFailedPartition(EventSourceId eventSourceId)
+    {
+        var partition = _failedPartitions.Find(_ => _.EventSourceId == eventSourceId);
+        if (partition is not null)
+        {
+            partition.Attempts++;
+            partition.LastAttempt = DateTimeOffset.UtcNow;
+        }
+    }
+
+    /// <summary>
+    /// Clear any failed partitions.
+    /// </summary>
+    public void ClearFailedPartitions()
+    {
+        _failedPartitions.Clear();
+    }
+
+    /// <summary>
+    /// Clear any recovering partitions.
+    /// </summary>
+    public void ClearRecoveringPartitions()
+    {
+        _partitionsBeingRecovered.Clear();
+    }
 }

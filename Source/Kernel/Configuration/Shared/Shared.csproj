@@ -6,5 +6,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../../../Fundamentals/Fundamentals.csproj" />
+        <ProjectReference Include="../../../Extensions/Orleans/Orleans.csproj"/>
     </ItemGroup>
 </Project>

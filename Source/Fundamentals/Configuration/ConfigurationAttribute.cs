@@ -11,9 +11,9 @@ namespace Aksio.Cratis.Configuration;
 public sealed class ConfigurationAttribute : Attribute
 {
     /// <summary>
-    /// Gets the name of the configuration file.
+    /// Gets the name of the configuration.
     /// </summary>
-    public string FileName { get; }
+    public string Name { get; }
 
     /// <summary>
     /// Gets a value indicating whether or not the file is optional.
@@ -21,18 +21,18 @@ public sealed class ConfigurationAttribute : Attribute
     public bool Optional { get; }
 
     /// <summary>
-    /// Check whether or not the FileName is set.
+    /// Check whether or not the Name is set.
     /// </summary>
-    public bool FileNameSet => !string.IsNullOrEmpty(FileName);
+    public bool NameSet => !string.IsNullOrEmpty(Name);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationAttribute"/> class.
     /// </summary>
-    /// <param name="fileName">Optional name of the configuration file.</param>
+    /// <param name="name">Optional name of the configuration.</param>
     /// <param name="optional">Whether or not the file is optional - default = false.</param>
-    public ConfigurationAttribute(string fileName = "", bool optional = false)
+    public ConfigurationAttribute(string name = "", bool optional = false)
     {
-        FileName = fileName;
+        Name = name;
         Optional = optional;
     }
 }

@@ -25,20 +25,20 @@ public class MongoDBReminderTable : IReminderTable
     const string ServiceIdProperty = "serviceId";
 
     readonly JsonSerializerSettings _serializerSettings;
-    readonly ISharedDatabase _database;
+    readonly IClusterDatabase _database;
     readonly IOptions<ClusterOptions> _clusterOptions;
     readonly ILogger<MongoDBReminderTable> _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EventLogPubSubStore"/> class.
+    /// Initializes a new instance of the <see cref="MongoDBReminderTable"/> class.
     /// </summary>
-    /// <param name="database"><see cref="ISharedDatabase"/> to keep state in.</param>
+    /// <param name="database"><see cref="IClusterDatabase"/> to keep state in.</param>
     /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for resolving grains during serialization.</param>
     /// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public MongoDBReminderTable(
-        ISharedDatabase database,
+        IClusterDatabase database,
         ITypeResolver typeResolver,
         IGrainFactory grainFactory,
         IOptions<ClusterOptions> clusterOptions,
@@ -128,7 +128,7 @@ public class MongoDBReminderTable : IReminderTable
         try
         {
             var json = JsonConvert.SerializeObject(entry, _serializerSettings);
-            json = json.Replace("\"$", "\"__", StringComparison.InvariantCulture);
+            json = json.Replace("\"$", "\"__");
             var filter = GetKeyFilterFor(key);
             var bson = BsonDocument.Parse(json);
             var hash = (long)entry.GrainRef.GetUniformHashCode();
@@ -153,7 +153,7 @@ public class MongoDBReminderTable : IReminderTable
     {
         document.Remove(GrainHashProperty);
         var json = document.ToJson();
-        json = json.Replace("\"__", "\"$", StringComparison.InvariantCulture);
+        json = json.Replace("\"__", "\"$");
         return JsonConvert.DeserializeObject<ReminderEntry>(json, _serializerSettings)!;
     }
 

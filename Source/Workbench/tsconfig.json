@@ -11,6 +11,9 @@
     },
     "references": [
         {
+            "path": "../ApplicationModel/Frontend/tsconfig.json"
+        },
+        {
             "path": "../Node/Fundamentals/tsconfig.json"
         },
         {
@@ -19,6 +22,7 @@
     ],
     "exclude": [
         "wwwroot",
+        "dist",
         "**/for_*/**"
     ]
 }
