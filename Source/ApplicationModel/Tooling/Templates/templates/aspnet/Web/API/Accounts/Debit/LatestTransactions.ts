@@ -15,7 +15,12 @@ export class LatestTransactions extends QueryFor<DebitAccountLatestTransactions,
     readonly route: string = '/api/accounts/debit/latest-transactions/{{accountId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: DebitAccountLatestTransactions = {} as any;
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'accountId',
+        ];
+    }
 
     static use(args?: LatestTransactionsArguments): [QueryResult<DebitAccountLatestTransactions>, PerformQuery<LatestTransactionsArguments>] {
         return useQuery<DebitAccountLatestTransactions, LatestTransactions, LatestTransactionsArguments>(LatestTransactions, args);

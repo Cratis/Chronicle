@@ -15,7 +15,12 @@ export class StartingWith extends QueryFor<DebitAccount[], StartingWithArguments
     readonly route: string = '/api/accounts/debit/starting-with?filter={{filter}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: DebitAccount[] = [];
-    readonly requiresArguments: boolean = true;
+
+    get requestArguments(): string[] {
+        return [
+            'filter',
+        ];
+    }
 
     static use(args?: StartingWithArguments): [QueryResult<DebitAccount[]>, PerformQuery<StartingWithArguments>] {
         return useQuery<DebitAccount[], StartingWith, StartingWithArguments>(StartingWith, args);
