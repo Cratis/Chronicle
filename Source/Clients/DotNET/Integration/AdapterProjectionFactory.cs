@@ -44,24 +44,24 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
     public async Task<IAdapterProjectionFor<TModel>> CreateFor<TModel, TExternalModel>(IAdapterFor<TModel, TExternalModel> adapter)
     {
         // TODO: register for all tenants
-        _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
+        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
 
         var projectionBuilder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, _eventTypes, _schemaGenerator);
         adapter.DefineModel(projectionBuilder);
         var projectionDefinition = projectionBuilder
             .WithName($"Adapter: {adapter.GetType().Name} - {typeof(TModel).Name}")
-            .Passive()
             .NotRewindable()
             .Build();
 
         var projections = _clusterClient.GetGrain<IProjections>(Guid.Empty);
         var pipelineDefinition = new ProjectionPipelineDefinition(
             projectionDefinition.Identifier,
-            "c0c0196f-57e3-4860-9e3b-9823cf45df30", // Cratis default
-            Array.Empty<ProjectionResultStoreDefinition>());
+            Array.Empty<ProjectionSinkDefinition>());
 
         await projections.Register(projectionDefinition, pipelineDefinition);
-        var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value);
+
+        // TODO: This has to be registered correctly. We want to be using immediate projections.
+        var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value, new ProjectionKey(ExecutionContextManager.GlobalMicroserviceId, TenantId.Development, Events.Store.EventSequenceId.Log));
         return new AdapterProjectionFor<TModel>(projection);
     }
 }

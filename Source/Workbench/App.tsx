@@ -5,11 +5,13 @@ import { Route, Routes } from 'react-router-dom';
 import { Navigation } from './Navigation';
 
 import { default as styles } from './App.module.scss';
-import { Microservices } from './microservices/Microservices';
+import { Microservices } from './configuration/Microservices';
 import { People } from './GDPR/People';
-import { EventTypes } from './events/EventTypes';
-import { Projections } from './events/Projections';
-import { EventLogs } from './events/EventLogs';
+import { EventTypes } from './events/store/EventTypes';
+import { Projections } from './events/store/Projections';
+import { EventSequences } from './events/store/EventSequences';
+import { Observers } from './events/store/Observers';
+import { Tenants } from './configuration/Tenants';
 
 
 export const App = () => {
@@ -23,11 +25,13 @@ export const App = () => {
                     <Route path="/">
                         Home
                     </Route>
-                    <Route path="/microservices" element={<Microservices/>} />
+                    <Route path="/configuration/microservices" element={<Microservices/>} />
+                    <Route path="/configuration/tenants" element={<Tenants/>} />
                     <Route path="/gdpr/people" element={<People />}/>
-                    <Route path="/events/types" element={<EventTypes />}/>
-                    <Route path="/events/eventlogs" element={<EventLogs />}/>
-                    <Route path="/events/projections" element={<Projections />}/>
+                    <Route path="/events/store/types" element={<EventTypes />}/>
+                    <Route path="/events/store/sequence" element={<EventSequences />}/>
+                    <Route path="/events/store/observers" element={<Observers />}/>
+                    <Route path="/events/store/projections" element={<Projections />}/>
                 </Routes>
             </div>
         </div>

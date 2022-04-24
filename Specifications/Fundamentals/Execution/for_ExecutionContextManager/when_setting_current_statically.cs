@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Execution;
 
 public class when_setting_current_statically : Specification
 {
-    ExecutionContext new_context = new(Guid.NewGuid(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid());
+    ExecutionContext new_context = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid());
 
     public when_setting_current_statically()
     {

@@ -17,19 +17,15 @@ import { useState, useEffect } from 'react';
 export function useObservableQuery<TDataType, TQuery extends IObservableQueryFor<TDataType>, TArguments = {}>(query: Constructor<TQuery>, args?: TArguments): [QueryResult<TDataType>] {
     const queryInstance = new query() as TQuery;
     const [result, setResult] = useState<QueryResult<TDataType>>(new QueryResult(queryInstance.defaultValue, true));
+    const argumentsDependency = queryInstance.requestArguments.map(_ => args?.[_]);
 
     useEffect(() => {
-        if (queryInstance.requiresArguments && !args) {
-            console.log(`Warning: Query '${query.name}' requires arguments. Will not perform the query.`);
-            return;
-        }
-
         const subscription = queryInstance.subscribe(_ => {
             setResult(_ as unknown as QueryResult<TDataType>);
         }, args);
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, argumentsDependency);
 
     return [result];
 }

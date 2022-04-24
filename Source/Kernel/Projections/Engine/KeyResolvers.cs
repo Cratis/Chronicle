@@ -15,7 +15,7 @@ public static class KeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static readonly KeyResolver FromEventSourceId = (IProjectionEventProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers))!;
+    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers))!;
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
@@ -26,7 +26,7 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver FromEventContent(IProjection projection, PropertyPath keyProperty, PropertyPath identifiedByProperty)
     {
-        return (IProjectionEventProvider eventProvider, AppendedEvent @event) =>
+        return (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
             var key = EventValueProviders.FromEventContent(keyProperty)(@event);
             if (!projection.HasParent)
@@ -50,7 +50,7 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver FromParentHierarchy(IProjection projection, PropertyPath parentKeyProperty, PropertyPath identifiedByProperty)
     {
-        return async (IProjectionEventProvider eventProvider, AppendedEvent @event) =>
+        return async (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
             var arrayIndexers = new List<ArrayIndexer>();
             var parentKey = EventValueProviders.FromEventContent(parentKeyProperty)(@event);

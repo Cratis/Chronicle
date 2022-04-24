@@ -23,6 +23,7 @@ We also have [guidance](./guidance/index.md) for how to work with Cratis and oth
 | Topic | Description |
 | ------- | ----------- |
 | [Fundamentals](./fundamentals/index.md) | What is fundamentals and what does it bring to the table. |
+| [Configuration](./fundamentals/configuration.md) | How the configuration system is setup |
 | [Concepts](./fundamentals/concepts.md) | What are concepts and how to work with them. |
 | [Types](./fundamentals/types.md) | How to work with the type discovery mechanism. |
 
@@ -39,7 +40,6 @@ We also have [guidance](./guidance/index.md) for how to work with Cratis and oth
 | Topic | Description |
 | ------- | ----------- |
 | [Inversion of Control](./application-model/ioc.md) | Why and how inversion of control is setup. |
-| [Configuration](./application-model/configuration.md) | How the configuration system is setup |
 | [Logging](./application-model/logging.md) | How logging is setup and how you can leverage it. |
 | [MongoDB](./application-model/mongodb.md) | How to work with MongoDB. |
 | [Queries](./application-model/cqrs/queries.md) | How to work with queries. |

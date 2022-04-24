@@ -32,9 +32,6 @@ public class Projection : IProjection
     public Model Model { get; }
 
     /// <inheritdoc/>
-    public bool IsPassive { get; }
-
-    /// <inheritdoc/>
     public bool IsRewindable { get; }
 
     /// <inheritdoc/>
@@ -63,7 +60,6 @@ public class Projection : IProjection
     /// <param name="path">The qualified path of the projection.</param>
     /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
     /// <param name="model">The target <see cref="Model"/>.</param>
-    /// <param name="passive">Whether or not the projection is a passive projection.</param>
     /// <param name="rewindable">Whether or not the projection is rewindable.</param>
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
@@ -72,14 +68,12 @@ public class Projection : IProjection
         ProjectionPath path,
         PropertyPath childrenPropertyPath,
         Model model,
-        bool passive,
         bool rewindable,
         IEnumerable<IProjection> childProjections)
     {
         Identifier = identifier;
         Name = name;
         Model = model;
-        IsPassive = passive;
         IsRewindable = rewindable;
         Event = FilterEventTypes(_subject);
         Path = path;

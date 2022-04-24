@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Configuration;
 
 /// <summary>
-/// Represents the configuration for a specific storage type.
+/// Represents the configuration for a specific shared storage type.
 /// </summary>
 public record StorageType
 {
@@ -14,12 +14,7 @@ public record StorageType
     public string Type { get; init; } = "Not Configured";
 
     /// <summary>
-    /// The shared database connection configuration.
+    /// Gets the provider type specific connection details.
     /// </summary>
-    public object Shared { get; init; } = string.Empty;
-
-    /// <summary>
-    /// The event store connection configuration per tenant.
-    /// </summary>
-    public IDictionary<string, object> Tenants { get; init; } = new Dictionary<string, object>();
+    public object ConnectionDetails { get; init; } = string.Empty;
 }

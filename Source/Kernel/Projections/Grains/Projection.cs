@@ -7,8 +7,13 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Grains.Observation;
+using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Execution;
 using Orleans;
+using Orleans.Streams;
 using EngineProjection = Aksio.Cratis.Events.Projections.IProjection;
 
 namespace Aksio.Cratis.Events.Projections.Grains;
@@ -19,43 +24,71 @@ namespace Aksio.Cratis.Events.Projections.Grains;
 public class Projection : Grain, IProjection
 {
     readonly IProjectionDefinitions _projectionDefinitions;
+    readonly IProjectionPipelineDefinitions _projectionPipelineDefinitions;
     readonly IProjectionFactory _projectionFactory;
+    readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly IObjectsComparer _objectsComparer;
-    readonly IProjectionEventProviders _projectionEventProviders;
-    readonly IEventLogStorageProvider _eventLogStorageProvider;
+    readonly IEventSequenceStorageProvider _eventProvider;
+    readonly IExecutionContextManager _executionContextManager;
     EngineProjection? _projection;
-    IProjectionEventProvider? _projectionEventProvider;
+    IProjectionPipeline? _pipeline;
+    IObserver? _observer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
     /// </summary>
     /// <param name="projectionDefinitions"><see cref="IProjectionDefinitions"/>.</param>
+    /// <param name="projectionPipelineDefinitions"><see cref="IProjectionPipelineDefinitions"/> for working with pipelines.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
-    /// <param name="projectionEventProviders"><see cref="IProjectionEventProviders"/> in the system.</param>
+    /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating the pipeline for the projection.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventLogStorageProvider"><see cref="IEventLogStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public Projection(
         IProjectionDefinitions projectionDefinitions,
+        IProjectionPipelineDefinitions projectionPipelineDefinitions,
         IProjectionFactory projectionFactory,
-        IProjectionEventProviders projectionEventProviders,
+        IProjectionPipelineFactory projectionPipelineFactory,
         IObjectsComparer objectsComparer,
-        IEventLogStorageProvider eventLogStorageProvider)
+        IEventSequenceStorageProvider eventProvider,
+        IExecutionContextManager executionContextManager)
     {
         _projectionDefinitions = projectionDefinitions;
+        _projectionPipelineDefinitions = projectionPipelineDefinitions;
         _projectionFactory = projectionFactory;
+        _projectionPipelineFactory = projectionPipelineFactory;
         _objectsComparer = objectsComparer;
-        _projectionEventProviders = projectionEventProviders;
-        _eventLogStorageProvider = eventLogStorageProvider;
+        _eventProvider = eventProvider;
+        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        var projectionId = this.GetPrimaryKey();
-        var definition = await _projectionDefinitions.GetFor(projectionId);
-        _projection = await _projectionFactory.CreateFrom(definition);
-        _projectionEventProvider = _projectionEventProviders.GetForType("c0c0196f-57e3-4860-9e3b-9823cf45df30");
+        var projectionId = this.GetPrimaryKey(out var keyAsString);
+        var key = ProjectionKey.Parse(keyAsString);
+
+        // TODO: This is a temporary work-around till we fix #264 & #265
+        _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
+
+        var projectionDefinition = await _projectionDefinitions.GetFor(projectionId);
+        var pipelineDefinition = await _projectionPipelineDefinitions.GetFor(projectionId);
+        _projection = await _projectionFactory.CreateFrom(projectionDefinition);
+        _pipeline = _projectionPipelineFactory.CreateFrom(_projection, pipelineDefinition);
+
+        _observer = GrainFactory.GetGrain<IObserver>(projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+
+        var observerNamespace = new ObserverNamespace(projectionId.ToString());
+        var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
+        var stream = streamProvider.GetStream<AppendedEvent>(projectionId, key);
+        await stream.SubscribeAsync(HandleEvent);
+
+        await _observer.SetMetadata(projectionDefinition.Name.Value, ObserverType.Projection);
+        await _observer.Subscribe(_projection.EventTypes, key.ToString());
     }
+
+    /// <inheritdoc/>
+    public Task Ensure() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task<JsonObject> GetModelInstanceById(EventSourceId eventSourceId)
@@ -64,7 +97,7 @@ public class Projection : Grain, IProjection
         {
             return new JsonObject();
         }
-        var cursor = await _eventLogStorageProvider.GetFromSequenceNumber(EventLogSequenceNumber.First, eventSourceId, _projection.EventTypes);
+        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         var state = new ExpandoObject();
         while (await cursor.MoveNext())
         {
@@ -77,7 +110,7 @@ public class Projection : Grain, IProjection
             {
                 var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, state);
                 var keyResolver = _projection.GetKeyResolverFor(@event.Metadata.Type);
-                var key = await keyResolver(_projectionEventProvider!, @event);
+                var key = await keyResolver(_eventProvider!, @event);
                 var context = new ProjectionEventContext(key, @event, changeset);
 
                 await HandleEventFor(_projection!, context);
@@ -104,6 +137,15 @@ public class Projection : Grain, IProjection
         var jsonObject = JsonNode.Parse(json)!;
         return (jsonObject as JsonObject)!;
     }
+
+    /// <inheritdoc/>
+    public Task Rewind()
+    {
+        _observer?.Rewind();
+        return Task.CompletedTask;
+    }
+
+    Task HandleEvent(AppendedEvent @event, StreamSequenceToken token) => _pipeline?.Handle(@event) ?? Task.CompletedTask;
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
     {

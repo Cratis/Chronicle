@@ -4,7 +4,6 @@
 using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.Grains.Observation;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Types;
 using Orleans;
@@ -50,7 +49,7 @@ public class Observers : IObservers
                                 return new ObserverHandler(
                                     observer.ObserverId,
                                     _.FullName ?? $"{_.Namespace}.{_.Name}",
-                                    observer.EventLogId,
+                                    observer.EventSequenceId,
                                     eventTypes,
                                     new ObserverInvoker(serviceProvider, eventTypes, middlewares, _),
                                     eventSerializer);
@@ -61,25 +60,22 @@ public class Observers : IObservers
     }
 
     /// <inheritdoc/>
-    public async Task StartObserving()
+    public async Task RegisterAndObserveAll()
     {
-        // TODO: Observe for all tenants
-        _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
-        var streamProvider = _clusterClient.GetStreamProvider("observer-handlers");
+        var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         foreach (var handler in _observerHandlers)
         {
-            var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.CurrentConnectionId.Value);
+            var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.ConnectionId);
             var subscription = await stream.SubscribeAsync(async (@event, _) =>
             {
-                // TODO: Establish in the correct context
-                _executionContextManager.Establish("3352d47d-c154-4457-b3fb-8a2efb725113", CorrelationId.New());
+                _executionContextManager.Establish(@event.Context.TenantId, @event.Context.CorrelationId);
                 await handler.OnNext(@event);
             });
 
-            var observer = _clusterClient.GetGrain<IObserver>(handler.ObserverId, keyExtension: handler.EventLogId.ToString());
+            var observers = _clusterClient.GetGrain<Store.Grains.Observation.IClientObservers>(Guid.Empty);
             var eventTypes = handler.EventTypes.ToArray();
-            await observer.Subscribe(eventTypes);
+            await observers.Subscribe(handler.Name, handler.ObserverId, EventSequenceId.Log, eventTypes);
         }
     }
 }

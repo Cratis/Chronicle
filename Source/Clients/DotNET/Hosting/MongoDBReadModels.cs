@@ -89,12 +89,12 @@ public static class MongoDBReadModels
     {
         var configurations = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfigurations>(Guid.Empty);
         var storage = await configurations.GetStorage();
-        var storageType = storage.Get(WellKnownStorageTypes.ReadModels);
         var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
 
-        foreach (var (tenant, config) in storageType.Tenants)
+        foreach (var (tenant, config) in storage.Tenants)
         {
-            var url = new MongoUrl(config.ToString()!);
+            var storageType = config.Get(WellKnownStorageTypes.ReadModels);
+            var url = new MongoUrl(storageType.ConnectionDetails.ToString()!);
             var client = clientFactory.Create(url);
             _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
         }

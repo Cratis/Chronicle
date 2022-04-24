@@ -1,4 +1,5 @@
 <Project>
+    <Import Project="$(MSBuildThisFileDirectory)../Versions.props"/>
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
@@ -17,6 +18,7 @@
         </PackageReference>
 
         <PackageReference Include="moq" Version="4.13.*" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)"/>
 
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
         <PackageReference Include="Aksio.Specifications" Version="2.0.0" />

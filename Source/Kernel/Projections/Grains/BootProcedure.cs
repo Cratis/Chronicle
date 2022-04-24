@@ -29,12 +29,9 @@ public class BootProcedure : IPerformBootProcedure
     /// <inheritdoc/>
     public void Perform()
     {
-        // TODO: Start for all tenants
-        _executionContextManager.Establish(
-            Guid.Parse("3352d47d-c154-4457-b3fb-8a2efb725113"),
-            Guid.NewGuid().ToString());
+        // TODO: Start for all Microservices
+        _executionContextManager.Establish(MicroserviceId.Unspecified);
 
-        var projections = _grainFactory.GetGrain<IProjections>(Guid.Empty);
-        projections.Start();
+        _ = _grainFactory.GetGrain<IProjections>(MicroserviceId.Unspecified);
     }
 }

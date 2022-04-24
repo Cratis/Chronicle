@@ -17,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
         <PackageReference Include="Humanizer" Version="$(Humanizer)" />
         <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(MicrosoftExtensions)" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensions)" />
@@ -30,6 +30,6 @@
         <PackageReference Include="Serilog.Sinks.PeriodicBatching" Version="2.3.0" />
         <PackageReference Include="serilog.aspnetcore" Version="4.0.0" />
         <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.2" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="$(Swashbuckle)" />
     </ItemGroup>
 </Project>

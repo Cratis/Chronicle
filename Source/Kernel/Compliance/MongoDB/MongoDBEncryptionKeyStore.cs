@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Compliance.MongoDB;
 /// </summary>
 public class MongoDBEncryptionKeyStore : IEncryptionKeyStore
 {
-    readonly IMongoCollection<EncryptionKeyForIdentifier> _encryptionKeysCollection;
+    readonly ISharedDatabase _database;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBEncryptionKeyStore"/> class.
@@ -19,13 +19,13 @@ public class MongoDBEncryptionKeyStore : IEncryptionKeyStore
     /// <param name="database"><see cref="ISharedDatabase"/> to use for accessing database.</param>
     public MongoDBEncryptionKeyStore(ISharedDatabase database)
     {
-        _encryptionKeysCollection = database.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
+        _database = database;
     }
 
     /// <inheritdoc/>
     public async Task SaveFor(EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        await _encryptionKeysCollection.ReplaceOneAsync(
+        await GetCollection().ReplaceOneAsync(
             _ => _.Identifier == identifier,
             new EncryptionKeyForIdentifier(identifier, key.Public, key.Private),
             new ReplaceOptions() { IsUpsert = true });
@@ -34,21 +34,21 @@ public class MongoDBEncryptionKeyStore : IEncryptionKeyStore
     /// <inheritdoc/>
     public async Task<bool> HasFor(EncryptionKeyIdentifier identifier)
     {
-        var result = await _encryptionKeysCollection.CountDocumentsAsync(_ => _.Identifier == identifier);
+        var result = await GetCollection().CountDocumentsAsync(_ => _.Identifier == identifier);
         return result == 1;
     }
 
     /// <inheritdoc/>
     public async Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier)
     {
-        var result = await _encryptionKeysCollection.FindAsync(_ => _.Identifier == identifier);
+        var result = await GetCollection().FindAsync(_ => _.Identifier == identifier);
         var key = result.SingleOrDefault();
         ThrowIfMissingEncryptionKey(identifier, key);
         return new(key.PublicKey, key.PrivateKey);
     }
 
     /// <inheritdoc/>
-    public async Task DeleteFor(EncryptionKeyIdentifier identifier) => await _encryptionKeysCollection.DeleteOneAsync(_ => _.Identifier == identifier);
+    public async Task DeleteFor(EncryptionKeyIdentifier identifier) => await GetCollection().DeleteOneAsync(_ => _.Identifier == identifier);
 
     void ThrowIfMissingEncryptionKey(EncryptionKeyIdentifier identifier, EncryptionKeyForIdentifier key)
     {
@@ -57,4 +57,6 @@ public class MongoDBEncryptionKeyStore : IEncryptionKeyStore
             throw new MissingEncryptionKey(identifier);
         }
     }
+
+    IMongoCollection<EncryptionKeyForIdentifier> GetCollection() => _database.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
 }

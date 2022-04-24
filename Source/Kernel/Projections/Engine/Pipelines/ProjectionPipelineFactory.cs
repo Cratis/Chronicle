@@ -4,6 +4,7 @@
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Store;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines;
@@ -13,9 +14,8 @@ namespace Aksio.Cratis.Events.Projections.Pipelines;
 /// </summary>
 public class ProjectionPipelineFactory : IProjectionPipelineFactory
 {
-    readonly IProjectionResultStores _projectionResultStores;
-    readonly IProjectionEventProviders _projectionEventProviders;
-    readonly IProjectionPositions _projectionPositions;
+    readonly IProjectionSinks _projectionSinks;
+    readonly IEventSequenceStorageProvider _eventProvider;
     readonly IObjectsComparer _objectsComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ILoggerFactory _loggerFactory;
@@ -23,23 +23,20 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionPipelineFactory"/> class.
     /// </summary>
-    /// <param name="projectionResultStores"><see cref="IProjectionResultStores"/> in the system.</param>
-    /// <param name="projectionEventProviders"><see cref="IProjectionEventProviders"/> in the system.</param>
-    /// <param name="projectionPositions"><see cref="IProjectionPositions"/> to use.</param>
+    /// <param name="projectionSinks"><see cref="IProjectionSinks"/> in the system.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> in the system.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public ProjectionPipelineFactory(
-        IProjectionResultStores projectionResultStores,
-        IProjectionEventProviders projectionEventProviders,
-        IProjectionPositions projectionPositions,
+        IProjectionSinks projectionSinks,
+        IEventSequenceStorageProvider eventProvider,
         IObjectsComparer objectsComparer,
         IChangesetStorage changesetStorage,
         ILoggerFactory loggerFactory)
     {
-        _projectionResultStores = projectionResultStores;
-        _projectionEventProviders = projectionEventProviders;
-        _projectionPositions = projectionPositions;
+        _projectionSinks = projectionSinks;
+        _eventProvider = eventProvider;
         _objectsComparer = objectsComparer;
         _changesetStorage = changesetStorage;
         _loggerFactory = loggerFactory;
@@ -48,20 +45,20 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// <inheritdoc/>
     public IProjectionPipeline CreateFrom(IProjection projection, ProjectionPipelineDefinition definition)
     {
-        var eventProvider = _projectionEventProviders.GetForType(definition.ProjectionEventProviderTypeId);
-        var handler = new ProjectionPipelineHandler(_objectsComparer, _changesetStorage, _projectionPositions, _loggerFactory.CreateLogger<ProjectionPipelineHandler>());
-        var pipeline = new ProjectionPipeline(
-            projection,
-            eventProvider,
-            handler,
-            new ProjectionPipelineJobs(_projectionPositions, eventProvider, handler, _loggerFactory),
-            _loggerFactory.CreateLogger<ProjectionPipeline>());
-
-        foreach (var resultStoreDefinition in definition.ResultStores)
+        // TODO: This should be taken out when we have the ImmediateProjection support.
+        IProjectionSink sink = default!;
+        if (definition.Sinks.Any())
         {
-            var resultStore = _projectionResultStores.GetForTypeAndModel(resultStoreDefinition.TypeId, projection.Model);
-            pipeline.StoreIn(resultStoreDefinition.ConfigurationId, resultStore);
+            var sinkDefinition = definition.Sinks.First();
+            sink = _projectionSinks.GetForTypeAndModel(sinkDefinition.TypeId, projection.Model);
         }
-        return pipeline;
+
+        return new ProjectionPipeline(
+            projection,
+            _eventProvider,
+            sink,
+            _objectsComparer,
+            _changesetStorage,
+            _loggerFactory.CreateLogger<ProjectionPipeline>());
     }
 }

@@ -11,7 +11,7 @@ public interface IConnectionManager
     /// <summary>
     /// Gets the current connection identifier.
     /// </summary>
-    ConnectionId CurrentConnectionId { get; }
+    string ConnectionId { get; }
 
     /// <summary>
     /// Set the current client connections to be in kernel mode.

@@ -6,7 +6,7 @@ using MongoDB.Driver;
 namespace Aksio.Cratis.MongoDB;
 
 /// <summary>
-/// Defines the common database for event store that goes across all tenants.
+/// Defines the common database for event store that goes across all tenants within a microservice.
 /// </summary>
 public interface ISharedDatabase
 {

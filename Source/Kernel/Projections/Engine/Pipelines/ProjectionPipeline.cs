@@ -1,11 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
-using System.Reactive.Subjects;
-using Aksio.Cratis.Events.Projections.Pipelines.JobSteps;
+using System.Dynamic;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Reactive;
+using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines;
@@ -15,266 +15,86 @@ namespace Aksio.Cratis.Events.Projections.Pipelines;
 /// </summary>
 public class ProjectionPipeline : IProjectionPipeline
 {
-    readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> _resultStores = new();
-    readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, ISubject<AppendedEvent>> _subjectsPerConfiguration = new();
-    readonly ConcurrentDictionary<ProjectionResultStoreConfigurationId, IDisposable> _subscriptionsPerConfiguration = new();
-    readonly IProjectionPipelineHandler _handler;
-    readonly IProjectionPipelineJobs _pipelineJobs;
+    readonly IObjectsComparer _objectsComparer;
+    readonly IChangesetStorage _changesetStorage;
     readonly ILogger<ProjectionPipeline> _logger;
-    readonly BehaviorSubject<ProjectionState> _state = new(ProjectionState.Registering);
-    readonly ObservableCollection<IProjectionPipelineJob> _jobs = new();
-    readonly BehaviorSubject<ProjectionPipelineStatus> _status = new(ProjectionPipelineStatus.Initial);
+    readonly IEventSequenceStorageProvider _eventProvider;
 
     /// <inheritdoc/>
     public IProjection Projection { get; }
 
     /// <inheritdoc/>
-    public IProjectionEventProvider EventProvider { get; }
-
-    /// <inheritdoc/>
-    public IDictionary<ProjectionResultStoreConfigurationId, IProjectionResultStore> ResultStores => _resultStores;
-
-    /// <inheritdoc/>
-    public IObservable<ProjectionState> State => _state;
-
-    /// <inheritdoc/>
-    public IObservable<IReadOnlyDictionary<ProjectionResultStoreConfigurationId, EventLogSequenceNumber>> Positions => _handler.Positions;
-
-    /// <inheritdoc/>
-    public ProjectionState CurrentState => _state.Value;
-
-    /// <inheritdoc/>
-    public IObservableCollection<IProjectionPipelineJob> Jobs => _jobs;
-
-    /// <inheritdoc/>
-    public IObservable<ProjectionPipelineStatus> Status => _status;
+    public IProjectionSink Sink { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
     /// </summary>
     /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
-    /// <param name="eventProvider"><see cref="IProjectionEventProvider"/> to use.</param>
-    /// <param name="handler"><see cref="IProjectionPipelineHandler"/> to use.</param>
-    /// <param name="jobs"><see cref="IProjectionPipelineJobs"/> for creating jobs.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> to use.</param>
+    /// <param name="sink"><see cref="IProjectionSink"/> to use.</param>
+    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
+    /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ProjectionPipeline(
         IProjection projection,
-        IProjectionEventProvider eventProvider,
-        IProjectionPipelineHandler handler,
-        IProjectionPipelineJobs jobs,
+        IEventSequenceStorageProvider eventProvider,
+        IProjectionSink sink,
+        IObjectsComparer objectsComparer,
+        IChangesetStorage changesetStorage,
         ILogger<ProjectionPipeline> logger)
     {
-        EventProvider = eventProvider;
-        _handler = handler;
-        _pipelineJobs = jobs;
+        _eventProvider = eventProvider;
+        Sink = sink;
+        _objectsComparer = objectsComparer;
+        _changesetStorage = changesetStorage;
         Projection = projection;
         _logger = logger;
-
-        if (projection.IsPassive)
-        {
-            _state.OnNext(ProjectionState.Passive);
-        }
-
-        _status.OnNext(new(projection, _status.Value.State, _status.Value.Positions, _status.Value.Jobs));
-        _state.Subscribe(_ => _status.OnNext(new(projection, _, _status.Value.Positions, _status.Value.Jobs)));
-        _handler.Positions.Subscribe(_ => _status.OnNext(new(projection, _status.Value.State, _.ToDictionary(_ => _.Key, _ => _.Value), _status.Value.Jobs)));
-        _jobs.Subscribe(_ => _status.OnNext(new(projection, _status.Value.State, _status.Value.Positions, _)));
     }
 
     /// <inheritdoc/>
-    public async Task Start()
+    public async Task Handle(AppendedEvent @event)
     {
-        if (Projection.IsPassive)
+        if (@event.Context.ObservationState.HasFlag(EventObservationState.HeadOfReplay))
         {
-            _logger.IgnoringOperationForPassive(Projection.Identifier, "Start");
-            return;
+            await Sink.BeginReplay();
         }
 
-        _logger.Starting(Projection.Identifier);
-        _state.OnNext(ProjectionState.CatchingUp);
-        await AddAndRunJobs(_pipelineJobs.Catchup(this));
-        _state.OnNext(ProjectionState.Active);
-
-        await SetupHandling();
-    }
-
-    /// <inheritdoc/>
-    public async Task Pause()
-    {
-        if (Projection.IsPassive)
+        _logger.HandlingEvent(@event.Metadata.SequenceNumber);
+        var correlationId = CorrelationId.New();
+        var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
+        var key = await keyResolver(_eventProvider, @event);
+        _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
+        var initialState = await Sink.FindOrDefault(key);
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, initialState);
+        var context = new ProjectionEventContext(key, @event, changeset);
+        await HandleEventFor(Projection, context);
+        if (changeset.HasChanges)
         {
-            _logger.IgnoringOperationForPassive(Projection.Identifier, "Pause");
-            return;
+            await Sink.ApplyChanges(key, changeset);
+            await _changesetStorage.Save(correlationId, changeset);
+            _logger.SavingResult(@event.Metadata.SequenceNumber);
         }
 
-        _logger.Pausing(Projection.Identifier);
-
-        await StopAllJobs();
-        foreach (var (_, subscription) in _subscriptionsPerConfiguration)
+        if (@event.Context.ObservationState.HasFlag(EventObservationState.TailOfReplay))
         {
-            subscription.Dispose();
-        }
-        await EventProvider.StopProvidingFor(this);
-        _subscriptionsPerConfiguration.Clear();
-        _state.OnNext(ProjectionState.Paused);
-    }
-
-    /// <inheritdoc/>
-    public async Task Resume()
-    {
-        if (Projection.IsPassive)
-        {
-            _logger.IgnoringOperationForPassive(Projection.Identifier, "Resume");
-            return;
-        }
-
-        if (CurrentState == ProjectionState.Active ||
-            CurrentState == ProjectionState.CatchingUp ||
-            CurrentState == ProjectionState.Rewinding)
-        {
-            return;
-        }
-
-        _logger.Resuming(Projection.Identifier);
-        _state.OnNext(ProjectionState.CatchingUp);
-        await AddAndRunJobs(_pipelineJobs.Catchup(this));
-        await SetupHandling();
-        _state.OnNext(ProjectionState.Active);
-    }
-
-    /// <inheritdoc/>
-    public async Task Rewind()
-    {
-        if (Projection.IsPassive)
-        {
-            _logger.IgnoringOperationForPassive(Projection.Identifier, "Rewind");
-            return;
-        }
-        if (!Projection.IsRewindable)
-        {
-            _logger.IgnoringRewind(Projection.Identifier);
-            return;
-        }
-
-        ThrowIfRewindAlreadyInProgress();
-
-        _logger.Rewinding(Projection.Identifier);
-        _state.OnNext(ProjectionState.Rewinding);
-        await AddAndRunJobs(_pipelineJobs.Rewind(this));
-        _state.OnNext(ProjectionState.Active);
-    }
-
-    /// <inheritdoc/>
-    public async Task Rewind(ProjectionResultStoreConfigurationId configurationId)
-    {
-        if (Projection.IsPassive)
-        {
-            _logger.IgnoringOperationForPassive(Projection.Identifier, "Rewind");
-            return;
-        }
-        if (!Projection.IsRewindable)
-        {
-            _logger.IgnoringRewind(Projection.Identifier);
-            return;
-        }
-
-        ThrowIfRewindAlreadyInProgressForConfiguration(configurationId);
-
-        _logger.RewindingForConfiguration(Projection.Identifier, configurationId);
-        _state.OnNext(ProjectionState.Rewinding);
-        await AddAndRunJobs(new[] { _pipelineJobs.Rewind(this, configurationId) });
-        _state.OnNext(ProjectionState.Active);
-    }
-
-    /// <inheritdoc/>
-    public async Task Suspend(string reason)
-    {
-        if (Projection.IsPassive)
-        {
-            _logger.IgnoringOperationForPassive(Projection.Identifier, "Rewind");
-            return;
-        }
-
-        _logger.Suspended(Projection.Identifier, reason);
-        await StopAllJobs();
-        foreach (var (_, subscription) in _subscriptionsPerConfiguration)
-        {
-            subscription.Dispose();
-        }
-        await EventProvider.StopProvidingFor(this);
-        _subscriptionsPerConfiguration.Clear();
-        _state.OnNext(ProjectionState.Suspended);
-    }
-
-    /// <inheritdoc/>
-    public void StoreIn(ProjectionResultStoreConfigurationId configurationId, IProjectionResultStore resultStore)
-    {
-        _resultStores[configurationId] = resultStore;
-        _subjectsPerConfiguration[configurationId] = new ReplaySubject<AppendedEvent>();
-        _handler.InitializeFor(this, configurationId);
-    }
-
-    async Task AddAndRunJobs(IEnumerable<IProjectionPipelineJob> jobs)
-    {
-        foreach (var job in jobs)
-        {
-            _jobs.Add(job);
-        }
-
-        foreach (var job in jobs)
-        {
-            await job.Run();
-            _jobs.Remove(job);
+            await Sink.EndReplay();
         }
     }
 
-    async Task StopAllJobs()
+    async Task HandleEventFor(IProjection projection, ProjectionEventContext context)
     {
-        foreach (var job in _jobs)
+        if (projection.Accepts(context.Event.Metadata.Type))
         {
-            await job.Stop();
+            _logger.Projecting(context.Event.Metadata.SequenceNumber);
+            projection.OnNext(context);
         }
-        _jobs.Clear();
-    }
-
-    async Task SetupHandling()
-    {
-        foreach (var (configurationId, subject) in _subjectsPerConfiguration)
+        else
         {
-            var resultStore = _resultStores[configurationId];
-            await EventProvider.ProvideFor(this, subject);
-
-            if (_subscriptionsPerConfiguration.ContainsKey(configurationId))
-            {
-                _subscriptionsPerConfiguration[configurationId].Dispose();
-                _subscriptionsPerConfiguration.Remove(configurationId, out _);
-            }
-            _subscriptionsPerConfiguration[configurationId] = Projection
-                .FilterEventTypes(subject)
-                .Subscribe(@event => _handler.Handle(@event, this, resultStore, configurationId).Wait());
+            _logger.EventNotAccepted(context.Event.Metadata.SequenceNumber, projection.Name, projection.Path, context.Event.Metadata.Type);
         }
-    }
-
-    void ThrowIfRewindAlreadyInProgress()
-    {
-        if (_jobs.Any(_ => _.Name == ProjectionPipelineJobs.RewindJob))
+        foreach (var child in projection.ChildProjections)
         {
-            throw new RewindAlreadyInProgress(this);
-        }
-    }
-
-    void ThrowIfRewindAlreadyInProgressForConfiguration(ProjectionResultStoreConfigurationId configurationId)
-    {
-        var rewindJob = _jobs.FirstOrDefault(_ => _.Name == ProjectionPipelineJobs.RewindJob);
-        if (rewindJob != default)
-        {
-            foreach (var step in rewindJob.Steps)
-            {
-                if (step is Rewind rewind && rewind.ConfigurationId == configurationId)
-                {
-                    throw new RewindAlreadyInProgressForConfiguration(this, configurationId);
-                }
-            }
+            await HandleEventFor(child, context);
         }
     }
 }

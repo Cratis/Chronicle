@@ -11,9 +11,9 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensions)" />
       <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="$(MicrosoftExtensions)" />
-      <PackageReference Include="NJsonSchema" Version="10.6.6"/>
+      <PackageReference Include="NJsonSchema" Version="$(NJsonSchema)"/>
       <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0"/>
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)"/>
-      <PackageReference Include="System.Reactive" Version="5.0.0" />
+      <PackageReference Include="System.Reactive" Version="$(SystemReactive)" />
     </ItemGroup>
 </Project>

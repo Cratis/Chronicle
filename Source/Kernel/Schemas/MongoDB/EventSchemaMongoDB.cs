@@ -16,7 +16,7 @@ public class EventSchemaMongoDB
     [BsonId]
     public string Id
     {
-        get => $"{EventType}-{Generation}";
+        get => $"{EventType}+{Generation}";
         set
         {
         }

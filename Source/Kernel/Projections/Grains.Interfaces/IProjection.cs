@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Events.Projections.Grains;
 /// <summary>
 /// Defines a projection.
 /// </summary>
-public interface IProjection : IGrainWithGuidKey
+public interface IProjection : IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Get a model instance by its <see cref="EventSourceId">identifier</see>.
@@ -17,4 +17,16 @@ public interface IProjection : IGrainWithGuidKey
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
     /// <returns>A projected model in the form of a <see cref="JsonObject"/>.</returns>
     Task<JsonObject> GetModelInstanceById(EventSourceId eventSourceId);
+
+    /// <summary>
+    /// Ensure the projection exists and is started.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Ensure();
+
+    /// <summary>
+    /// Rewind projection.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Rewind();
 }
