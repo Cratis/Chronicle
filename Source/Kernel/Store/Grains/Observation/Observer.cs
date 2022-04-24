@@ -97,7 +97,9 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         await WriteStateAsync();
     }
 
-    bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) => !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
+    bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) =>
+        State.RunningState != ObserverRunningState.New &&
+        !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
 
     async Task HandleEventForPartitionedObserver(AppendedEvent @event, bool setLastHandled = false)
     {

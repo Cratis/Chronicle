@@ -53,7 +53,8 @@ public class ObserverStorageProvider : IGrainStorage
             EventSequenceId = eventSequenceId,
             ObserverId = observerId,
             NextEventSequenceNumber = EventSequenceNumber.First,
-            LastHandled = EventSequenceNumber.First
+            LastHandled = EventSequenceNumber.First,
+            RunningState = ObserverRunningState.New
         };
     }
 

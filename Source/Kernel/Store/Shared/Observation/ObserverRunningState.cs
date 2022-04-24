@@ -11,7 +11,7 @@ public enum ObserverRunningState
     /// <summary>
     /// Observer is in an unknown state.
     /// </summary>
-    Unknown = 0,
+    New = 0,
 
     /// <summary>
     /// Observer is subscribing.
