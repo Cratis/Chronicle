@@ -74,23 +74,24 @@ public partial class Observer
 
     async Task HandleEventForPartitionedObserverWhenReplaying(AppendedEvent @event, EventSequenceNumber headSequenceNumber)
     {
-        var tail = @event.Metadata.SequenceNumber == State.LastHandled;
+#pragma warning disable RCS1096
+        var state = EventObservationState.Replay;
+
         if (headSequenceNumber == @event.Metadata.SequenceNumber)
         {
-            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.HeadOfReplay), @event.Content);
+            state |= EventObservationState.HeadOfReplay;
         }
-        else if (tail)
+
+        if (@event.Metadata.SequenceNumber == State.LastHandled)
         {
-            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.TailOfReplay), @event.Content);
+            state |= EventObservationState.TailOfReplay;
         }
-        else
-        {
-            @event = new(@event.Metadata, @event.Context.WithState(EventObservationState.Replay), @event.Content);
-        }
+
+        @event = new(@event.Metadata, @event.Context.WithState(state), @event.Content);
 
         await HandleEventForPartitionedObserver(@event);
 
-        if (tail)
+        if (state.HasFlag(EventObservationState.TailOfReplay))
         {
             State.RunningState = ObserverRunningState.TailOfReplay;
             await WriteStateAsync();

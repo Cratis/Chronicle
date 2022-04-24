@@ -66,8 +66,8 @@ public class and_has_three_events_in_sequence : given.an_observer_and_two_event_
         await observers[1].OnNextAsync(third_appended_event);
     }
 
-    [Fact] void should_set_head_of_replay_as_event_observation_state_for_first_event() => appended_events[0].Context.ObservationState.ShouldEqual(EventObservationState.HeadOfReplay);
+    [Fact] void should_set_head_of_replay_as_event_observation_state_for_first_event() => appended_events[0].Context.ObservationState.ShouldEqual(EventObservationState.HeadOfReplay | EventObservationState.Replay);
     [Fact] void should_set_replay_as_event_observation_state_for_second_event() => appended_events[1].Context.ObservationState.ShouldEqual(EventObservationState.Replay);
-    [Fact] void should_set_tail_of_replay_as_event_observation_state_for_third_event() => appended_events[2].Context.ObservationState.ShouldEqual(EventObservationState.TailOfReplay);
+    [Fact] void should_set_tail_of_replay_as_event_observation_state_for_third_event() => appended_events[2].Context.ObservationState.ShouldEqual(EventObservationState.TailOfReplay | EventObservationState.Replay);
     [Fact] void should_set_state_to_active() => state_on_write.RunningState.ShouldEqual(ObserverRunningState.Active);
 }
