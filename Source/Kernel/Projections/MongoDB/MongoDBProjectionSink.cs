@@ -30,12 +30,17 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     readonly IExecutionContextManager _executionContextManager;
     readonly IMongoDBClientFactory _clientFactory;
     readonly Storage _configuration;
+    readonly IMongoDatabase _database;
+
+    bool _isReplaying;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "MongoDB";
 
     /// <inheritdoc/>
     public ProjectionSinkTypeId TypeId => ProjectionResultStoreTypeId;
+
+    string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBProjectionSink"/> class.
@@ -54,14 +59,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         _executionContextManager = executionContextManager;
         _clientFactory = clientFactory;
         _configuration = configuration;
+        _database = GetDatabase();
     }
-
-    /// <summary>
-    /// Get the rewind collection name.
-    /// </summary>
-    /// <param name="name">Name to get for.</param>
-    /// <returns>Formatted collection name for rewind purpose.</returns>
-    public static string GetRewindCollectionName(string name) => $"rewind-{name}";
 
     /// <inheritdoc/>
     public async Task<ExpandoObject> FindOrDefault(Key key)
@@ -160,6 +159,51 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
+    public async Task BeginReplay()
+    {
+        _isReplaying = true;
+        await PrepareInitialRun();
+    }
+
+    /// <inheritdoc/>
+    public async Task EndReplay()
+    {
+        _isReplaying = false;
+        var rewindName = ReplayCollectionName;
+        var rewoundCollectionsPrefix = $"{_model.Name}-";
+        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
+        var nextCollectionSequenceNumber = 1;
+        var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
+        if (rewoundCollectionNames.Length > 0)
+        {
+            nextCollectionSequenceNumber = rewoundCollectionNames
+                .Select(_ =>
+                {
+                    var postfix = _.Substring(rewoundCollectionsPrefix.Length);
+                    if (int.TryParse(postfix, out var value))
+                    {
+                        return value;
+                    }
+                    return -1;
+                })
+                .Where(_ => _ >= 0)
+                .OrderByDescending(_ => _)
+                .First() + 1;
+        }
+        var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
+
+        if (collectionNames.Contains(_model.Name))
+        {
+            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
+        }
+
+        if (collectionNames.Contains(rewindName))
+        {
+            await _database.RenameCollectionAsync(rewindName, _model.Name);
+        }
+    }
+
+    /// <inheritdoc/>
     public Task PrepareInitialRun()
     {
         var collection = GetCollection();
@@ -231,11 +275,5 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         return client.GetDatabase(url.DatabaseName);
     }
 
-    IMongoCollection<BsonDocument> GetCollection()
-    {
-        var database = GetDatabase();
-        return IsRewinding ? database.GetCollection<BsonDocument>(GetRewindCollectionName(_model.Name)) : database.GetCollection<BsonDocument>(_model.Name);
-    }
-
-    static bool IsRewinding => false;
+    IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
 }

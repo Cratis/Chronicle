@@ -9,6 +9,14 @@ namespace Aksio.Cratis.Events.Store;
 public interface IEventSequenceStorageProvider
 {
     /// <summary>
+    /// Get the sequence number of the first event as part of the filtered event types.
+    /// </summary>
+    /// <param name="eventTypes">Even types to get for.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. It won't filter by this if omitted.</param>
+    /// <returns>The lowest number for the event type filter.</returns>
+    Task<EventSequenceNumber> GetHeadSequenceNumber(IEnumerable<EventType> eventTypes, EventSourceId? eventSourceId = null);
+
+    /// <summary>
     /// Get the sequence number of the last event as part of the filtered event types.
     /// </summary>
     /// <param name="eventTypes">Even types to get for.</param>

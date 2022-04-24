@@ -20,6 +20,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 
     readonly Dictionary<object, ExpandoObject> _collection = new();
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
+    bool _isReplaying;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeId TypeId => ProjectionResultStoreTypeId;
@@ -68,6 +69,20 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task BeginReplay()
+    {
+        _isReplaying = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task EndReplay()
+    {
+        _isReplaying = false;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task PrepareInitialRun()
     {
         GetCollection().Clear();
@@ -80,7 +95,5 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    Dictionary<object, ExpandoObject> GetCollection() => IsRewinding ? _rewindCollection : _collection;
-
-    static bool IsRewinding => false;
+    Dictionary<object, ExpandoObject> GetCollection() => _isReplaying ? _rewindCollection : _collection;
 }

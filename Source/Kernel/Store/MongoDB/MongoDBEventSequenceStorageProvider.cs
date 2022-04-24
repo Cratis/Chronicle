@@ -30,6 +30,25 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     /// <inheritdoc/>
+    public async Task<EventSequenceNumber> GetHeadSequenceNumber(IEnumerable<EventType> eventTypes, EventSourceId? eventSourceId = null)
+    {
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(EventSequenceId.Log);
+        var filters = new List<FilterDefinition<Event>>
+        {
+            Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray())
+        };
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var highest = await collection.Find(filter).SortBy(_ => _.SequenceNumber).Limit(1).SingleOrDefaultAsync();
+        return highest?.SequenceNumber ?? EventSequenceNumber.Unavailable;
+    }
+
+    /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumber(IEnumerable<EventType> eventTypes, EventSourceId? eventSourceId = null)
     {
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(EventSequenceId.Log);
