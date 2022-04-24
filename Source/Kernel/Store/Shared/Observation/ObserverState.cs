@@ -58,7 +58,7 @@ public class ObserverState
     /// <summary>
     /// Gets or sets the running state.
     /// </summary>
-    public ObserverRunningState RunningState { get; set; } = ObserverRunningState.Unknown;
+    public ObserverRunningState RunningState { get; set; } = ObserverRunningState.New;
 
     /// <summary>
     /// The current namespace we want to target stream to.

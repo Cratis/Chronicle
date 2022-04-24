@@ -31,7 +31,6 @@ public partial class Observer
 
         await TryResumeAnyFailedPartitions();
 
-        State.RunningState = ObserverRunningState.Subscribing;
         await UnsubscribeStream();
 
         if (HasDefinitionChanged(eventTypes))
@@ -42,6 +41,8 @@ public partial class Observer
             return;
         }
 
+        State.RunningState = ObserverRunningState.Subscribing;
+        State.EventTypes = eventTypes;
         var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
 
         var nextSequenceNumber = lastSequenceNumber + 1;
@@ -57,7 +58,6 @@ public partial class Observer
             _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
-        State.EventTypes = eventTypes;
         await WriteStateAsync();
         await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
     }
