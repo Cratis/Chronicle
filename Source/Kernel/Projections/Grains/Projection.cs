@@ -11,6 +11,7 @@ using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.Grains.Observation;
 using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Streams;
 using EngineProjection = Aksio.Cratis.Events.Projections.IProjection;
@@ -28,6 +29,7 @@ public class Projection : Grain, IProjection
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly IObjectsComparer _objectsComparer;
     readonly IEventSequenceStorageProvider _eventProvider;
+    readonly IExecutionContextManager _executionContextManager;
     EngineProjection? _projection;
     IProjectionPipeline? _pipeline;
     IObserver? _observer;
@@ -41,13 +43,15 @@ public class Projection : Grain, IProjection
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating the pipeline for the projection.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public Projection(
         IProjectionDefinitions projectionDefinitions,
         IProjectionPipelineDefinitions projectionPipelineDefinitions,
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory,
         IObjectsComparer objectsComparer,
-        IEventSequenceStorageProvider eventProvider)
+        IEventSequenceStorageProvider eventProvider,
+        IExecutionContextManager executionContextManager)
     {
         _projectionDefinitions = projectionDefinitions;
         _projectionPipelineDefinitions = projectionPipelineDefinitions;
@@ -55,6 +59,7 @@ public class Projection : Grain, IProjection
         _projectionPipelineFactory = projectionPipelineFactory;
         _objectsComparer = objectsComparer;
         _eventProvider = eventProvider;
+        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
@@ -62,6 +67,10 @@ public class Projection : Grain, IProjection
     {
         var projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ProjectionKey.Parse(keyAsString);
+
+        // TODO: This is a temporary work-around till we fix #264 & #265
+        _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
+
         var projectionDefinition = await _projectionDefinitions.GetFor(projectionId);
         var pipelineDefinition = await _projectionPipelineDefinitions.GetFor(projectionId);
         _projection = await _projectionFactory.CreateFrom(projectionDefinition);

@@ -38,6 +38,18 @@ public interface IProjectionSink
     Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset);
 
     /// <summary>
+    /// Enter replay state.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task BeginReplay();
+
+    /// <summary>
+    /// End replay state.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task EndReplay();
+
+    /// <summary>
     /// Prepare the store for an initial run.
     /// </summary>
     /// <remarks>

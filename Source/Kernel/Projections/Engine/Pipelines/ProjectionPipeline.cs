@@ -54,6 +54,12 @@ public class ProjectionPipeline : IProjectionPipeline
     /// <inheritdoc/>
     public async Task Handle(AppendedEvent @event)
     {
+#pragma warning disable RCS1096
+        if (@event.Context.ObservationState.HasFlag(EventObservationState.HeadOfReplay))
+        {
+            await Sink.BeginReplay();
+        }
+
         _logger.HandlingEvent(@event.Metadata.SequenceNumber);
         var correlationId = CorrelationId.New();
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
@@ -68,6 +74,11 @@ public class ProjectionPipeline : IProjectionPipeline
             await Sink.ApplyChanges(key, changeset);
             await _changesetStorage.Save(correlationId, changeset);
             _logger.SavingResult(@event.Metadata.SequenceNumber);
+        }
+
+        if (@event.Context.ObservationState.HasFlag(EventObservationState.TailOfReplay))
+        {
+            await Sink.EndReplay();
         }
     }
 
