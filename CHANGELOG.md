@@ -1,3 +1,39 @@
+# [v6.0.0] - 2022-4-24 [PR: #190](https://github.com/aksio-insurtech/Cratis/pull/190)
+
+## Summary
+
+This release is a major release with breaking changes. Primarily, the API surfaces has not been touched, but all of configuration has changed. In addition, underlying data model has also changed. There is no migration script as of yet, since we are assuming at this point that we (Aksio) are the only ones using our own tech and we will not invest in doing migrations for non-production workloads ATM.
+
+### Added
+
+- Support for child configuration objects that are automatically registered with services.
+- Base type `GrainSpecification` for writing specifications for grains. This solution does not require setting up a Orleans in-process TestCluster, as it mocks out the underlying grain. One caveat, as it is relying on privates and internals; if that changes, all specs relying on this gets broken. But we will know right away :) and can therefor fix it. For the time being we want to maintain this as it gives us more lightweight specs, no need for xUnit fixtures. With the recommended Orleans approach it becomes messy real fast with grains that takes dependencies having to effectively configure dependencies for the service collections for the test cluster.
+- Added `ValidFrom` for events in Append APIs and storage. This is a "for the future" thing and is defaulted to `DateTimeOffset.MinValue` if not specified. The purpose of it will be to be able to append events that occur at a time but can be filtered out in projections or observers if a condition requires it. (#244)
+- Observers now have a friendly name persisted along the state. From a client observer, this defaults to the fully qualified name of the type.
+- Observers have a type associated with them. For now the types are `Client` or `Projection`.
+- `EventContext` now has a new property called `ObservationState`. This can be used to know whether or not the observer is seeing the event for the first time or if it is a replay of the event. It also holds information on if it is the tail event of a replay.
+
+### Changed
+
+- Renaming `ProjectionResultStore` as concept to be `ProjectionSink` - consistent rename in code, log messages and exceptions. (#89)
+- Renaming from `EventLog`to `EventSequence` for the abstract representation. Keeping `EventLog` as concept and the the default sequence typically used. From client, there is no change. (#129)
+- Changing to file scoped namespaces for the codebase and templates. (#161)
+- For consistency, changing the key representation of event types in the schema store.
+- Observers failed partitions have now moved into the observer state, meaning that the MongoDB collection for `failed-observers` are gone. Logic is also now consolidated into `Observer` grain.
+
+### Fixed
+
+- Observers in client SDK is made tenant unaware and Kernel hooks up all Tenants automatically. (#109)
+- Observers will automatically rewind if definition (event types) changes. (#236)
+- Upgraded all 3rd party dependencies to the latest. (#148)
+- Routes in generated proxies are not escaped. Previously it would URL encode it, which lead to "&amp;" for the *&* for multiple query string arguments.
+- Observers will catch up on start up, Orleans didn't automatically play subscribers before there was a new event in the stream. The observers are now producing a dummy event on subscription to work around this problem.
+
+### Removed
+
+- The concept of ProjectionEventProvider is removed. As per now, we only want to provide events from our own event store.
+
+
 # [v5.14.1] - 2022-4-7 [PR: #243](https://github.com/aksio-insurtech/Cratis/pull/243)
 
 ### Fixed
