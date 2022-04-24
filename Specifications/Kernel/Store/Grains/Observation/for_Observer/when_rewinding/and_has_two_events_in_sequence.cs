@@ -19,12 +19,11 @@ public class and_has_two_events_in_sequence : given.an_observer_and_two_event_ty
     async Task Establish()
     {
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, event_source_id)).Returns(Task.FromResult((EventSequenceNumber)2));
 
         await observer.Subscribe(event_types, observer_namespace);
         state.RunningState = ObserverRunningState.Active;
 
-        state.NextEventSequenceNumber = EventSequenceNumber.First + 2;
+        state.NextEventSequenceNumber = EventSequenceNumber.First;
 
         event_source_id = Guid.NewGuid().ToString();
 
@@ -61,4 +60,5 @@ public class and_has_two_events_in_sequence : given.an_observer_and_two_event_ty
 
     [Fact] void should_set_replay_as_event_observation_state_for_first_event() => appended_events[0].Context.ObservationState.ShouldEqual(EventObservationState.Replay);
     [Fact] void should_set_tail_of_replay_as_event_observation_state_for_second_event() => appended_events[1].Context.ObservationState.ShouldEqual(EventObservationState.TailOfReplay);
+    [Fact] void should_set_state_to_active() => state_on_write.RunningState.ShouldEqual(ObserverRunningState.Active);
 }
