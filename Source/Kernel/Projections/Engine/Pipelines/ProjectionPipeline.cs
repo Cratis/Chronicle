@@ -54,7 +54,6 @@ public class ProjectionPipeline : IProjectionPipeline
     /// <inheritdoc/>
     public async Task Handle(AppendedEvent @event)
     {
-#pragma warning disable RCS1096
         if (@event.Context.ObservationState.HasFlag(EventObservationState.HeadOfReplay))
         {
             await Sink.BeginReplay();

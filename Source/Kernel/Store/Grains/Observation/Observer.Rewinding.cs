@@ -74,7 +74,6 @@ public partial class Observer
 
     async Task HandleEventForPartitionedObserverWhenReplaying(AppendedEvent @event, EventSequenceNumber headSequenceNumber)
     {
-#pragma warning disable RCS1096
         var state = EventObservationState.Replay;
 
         if (headSequenceNumber == @event.Metadata.SequenceNumber)
