@@ -11,7 +11,7 @@ This release is a major release with breaking changes. Primarily, the API surfac
 - Added `ValidFrom` for events in Append APIs and storage. This is a "for the future" thing and is defaulted to `DateTimeOffset.MinValue` if not specified. The purpose of it will be to be able to append events that occur at a time but can be filtered out in projections or observers if a condition requires it. (#244)
 - Observers now have a friendly name persisted along the state. From a client observer, this defaults to the fully qualified name of the type.
 - Observers have a type associated with them. For now the types are `Client` or `Projection`.
-- `EventContext` now has a new property called `ObservationState`. This can be used to know whether or not the observer is seeing the event for the first time or if it is a replay of the event. It also holds information on if it is the tail event of a replay.
+- `EventContext` now has a new property called `ObservationState`. This can be used to know whether or not the observer is seeing the event for the first time or if it is a replay of the event. It also holds information on if it is the head or tail event of a replay.
 
 ### Changed
 
@@ -91,7 +91,7 @@ This release is a major release with breaking changes. Primarily, the API surfac
 
 ### Fixed
 
-- Fixed type support in proxy generation. It was using `string` for C# types `DateTime`and `DateTimeOffset`, now it uses `Date`. 
+- Fixed type support in proxy generation. It was using `string` for C# types `DateTime`and `DateTimeOffset`, now it uses `Date`.
 
 
 # [v5.11.0] - 2022-2-27 [PR: #197](https://github.com/aksio-insurtech/Cratis/pull/197)
