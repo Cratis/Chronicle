@@ -26,6 +26,7 @@
 
     <ItemGroup>
         <ProjectReference Include="$(MSBuildThisFileDirectory)/Common/Common.csproj"/>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../Source/Extensions/Specifications/Specifications.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
