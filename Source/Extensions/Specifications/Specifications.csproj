@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Specifications</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Specifications</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit" Version="$(xunit)" />
+        <PackageReference Include="Aksio.Specifications" Version="$(AksioSpecifications)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../Kernel/Projections/Engine/Engine.csproj"/>
+    </ItemGroup>
+</Project>
