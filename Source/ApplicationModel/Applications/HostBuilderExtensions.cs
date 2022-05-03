@@ -52,6 +52,7 @@ public static class HostBuilderExtensions
                     options.Providers.Add<GzipCompressionProvider>();
                 })
                 .Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.SmallestSize)
+                .Configure<BrotliCompressionProviderOptions>(options => options.Level = CompressionLevel.SmallestSize)
 
                 // Todo: Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/):
                 .AddRazorPages();
