@@ -1,6 +1,6 @@
 # Integration
 
-Since all we do @ Aksio is Event Sourced, connecting with 3rd parties can become a challenge.
+Since Cratis is focused on Event Sourcing, connecting with 3rd parties can become a challenge.
 Most 3rd parties don't offer integration where we can ask for domain events that has occurred in a
 sequenced manner as we would expect.
 
