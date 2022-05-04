@@ -15,4 +15,6 @@ public class person_information : AdapterSpecificationFor<AccountHolder, KontoEi
     protected const string city = "Oslo";
     protected const string postal_code = "0103";
     protected const string country = "Norge";
+
+    protected override IAdapterFor<AccountHolder, KontoEier> CreateAdapter() => new AccountHolderDetailsAdapter();
 }
