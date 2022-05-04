@@ -25,7 +25,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     /// <inheritdoc/>
     public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = null, IEnumerable<EventType>? eventTypes = null)
     {
-        var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber > sequenceNumber);
+        var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber);
         if (eventSourceId is not null)
         {
             query = query.Where(_ => _.Context.EventSourceId == eventSourceId);
