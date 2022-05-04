@@ -43,7 +43,22 @@ public static class HostBuilderExtensions
                 .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
                 .AddConfigurationObjects(types, searchSubPaths: new[] { "config" }, logger: logger)
                 .AddControllersFromProjectReferencedAssembles(types)
-                .AddSwaggerGen()
+                .AddSwaggerGen(options =>
+                {
+                    var files = Directory.GetFiles(AppContext.BaseDirectory).Where(file => Path.GetExtension(file) == ".xml");
+                    var documentationFiles = files.Where(file =>
+                        {
+                            var fileName = Path.GetFileNameWithoutExtension(file);
+                            var dllFileName = Path.Combine(AppContext.BaseDirectory, $"{fileName}.dll");
+                            var xmlFileName = Path.Combine(AppContext.BaseDirectory, $"{fileName}.xml");
+                            return File.Exists(dllFileName) && File.Exists(xmlFileName);
+                        });
+
+                    foreach (var file in documentationFiles)
+                    {
+                        options.IncludeXmlComments(file);
+                    }
+                })
                 .AddEndpointsApiExplorer()
                 .AddResponseCompression(options =>
                 {

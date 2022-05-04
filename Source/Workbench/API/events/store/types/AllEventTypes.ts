@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { EventType } from './EventType';
+import { EventTypeInformation } from './EventTypeInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/types?microserviceId={{microserviceId}}');
@@ -11,10 +11,10 @@ const routeTemplate = Handlebars.compile('/api/events/store/types?microserviceId
 export interface AllEventTypesArguments {
     microserviceId: string;
 }
-export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments> {
+export class AllEventTypes extends QueryFor<EventTypeInformation[], AllEventTypesArguments> {
     readonly route: string = '/api/events/store/types?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: EventType[] = [];
+    readonly defaultValue: EventTypeInformation[] = [];
 
     get requestArguments(): string[] {
         return [
@@ -22,7 +22,7 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesArguments>
         ];
     }
 
-    static use(args?: AllEventTypesArguments): [QueryResult<EventType[]>, PerformQuery<AllEventTypesArguments>] {
-        return useQuery<EventType[], AllEventTypes, AllEventTypesArguments>(AllEventTypes, args);
+    static use(args?: AllEventTypesArguments): [QueryResult<EventTypeInformation[]>, PerformQuery<AllEventTypesArguments>] {
+        return useQuery<EventTypeInformation[], AllEventTypes, AllEventTypesArguments>(AllEventTypes, args);
     }
 }
