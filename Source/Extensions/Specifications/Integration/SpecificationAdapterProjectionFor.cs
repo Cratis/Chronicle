@@ -12,6 +12,7 @@ using Aksio.Cratis.Events.Projections.InMemory;
 using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Integration;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Specifications.Integration;
@@ -20,20 +21,29 @@ namespace Aksio.Cratis.Specifications.Integration;
 /// Represents a <see cref="IAdapterProjectionFor{T}"/> for in-memory purpose.
 /// </summary>
 /// <typeparam name="TModel">Type of model.</typeparam>
-public class InMemoryAdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>, IDisposable
+public class SpecificationAdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>, IDisposable
 {
+    readonly JsonSerializerOptions _serializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters =
+                {
+                    new ConceptAsJsonConverterFactory()
+                }
+    };
+
     readonly IProjection _projection;
     readonly IEventSequenceStorageProvider _eventSequenceStorageProvider;
     readonly IProjectionPipeline _pipeline;
     readonly InMemoryProjectionSink _sink;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryAdapterProjectionFor{TModel}"/> class.
+    /// Initializes a new instance of the <see cref="SpecificationAdapterProjectionFor{TModel}"/> class.
     /// </summary>
     /// <param name="projectionDefinition">The <see cref="ProjectionDefinition"/> for the projection.</param>
     /// <param name="eventSequenceStorageProvider">The <see cref="IEventSequenceStorageProvider"/> to use.</param>
     /// <param name="comparer"><see cref="IObjectsComparer"/> for comparing differences.</param>
-    public InMemoryAdapterProjectionFor(
+    public SpecificationAdapterProjectionFor(
         ProjectionDefinition projectionDefinition,
         IEventSequenceStorageProvider eventSequenceStorageProvider,
         IObjectsComparer comparer)
@@ -70,6 +80,6 @@ public class InMemoryAdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel
 
         var result = await _sink.FindOrDefault(new(eventSourceId, ArrayIndexers.NoIndexers));
         var json = JsonSerializer.Serialize(result);
-        return JsonSerializer.Deserialize<TModel>(json)!;
+        return JsonSerializer.Deserialize<TModel>(json, _serializerOptions)!;
     }
 }
