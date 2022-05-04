@@ -1,0 +1,1753 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Aksio.Cratis.Server",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/configuration/tenants": {
+      "get": {
+        "tags": [
+          "AllConfiguration"
+        ],
+        "summary": "Returns all the tenants configured in the kernel.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tenant"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tenant"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tenant"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/configuration/microservices": {
+      "get": {
+        "tags": [
+          "AllConfiguration"
+        ],
+        "summary": "Returns all the tenants configured in the kernel.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Microservice"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Microservice"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Microservice"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/sequence/{eventSourceId}/{eventTypeId}/{eventGeneration}": {
+      "post": {
+        "tags": [
+          "EventSequence"
+        ],
+        "summary": "Appends an event to the event log.",
+        "parameters": [
+          {
+            "name": "eventSourceId",
+            "in": "path",
+            "description": "EventSource to append for.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventSourceId"
+            }
+          },
+          {
+            "name": "eventTypeId",
+            "in": "path",
+            "description": "Type of event to append.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventTypeId"
+            }
+          },
+          {
+            "name": "eventGeneration",
+            "in": "path",
+            "description": "Generation of the event to append.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventGeneration"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/events/store/sequence/{eventSequenceId}": {
+      "get": {
+        "tags": [
+          "EventSequence"
+        ],
+        "summary": "Get events for a specific event sequence in a microservice for a specific tenant.",
+        "parameters": [
+          {
+            "name": "eventSequenceId",
+            "in": "path",
+            "description": "Event sequence to get for.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventSequenceId"
+            }
+          },
+          {
+            "name": "microserviceId",
+            "in": "query",
+            "description": "Microservice to get for.",
+            "schema": {
+              "$ref": "#/components/schemas/MicroserviceId"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "Tenant to get for.",
+            "schema": {
+              "$ref": "#/components/schemas/TenantId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppendedEvent"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppendedEvent"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppendedEvent"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/sequence/{eventSequenceId}/count": {
+      "get": {
+        "tags": [
+          "EventSequence"
+        ],
+        "summary": "Count number of events in an event sequence. PS: Not implemented yet.",
+        "parameters": [
+          {
+            "name": "eventSequenceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/sequence/histogram": {
+      "get": {
+        "tags": [
+          "EventSequence"
+        ],
+        "summary": "Get a histogram of a specific event sequence. PS: Not implemented yet.",
+        "parameters": [
+          {
+            "name": "eventSequenceId",
+            "in": "path",
+            "description": "Event sequence to get for.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventSequenceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventHistogramEntry"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventHistogramEntry"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventHistogramEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/sequence/{eventSequenceId}/{eventSourceId}": {
+      "get": {
+        "tags": [
+          "EventSequence"
+        ],
+        "summary": "Find events for a specific event source id. PS: Not implemented yet.",
+        "parameters": [
+          {
+            "name": "eventSequenceId",
+            "in": "path",
+            "description": "Event sequence to find events in.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventSequenceId"
+            }
+          },
+          {
+            "name": "eventSourceId",
+            "in": "path",
+            "description": "Event source to get for.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventSourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppendedEvent"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppendedEvent"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppendedEvent"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/sequences": {
+      "get": {
+        "tags": [
+          "EventSequences"
+        ],
+        "summary": "Gets all event sequences.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventSequenceInformation"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventSequenceInformation"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventSequenceInformation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/types": {
+      "get": {
+        "tags": [
+          "EventTypes"
+        ],
+        "summary": "Gets all event types.",
+        "parameters": [
+          {
+            "name": "microserviceId",
+            "in": "query",
+            "description": "The Aksio.Cratis.Execution.MicroserviceId to get event types for.",
+            "schema": {
+              "$ref": "#/components/schemas/MicroserviceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventTypeInformation"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventTypeInformation"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventTypeInformation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/types/schemas/{eventTypeId}": {
+      "get": {
+        "tags": [
+          "EventTypes"
+        ],
+        "summary": "Gets generation schema for type.",
+        "parameters": [
+          {
+            "name": "microserviceId",
+            "in": "query",
+            "description": "The Aksio.Cratis.Execution.MicroserviceId to get event type for.",
+            "schema": {
+              "$ref": "#/components/schemas/MicroserviceId"
+            }
+          },
+          {
+            "name": "eventTypeId",
+            "in": "path",
+            "description": "Type to get for.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventTypeId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": { }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compliance/microservices": {
+      "post": {
+        "tags": [
+          "Microservices"
+        ],
+        "summary": "Add a microservice.",
+        "requestBody": {
+          "description": "M:Aksio.Cratis.Compliance.Domain.Microservices.Microservices.AddMicroservice(Aksio.Cratis.Compliance.Domain.Microservices.AddMicroservice) payload.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMicroservice"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMicroservice"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMicroservice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/events/store/observers/{observerId}/rewind": {
+      "post": {
+        "tags": [
+          "Observers"
+        ],
+        "summary": "Rewind a specific observer for a microservice and tenant.",
+        "parameters": [
+          {
+            "name": "observerId",
+            "in": "path",
+            "description": "Aksio.Cratis.Events.Store.Observation.ObserverId to rewind.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ObserverId"
+            }
+          },
+          {
+            "name": "microserviceId",
+            "in": "query",
+            "description": "Aksio.Cratis.Execution.MicroserviceId the observer is for.",
+            "schema": {
+              "$ref": "#/components/schemas/MicroserviceId"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "Aksio.Cratis.Execution.TenantId the observer is for.",
+            "schema": {
+              "$ref": "#/components/schemas/TenantId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/events/store/observers": {
+      "get": {
+        "tags": [
+          "Observers"
+        ],
+        "summary": "Get and observe all observers.",
+        "parameters": [
+          {
+            "name": "microserviceId",
+            "in": "query",
+            "description": "Aksio.Cratis.Execution.MicroserviceId the observers are for.",
+            "schema": {
+              "$ref": "#/components/schemas/MicroserviceId"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "Aksio.Cratis.Execution.TenantId the observers are for.",
+            "schema": {
+              "$ref": "#/components/schemas/TenantId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ObserverState"
+                    }
+                  },
+                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ObserverState"
+                    }
+                  },
+                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ObserverState"
+                    }
+                  },
+                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compliance/gdpr/pii": {
+      "post": {
+        "tags": [
+          "PII"
+        ],
+        "summary": "Create and register a key.",
+        "requestBody": {
+          "description": "M:Aksio.Cratis.Compliance.Domain.GDPR.PII.CreateAndRegisterKeyFor(Aksio.Cratis.Compliance.Domain.GDPR.CreateAndRegisterKeyFor) payload.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAndRegisterKeyFor"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAndRegisterKeyFor"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAndRegisterKeyFor"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/compliance/gdpr/pii/delete": {
+      "post": {
+        "tags": [
+          "PII"
+        ],
+        "summary": "Delete PII for a person.",
+        "requestBody": {
+          "description": "M:Aksio.Cratis.Compliance.Domain.GDPR.PII.DeletePIIForPerson(Aksio.Cratis.Compliance.Domain.GDPR.DeletePIIForPerson) payload.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePIIForPerson"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePIIForPerson"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePIIForPerson"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/compliance/gdpr/people": {
+      "get": {
+        "tags": [
+          "People"
+        ],
+        "summary": "Get all people.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Person"
+                    }
+                  },
+                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Person"
+                    }
+                  },
+                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Person"
+                    }
+                  },
+                  "description": "Represents an implementation of Aksio.Cratis.Applications.Queries.IClientObservable."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compliance/gdpr/people/search": {
+      "get": {
+        "tags": [
+          "People"
+        ],
+        "summary": "Search for people by an arbitrary string.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "String to search for.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Person"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Person"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Person"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/projections": {
+      "get": {
+        "tags": [
+          "Projections"
+        ],
+        "summary": "Gets all projections.",
+        "parameters": [
+          {
+            "name": "microserviceId",
+            "in": "query",
+            "description": "The Aksio.Cratis.Execution.MicroserviceId to get projections for.",
+            "schema": {
+              "$ref": "#/components/schemas/MicroserviceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Projection"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Projection"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Projection"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/store/projections/{projectionId}/collections": {
+      "get": {
+        "tags": [
+          "Projections"
+        ],
+        "summary": "Get all collections for projection.",
+        "parameters": [
+          {
+            "name": "microserviceId",
+            "in": "query",
+            "description": "The Aksio.Cratis.Execution.MicroserviceId to get projection collections for.",
+            "schema": {
+              "$ref": "#/components/schemas/MicroserviceId"
+            }
+          },
+          {
+            "name": "projectionId",
+            "in": "path",
+            "description": "Id of projection to get for.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProjectionId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectionCollection"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectionCollection"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectionCollection"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddMicroservice": {
+        "type": "object",
+        "properties": {
+          "microserviceId": {
+            "$ref": "#/components/schemas/MicroserviceId"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AppendedEvent": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/EventMetadata"
+          },
+          "context": {
+            "$ref": "#/components/schemas/EventContext"
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonNode"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an event that has been appended to an event log."
+      },
+      "CausationId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an identifier for correlation."
+      },
+      "CausedBy": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an identifier of an identity that was the root of a cause."
+      },
+      "City": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CorrelationId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an identifier for correlation."
+      },
+      "Country": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateAndRegisterKeyFor": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "$ref": "#/components/schemas/EncryptionKeyIdentifier"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Encapsulation representing the creation and registration of a key for a specific identifier."
+      },
+      "DeletePIIForPerson": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "$ref": "#/components/schemas/PersonId"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EncryptionKeyIdentifier": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the unique identifier of an encryption key."
+      },
+      "EventContext": {
+        "type": "object",
+        "properties": {
+          "eventSourceId": {
+            "$ref": "#/components/schemas/EventSourceId"
+          },
+          "occurred": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "$ref": "#/components/schemas/TenantId"
+          },
+          "correlationId": {
+            "$ref": "#/components/schemas/CorrelationId"
+          },
+          "causationId": {
+            "$ref": "#/components/schemas/CausationId"
+          },
+          "causedBy": {
+            "$ref": "#/components/schemas/CausedBy"
+          },
+          "observationState": {
+            "$ref": "#/components/schemas/EventObservationState"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the context in which an event exists - typically what it was appended with."
+      },
+      "EventGeneration": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "integer",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the generation of an Aksio.Cratis.Events.EventType."
+      },
+      "EventHistogramEntry": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EventMetadata": {
+        "type": "object",
+        "properties": {
+          "sequenceNumber": {
+            "$ref": "#/components/schemas/EventSequenceNumber"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EventType"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the metadata related to an event."
+      },
+      "EventObservationState": {
+        "enum": [
+          0,
+          1,
+          2,
+          4,
+          8
+        ],
+        "type": "integer",
+        "description": "Represents the observation state for an event.",
+        "format": "int32"
+      },
+      "EventSequenceId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          },
+          "isEventLog": {
+            "type": "boolean",
+            "description": "Get whether or not this is the default log event sequence.",
+            "readOnly": true
+          },
+          "isOutbox": {
+            "type": "boolean",
+            "description": "Get whether or not this is the default outbox event sequence.",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the unique identifier of an event sequence."
+      },
+      "EventSequenceInformation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EventSequenceNumber": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "integer",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the sequence number within an event log for an event."
+      },
+      "EventSourceId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "isSpecified": {
+            "type": "boolean",
+            "description": "Check whether or not the Aksio.Cratis.Events.EventSourceId is specified.",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the unique identifier of an instance of an event source."
+      },
+      "EventType": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/EventTypeId"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/EventGeneration"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the type of an event."
+      },
+      "EventTypeId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the concept of the unique identifier of a type of event."
+      },
+      "EventTypeInformation": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "generations": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FailedObserverPartition": {
+        "type": "object",
+        "properties": {
+          "eventSourceId": {
+            "$ref": "#/components/schemas/EventSourceId"
+          },
+          "sequenceNumber": {
+            "$ref": "#/components/schemas/EventSequenceNumber"
+          },
+          "occurred": {
+            "type": "string",
+            "description": "Gets or sets the occurred time of the failure - if any.",
+            "format": "date-time"
+          },
+          "lastAttempt": {
+            "type": "string",
+            "description": "Gets or sets the occurred time of the failure - if any.",
+            "format": "date-time"
+          },
+          "attempts": {
+            "type": "integer",
+            "description": "Gets or sets the number of retry attempts it has had.",
+            "format": "int32"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Gets or sets the message from the failure - if any.",
+            "nullable": true
+          },
+          "stackTrace": {
+            "type": "string",
+            "description": "Gets or sets the stack trace from the failure - if any.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the state used for failed observers."
+      },
+      "FirstName": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "JsonNode": {
+        "type": "object",
+        "properties": {
+          "options": {
+            "$ref": "#/components/schemas/JsonNodeOptions"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "root": {
+            "$ref": "#/components/schemas/JsonNode"
+          }
+        },
+        "additionalProperties": false
+      },
+      "JsonNodeOptions": {
+        "type": "object",
+        "properties": {
+          "propertyNameCaseInsensitive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "LastName": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Microservice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/MicroserviceId"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MicroserviceId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the concept of the microservice identifier."
+      },
+      "ModelName": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the friendly display name of a model."
+      },
+      "ObserverId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Concept that represents the unique identifier of an observer."
+      },
+      "ObserverName": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Concept that represents the name of an observer."
+      },
+      "ObserverNamespace": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents an observer namespace, typically used for scoping handler streams."
+      },
+      "ObserverRunningState": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "type": "integer",
+        "description": "Defines the status of an observer.",
+        "format": "int32"
+      },
+      "ObserverState": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Gets or sets the identifier of the observer state.",
+            "nullable": true
+          },
+          "eventTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventType"
+            },
+            "description": "Gets or sets the event types the observer is observing.",
+            "nullable": true
+          },
+          "eventSequenceId": {
+            "$ref": "#/components/schemas/EventSequenceId"
+          },
+          "observerId": {
+            "$ref": "#/components/schemas/ObserverId"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ObserverName"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ObserverType"
+          },
+          "nextEventSequenceNumber": {
+            "$ref": "#/components/schemas/EventSequenceNumber"
+          },
+          "lastHandled": {
+            "$ref": "#/components/schemas/EventSequenceNumber"
+          },
+          "runningState": {
+            "$ref": "#/components/schemas/ObserverRunningState"
+          },
+          "currentNamespace": {
+            "$ref": "#/components/schemas/ObserverNamespace"
+          },
+          "failedPartitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailedObserverPartition"
+            },
+            "description": "Gets or sets the failed partitions for the observer.",
+            "nullable": true
+          },
+          "recoveringPartitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecoveringFailedObserverPartition"
+            },
+            "description": "Gets or sets the failed partitions for the observer.",
+            "nullable": true
+          },
+          "hasFailedPartitions": {
+            "type": "boolean",
+            "description": "Gets whether or not there are any failed partitions.",
+            "readOnly": true
+          },
+          "isRecoveringAnyPartition": {
+            "type": "boolean",
+            "description": "Gets whether or not there are any partitions being recovered.",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the state used for an observer."
+      },
+      "ObserverType": {
+        "enum": [
+          0,
+          1,
+          2
+        ],
+        "type": "integer",
+        "description": "Defines the different types of observers.",
+        "format": "int32"
+      },
+      "Person": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/PersonId"
+          },
+          "socialSecurityNumber": {
+            "$ref": "#/components/schemas/SocialSecurityNumber"
+          },
+          "firstName": {
+            "$ref": "#/components/schemas/FirstName"
+          },
+          "lastName": {
+            "$ref": "#/components/schemas/LastName"
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "city": {
+            "$ref": "#/components/schemas/City"
+          },
+          "postalCode": {
+            "$ref": "#/components/schemas/PostalCode"
+          },
+          "country": {
+            "$ref": "#/components/schemas/Country"
+          },
+          "personalInformation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonalInformation"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PersonId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the concept of a unique identifier that identifies a person."
+      },
+      "PersonalInformation": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "$ref": "#/components/schemas/PersonalInformationId"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PersonalInformationType"
+          },
+          "value": {
+            "$ref": "#/components/schemas/PersonalInformationValue"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PersonalInformationId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PersonalInformationType": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PersonalInformationValue": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostalCode": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Projection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ProjectionId"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ProjectionName"
+          },
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProjectionCollection": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "documentCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProjectionId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the unique identifier of a projection."
+      },
+      "ProjectionName": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the friendly display name of a projection."
+      },
+      "RecoveringFailedObserverPartition": {
+        "type": "object",
+        "properties": {
+          "eventSourceId": {
+            "$ref": "#/components/schemas/EventSourceId"
+          },
+          "sequenceNumber": {
+            "$ref": "#/components/schemas/EventSequenceNumber"
+          },
+          "startedRecoveryAt": {
+            "type": "string",
+            "description": "Gets or sets the occurred time of the failure - if any.",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the state used when recovering a failed observer partition."
+      },
+      "SocialSecurityNumber": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "description": "Gets the details for the PII.",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Tenant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/TenantId"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TenantId": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Gets or inits the underlying value for the instance.",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Represents the unique identifier of a tenant in the system."
+      }
+    }
+  }
+}

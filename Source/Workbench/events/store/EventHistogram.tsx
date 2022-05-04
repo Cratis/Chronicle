@@ -61,7 +61,7 @@ export interface EventHistogramProps {
 export const EventHistogram = (props: EventHistogramProps) => {
     const chartContainer = useRef<HTMLDivElement>(null);
     const getChart = () => echarts.getInstanceByDom(chartContainer.current!);
-    const [entries, refreshEntries] = Histogram.use({ eventLogId: props.eventLog });
+    const [entries, refreshEntries] = Histogram.use({ eventSequenceId: props.eventLog });
     const dates = entries.data.map(_ => {
         return echarts.format.formatTime('yyyy-MM-dd', _.date);
     });

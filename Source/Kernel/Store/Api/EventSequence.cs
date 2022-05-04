@@ -39,6 +39,13 @@ public class EventSequence : Controller
         _executionContextManager = executionContextManager;
     }
 
+    /// <summary>
+    /// Appends an event to the event log.
+    /// </summary>
+    /// <param name="eventSourceId">EventSource to append for.</param>
+    /// <param name="eventTypeId">Type of event to append.</param>
+    /// <param name="eventGeneration">Generation of the event to append.</param>
+    /// <returns>Awaitable task.</returns>
     [HttpPost("{eventSourceId}/{eventTypeId}/{eventGeneration}")]
     public async Task Append(
         [FromRoute] EventSourceId eventSourceId,
@@ -54,6 +61,13 @@ public class EventSequence : Controller
             content!);
     }
 
+    /// <summary>
+    /// Get events for a specific event sequence in a microservice for a specific tenant.
+    /// </summary>
+    /// <param name="eventSequenceId">Event sequence to get for.</param>
+    /// <param name="microserviceId">Microservice to get for.</param>
+    /// <param name="tenantId">Tenant to get for.</param>
+    /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet("{eventSequenceId}")]
     public async Task<IEnumerable<AppendedEvent>> FindFor(
         [FromRoute] EventSequenceId eventSequenceId,
@@ -70,23 +84,32 @@ public class EventSequence : Controller
         return result;
     }
 
+    /// <summary>
+    /// Count number of events in an event sequence. PS: Not implemented yet.
+    /// </summary>
+    /// <returns>Will always return 0 right now.</returns>
     [HttpGet("{eventSequenceId}/count")]
     public Task<long> Count() => Task.FromResult(0L);
 
+    /// <summary>
+    /// Get a histogram of a specific event sequence. PS: Not implemented yet.
+    /// </summary>
+    /// <param name="eventSequenceId">Event sequence to get for.</param>
+    /// <returns>A collection of <see cref="EventHistogramEntry"/>.</returns>
     [HttpGet("histogram")]
-    public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] string eventLogId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
+    public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] EventSequenceId eventSequenceId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 
+    /// <summary>
+    /// Find events for a specific event source id. PS: Not implemented yet.
+    /// </summary>
+    /// <param name="eventSequenceId">Event sequence to find events in.</param>
+    /// <param name="eventSourceId">Event source to get for.</param>
+    /// <returns>A collection of <see cref="AppendedEvent"/>. Always empty right now.</returns>
     [HttpGet("{eventSequenceId}/{eventSourceId}")]
-    public Task FindForEventSourceId(
+    public Task<IEnumerable<AppendedEvent>> FindForEventSourceId(
         [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] EventSourceId eventSourceId)
     {
-        return Task.CompletedTask;
-    }
-
-    [HttpGet("{eventSequenceId}/types")]
-    public Task Types([FromRoute] string eventSequenceId)
-    {
-        return Task.CompletedTask;
+        return Task.FromResult(Array.Empty<AppendedEvent>().AsEnumerable());
     }
 }
