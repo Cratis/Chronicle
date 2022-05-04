@@ -9,7 +9,7 @@ import Handlebars from 'handlebars';
 const routeTemplate = Handlebars.compile('/api/events/store/sequence/histogram');
 
 export interface HistogramArguments {
-    eventLogId: string;
+    eventSequenceId: string;
 }
 export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArguments> {
     readonly route: string = '/api/events/store/sequence/histogram';
@@ -18,7 +18,7 @@ export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArgument
 
     get requestArguments(): string[] {
         return [
-            'eventLogId',
+            'eventSequenceId',
         ];
     }
 
