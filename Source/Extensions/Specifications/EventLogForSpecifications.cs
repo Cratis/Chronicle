@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
@@ -15,6 +13,7 @@ namespace Aksio.Cratis.Specifications;
 /// </summary>
 public class EventLogForSpecifications : IEventLog
 {
+    static readonly IEventSerializer _serializer = new EventSerializer();
     readonly List<AppendedEvent> _appendedEvents = new();
     readonly List<object> _actualEvents = new();
 
@@ -33,7 +32,7 @@ public class EventLogForSpecifications : IEventLog
     /// <inheritdoc/>
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
-        var json = (JsonSerializer.SerializeToNode(@event) as JsonObject)!;
+        var json = _serializer.Serialize(@event);
 
         var eventTypeAttribute = @event.GetType().GetCustomAttribute<EventTypeAttribute>();
         _appendedEvents.Add(new(
