@@ -36,14 +36,14 @@ public class EventTypes : Controller
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get event types for.</param>
     /// <returns>Collection of event types.</returns>
     [HttpGet]
-    public async Task<IEnumerable<EventType>> AllEventTypes([FromQuery] MicroserviceId microserviceId)
+    public async Task<IEnumerable<EventTypeInformation>> AllEventTypes([FromQuery] MicroserviceId microserviceId)
     {
         _executionContextManager.Establish(microserviceId);
 
         var schemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
 
         return schemas.Select(_ =>
-            new EventType(
+            new EventTypeInformation(
                 _.Type.Id.ToString(),
                 _.Schema.GetDisplayName(),
                 _.Schema.GetGeneration()));

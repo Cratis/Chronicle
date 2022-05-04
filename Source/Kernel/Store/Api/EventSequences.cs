@@ -14,7 +14,7 @@ public class EventSequences : Controller
     /// <summary>
     /// Gets all event sequences.
     /// </summary>
-    /// <returns>Collection of event logs.</returns>
+    /// <returns>Collection of <see cref="EventSequenceInformation"/>.</returns>
     [HttpGet]
     public Task<IEnumerable<EventSequenceInformation>> AllEventSequences()
     {
