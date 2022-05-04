@@ -11,7 +11,7 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(SpecProject)' == 'true'">
-        <NoWarn>$(NoWarn);CA1707;MA0036;IDE1006;RCS1213;RCS1169;SA1310;SA1134;IDE0044;IDE0051</NoWarn>
+        <NoWarn>$(NoWarn);CA1707;MA0036;IDE1006;RCS1213;RCS1169;SA1310;SA1134;IDE0044;IDE0051;SA1303;MA0069;SA1203;CA1051</NoWarn>
     </PropertyGroup>
 
     <Import Project="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Tooling/ProxyGenerator/build/Aksio.Cratis.Applications.ProxyGenerator.props"/>
