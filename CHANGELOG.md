@@ -1,3 +1,14 @@
+# [v6.0.1] - 2022-5-4 [PR: #281](https://github.com/aksio-insurtech/Cratis/pull/281)
+
+### Added
+
+- Crude kernel API docs
+
+### Fixed
+
+- Swagger endpoint working, navigate to `/swagger` on the Kernel (e.g. http://localhost:8080/swagger)
+
+
 # [v6.0.0] - 2022-4-24 [PR: #190](https://github.com/aksio-insurtech/Cratis/pull/190)
 
 ## Summary
