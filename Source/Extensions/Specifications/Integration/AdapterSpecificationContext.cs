@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Schemas;
@@ -21,6 +22,12 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
     readonly IAdapterFor<TModel, TExternalModel> _adapter;
     readonly IImportOperations<TModel, TExternalModel> _importOperations;
     readonly EventLogForSpecifications _eventLog = new();
+    int _eventCountBeforeImport;
+
+    /// <summary>
+    /// Gets the <see cref="IEventLog"/>.
+    /// </summary>
+    public IEventLog EventLog => _eventLog;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdapterSpecificationContext{TModel, TExternalModel}"/> class.
@@ -40,7 +47,7 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
         var projectionDefinition = builder.Build();
         var eventSequenceStorageProvider = new EventSequenceStorageProviderForSpecifications(_eventLog);
         var objectsComparer = new ObjectsComparer();
-        var adapterProjectionFor = new InMemoryAdapterProjectionFor<TModel>(projectionDefinition, eventSequenceStorageProvider, objectsComparer);
+        var adapterProjectionFor = new SpecificationAdapterProjectionFor<TModel>(projectionDefinition, eventSequenceStorageProvider, objectsComparer);
         var adapterMapperFactory = new AdapterMapperFactory();
         var mapper = adapterMapperFactory.CreateFor(adapter);
 
@@ -64,6 +71,7 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
     /// <param name="externalModel">External model to import.</param>
     public void Import(TExternalModel externalModel)
     {
+        _eventCountBeforeImport = _eventLog.ActualEvents.Count();
         _importOperations.Apply(externalModel);
     }
 
@@ -71,17 +79,16 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
     /// Assert that a set events are appended.
     /// </summary>
     /// <param name="events">Events to verify.</param>
-    public void ShouldAppendEvents(params object[] events)
-    {
-        _eventLog.ActualEvents.ShouldContain(events);
-    }
+    public void ShouldAppendEvents(params object[] events) => _eventLog.ActualEvents.ShouldContain(events);
 
     /// <summary>
     /// Assert that a set events are the only ones being appended.
     /// </summary>
     /// <param name="events">Events to verify.</param>
-    public void ShouldOnlyAppendEvents(params object[] events)
-    {
-        _eventLog.ActualEvents.ShouldContainOnly(events);
-    }
+    public void ShouldOnlyAppendEvents(params object[] events) => _eventLog.ActualEvents.ShouldContainOnly(events);
+
+    /// <summary>
+    /// Assert that there has not been added any events as the result of an import.
+    /// </summary>
+    public void ShouldNotAppendEvents() => _eventLog.ActualEvents.Count().ShouldEqual(_eventCountBeforeImport);
 }
