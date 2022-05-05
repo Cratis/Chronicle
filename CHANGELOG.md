@@ -1,3 +1,11 @@
+# [v6.1.0] - 2022-5-5 [PR: #275](https://github.com/aksio-insurtech/Cratis/pull/275)
+
+### Added
+
+- Support for writing specifications for adapters and projections (#230)
+- Brotli compression configuration set to smallest size
+
+
 # [v6.0.1] - 2022-5-4 [PR: #281](https://github.com/aksio-insurtech/Cratis/pull/281)
 
 ### Added
