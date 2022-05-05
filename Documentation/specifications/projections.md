@@ -1,7 +1,7 @@
 # Projections
 
-Projections typically takes events and project these to a desired model.
-The assertions one might want to do is to verify that they are in fact projecting
+Projections takes events and project these to a desired model.
+The assertions one typically want to do is to verify that they are in fact being projected
 to the expected outcome.
 
 ## Projection
@@ -29,7 +29,7 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
 
 ## Projection Specification Context
 
-At the core sits an type called `ProjectionSpecificationContext<>`. This does all the heavy lifting
+At the core sits a type called `ProjectionSpecificationContext<>`. This does all the heavy lifting
 of setting up an in-memory system for working with projections. It provides the **event log** and
 the actual projection that can be worked with. One can then typically append events into the **event log**
 and then get an instance of the projection for assertions.
@@ -74,6 +74,9 @@ async Task DebitAccountOpenedShouldProjectToExpectedProperties()
 Building on top of the gherkin-ish type of approach in [Aksio Specifications](https://github.com/aksio-insurtech/Specifications),
 there is a base class called `ProjectionSpecificationFor<>` that sets up and leverages the `ProjectionSpecificationContext<>`.
 This is exposed in a property called `context`.
+
+The base class is an abstract class requiring you to override a method called `CreateProjection()` where you return a new instance
+of the adapter.
 
 The specification would then look something like this for asserting value correctness on the model:
 
