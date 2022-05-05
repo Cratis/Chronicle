@@ -2,6 +2,8 @@
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Specifications</AssemblyName>
         <RootNamespace>Aksio.Cratis.Specifications</RootNamespace>
+
+        <NoWarn>$(NoWarn);CA1051;RCS1213;IDE0051;CS8618;IDE1006</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
