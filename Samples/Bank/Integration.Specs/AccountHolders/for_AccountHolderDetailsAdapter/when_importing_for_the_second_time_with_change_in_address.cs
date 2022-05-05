@@ -17,7 +17,7 @@ public class when_importing_for_the_second_time_with_change_in_address : given.o
         postal_code,
         country);
 
-    void Because() => context.Import(object_with_changes);
+    Task Because() => context.Import(object_with_changes);
 
     [Fact] void should_append_account_holder_address_changed() => context.ShouldAppendEvents(new AccountHolderAddressChanged(object_with_changes.Adresse, city, postal_code, country));
 }
