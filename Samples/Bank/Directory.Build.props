@@ -10,10 +10,6 @@
         <SpecProject>$([System.String]::Copy($(MSBuildProjectName)).Contains('.Specs'))</SpecProject>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(SpecProject)' == 'true'">
-        <NoWarn>$(NoWarn);CA1707;MA0036;IDE1006;RCS1213;RCS1169;SA1310;SA1134;IDE0044;IDE0051;SA1303;MA0069;SA1203;CA1051</NoWarn>
-    </PropertyGroup>
-
     <Import Project="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Tooling/ProxyGenerator/build/Aksio.Cratis.Applications.ProxyGenerator.props"/>
 
     <ItemGroup>
@@ -21,13 +17,13 @@
         <ProjectReference Include="$(MSBuildThisFileDirectory)../../Source/ApplicationModel/Tooling/ProxyGenerator/ProxyGenerator.csproj" OutputItemType="Analyzer" Private="true"/>
     </ItemGroup>
 
-	<ItemGroup Condition="'$(SpecProject)' != 'true'">
-		<PackageReference Include="Aksio.Defaults" Version="$(AksioDefaults)" />
-	</ItemGroup>
-
     <ItemGroup>
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
     </ItemGroup>
+
+    <PropertyGroup Condition="'$(SpecProject)' == 'true'">
+        <NoWarn>$(NoWarn);CA1707;MA0036;IDE1006;RCS1213;RCS1169;SA1310;SA1134;IDE0044;IDE0051;SA1303;MA0069;SA1203;CA1051</NoWarn>
+    </PropertyGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)../../Source/Extensions/Specifications/Specifications.csproj" />
