@@ -65,7 +65,7 @@ async Task DebitAccountOpenedShouldProjectToExpectedProperties()
 
     // Assert
     Assert.Equal(result.Name.Value, accountName);
-    Assert:Equal(result.Owner.Value, Guid.Parse(owner_id));
+    Assert.Equal(result.Owner.Value, Guid.Parse(owner_id));
 }
 ```
 
