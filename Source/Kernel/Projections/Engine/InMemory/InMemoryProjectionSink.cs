@@ -18,8 +18,8 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// </summary>
     public static readonly ProjectionSinkTypeId ProjectionResultStoreTypeId = "8a23995d-da0b-4c4c-818b-f97992f26bbf";
 
-    readonly Dictionary<object, ExpandoObject> _collection = new();
-    readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
+    readonly Dictionary<string, ExpandoObject> _collection = new();
+    readonly Dictionary<string, ExpandoObject> _rewindCollection = new();
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -34,9 +34,9 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         var collection = GetCollection();
 
         ExpandoObject modelInstance;
-        if (collection.ContainsKey(key.Value))
+        if (collection.ContainsKey(key.Value.ToString()!))
         {
-            modelInstance = collection[key.Value];
+            modelInstance = collection[key.Value.ToString()!];
         }
         else
         {
@@ -54,7 +54,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 
         if (changeset.HasBeenRemoved())
         {
-            collection.Remove(key.Value);
+            collection.Remove(key.Value.ToString()!);
             return Task.CompletedTask;
         }
 
@@ -63,7 +63,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             state = state.OverwriteWith((change.State as ExpandoObject)!);
         }
 
-        collection[key.Value] = state;
+        collection[key.Value.ToString()!] = state;
 
         return Task.CompletedTask;
     }
@@ -95,5 +95,5 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    Dictionary<object, ExpandoObject> GetCollection() => _isReplaying ? _rewindCollection : _collection;
+    Dictionary<string, ExpandoObject> GetCollection() => _isReplaying ? _rewindCollection : _collection;
 }

@@ -11,7 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="xunit" Version="2.4.1" />
+        <PackageReference Include="xunit" Version="$(xunit)" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -21,11 +21,12 @@
         <PackageReference Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)"/>
 
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
-        <PackageReference Include="Aksio.Specifications" Version="2.0.0" />
+        <PackageReference Include="Aksio.Specifications" Version="$(AksioSpecifications)" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="$(MSBuildThisFileDirectory)/Common/Common.csproj"/>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../Source/Extensions/Specifications/Specifications.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -4,7 +4,7 @@
 using System.Collections;
 using Aksio.Cratis.Types;
 
-namespace Aksio.Cratis.Common;
+namespace Aksio.Cratis.Specifications.Types;
 
 /// <summary>
 /// Represents an implementation of <see cref="IInstancesOf{T}"/> for providing exact instances.

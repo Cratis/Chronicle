@@ -7,6 +7,8 @@
         <NoWarn>$(NoWarn);CS0012;RCS1090;CA2007</NoWarn>    <!-- ConfigureAwait requirement, https://devblogs.microsoft.com/dotnet/configureawait-faq/#when-should-i-use-configureawaitfalse -->
 
         <AksioProxyOutput>$(MSBuildThisFileDirectory)/Web/API</AksioProxyOutput>
+
+        <SpecProject>$([System.String]::Copy($(MSBuildProjectName)).Contains('.Specs'))</SpecProject>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.Defaults" Version="1.5.8" />
+        <PackageReference Include="Aksio.Defaults" Version="1.6.3" />
         <PackageReference Include="Aksio.Cratis.Applications" Version="5.0.3" />
         <PackageReference Include="Aksio.Cratis.Applications.CQRS" Version="5.0.3" />
         <PackageReference Include="Aksio.Cratis.Applications.CQRS.MongoDB" Version="5.0.3" />
@@ -22,4 +24,28 @@
         <PackageReference Include="Aksio.Cratis.Applications.ProxyGenerator" Version="5.0.3" />
         <!--#endif -->
     </ItemGroup>
+
+    <PropertyGroup Condition="'$(SpecProject)' == 'true'">
+        <NoWarn>$(NoWarn);CA1707;MA0036;IDE1006;RCS1213;RCS1169;SA1310;SA1134;IDE0044;IDE0051;SA1303;MA0069;SA1203;CA1051</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(SpecProject)' == 'true'">
+        <ProjectReference Include="Aksio.Cratis.Specifications" Version="5.0.3" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(SpecProject)' == 'true'">
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(SpecProject)' == 'true'">
+        <PackageReference Include="xunit" Version="$(xunit)" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+
+        <PackageReference Include="moq" Version="4.13.*" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
+    </ItemGroup>
+
 </Project>
