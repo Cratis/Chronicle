@@ -13,6 +13,7 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 
     public override void DefineModel(IProjectionBuilderFor<AccountHolder> builder) => builder
         .From<AccountHolderRegistered>(_ => _
+            .Set(m => m.SocialSecurityNumber).ToEventSourceId()
             .Set(m => m.FirstName).To(ev => ev.FirstName)
             .Set(m => m.LastName).To(ev => ev.LastName)
             .Set(m => m.DateOfBirth).To(ev => ev.DateOfBirth))
