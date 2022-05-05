@@ -6,8 +6,6 @@ using Aksio.Specifications;
 
 namespace Aksio.Cratis.Specifications.Integration;
 
-#pragma warning disable CA1051, SA1600, RCS1213, IDE0051, CS8618
-
 /// <summary>
 /// Represents a specialized <see cref="Specification"/> for specifying behaviors of adapters.
 /// </summary>
@@ -15,8 +13,15 @@ namespace Aksio.Cratis.Specifications.Integration;
 /// <typeparam name="TExternalModel">The external model the adapter is for.</typeparam>
 public abstract class AdapterSpecificationFor<TModel, TExternalModel> : Specification
 {
-    protected IAdapterFor<TModel, TExternalModel> adapter;
-    protected AdapterSpecificationContext<TModel, TExternalModel> context;
+    /// <summary>
+    /// Gets the <see cref="IAdapterFor{TModel, TExternalModel}"/>.
+    /// </summary>
+    protected IAdapterFor<TModel, TExternalModel> adapter { get; private set; }
+
+    /// <summary>
+    /// Gets the <see cref="AdapterSpecificationContext{TModel, TExternalModel}"/>.
+    /// </summary>
+    protected AdapterSpecificationContext<TModel, TExternalModel> context { get; private set; }
 
     /// <summary>
     /// Create an instance of the adapter for the specification.

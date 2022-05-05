@@ -2,12 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Integration;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Specifications.Types;
 using Aksio.Specifications;
 
 namespace Aksio.Cratis.Specifications.Integration;
@@ -19,15 +15,19 @@ namespace Aksio.Cratis.Specifications.Integration;
 /// <typeparam name="TExternalModel">Type of external model.</typeparam>
 public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
 {
-    readonly IAdapterFor<TModel, TExternalModel> _adapter;
     readonly IImportOperations<TModel, TExternalModel> _importOperations;
-    readonly EventLogForSpecifications _eventLog = new();
+    readonly ProjectionSpecificationContext<TModel> _projectionSpecificationContext;
     int _eventCountBeforeImport;
 
     /// <summary>
     /// Gets the <see cref="IEventLog"/>.
     /// </summary>
-    public IEventLog EventLog => _eventLog;
+    public IEventLog EventLog => _projectionSpecificationContext.EventLog;
+
+    /// <summary>
+    /// Gets the <see cref="IAdapterProjectionFor{TModel}"/> used.
+    /// </summary>
+    public IAdapterProjectionFor<TModel> Projection { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdapterSpecificationContext{TModel, TExternalModel}"/> class.
@@ -35,60 +35,52 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
     /// <param name="adapter"><see cref="IAdapterFor{TModel, TExternalModel}"/> instance.</param>
     public AdapterSpecificationContext(IAdapterFor<TModel, TExternalModel> adapter)
     {
-        _adapter = adapter;
-
-        var schemaGenerator = new JsonSchemaGenerator(
-            new ComplianceMetadataResolver(
-                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
-                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()));
-
-        var builder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, new EventTypesForSpecifications(), schemaGenerator);
-        _adapter.DefineModel(builder);
-        var projectionDefinition = builder.Build();
-        var eventSequenceStorageProvider = new EventSequenceStorageProviderForSpecifications(_eventLog);
         var objectsComparer = new ObjectsComparer();
-        var adapterProjectionFor = new SpecificationAdapterProjectionFor<TModel>(projectionDefinition, eventSequenceStorageProvider, objectsComparer);
+        _projectionSpecificationContext = new ProjectionSpecificationContext<TModel>(adapter.Identifier.Value, adapter.DefineModel);
+        Projection = new SpecificationAdapterProjectionFor<TModel>(_projectionSpecificationContext);
         var adapterMapperFactory = new AdapterMapperFactory();
         var mapper = adapterMapperFactory.CreateFor(adapter);
 
         _importOperations = new ImportOperations<TModel, TExternalModel>(
             adapter,
-            adapterProjectionFor,
+            Projection,
             mapper,
             objectsComparer,
-            _eventLog);
+            EventLog);
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
         _importOperations.Dispose();
+        _projectionSpecificationContext.Dispose();
     }
 
     /// <summary>
     /// Import the instance of the external model.
     /// </summary>
     /// <param name="externalModel">External model to import.</param>
-    public void Import(TExternalModel externalModel)
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public async Task Import(TExternalModel externalModel)
     {
-        _eventCountBeforeImport = _eventLog.ActualEvents.Count();
-        _importOperations.Apply(externalModel);
+        _eventCountBeforeImport = _projectionSpecificationContext._eventLog.ActualEvents.Count();
+        await _importOperations.Apply(externalModel);
     }
 
     /// <summary>
     /// Assert that a set events are appended.
     /// </summary>
     /// <param name="events">Events to verify.</param>
-    public void ShouldAppendEvents(params object[] events) => _eventLog.ActualEvents.ShouldContain(events);
+    public void ShouldAppendEvents(params object[] events) => _projectionSpecificationContext._eventLog.ActualEvents.ShouldContain(events);
 
     /// <summary>
     /// Assert that a set events are the only ones being appended.
     /// </summary>
     /// <param name="events">Events to verify.</param>
-    public void ShouldOnlyAppendEvents(params object[] events) => _eventLog.ActualEvents.ShouldContainOnly(events);
+    public void ShouldOnlyAppendEvents(params object[] events) => _projectionSpecificationContext._eventLog.ActualEvents.ShouldContainOnly(events);
 
     /// <summary>
     /// Assert that there has not been added any events as the result of an import.
     /// </summary>
-    public void ShouldNotAppendEvents() => _eventLog.ActualEvents.Count().ShouldEqual(_eventCountBeforeImport);
+    public void ShouldNotAppendEvents() => _projectionSpecificationContext._eventLog.ActualEvents.Count().ShouldEqual(_eventCountBeforeImport);
 }
