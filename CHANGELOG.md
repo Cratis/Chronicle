@@ -2,7 +2,7 @@
 
 ### Added
 
-- Support for writing specifications for adapters and projections (#230)
+- Support for writing specifications for adapters and projections (#230). For documentation on how, go [here](./Documentation/specifications/index.md).
 - Brotli compression configuration set to smallest size
 
 
