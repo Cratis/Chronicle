@@ -1,6 +1,7 @@
 <Project>
     <PropertyGroup>
         <AksioDefaults>1.5.15</AksioDefaults>
+        <AksioSpecifications>2.0.0</AksioSpecifications>
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
         <Autofac>6.3.0</Autofac>
         <AutofacExtensions>7.2.0</AutofacExtensions>
@@ -13,5 +14,6 @@
         <SqlDataClient>4.8.3</SqlDataClient>
         <SystemReactive>5.0.0</SystemReactive>
         <NJsonSchema>10.6.10</NJsonSchema>
+        <xunit>2.4.1</xunit>
     </PropertyGroup>
 </Project>
