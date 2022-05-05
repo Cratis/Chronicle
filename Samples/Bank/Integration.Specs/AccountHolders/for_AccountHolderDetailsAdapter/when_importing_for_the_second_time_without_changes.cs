@@ -13,7 +13,7 @@ public class when_importing_for_the_second_time_without_changes : given.object_r
         context.EventLog.Append(social_security_number, new AccountHolderAddressChanged(address, city, postal_code, country));
     }
 
-    void Because() => context.Import(object_to_import);
+    Task Because() => context.Import(object_to_import);
 
     [Fact] void should_not_append_any_events() => context.ShouldNotAppendEvents();
 }
