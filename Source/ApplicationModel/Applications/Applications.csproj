@@ -9,15 +9,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
-        <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj"/>
-        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj"/>
-        <ProjectReference Include="../CQRS/CQRS.csproj"/>
-        <ProjectReference Include="../CQRS.MongoDB/CQRS.MongoDB.csproj"/>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+        <ProjectReference Include="../../Extensions/Autofac/Autofac.csproj" />
+        <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../CQRS/CQRS.csproj" />
+        <ProjectReference Include="../CQRS.MongoDB/CQRS.MongoDB.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
+        <PackageReference Include="FluentValidation" Version="11.0.1" />
         <PackageReference Include="Humanizer" Version="$(Humanizer)" />
         <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(MicrosoftExtensions)" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensions)" />
