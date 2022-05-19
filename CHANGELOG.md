@@ -1,5 +1,10 @@
 # [v6.1.2] - 2022-5-19 [PR: #300](https://github.com/aksio-insurtech/Cratis/pull/300)
 
+### Added
+
+- Introducing `AppendedEvents` on `IHaveEventLog` implemented by `AdapterSpecificationContext<,>` and `ProjectionSpecificationContext<>`, making it easier to extend on `Should*` extensions for asserting on appended events.
+- `AppendedEvents` on `IHaveEventLog` exposes a new type `AppendedEventForSpecifications` that contains both a JSON representation and the original object.
+
 ### Changed
 
 - For asserting if that events are not added during import one should now use `ShouldNotAppendEventsDuringImport()`.
