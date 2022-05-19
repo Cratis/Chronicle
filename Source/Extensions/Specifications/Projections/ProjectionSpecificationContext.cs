@@ -22,7 +22,7 @@ namespace Aksio.Cratis.Specifications.Integration;
 /// Represents the context for specifications for a projection.
 /// </summary>
 /// <typeparam name="TModel">Type of target model the projection is for.</typeparam>
-public class ProjectionSpecificationContext<TModel> : IDisposable
+public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 {
     internal readonly EventLogForSpecifications _eventLog = new();
     readonly JsonSerializerOptions _serializerOptions = new()
@@ -34,10 +34,11 @@ public class ProjectionSpecificationContext<TModel> : IDisposable
                 }
     };
 
-    /// <summary>
-    /// Gets the <see cref="IEventLog"/>.
-    /// </summary>
+    /// <inheritdoc/>
     public IEventLog EventLog => _eventLog;
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _eventLog.AppendedEvents;
 
     readonly IProjection _projection;
     readonly IEventSequenceStorageProvider _eventSequenceStorageProvider;
