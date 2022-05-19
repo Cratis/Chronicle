@@ -1,3 +1,14 @@
+# [v6.1.2] - 2022-5-19 [PR: #300](https://github.com/aksio-insurtech/Cratis/pull/300)
+
+### Changed
+
+- For asserting if that events are not added during import one should now use `ShouldNotAppendEventsDuringImport()`.
+
+### Fixed
+
+- More flexibility around how to write custom assertions. `IHaveEventLog` is an interface implemented by `AdpaterSpecificationContext<,>` and `ProjectionSpecificationContext<>` holding the actual appended events. (Fixes #297)
+- Moved assertions into general extension methods that can be used for anything implementing `IHaveEventLog`.
+
 # [v6.1.0] - 2022-5-5 [PR: #275](https://github.com/aksio-insurtech/Cratis/pull/275)
 
 ### Added
