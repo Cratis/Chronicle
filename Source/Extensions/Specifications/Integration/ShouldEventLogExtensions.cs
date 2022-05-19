@@ -3,7 +3,7 @@
 
 using Aksio.Specifications;
 
-namespace Aksio.Cratis.Specifications.Integration;
+namespace Aksio.Cratis.Specifications;
 
 /// <summary>
 /// Holds extension methods for fluent "Should*" assertions related to <see cref="IHaveEventLog"/>.
