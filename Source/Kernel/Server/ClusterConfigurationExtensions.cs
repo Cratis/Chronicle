@@ -41,7 +41,7 @@ public static class ClusterConfigurationExtensions
             else
             {
                 builder.ConfigureEndpoints(
-                    hostName: clusterConfig.SiloHostName,
+                    hostname: clusterConfig.SiloHostName,
                     siloPort: clusterConfig.SiloPort,
                     gatewayPort: clusterConfig.GatewayPort,
                     listenOnAnyHostAddress: true);
