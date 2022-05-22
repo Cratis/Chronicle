@@ -185,8 +185,8 @@ public class ClusterOptionsValueResolver : IConfigurationValueResolver
         return configuration.GetValue<string>("type") switch
         {
             ClusterTypes.Static => new StaticClusterOptions(),
-            ClusterTypes.AdoNet => new AdoNetClusteringSiloOptions(),
-            ClusterTypes.AzureStorage => new AzureStorageClusteringOptions(),
+            ClusterTypes.AdoNet => new AdoNetClusterOptions(),
+            ClusterTypes.AzureStorage => new AzureStorageClusterOptions(),
             _ => null!
         };
     }
