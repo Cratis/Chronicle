@@ -89,7 +89,7 @@ public static class ConfigurationHostBuilderExtensions
 
             foreach (var searchPath in allSearchPaths)
             {
-                logger?.AddingConfigurationFile(configurationObjectType, fileName);
+                logger?.AddingConfigurationFile(configurationObjectType, fileName, searchPath);
                 var actualFile = Path.Combine(searchPath, fileName);
                 configurationBuilder.AddJsonFile(actualFile, true);
             }
