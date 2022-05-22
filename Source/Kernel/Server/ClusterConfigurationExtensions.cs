@@ -60,7 +60,7 @@ public static class ClusterConfigurationExtensions
 
                 case ClusterTypes.AdoNet:
                     {
-                        var adoNetOptions = clusterConfig.GetAdoNetClusteringSiloOptions();
+                        var adoNetOptions = clusterConfig.GetAdoNetClusterOptions();
                         builder.UseAdoNetClustering(options =>
                         {
                             options.ConnectionString = adoNetOptions.ConnectionString;
@@ -71,7 +71,7 @@ public static class ClusterConfigurationExtensions
 
                 case ClusterTypes.AzureStorage:
                     {
-                        var azureOptions = clusterConfig.GetAzureStorageClusteringOptions();
+                        var azureOptions = clusterConfig.GetAzureStorageClusterOptions();
                         builder.UseAzureStorageClustering(options =>
                         {
                             options.ConfigureTableServiceClient(azureOptions.ConnectionString);
