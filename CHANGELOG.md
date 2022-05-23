@@ -1,3 +1,10 @@
+# [v6.1.8] - 2022-5-23 [PR: #311](https://github.com/aksio-insurtech/Cratis/pull/311)
+
+### Fixed
+
+- Making the current hostname a fallback if not `AdvertisedIP` or `SiloHostName` is configured for the cluster config.
+
+
 # [v6.1.7] - 2022-5-23 [PR: #309](https://github.com/aksio-insurtech/Cratis/pull/309)
 
 ### Fixed
