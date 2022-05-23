@@ -30,7 +30,7 @@ public static class ClusterConfigurationExtensions
                     options.ServiceId = "kernel";
                 });
 
-            if (string.IsNullOrEmpty(clusterConfig.SiloHostName))
+            if (!string.IsNullOrEmpty(clusterConfig.AdvertisedIP))
             {
                 builder.ConfigureEndpoints(
                     advertisedIP: IPAddress.Parse(clusterConfig.AdvertisedIP),
@@ -41,7 +41,7 @@ public static class ClusterConfigurationExtensions
             else
             {
                 builder.ConfigureEndpoints(
-                    hostname: clusterConfig.SiloHostName,
+                    hostname: !string.IsNullOrEmpty(clusterConfig.SiloHostName) ? clusterConfig.SiloHostName : Dns.GetHostName(),
                     siloPort: clusterConfig.SiloPort,
                     gatewayPort: clusterConfig.GatewayPort,
                     listenOnAnyHostAddress: true);
