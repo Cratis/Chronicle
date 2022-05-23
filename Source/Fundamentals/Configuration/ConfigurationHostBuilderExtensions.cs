@@ -95,33 +95,46 @@ public static class ConfigurationHostBuilderExtensions
             }
 
             var configuration = configurationBuilder.Build();
-            var configurationObject = configuration.Get(configurationObjectType);
+            var configurationObject = Activator.CreateInstance(configurationObjectType)!;
+            ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
+            configuration.Bind(configurationObject);
+            services.AddSingleton(configurationObjectType, configurationObject);
 
-            if (configurationObject is not null)
-            {
-                ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
-                services.AddSingleton(configurationObjectType, configurationObject);
+            services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
 
-                services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
+            var optionsType = typeof(IOptions<>).MakeGenericType(configurationObjectType);
+            var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObjectType);
+            var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationObject });
 
-                var optionsType = typeof(IOptions<>).MakeGenericType(configurationObjectType);
-                var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObjectType);
-                var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationObject });
-
-                services.AddSingleton(optionsType, optionsWrapperInstance!);
-            }
+            services.AddSingleton(optionsType, optionsWrapperInstance!);
         }
 
         return services;
     }
 
-    static void ResolveConfigurationValues(IConfigurationRoot configuration, Type configurationObjectType, object configurationObject)
+    static void ResolveConfigurationValues(IConfiguration configuration, Type configurationObjectType, object configurationObject)
     {
-        foreach (var property in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite && _.HasAttribute<ConfigurationValueResolverAttribute>()))
+        foreach (var property in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite))
         {
-            var resolverAttribute = property.GetCustomAttribute<ConfigurationValueResolverAttribute>()!;
-            var resolver = (Activator.CreateInstance(resolverAttribute.ResolverType) as IConfigurationValueResolver)!;
-            property.SetValue(configurationObject, resolver.Resolve(configuration));
+            object propertyValue;
+
+            if (property.HasAttribute<ConfigurationValueResolverAttribute>())
+            {
+                var resolverAttribute = property.GetCustomAttribute<ConfigurationValueResolverAttribute>()!;
+                var resolver = (Activator.CreateInstance(resolverAttribute.ResolverType) as IConfigurationValueResolver)!;
+                propertyValue = resolver.Resolve(configuration);
+                property.SetValue(configurationObject, propertyValue);
+            }
+            else
+            {
+                propertyValue = property.GetValue(configurationObject)!;
+            }
+
+            if (!property.PropertyType.IsAPrimitiveType() &&
+                !property.PropertyType.IsEnumerable())
+            {
+                ResolveConfigurationValues(configuration.GetSection(property.Name), property.PropertyType, propertyValue);
+            }
         }
     }
 
