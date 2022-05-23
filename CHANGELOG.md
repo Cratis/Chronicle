@@ -1,3 +1,10 @@
+# [v6.1.10] - 2022-5-23 [PR: #313](https://github.com/aksio-insurtech/Cratis/pull/313)
+
+### Fixed
+
+- Production image in 6.1.9 is broken due to missing `.deps.json` files. These are now braught back and `cratis.json` which was the file we intended to remove is now explicitly removed from the image.
+
+
 # [v6.1.9] - 2022-5-23 [PR: #312](https://github.com/aksio-insurtech/Cratis/pull/312)
 
 ### Fixed
