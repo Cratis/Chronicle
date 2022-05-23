@@ -29,7 +29,7 @@ public class Cluster
     /// <summary>
     /// Gets the advertised IP address to be used in the Orleans membership table.
     /// </summary>
-    public string AdvertisedIP { get; init; } = "127.0.0.1";
+    public string AdvertisedIP { get; init; } = string.Empty;
 
     /// <summary>
     /// Gets the port used for the Silo in the cluster.
