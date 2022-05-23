@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Pipelines;
@@ -23,8 +24,8 @@ namespace Aksio.Cratis.Events.Projections.Grains;
 /// </summary>
 public class Projection : Grain, IProjection
 {
-    readonly IProjectionDefinitions _projectionDefinitions;
-    readonly IProjectionPipelineDefinitions _projectionPipelineDefinitions;
+    readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
+    readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitionsProvider;
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly IObjectsComparer _objectsComparer;
@@ -37,24 +38,24 @@ public class Projection : Grain, IProjection
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
     /// </summary>
-    /// <param name="projectionDefinitions"><see cref="IProjectionDefinitions"/>.</param>
-    /// <param name="projectionPipelineDefinitions"><see cref="IProjectionPipelineDefinitions"/> for working with pipelines.</param>
+    /// <param name="projectionDefinitionsProvider"><see cref="IProjectionDefinitions"/>.</param>
+    /// <param name="projectionPipelineDefinitionsProvider"><see cref="IProjectionPipelineDefinitions"/> for working with pipelines.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating the pipeline for the projection.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public Projection(
-        IProjectionDefinitions projectionDefinitions,
-        IProjectionPipelineDefinitions projectionPipelineDefinitions,
+        ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
+        ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitionsProvider,
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory,
         IObjectsComparer objectsComparer,
         IEventSequenceStorageProvider eventProvider,
         IExecutionContextManager executionContextManager)
     {
-        _projectionDefinitions = projectionDefinitions;
-        _projectionPipelineDefinitions = projectionPipelineDefinitions;
+        _projectionDefinitionsProvider = projectionDefinitionsProvider;
+        _projectionPipelineDefinitionsProvider = projectionPipelineDefinitionsProvider;
         _projectionFactory = projectionFactory;
         _projectionPipelineFactory = projectionPipelineFactory;
         _objectsComparer = objectsComparer;
@@ -71,8 +72,8 @@ public class Projection : Grain, IProjection
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
 
-        var projectionDefinition = await _projectionDefinitions.GetFor(projectionId);
-        var pipelineDefinition = await _projectionPipelineDefinitions.GetFor(projectionId);
+        var projectionDefinition = await _projectionDefinitionsProvider().GetFor(projectionId);
+        var pipelineDefinition = await _projectionPipelineDefinitionsProvider().GetFor(projectionId);
         _projection = await _projectionFactory.CreateFrom(projectionDefinition);
         _pipeline = _projectionPipelineFactory.CreateFrom(_projection, pipelineDefinition);
 
