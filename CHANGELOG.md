@@ -1,3 +1,10 @@
+# [v6.1.7] - 2022-5-23 [PR: #309](https://github.com/aksio-insurtech/Cratis/pull/309)
+
+### Fixed
+
+- Fixing a problem that occurred when execution context was not set when getting projected model instances. Switching to `ProviderFor<>` for this. We will fix this completely with #265.
+
+
 # [v6.1.6] - 2022-5-23 [PR: #308](https://github.com/aksio-insurtech/Cratis/pull/308)
 
 ### Fixed
