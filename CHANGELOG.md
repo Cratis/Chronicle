@@ -1,3 +1,11 @@
+# [v6.1.5] - 2022-5-23 [PR: #307](https://github.com/aksio-insurtech/Cratis/pull/307)
+
+### Fixed
+
+- Making configuration value resolvers work recursively, now that one can have config objects within config objects.
+- Switching back to using `Bind()` on config objects rather than `Get()` as the configuration value resolvers need to be run before we apply the config on an instance, and not after as we had it, which caused it to fail.
+
+
 # [v6.1.2] - 2022-5-19 [PR: #300](https://github.com/aksio-insurtech/Cratis/pull/300)
 
 ### Added
