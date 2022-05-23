@@ -97,16 +97,20 @@ public static class ConfigurationHostBuilderExtensions
             var configuration = configurationBuilder.Build();
             var configurationObject = Activator.CreateInstance(configurationObjectType)!;
             ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
-            configuration.Bind(configurationObject);
-            services.AddSingleton(configurationObjectType, configurationObject);
 
-            services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
+            if (configuration.Providers.Any(_ => _.GetChildKeys(Array.Empty<string>(), null!).Any()))
+            {
+                configuration.Bind(configurationObject);
+                services.AddSingleton(configurationObjectType, configurationObject);
 
-            var optionsType = typeof(IOptions<>).MakeGenericType(configurationObjectType);
-            var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObjectType);
-            var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationObject });
+                services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
 
-            services.AddSingleton(optionsType, optionsWrapperInstance!);
+                var optionsType = typeof(IOptions<>).MakeGenericType(configurationObjectType);
+                var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObjectType);
+                var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationObject });
+
+                services.AddSingleton(optionsType, optionsWrapperInstance!);
+            }
         }
 
         return services;
@@ -116,7 +120,7 @@ public static class ConfigurationHostBuilderExtensions
     {
         foreach (var property in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite))
         {
-            object propertyValue;
+            object? propertyValue = null;
 
             if (property.HasAttribute<ConfigurationValueResolverAttribute>())
             {
@@ -127,10 +131,15 @@ public static class ConfigurationHostBuilderExtensions
             }
             else
             {
-                propertyValue = property.GetValue(configurationObject)!;
+                try
+                {
+                    propertyValue = property.GetValue(configurationObject)!;
+                }
+                catch { }
             }
 
-            if (!property.PropertyType.IsAPrimitiveType() &&
+            if (propertyValue is not null &&
+                !property.PropertyType.IsAPrimitiveType() &&
                 !property.PropertyType.IsEnumerable())
             {
                 ResolveConfigurationValues(configuration.GetSection(property.Name), property.PropertyType, propertyValue);
