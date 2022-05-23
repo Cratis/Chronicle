@@ -16,7 +16,7 @@ RUN echo Version = ${VERSION}
 EXPOSE 80 11111 30000
 
 COPY ./Source/Kernel/Server/out/x64/*.dll .
-COPY ./Source/Kernel/Server/out/x64/*.json .
+COPY ./Source/Kernel/Server/out/x64/appsettings.json .
 COPY ./Source/Kernel/Server/out/x64/*.so .
 COPY ./Source/Kernel/Server/out/x64/Aksio.Cratis.Server .
 COPY ./Source/Workbench/wwwroot wwwroot
