@@ -1,3 +1,10 @@
+# [v6.1.6] - 2022-5-23 [PR: #308](https://github.com/aksio-insurtech/Cratis/pull/308)
+
+### Fixed
+
+- When none of the configuration providers can provide values, we now skip. This then makes sure that we don't bind default objects that can't been bound to any configuration data. Concretely fixes a crash we have for clients right now.
+
+
 # [v6.1.5] - 2022-5-23 [PR: #307](https://github.com/aksio-insurtech/Cratis/pull/307)
 
 ### Fixed
