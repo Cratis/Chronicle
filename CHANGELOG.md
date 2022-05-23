@@ -1,3 +1,11 @@
+# [v6.1.9] - 2022-5-23 [PR: #312](https://github.com/aksio-insurtech/Cratis/pull/312)
+
+### Fixed
+
+- Removing `cratis.json` from production image. With the configuration basically combining providers / files and their configuration, we want a clean one for production.
+
+
+
 # [v6.1.8] - 2022-5-23 [PR: #311](https://github.com/aksio-insurtech/Cratis/pull/311)
 
 ### Fixed
