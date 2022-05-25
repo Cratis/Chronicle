@@ -20,7 +20,7 @@
         "build": "tsc -b",
         "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
         "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
-        "test": "mocha",
+        "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha",
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
         "up": "ncu -u \\!'@aksio/*'"
     },
