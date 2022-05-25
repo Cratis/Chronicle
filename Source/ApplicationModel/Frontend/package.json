@@ -9,7 +9,8 @@
     },
     "files": [
         "dist",
-        "**/*.ts"
+        "**/*.ts",
+        "**/*.tsx"
     ],
     "main": "dist/index.js",
     "module": "dist/index.js",
