@@ -24,12 +24,12 @@
         "@aksio/cratis-fluentui": "1.0.0",
         "@aksio/cratis-react": "1.0.0",
         "@aksio/cratis-fundamentals": "1.0.0",
-        "@fluentui/react-experiments": "8.4.17",
-        "@monaco-editor/react": "4.3.1",
-        "echarts": "5.2.2",
+        "@fluentui/react-experiments": "8.8.23",
+        "@monaco-editor/react": "4.4.5",
+        "echarts": "5.3.2",
         "handlebars": "4.7.7",
-        "@ctrl/tinycolor": "3.4.0",
-        "d3": "7.3.0"
+        "@ctrl/tinycolor": "3.4.1",
+        "d3": "7.4.4"
     },
     "devDependencies": {
         "@aksio/cratis-webpack": "1.0.0"
