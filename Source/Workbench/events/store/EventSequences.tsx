@@ -79,7 +79,8 @@ export const EventSequences = () => {
 
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
     const [selectedEventType, setSelectedEventType] = useState<EventType | undefined>(undefined);
-    const [eventTypes] = AllEventTypes.use({
+
+    const [eventTypes, refreshEventTypes] = AllEventTypes.use({
         microserviceId: selectedMicroservice?.id || undefined!,
     });
 
@@ -115,6 +116,9 @@ export const EventSequences = () => {
     useEffect(() => {
         if (microservices.data.length > 0) {
             setSelectedMicroservice(microservices.data[0]);
+            refreshEventTypes({
+                microserviceId: microservices.data[0].id
+            });
         }
     }, [microservices.data]);
 
@@ -129,7 +133,6 @@ export const EventSequences = () => {
             refreshEvents(getFindForArguments());
         }
     }, [selectedEventSequence, selectedMicroservice, selectedTenant]);
-
 
     commandBarItems = [...commandBarItems, ...[
         // {
