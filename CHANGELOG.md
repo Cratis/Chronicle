@@ -1,3 +1,14 @@
+# [v6.1.12] - 2022-5-25 [PR: #316](https://github.com/aksio-insurtech/Cratis/pull/316)
+
+### Added
+
+- Adding **netcat**, **ping** and **nano** to othe development Docker image for Cratis. This is helpful when helping on debug situations either locally, or more typically in the cloud where we can't install new packages.
+
+### Fixed
+
+- Fixing `tsconfig.json` for the sample and Web template to include the correct `lib` array to support `WeakRef`.
+
+
 # [v6.1.11] - 2022-5-25 [PR: #315](https://github.com/aksio-insurtech/Cratis/pull/315)
 
 ### Fixed
