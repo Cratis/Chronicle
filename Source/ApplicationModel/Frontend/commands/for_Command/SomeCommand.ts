@@ -5,13 +5,17 @@ import { Command } from '../Command';
 import Handlebars from 'handlebars';
 import { CommandValidator } from '../CommandValidator';
 
-export class SomeCommand extends Command {
+export interface ISomeCommand {
+    someProperty: string;
+}
+
+export class SomeCommand extends Command<ISomeCommand> implements ISomeCommand {
     validation!: CommandValidator;
     route = '';
-    routeTemplate!: Handlebars.TemplateDelegate<any>;
+    routeTemplate!: Handlebars.TemplateDelegate;
 
     get requestArguments(): string[] {
-        throw new Error('Method not implemented.');
+        return [];
     }
     get properties(): string[] {
         return [

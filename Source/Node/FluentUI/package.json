@@ -20,16 +20,16 @@
         "build": "tsc -b",
         "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
         "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
-        "test": "mocha",
+        "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha",
         "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
         "up": "ncu -u \\!'@aksio/*'"
     },
     "dependencies": {
         "@aksio/cratis-typescript": "1.0.0",
         "@fluentui/font-icons-mdl2": "8.1.20",
-        "@fluentui/react": "8.49.5",
-        "@fluentui/react-charting": "5.7.5",
-        "@fluentui/react-hooks": "8.3.9",
+        "@fluentui/react": "8.70.0",
+        "@fluentui/react-charting": "5.9.37",
+        "@fluentui/react-hooks": "8.5.5",
         "@fluentui/react-icons": "1.1.145"
     },
     "devDependencies": {}

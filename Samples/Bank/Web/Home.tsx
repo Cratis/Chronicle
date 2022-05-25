@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Link } from '@fluentui/react';
+import { default as styles } from './Home.module.scss';
 
 export const Home = () => {
     return (
-        <div style={{margin: '1rem'}}>
+        <div style={{margin: '1rem'}} className={styles.home}>
             <h1>Congratulations on your new microservice! 🍾 🎂 </h1>
             This microservice comes with a default Aksio setup.<br/>
             <br/>
