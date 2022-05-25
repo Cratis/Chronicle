@@ -1,3 +1,9 @@
+# [v6.1.11] - 2022-5-25 [PR: #315](https://github.com/aksio-insurtech/Cratis/pull/315)
+
+### Fixed
+
+- `CommandTracker` was not included properly in the NPM package, this is now fixed.
+
 # [v6.1.10] - 2022-5-23 [PR: #313](https://github.com/aksio-insurtech/Cratis/pull/313)
 
 ### Fixed
