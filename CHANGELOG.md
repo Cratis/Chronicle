@@ -1,3 +1,13 @@
+# [v6.1.13] - 2022-5-25 [PR: #318](https://github.com/aksio-insurtech/Cratis/pull/318)
+
+### Fixed
+
+- Upgrading 3rd party NPM package dependencies
+- Switching to `esnext` for modules in `tsconfig`
+- Fixing so that we show event type names in event sequence list (#304).
+
+
+
 # [v6.1.12] - 2022-5-25 [PR: #316](https://github.com/aksio-insurtech/Cratis/pull/316)
 
 ### Added
