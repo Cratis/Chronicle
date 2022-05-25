@@ -27,9 +27,9 @@
     "dependencies": {
         "@aksio/cratis-typescript": "1.0.0",
         "@fluentui/font-icons-mdl2": "8.1.20",
-        "@fluentui/react": "8.49.5",
-        "@fluentui/react-charting": "5.7.5",
-        "@fluentui/react-hooks": "8.3.9",
+        "@fluentui/react": "8.70.0",
+        "@fluentui/react-charting": "5.9.37",
+        "@fluentui/react-hooks": "8.5.5",
         "@fluentui/react-icons": "1.1.145"
     },
     "devDependencies": {}

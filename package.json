@@ -17,28 +17,6 @@
         "edit-json-file": "1.6.0",
         "glob": "7.2.0"
     },
-    "resolutions": {
-        "@fluentui/react": "8.49.5",
-        "@fluentui/foundation-legacy": "8.1.19",
-        "@fluentui/date-time-utilities": "8.2.3",
-        "@fluentui/theme": "2.4.6",
-        "@fluentui/style-utilities": "8.5.2",
-        "@fluentui/utilities": "8.3.9",
-        "@fluentui/react-charting": "5.7.5",
-        "@fluentui/react-focus": "8.3.15",
-        "@fluentui/react-hooks": "8.3.9"
-    },
-    "overrides": {
-        "@fluentui/react": "8.49.5",
-        "@fluentui/foundation-legacy": "8.1.19",
-        "@fluentui/date-time-utilities": "8.2.3",
-        "@fluentui/theme": "2.4.6",
-        "@fluentui/style-utilities": "8.5.2",
-        "@fluentui/utilities": "8.3.9",
-        "@fluentui/react-charting": "5.7.5",
-        "@fluentui/react-focus": "8.3.15",
-        "@fluentui/react-hooks": "8.3.9"
-    },
     "license": "MIT",
     "version": "0.0.0"
 }
