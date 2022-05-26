@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Events.Projections.Definitions;
 using Orleans;
 
 namespace Aksio.Cratis.Events.Projections.Grains;
@@ -19,6 +20,7 @@ public interface IImmediateProjection : IGrainWithGuidCompoundKey
     /// <summary>
     /// Get the model instance.
     /// </summary>
+    /// <param name="projectionDefinition">The <see cref="ProjectionDefinition"/> to use.</param>
     /// <returns>A projected model in the form of a <see cref="JsonObject"/>.</returns>
-    Task<JsonObject> GetModelInstance();
+    Task<JsonObject> GetModelInstance(ProjectionDefinition projectionDefinition);
 }
