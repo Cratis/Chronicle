@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Events.Projections;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-/// <typeparam name="TProperty">The type of the property we're targetting.</typeparam>
+/// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 public interface ISubtractBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilder
 {
     /// <summary>
