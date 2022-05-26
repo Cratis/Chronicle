@@ -2,7 +2,7 @@
 
 ## Summary
 
-This release adds support for immediate projections. Read the [tutorial](./documentation/tutorials/immediate-projections/index.md) for more details on how it works.
+This release adds support for immediate projections. Read the [tutorial](./Documentation/tutorials/immediate-projections/index.md) for more details on how it works.
 
 ### Added
 
