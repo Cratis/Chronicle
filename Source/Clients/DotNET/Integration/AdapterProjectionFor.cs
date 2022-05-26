@@ -3,7 +3,11 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Grains;
+using Aksio.Cratis.Execution;
+using Orleans;
 
 namespace Aksio.Cratis.Integration;
 
@@ -13,24 +17,34 @@ namespace Aksio.Cratis.Integration;
 /// <typeparam name="TModel">Type of model.</typeparam>
 public class AdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>
 {
+    readonly ProjectionDefinition _projectionDefinition;
+    readonly IClusterClient _clusterClient;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IProjection _projection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdapterProjectionFor{TModel}"/> class.
     /// </summary>
-    /// <param name="projection">The <see cref="IProjection"/> to work with.</param>
+    /// <param name="projectionDefinition">The <see cref="IProjection"/> to work with.</param>
+    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
-    public AdapterProjectionFor(IProjection projection, JsonSerializerOptions jsonSerializerOptions)
+    public AdapterProjectionFor(
+        ProjectionDefinition projectionDefinition,
+        IClusterClient clusterClient,
+        JsonSerializerOptions jsonSerializerOptions)
     {
-        _projection = projection;
+        _projectionDefinition = projectionDefinition;
+        _clusterClient = clusterClient;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
 
     /// <inheritdoc/>
     public async Task<TModel> GetById(EventSourceId eventSourceId)
     {
-        var jsonObject = await _projection.GetModelInstanceById(eventSourceId);
+        // TODO: Fix so that this is not constant values.
+        var key = new ImmediateProjectionKey(ExecutionContextManager.GlobalMicroserviceId, TenantId.Development, Events.Store.EventSequenceId.Log, eventSourceId);
+        var projection = _clusterClient.GetGrain<IImmediateProjection>(_projectionDefinition.Identifier, key);
+
+        var jsonObject = await projection.GetModelInstance(_projectionDefinition);
         return jsonObject.Deserialize<TModel>(_jsonSerializerOptions)!;
     }
 }

@@ -45,7 +45,6 @@ public class ImmediateProjection : Grain, IImmediateProjection
         _executionContextManager = executionContextManager;
     }
 
-
     /// <inheritdoc/>
     public override Task OnActivateAsync()
     {
