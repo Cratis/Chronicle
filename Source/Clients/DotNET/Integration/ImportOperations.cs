@@ -33,7 +33,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// </summary>
     /// <param name="adapter">The <see cref="IAdapterFor{TModel, TExternalModel}"/>.</param>
     /// <param name="adapterProjection">The <see cref="IAdapterProjectionFor{TModel}"/> for the model.</param>
-    /// <param name="mapper"><see cref="IMapper"/> to use for mapping beteween external model and model.</param>
+    /// <param name="mapper"><see cref="IMapper"/> to use for mapping between external model and model.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
     /// <param name="eventLog">The <see cref="IEventLog"/> to work with.</param>
     public ImportOperations(
