@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Projections.Definitions;
@@ -18,6 +19,7 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
 {
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IClusterClient _clusterClient;
     readonly IExecutionContextManager _executionContextManager;
 
@@ -26,16 +28,19 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
     /// </summary>
     /// <param name="eventTypes">The <see cref="IEventTypes"/> to use.</param>
     /// <param name="schemaGenerator">The <see cref="IJsonSchemaGenerator"/> for generating schemas.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
     public AdapterProjectionFactory(
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
+        JsonSerializerOptions jsonSerializerOptions,
         IExecutionContextManager executionContextManager,
         IClusterClient clusterClient)
     {
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
+        _jsonSerializerOptions = jsonSerializerOptions;
         _executionContextManager = executionContextManager;
         _clusterClient = clusterClient;
     }
@@ -62,6 +67,6 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
 
         // TODO: This has to be registered correctly. We want to be using immediate projections.
         var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value, new ProjectionKey(ExecutionContextManager.GlobalMicroserviceId, TenantId.Development, Events.Store.EventSequenceId.Log));
-        return new AdapterProjectionFor<TModel>(projection);
+        return new AdapterProjectionFor<TModel>(projection, _jsonSerializerOptions);
     }
 }
