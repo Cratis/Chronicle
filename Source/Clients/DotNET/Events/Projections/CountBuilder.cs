@@ -10,11 +10,20 @@ namespace Aksio.Cratis.Events.Projections;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-/// <typeparam name="TProperty">The type of the property we're targetting.</typeparam>
+/// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 public class CountBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilder
 {
     /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; } = string.Empty;
+    public PropertyPath TargetProperty { get; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CountBuilder{TModel, TEvent, TProperty}"/> class.
+    /// </summary>
+    /// <param name="targetProperty">Target property we're building for.</param>
+    public CountBuilder(PropertyPath targetProperty)
+    {
+        TargetProperty = targetProperty;
+    }
 
     /// <inheritdoc/>
     public string Build() => "$count()";
