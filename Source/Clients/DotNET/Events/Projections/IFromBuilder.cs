@@ -47,6 +47,14 @@ public interface IFromBuilder<TModel, TEvent>
     ISubtractBuilder<TModel, TEvent, TProperty> Subtract<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
+    /// Start building the count operation to a target property on the model.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
+    /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
+    /// <returns>Builder continuation.</returns>
+    IFromBuilder<TModel, TEvent> Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+    /// <summary>
     /// Start building the set operation to a target property on the model.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
