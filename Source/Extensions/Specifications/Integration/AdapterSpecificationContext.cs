@@ -13,16 +13,17 @@ namespace Aksio.Cratis.Specifications.Integration;
 /// </summary>
 /// <typeparam name="TModel">Type of model.</typeparam>
 /// <typeparam name="TExternalModel">Type of external model.</typeparam>
-public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
+public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog, IDisposable
 {
     readonly IImportOperations<TModel, TExternalModel> _importOperations;
     readonly ProjectionSpecificationContext<TModel> _projectionSpecificationContext;
     int _eventCountBeforeImport;
 
-    /// <summary>
-    /// Gets the <see cref="IEventLog"/>.
-    /// </summary>
+    /// <inheritdoc/>
     public IEventLog EventLog => _projectionSpecificationContext.EventLog;
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _projectionSpecificationContext.AppendedEvents;
 
     /// <summary>
     /// Gets the <see cref="IAdapterProjectionFor{TModel}"/> used.
@@ -63,24 +64,12 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task Import(TExternalModel externalModel)
     {
-        _eventCountBeforeImport = _projectionSpecificationContext._eventLog.ActualEvents.Count();
+        _eventCountBeforeImport = _projectionSpecificationContext.AppendedEvents.Count();
         await _importOperations.Apply(externalModel);
     }
 
     /// <summary>
-    /// Assert that a set events are appended.
-    /// </summary>
-    /// <param name="events">Events to verify.</param>
-    public void ShouldAppendEvents(params object[] events) => _projectionSpecificationContext._eventLog.ActualEvents.ShouldContain(events);
-
-    /// <summary>
-    /// Assert that a set events are the only ones being appended.
-    /// </summary>
-    /// <param name="events">Events to verify.</param>
-    public void ShouldOnlyAppendEvents(params object[] events) => _projectionSpecificationContext._eventLog.ActualEvents.ShouldContainOnly(events);
-
-    /// <summary>
     /// Assert that there has not been added any events as the result of an import.
     /// </summary>
-    public void ShouldNotAppendEvents() => _projectionSpecificationContext._eventLog.ActualEvents.Count().ShouldEqual(_eventCountBeforeImport);
+    public void ShouldNotAppendEventsDuringImport() => AppendedEvents.Count().ShouldEqual(_eventCountBeforeImport);
 }

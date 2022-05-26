@@ -1,3 +1,80 @@
+# [v6.1.12] - 2022-5-25 [PR: #316](https://github.com/aksio-insurtech/Cratis/pull/316)
+
+### Added
+
+- Adding **netcat**, **ping** and **nano** to othe development Docker image for Cratis. This is helpful when helping on debug situations either locally, or more typically in the cloud where we can't install new packages.
+
+### Fixed
+
+- Fixing `tsconfig.json` for the sample and Web template to include the correct `lib` array to support `WeakRef`.
+
+
+# [v6.1.11] - 2022-5-25 [PR: #315](https://github.com/aksio-insurtech/Cratis/pull/315)
+
+### Fixed
+
+- `CommandTracker` was not included properly in the NPM package, this is now fixed.
+
+# [v6.1.10] - 2022-5-23 [PR: #313](https://github.com/aksio-insurtech/Cratis/pull/313)
+
+### Fixed
+
+- Production image in 6.1.9 is broken due to missing `.deps.json` files. These are now braught back and `cratis.json` which was the file we intended to remove is now explicitly removed from the image.
+
+
+# [v6.1.9] - 2022-5-23 [PR: #312](https://github.com/aksio-insurtech/Cratis/pull/312)
+
+### Fixed
+
+- Removing `cratis.json` from production image. With the configuration basically combining providers / files and their configuration, we want a clean one for production.
+
+
+
+# [v6.1.8] - 2022-5-23 [PR: #311](https://github.com/aksio-insurtech/Cratis/pull/311)
+
+### Fixed
+
+- Making the current hostname a fallback if not `AdvertisedIP` or `SiloHostName` is configured for the cluster config.
+
+
+# [v6.1.7] - 2022-5-23 [PR: #309](https://github.com/aksio-insurtech/Cratis/pull/309)
+
+### Fixed
+
+- Fixing a problem that occurred when execution context was not set when getting projected model instances. Switching to `ProviderFor<>` for this. We will fix this completely with #265.
+
+
+# [v6.1.6] - 2022-5-23 [PR: #308](https://github.com/aksio-insurtech/Cratis/pull/308)
+
+### Fixed
+
+- When none of the configuration providers can provide values, we now skip. This then makes sure that we don't bind default objects that can't been bound to any configuration data. Concretely fixes a crash we have for clients right now.
+
+
+# [v6.1.5] - 2022-5-23 [PR: #307](https://github.com/aksio-insurtech/Cratis/pull/307)
+
+### Fixed
+
+- Making configuration value resolvers work recursively, now that one can have config objects within config objects.
+- Switching back to using `Bind()` on config objects rather than `Get()` as the configuration value resolvers need to be run before we apply the config on an instance, and not after as we had it, which caused it to fail.
+
+
+# [v6.1.2] - 2022-5-19 [PR: #300](https://github.com/aksio-insurtech/Cratis/pull/300)
+
+### Added
+
+- Introducing `AppendedEvents` on `IHaveEventLog` implemented by `AdapterSpecificationContext<,>` and `ProjectionSpecificationContext<>`, making it easier to extend on `Should*` extensions for asserting on appended events.
+- `AppendedEvents` on `IHaveEventLog` exposes a new type `AppendedEventForSpecifications` that contains both a JSON representation and the original object.
+
+### Changed
+
+- For asserting if that events are not added during import one should now use `ShouldNotAppendEventsDuringImport()`.
+
+### Fixed
+
+- More flexibility around how to write custom assertions. `IHaveEventLog` is an interface implemented by `AdpaterSpecificationContext<,>` and `ProjectionSpecificationContext<>` holding the actual appended events. (Fixes #297)
+- Moved assertions into general extension methods that can be used for anything implementing `IHaveEventLog`.
+
 # [v6.1.0] - 2022-5-5 [PR: #275](https://github.com/aksio-insurtech/Cratis/pull/275)
 
 ### Added

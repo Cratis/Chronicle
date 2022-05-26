@@ -4,17 +4,17 @@
 namespace Aksio.Cratis.Extensions.Orleans.Configuration;
 
 /// <summary>
-/// Represents cluster configuration for azure storage.
+/// Represents the options for the Azure Storage clustering.
 /// </summary>
-public class AzureStorageClusteringConfiguration
+public class AdoNetClusterOptions
 {
     /// <summary>
-    /// Gets the connection string.
+    /// Gets the connection string to use.
     /// </summary>
-    public string ConnectionString { get; init; } = string.Empty;
+    public string ConnectionString { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the table name.
+    /// Gets the invariant name of the connector to use.
     /// </summary>
-    public string TableName { get; init; } = string.Empty;
+    public string Invariant { get; init; } = string.Empty;
 }
