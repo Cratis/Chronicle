@@ -59,7 +59,7 @@ public class FromBuilder<TModel, TEvent> : IFromBuilder<TModel, TEvent>
     /// <inheritdoc/>
     public IFromBuilder<TModel, TEvent> Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        _propertyExpressions.Add(new CountBuilder<TModel, TEvent, TProperty>());
+        _propertyExpressions.Add(new CountBuilder<TModel, TEvent, TProperty>(modelPropertyAccessor.GetPropertyPath()));
         return this;
     }
 
