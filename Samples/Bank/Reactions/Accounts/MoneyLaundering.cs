@@ -11,18 +11,20 @@ namespace Reactions.Accounts;
 public class MoneyLaundering
 {
     readonly IImmediateProjections _immediateProjections;
+    readonly IEventLog _eventLog;
 
-    public MoneyLaundering(IImmediateProjections immediateProjections)
+    public MoneyLaundering(IImmediateProjections immediateProjections, IEventLog eventLog)
     {
         _immediateProjections = immediateProjections;
+        _eventLog = eventLog;
     }
 
     public async Task AccountOpened(DebitAccountOpened @event, EventContext context)
     {
         var count = await _immediateProjections.GetInstanceById<AccountsCounter>(context.EventSourceId);
-        if (count?.Count > 42)
+        if (count.Count > 42)
         {
-            // Notify someone
+            await _eventLog.Append(Guid.Empty.ToString(), new PossibleMoneyLaunderingDetected(@event.Owner, context.EventSourceId));
         }
     }
 }
