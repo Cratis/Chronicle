@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Projections;
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
-/// <typeparam name="TProperty">The type of the property we're targetting.</typeparam>
+/// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 public class AddBuilder<TModel, TEvent, TProperty> : IAddBuilder<TModel, TEvent, TProperty>
 {
     readonly IFromBuilder<TModel, TEvent> _parent;
@@ -22,7 +22,7 @@ public class AddBuilder<TModel, TEvent, TProperty> : IAddBuilder<TModel, TEvent,
     public PropertyPath TargetProperty { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty}"/> class.
+    /// Initializes a new instance of the <see cref="AddBuilder{TModel, TEvent, TProperty}"/> class.
     /// </summary>
     /// <param name="parent">Parent builder.</param>
     /// <param name="targetProperty">Target property we're building for.</param>
