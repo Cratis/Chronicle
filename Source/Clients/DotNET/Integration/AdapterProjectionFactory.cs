@@ -4,9 +4,6 @@
 using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Projections.Grains;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
 using Orleans;
 
@@ -21,7 +18,6 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
     readonly IJsonSchemaGenerator _schemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IClusterClient _clusterClient;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdapterProjectionFactory"/> class.
@@ -29,44 +25,25 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
     /// <param name="eventTypes">The <see cref="IEventTypes"/> to use.</param>
     /// <param name="schemaGenerator">The <see cref="IJsonSchemaGenerator"/> for generating schemas.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
     public AdapterProjectionFactory(
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager,
         IClusterClient clusterClient)
     {
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _executionContextManager = executionContextManager;
         _clusterClient = clusterClient;
     }
 
     /// <inheritdoc/>
-    public async Task<IAdapterProjectionFor<TModel>> CreateFor<TModel, TExternalModel>(IAdapterFor<TModel, TExternalModel> adapter)
+    public Task<IAdapterProjectionFor<TModel>> CreateFor<TModel, TExternalModel>(IAdapterFor<TModel, TExternalModel> adapter)
     {
-        // TODO: register for all tenants
-        _executionContextManager.Establish(TenantId.Development, CorrelationId.New());
-
         var projectionBuilder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, _eventTypes, _schemaGenerator);
         adapter.DefineModel(projectionBuilder);
-        var projectionDefinition = projectionBuilder
-            .WithName($"Adapter: {adapter.GetType().Name} - {typeof(TModel).Name}")
-            .NotRewindable()
-            .Build();
-
-        var projections = _clusterClient.GetGrain<IProjections>(Guid.Empty);
-        var pipelineDefinition = new ProjectionPipelineDefinition(
-            projectionDefinition.Identifier,
-            Array.Empty<ProjectionSinkDefinition>());
-
-        await projections.Register(projectionDefinition, pipelineDefinition);
-
-        // TODO: This has to be registered correctly. We want to be using immediate projections.
-        var projection = _clusterClient.GetGrain<IProjection>(adapter.Identifier.Value, new ProjectionKey(ExecutionContextManager.GlobalMicroserviceId, TenantId.Development, Events.Store.EventSequenceId.Log));
-        return new AdapterProjectionFor<TModel>(projection, _jsonSerializerOptions);
+        var projectionDefinition = projectionBuilder.Build();
+        return Task.FromResult<IAdapterProjectionFor<TModel>>(new AdapterProjectionFor<TModel>(projectionDefinition, _clusterClient, _jsonSerializerOptions));
     }
 }
