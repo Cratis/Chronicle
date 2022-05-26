@@ -1,3 +1,15 @@
+# [v6.2.0] - 2022-5-26 [PR: #320](https://github.com/aksio-insurtech/Cratis/pull/320)
+
+## Summary
+
+This release adds support for immediate projections. Read the [tutorial](./documentation/tutorials/immediate-projections/index.md) for more details on how it works.
+
+### Added
+
+- Projections now support `.Count()`, which can be used to count the occurrences of an event.
+- Formalized immediate projections. (#215)
+
+
 # [v6.1.13] - 2022-5-25 [PR: #318](https://github.com/aksio-insurtech/Cratis/pull/318)
 
 ### Fixed
