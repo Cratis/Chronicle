@@ -7,33 +7,35 @@ using Aksio.Cratis.Execution;
 namespace Aksio.Cratis.Events.Projections;
 
 /// <summary>
-/// Represents the compound key for a projection.
+/// Represents the compound key for an immediate projection.
 /// </summary>
 /// <param name="MicroserviceId">The Microservice identifier.</param>
 /// <param name="TenantId">The Tenant identifier.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
-public record ProjectionKey(MicroserviceId MicroserviceId, TenantId TenantId, EventSequenceId EventSequenceId)
+/// <param name="EventSourceId">The event source identifier.</param>
+public record ImmediateProjectionKey(MicroserviceId MicroserviceId, TenantId TenantId, EventSequenceId EventSequenceId, EventSourceId EventSourceId)
 {
     /// <summary>
     /// Implicitly convert from <see cref="ProjectionKey"/> to string.
     /// </summary>
-    /// <param name="key"><see cref="ProjectionKey"/> to convert from.</param>
-    public static implicit operator string(ProjectionKey key) => key.ToString();
+    /// <param name="key"><see cref="ImmediateProjectionKey"/> to convert from.</param>
+    public static implicit operator string(ImmediateProjectionKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}+{EventSequenceId}";
+    public override string ToString() => $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{EventSourceId}";
 
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ProjectionKey"/> instance.</returns>
-    public static ProjectionKey Parse(string key)
+    public static ImmediateProjectionKey Parse(string key)
     {
         var elements = key.Split('+');
         var microserviceId = (MicroserviceId)elements[0];
         var tenantId = (TenantId)elements[1];
         var eventSequenceId = (EventSequenceId)elements[2];
-        return new(microserviceId, tenantId, eventSequenceId);
+        var eventSourceId = (EventSourceId)elements[3];
+        return new(microserviceId, tenantId, eventSequenceId, eventSourceId);
     }
 }

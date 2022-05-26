@@ -4,10 +4,10 @@
 namespace Aksio.Cratis.Events.Projections;
 
 /// <summary>
-/// Defines a system that can define a projection.
+/// Defines a system that can define an immediate projection.
 /// </summary>
 /// <typeparam name="TModel">Model type to target.</typeparam>
-public interface IProjectionFor<TModel>
+public interface IImmediateProjectionFor<TModel>
 {
     /// <summary>
     /// Gets the unique identifier of the projection.

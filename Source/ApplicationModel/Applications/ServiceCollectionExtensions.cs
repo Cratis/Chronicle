@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Types;
@@ -25,6 +26,17 @@ public static class ServiceCollectionExtensions
         var controllerBuilder = services
             .AddControllers(_ => _.AddCQRS())
             .AddJsonOptions(_ => _.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory()));
+
+        var serializerOptions = new JsonSerializerOptions()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters =
+                {
+                    new ConceptAsJsonConverterFactory()
+                }
+        };
+
+        services.AddSingleton(serializerOptions);
 
         foreach (var controllerAssembly in types.ProjectReferencedAssemblies.Where(_ => _.DefinedTypes.Any(type => type.Implements(typeof(Controller)))))
         {

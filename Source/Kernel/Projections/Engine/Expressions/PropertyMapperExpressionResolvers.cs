@@ -17,6 +17,7 @@ public class PropertyMapperExpressionResolvers : IPropertyMapperExpressionResolv
             new EventSourceIdExpressionResolver(),
             new AddExpressionResolver(),
             new SubtractExpressionResolver(),
+            new CountExpressionResolver(),
             new PropertyOnEventContentExpressionProvider()
     };
 
