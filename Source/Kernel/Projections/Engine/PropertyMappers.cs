@@ -71,4 +71,25 @@ public static class PropertyMappers
             actualTarget[lastSegment.Value] = value;
         };
     }
+
+    /// <summary>
+    /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can count by increasing the target property when called.
+    /// </summary>
+    /// <param name="targetProperty">Target property.</param>
+    /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
+    public static PropertyMapper<AppendedEvent, ExpandoObject> Count(PropertyPath targetProperty)
+    {
+        return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
+        {
+            var lastSegment = targetProperty.LastSegment;
+            var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
+            if (!actualTarget.ContainsKey(lastSegment.Value))
+            {
+                actualTarget[lastSegment.Value] = 0D;
+            }
+            var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+            value++;
+            actualTarget[lastSegment.Value] = value;
+        };
+    }
 }

@@ -57,6 +57,13 @@ public class FromBuilder<TModel, TEvent> : IFromBuilder<TModel, TEvent>
     }
 
     /// <inheritdoc/>
+    public IFromBuilder<TModel, TEvent> Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    {
+        _propertyExpressions.Add(new CountBuilder<TModel, TEvent, TProperty>());
+        return this;
+    }
+
+    /// <inheritdoc/>
     public FromDefinition Build() => new(
         Properties: _propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()),
         Key: _key,
