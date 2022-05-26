@@ -129,13 +129,9 @@ public static class ConfigurationHostBuilderExtensions
                 propertyValue = resolver.Resolve(configuration);
                 property.SetValue(configurationObject, propertyValue);
             }
-            else
+            else if (property.GetIndexParameters().Length == 0)
             {
-                try
-                {
-                    propertyValue = property.GetValue(configurationObject)!;
-                }
-                catch { }
+                propertyValue = property.GetValue(configurationObject)!;
             }
 
             if (propertyValue is not null &&
