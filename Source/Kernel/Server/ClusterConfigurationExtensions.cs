@@ -28,12 +28,24 @@ public static class ClusterConfigurationExtensions
                 {
                     options.ClusterId = clusterConfig.Name;
                     options.ServiceId = "kernel";
-                })
-                .ConfigureEndpoints(
+                });
+
+            if (!string.IsNullOrEmpty(clusterConfig.AdvertisedIP))
+            {
+                builder.ConfigureEndpoints(
                     advertisedIP: IPAddress.Parse(clusterConfig.AdvertisedIP),
                     siloPort: clusterConfig.SiloPort,
                     gatewayPort: clusterConfig.GatewayPort,
                     listenOnAnyHostAddress: true);
+            }
+            else
+            {
+                builder.ConfigureEndpoints(
+                    hostname: !string.IsNullOrEmpty(clusterConfig.SiloHostName) ? clusterConfig.SiloHostName : Dns.GetHostName(),
+                    siloPort: clusterConfig.SiloPort,
+                    gatewayPort: clusterConfig.GatewayPort,
+                    listenOnAnyHostAddress: true);
+            }
 
             switch (clusterConfig.Type)
             {
@@ -48,7 +60,7 @@ public static class ClusterConfigurationExtensions
 
                 case ClusterTypes.AdoNet:
                     {
-                        var adoNetOptions = clusterConfig.GetAdoNetClusteringSiloOptions();
+                        var adoNetOptions = clusterConfig.GetAdoNetClusterOptions();
                         builder.UseAdoNetClustering(options =>
                         {
                             options.ConnectionString = adoNetOptions.ConnectionString;
@@ -59,7 +71,7 @@ public static class ClusterConfigurationExtensions
 
                 case ClusterTypes.AzureStorage:
                     {
-                        var azureOptions = clusterConfig.GetAzureStorageClusteringOptions();
+                        var azureOptions = clusterConfig.GetAzureStorageClusterOptions();
                         builder.UseAzureStorageClustering(options =>
                         {
                             options.ConfigureTableServiceClient(azureOptions.ConnectionString);

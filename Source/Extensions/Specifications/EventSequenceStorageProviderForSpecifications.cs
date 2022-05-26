@@ -46,7 +46,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     public Task<AppendedEvent> GetLastInstanceFor(EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
         var lastInstance = _eventLog.AppendedEvents.Where(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId).OrderByDescending(_ => _.Metadata.SequenceNumber).First();
-        return Task.FromResult(lastInstance);
+        return Task.FromResult(new AppendedEvent(lastInstance.Metadata, lastInstance.Context, lastInstance.Content));
     }
 
     /// <inheritdoc/>

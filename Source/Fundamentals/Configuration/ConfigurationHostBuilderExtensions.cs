@@ -89,17 +89,18 @@ public static class ConfigurationHostBuilderExtensions
 
             foreach (var searchPath in allSearchPaths)
             {
-                logger?.AddingConfigurationFile(configurationObjectType, fileName);
+                logger?.AddingConfigurationFile(configurationObjectType, fileName, searchPath);
                 var actualFile = Path.Combine(searchPath, fileName);
                 configurationBuilder.AddJsonFile(actualFile, true);
             }
 
             var configuration = configurationBuilder.Build();
-            var configurationObject = configuration.Get(configurationObjectType);
+            var configurationObject = Activator.CreateInstance(configurationObjectType)!;
+            ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
 
-            if (configurationObject is not null)
+            if (configuration.Providers.Any(_ => _.GetChildKeys(Array.Empty<string>(), null!).Any()))
             {
-                ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
+                configuration.Bind(configurationObject);
                 services.AddSingleton(configurationObjectType, configurationObject);
 
                 services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
@@ -115,13 +116,34 @@ public static class ConfigurationHostBuilderExtensions
         return services;
     }
 
-    static void ResolveConfigurationValues(IConfigurationRoot configuration, Type configurationObjectType, object configurationObject)
+    static void ResolveConfigurationValues(IConfiguration configuration, Type configurationObjectType, object configurationObject)
     {
-        foreach (var property in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite && _.HasAttribute<ConfigurationValueResolverAttribute>()))
+        foreach (var property in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite))
         {
-            var resolverAttribute = property.GetCustomAttribute<ConfigurationValueResolverAttribute>()!;
-            var resolver = (Activator.CreateInstance(resolverAttribute.ResolverType) as IConfigurationValueResolver)!;
-            property.SetValue(configurationObject, resolver.Resolve(configuration));
+            object? propertyValue = null;
+
+            if (property.HasAttribute<ConfigurationValueResolverAttribute>())
+            {
+                var resolverAttribute = property.GetCustomAttribute<ConfigurationValueResolverAttribute>()!;
+                var resolver = (Activator.CreateInstance(resolverAttribute.ResolverType) as IConfigurationValueResolver)!;
+                propertyValue = resolver.Resolve(configuration);
+                property.SetValue(configurationObject, propertyValue);
+            }
+            else
+            {
+                try
+                {
+                    propertyValue = property.GetValue(configurationObject)!;
+                }
+                catch { }
+            }
+
+            if (propertyValue is not null &&
+                !property.PropertyType.IsAPrimitiveType() &&
+                !property.PropertyType.IsEnumerable())
+            {
+                ResolveConfigurationValues(configuration.GetSection(property.Name), property.PropertyType, propertyValue);
+            }
         }
     }
 

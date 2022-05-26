@@ -9,9 +9,12 @@ FROM mcr.microsoft.com/dotnet/runtime:6.0.1-focal
 
 RUN echo Version = ${VERSION}
 
-# Install MongoDB dependencies
+# Install Tools
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+    nano \
+    iputils-ping \
+    netcat \
     wget \
     curl \
     gnupg \
