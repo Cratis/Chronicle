@@ -2,7 +2,7 @@
 
 Unlike regular projections an immediate projection does not save its result for reuse, all is handled in-memory.
 This is very helpful for those scenarios where you need a special purpose model and specific instance based on
-an identifier.
+an identifier. Or need strong consistency based on the events, such as on the **Command** / **Write** side.
 
 Following the [Bank sample](../../../Samples/Bank/) we can imagine a part of the system that looks at suspicious
 activity that could resemble money laundering. For the simplicity of the sample the logic will basically be
