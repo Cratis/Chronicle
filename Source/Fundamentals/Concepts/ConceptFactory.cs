@@ -53,7 +53,18 @@ public static class ConceptFactory
         }
         else if (genericArgumentType.IsDateTimeOffset())
         {
-            val = value ?? default(DateTimeOffset);
+            if (value is DateTimeOffset)
+            {
+                val = value;
+            }
+            else if (DateTimeOffset.TryParse(value.ToString(), out var dateTimeOffsetValue))
+            {
+                val = dateTimeOffsetValue;
+            }
+            else
+            {
+                val = default(DateTimeOffset);
+            }
         }
         else if (genericArgumentType.IsAPrimitiveType())
         {
