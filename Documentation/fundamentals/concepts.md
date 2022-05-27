@@ -40,6 +40,10 @@ public interface IPersons
 }
 ```
 
+> Note: It is important to note that anything that implements `ConceptAs<>` is assumed to be a wrapper for a primitive type only.
+> All serialization converters assume this and will fail if one puts more properties on it.
+> If one needs to represent complex types, you can do so without inheriting from `ConceptAs<>` and then have all its values be concepts instead.
+
 ## Implicit operators
 
 The `ConceptAs<>` base record has an implicit operator overload for converting from the formalized type to the underlying primitive type.
