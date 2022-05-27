@@ -12,5 +12,5 @@ public class when_asking_can_resolve_for_add_expression : Specification
 
     void Because() => result = resolver.CanResolve(string.Empty, "$add(something)");
 
-    [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
+    [Fact] void should_be_able_to_resolve() =>Times.  result.ShouldBeTrue();
 }
