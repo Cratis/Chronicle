@@ -1,3 +1,11 @@
+# [v6.2.1] - 2022-5-27 [PR: #322](https://github.com/aksio-insurtech/Cratis/pull/322)
+
+### Fixed
+
+- `ConceptFactory` now supports conversion from a string representation to `DateTimeOffset`. .NET does not support type conversion of this when using `Convert.ChangeType()`.
+- Updated [documentation for concepts](./Documentation/fundamentals/concepts.md) regarding them representing a single value.
+
+
 # [v6.2.0] - 2022-5-26 [PR: #320](https://github.com/aksio-insurtech/Cratis/pull/320)
 
 ## Summary
