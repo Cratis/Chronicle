@@ -60,11 +60,11 @@ public class ImmediateProjections : IImmediateProjections
     }
 
     /// <inheritdoc/>
-    public async Task<TModel> GetInstanceById<TModel>(EventSourceId eventSourceId)
+    public async Task<TModel> GetInstanceById<TModel>(ModelKey modelKey)
     {
         HandleProjectionTypeCache<TModel>();
 
-        var key = new ImmediateProjectionKey(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId, EventSequenceId.Log, eventSourceId);
+        var key = new ImmediateProjectionKey(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId, EventSequenceId.Log, modelKey);
         var projection = _clusterClient.GetGrain<IImmediateProjection>(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier, key);
         var json = await projection.GetModelInstance(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition!);
 
