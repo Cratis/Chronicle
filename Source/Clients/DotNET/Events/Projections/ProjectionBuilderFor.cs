@@ -22,7 +22,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     readonly ProjectionId _identifier;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
-    readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
+    readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
     readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     bool _isRewindable = true;
     string _modelName;
@@ -81,7 +81,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
         var builder = new FromBuilder<TModel, TEvent>();
         builderCallback(builder);
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        _fromDefintions[eventType] = builder.Build();
+        _fromDefinitions[eventType] = builder.Build();
         return this;
     }
 
@@ -114,7 +114,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
             _name ?? typeof(TModel).FullName ?? "[N/A]",
             new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TModel)).ToJson()),
             _isRewindable,
-            _fromDefintions,
+            _fromDefinitions,
             _childrenDefinitions,
             _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
     }
