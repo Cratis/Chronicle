@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Json;
 
 namespace Aksio.Cratis.Events;
 
@@ -17,16 +16,10 @@ public class EventSerializer : IEventSerializer
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSerializer"/> class.
     /// </summary>
-    public EventSerializer()
+    /// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
+    public EventSerializer(JsonSerializerOptions serializerOptions)
     {
-        _serializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-                {
-                    new ConceptAsJsonConverterFactory()
-                }
-        };
+        _serializerOptions = serializerOptions;
     }
 
     /// <inheritdoc/>

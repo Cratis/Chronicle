@@ -6,7 +6,7 @@ using FluentValidation;
 namespace Aksio.Cratis.Applications.BusinessRules;
 
 /// <summary>
-/// Rule builder for state on a <see cref="BusinessRulesFor{T,TC}"/>.
+/// Defines a rule builder for state on a <see cref="BusinessRulesFor{T,TC}"/>.
 /// </summary>
 /// <typeparam name="TState">Type that holds the state.</typeparam>
 /// <typeparam name="TCommand">Type of command the rule is for.</typeparam>

@@ -71,7 +71,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(_projectionKey.TenantId, CorrelationId.New(), _projectionKey.MicroserviceId);
 
-        var modelKey = _projectionKey.ModelKey.IsSpecified ? _projectionKey.ModelKey.Value : null!;
+        var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
 
         var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceNumber.First, modelKey, _projection.EventTypes);
         var state = new ExpandoObject();

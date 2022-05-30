@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Types;
+
 namespace Aksio.Cratis.Applications;
 
 /// <summary>
@@ -9,4 +11,5 @@ namespace Aksio.Cratis.Applications;
 internal static class Internals
 {
     internal static IServiceProvider? ServiceProvider;
+    internal static ITypes? Types;
 }
