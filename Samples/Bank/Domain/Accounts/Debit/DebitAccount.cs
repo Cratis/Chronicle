@@ -17,7 +17,7 @@ public class DebitAccount : Controller
     public Task SetDebitAccountName([FromRoute] AccountId accountId, [FromRoute] AccountName name) => _eventLog.Append(accountId, new DebitAccountNameChanged(name));
 
     [HttpPost("close")]
-    public Task CloseDebitAccount([FromRoute] AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed());
+    public Task CloseDebitAccount([FromRoute][AccountMustBeEmpty] AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed());
 
     [HttpPost("deposit/{amount}")]
     public Task DepositToAccount([FromRoute] AccountId accountId, [FromRoute] double amount) => _eventLog.Append(accountId, new DepositToDebitAccountPerformed(amount));

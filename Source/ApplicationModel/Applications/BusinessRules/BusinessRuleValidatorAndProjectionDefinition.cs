@@ -12,4 +12,4 @@ namespace Aksio.Cratis.Applications.BusinessRules;
 /// <param name="Identifier">Identifier of the business rules.</param>
 /// <param name="Validator">Validator to use.</param>
 /// <param name="ProjectionDefinition">Projection definition.</param>
-public record BusinessRuleValidatorAndProjectionDefinition(BusinessRulesId Identifier, IValidator Validator, ProjectionDefinition ProjectionDefinition);
+public record BusinessRuleValidatorAndProjectionDefinition(BusinessRuleId Identifier, IValidator Validator, ProjectionDefinition ProjectionDefinition);
