@@ -6,20 +6,21 @@ using Events.Accounts.Debit;
 
 namespace Domain.Accounts.Debit;
 
-#pragma warning disable RCS1169, IDE0044
-
 public class OpenDebitAccountRules : BusinessRulesFor<OpenDebitAccountRules, OpenDebitAccount>
 {
-    IEnumerable<AccountName> _accounts = Array.Empty<AccountName>();
+    public override BusinessRulesId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
+
+    public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
 
     public OpenDebitAccountRules()
     {
-        RuleForState(_ => _._accounts).Unique(_ => _.Name).WithMessage("Account with name already exists");
+        RuleForState(_ => _.Accounts)
+            .Unique(_ => _.Name)
+            .WithMessage("Account with name already exists");
     }
 
     public override void DefineState(IProjectionBuilderFor<OpenDebitAccountRules> builder) => builder
-        .Children(_ => _._accounts, _ => _
+        .Children(_ => _.Accounts, _ => _
             .IdentifiedBy(_ => _)
-            .From<DebitAccountOpened>(_ => _.UsingKey(_ => _.Name));
-
+            .From<DebitAccountOpened>(_ => _.UsingKey(_ => _.Name)));
 }

@@ -24,15 +24,22 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddControllersFromProjectReferencedAssembles(this IServiceCollection services, ITypes types)
     {
         var controllerBuilder = services
-            .AddControllers(_ => _.AddCQRS())
-            .AddJsonOptions(_ => _.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory()));
+            .AddControllers(_ => _
+                .AddBusinessRulesValidators()
+                .AddCQRS())
+            .AddJsonOptions(_ =>
+            {
+                _.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
+                _.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
+            });
 
         var serializerOptions = new JsonSerializerOptions()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             Converters =
                 {
-                    new ConceptAsJsonConverterFactory()
+                    new ConceptAsJsonConverterFactory(),
+                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
                 }
         };
 

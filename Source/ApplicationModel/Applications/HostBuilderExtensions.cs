@@ -3,7 +3,6 @@
 
 using System.IO.Compression;
 using Aksio.Cratis.Applications;
-using Aksio.Cratis.Concepts;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
@@ -30,19 +29,19 @@ public static class HostBuilderExtensions
         var logger = loggerFactory.CreateLogger("Aksio setup");
         logger.SettingUpDefaults();
 
-        var types = new Types("Aksio");
-        types.RegisterTypeConvertersForConcepts();
+        Internals.Types = new Types("Aksio");
+        Internals.Types.RegisterTypeConvertersForConcepts();
 
         builder
-            .UseMongoDB(types)
-            .UseCratis(types, configureDelegate, loggerFactory)
+            .UseMongoDB(Internals.Types)
+            .UseCratis(Internals.Types, configureDelegate, loggerFactory)
             .ConfigureServices(_ =>
             {
                 _
-                .AddSingleton<ITypes>(types)
+                .AddSingleton(Internals.Types)
                 .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
-                .AddConfigurationObjects(types, searchSubPaths: new[] { "config" }, logger: logger)
-                .AddControllersFromProjectReferencedAssembles(types)
+                .AddConfigurationObjects(Internals.Types, searchSubPaths: new[] { "config" }, logger: logger)
+                .AddControllersFromProjectReferencedAssembles(Internals.Types)
                 .AddSwaggerGen(options =>
                 {
                     var files = Directory.GetFiles(AppContext.BaseDirectory).Where(file => Path.GetExtension(file) == ".xml");
@@ -74,7 +73,7 @@ public static class HostBuilderExtensions
 
                 _.AddMvc();
             })
-            .UseDefaultDependencyInversion(types);
+            .UseDefaultDependencyInversion(Internals.Types);
 
         return builder;
     }

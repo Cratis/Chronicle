@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using Aksio.Cratis.Events.Projections;
 using FluentValidation;
+using FluentValidation.Results;
 
 namespace Aksio.Cratis.Applications.BusinessRules;
 
@@ -12,9 +13,16 @@ namespace Aksio.Cratis.Applications.BusinessRules;
 /// </summary>
 /// <typeparam name="TSelf">The type of itself.</typeparam>
 /// <typeparam name="TCommand">Type of command.</typeparam>
-public class BusinessRulesFor<TSelf, TCommand> : AbstractValidator<TCommand>
+public abstract class BusinessRulesFor<TSelf, TCommand> : AbstractValidator<TCommand>
     where TSelf : BusinessRulesFor<TSelf, TCommand>
 {
+    readonly InlineValidator<TSelf> _selfValidator = new();
+
+    /// <summary>
+    /// Gets the unique identifier for the business rules.
+    /// </summary>
+    public abstract BusinessRulesId Identifier { get; }
+
     /// <summary>
     /// Define state that will be used by rules.
     /// </summary>
@@ -31,7 +39,18 @@ public class BusinessRulesFor<TSelf, TCommand> : AbstractValidator<TCommand>
     /// <returns>IRuleBuilder instance on which validators can be defined.</returns>
     public IStateRuleBuilder<TSelf, TCommand, TProperty> RuleForState<TProperty>(Expression<Func<TSelf, TProperty>> expression)
     {
-        #pragma warning disable RCS1140
-        throw new NotImplementedException();
+        var rule = _selfValidator.RuleFor(expression);
+        return new StateRuleBuilder<TSelf, TCommand, TProperty>(rule);
+    }
+
+    /// <inheritdoc/>
+    public override ValidationResult Validate(ValidationContext<TCommand> context)
+    {
+        var result = base.Validate(context);
+
+        var selfContext = context.CloneForChildValidator((TSelf)this, true);
+        _selfValidator.Validate(selfContext);
+
+        return result;
     }
 }

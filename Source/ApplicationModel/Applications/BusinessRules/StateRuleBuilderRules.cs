@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Reflection;
 using FluentValidation;
 
 namespace Aksio.Cratis.Applications.BusinessRules;
@@ -25,7 +26,8 @@ public static class StateRuleBuilderRules
         where TState : BusinessRulesFor<TState, TCommand>
         where TProperty : IEnumerable<TCommandProperty>
     {
-        #pragma warning disable RCS1140
-        throw new NotImplementedException();
+        var propertyInfo = expression.GetPropertyInfo();
+        var getValue = (object instance) => propertyInfo.GetMethod!.Invoke(instance, Array.Empty<object>());
+        return ruleBuilder.SetValidator(new UniqueInstanceValidator<TState, TProperty>(getValue));
     }
 }

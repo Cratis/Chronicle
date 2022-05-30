@@ -38,7 +38,7 @@ public class CommandResult
     /// <summary>
     /// Gets any validation errors. If this collection is empty, there are errors.
     /// </summary>
-    public IEnumerable<ValidationError> ValidationErrors { get; } = Array.Empty<ValidationError>();
+    public IEnumerable<ValidationError> ValidationErrors { get; init; } = Array.Empty<ValidationError>();
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
