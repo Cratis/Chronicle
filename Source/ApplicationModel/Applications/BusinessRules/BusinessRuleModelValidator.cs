@@ -45,6 +45,9 @@ public class BusinessRuleModelValidator : IModelValidator
     /// <inheritdoc/>
     public IEnumerable<ModelValidationResult> Validate(ModelValidationContext context)
     {
+        // TODO:
+        // - Support ModelKey attribute. Model can only have one ModelKey (0 or 1).
+        // - Separate out to common place used by this and BusinessRuleAttribute.
         var key = new ImmediateProjectionKey(_executionContext.MicroserviceId, _executionContext.TenantId, Events.Store.EventSequenceId.Log, ModelKey.Unspecified);
 
         foreach (var validatorAndProjection in _validatorsAndProjectionDefinitions)
@@ -53,6 +56,8 @@ public class BusinessRuleModelValidator : IModelValidator
             var task = projection.GetModelInstance(validatorAndProjection.ProjectionDefinition);
             task.Wait();
 
+            // TODO:
+            // - Separate out this to own thing, used by both this place and BusinessRuleAttribute.
             foreach (var property in validatorAndProjection.Validator.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
             {
                 var name = property.Name.ToCamelCase();

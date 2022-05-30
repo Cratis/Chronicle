@@ -62,6 +62,11 @@ public abstract class BusinessRuleAttribute : ValidationAttribute
     public abstract BusinessRuleId Identifier { get; }
 
     /// <summary>
+    /// Gets whether or not value adorned represents the <see cref="ModelKey"/>.
+    /// </summary>
+    public bool IsModelKey { get; set; }
+
+    /// <summary>
     /// Validates the value it was adorned.
     /// </summary>
     /// <param name="value">Value to validate.</param>
@@ -90,7 +95,12 @@ public abstract class BusinessRuleAttribute : ValidationAttribute
         var executionContext = validationContext.GetService<ExecutionContext>()!;
         var serializerOptions = validationContext.GetService<JsonSerializerOptions>()!;
 
-        var key = new ImmediateProjectionKey(executionContext.MicroserviceId, executionContext.TenantId, Events.Store.EventSequenceId.Log, ModelKey.Unspecified);
+        var key = new ImmediateProjectionKey(
+            executionContext.MicroserviceId,
+            executionContext.TenantId,
+            Events.Store.EventSequenceId.Log,
+            IsModelKey ? value?.ToString() ?? ModelKey.Unspecified : ModelKey.Unspecified);
+
         var projection = clusterClient.GetGrain<IImmediateProjection>(Identifier, key);
         var task = projection.GetModelInstance(projectionDefinition);
         task.Wait();
