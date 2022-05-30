@@ -8,7 +8,7 @@ namespace Domain.Accounts.Debit;
 
 public class OpenDebitAccountRules : BusinessRulesFor<OpenDebitAccountRules, OpenDebitAccount>
 {
-    public override BusinessRulesId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
+    public override BusinessRuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
 
     public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
 

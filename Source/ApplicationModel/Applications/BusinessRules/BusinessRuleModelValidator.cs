@@ -53,7 +53,7 @@ public class BusinessRuleModelValidator : IModelValidator
             var task = projection.GetModelInstance(validatorAndProjection.ProjectionDefinition);
             task.Wait();
 
-            foreach (var property in validatorAndProjection.Validator.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            foreach (var property in validatorAndProjection.Validator.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
             {
                 var name = property.Name.ToCamelCase();
                 var node = task.Result[name];

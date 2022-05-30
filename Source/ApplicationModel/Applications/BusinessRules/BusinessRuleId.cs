@@ -9,17 +9,17 @@ namespace Aksio.Cratis.Applications.BusinessRules;
 /// Represents the unique identifier of a projection.
 /// </summary>
 /// <param name="Value">The value.</param>
-public record BusinessRulesId(Guid Value) : ConceptAs<Guid>(Value)
+public record BusinessRuleId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionId"/>.
     /// </summary>
     /// <param name="value"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator BusinessRulesId(Guid value) => new(value);
+    public static implicit operator BusinessRuleId(Guid value) => new(value);
 
     /// <summary>
     /// Implicitly convert from string representation of a <see cref="Guid"/> to <see cref="ProjectionId"/>.
     /// </summary>
     /// <param name="value"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator BusinessRulesId(string value) => new(Guid.Parse(value));
+    public static implicit operator BusinessRuleId(string value) => new(Guid.Parse(value));
 }

@@ -21,7 +21,7 @@ public abstract class BusinessRulesFor<TSelf, TCommand> : AbstractValidator<TCom
     /// <summary>
     /// Gets the unique identifier for the business rules.
     /// </summary>
-    public abstract BusinessRulesId Identifier { get; }
+    public abstract BusinessRuleId Identifier { get; }
 
     /// <summary>
     /// Define state that will be used by rules.
