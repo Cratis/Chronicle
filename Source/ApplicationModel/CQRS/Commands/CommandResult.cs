@@ -23,7 +23,7 @@ public class CommandResult
     /// <summary>
     /// Gets whether or not the command was authorized to execute.
     /// </summary>
-    public bool IsAuthorized { get; init; }
+    public bool IsAuthorized { get; init; } = true;
 
     /// <summary>
     /// Gets whether or not the command is valid.
@@ -33,7 +33,7 @@ public class CommandResult
     /// <summary>
     /// Gets whether or not there are any exceptions that occurred.
     /// </summary>
-    public bool HasExceptions => !ExceptionMessages.Any();
+    public bool HasExceptions => ExceptionMessages.Any();
 
     /// <summary>
     /// Gets any validation errors. If this collection is empty, there are errors.
