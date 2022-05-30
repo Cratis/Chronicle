@@ -51,6 +51,16 @@ public class CommandActionFilter : IAsyncActionFilter
                 ExceptionMessages = exceptionMessages.ToArray(),
                 ExceptionStackTrace = exceptionStackTrace
             };
+
+            if (!commandResult.IsAuthorized)
+            {
+                result.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
+            }
+            else if (!commandResult.IsValid)
+            {
+                result.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
+            }
+
             result.Result = new ObjectResult(commandResult);
         }
     }
