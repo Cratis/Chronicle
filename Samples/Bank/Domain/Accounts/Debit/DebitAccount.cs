@@ -17,8 +17,8 @@ public class DebitAccount : Controller
     public Task SetDebitAccountName([FromRoute] AccountId accountId, [FromRoute] AccountName name) => _eventLog.Append(accountId, new DebitAccountNameChanged(name));
 
     [HttpPost("close")]
-    public Task CloseDebitAccount([
-        FromRoute]
+    public Task CloseDebitAccount(
+        [FromRoute]
         [AccountMustBeEmpty(IsModelKey = true)]
         AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed());
 
