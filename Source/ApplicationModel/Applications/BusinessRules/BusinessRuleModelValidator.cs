@@ -1,15 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
-using System.Text.Json;
-using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Projections.Grains;
-using Aksio.Cratis.Strings;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using Orleans;
 
 namespace Aksio.Cratis.Applications.BusinessRules;
 
@@ -18,59 +12,31 @@ namespace Aksio.Cratis.Applications.BusinessRules;
 /// </summary>
 public class BusinessRuleModelValidator : IModelValidator
 {
-    readonly ExecutionContext _executionContext;
-    readonly IEnumerable<BusinessRuleValidatorAndProjectionDefinition> _validatorsAndProjectionDefinitions;
-    readonly JsonSerializerOptions _serializerOptions;
-    readonly IClusterClient _clusterClient;
+    readonly IEnumerable<IBusinessRule> _businessRuleSets;
+    readonly IBusinessRules _businessRules;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BusinessRuleModelValidator"/> class.
     /// </summary>
-    /// <param name="executionContext">Current <see cref="ExecutionContext"/>.</param>
-    /// <param name="validatorsAndProjectionDefinitions">Validators and belonging projection definitions.</param>
-    /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
-    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
+    /// <param name="businessRuleSets">The actual collection of <see cref="IBusinessRule">business rules</see>.</param>
+    /// <param name="businessRules">The <see cref="IBusinessRules"/>.</param>
     public BusinessRuleModelValidator(
-        ExecutionContext executionContext,
-        IEnumerable<BusinessRuleValidatorAndProjectionDefinition> validatorsAndProjectionDefinitions,
-        JsonSerializerOptions serializerOptions,
-        IClusterClient clusterClient)
+        IEnumerable<IBusinessRule> businessRuleSets,
+        IBusinessRules businessRules)
     {
-        _executionContext = executionContext;
-        _validatorsAndProjectionDefinitions = validatorsAndProjectionDefinitions;
-        _serializerOptions = serializerOptions;
-        _clusterClient = clusterClient;
+        _businessRuleSets = businessRuleSets;
+        _businessRules = businessRules;
     }
 
     /// <inheritdoc/>
     public IEnumerable<ModelValidationResult> Validate(ModelValidationContext context)
     {
-        // TODO:
-        // - Support ModelKey attribute. Model can only have one ModelKey (0 or 1).
-        // - Separate out to common place used by this and BusinessRuleAttribute.
-        var key = new ImmediateProjectionKey(_executionContext.MicroserviceId, _executionContext.TenantId, Events.Store.EventSequenceId.Log, ModelKey.Unspecified);
-
-        foreach (var validatorAndProjection in _validatorsAndProjectionDefinitions)
+        foreach (var businessRule in _businessRuleSets)
         {
-            var projection = _clusterClient.GetGrain<IImmediateProjection>(validatorAndProjection.Identifier, key);
-            var task = projection.GetModelInstance(validatorAndProjection.ProjectionDefinition);
-            task.Wait();
-
-            // TODO:
-            // - Separate out this to own thing, used by both this place and BusinessRuleAttribute.
-            foreach (var property in validatorAndProjection.Validator.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
-            {
-                var name = property.Name.ToCamelCase();
-                var node = task.Result[name];
-                if (node is not null)
-                {
-                    property.SetValue(validatorAndProjection.Validator, node.Deserialize(property.PropertyType, _serializerOptions));
-                }
-            }
-
+            _businessRules.ProjectTo(businessRule);
             var validationContextType = typeof(ValidationContext<>).MakeGenericType(context.ModelMetadata.ModelType);
             var validationContext = Activator.CreateInstance(validationContextType, new object[] { context.Model! }) as IValidationContext;
-            var result = validatorAndProjection.Validator.Validate(validationContext);
+            var result = (businessRule as IValidator)!.Validate(validationContext);
             return result.Errors.Select(x => new ModelValidationResult(x.PropertyName, x.ErrorMessage));
         }
 
