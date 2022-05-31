@@ -48,7 +48,9 @@ export abstract class Command<TCommandContent = {}> implements ICommand<TCommand
         });
         this.setInitialValuesFromCurrentValues();
 
-        return new CommandResult(response);
+        const result = await response.json();
+
+        return new CommandResult(result);
     }
 
     /** @inheritdoc */

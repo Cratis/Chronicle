@@ -26,11 +26,11 @@ public class CommandActionFilter : IAsyncActionFilter
     /// <inheritdoc/>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var result = await next();
-        if (context.HttpContext.Request.Method == HttpMethod.Post.Method && result is not null)
+        var exceptionMessages = new List<string>();
+        var exceptionStackTrace = string.Empty;
+        if (context.ModelState.IsValid)
         {
-            var exceptionMessages = new List<string>();
-            var exceptionStackTrace = string.Empty;
+            var result = await next();
 
             if (result.Exception is not null)
             {
@@ -43,7 +43,9 @@ public class CommandActionFilter : IAsyncActionFilter
                 }
                 while (exception is not null);
             }
-
+        }
+        if (context.HttpContext.Request.Method == HttpMethod.Post.Method)
+        {
             var commandResult = new CommandResult
             {
                 CorrelationId = _executionContextManager.Current.CorrelationId,
@@ -54,14 +56,14 @@ public class CommandActionFilter : IAsyncActionFilter
 
             if (!commandResult.IsAuthorized)
             {
-                result.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
+                context.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
             }
             else if (!commandResult.IsValid)
             {
-                result.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
+                context.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
             }
 
-            result.Result = new ObjectResult(commandResult);
+            context.Result = new ObjectResult(commandResult);
         }
     }
 }
