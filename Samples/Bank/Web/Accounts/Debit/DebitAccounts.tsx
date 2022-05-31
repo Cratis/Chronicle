@@ -44,7 +44,10 @@ export const DebitAccounts = () => {
                 accountId: Guid.create().toString(),
                 name: output.name
             });
-            await openDebitAccount.execute();
+            const result = await openDebitAccount.execute();
+            if (!result.isSuccess) {
+                alert(`Validation Errors: \n ${result.validationErrors.map(_ => _.message).join('\n')}`);
+            }
         }
     });
 
@@ -145,7 +148,7 @@ export const DebitAccounts = () => {
                 <Stack>
                     <Stack.Item disableShrink>
                         <CommandTrackerContext.Consumer>
-                            {({hasChanges, execute, revertChanges}) => {
+                            {({ hasChanges, execute, revertChanges }) => {
                                 const actualItems: ICommandBarItemProps[] = [{
                                     key: 'save',
                                     name: 'Save',
@@ -172,7 +175,7 @@ export const DebitAccounts = () => {
                         </CommandTrackerContext.Consumer>
                     </Stack.Item>
                     <Stack.Item>
-                        <DebitAccountsList accounts={accountItems} selection={selection}/>
+                        <DebitAccountsList accounts={accountItems} selection={selection} />
                     </Stack.Item>
                 </Stack>
             </CommandTracker>
