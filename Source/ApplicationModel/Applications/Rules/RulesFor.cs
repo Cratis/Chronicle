@@ -6,22 +6,22 @@ using Aksio.Cratis.Events.Projections;
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
 /// Represents a <see cref="AbstractValidator{T}"/> for business rules related to a command.
 /// </summary>
 /// <typeparam name="TSelf">The type of itself.</typeparam>
 /// <typeparam name="TCommand">Type of command.</typeparam>
-public abstract class BusinessRulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, IBusinessRule
-    where TSelf : BusinessRulesFor<TSelf, TCommand>
+public abstract class RulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, IRule
+    where TSelf : RulesFor<TSelf, TCommand>
 {
     readonly InlineValidator<TSelf> _selfValidator = new();
 
     /// <summary>
     /// Gets the unique identifier for the business rules.
     /// </summary>
-    public abstract BusinessRuleId Identifier { get; }
+    public abstract RuleId Identifier { get; }
 
     /// <summary>
     /// Define state that will be used by rules.

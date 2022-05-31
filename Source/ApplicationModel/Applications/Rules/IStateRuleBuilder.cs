@@ -3,15 +3,15 @@
 
 using FluentValidation;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
-/// Defines a rule builder for state on a <see cref="BusinessRulesFor{T,TC}"/>.
+/// Defines a rule builder for state on a <see cref="RulesFor{T,TC}"/>.
 /// </summary>
 /// <typeparam name="TState">Type that holds the state.</typeparam>
 /// <typeparam name="TCommand">Type of command the rule is for.</typeparam>
 /// <typeparam name="TProperty">The type of the property being validated.</typeparam>
 public interface IStateRuleBuilder<TState, TCommand, TProperty> : IRuleBuilderInitial<TState, TProperty>
-    where TState : BusinessRulesFor<TState, TCommand>
+    where TState : RulesFor<TState, TCommand>
 {
 }

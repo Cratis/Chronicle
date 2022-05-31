@@ -6,9 +6,9 @@ using Events.Accounts.Debit;
 namespace Domain.Accounts.Debit;
 
 [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property, AllowMultiple = false)]
-public sealed class AccountMustBeEmptyAttribute : BusinessRuleAttribute
+public sealed class AccountMustBeEmptyAttribute : RuleAttribute
 {
-    public override BusinessRuleId Identifier => "bc2042a9-3908-4ac4-8637-b2058ba8cead";
+    public override RuleId Identifier => "bc2042a9-3908-4ac4-8637-b2058ba8cead";
 
     public double Balance { get; set; }
 
