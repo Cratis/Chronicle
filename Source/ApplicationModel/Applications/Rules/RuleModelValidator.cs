@@ -5,35 +5,35 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
-/// Represents a <see cref="ObjectModelValidator"/> for <see cref="BusinessRulesFor{TSelf, TCommand}"/>.
+/// Represents a <see cref="ObjectModelValidator"/> for <see cref="RulesFor{TSelf, TCommand}"/>.
 /// </summary>
-public class BusinessRuleModelValidator : IModelValidator
+public class RuleModelValidator : IModelValidator
 {
-    readonly IEnumerable<IBusinessRule> _businessRuleSets;
-    readonly IBusinessRules _businessRules;
+    readonly IEnumerable<IRule> _ruleSets;
+    readonly IRules _rules;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BusinessRuleModelValidator"/> class.
+    /// Initializes a new instance of the <see cref="RuleModelValidator"/> class.
     /// </summary>
-    /// <param name="businessRuleSets">The actual collection of <see cref="IBusinessRule">business rules</see>.</param>
-    /// <param name="businessRules">The <see cref="IBusinessRules"/>.</param>
-    public BusinessRuleModelValidator(
-        IEnumerable<IBusinessRule> businessRuleSets,
-        IBusinessRules businessRules)
+    /// <param name="ruleSets">The actual collection of <see cref="IRule">business rules</see>.</param>
+    /// <param name="rules">The <see cref="IRules"/>.</param>
+    public RuleModelValidator(
+        IEnumerable<IRule> ruleSets,
+        IRules rules)
     {
-        _businessRuleSets = businessRuleSets;
-        _businessRules = businessRules;
+        _ruleSets = ruleSets;
+        _rules = rules;
     }
 
     /// <inheritdoc/>
     public IEnumerable<ModelValidationResult> Validate(ModelValidationContext context)
     {
-        foreach (var businessRule in _businessRuleSets)
+        foreach (var businessRule in _ruleSets)
         {
-            _businessRules.ProjectTo(businessRule);
+            _rules.ProjectTo(businessRule);
             var validationContextType = typeof(ValidationContext<>).MakeGenericType(context.ModelMetadata.ModelType);
             var validationContext = Activator.CreateInstance(validationContextType, new object[] { context.Model! }) as IValidationContext;
             var result = (businessRule as IValidator)!.Validate(validationContext);

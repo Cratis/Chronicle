@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Applications;
-using Aksio.Cratis.Applications.BusinessRules;
+using Aksio.Cratis.Applications.Rules;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -19,7 +19,7 @@ public static class MvcOptionsExtensions
     /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
     public static MvcOptions AddBusinessRulesValidators(this MvcOptions options)
     {
-        options.ModelValidatorProviders.Add(new BusinessRulesModelValidatorProvider(Internals.ServiceProvider!));
+        options.ModelValidatorProviders.Add(new RulesModelValidatorProvider(Internals.ServiceProvider!));
         return options;
     }
 }

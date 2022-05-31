@@ -3,7 +3,7 @@
 
 using System.Collections;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
 /// Represents a wrapper for non generic enumerables, e.g. arrays.

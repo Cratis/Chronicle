@@ -14,30 +14,30 @@ using Aksio.Cratis.Strings;
 using Aksio.Cratis.Types;
 using Orleans;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
-/// Represents an implementation of <see cref="IBusinessRules"/>.
+/// Represents an implementation of <see cref="IRules"/>.
 /// </summary>
 [Singleton]
-public class BusinessRules : IBusinessRules
+public class Rules : IRules
 {
     static readonly MethodInfo? _createProjectionMethod;
     readonly IDictionary<Type, IEnumerable<Type>> _businessRulesPerCommand;
-    readonly Dictionary<BusinessRuleId, ProjectionDefinition> _projectionDefinitionsPerRule = new();
+    readonly Dictionary<RuleId, ProjectionDefinition> _projectionDefinitionsPerRule = new();
     readonly ExecutionContext _executionContext;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly JsonSerializerOptions _serializerOptions;
     readonly IClusterClient _clusterClient;
 
-    static BusinessRules()
+    static Rules()
     {
-        _createProjectionMethod = typeof(BusinessRules).GetMethod(nameof(BusinessRules.CreateProjection), BindingFlags.NonPublic | BindingFlags.Instance)!;
+        _createProjectionMethod = typeof(Rules).GetMethod(nameof(Rules.CreateProjection), BindingFlags.NonPublic | BindingFlags.Instance)!;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BusinessRules"/> class.
+    /// Initializes a new instance of the <see cref="Rules"/> class.
     /// </summary>
     /// <param name="executionContext">Current <see cref="ExecutionContext"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
@@ -45,7 +45,7 @@ public class BusinessRules : IBusinessRules
     /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
     /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
-    public BusinessRules(
+    public Rules(
         ExecutionContext executionContext,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
@@ -55,7 +55,7 @@ public class BusinessRules : IBusinessRules
     {
         var businessRuleTypes = types.All.Where(_ =>
             _.BaseType?.IsGenericType == true &&
-            _.BaseType?.GetGenericTypeDefinition() == typeof(BusinessRulesFor<,>)).ToArray();
+            _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
 
         _businessRulesPerCommand = businessRuleTypes
             .GroupBy(_ => _.BaseType!.GetGenericArguments()[1])
@@ -74,22 +74,22 @@ public class BusinessRules : IBusinessRules
     public IEnumerable<Type> GetFor(Type type) => HasFor(type) ? _businessRulesPerCommand[type] : Array.Empty<Type>();
 
     /// <inheritdoc/>
-    public ProjectionDefinition GetProjectionDefinitionFor(IBusinessRule businessRule)
+    public ProjectionDefinition GetProjectionDefinitionFor(IRule rule)
     {
-        if (!_projectionDefinitionsPerRule.ContainsKey(businessRule.Identifier))
+        if (!_projectionDefinitionsPerRule.ContainsKey(rule.Identifier))
         {
-            _projectionDefinitionsPerRule[businessRule.Identifier] = (_createProjectionMethod!.MakeGenericMethod(businessRule.GetType()).Invoke(this, new[] { businessRule }) as ProjectionDefinition)!;
+            _projectionDefinitionsPerRule[rule.Identifier] = (_createProjectionMethod!.MakeGenericMethod(rule.GetType()).Invoke(this, new[] { rule }) as ProjectionDefinition)!;
         }
 
-        return _projectionDefinitionsPerRule[businessRule.Identifier];
+        return _projectionDefinitionsPerRule[rule.Identifier];
     }
 
     /// <inheritdoc/>
-    public void ProjectTo(IBusinessRule businessRule, object? modelIdentifier = default)
+    public void ProjectTo(IRule rule, object? modelIdentifier = default)
     {
-        var projectionDefinition = GetProjectionDefinitionFor(businessRule);
+        var projectionDefinition = GetProjectionDefinitionFor(rule);
 
-        var type = businessRule.GetType();
+        var type = rule.GetType();
         if (modelIdentifier is null)
         {
             var propertiesWithModelKey = type
@@ -104,7 +104,7 @@ public class BusinessRules : IBusinessRules
 
             if (propertiesWithModelKey.Length == 1)
             {
-                modelIdentifier = propertiesWithModelKey[0].GetValue(businessRule);
+                modelIdentifier = propertiesWithModelKey[0].GetValue(rule);
             }
         }
 
@@ -114,7 +114,7 @@ public class BusinessRules : IBusinessRules
             Events.Store.EventSequenceId.Log,
             modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!);
 
-        var projection = _clusterClient.GetGrain<IImmediateProjection>(businessRule.Identifier.Value, key);
+        var projection = _clusterClient.GetGrain<IImmediateProjection>(rule.Identifier.Value, key);
         var task = projection.GetModelInstance(projectionDefinition);
         task.Wait();
 
@@ -124,20 +124,20 @@ public class BusinessRules : IBusinessRules
             var node = task.Result[name];
             if (node is not null)
             {
-                property.SetValue(businessRule, node.Deserialize(property.PropertyType, _serializerOptions));
+                property.SetValue(rule, node.Deserialize(property.PropertyType, _serializerOptions));
             }
         }
     }
 
-    static void ThrowIfInvalidSignatureForDefineState(Type businessRuleType, ParameterInfo[] parameters)
+    static void ThrowIfInvalidSignatureForDefineState(Type ruleType, ParameterInfo[] parameters)
     {
-        if (parameters.Length > 1 && parameters[0].ParameterType != typeof(IProjectionBuilderFor<>).MakeGenericType(businessRuleType))
+        if (parameters.Length > 1 && parameters[0].ParameterType != typeof(IProjectionBuilderFor<>).MakeGenericType(ruleType))
         {
-            throw new InvalidDefineStateInBusinessRuleSignature(businessRuleType);
+            throw new InvalidDefineStateInRuleSignature(ruleType);
         }
     }
 
-    ProjectionDefinition CreateProjection<TTarget>(IBusinessRule businessRule)
+    ProjectionDefinition CreateProjection<TTarget>(IRule businessRule)
     {
         var projectionBuilder = new ProjectionBuilderFor<TTarget>(businessRule.Identifier.Value, _eventTypes, _jsonSchemaGenerator);
 

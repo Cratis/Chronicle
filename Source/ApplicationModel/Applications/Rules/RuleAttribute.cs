@@ -5,18 +5,18 @@ using System.ComponentModel.DataAnnotations;
 using Aksio.Cratis.Events.Projections;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
 /// Represents a single business rule.
 /// </summary>
 [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property, AllowMultiple = false)]
-public abstract class BusinessRuleAttribute : ValidationAttribute, IBusinessRule
+public abstract class RuleAttribute : ValidationAttribute, IRule
 {
     /// <summary>
     /// Gets the unique identifier for the business rules.
     /// </summary>
-    public abstract BusinessRuleId Identifier { get; }
+    public abstract RuleId Identifier { get; }
 
     /// <summary>
     /// Gets whether or not value adorned represents the <see cref="ModelKey"/>.
@@ -41,7 +41,7 @@ public abstract class BusinessRuleAttribute : ValidationAttribute, IBusinessRule
     /// <inheritdoc/>
     protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
     {
-        var businessRules = validationContext.GetService<IBusinessRules>()!;
+        var businessRules = validationContext.GetService<IRules>()!;
         businessRules.ProjectTo(this, IsModelKey ? value : null!);
 
         if (!IsValid(value))

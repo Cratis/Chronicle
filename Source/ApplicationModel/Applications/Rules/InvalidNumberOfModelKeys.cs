@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
 /// Exception that gets thrown when there are an invalid number of model keys on a model. Only one is allowed.

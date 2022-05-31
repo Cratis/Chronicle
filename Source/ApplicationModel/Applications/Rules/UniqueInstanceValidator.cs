@@ -5,7 +5,7 @@ using System.Collections;
 using FluentValidation;
 using FluentValidation.Validators;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
 /// Represents a <see cref="PropertyValidator{T, TProperty}"/> for checking for uniqueness.

@@ -3,10 +3,10 @@
 
 #pragma warning disable CS8019
 
-global using Aksio.Cratis.Applications.BusinessRules;
 global using Aksio.Cratis.Applications.Commands;
 global using Aksio.Cratis.Applications.Queries;
 global using Aksio.Cratis.Applications.Queries.MongoDB;
+global using Aksio.Cratis.Applications.Rules;
 global using Aksio.Cratis.Concepts;
 global using Aksio.Cratis.Events;
 global using Aksio.Cratis.Events.Observation;

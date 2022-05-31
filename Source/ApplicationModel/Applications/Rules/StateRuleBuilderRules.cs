@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using Aksio.Cratis.Reflection;
 using FluentValidation;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
 /// Represents validation rules for <see cref="IStateRuleBuilder{TState, TCommand, TProperty}"/>.
@@ -23,7 +23,7 @@ public static class StateRuleBuilderRules
     /// <typeparam name="TCommandProperty">The type of the property on the command.</typeparam>
     /// <returns>Options for the rule.</returns>
     public static IRuleBuilderOptions<TState, TProperty> Unique<TState, TCommand, TProperty, TCommandProperty>(this IStateRuleBuilder<TState, TCommand, TProperty> ruleBuilder, Expression<Func<TCommand, TCommandProperty>> expression)
-        where TState : BusinessRulesFor<TState, TCommand>
+        where TState : RulesFor<TState, TCommand>
         where TProperty : IEnumerable<TCommandProperty>
     {
         var propertyInfo = expression.GetPropertyInfo();

@@ -3,12 +3,12 @@
 
 using Aksio.Cratis.Events.Projections.Definitions;
 
-namespace Aksio.Cratis.Applications.BusinessRules;
+namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
-/// Represents a system for working with <see cref="BusinessRulesFor{TSelf, TCommand}"/>.
+/// Represents a system for working with <see cref="RulesFor{TSelf, TCommand}"/>.
 /// </summary>
-public interface IBusinessRules
+public interface IRules
 {
     /// <summary>
     /// Check if there are business rules for a specific type.
@@ -27,14 +27,14 @@ public interface IBusinessRules
     /// <summary>
     /// Get the <see cref="ProjectionDefinition"/> from a business rule.
     /// </summary>
-    /// <param name="businessRule"><see cref="IBusinessRule"/> to get from.</param>
+    /// <param name="rule"><see cref="IRule"/> to get from.</param>
     /// <returns>The <see cref="ProjectionDefinition"/>.</returns>
-    ProjectionDefinition GetProjectionDefinitionFor(IBusinessRule businessRule);
+    ProjectionDefinition GetProjectionDefinitionFor(IRule rule);
 
     /// <summary>
-    /// Perform projection defined by <see cref="IBusinessRule"/> into the rule itself.
+    /// Perform projection defined by <see cref="IRule"/> into the rule itself.
     /// </summary>
-    /// <param name="businessRule"><see cref="IBusinessRule"/> that defines the projection and gets projected into.</param>
+    /// <param name="rule"><see cref="IRule"/> that defines the projection and gets projected into.</param>
     /// <param name="modelIdentifier">Optional model identifier.</param>
-    void ProjectTo(IBusinessRule businessRule, object? modelIdentifier = default);
+    void ProjectTo(IRule rule, object? modelIdentifier = default);
 }
