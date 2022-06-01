@@ -31,12 +31,12 @@ public class RuleModelValidator : IModelValidator
     /// <inheritdoc/>
     public IEnumerable<ModelValidationResult> Validate(ModelValidationContext context)
     {
-        foreach (var businessRule in _ruleSets)
+        foreach (var rule in _ruleSets)
         {
-            _rules.ProjectTo(businessRule);
+            _rules.ProjectTo(rule);
             var validationContextType = typeof(ValidationContext<>).MakeGenericType(context.ModelMetadata.ModelType);
             var validationContext = Activator.CreateInstance(validationContextType, new object[] { context.Model! }) as IValidationContext;
-            var result = (businessRule as IValidator)!.Validate(validationContext);
+            var result = (rule as IValidator)!.Validate(validationContext);
             return result.Errors.Select(x => new ModelValidationResult(x.PropertyName, x.ErrorMessage));
         }
 
