@@ -27,9 +27,13 @@ public class all_dependencies : Specification
         cluster_client = new();
         json_schema_generator = new();
         json_schema_generator.Setup(_ => _.Generate(IsAny<Type>())).Returns(new JsonSchema());
-        json_serializer_options = new();
+        json_serializer_options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
         execution_context = new(
-            MicroserviceId.Unspecified,
+            "1ca3e772-4e18-47b1-8f7b-c697b2c8ee8f",
             TenantId.Development,
             CorrelationId.New(),
             CausationId.System,

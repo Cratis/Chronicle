@@ -8,7 +8,6 @@ using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Grains;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Strings;
 using Aksio.Cratis.Types;
@@ -101,25 +100,6 @@ public class Rules : IRules
     {
         var projectionDefinition = GetProjectionDefinitionFor(rule);
 
-        var type = rule.GetType();
-        if (modelIdentifier is null)
-        {
-            var propertiesWithModelKey = type
-                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                .Where(_ => _.HasAttribute<ModelKeyAttribute>())
-                .ToArray();
-
-            if (propertiesWithModelKey.Length > 1)
-            {
-                throw new InvalidNumberOfModelKeys(type, propertiesWithModelKey);
-            }
-
-            if (propertiesWithModelKey.Length == 1)
-            {
-                modelIdentifier = propertiesWithModelKey[0].GetValue(rule);
-            }
-        }
-
         var key = new ImmediateProjectionKey(
             _executionContext.MicroserviceId,
             _executionContext.TenantId,
@@ -130,7 +110,7 @@ public class Rules : IRules
         var task = projection.GetModelInstance(projectionDefinition);
         task.Wait();
 
-        foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
+        foreach (var property in rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
         {
             var name = property.Name.ToCamelCase();
             var node = task.Result[name];
