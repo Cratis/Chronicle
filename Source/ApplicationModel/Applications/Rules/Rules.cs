@@ -53,11 +53,11 @@ public class Rules : IRules
         ITypes types,
         IClusterClient clusterClient)
     {
-        var businessRuleTypes = types.All.Where(_ =>
+        var ruleTypes = types.All.Where(_ =>
             _.BaseType?.IsGenericType == true &&
             _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
 
-        _rulesPerCommand = businessRuleTypes
+        _rulesPerCommand = ruleTypes
             .GroupBy(_ => _.BaseType!.GetGenericArguments()[1])
             .ToDictionary(_ => _.Key, _ => _.ToArray().AsEnumerable());
         _executionContext = executionContext;
@@ -78,7 +78,19 @@ public class Rules : IRules
     {
         if (!_projectionDefinitionsPerRule.ContainsKey(rule.Identifier))
         {
-            _projectionDefinitionsPerRule[rule.Identifier] = (_createProjectionMethod!.MakeGenericMethod(rule.GetType()).Invoke(this, new[] { rule }) as ProjectionDefinition)!;
+            try
+            {
+                _projectionDefinitionsPerRule[rule.Identifier] = (_createProjectionMethod!.MakeGenericMethod(rule.GetType()).Invoke(this, new[] { rule }) as ProjectionDefinition)!;
+            }
+            catch (TargetInvocationException ex)
+            {
+                if (ex.InnerException is not null)
+                {
+                    throw ex.InnerException;
+                }
+
+                throw;
+            }
         }
 
         return _projectionDefinitionsPerRule[rule.Identifier];
@@ -129,27 +141,27 @@ public class Rules : IRules
         }
     }
 
-    static void ThrowIfInvalidSignatureForDefineState(Type ruleType, ParameterInfo[] parameters)
+    ProjectionDefinition CreateProjection<TTarget>(IRule rule)
+    {
+        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _eventTypes, _jsonSchemaGenerator);
+
+        var ruleType = typeof(TTarget);
+        var defineStateMethod = ruleType.GetMethod("DefineState", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (defineStateMethod is not null)
+        {
+            var parameters = defineStateMethod.GetParameters();
+            ThrowIfInvalidSignatureForDefineState(ruleType, parameters);
+            defineStateMethod.Invoke(rule, new object[] { projectionBuilder });
+        }
+
+        return projectionBuilder.Build();
+    }
+
+    void ThrowIfInvalidSignatureForDefineState(Type ruleType, ParameterInfo[] parameters)
     {
         if (parameters.Length > 1 && parameters[0].ParameterType != typeof(IProjectionBuilderFor<>).MakeGenericType(ruleType))
         {
             throw new InvalidDefineStateInRuleSignature(ruleType);
         }
-    }
-
-    ProjectionDefinition CreateProjection<TTarget>(IRule businessRule)
-    {
-        var projectionBuilder = new ProjectionBuilderFor<TTarget>(businessRule.Identifier.Value, _eventTypes, _jsonSchemaGenerator);
-
-        var businessRuleType = typeof(TTarget);
-        var defineStateMethod = businessRuleType.GetMethod("DefineState", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (defineStateMethod is not null)
-        {
-            var parameters = defineStateMethod.GetParameters();
-            ThrowIfInvalidSignatureForDefineState(businessRuleType, parameters);
-            defineStateMethod.Invoke(businessRule, new object[] { projectionBuilder });
-        }
-
-        return projectionBuilder.Build();
     }
 }
