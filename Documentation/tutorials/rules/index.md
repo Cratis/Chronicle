@@ -96,7 +96,113 @@ as the key when getting a specific projected instance. In our case, we want it t
 
 ## Model based rules
 
-The model based rules are built on top of [FluentValidation](https://docs.fluentvalidation.net/en/latest/) giving you a fluent interface.
-If your actions take complex objects as arguments, it could be a good fit to model the rules in a separate file.
-Another aspect of the FluentValidation API is that it provides fluent APIs for dynamic rules that are applied based on conditions.
-Something the attribute model does not allow for unless one hand-rolls this type of flexibility into the rules themselves.
+The model based rules are built on top of [FluentValidation](https://docs.fluentvalidation.net/en/latest/) giving you a fluent interface
+to express rules. If your actions take complex objects as arguments, the fluent interface enables you have all the rules for the type
+in one place. With the FluentValidation API you also have more flexibility with the rules, as you can express conditionals for the rules,
+something the attribute model does not allow for unless one hand-rolls this type of flexibility into the rules themselves.
+
+Following the [Bank sample](../../../Samples/Bank/) we have the possibility to open a bank account. The bank accounts can have a friendly
+name associated with it. This name makes sense to make sure is unique.
+
+The action that opens the account takes a complex type; a command:
+
+```csharp
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
+```
+
+With this command we can now create rules for it. Start by creating a file in your domain (./Domain/Accounts/Debit) called `OpenDebitAccountRules`.
+Scaffold it with the following:
+
+```csharp
+public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
+{
+    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
+}
+
+The first generic parameter is telling that the type itself will be the holder of the state. Note that this has to be the rules type itself.
+For the second parameter we specify the command type; `OpenDebitAccount`. With this in place the system will automatically discover the
+rule and call it when an action is called with it as payload.
+
+Next thing we need is to give it some state that we can add rules for:
+
+```csharp
+public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
+{
+    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
+
+    // The state we want to have rules for
+    public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
+
+    // Define method that gets called to describe the projected state from events
+    public override void DefineState(IProjectionBuilderFor<OpenDebitAccountRules> builder) => builder
+        .Children(_ => _.Accounts, _ => _
+            .IdentifiedBy(_ => _)
+            .From<DebitAccountOpened>(_ => _.UsingKey(_ => _.Name)));
+}
+```
+
+The rules are declared by adding a constructor where one describes rules for properties.
+In addition to simple value rules like `.NotEmpty()` or `.Length()` there is a rule called `.Must()`
+that takes a callback in the form of `Func<TProperty, bool>` that can be leveraged.
+
+Lets add a specific rule called `BeUniqueName` in the form of a private method and a constructor
+that leverages it:
+
+```csharp
+public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
+{
+    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
+
+    public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
+
+    public OpenDebitAccountRules()
+    {
+        // Adding a rule to make sure the account name is unique
+        RuleFor(_ => _.Name).Must(BeUniqueName).WithMessage("Account with name already exists");
+    }
+
+    public override void DefineState(IProjectionBuilderFor<OpenDebitAccountRules> builder) => builder
+        .Children(_ => _.Accounts, _ => _
+            .IdentifiedBy(_ => _)
+            .From<DebitAccountOpened>(_ => _.UsingKey(_ => _.Name)));
+
+    // The actual rule
+    bool BeUniqueName(AccountName name) => !Accounts.Any(_ => _.Equals(name));
+}
+```
+
+Having the rules within the class like this can be convenient, but you might find that you want to have
+some rules be reusable or even more generic and applicable as abstract concepts.
+Cratis provides a method in the base class called `RuleForState()` that lets you fluently describe rules per projected state property.
+
+> Note: Out of the box Cratis provides some rules, but you can easily [extend it](../../recipes/rules/extending-rules.md).
+
+Lets change to using a generic `.Unique()` rule:
+
+```csharp
+public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAccount>
+{
+    public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
+
+    public IEnumerable<AccountName> Accounts { get; set; } = Array.Empty<AccountName>();
+
+    public OpenDebitAccountRules()
+    {
+        // Adding a rule to make sure the account name is unique
+        RuleForState(_ => _.Accounts)
+            .Unique(_ => _.Name)    // The Unique() rule lets you specify which property from the command it should compare against.
+            .WithMessage("Account with name already exists");
+
+        // Regular FluentValidation rule for command properties
+        RuleFor(_ => _.Name).NotEmpty().WithMessage("You have to specify a name");
+    }
+
+    public override void DefineState(IProjectionBuilderFor<OpenDebitAccountRules> builder) => builder
+        .Children(_ => _.Accounts, _ => _
+            .IdentifiedBy(_ => _)
+            .From<DebitAccountOpened>(_ => _.UsingKey(_ => _.Name)));
+}
+```
+
+> Note: In the constructor as you notice, we also added a regular [FluentValidation rules](https://docs.fluentvalidation.net/en/latest/#example) that is related
+> to the command. These rules can be input validation or anything.
