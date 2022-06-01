@@ -41,8 +41,8 @@ public abstract class RuleAttribute : ValidationAttribute, IRule
     /// <inheritdoc/>
     protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
     {
-        var businessRules = validationContext.GetService<IRules>()!;
-        businessRules.ProjectTo(this, IsModelKey ? value : null!);
+        var rules = validationContext.GetService<IRules>()!;
+        rules.ProjectTo(this, IsModelKey ? value : null!);
 
         if (!IsValid(value))
         {

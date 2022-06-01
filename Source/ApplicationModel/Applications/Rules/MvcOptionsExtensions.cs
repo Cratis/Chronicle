@@ -17,7 +17,7 @@ public static class MvcOptionsExtensions
     /// </summary>
     /// <param name="options"><see cref="MvcOptions"/> to build on.</param>
     /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
-    public static MvcOptions AddBusinessRulesValidators(this MvcOptions options)
+    public static MvcOptions AddRules(this MvcOptions options)
     {
         options.ModelValidatorProviders.Add(new RulesModelValidatorProvider(Internals.ServiceProvider!));
         return options;
