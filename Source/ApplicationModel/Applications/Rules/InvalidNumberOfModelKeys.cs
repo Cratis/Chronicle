@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
-
 namespace Aksio.Cratis.Applications.Rules;
 
 /// <summary>
@@ -15,8 +13,8 @@ public class InvalidNumberOfModelKeys : Exception
     /// </summary>
     /// <param name="type">Type that is invalid.</param>
     /// <param name="properties">Properties that has model key.</param>
-    public InvalidNumberOfModelKeys(Type type, IEnumerable<PropertyInfo> properties)
-        : base($"Invalid number of model keys on '{type.FullName}'. Only one allowed. (Keys = {string.Join(",", properties.Select(_ => _.Name))}) ")
+    public InvalidNumberOfModelKeys(Type type, IEnumerable<string> properties)
+        : base($"Invalid number of model keys on '{type.FullName}'. Only one allowed. (Keys = {string.Join(",", properties)}) ")
     {
     }
 }
