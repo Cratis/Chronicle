@@ -7,7 +7,7 @@ using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Grains;
 using Aksio.Cratis.Strings;
 
-namespace Aksio.Cratis.Applications.Rules.for_Rules.when_checking_if_has_for_type.when_projecting_to_rule;
+namespace Aksio.Cratis.Applications.Rules.for_Rules.when_projecting_to_rule;
 
 public class with_model_identifier : given.no_rules
 {
