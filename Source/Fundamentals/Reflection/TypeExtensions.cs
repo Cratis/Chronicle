@@ -332,6 +332,13 @@ public static class TypeExtensions
         return (ITypeInfo)instanceField!.GetValue(null)!;
     }
 
+    /// <summary>
+    /// Check whether or not a type is a record type.
+    /// </summary>
+    /// <param name="type">Type to check.</param>
+    /// <returns>True if record, false if not.</returns>
+    public static bool IsRecord(this Type type) => type.GetTypeInfo().DeclaredProperties.Any(x => x.Name == "EqualityContract");
+
     static IEnumerable<Type> BaseTypes(this Type type)
     {
         var currentType = type;
