@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
+using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Reflection;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
@@ -33,7 +36,24 @@ public class RuleModelValidator : IModelValidator
     {
         foreach (var rule in _ruleSets)
         {
-            _rules.ProjectTo(rule);
+            object? modelIdentifier = null;
+            var type = context.ModelMetadata.ModelType;
+            var propertiesWithModelKey = type
+                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(_ => _.HasAttribute<ModelKeyAttribute>())
+                .ToArray();
+
+            if (propertiesWithModelKey.Length > 1)
+            {
+                throw new InvalidNumberOfModelKeys(type, propertiesWithModelKey);
+            }
+
+            if (propertiesWithModelKey.Length == 1)
+            {
+                modelIdentifier = propertiesWithModelKey[0].GetValue(rule);
+            }
+
+            _rules.ProjectTo(rule, modelIdentifier);
             var validationContextType = typeof(ValidationContext<>).MakeGenericType(context.ModelMetadata.ModelType);
             var validationContext = Activator.CreateInstance(validationContextType, new object[] { context.Model! }) as IValidationContext;
             var result = (rule as IValidator)!.Validate(validationContext);
