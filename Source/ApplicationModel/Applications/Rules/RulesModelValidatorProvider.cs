@@ -12,9 +12,9 @@ namespace Aksio.Cratis.Applications.Rules;
 public class RulesModelValidatorProvider : IModelValidatorProvider
 {
     readonly IServiceProvider _serviceProvider;
-    IRules? _businessRules;
+    IRules? _rules;
 
-    IRules BusinessRules => _businessRules ??= _serviceProvider.GetService<IRules>()!;
+    IRules Rules => _rules ??= _serviceProvider.GetService<IRules>()!;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RulesModelValidatorProvider"/> class.
@@ -28,12 +28,12 @@ public class RulesModelValidatorProvider : IModelValidatorProvider
     /// <inheritdoc/>
     public void CreateValidators(ModelValidatorProviderContext context)
     {
-        if (BusinessRules.HasFor(context.ModelMetadata.ModelType))
+        if (Rules.HasFor(context.ModelMetadata.ModelType))
         {
-            var ruleTypes = BusinessRules.GetFor(context.ModelMetadata.ModelType);
+            var ruleTypes = Rules.GetFor(context.ModelMetadata.ModelType);
             var rules = ruleTypes.Select(ruleType => (_serviceProvider.GetService(ruleType) as IRule)!).ToArray();
 
-            var validator = new RuleModelValidator(rules, BusinessRules);
+            var validator = new RuleModelValidator(rules, Rules);
 
             context.Results.Add(new ValidatorItem
             {

@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Applications.Rules;
 public class Rules : IRules
 {
     static readonly MethodInfo? _createProjectionMethod;
-    readonly IDictionary<Type, IEnumerable<Type>> _businessRulesPerCommand;
+    readonly IDictionary<Type, IEnumerable<Type>> _rulesPerCommand;
     readonly Dictionary<RuleId, ProjectionDefinition> _projectionDefinitionsPerRule = new();
     readonly ExecutionContext _executionContext;
     readonly IEventTypes _eventTypes;
@@ -57,7 +57,7 @@ public class Rules : IRules
             _.BaseType?.IsGenericType == true &&
             _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
 
-        _businessRulesPerCommand = businessRuleTypes
+        _rulesPerCommand = businessRuleTypes
             .GroupBy(_ => _.BaseType!.GetGenericArguments()[1])
             .ToDictionary(_ => _.Key, _ => _.ToArray().AsEnumerable());
         _executionContext = executionContext;
@@ -68,10 +68,10 @@ public class Rules : IRules
     }
 
     /// <inheritdoc/>
-    public bool HasFor(Type type) => _businessRulesPerCommand.ContainsKey(type);
+    public bool HasFor(Type type) => _rulesPerCommand.ContainsKey(type);
 
     /// <inheritdoc/>
-    public IEnumerable<Type> GetFor(Type type) => HasFor(type) ? _businessRulesPerCommand[type] : Array.Empty<Type>();
+    public IEnumerable<Type> GetFor(Type type) => HasFor(type) ? _rulesPerCommand[type] : Array.Empty<Type>();
 
     /// <inheritdoc/>
     public ProjectionDefinition GetProjectionDefinitionFor(IRule rule)
