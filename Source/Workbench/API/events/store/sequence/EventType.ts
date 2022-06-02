@@ -6,4 +6,5 @@
 export type EventType = {
     id: string;
     generation: number;
+    isPublic: boolean;
 };
