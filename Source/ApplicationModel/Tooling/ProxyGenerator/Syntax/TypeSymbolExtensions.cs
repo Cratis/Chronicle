@@ -18,6 +18,7 @@ public static class TypeSymbolExtensions
 
     static readonly Dictionary<string, TargetType> _primitiveTypeMap = new()
     {
+        { typeof(bool).FullName!, new("boolean") },
         { typeof(string).FullName!, new("string") },
         { typeof(short).FullName!, new("number") },
         { typeof(int).FullName!, new("number") },
