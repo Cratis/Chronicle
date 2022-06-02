@@ -71,6 +71,7 @@
         "Pkcs",
         "Proto",
         "protobuf",
+        "Remindable",
         "tinycolor",
         "typeparam",
         "upserted"
