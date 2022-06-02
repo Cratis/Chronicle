@@ -10,8 +10,20 @@ namespace Aksio.Cratis.Events.Schemas;
 /// </summary>
 public static class SchemaExtensionMethods
 {
+    const string IsPublicExtension = "isPublic";
     const string DisplayNameExtension = "displayName";
     const string GenerationExtension = "generation";
+
+    /// <summary>
+    /// Set the isPublic extension in the schema.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to use.</param>
+    /// <param name="isPublic">State to set.</param>
+    public static void SetIsPublic(this JsonSchema schema, bool isPublic)
+    {
+        schema.EnsureExtensionData();
+        schema.ExtensionData[IsPublicExtension] = isPublic;
+    }
 
     /// <summary>
     /// Set the display name for a schema.
