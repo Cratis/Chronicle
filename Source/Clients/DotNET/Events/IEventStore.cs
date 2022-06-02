@@ -12,4 +12,9 @@ public interface IEventStore
     /// Gets the default event log.
     /// </summary>
     IEventLog EventLog { get; }
+
+    /// <summary>
+    /// Gets the event outbox.
+    /// </summary>
+    IEventOutbox Outbox { get; }
 }

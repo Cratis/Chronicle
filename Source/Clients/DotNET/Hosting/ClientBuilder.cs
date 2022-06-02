@@ -79,7 +79,8 @@ public class ClientBuilder : IClientBuilder
 
         services
             .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
-            .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
+            .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
+            .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
 
         if (_inKernel)
         {
