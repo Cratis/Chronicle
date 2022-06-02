@@ -1,3 +1,25 @@
+# [v6.3.0] - 2022-6-2 [PR: #328](https://github.com/aksio-insurtech/Cratis/pull/328)
+
+## Summary
+
+This PR concludes the requirements for the [v6.3.0 milestone](https://github.com/aksio-insurtech/Cratis/milestone/9?closed=1). Primarily focused on bringing the capability of running rules that are concurrently getting state based on the event store and leveraging projections to do so. The rules is a form of assertion or validation of the input coming in.
+
+For more details on how to use the new rules, read the tutorial in the documentation [here](./Documentation/tutorials/rules/index.md).
+
+
+### Added
+
+- Support for creating rules for commands (Models) using a fluent API built on top of FluentValidation.
+- Support for creating rules for individual values built on top of ASP.NET `ValidationAttribute` infrastructure.
+- Adding the Orleans dashboard, available at port **8081**, e.g. http://localhost:8080.
+
+### Changed
+
+- Controller actions won't be called if state is invalid. Invalid state means you don't want to carry on.
+- `CommandResult` is now formalized with all the properties representing validation results, authorization, exceptions. This is also reflected in the frontend representation.
+
+
+
 # [v6.2.1] - 2022-5-27 [PR: #322](https://github.com/aksio-insurtech/Cratis/pull/322)
 
 ### Fixed
