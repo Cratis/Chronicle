@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Aksio.Cratis.Events.Projections;
 
 namespace Aksio.Cratis.Integration;
 
@@ -12,9 +12,9 @@ namespace Aksio.Cratis.Integration;
 public interface IAdapterProjectionFor<TModel>
 {
     /// <summary>
-    /// Get an instance by <see cref="EventSourceId"/>.
+    /// Get an instance by <see cref="ModelKey"/>.
     /// </summary>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to get for.</param>
+    /// <param name="modelKey">The <see cref="ModelKey"/> to get for.</param>
     /// <returns>Instance of the model.</returns>
-    Task<TModel> GetById(EventSourceId eventSourceId);
+    Task<TModel> GetById(ModelKey modelKey);
 }

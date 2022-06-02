@@ -9,6 +9,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="System.Reactive" Version="$(SystemReactive)" />
     </ItemGroup>
 </Project>

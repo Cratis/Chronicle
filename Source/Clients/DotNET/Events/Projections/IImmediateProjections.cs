@@ -9,10 +9,10 @@ namespace Aksio.Cratis.Events.Projections;
 public interface IImmediateProjections
 {
     /// <summary>
-    /// Get an instance by a specific <see cref="EventSourceId"/>.
+    /// Get an instance by a specific <see cref="ModelKey"/>.
     /// </summary>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get instance for.</param>
+    /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
     /// <typeparam name="TModel">Type of model.</typeparam>
     /// <returns>An instance for the id.</returns>
-    Task<TModel> GetInstanceById<TModel>(EventSourceId eventSourceId);
+    Task<TModel> GetInstanceById<TModel>(ModelKey modelKey);
 }

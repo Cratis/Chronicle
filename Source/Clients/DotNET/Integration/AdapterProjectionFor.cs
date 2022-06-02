@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Grains;
@@ -38,10 +37,10 @@ public class AdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>
     }
 
     /// <inheritdoc/>
-    public async Task<TModel> GetById(EventSourceId eventSourceId)
+    public async Task<TModel> GetById(ModelKey modelKey)
     {
         // TODO: Fix so that this is not constant values.
-        var key = new ImmediateProjectionKey(ExecutionContextManager.GlobalMicroserviceId, TenantId.Development, Events.Store.EventSequenceId.Log, eventSourceId);
+        var key = new ImmediateProjectionKey(ExecutionContextManager.GlobalMicroserviceId, TenantId.Development, Events.Store.EventSequenceId.Log, modelKey);
         var projection = _clusterClient.GetGrain<IImmediateProjection>(_projectionDefinition.Identifier, key);
 
         var jsonObject = await projection.GetModelInstance(_projectionDefinition);

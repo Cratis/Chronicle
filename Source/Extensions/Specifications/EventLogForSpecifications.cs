@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Specifications;
 /// </summary>
 public class EventLogForSpecifications : IEventLog
 {
-    static readonly IEventSerializer _serializer = new EventSerializer();
+    static readonly IEventSerializer _serializer = new EventSerializer(new());
     readonly List<AppendedEventForSpecifications> _appendedEvents = new();
     EventSequenceNumber _sequenceNumber = EventSequenceNumber.First;
 

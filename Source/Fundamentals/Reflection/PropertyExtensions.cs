@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Reflection;
 public static class PropertyExtensions
 {
     /// <summary>
-    /// Check if a type has an attribute associated with it.
+    /// Check if a property has an attribute associated with it.
     /// </summary>
     /// <typeparam name="T">Attribute type to check for.</typeparam>
     /// <param name="property"><see cref="PropertyInfo"/> to check.</param>

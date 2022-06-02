@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Integration;
 
 namespace Aksio.Cratis.Specifications.Integration;
@@ -27,5 +27,5 @@ public class SpecificationAdapterProjectionFor<TModel> : IAdapterProjectionFor<T
     public void Dispose() => _context.Dispose();
 
     /// <inheritdoc/>
-    public Task<TModel> GetById(EventSourceId eventSourceId) => _context.GetById(eventSourceId);
+    public Task<TModel> GetById(ModelKey modelKey) => _context.GetById(modelKey);
 }
