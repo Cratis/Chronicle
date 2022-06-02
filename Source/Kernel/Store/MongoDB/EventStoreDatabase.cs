@@ -14,7 +14,10 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 [SingletonPerMicroserviceAndTenant]
 public class EventStoreDatabase : IEventStoreDatabase
 {
-    const string BaseCollectionName = "event-log";
+    const string EventLogCollectionName = "event-log";
+    const string OutboxCollectionName = "outbox";
+    const string InboxCollectionPrefix = "inbox";
+
     readonly IMongoDatabase _database;
 
     /// <summary>
@@ -43,16 +46,16 @@ public class EventStoreDatabase : IEventStoreDatabase
     /// <inheritdoc/>
     public IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId)
     {
-        var collectionName = BaseCollectionName;
+        var collectionName = EventLogCollectionName;
         if (!eventSequenceId.IsEventLog)
         {
             if (eventSequenceId.IsOutbox)
             {
-                collectionName = $"{BaseCollectionName}-public";
+                collectionName = OutboxCollectionName;
             }
             else
             {
-                collectionName = $"{BaseCollectionName}-{eventSequenceId}";
+                collectionName = $"{InboxCollectionPrefix}-{eventSequenceId}";
             }
         }
 
