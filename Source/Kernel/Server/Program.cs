@@ -33,6 +33,12 @@ public static class Program
             .UseAksio(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
+                .UseDashboard(options =>
+                {
+                    options.Host = "*";
+                    options.Port = 8081;
+                    options.HostSelf = true;
+                })
                 .ConfigureServices(_ => _
                     .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
                     .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
