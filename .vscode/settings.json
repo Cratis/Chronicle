@@ -59,6 +59,7 @@
         "deref",
         "echarts",
         "encryptor",
+        "enumerables",
         "Expando",
         "fluentui",
         "Grpc",

@@ -16,6 +16,7 @@ We also have [guidance](./guidance/index.md) for how to work with Cratis and oth
 | ------- | ----------- |
 | [Getting started](./getting-started.md) | Getting started |
 | [Tutorials](./tutorials/index.md) | Guided tutorials |
+| [Recipes](./recipes/index.md) | How to do specific tasks |
 | [Tenancy](./tenancy.md) | What is tenancy and how does it work? |
 | [Kernel](./kernel/index.md) | What the Kernel is, its architecture and structure and its public APIs |
 

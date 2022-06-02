@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Json;
 
 namespace Aksio.Cratis.Events.Projections.Json;
 
@@ -17,16 +16,10 @@ public class JsonProjectionPipelineSerializer : IJsonProjectionPipelineSerialize
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonProjectionPipelineSerializer"/>.
     /// </summary>
-    public JsonProjectionPipelineSerializer()
+    /// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
+    public JsonProjectionPipelineSerializer(JsonSerializerOptions serializerOptions)
     {
-        _serializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-                {
-                    new ConceptAsJsonConverterFactory()
-                }
-        };
+        _serializerOptions = serializerOptions;
     }
 
     /// <inheritdoc/>
