@@ -7,7 +7,6 @@ import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
 import { FailedObserverPartition } from './FailedObserverPartition';
 import { RecoveringFailedObserverPartition } from './RecoveringFailedObserverPartition';
-import { Boolean } from './Boolean';
 
 export type ObserverState = {
     id: string;
@@ -22,6 +21,6 @@ export type ObserverState = {
     currentNamespace: string;
     failedPartitions: FailedObserverPartition[];
     recoveringPartitions: RecoveringFailedObserverPartition[];
-    hasFailedPartitions: Boolean;
-    isRecoveringAnyPartition: Boolean;
+    hasFailedPartitions: boolean;
+    isRecoveringAnyPartition: boolean;
 };
