@@ -12,4 +12,9 @@ public class Microservice
     /// Gets the name of the microservice.
     /// </summary>
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the inbox configuration for the microservice.
+    /// </summary>
+    public Inbox Inbox { get; init; } = new Inbox();
 }
