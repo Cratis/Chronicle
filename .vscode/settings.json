@@ -54,6 +54,7 @@
         "Brotli",
         "Bson",
         "camelcase",
+        "changesets",
         "Cratis",
         "decryptor",
         "deref",
