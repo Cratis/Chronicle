@@ -57,6 +57,7 @@
         "Cratis",
         "decryptor",
         "deref",
+        "downcaster",
         "echarts",
         "encryptor",
         "enumerables",
@@ -74,6 +75,7 @@
         "Remindable",
         "tinycolor",
         "typeparam",
+        "upcaster",
         "upserted"
     ]
 }
