@@ -15,7 +15,7 @@ public interface IEventSerializer
     /// </summary>
     /// <param name="event">The event instance to serialize.</param>
     /// <returns>Serialized JSON.</returns>
-    JsonObject Serialize(object @event);
+    Task<JsonObject> Serialize(object @event);
 
     /// <summary>
     /// Deserialize a JSON representation of an event to a specific type.
@@ -23,5 +23,5 @@ public interface IEventSerializer
     /// <param name="type">Type to deserialize to.</param>
     /// <param name="json">JSON to deserialize.</param>
     /// <returns>Deserialized instance.</returns>
-    object Deserialize(Type type, JsonObject json);
+    Task<object> Deserialize(Type type, JsonObject json);
 }

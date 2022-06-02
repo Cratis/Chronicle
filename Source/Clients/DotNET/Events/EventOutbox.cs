@@ -4,35 +4,41 @@
 namespace Aksio.Cratis.Events;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventLog"/>.
+/// Represents an implementation of <see cref="IEventOutbox"/>.
 /// </summary>
-public class EventLog : IEventLog
+public class EventOutbox : IEventOutbox
 {
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _serializer;
-    readonly Store.Grains.IEventSequence _eventLog;
+    readonly Store.Grains.IEventSequence _eventOutbox;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventLog"/> class.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving the types of events.</param>
     /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
-    /// <param name="eventLog">The actual <see cref="Store.Grains.IEventSequence"/>.</param>
-    public EventLog(
+    /// <param name="eventOutbox">The actual <see cref="Store.Grains.IEventSequence"/>.</param>
+    public EventOutbox(
         IEventTypes eventTypes,
         IEventSerializer serializer,
-        Store.Grains.IEventSequence eventLog)
+        Store.Grains.IEventSequence eventOutbox)
     {
         _eventTypes = eventTypes;
         _serializer = serializer;
-        _eventLog = eventLog;
+        _eventOutbox = eventOutbox;
     }
 
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default)
+    public async Task Append(EventSourceId eventSourceId, object @event)
     {
-        var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
+        var type = @event.GetType();
+        var eventType = _eventTypes.GetEventTypeFor(type);
+        if (!eventType.IsPublic)
+        {
+            throw new EventTypeNeedsToMarkedPublic(type);
+        }
+
         var eventAsJson = await _serializer.Serialize(@event!);
-        await _eventLog.Append(eventSourceId, eventType, eventAsJson, validFrom);
+        await _eventOutbox.Append(eventSourceId, eventType, eventAsJson);
     }
 }
