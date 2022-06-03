@@ -97,6 +97,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(types)
             .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
             .AddProjections()
+            .AddOutboxProjections()
             .AddIntegration()
             .AddSingleton<IObservers, Observers>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
