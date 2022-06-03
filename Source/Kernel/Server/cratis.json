@@ -14,10 +14,15 @@
         "00000000-0000-0000-0000-000000000000": {
             "name": "Bank",
             "inbox": {
-                "microservices": [
-                    "00000000-0000-0000-0000-000000000000"
+                "fromOutboxes": [
+                    {
+                        "microservice": "40dda9cf-38cc-4bf5-a249-ba3ce4f8861f"
+                    }
                 ]
             }
+        },
+        "40dda9cf-38cc-4bf5-a249-ba3ce4f8861f": {
+            "name": "Test"
         }
     },
     "cluster": {
@@ -70,6 +75,46 @@
                         "eventStore": {
                             "type": "MongoDB",
                             "connectionDetails": "mongodb://localhost:27017/tenant-1-event-store"
+                        }
+                    }
+                }
+            },
+            "40dda9cf-38cc-4bf5-a249-ba3ce4f8861f": {
+                "shared": {
+                    "eventStore": {
+                        "type": "MongoDB",
+                        "connectionDetails": "mongodb://localhost:27017/m2-event-store-shared"
+                    }
+                },
+                "tenants": {
+                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/m2-development-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/m2-development-event-store"
+                        }
+                    },
+                    "f455c031-630e-450d-a75b-ca050c441708": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/m2-tenant-1-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/m2-tenant-1-event-store"
+                        }
+                    },
+                    "1c51e03c-680e-4c38-92a0-0f1b96c57d3f": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/m2-tenant-1-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/m2-tenant-1-event-store"
                         }
                     }
                 }
