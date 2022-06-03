@@ -50,4 +50,9 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     /// Get whether or not this is the default outbox event sequence.
     /// </summary>
     public bool IsOutbox => this == Outbox;
+
+    /// <summary>
+    /// Get whether or not this is the default outbox event sequence.
+    /// </summary>
+    public bool IsInbox => this == Inbox;
 }

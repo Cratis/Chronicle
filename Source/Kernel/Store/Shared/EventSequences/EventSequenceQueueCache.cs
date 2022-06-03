@@ -36,11 +36,6 @@ public class EventSequenceQueueCache : IQueueCache
     /// <inheritdoc/>
     public IQueueCacheCursor GetCacheCursor(IStreamIdentity streamIdentity, StreamSequenceToken token)
     {
-        if (streamIdentity.Guid == EventSequenceId.Outbox.Value)
-        {
-            Console.WriteLine("Out to the box");
-        }
-
         var microserviceAndTenant = (MicroserviceAndTenant)streamIdentity.Namespace;
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 

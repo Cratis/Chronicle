@@ -99,11 +99,6 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         EventSourceId? eventSourceId = null,
         IEnumerable<EventType>? eventTypes = null)
     {
-        if (eventSequenceId == EventSequenceId.Outbox)
-        {
-            Console.WriteLine("Out to the box");
-        }
-
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
