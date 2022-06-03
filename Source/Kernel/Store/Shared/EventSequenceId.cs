@@ -25,6 +25,11 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public static readonly EventSequenceId Outbox = Guid.Parse("ae99de1e-b19f-4a33-a5c4-3908508ce59f");
 
     /// <summary>
+    /// The <see cref="EventSequenceId"/> representing the default inbox.
+    /// </summary>
+    public static readonly EventSequenceId Inbox = Guid.Parse("2b608a79-77d2-4ccf-af43-4c37dee46592");
+
+    /// <summary>
     /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="EventSequenceId"/>.
     /// </summary>
     /// <param name="id"><see cref="Guid"/> to convert from.</param>
