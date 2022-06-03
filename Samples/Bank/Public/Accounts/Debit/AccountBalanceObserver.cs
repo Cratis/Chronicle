@@ -10,7 +10,7 @@ public class AccountBalanceObserver
 {
     public Task Balance(AccountBalance @event, EventContext context)
     {
-        Console.WriteLine($"Balance for {context.EventSourceId} : {@event.Amount}");
+        Console.WriteLine($"Balance for {context.EventSourceId} : {@event.Balance}");
         return Task.CompletedTask;
     }
 }
