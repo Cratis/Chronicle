@@ -73,7 +73,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
         var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
 
-        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceNumber.First, modelKey, _projection.EventTypes);
+        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, modelKey, _projection.EventTypes);
         var state = new ExpandoObject();
         while (await cursor.MoveNext())
         {

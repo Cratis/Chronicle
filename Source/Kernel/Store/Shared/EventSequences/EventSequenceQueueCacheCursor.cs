@@ -110,9 +110,14 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
             return;
         }
 
+        if (_streamIdentity.Guid == EventSequenceId.Outbox.Value)
+        {
+            Console.WriteLine("Out to the box");
+        }
+
         var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
-        var task = _eventLogStorageProvider.GetFromSequenceNumber((ulong)token.SequenceNumber, _partition, _eventTypes);
+        var task = _eventLogStorageProvider.GetFromSequenceNumber(_streamIdentity.Guid, (ulong)token.SequenceNumber, _partition, _eventTypes);
         task.Wait();
         _cursor = task.Result;
     }

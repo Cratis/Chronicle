@@ -6,7 +6,7 @@ using Aksio.Cratis.Execution;
 namespace Aksio.Cratis.Events.Store.Observation;
 
 /// <summary>
-/// Represents a key for am observer.
+/// Represents a key for an observer.
 /// </summary>
 /// <param name="MicroserviceId">The Microservice identifier.</param>
 /// <param name="TenantId">The Tenant identifier.</param>

@@ -90,7 +90,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     /// <returns>Instance of the model.</returns>
     public async Task<TModel> GetById(EventSourceId eventSourceId)
     {
-        var cursor = await _eventSequenceStorageProvider.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
+        var cursor = await _eventSequenceStorageProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)

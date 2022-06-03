@@ -68,7 +68,7 @@ public partial class Observer
         State.RunningState = ObserverRunningState.Replaying;
         await WriteStateAsync();
 
-        var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventTypes);
+        var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventSequenceId, State.EventTypes);
         await SubscribeStream(_ => HandleEventForPartitionedObserverWhenReplaying(_, headSequenceNumber));
     }
 
