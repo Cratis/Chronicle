@@ -35,7 +35,7 @@ public class EventOutbox : IEventOutbox
         var eventType = _eventTypes.GetEventTypeFor(type);
         if (!eventType.IsPublic)
         {
-            throw new EventTypeNeedsToMarkedPublic(type);
+            throw new EventTypeNeedsToBeMarkedPublic(type);
         }
 
         var eventAsJson = await _serializer.Serialize(@event!);
