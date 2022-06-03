@@ -101,7 +101,7 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
                 {
                         new ProjectionSinkDefinition(
                             "12358239-a120-4392-96d4-2b48271b904c",
-                            "22202c41-2be1-4547-9c00-f0b1f797fd75") // MongoDB
+                            WellKnownProjectionSinkTypes.MongoDB)
                 });
             await projections.Register(projectionDefinition, pipelineDefinition);
         }
