@@ -4,4 +4,4 @@
 namespace Events.Public.Accounts.Debit;
 
 [EventType("cf0a9242-706e-4293-bd3d-e795b9348bd6", isPublic: true)]
-public record AccountBalance(double Amount);
+public record AccountBalance(double Balance);
