@@ -68,7 +68,7 @@ public static class KeyResolvers
                     arrayIndexers.Add(new(currentProjection.ChildrenPropertyPath, parentKeyProperty, parentKey));
                 }
                 var firstEvent = currentProjection.EventTypes.First()!;
-                var parentEvent = await eventProvider.GetLastInstanceFor(firstEvent.Id, parentKey.ToString()!);
+                var parentEvent = await eventProvider.GetLastInstanceFor(EventSequenceId.Log, firstEvent.Id, parentKey.ToString()!);
                 var keyResolver = currentProjection.GetKeyResolverFor(firstEvent);
                 var resolvedParentKey = await keyResolver(eventProvider, parentEvent);
                 parentKey = resolvedParentKey.Value;

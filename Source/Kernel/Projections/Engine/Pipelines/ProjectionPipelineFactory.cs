@@ -45,7 +45,6 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// <inheritdoc/>
     public IProjectionPipeline CreateFrom(IProjection projection, ProjectionPipelineDefinition definition)
     {
-        // TODO: This should be taken out when we have the ImmediateProjection support.
         IProjectionSink sink = default!;
         if (definition.Sinks.Any())
         {

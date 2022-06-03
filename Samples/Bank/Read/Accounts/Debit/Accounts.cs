@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Concepts;
+using Concepts.Accounts;
+
 namespace Read.Accounts.Debit;
 
 [Route("/api/accounts/debit")]
@@ -18,9 +21,12 @@ public class Accounts : Controller
     }
 
     [HttpGet]
-    public Task<ClientObservable<IEnumerable<DebitAccount>>> AllAccounts()
+    public DebitAccount[] AllAccounts()
     {
-        return _accountsCollection.Observe();
+        return new DebitAccount[]
+        {
+            new(new AccountId(Guid.Empty), "My Account", new PersonId(Guid.Empty), 0)
+        };
     }
 
     [HttpGet("starting-with")]
