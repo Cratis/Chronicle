@@ -42,19 +42,28 @@ public class EventSequence : Controller
     /// <summary>
     /// Appends an event to the event log.
     /// </summary>
+    /// <param name="eventSequenceId">The event sequence to append to.</param>
+    /// <param name="microserviceId">The microservice to append for.</param>
+    /// <param name="tenantId">The tenant to append for.</param>
     /// <param name="eventSourceId">EventSource to append for.</param>
     /// <param name="eventTypeId">Type of event to append.</param>
     /// <param name="eventGeneration">Generation of the event to append.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{eventSourceId}/{eventTypeId}/{eventGeneration}")]
+    [HttpPost("{eventSequenceId}/{microserviceId}/{tenantId}/{eventSourceId}/{eventTypeId}/{eventGeneration}")]
     public async Task Append(
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
         [FromRoute] EventSourceId eventSourceId,
         [FromRoute] EventTypeId eventTypeId,
         [FromRoute] EventGeneration eventGeneration)
     {
         var jsonDocument = await JsonDocument.ParseAsync(Request.Body);
         var content = JsonObject.Create(jsonDocument.RootElement);
-        var eventLog = _grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: _executionContextManager.Current.ToMicroserviceAndTenant());
+        var eventLog = _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
+
+        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+
         await eventLog.Append(
             eventSourceId,
             new EventType(eventTypeId, eventGeneration),
@@ -76,7 +85,7 @@ public class EventSequence : Controller
     {
         var result = new List<AppendedEvent>();
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-        var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(EventSequenceNumber.First);
+        var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First);
         while (await cursor.MoveNext())
         {
             result.AddRange(cursor.Current);
