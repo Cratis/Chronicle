@@ -17,7 +17,7 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
     readonly Storage _configuration;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => MongoDBProjectionSink.ProjectionResultStoreTypeId;
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
 
     /// <summary>
     /// /// Initializes a new instance of the <see cref="MongoDBProjectionSinkFactory"/> class.
