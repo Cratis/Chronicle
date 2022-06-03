@@ -20,7 +20,9 @@ public class EventSequences : Controller
     {
         return Task.FromResult(new[]
         {
-            new EventSequenceInformation(EventSequenceId.Log.ToString(), "Log")
+            new EventSequenceInformation(EventSequenceId.Log.ToString(), "Log"),
+            new EventSequenceInformation(EventSequenceId.Inbox.ToString(), "Inbox"),
+            new EventSequenceInformation(EventSequenceId.Outbox.ToString(), "Outbox")
         }.AsEnumerable());
     }
 }
