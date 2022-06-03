@@ -26,10 +26,10 @@ public sealed class ObserverAttribute : Attribute
     /// Initializes a new instance of <see cref="ObserverAttribute"/>.
     /// </summary>
     /// <param name="observerIdAsString">Unique identifier as string.</param>
-    /// <param name="eventSequenceIdAsString">Optional <see cref="EventSequenceId">event sequence identifier</see> as string.</param>
-    public ObserverAttribute(string observerIdAsString, string? eventSequenceIdAsString = null)
+    /// <param name="inbox">Whether or not to observe inbox. If false, it will observe the default event log.</param>
+    public ObserverAttribute(string observerIdAsString, bool inbox = false)
     {
         ObserverId = observerIdAsString;
-        if (eventSequenceIdAsString != null) EventSequenceId = eventSequenceIdAsString;
+        EventSequenceId = inbox ? EventSequenceId.Inbox : EventSequenceId.Log;
     }
 }
