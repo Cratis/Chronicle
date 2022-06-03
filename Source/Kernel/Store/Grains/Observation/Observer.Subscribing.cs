@@ -44,11 +44,6 @@ public partial class Observer
         State.RunningState = ObserverRunningState.Subscribing;
         State.EventTypes = eventTypes;
 
-        if (_eventSequenceId == EventSequenceId.Outbox && _tenantId == Execution.TenantId.Development)
-        {
-            Console.WriteLine("Out to the box");
-        }
-
         var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
 
         var nextSequenceNumber = lastSequenceNumber + 1;
