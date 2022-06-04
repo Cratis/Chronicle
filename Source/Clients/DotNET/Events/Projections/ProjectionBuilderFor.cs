@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
@@ -109,10 +110,17 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     /// <inheritdoc/>
     public ProjectionDefinition Build()
     {
+        var modelType = typeof(TModel);
+        var modelSchema = _schemaGenerator.Generate(modelType);
+        if (_eventTypes.HasFor(modelType))
+        {
+            modelSchema.SetEventType(_eventTypes.GetEventTypeFor(modelType));
+        }
+
         return new ProjectionDefinition(
             _identifier,
-            _name ?? typeof(TModel).FullName ?? "[N/A]",
-            new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TModel)).ToJson()),
+            _name ?? modelType.FullName ?? "[N/A]",
+            new ModelDefinition(_modelName, modelSchema.ToJson()),
             _isRewindable,
             _fromDefinitions,
             _childrenDefinitions,
