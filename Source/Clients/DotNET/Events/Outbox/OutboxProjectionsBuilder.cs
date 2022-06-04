@@ -53,7 +53,7 @@ public class OutboxProjectionsBuilder : IOutboxProjectionsBuilder
         var identifier = _projectionId.Value.Xor(eventType.Id.Value);
         var projectionBuilder = new ProjectionBuilderFor<TTargetEvent>(identifier, _eventTypes, _jsonSchemaGenerator);
         projectionBuilderCallback(projectionBuilder);
-        projectionBuilder.WithName($"Outbox for: ${eventClrType.FullName}");
+        projectionBuilder.WithName($"Outbox for ${eventClrType.FullName}");
         _projectionDefinitionsPerEventType[eventType] = projectionBuilder.Build();
 
         return this;
