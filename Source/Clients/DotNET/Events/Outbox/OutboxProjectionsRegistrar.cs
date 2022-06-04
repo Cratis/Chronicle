@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Outbox;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
@@ -17,7 +19,7 @@ public class OutboxProjectionsRegistrar : IOutboxProjectionsRegistrar
     readonly IClusterClient _clusterClient;
     readonly IExecutionContextManager _executionContextManager;
     readonly IInstancesOf<IOutboxProjections> _outboxProjections;
-    readonly IEnumerable<OutboxProjectionsDefinition> _outboxProjectionsDefinition;
+    readonly IEnumerable<OutboxProjectionsDefinition> _outboxProjectionsDefinitions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxProjectionsRegistrar"/> class.
@@ -37,7 +39,7 @@ public class OutboxProjectionsRegistrar : IOutboxProjectionsRegistrar
         _clusterClient = clusterClient;
         _executionContextManager = executionContextManager;
         _outboxProjections = outboxProjections;
-        _outboxProjectionsDefinition = _outboxProjections.Select(projections =>
+        _outboxProjectionsDefinitions = _outboxProjections.Select(projections =>
         {
             var builder = new OutboxProjectionsBuilder(eventTypes, jsonSchemaGenerator, projections.Identifier);
             projections.Define(builder);
@@ -46,13 +48,25 @@ public class OutboxProjectionsRegistrar : IOutboxProjectionsRegistrar
     }
 
     /// <inheritdoc/>
-    public Task DiscoverAndRegisterAll()
+    public async Task DiscoverAndRegisterAll()
     {
         _executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
 
-        Console.WriteLine(_outboxProjectionsDefinition);
-        Console.WriteLine(_clusterClient);
-
-        return Task.CompletedTask;
+        var projections = _clusterClient.GetGrain<Projections.Grains.IProjections>(ExecutionContextManager.GlobalMicroserviceId);
+        foreach (var outboxProjectionsDefinition in _outboxProjectionsDefinitions)
+        {
+            foreach (var (_, projectionDefinition) in outboxProjectionsDefinition.TargetEventTypeProjections)
+            {
+                var pipelineDefinition = new ProjectionPipelineDefinition(
+                    projectionDefinition.Identifier,
+                    new[]
+                    {
+                        new ProjectionSinkDefinition(
+                            "06ec7e41-4424-4eb3-8dd0-defb45bc055e",
+                            WellKnownProjectionSinkTypes.Outbox)
+                    });
+                await projections.Register(projectionDefinition, pipelineDefinition);
+            }
+        }
     }
 }
