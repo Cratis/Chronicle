@@ -22,7 +22,7 @@ Following the [Bank sample](../../../Samples/Bank/) we can imagine a part of the
 the closing of an existing account. We want to make sure we don't allow closing accounts that has either a
 positive or a negative balance.
 
-Start by creating a file in your domain (./Domain/Accounts/Debit) called `AccountMustBeEmptyAttribute`.
+Start by creating a file in your domain (./Domain/Accounts/Debit) called `AccountMustBeEmptyAttribute.cs`.
 Scaffold it with the following:
 
 ```csharp
@@ -110,7 +110,7 @@ The action that opens the account takes a complex type; a command:
 public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
 ```
 
-With this command we can now create rules for it. Start by creating a file in your domain (./Domain/Accounts/Debit) called `OpenDebitAccountRules`.
+With this command we can now create rules for it. Start by creating a file in your domain (./Domain/Accounts/Debit) called `OpenDebitAccountRules.cs`.
 Scaffold it with the following:
 
 ```csharp
