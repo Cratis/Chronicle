@@ -6,7 +6,7 @@ telemetry. This can then be used with [Speedscope](https://www.speedscope.app) b
 ## Client
 
 The simplest way to profile the client would be to go via a Sample application, e.g. the Bank sample.
-Navigate to [./Samples/Bank/Main](./Samples/Bank/Main) and run the following after a build.
+Navigate to [./Samples/Banking/Bank/Main](./Samples/Banking/Bank/Main) and run the following after a build.
 
 ```shell
 dotnet trace collect --format Speedscope -- dotnet bin/Debug/net6.0/Main.dll

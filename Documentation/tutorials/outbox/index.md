@@ -26,7 +26,7 @@ They are also now your contract to the outside world.
 The outbox only supports appending types that are meant for public consumption. They are marked
 as public to differentiate from the private events to the microservice.
 
-Following the [Bank sample](../../../Samples/Bank/) we can imagine a part of the system that enables
+Following the [Bank sample](../../../Samples/Banking/Bank/) we can imagine a part of the system that enables
 publishes the balance of an account as it changes.
 
 Start by creating a file in the **Events.Public** project (./Events.Public/Accounts/Debit) called `AccountBalance.cs`.

@@ -21,7 +21,7 @@
             "args": [
                 "build",
                 "--no-restore",
-                "${workspaceFolder}/Samples/Bank/Main/Main.csproj",
+                "${workspaceFolder}/Samples/Banking/Bank/Main/Main.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

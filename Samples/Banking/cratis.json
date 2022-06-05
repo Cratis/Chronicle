@@ -1,0 +1,124 @@
+{
+    "tenants": {
+        "3352d47d-c154-4457-b3fb-8a2efb725113": {
+            "name": "dev"
+        },
+        "f455c031-630e-450d-a75b-ca050c441708": {
+            "name": "ten1"
+        },
+        "1c51e03c-680e-4c38-92a0-0f1b96c57d3f": {
+            "name": "ten2"
+        }
+    },
+    "microservices": {
+        "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+            "name": "Bank"
+        },
+        "40dda9cf-38cc-4bf5-a249-ba3ce4f8861f": {
+            "name": "Balance notifier",
+            "inbox": {
+                "fromOutboxes": [
+                    {
+                        "microservice": "0e1219ec-7136-40d8-a6e6-99c05ba22a30"
+                    }
+                ]
+            }
+        }
+    },
+    "cluster": {
+        "name": "Cratis",
+        "type": "local",
+        "advertisedIP": "127.0.0.1",
+        "siloPort": 11111,
+        "gatewayPort": 30000,
+        "options": {}
+    },
+    "storage": {
+        "cluster": {
+            "type": "MongoDB",
+            "connectionDetails": "mongodb://localhost:27017/cratis-shared"
+        },
+        "microservices": {
+            "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+                "shared": {
+                    "eventStore": {
+                        "type": "MongoDB",
+                        "connectionDetails": "mongodb://localhost:27017/bank-event-store-shared"
+                    }
+                },
+                "tenants": {
+                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-dev-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-dev-event-store"
+                        }
+                    },
+                    "f455c031-630e-450d-a75b-ca050c441708": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-ten1-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-ten1-event-store"
+                        }
+                    },
+                    "1c51e03c-680e-4c38-92a0-0f1b96c57d3f": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-ten2-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-ten2-event-store"
+                        }
+                    }
+                }
+            },
+            "40dda9cf-38cc-4bf5-a249-ba3ce4f8861f": {
+                "shared": {
+                    "eventStore": {
+                        "type": "MongoDB",
+                        "connectionDetails": "mongodb://localhost:27017/m2-event-store-shared"
+                    }
+                },
+                "tenants": {
+                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bn-dev-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bn-dev-event-store"
+                        }
+                    },
+                    "f455c031-630e-450d-a75b-ca050c441708": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bn-ten1-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bn-ten1-event-store"
+                        }
+                    },
+                    "1c51e03c-680e-4c38-92a0-0f1b96c57d3f": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bn-ten2-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bn-ten2-event-store"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

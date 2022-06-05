@@ -46,9 +46,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build bank sample",
-            "program": "${workspaceFolder}/Samples/Bank/Main/bin/Debug/net6.0/Main.dll",
+            "program": "${workspaceFolder}/Samples/Banking/Bank/Main/bin/Debug/net6.0/Main.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Samples/Bank/Main",
+            "cwd": "${workspaceFolder}/Samples/Banking/Bank/Main",
             "stopAtEntry": false,
             "justMyCode": false,
             "requireExactSource": false,
@@ -69,9 +69,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build bank sample",
-            "program": "${workspaceFolder}/Samples/Bank/Main/bin/Debug/net6.0/Main.dll",
+            "program": "${workspaceFolder}/Samples/Banking/Bank/Main/bin/Debug/net6.0/Main.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Samples/Bank/Main",
+            "cwd": "${workspaceFolder}/Samples/Banking/Bank/Main",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
@@ -82,9 +82,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build balance notifier sample",
-            "program": "${workspaceFolder}/Samples/BalanceNotifier/Main/bin/Debug/net6.0/Main.dll",
+            "program": "${workspaceFolder}/Samples/Banking/BalanceNotifier/Main/bin/Debug/net6.0/Main.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Samples/BalanceNotifier/Main",
+            "cwd": "${workspaceFolder}/Samples/Banking/BalanceNotifier/Main",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
