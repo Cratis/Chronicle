@@ -26,20 +26,21 @@ public static class JsonObjectExtensions
     /// Convert a <see cref="JsonObject"/> to <see cref="ExpandoObject"/>.
     /// </summary>
     /// <param name="json"><see cref="JsonObject"/> to convert.</param>
+    /// <param name="valueConverter">Optional callback for possible value conversion.</param>
     /// <returns>Converted <see cref="ExpandoObject"/>.</returns>
-    public static ExpandoObject AsExpandoObject(this JsonObject json)
+    public static ExpandoObject AsExpandoObject(this JsonObject json, Func<object, object>? valueConverter = default)
     {
         var result = new ExpandoObject();
         var resultAsDictionary = result as IDictionary<string, object>;
         foreach (var (property, node) in json)
         {
-            resultAsDictionary[property!] = ConvertNode(node!);
+            resultAsDictionary[property!] = ConvertNode(node!, valueConverter);
         }
 
         return result;
     }
 
-    static object ConvertNode(JsonNode node)
+    static object ConvertNode(JsonNode node, Func<object, object>? valueConverter = default)
     {
         switch (node)
         {
@@ -49,6 +50,11 @@ public static class JsonObjectExtensions
                 if (sourceValue is JsonElement element)
                 {
                     element.TryGetValue(out sourceValue);
+                }
+
+                if (valueConverter is not null)
+                {
+                    sourceValue = valueConverter(sourceValue!);
                 }
 
                 return sourceValue!;
