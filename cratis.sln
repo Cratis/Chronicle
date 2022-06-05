@@ -147,11 +147,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{3AFA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BalanceNotifier", "BalanceNotifier", "{CACAB5FD-DEDF-41E1-AD60-374FA9D81DBD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main", "Samples\BalanceNotifier\Main\Main.csproj", "{B4FDC635-DE05-4B05-B808-EEA54DF5A5AC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main", "Samples\Banking\BalanceNotifier\Main\Main.csproj", "{B4FDC635-DE05-4B05-B808-EEA54DF5A5AC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Public", "Samples\BalanceNotifier\Public\Public.csproj", "{690D0CDD-D231-4C9B-AEB7-482FCC7BE441}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Public", "Samples\Banking\BalanceNotifier\Public\Public.csproj", "{690D0CDD-D231-4C9B-AEB7-482FCC7BE441}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events.Bank", "Samples\BalanceNotifier\Events.Bank\Events.Bank.csproj", "{8A262DF1-0CD8-434A-8405-31CE28AB634C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events.Bank", "Samples\Banking\BalanceNotifier\Events.Bank\Events.Bank.csproj", "{8A262DF1-0CD8-434A-8405-31CE28AB634C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
