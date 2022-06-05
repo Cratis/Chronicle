@@ -77,6 +77,19 @@
                 "ASPNETCORE_ENVIRONMENT": "Development"
             }
         },
+        {
+            "name": ".NET Core Launch (Balance Notifier)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build balance notifier sample",
+            "program": "${workspaceFolder}/Samples/BalanceNotifier/Main/bin/Debug/net6.0/Main.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Samples/BalanceNotifier/Main",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
 
         {
             "name": ".NET Core Attach",
@@ -90,6 +103,13 @@
             "configurations": [
                 ".NET Core Launch (Server)",
                 ".NET Core Launch (Bank Sample)"
+            ]
+        },
+        {
+            "name": "Server and Balance Notifier",
+            "configurations": [
+                ".NET Core Launch (Server)",
+                ".NET Core Launch (Balance Notifier)"
             ]
         },
         {
