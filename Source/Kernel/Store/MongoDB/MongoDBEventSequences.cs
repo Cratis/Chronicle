@@ -46,7 +46,11 @@ public class MongoDBEventSequences : IEventSequences
     {
         try
         {
-            _logger.Appending(sequenceNumber);
+            _logger.Appending(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId);
             var @event = new Event(
                 sequenceNumber,
                 _executionContextManager.Current.CorrelationId,
@@ -68,7 +72,12 @@ public class MongoDBEventSequences : IEventSequences
         }
         catch (Exception ex)
         {
-            _logger.AppendFailure(ex);
+            _logger.AppendFailure(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId,
+                ex);
             throw;
         }
     }
