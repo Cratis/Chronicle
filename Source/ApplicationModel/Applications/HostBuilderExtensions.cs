@@ -4,6 +4,7 @@
 using System.IO.Compression;
 using Aksio.Cratis.Applications;
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
@@ -22,8 +23,12 @@ public static class HostBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="IHostBuilder"/> to extend.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> for the running process.</param>
     /// <returns><see cref="IHostBuilder"/> for building continuation.</returns>
-    public static IHostBuilder UseAksio(this IHostBuilder builder, Action<IClientBuilder>? configureDelegate = default)
+    public static IHostBuilder UseAksio(
+        this IHostBuilder builder,
+        Action<IClientBuilder>? configureDelegate = default,
+        MicroserviceId? microserviceId = default)
     {
         var loggerFactory = builder.UseDefaultLogging();
         var logger = loggerFactory.CreateLogger("Aksio setup");
@@ -32,9 +37,14 @@ public static class HostBuilderExtensions
         Internals.Types = new Types("Aksio");
         Internals.Types.RegisterTypeConvertersForConcepts();
 
+        if (microserviceId is null)
+        {
+            microserviceId = MicroserviceId.Unspecified;
+        }
+
         builder
             .UseMongoDB(Internals.Types)
-            .UseCratis(Internals.Types, configureDelegate, loggerFactory)
+            .UseCratis(microserviceId, Internals.Types, configureDelegate, loggerFactory)
             .ConfigureServices(_ =>
             {
                 _
