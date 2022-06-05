@@ -77,15 +77,6 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     /// <inheritdoc/>
     public async Task DiscoverAndRegisterAll()
     {
-        if (ExecutionContextManager.IsInKernel)
-        {
-            foreach (var microserviceId in _microservices.GetMicroserviceIds())
-            {
-                await RegisterProjectionsForMicroservice(microserviceId);
-            }
-            return;
-        }
-
         await RegisterProjectionsForMicroservice(ExecutionContextManager.GlobalMicroserviceId);
     }
 
