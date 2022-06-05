@@ -11,7 +11,7 @@ For more details on how to use the new rules, read the tutorial in the documenta
 
 - Support for creating rules for commands (Models) using a fluent API built on top of FluentValidation.
 - Support for creating rules for individual values built on top of ASP.NET `ValidationAttribute` infrastructure.
-- Adding the Orleans dashboard, available at port **8081**, e.g. http://localhost:8080.
+- Adding the Orleans dashboard, available at port **8081**, e.g. http://localhost:8081.
 
 ### Changed
 
