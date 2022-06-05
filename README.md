@@ -28,7 +28,7 @@ Make sure you have the following installed:
 - [Node JS version 16](https://nodejs.org/)
 
 The sample consists of a backend and a frontend.
-Navigate to the [Bank Sample](./Samples/Bank) folder.
+Navigate to the [Bank Sample](./Samples/Banking/Bank) folder.
 
 Before running the microservice backend and frontend, we will need to run the Cratis Kernel.
 
@@ -45,14 +45,14 @@ This will bring up the Cratis Kernel and expose the following ports:
 | 11111 | Clustering port |
 | 30000 | Client to Kernel connectivity |
 
-Within here you'll see a folder called [Main](./Samples/Bank/Main), which represents the backend startup.
+Within here you'll see a folder called [Main](./Samples/Banking/Bank/Main), which represents the backend startup.
 Navigate to this and start the backend by running:
 
 ```shell
 dotnet run
 ```
 
-The frontend is located in the [Web](./Samples/Bank/Web) folder. While the backend is running in another terminal,
+The frontend is located in the [Web](./Samples/Banking/Bank/Web) folder. While the backend is running in another terminal,
 navigate to that folder and start it by running:
 
 ```shell
