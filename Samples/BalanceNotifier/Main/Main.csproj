@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <ItemGroup>
         <ProjectReference Include="../Events.Bank/Events.Bank.csproj" />
+        <ProjectReference Include="../Public/Public.csproj" />
     </ItemGroup>
     <ItemGroup>
       <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="8.4.1" />

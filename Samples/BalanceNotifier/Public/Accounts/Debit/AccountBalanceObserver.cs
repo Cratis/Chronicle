@@ -1,11 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Events.Public.Accounts.Debit;
+using Events.Bank.Accounts.Debit;
 
 namespace Public.Accounts.Debit;
 
-[Observer("2b110250-319d-4246-8b30-7a191b513e33", inbox: true)]
+[Observer("292a21dc-71de-4042-a313-4bcd45f6e0cb", inbox: true)]
 public class AccountBalanceObserver
 {
     public Task Balance(AccountBalance @event, EventContext context)
