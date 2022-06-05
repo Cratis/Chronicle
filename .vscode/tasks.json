@@ -21,7 +21,20 @@
             "args": [
                 "build",
                 "--no-restore",
-                "${workspaceFolder}/Samples/Bank/Main/Main.csproj",
+                "${workspaceFolder}/Samples/Banking/Bank/Main/Main.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build balance notifier sample",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "--no-restore",
+                "${workspaceFolder}/Samples/BalanceNotifier/Main/Main.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

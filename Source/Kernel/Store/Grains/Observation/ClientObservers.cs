@@ -23,7 +23,6 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
     readonly Tenants _tenants;
     readonly ILogger<ClientObservers> _logger;
     IConnectedClients? _connectedClients;
-    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObservers"/> class.
@@ -47,7 +46,6 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        _microserviceId = _executionContextManager.Current.MicroserviceId;
         _connectedClients = GrainFactory.GetGrain<IConnectedClients>(Guid.Empty);
 
         // TODO: Subscribe any observers from state, but only if the client is actually still connected.
@@ -63,9 +61,10 @@ public class ClientObservers : Grain<ClientObserversState>, IClientObservers
             await _connectedClients!.SubscribeOnDisconnected(connectionId, this.GetReference<IConnectedClientObserver>());
         }
 
+        var microserviceId = _executionContextManager.Current.MicroserviceId;
         foreach (var tenantId in _tenants.GetTenantIds())
         {
-            var observerKey = new ObserverKey(_microserviceId, tenantId, eventSequenceId);
+            var observerKey = new ObserverKey(microserviceId, tenantId, eventSequenceId);
             State.AssociateObserverWithConnectionId(connectionId, new(observerId, observerKey));
 
             var observer = GrainFactory.GetGrain<IObserver>(observerId, observerKey);

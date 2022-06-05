@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
 using Orleans;
 
 namespace Aksio.Cratis.Events;
@@ -18,6 +17,9 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public IEventLog EventLog { get; }
 
+    /// <inheritdoc/>
+    public IEventOutbox Outbox { get; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
     /// </summary>
@@ -25,19 +27,22 @@ public class EventStore : IEventStore
     /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with execution context.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/> in the system.</param>
-    /// /// <param name="additionalEventInformationProviders">Providers of additional event information.</param>
     public EventStore(
         IEventSerializer serializer,
         IClusterClient clusterClient,
         IExecutionContextManager executionContextManager,
-        IEventTypes eventTypes,
-        IInstancesOf<ICanProvideAdditionalEventInformation> additionalEventInformationProviders)
+        IEventTypes eventTypes)
     {
         _clusterClient = clusterClient;
 
         var eventLog = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
             EventSequenceId.Log,
             keyExtension: executionContextManager.Current.ToMicroserviceAndTenant());
-        EventLog = new EventLog(eventTypes, serializer, additionalEventInformationProviders, eventLog);
+        EventLog = new EventLog(eventTypes, serializer, eventLog);
+
+        var eventOutbox = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
+            EventSequenceId.Outbox,
+            keyExtension: executionContextManager.Current.ToMicroserviceAndTenant());
+        Outbox = new EventOutbox(eventTypes, serializer, eventOutbox);
     }
 }

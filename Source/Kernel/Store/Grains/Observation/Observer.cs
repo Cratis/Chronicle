@@ -76,11 +76,13 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _eventSequenceId = key.EventSequenceId;
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
+        var sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
+        var sourceTenantId = key.SourceTenantId ?? _tenantId;
 
         _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
+        var microserviceAndTenant = new MicroserviceAndTenant(sourceMicroserviceId, sourceTenantId);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
 
         _recoverReminder = await GetReminder(RecoverReminder);
@@ -120,7 +122,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 State.LastHandled = @event.Metadata.SequenceNumber;
             }
 
-            var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
+            var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
             if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
             {
                 State.RunningState = ObserverRunningState.Active;
@@ -145,9 +147,9 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         _streamSubscription = await _stream!.SubscribeAsync(
             (@event, _) => handler(@event),
-            new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes));
+            State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));
 
-        // Note: Add a warm up event. The internals of Orleans will not do the producer / consumer handshake only after an event has gone through the
+        // Note: Add a warm up event. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
         const long sequence = -1;
         var @event = new AppendedEvent(

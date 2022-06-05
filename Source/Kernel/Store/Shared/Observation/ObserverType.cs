@@ -21,5 +21,10 @@ public enum ObserverType
     /// <summary>
     /// Projection type of observer.
     /// </summary>
-    Projection = 2
+    Projection = 2,
+
+    /// <summary>
+    /// Inbox type of observer.
+    /// </summary>
+    Inbox = 3
 }

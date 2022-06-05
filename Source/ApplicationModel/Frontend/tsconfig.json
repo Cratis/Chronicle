@@ -6,6 +6,9 @@
     },
     "references": [
         {
+            "path": "../../Node/Fundamentals/tsconfig.json"
+        },
+        {
             "path": "../../Node/TypeScript/tsconfig.json"
         }
     ],

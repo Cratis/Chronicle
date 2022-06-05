@@ -46,7 +46,11 @@ public class MongoDBEventSequences : IEventSequences
     {
         try
         {
-            _logger.Appending(sequenceNumber);
+            _logger.Appending(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId);
             var @event = new Event(
                 sequenceNumber,
                 _executionContextManager.Current.CorrelationId,
@@ -61,11 +65,19 @@ public class MongoDBEventSequences : IEventSequences
                         { eventType.Generation.ToString(), BsonDocument.Parse(content.ToJsonString()) }
                 },
                 Array.Empty<EventCompensation>());
-            await GetCollectionFor(eventSequenceId).InsertOneAsync(@event);
+            var collection = GetCollectionFor(eventSequenceId);
+            await collection.InsertOneAsync(@event);
+
+            await HandleRetention(eventSequenceId, sequenceNumber, eventSourceId, eventType, collection);
         }
         catch (Exception ex)
         {
-            _logger.AppendFailure(ex);
+            _logger.AppendFailure(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId,
+                ex);
             throw;
         }
     }
@@ -79,4 +91,21 @@ public class MongoDBEventSequences : IEventSequences
         JsonObject content) => throw new NotImplementedException();
 
     IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+
+    async Task HandleRetention(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        EventSourceId eventSourceId,
+        EventType eventType,
+        IMongoCollection<Event> collection)
+    {
+        if (eventSequenceId.IsInbox || eventSequenceId.IsOutbox)
+        {
+            var filter = Builders<Event>.Filter.And(
+                Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId),
+                Builders<Event>.Filter.Eq(e => e.Type, eventType.Id),
+                Builders<Event>.Filter.Ne(e => e.SequenceNumber, sequenceNumber));
+            await collection.DeleteManyAsync(filter);
+        }
+    }
 }

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Boot;
-using Aksio.Cratis.Execution;
+using Aksio.Cratis.Configuration;
 using Orleans;
 
 namespace Aksio.Cratis.Events.Projections.Grains;
@@ -13,25 +13,27 @@ namespace Aksio.Cratis.Events.Projections.Grains;
 public class BootProcedure : IPerformBootProcedure
 {
     readonly IGrainFactory _grainFactory;
-    readonly IExecutionContextManager _executionContextManager;
+    readonly Microservices _microservices;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BootProcedure"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public BootProcedure(IGrainFactory grainFactory, IExecutionContextManager executionContextManager)
+    /// <param name="microservices"><see cref="Microservices"/> configuration.</param>
+    public BootProcedure(
+        IGrainFactory grainFactory,
+        Microservices microservices)
     {
         _grainFactory = grainFactory;
-        _executionContextManager = executionContextManager;
+        _microservices = microservices;
     }
 
     /// <inheritdoc/>
     public void Perform()
     {
-        // TODO: Start for all Microservices
-        _executionContextManager.Establish(MicroserviceId.Unspecified);
-
-        _ = _grainFactory.GetGrain<IProjections>(MicroserviceId.Unspecified);
+        foreach (var microserviceId in _microservices.GetMicroserviceIds())
+        {
+            _ = _grainFactory.GetGrain<IProjections>(microserviceId);
+        }
     }
 }

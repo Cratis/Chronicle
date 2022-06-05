@@ -6,9 +6,12 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/sequence/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}');
+const routeTemplate = Handlebars.compile('/api/events/store/sequence/{{eventSequenceId}}/{{microserviceId}}/{{tenantId}}/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}');
 
 export interface IAppend {
+    eventSequenceId?: string;
+    microserviceId?: string;
+    tenantId?: string;
     eventSourceId?: string;
     eventTypeId?: string;
     eventGeneration?: number;
@@ -16,6 +19,9 @@ export interface IAppend {
 
 export class AppendValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
+        eventSequenceId: new Validator(),
+        microserviceId: new Validator(),
+        tenantId: new Validator(),
         eventSourceId: new Validator(),
         eventTypeId: new Validator(),
         eventGeneration: new Validator(),
@@ -23,16 +29,22 @@ export class AppendValidator extends CommandValidator {
 }
 
 export class Append extends Command<IAppend> implements IAppend {
-    readonly route: string = '/api/events/store/sequence/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}';
+    readonly route: string = '/api/events/store/sequence/{{eventSequenceId}}/{{microserviceId}}/{{tenantId}}/{{eventSourceId}}/{{eventTypeId}}/{{eventGeneration}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AppendValidator();
 
+    private _eventSequenceId!: string;
+    private _microserviceId!: string;
+    private _tenantId!: string;
     private _eventSourceId!: string;
     private _eventTypeId!: string;
     private _eventGeneration!: number;
 
     get requestArguments(): string[] {
         return [
+            'eventSequenceId',
+            'microserviceId',
+            'tenantId',
             'eventSourceId',
             'eventTypeId',
             'eventGeneration',
@@ -41,12 +53,39 @@ export class Append extends Command<IAppend> implements IAppend {
 
     get properties(): string[] {
         return [
+            'eventSequenceId',
+            'microserviceId',
+            'tenantId',
             'eventSourceId',
             'eventTypeId',
             'eventGeneration',
         ];
     }
 
+    get eventSequenceId(): string {
+        return this._eventSequenceId;
+    }
+
+    set eventSequenceId(value: string) {
+        this._eventSequenceId = value;
+        this.propertyChanged('eventSequenceId');
+    }
+    get microserviceId(): string {
+        return this._microserviceId;
+    }
+
+    set microserviceId(value: string) {
+        this._microserviceId = value;
+        this.propertyChanged('microserviceId');
+    }
+    get tenantId(): string {
+        return this._tenantId;
+    }
+
+    set tenantId(value: string) {
+        this._tenantId = value;
+        this.propertyChanged('tenantId');
+    }
     get eventSourceId(): string {
         return this._eventSourceId;
     }

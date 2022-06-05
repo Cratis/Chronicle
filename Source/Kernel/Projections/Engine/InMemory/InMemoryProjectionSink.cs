@@ -13,17 +13,12 @@ namespace Aksio.Cratis.Events.Projections.InMemory;
 /// </summary>
 public class InMemoryProjectionSink : IProjectionSink, IDisposable
 {
-    /// <summary>
-    /// Gets the identifier of the <see cref="InMemoryProjectionSink"/>.
-    /// </summary>
-    public static readonly ProjectionSinkTypeId ProjectionResultStoreTypeId = "8a23995d-da0b-4c4c-818b-f97992f26bbf";
-
     readonly Dictionary<string, ExpandoObject> _collection = new();
     readonly Dictionary<string, ExpandoObject> _rewindCollection = new();
     bool _isReplaying;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => ProjectionResultStoreTypeId;
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.InMemory;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "InMemory";

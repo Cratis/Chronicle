@@ -79,7 +79,8 @@ public class ClientBuilder : IClientBuilder
 
         services
             .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
-            .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog);
+            .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
+            .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
 
         if (_inKernel)
         {
@@ -96,6 +97,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton(types)
             .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
             .AddProjections()
+            .AddOutboxProjections()
             .AddIntegration()
             .AddSingleton<IObservers, Observers>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
