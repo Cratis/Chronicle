@@ -40,7 +40,14 @@ public class Inbox : Grain, IInbox
             EventSequenceId.Inbox,
             keyExtension: new MicroserviceAndTenant(_microserviceId, _key.TenantId));
 
-        _observer = GrainFactory.GetGrain<IObserver>(_microserviceId, new ObserverKey(_key.MicroserviceId, _key.TenantId, EventSequenceId.Outbox));
+        _observer = GrainFactory.GetGrain<IObserver>(
+            _microserviceId,
+            new ObserverKey(
+                _microserviceId,
+                _key.TenantId,
+                EventSequenceId.Outbox,
+                _key.MicroserviceId,
+                _key.TenantId));
 
         var observerNamespace = new ObserverNamespace($"{_microserviceId}+${keyAsString}");
         var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
