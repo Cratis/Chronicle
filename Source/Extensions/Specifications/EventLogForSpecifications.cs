@@ -4,6 +4,7 @@
 using System.Reflection;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Specifications.Types;
 
 namespace Aksio.Cratis.Specifications;
 
@@ -12,7 +13,7 @@ namespace Aksio.Cratis.Specifications;
 /// </summary>
 public class EventLogForSpecifications : IEventLog
 {
-    static readonly IEventSerializer _serializer = new EventSerializer(new());
+    static readonly IEventSerializer _serializer = new EventSerializer(new KnownInstancesOf<ICanProvideAdditionalEventInformation>(), new());
     readonly List<AppendedEventForSpecifications> _appendedEvents = new();
     EventSequenceNumber _sequenceNumber = EventSequenceNumber.First;
 
@@ -22,9 +23,9 @@ public class EventLogForSpecifications : IEventLog
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _appendedEvents;
 
     /// <inheritdoc/>
-    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
+    public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
-        var json = _serializer.Serialize(@event);
+        var json = await _serializer.Serialize(@event);
 
         var eventTypeAttribute = @event.GetType().GetCustomAttribute<EventTypeAttribute>();
         _appendedEvents.Add(new(
@@ -40,6 +41,5 @@ public class EventLogForSpecifications : IEventLog
             json,
             @event));
         _sequenceNumber++;
-        return Task.CompletedTask;
     }
 }
