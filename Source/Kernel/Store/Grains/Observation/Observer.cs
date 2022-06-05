@@ -76,11 +76,13 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _eventSequenceId = key.EventSequenceId;
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
+        var sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
+        var sourceTenantId = key.SourceTenantId ?? _tenantId;
 
         _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
+        var microserviceAndTenant = new MicroserviceAndTenant(sourceMicroserviceId, sourceTenantId);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
 
         _recoverReminder = await GetReminder(RecoverReminder);
