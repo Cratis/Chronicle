@@ -5,7 +5,7 @@ import { SinonStub } from 'sinon';
 import { CommandTrackerImplementation } from '../CommandTrackerImplementation';
 import { FakeCommand } from './FakeCommand';
 
-describe('when executing with three commands were two having changes', () => {
+describe('when executing with three commands were two having changes', async () => {
     const tracker = new CommandTrackerImplementation(() => {});
 
     const firstCommand = new FakeCommand(true);
@@ -16,7 +16,7 @@ describe('when executing with three commands were two having changes', () => {
     tracker.addCommand(secondCommand);
     tracker.addCommand(thirdCommand);
 
-    tracker.execute();
+    await tracker.execute();
 
     it('should call execute on first command', () => (firstCommand.execute as SinonStub).called.should.be.true);
     it('should not call execute on second command', () => (secondCommand.execute as SinonStub).called.should.be.false);

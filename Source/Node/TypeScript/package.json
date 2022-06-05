@@ -14,7 +14,7 @@
         "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
         "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
         "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha",
-        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
+        "ci": "yarn clean && yarn lint:ci && yarn test && yarn build",
         "up": "ncu -u \\!'@aksio/*'"
     },
     "dependencies": {

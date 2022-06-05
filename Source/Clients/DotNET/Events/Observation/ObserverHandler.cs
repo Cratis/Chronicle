@@ -69,7 +69,7 @@ public class ObserverHandler
     public async Task OnNext(AppendedEvent @event)
     {
         var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
-        var content = _eventSerializer.Deserialize(eventType, @event.Content);
+        var content = await _eventSerializer.Deserialize(eventType, @event.Content);
         await _observerInvoker.Invoke(content, @event.Context);
     }
 }

@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Events.Projections.InMemory;
 public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
 {
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => InMemoryProjectionSink.ProjectionResultStoreTypeId;
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.InMemory;
 
     /// <inheritdoc/>
     public IProjectionSink CreateFor(Model model) => new InMemoryProjectionSink();

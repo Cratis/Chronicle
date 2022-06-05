@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <ItemGroup>
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Domain/Domain.csproj" />
+        <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../Events.Public/Events.Public.csproj" />
+        <ProjectReference Include="../Integration/Integration.csproj" />
+        <ProjectReference Include="../Public/Public.csproj" />
+        <ProjectReference Include="../Reactions/Reactions.csproj" />
+        <ProjectReference Include="../Read/Read.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="8.4.1" />
+    </ItemGroup>
+</Project>

@@ -43,7 +43,8 @@ public partial class Observer
 
         State.RunningState = ObserverRunningState.Subscribing;
         State.EventTypes = eventTypes;
-        var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventTypes);
+
+        var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
 
         var nextSequenceNumber = lastSequenceNumber + 1;
         if (State.NextEventSequenceNumber < nextSequenceNumber)

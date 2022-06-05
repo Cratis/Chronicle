@@ -4,7 +4,7 @@ Unlike regular projections an immediate projection does not save its result for 
 This is very helpful for those scenarios where you need a special purpose model and specific instance based on
 an identifier. Or need strong consistency based on the events, such as on the **Command** / **Write** side.
 
-Following the [Bank sample](../../../Samples/Bank/) we can imagine a part of the system that looks at suspicious
+Following the [Bank sample](../../../Samples/Banking/Bank/) we can imagine a part of the system that looks at suspicious
 activity that could resemble money laundering. For the simplicity of the sample the logic will basically be
 looking for an unusual amount of debit accounts being opened.
 
@@ -31,7 +31,7 @@ public class MoneyLaundering
 Since we are going to look for the number of occurrences of the `DebitAccountOpened` event we will need
 a model to keep the count and a projection that defines the projection.
 
-Add a file called `AccountsCounter` and add the following:
+Add a file called `AccountsCounter.cs` and add the following:
 
 ```csharp
 namespace Reactions.Accounts;
@@ -39,7 +39,7 @@ namespace Reactions.Accounts;
 public record AccountsCounter(int Count);
 ```
 
-Then add a file for the projection called `AccountsCounterProjection`:
+Then add a file for the projection called `AccountsCounterProjection.cs`:
 
 ```csharp
 using Events.Accounts.Debit;

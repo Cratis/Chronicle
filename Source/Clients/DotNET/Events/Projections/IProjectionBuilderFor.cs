@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Projections;
 public interface IProjectionBuilderFor<TModel>
 {
     /// <summary>
-    /// Names the projection. Default behavior is to use the type of the models fullname.
+    /// Names the projection. Default behavior is to use the type of the models full name.
     /// </summary>
     /// <param name="name">The name of the projection to use.</param>
     /// <returns>Builder continuation.</returns>

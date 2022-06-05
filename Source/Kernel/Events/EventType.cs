@@ -8,7 +8,8 @@ namespace Aksio.Cratis.Events;
 /// </summary>
 /// <param name="Id"><see cref="EventTypeId">Unique identifier</see>.</param>
 /// <param name="Generation"><see cref="EventGeneration">Generation</see> of the event.</param>
-public record EventType(EventTypeId Id, EventGeneration Generation)
+/// <param name="IsPublic">Whether or not the event type is considered a public event.</param>
+public record EventType(EventTypeId Id, EventGeneration Generation, bool IsPublic = false)
 {
     /// <summary>
     /// Implicitly convert from <see cref="EventType"/> to string.

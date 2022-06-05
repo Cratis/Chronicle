@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Types;
-
 namespace Aksio.Cratis.Events;
 
 /// <summary>
@@ -12,7 +10,6 @@ public class EventLog : IEventLog
 {
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _serializer;
-    readonly IInstancesOf<ICanProvideAdditionalEventInformation> _additionalEventInformationProviders;
     readonly Store.Grains.IEventSequence _eventLog;
 
     /// <summary>
@@ -20,17 +17,14 @@ public class EventLog : IEventLog
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving the types of events.</param>
     /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
-    /// <param name="additionalEventInformationProviders">Providers of additional event information.</param>
     /// <param name="eventLog">The actual <see cref="Store.Grains.IEventSequence"/>.</param>
     public EventLog(
         IEventTypes eventTypes,
         IEventSerializer serializer,
-        IInstancesOf<ICanProvideAdditionalEventInformation> additionalEventInformationProviders,
         Store.Grains.IEventSequence eventLog)
     {
         _eventTypes = eventTypes;
         _serializer = serializer;
-        _additionalEventInformationProviders = additionalEventInformationProviders;
         _eventLog = eventLog;
     }
 
@@ -38,11 +32,7 @@ public class EventLog : IEventLog
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default)
     {
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-        var eventAsJson = _serializer.Serialize(@event!);
-        foreach (var provider in _additionalEventInformationProviders)
-        {
-            await provider.ProvideFor(eventAsJson);
-        }
+        var eventAsJson = await _serializer.Serialize(@event!);
         await _eventLog.Append(eventSourceId, eventType, eventAsJson, validFrom);
     }
 }

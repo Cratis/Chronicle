@@ -79,7 +79,6 @@ public class Projection : Grain, IProjection
 
         _observer = GrainFactory.GetGrain<IObserver>(projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
 
-        var observerNamespace = new ObserverNamespace(projectionId.ToString());
         var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
         var stream = streamProvider.GetStream<AppendedEvent>(projectionId, key);
         await stream.SubscribeAsync(HandleEvent);
@@ -98,7 +97,7 @@ public class Projection : Grain, IProjection
         {
             return new JsonObject();
         }
-        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
+        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         var state = new ExpandoObject();
         while (await cursor.MoveNext())
         {

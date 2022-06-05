@@ -12,6 +12,11 @@ namespace Aksio.Cratis.Execution;
 public record MicroserviceId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
+    /// Represents a value that identifies the Kernel as a microservice.
+    /// </summary>
+    public static readonly MicroserviceId Kernel = Guid.Parse("12c737d2-e816-46f4-96fd-67fc1bf71086");
+
+    /// <summary>
     /// The value when microservice identifier is not specified.
     /// </summary>
     public static readonly MicroserviceId Unspecified = new(Guid.Empty);

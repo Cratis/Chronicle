@@ -37,6 +37,7 @@ public class MongoDBSchemaStore : ISchemaStore
         // If this is a new generation, there must be an upcaster and downcaster associated with the schema
         // .. do not allow generational gaps
         // if (await HasFor(type.Id, type.Generation)) return;
+        schema.SetIsPublic(type.IsPublic);
         schema.SetDisplayName(friendlyName);
         schema.SetGeneration(type.Generation);
 

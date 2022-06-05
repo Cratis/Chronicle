@@ -21,11 +21,6 @@ namespace Aksio.Cratis.Events.Projections.MongoDB;
 /// </summary>
 public class MongoDBProjectionSink : IProjectionSink, IDisposable
 {
-    /// <summary>
-    /// Gets the identifier of the <see cref="MongoDBProjectionSink"/>.
-    /// </summary>
-    public static readonly ProjectionSinkTypeId ProjectionResultStoreTypeId = "22202c41-2be1-4547-9c00-f0b1f797fd75";
-
     readonly Model _model;
     readonly IExecutionContextManager _executionContextManager;
     readonly IMongoDBClientFactory _clientFactory;
@@ -38,7 +33,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     public ProjectionSinkTypeName Name => "MongoDB";
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => ProjectionResultStoreTypeId;
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
 
     string ReplayCollectionName => $"replay-{_model.Name}";
 

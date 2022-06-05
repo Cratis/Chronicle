@@ -14,6 +14,6 @@ public interface ICanProvideAdditionalEventInformation
     /// Provide additional information on events being appended.
     /// </summary>
     /// <param name="event">The event being appended.</param>
-    /// <returns>Object containing the additional information.</returns>
+    /// <returns>Awaitable task.</returns>
     Task ProvideFor(JsonObject @event);
 }

@@ -15,12 +15,19 @@ public sealed class EventTypeAttribute : Attribute
     public EventType Type { get; }
 
     /// <summary>
+    /// Gets or sets whether or not this event type should be available publicly.
+    /// </summary>
+    public bool IsPublic { get; }
+
+    /// <summary>
     /// Initializes a new instance of <see cref="EventTypeAttribute"/>.
     /// </summary>
     /// <param name="idAsGuid"><see cref="EventTypeId">Identifier</see> as string representation of a <see cref="Guid"/>.</param>
     /// <param name="generation"><see cref="EventGeneration"/> represented as <see cref="uint"/>.</param>
-    public EventTypeAttribute(string idAsGuid, uint generation = EventGeneration.FirstValue)
+    /// <param name="isPublic">Whether or not the event type is for public use.</param>
+    public EventTypeAttribute(string idAsGuid, uint generation = EventGeneration.FirstValue, bool isPublic = false)
     {
-        Type = new(Guid.Parse(idAsGuid), generation);
+        IsPublic = isPublic;
+        Type = new(Guid.Parse(idAsGuid), generation, isPublic);
     }
 }
