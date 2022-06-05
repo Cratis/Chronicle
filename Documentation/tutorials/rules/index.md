@@ -18,7 +18,7 @@ Cratis supports 2 approaches to defining rules:
 
 The value based rules are building on top of the ASP.NET Core pipelines [custom attributes](https://docs.microsoft.com/en-us/aspnet/core/mvc/models/validation?view=aspnetcore-6.0#custom-attributes).
 
-Following the [Bank sample](../../../Samples/Bank/) we can imagine a part of the system that enables
+Following the [Bank sample](../../../Samples/Banking/Bank/) we can imagine a part of the system that enables
 the closing of an existing account. We want to make sure we don't allow closing accounts that has either a
 positive or a negative balance.
 
@@ -101,7 +101,7 @@ to express rules. If your actions take complex objects as arguments, the fluent 
 in one place. With the FluentValidation API you also have more flexibility with the rules, as you can express conditionals for the rules,
 something the attribute model does not allow for unless one hand-rolls this type of flexibility into the rules themselves.
 
-Following the [Bank sample](../../../Samples/Bank/) we have the possibility to open a bank account. The bank accounts can have a friendly
+Following the [Bank sample](../../../Samples/Banking/Bank/) we have the possibility to open a bank account. The bank accounts can have a friendly
 name associated with it. This name makes sense to make sure is unique.
 
 The action that opens the account takes a complex type; a command:
