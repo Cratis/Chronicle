@@ -31,7 +31,7 @@ public class MoneyLaundering
 Since we are going to look for the number of occurrences of the `DebitAccountOpened` event we will need
 a model to keep the count and a projection that defines the projection.
 
-Add a file called `AccountsCounter` and add the following:
+Add a file called `AccountsCounter.cs` and add the following:
 
 ```csharp
 namespace Reactions.Accounts;
@@ -39,7 +39,7 @@ namespace Reactions.Accounts;
 public record AccountsCounter(int Count);
 ```
 
-Then add a file for the projection called `AccountsCounterProjection`:
+Then add a file for the projection called `AccountsCounterProjection.cs`:
 
 ```csharp
 using Events.Accounts.Debit;
