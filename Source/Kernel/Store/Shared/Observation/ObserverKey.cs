@@ -11,7 +11,14 @@ namespace Aksio.Cratis.Events.Store.Observation;
 /// <param name="MicroserviceId">The Microservice identifier.</param>
 /// <param name="TenantId">The Tenant identifier.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
-public record ObserverKey(MicroserviceId MicroserviceId, TenantId TenantId, EventSequenceId EventSequenceId)
+/// <param name="SourceMicroserviceId">Optional source Microservice identifier. Typically used for Inbox.</param>
+/// <param name="SourceTenantId">Optional source Tenant identifier. Typically used for Inbox.</param>
+public record ObserverKey(
+    MicroserviceId MicroserviceId,
+    TenantId TenantId,
+    EventSequenceId EventSequenceId,
+    MicroserviceId? SourceMicroserviceId = default,
+    TenantId? SourceTenantId = default)
 {
     /// <summary>
     /// Implicitly convert from <see cref="ObserverKey"/> to string.
@@ -20,7 +27,15 @@ public record ObserverKey(MicroserviceId MicroserviceId, TenantId TenantId, Even
     public static implicit operator string(ObserverKey key) => key.ToString();
 
     /// <inheritdoc/>
-    public override string ToString() => $"{MicroserviceId}+{TenantId}+{EventSequenceId}";
+    public override string ToString()
+    {
+        if (SourceMicroserviceId is not null && SourceTenantId is not null)
+        {
+            return $"{MicroserviceId}+{TenantId}+{EventSequenceId}+{SourceMicroserviceId}+{SourceTenantId}";
+        }
+
+        return $"{MicroserviceId}+{TenantId}+{EventSequenceId}";
+    }
 
     /// <summary>
     /// Parse a key into its components.
@@ -33,6 +48,14 @@ public record ObserverKey(MicroserviceId MicroserviceId, TenantId TenantId, Even
         var microserviceId = (MicroserviceId)elements[0];
         var tenantId = (TenantId)elements[1];
         var eventSequenceId = (EventSequenceId)elements[2];
-        return new(microserviceId, tenantId, eventSequenceId);
+        MicroserviceId? sourceMicroserviceId = null;
+        TenantId? sourceTenantId = null;
+        if (elements.Length > 3)
+        {
+            sourceMicroserviceId = (MicroserviceId)elements[3];
+            sourceTenantId = (TenantId)elements[4];
+        }
+
+        return new(microserviceId, tenantId, eventSequenceId, sourceMicroserviceId, sourceTenantId);
     }
 }
