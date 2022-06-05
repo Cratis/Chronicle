@@ -12,6 +12,7 @@ using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.MongoDB;
 using Aksio.Cratis.Events.Store.MongoDB.Observation;
 using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
@@ -30,7 +31,7 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
-            .UseAksio(_ => _.InKernel())
+            .UseAksio(_ => _.InKernel(), microserviceId: MicroserviceId.Kernel)
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseDashboard(options =>
