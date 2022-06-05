@@ -6,12 +6,12 @@ using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Orleans;
 
-namespace Aksio.Cratis.Events.Projections.MongoDB;
+namespace Aksio.Cratis.Events.Projections.Grains.Outbox;
 
 /// <summary>
-/// Represents a <see cref="IProjectionSinkFactory"/> for creating <see cref="MongoDBOutboxProjectionSink"/> instances.
+/// Represents a <see cref="IProjectionSinkFactory"/> for creating <see cref="OutboxProjectionSink"/> instances.
 /// </summary>
-public class MongoDBOutboxProjectionSinkFactory : IProjectionSinkFactory
+public class OutboxProjectionSinkFactory : IProjectionSinkFactory
 {
     readonly IEventSequenceStorageProvider _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
@@ -22,13 +22,13 @@ public class MongoDBOutboxProjectionSinkFactory : IProjectionSinkFactory
     public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.Outbox;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBOutboxProjectionSinkFactory"/> class.
+    /// Initializes a new instance of the <see cref="OutboxProjectionSinkFactory"/> class.
     /// </summary>
     /// <param name="eventSequenceStorageProvider">The <see cref="IEventSequenceStorageProvider"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonSerializerOptions">The global serialization options.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public MongoDBOutboxProjectionSinkFactory(
+    public OutboxProjectionSinkFactory(
         IEventSequenceStorageProvider eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
         JsonSerializerOptions jsonSerializerOptions,
@@ -42,7 +42,7 @@ public class MongoDBOutboxProjectionSinkFactory : IProjectionSinkFactory
 
     /// <inheritdoc/>
     public IProjectionSink CreateFor(Model model) =>
-        new MongoDBOutboxProjectionSink(
+        new OutboxProjectionSink(
             model,
             _eventSequenceStorageProvider,
             _executionContextManager,
