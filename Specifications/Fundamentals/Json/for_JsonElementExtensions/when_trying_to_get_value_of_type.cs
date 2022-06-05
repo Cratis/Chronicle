@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Aksio.Cratis.Json;
+namespace Aksio.Cratis.Json.for_JsonElementExtensions;
 
 public abstract class when_trying_to_get_value_of_type<T> : Specification
 {
