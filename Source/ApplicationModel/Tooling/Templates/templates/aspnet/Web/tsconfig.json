@@ -7,16 +7,22 @@
         "declarationMap": true,
         "sourceMap": true,
         "composite": true,
+        "importHelpers": true,
+        "removeComments": true,
         "strict": true,
         "allowJs": false,
         "checkJs": false,
-        "module": "CommonJS",
+        "module": "esnext",
+        "moduleResolution": "node",
         "noEmit": false,
         "pretty": true,
         "noImplicitAny": false,
         "skipLibCheck": true,
         "target": "ES2015",
-        "moduleResolution": "node",
+        "lib": [
+            "ESNext",
+            "DOM"
+        ],
         "jsx": "react-jsx",
         "esModuleInterop": true,
         "strictNullChecks": true,
@@ -33,15 +39,10 @@
         "assumeChangesOnlyAffectDirectDependencies": true,
         "alwaysStrict": true,
         "preserveConstEnums": true,
-        "newLine": "lf",
-        "paths": {
-            "API/*": [
-                "./API/*"
-            ]
-        },
+        "newLine": "lf"
     },
     "exclude": [
-        "**/dist"
-    ],
-    "references": []
+        "**/dist",
+        "**/for_*/**"
+    ]
 }
