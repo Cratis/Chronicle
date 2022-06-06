@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Extensions.Orleans.Configuration;
 public class EndPoint
 {
     /// <summary>
-    /// Gets the IP address.
+    /// Gets the address to use, this can either be an IP address or a hostname.
     /// </summary>
     public string Address { get; init; } = string.Empty;
 
