@@ -1,3 +1,10 @@
+# [v6.4.2] - 2022-6-6 [PR: #337](https://github.com/aksio-insurtech/Cratis/pull/337)
+
+### Fixed
+
+- When using static cluster (cluster.json) the address for the silo was limited to IP address only. This is very inconvenient when using things like docker compose on a local dev environment. It now allows both IP or hostname and will resolve to the correct IP address.
+
+
 # [v6.4.1] - 2022-6-6 [PR: #336](https://github.com/aksio-insurtech/Cratis/pull/336)
 
 ### Fixed
