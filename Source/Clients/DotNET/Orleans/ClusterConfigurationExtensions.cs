@@ -43,7 +43,12 @@ public static class ClusterConfigurationExtensions
                 {
                     logger?.UsingStaticClustering();
                     var staticClusterOptions = clusterConfig.GetStaticClusterOptions();
-                    var endPoints = staticClusterOptions.Gateways.Select(_ => new IPEndPoint(IPAddress.Parse(_.Address), _.Port)).ToArray();
+                    var endPoints = staticClusterOptions.Gateways.Select(_ =>
+                    {
+                        var hostEntry = Dns.GetHostEntry(_.Address);
+                        var ipAddress = hostEntry.AddressList.FirstOrDefault();
+                        return new IPEndPoint(ipAddress!, _.Port);
+                    }).ToArray();
                     builder.UseStaticClustering(endPoints);
                 }
                 break;

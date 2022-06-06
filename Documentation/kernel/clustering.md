@@ -76,17 +76,19 @@ For the client you need to configure the options slightly different with gateway
                 "port": 30000
             },
             {
-                "address": "SECOND_KERNEL_IP",
+                "address": "SECOND_KERNEL",
                 "port": 30000
             },
             {
-                "address": "THIRD_KERNEL_IP",
+                "address": "THIRD_KERNEL",
                 "port": 30000
             }
         ]
     }
 }
 ```
+
+> Note: The address can be either an IP address or a hostname.
 
 ### Azure Storage
 
