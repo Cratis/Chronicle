@@ -1,3 +1,10 @@
+# [v6.4.1] - 2022-6-6 [PR: #336](https://github.com/aksio-insurtech/Cratis/pull/336)
+
+### Fixed
+
+- Fixing `tsconfig.json` in the template so that it actually compiles with the new requirements of `ESNext`.
+
+
 # [v6.4.0] - 2022-6-2 [PR: #328](https://github.com/aksio-insurtech/Cratis/pull/330)
 ## Summary
 
