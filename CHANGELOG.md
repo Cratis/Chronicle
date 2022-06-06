@@ -1,3 +1,24 @@
+# [v6.4.0] - 2022-6-2 [PR: #328](https://github.com/aksio-insurtech/Cratis/pull/330)
+## Summary
+
+This version concludes the requirements for the [v6.4.0 milestone](https://github.com/aksio-insurtech/Cratis/milestone/7?closed=1).
+Focused on bringing in formalized support for the concept of an **outbox** and an **inbox** and connecting these together in a good way.
+
+For more details on how to use it, read more about it in the [outbox tutorial](./Documentation/tutorials/outbox/index.md).
+
+### Added
+
+- Support for appending events to outbox. Client now has `IEventOutbox`.
+- Added `IsPublic` to event type, which is used to constrain what is allowed to append to the outbox.
+- Support for declaratively describing how to append events to outbox based on private events.
+
+### Fixed
+
+- Resume of observers didn't actually resume in some circumstances. Made sure they do so.
+- Known type missing for C# `bool` to JS boolean` for the proxy generator.
+- Fixed issues with wrong microservice being used during set up of observers and event sequences.
+
+
 # [v6.3.0] - 2022-6-2 [PR: #328](https://github.com/aksio-insurtech/Cratis/pull/328)
 
 ## Summary
