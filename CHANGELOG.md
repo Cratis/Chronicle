@@ -1,3 +1,10 @@
+# [v6.4.5] - 2022-6-6 [PR: #340](https://github.com/aksio-insurtech/Cratis/pull/340)
+
+### Fixed
+
+- Add missing information about the projects that is in the sample and gets created from the template.
+
+
 # [v6.4.2] - 2022-6-6 [PR: #337](https://github.com/aksio-insurtech/Cratis/pull/337)
 
 ### Fixed
