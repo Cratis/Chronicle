@@ -15,7 +15,11 @@ export const Home = () => {
                 <li>Concepts - used for holding reusable domain concepts.</li>
                 <li>Domain - holds the business logic related to performing actions.</li>
                 <li>Events - holds all the events for the microservice.</li>
+                <li>Events.Public - holds all the public events that you want to communicate outside of the microservice.</li>
+                <li>Integration - holds artifacts used for integrating with non-event sourced systems.</li>
                 <li>Read - holds projections and read models.</li>
+                <li>Reactions - holds imperative observers that produces reactions typically other than state.</li>
+                <li>Public - holds projections and possible other reactions that produces the public events to the outbox.</li>
                 <li>Main - the backend startup project.</li>
                 <li>Web - this Web frontend.</li>
             </ul>
