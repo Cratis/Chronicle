@@ -25,7 +25,7 @@ public class SingletonPerTenantComponentLifetime : IComponentLifetime
         var context = ExecutionContextManager.GetCurrent();
         if (!_scopes.ContainsKey(context.TenantId))
         {
-            _scopes[context.TenantId] = new SingletonLifetimeScope<SingletonPerTenantComponentLifetime>(mostNestedVisibleScope.RootLifetimeScope, mostNestedVisibleScope);
+            _scopes[context.TenantId] = new SingletonLifetimeScope<SingletonPerTenantComponentLifetime>(mostNestedVisibleScope);
         }
 
         return _scopes[context.TenantId];

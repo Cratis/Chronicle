@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Link } from '@fluentui/react';
+import { default as styles } from './Home.module.scss';
 
 export const Home = () => {
     return (
-        <div style={{margin: '1rem'}}>
+        <div style={{margin: '1rem'}} className={styles.home}>
             <h1>Congratulations on your new microservice! 🍾 🎂 </h1>
             This microservice comes with a default Aksio setup.<br/>
             <br/>
@@ -14,7 +15,11 @@ export const Home = () => {
                 <li>Concepts - used for holding reusable domain concepts.</li>
                 <li>Domain - holds the business logic related to performing actions.</li>
                 <li>Events - holds all the events for the microservice.</li>
+                <li>Events.Public - holds all the public events that you want to communicate outside of the microservice.</li>
+                <li>Integration - holds artifacts used for integrating with non-event sourced systems.</li>
                 <li>Read - holds projections and read models.</li>
+                <li>Reactions - holds imperative observers that produces reactions typically other than state.</li>
+                <li>Public - holds projections and possible other reactions that produces the public events to the outbox.</li>
                 <li>Main - the backend startup project.</li>
                 <li>Web - this Web frontend.</li>
             </ul>

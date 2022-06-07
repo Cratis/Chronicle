@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Json;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Bson;
@@ -13,6 +14,7 @@ namespace Aksio.Cratis.Events.Projections.MongoDB;
 /// <summary>
 /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
 /// </summary>
+[SingletonPerMicroservice]
 public class MongoDBProjectionPipelineDefinitionsStorage : IProjectionPipelineDefinitionsStorage
 {
     readonly IJsonProjectionPipelineSerializer _projectionPipelineSerializer;

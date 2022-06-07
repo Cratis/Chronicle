@@ -3,8 +3,8 @@
         <AksioDefaults>1.5.15</AksioDefaults>
         <AksioSpecifications>2.0.0</AksioSpecifications>
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
-        <Autofac>6.3.0</Autofac>
-        <AutofacExtensions>7.2.0</AutofacExtensions>
+        <Autofac>6.4.0</Autofac>
+        <AutofacExtensions>8.0.0</AutofacExtensions>
         <Orleans>3.6.1</Orleans>
         <MongoDB>2.15.0</MongoDB>
         <ServiceModelPrimitives>4.9.0</ServiceModelPrimitives>

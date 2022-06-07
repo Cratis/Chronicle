@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 /// </summary>
 public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
 {
-    readonly IEventConverter _converter;
+    readonly ProviderFor<IEventConverter> _converter;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
     /// <summary>
@@ -22,7 +22,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     /// <param name="converter"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/> to use.</param>
     public MongoDBEventSequenceStorageProvider(
-        IEventConverter converter,
+        ProviderFor<IEventConverter> converter,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
     {
         _converter = converter;
@@ -89,7 +89,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
 
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
         var @event = await collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleAsync();
-        return await _converter.ToAppendedEvent(@event);
+        return await _converter().ToAppendedEvent(@event);
     }
 
     /// <inheritdoc/>
@@ -117,6 +117,6 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var cursor = collection.Find(filter).ToCursor();
-        return Task.FromResult<IEventCursor>(new EventCursor(_converter, cursor));
+        return Task.FromResult<IEventCursor>(new EventCursor(_converter(), cursor));
     }
 }

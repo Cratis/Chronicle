@@ -24,6 +24,13 @@ public record ModelKey(string Value) : ConceptAs<string>(Value)
     /// <summary>
     /// Implicitly convert from <see cref="EventSourceId"/> to <see cref="ModelKey"/>.
     /// </summary>
+    /// <param name="id"><see cref="Guid"/> to convert from.</param>
+    /// <returns>A converted <see cref="ModelKey"/>.</returns>;
+    public static implicit operator ModelKey(Guid id) => new(id.ToString());
+
+    /// <summary>
+    /// Implicitly convert from <see cref="EventSourceId"/> to <see cref="ModelKey"/>.
+    /// </summary>
     /// <param name="id"><see cref="EventSourceId"/> to convert from.</param>
     /// <returns>A converted <see cref="ModelKey"/>.</returns>;
     public static implicit operator ModelKey(EventSourceId id) => new(id.Value);

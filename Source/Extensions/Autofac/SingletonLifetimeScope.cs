@@ -46,13 +46,12 @@ public class SingletonLifetimeScope<TComponentLifetime> : ISharingLifetimeScope
     /// <summary>
     /// Initializes a new instance of the <see cref="SingletonLifetimeScope{T}"/> class.
     /// </summary>
-    /// <param name="rootLifetimeScope">The root lifetime scope.</param>
     /// <param name="parentLifetimeScope">The parent lifetime scope.</param>
-    public SingletonLifetimeScope(ISharingLifetimeScope rootLifetimeScope, ISharingLifetimeScope parentLifetimeScope)
+    public SingletonLifetimeScope(ISharingLifetimeScope parentLifetimeScope)
     {
-        RootLifetimeScope = rootLifetimeScope;
+        RootLifetimeScope = this;
         ParentLifetimeScope = parentLifetimeScope;
-        ComponentRegistry = rootLifetimeScope.ComponentRegistry;
+        ComponentRegistry = parentLifetimeScope.ComponentRegistry;
     }
 
     /// <inheritdoc/>
@@ -76,7 +75,7 @@ public class SingletonLifetimeScope<TComponentLifetime> : ISharingLifetimeScope
         var registration = ComponentRegistry.Registrations.Single(_ => _.Id == primaryId);
         if (registration.Lifetime is not TComponentLifetime)
         {
-            return RootLifetimeScope.CreateSharedInstance(primaryId, qualifyingId, creator);
+            return ParentLifetimeScope!.CreateSharedInstance(primaryId, qualifyingId, creator);
         }
 
         return _instances[primaryId] = creator();

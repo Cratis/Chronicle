@@ -12,6 +12,12 @@ namespace Aksio.Cratis.Events.Projections.Grains;
 public interface IProjections : IGrainWithGuidKey
 {
     /// <summary>
+    /// Rehydrate all projections for all microservices and tenants.
+    /// </summary>
+    /// <returns>Async task.</returns>
+    Task Rehydrate();
+
+    /// <summary>
     /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.
     /// </summary>
     /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> to register.</param>
