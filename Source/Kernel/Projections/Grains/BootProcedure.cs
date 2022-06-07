@@ -33,7 +33,8 @@ public class BootProcedure : IPerformBootProcedure
     {
         foreach (var microserviceId in _microservices.GetMicroserviceIds())
         {
-            _ = _grainFactory.GetGrain<IProjections>(microserviceId);
+            var projections = _grainFactory.GetGrain<IProjections>(microserviceId);
+            projections.Rehydrate().Wait();
         }
     }
 }
