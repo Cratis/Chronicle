@@ -37,6 +37,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     ObserverId _observerId = Guid.Empty;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
+    MicroserviceId _sourceMicroserviceId = MicroserviceId.Unspecified;
+    TenantId _sourceTenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
     IStreamProvider? _observerStreamProvider;
@@ -47,7 +49,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         get
         {
             // TODO: This is a temporary work-around till we fix #264 & #265
-            _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
+            _executionContextManager.Establish(_sourceTenantId, CorrelationId.New(), _sourceMicroserviceId);
             return _eventSequenceStorageProviderProvider();
         }
     }
@@ -76,13 +78,13 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _eventSequenceId = key.EventSequenceId;
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
-        var sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
-        var sourceTenantId = key.SourceTenantId ?? _tenantId;
+        _sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
+        _sourceTenantId = key.SourceTenantId ?? _tenantId;
 
         _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        var microserviceAndTenant = new MicroserviceAndTenant(sourceMicroserviceId, sourceTenantId);
+        var microserviceAndTenant = new MicroserviceAndTenant(_sourceMicroserviceId, _sourceTenantId);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
 
         _recoverReminder = await GetReminder(RecoverReminder);
