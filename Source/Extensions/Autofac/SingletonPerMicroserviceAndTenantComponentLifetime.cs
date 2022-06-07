@@ -26,7 +26,7 @@ public class SingletonPerMicroserviceAndTenantComponentLifetime : IComponentLife
         var key = new MicroserviceAndTenant(context.MicroserviceId, context.TenantId);
         if (!_scopes.ContainsKey(key))
         {
-            _scopes[key] = new SingletonLifetimeScope<SingletonPerMicroserviceAndTenantComponentLifetime>(mostNestedVisibleScope.RootLifetimeScope, mostNestedVisibleScope);
+            _scopes[key] = new SingletonLifetimeScope<SingletonPerMicroserviceAndTenantComponentLifetime>(mostNestedVisibleScope);
         }
 
         return _scopes[key];

@@ -1,0 +1,48 @@
+{
+    "tenants": {
+        "3352d47d-c154-4457-b3fb-8a2efb725113": {
+            "name": "development"
+        }
+    },
+    "microservices": {
+        "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+            "name": "Bank"
+        }
+    },
+    "cluster": {
+        "name": "Cratis",
+        "type": "local",
+        "advertisedIP": "127.0.0.1",
+        "siloPort": 11111,
+        "gatewayPort": 30000,
+        "options": {}
+    },
+    "storage": {
+        "cluster": {
+            "type": "MongoDB",
+            "connectionDetails": "mongodb://localhost:27017/cratis-shared"
+        },
+        "microservices": {
+            "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+                "shared": {
+                    "eventStore": {
+                        "type": "MongoDB",
+                        "connectionDetails": "mongodb://localhost:27017/bank-event-store-shared"
+                    }
+                },
+                "tenants": {
+                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-dev-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/bank-dev-event-store"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

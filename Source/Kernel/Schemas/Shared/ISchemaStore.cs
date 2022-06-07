@@ -11,6 +11,12 @@ namespace Aksio.Cratis.Events.Schemas;
 public interface ISchemaStore
 {
     /// <summary>
+    /// Populate the schema store with existing schemas.
+    /// </summary>
+    /// <returns>Async task.</returns>
+    Task Populate();
+
+    /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to register for.</param>

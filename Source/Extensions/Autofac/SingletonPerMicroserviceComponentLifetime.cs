@@ -15,7 +15,7 @@ public class SingletonPerMicroserviceComponentLifetime : IComponentLifetime
     /// <summary>
     /// Gets the global instance.
     /// </summary>
-    public static readonly SingletonPerMicroserviceAndTenantComponentLifetime Instance = new();
+    public static readonly SingletonPerMicroserviceComponentLifetime Instance = new();
 
     readonly ConcurrentDictionary<MicroserviceId, SingletonLifetimeScope<SingletonPerMicroserviceComponentLifetime>> _scopes = new();
 
@@ -25,7 +25,7 @@ public class SingletonPerMicroserviceComponentLifetime : IComponentLifetime
         var context = ExecutionContextManager.GetCurrent();
         if (!_scopes.ContainsKey(context.MicroserviceId))
         {
-            _scopes[context.MicroserviceId] = new SingletonLifetimeScope<SingletonPerMicroserviceComponentLifetime>(mostNestedVisibleScope.RootLifetimeScope, mostNestedVisibleScope);
+            _scopes[context.MicroserviceId] = new SingletonLifetimeScope<SingletonPerMicroserviceComponentLifetime>(mostNestedVisibleScope);
         }
 
         return _scopes[context.MicroserviceId];

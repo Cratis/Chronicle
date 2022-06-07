@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Execution;
@@ -19,7 +20,7 @@ namespace Aksio.Cratis.Events.Store.Grains;
 [StorageProvider(ProviderName = EventSequenceState.StorageProvider)]
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
-    readonly ISchemaStore _schemaStore;
+    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
     readonly ILogger<EventSequence> _logger;
@@ -30,17 +31,17 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
-    /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
-        ISchemaStore schemaStore,
+        ProviderFor<ISchemaStore> schemaStoreProvider,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManager,
         ILogger<EventSequence> logger)
     {
-        _schemaStore = schemaStore;
+        _schemaStoreProvider = schemaStoreProvider;
         _executionContextManager = executionContextManager;
         _jsonComplianceManager = jsonComplianceManager;
         _logger = logger;
@@ -75,10 +76,10 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             eventSourceId,
             State.SequenceNumber);
 
-        var updateSequenceNumber = true;
+        var updateSequenceNumber = false;
         try
         {
-            var eventSchema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
+            var eventSchema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
             var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, content);
 
             var appendedEvent = new AppendedEvent(
@@ -94,6 +95,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 compliantEvent);
 
             await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
+            updateSequenceNumber = true;
         }
         catch (UnableToAppendToEventSequence ex)
         {
@@ -105,7 +107,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 ex.SequenceNumber,
                 ex);
 
-            updateSequenceNumber = false;
+            throw;
         }
         catch (Exception ex)
         {
@@ -116,6 +118,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 eventSourceId,
                 State.SequenceNumber,
                 ex);
+
+            throw;
         }
 
         if (updateSequenceNumber)

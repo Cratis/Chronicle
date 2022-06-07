@@ -17,6 +17,7 @@ public class Projections : Grain, IProjections
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
     readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitions;
+    readonly IExecutionContextManager _executionContextManager;
     readonly Tenants _tenants;
     readonly ILogger<Projections> _logger;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
@@ -26,24 +27,34 @@ public class Projections : Grain, IProjections
     /// </summary>
     /// <param name="projectionDefinitions">Provider for the <see cref="IProjectionDefinitions"/> to use.</param>
     /// <param name="projectionPipelineDefinitions">Provider for the <see cref="IProjectionPipelineDefinitions"/> to use.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="tenants">All configured tenants.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Projections(
         ProviderFor<IProjectionDefinitions> projectionDefinitions,
         ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitions,
+        IExecutionContextManager executionContextManager,
         Tenants tenants,
         ILogger<Projections> logger)
     {
         _projectionDefinitions = projectionDefinitions;
         _projectionPipelineDefinitions = projectionPipelineDefinitions;
+        _executionContextManager = executionContextManager;
         _tenants = tenants;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public override Task OnActivateAsync()
     {
         _microserviceId = this.GetPrimaryKey();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task Rehydrate()
+    {
+        _executionContextManager.Establish(_microserviceId);
         var projectionPipelineDefinitions = await _projectionPipelineDefinitions().GetAll();
         foreach (var pipeline in projectionPipelineDefinitions)
         {
