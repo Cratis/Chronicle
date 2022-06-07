@@ -28,10 +28,21 @@ public class MongoDBSchemaStore : ISchemaStore
     }
 
     /// <inheritdoc/>
+    public async Task Populate()
+    {
+        var findResult = await GetCollection().FindAsync(_ => true);
+        var allSchemas = await findResult.ToListAsync();
+
+        _schemasByTypeAndGeneration =
+            allSchemas!.GroupBy(_ => _.EventType)
+            .ToDictionary(
+                _ => (EventTypeId)_.Key,
+                _ => _.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema()));
+    }
+
+    /// <inheritdoc/>
     public async Task Register(EventType type, string friendlyName, JsonSchema schema)
     {
-        await PopulateIfNotPopulated();
-
         // If we have a schema for the event type on the given generation and the schemas differ - throw an exception (only in production)
         // .. if they're the same. Ignore saving.
         // If this is a new generation, there must be an upcaster and downcaster associated with the schema
@@ -57,8 +68,6 @@ public class MongoDBSchemaStore : ISchemaStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
     {
-        await PopulateIfNotPopulated();
-
         var result = await GetCollection().FindAsync(_ => true);
         var schemas = await result.ToListAsync();
         return schemas
@@ -69,7 +78,6 @@ public class MongoDBSchemaStore : ISchemaStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
     {
-        await PopulateIfNotPopulated();
         var collection = GetCollection();
         var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
         var result = await collection.FindAsync(filter);
@@ -82,7 +90,6 @@ public class MongoDBSchemaStore : ISchemaStore
     /// <inheritdoc/>
     public async Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
     {
-        await PopulateIfNotPopulated();
         generation ??= EventGeneration.First;
         if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
         {
@@ -117,24 +124,4 @@ public class MongoDBSchemaStore : ISchemaStore
     FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.Generation, (generation ?? EventGeneration.First).Value));
-
-    async Task PopulateIfNotPopulated()
-    {
-        if (_schemasByTypeAndGeneration.Count == 0)
-        {
-            await Populate();
-        }
-    }
-
-    async Task Populate()
-    {
-        var findResult = await GetCollection().FindAsync(_ => true);
-        var allSchemas = await findResult.ToListAsync();
-
-        _schemasByTypeAndGeneration =
-            allSchemas!.GroupBy(_ => _.EventType)
-            .ToDictionary(
-                _ => (EventTypeId)_.Key,
-                _ => _.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema()));
-    }
 }
