@@ -7,8 +7,6 @@
 
     <!-- 3rd party package references -->
     <ItemGroup>
-        <PackageReference Include="Autofac" Version="$(Autofac)" />
-        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
         <PackageReference Include="OrleansDashboard" Version="3.6.2" />
         <PackageReference Include="serilog.aspnetcore" Version="4.0.0" />
         <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
