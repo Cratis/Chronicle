@@ -21,6 +21,7 @@
         "amodio.tsl-problem-matcher",
         "pmneo.tsimporter",
         "nsoult.typescript-imports-sort",
-        "DSKWRK.vscode-generate-getter-setter"
+        "DSKWRK.vscode-generate-getter-setter",
+        "formulahendry.dotnet-test-explorer"
     ]
 }
