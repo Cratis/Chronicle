@@ -134,6 +134,14 @@ export const EventSequences = () => {
         }
     }, [selectedEventSequence, selectedMicroservice, selectedTenant]);
 
+    useEffect(() => {
+        if (selectedMicroservice) {
+            refreshEventTypes({
+                microserviceId: selectedMicroservice.id
+            });
+        }
+    }, [selectedMicroservice]);
+
     commandBarItems = [...commandBarItems, ...[
         // {
         //     key: 'timeline',
