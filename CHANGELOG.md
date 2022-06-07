@@ -1,3 +1,18 @@
+# [v6.4.6] - 2022-6-7 [PR: #345](https://github.com/aksio-insurtech/Cratis/pull/345)
+
+### Fixed
+
+- Fixing broken backwards compatibility that was introduced with `ModelKey`. It now supports implicit conversion from `Guid` as `EventSourceId` does which it replaced in some APIs. They are now interchangable.
+- FIxing Banking sample so that it builds - wrong directory references for props file.
+- Upgraded to latest Autofac (6.4.0)
+- Fixing SingletonLifetimeScope to have itself as root and then the container root as parent.
+- Fixing lifetime for MongoDB services, these were all singleton, but implementations assuming singleton per microservice and/or tenant.
+- Explicit population of schema store for each microservice, rather than lazy. This fixes a problem when using MongoDB async from within Orleans stream which seems to not quite work.
+- Merging boot procedures to get control over order of initialization.
+- Going through all lifecycles of services that are multi microservice and/or tenant, making them use `ProviderFor<>` when needed to be in the correct context.
+- Explicit rehydration of projections to be in the correct context.
+
+
 # [v6.4.5] - 2022-6-6 [PR: #340](https://github.com/aksio-insurtech/Cratis/pull/340)
 
 ### Fixed
