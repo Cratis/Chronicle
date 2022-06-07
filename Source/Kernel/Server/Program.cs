@@ -1,17 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Compliance.MongoDB;
-using Aksio.Cratis.Events.Projections.Changes;
-using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Projections.MongoDB;
-using Aksio.Cratis.Events.Schemas;
-using Aksio.Cratis.Events.Schemas.MongoDB;
-using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.MongoDB;
-using Aksio.Cratis.Events.Store.MongoDB.Observation;
-using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Hosting;
@@ -40,16 +29,6 @@ public static class Program
                     options.Port = 8081;
                     options.HostSelf = true;
                 })
-                .ConfigureServices(_ => _
-                    .AddSingleton<IChangesetStorage, MongoDBChangesetStorage>()
-                    .AddSingleton<IEncryptionKeyStore>(sp => new CacheEncryptionKeyStore(sp.GetService<MongoDBEncryptionKeyStore>()!))
-                    .AddSingleton<ISchemaStore, MongoDBSchemaStore>()
-                    .AddSingleton<IEventSequenceStorageProvider, MongoDBEventSequenceStorageProvider>()
-                    .AddSingleton<IEventSequences, MongoDBEventSequences>()
-                    .AddSingleton<IObserversState, MongoDBObserversState>()
-                    .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>()
-                    .AddSingleton<IProjectionPipelineDefinitionsStorage, MongoDBProjectionPipelineDefinitionsStorage>()
-                    .AddSingleton<IProjectionDefinitionsStorage, MongoDBProjectionDefinitionsStorage>())
                 .AddConnectedClientsTracking()
                 .AddEventSequenceStream()
                 .UseMongoDBReminderService()
