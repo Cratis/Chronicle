@@ -85,7 +85,7 @@ public class EventSequence : Controller
     {
         var result = new List<AppendedEvent>();
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-        var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First);
+        var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First);
         while (await cursor.MoveNext())
         {
             result.AddRange(cursor.Current);

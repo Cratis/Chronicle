@@ -43,7 +43,8 @@ const observerRunningStates: { [key: number]: string; } = {
 const observerTypes: { [key: number]: string; } = {
     0: 'Unknown',
     1: 'Client',
-    2: 'Projection'
+    2: 'Projection',
+    3: 'Inbox'
 };
 
 const columns: IColumn[] = [
