@@ -17,6 +17,13 @@ public class DebitAccounts
 
     public DebitAccounts(IEventLog eventLog) => _eventLog = eventLog;
 
-    public Task OpenDebitAccount(AccountName Name, PersonId Owner) => _eventLog.Append(new DebitAccountOpened(Name, Owner));
+    public Task OpenDebitAccount(AccountName Name, PersonId Owner) => _eventLog.Append(Guid.NewGuid().ToString(), new DebitAccountOpened(Name, Owner));
 }
 ```
+
+> Note: The first parameter of `Append()` takes the type `EventSourceId`. This is a wrapper for a string value type.
+> The `EventSourceId` is the identifier that identifies the unique instance of a concept in your domain, often referred
+> to as an aggregate.
+
+The choice of using a **Guid** as the unique identifier is that there is no centralized primary key sequence that
+can give you unique keys. A generated **Guid** can however be generated anywhere and will be unique.
