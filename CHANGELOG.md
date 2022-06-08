@@ -1,3 +1,12 @@
+# [v6.4.7] - 2022-6-7 [PR: #346](https://github.com/aksio-insurtech/Cratis/pull/346)
+
+### Fixed
+
+- The Kernel REST API now honors the EventSequenceId in the `FindFor` query.
+- Event sequence view in Workbench now refreshes the event types when selecting a microservice.
+- Showing correct type for Inbox observer type in observer view.
+
+
 # [v6.4.6] - 2022-6-7 [PR: #345](https://github.com/aksio-insurtech/Cratis/pull/345)
 
 ### Fixed
