@@ -22,7 +22,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
-    readonly IJsonComplianceManager _jsonComplianceManager;
+    readonly ProviderFor<IJsonComplianceManager> _jsonComplianceManagerProvider;
     readonly ILogger<EventSequence> _logger;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     MicroserviceAndTenant _microserviceAndTenant = MicroserviceAndTenant.NotSet;
@@ -33,17 +33,17 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
+    /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
         ProviderFor<ISchemaStore> schemaStoreProvider,
         IExecutionContextManager executionContextManager,
-        IJsonComplianceManager jsonComplianceManager,
+        ProviderFor<IJsonComplianceManager> jsonComplianceManagerProvider,
         ILogger<EventSequence> logger)
     {
         _schemaStoreProvider = schemaStoreProvider;
         _executionContextManager = executionContextManager;
-        _jsonComplianceManager = jsonComplianceManager;
+        _jsonComplianceManagerProvider = jsonComplianceManagerProvider;
         _logger = logger;
     }
 
@@ -80,7 +80,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         try
         {
             var eventSchema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
-            var compliantEvent = await _jsonComplianceManager.Apply(eventSchema.Schema, eventSourceId, content);
+            var compliantEvent = await _jsonComplianceManagerProvider().Apply(eventSchema.Schema, eventSourceId, content);
 
             var appendedEvent = new AppendedEvent(
                 new(State.SequenceNumber, eventType),
