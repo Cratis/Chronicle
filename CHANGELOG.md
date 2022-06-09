@@ -1,3 +1,10 @@
+# [v6.4.9] - 2022-6-9 [PR: #350](https://github.com/aksio-insurtech/Cratis/pull/350)
+
+### Fixed
+
+- Fixing an exception when appending events saying "Execution context not set", which was caused by the dependency `JsonComplianceManager` changed in scope and setup with new registrations.
+
+
 # [v6.4.7] - 2022-6-7 [PR: #346](https://github.com/aksio-insurtech/Cratis/pull/346)
 
 ### Fixed
