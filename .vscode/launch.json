@@ -99,7 +99,7 @@
     ],
     "compounds": [
         {
-            "name": "Server and Client",
+            "name": "Server and Bank Sample",
             "configurations": [
                 ".NET Core Launch (Server)",
                 ".NET Core Launch (Bank Sample)"
