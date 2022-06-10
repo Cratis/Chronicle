@@ -19,6 +19,10 @@ For general guidance on the core values and principles we @ Aksio use, read more
 
 If you want to jump into building this repository and possibly contributing, please refer to [contributing](./Documentation/contributing.md).
 
+## Opening in VSCode online
+
+If you prefer to browse the code in VSCode, you can do so by clicking [here](https://vscode.dev/github/aksio-insurtech/Cratis).
+
 ## Running the samples
 
 Make sure you have the following installed:
