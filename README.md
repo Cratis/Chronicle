@@ -63,3 +63,8 @@ Open a browser and navigate to [http://localhost:9100/](http://localhost:9100/) 
 around with the sample.
 
 > Note: The Cratis workbench is available [http://localhost:8080/](http://localhost:8080/)
+
+## Contributing / Running locally
+
+If you're looking to either contribute or dive into the code by building and running the Cratis Kernel locally,
+you can read more [here](./Documentation/contributing.md).
