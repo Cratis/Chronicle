@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Reflection;
 
@@ -51,8 +52,12 @@ public class FromBuilder<TModel, TEvent> : IFromBuilder<TModel, TEvent>
     /// <inheritdoc/>
     public ISetBuilder<TModel, TEvent, TProperty> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        var setBuilder = new SetBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyPath());
+        var targetType = typeof(TProperty);
+        var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
+
+        var setBuilder = new SetBuilder<TModel, TEvent, TProperty>(this, modelPropertyAccessor.GetPropertyPath(), !primitive);
         _propertyExpressions.Add(setBuilder);
+
         return setBuilder;
     }
 
