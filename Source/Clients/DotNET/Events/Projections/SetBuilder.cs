@@ -16,6 +16,7 @@ namespace Aksio.Cratis.Events.Projections;
 public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent, TProperty>
 {
     readonly IFromBuilder<TModel, TEvent> _parent;
+    readonly bool _forceEventProperty;
     string _expression = string.Empty;
 
     /// <inheritdoc/>
@@ -26,10 +27,12 @@ public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent,
     /// </summary>
     /// <param name="parent">Parent builder.</param>
     /// <param name="targetProperty">Target property we're building for.</param>
-    public SetBuilder(IFromBuilder<TModel, TEvent> parent, PropertyPath targetProperty)
+    /// <param name="forceEventProperty">Whether or not to force this to have to map to a target property or not.</param>
+    public SetBuilder(IFromBuilder<TModel, TEvent> parent, PropertyPath targetProperty, bool forceEventProperty = false)
     {
         _parent = parent;
         TargetProperty = targetProperty;
+        _forceEventProperty = forceEventProperty;
     }
 
     /// <inheritdoc/>
@@ -42,6 +45,8 @@ public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent,
     /// <inheritdoc/>
     public IFromBuilder<TModel, TEvent> ToEventSourceId()
     {
+        ThrowIfOnlyEventPropertyIsSupported();
+
         _expression = "$eventSourceId";
         return _parent;
     }
@@ -50,5 +55,13 @@ public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent,
     public string Build()
     {
         return _expression;
+    }
+
+    void ThrowIfOnlyEventPropertyIsSupported()
+    {
+        if (_forceEventProperty)
+        {
+            throw new OnlyEventPropertySupported(TargetProperty);
+        }
     }
 }

@@ -34,7 +34,21 @@ public static class HostBuilderExtensions
         var logger = loggerFactory.CreateLogger("Aksio setup");
         logger.SettingUpDefaults();
 
-        Internals.Types = new Types("Aksio");
+        Types.AddAssemblyPrefixesToExclude(
+            "AutoMapper",
+            "Autofac",
+            "Azure",
+            "Elasticsearch",
+            "FluentValidation",
+            "Handlebars",
+            "Humanizer",
+            "NJsonSchema",
+            "MongoDB",
+            "Orleans",
+            "Serilog",
+            "Swashbuckle");
+
+        Internals.Types = new Types();
         Internals.Types.RegisterTypeConvertersForConcepts();
 
         if (microserviceId is null)

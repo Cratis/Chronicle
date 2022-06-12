@@ -86,6 +86,7 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
             .Set(m => m.FirstName).To(ev => ev.FirstName)
             .Set(m => m.LastName).To(ev => ev.LastName)
             .Set(m => m.DateOfBirth).To(ev => ev.DateOfBirth))
+            .Set(m => m.Address).To(ev => ev.Address))
         .From<AccountHolderAddressChanged>(_ => _
             .Set(m => m.Address).To(ev => ev.Address)
             .Set(m => m.City).To(ev => ev.City)
@@ -116,9 +117,7 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
         .MapMember(_ => _.FirstName, _ => _.Fornavn)
         .MapMember(_ => _.LastName, _ => _.Etternavn)
         .MapMember(_ => _.DateOfBirth, _ => _.FodselsDato)
-        .MapMember(_ => _.Address, _ => _.Adresse)
-        .MapMember(_ => _.City, _ => _.By)
-        .MapMember(_ => _.Country, _ => _.Land);
+        .MapMember(_ => _.Address, (source, context) => new Address(source.Adresse, source.PostNr, source.By, source.Land));
 }
 ```
 
@@ -138,9 +137,7 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
         .MapRecordMember(_ => _.FirstName, _ => _.Fornavn)
         .MapRecordMember(_ => _.LastName, _ => _.Etternavn)
         .MapRecordMember(_ => _.DateOfBirth, _ => _.FodselsDato)
-        .MapRecordMember(_ => _.Address, _ => _.Adresse)
-        .MapRecordMember(_ => _.City, _ => _.By)
-        .MapRecordMember(_ => _.Country, _ => _.Land);
+        .MapRecordMember(_ => _.Address, (source, context) => new Address(source.Adresse, source.PostNr, source.By, source.Land));
 }
 ```
 
@@ -162,10 +159,19 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
     {
         builder
             .WithProperties(_ => _.FirstName, _ => _.LastName, _ => _.DateOfBirth)
-            .AppendEvent(_ => new AccountHolderRegistered(_.Changeset.Incoming.FirstName, _.Changeset.Incoming.LastName, _.Changeset.Incoming.DateOfBirth))
+            .AppendEvent(_ =>
+                new AccountHolderRegistered(
+                    _.Changeset.Incoming.FirstName,
+                    _.Changeset.Incoming.LastName,
+                    _.Changeset.Incoming.DateOfBirth,
+                    _.Changeset.Incoming.Address));
 
         builder
-            .WithProperties(_ => _.Address, _ => _.City, _ => _.PostalCode)
+            .WithProperties(
+                _ => _.Address.AddressLine,
+                _ => _.Address.City,
+                _ => _.Address.PostalCode,
+                _ => _.Address.Country)
             .AppendEvent<AccountHolder, KontoEier, AccountHolderAddressChanged>();
     }
 }
