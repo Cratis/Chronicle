@@ -67,8 +67,6 @@ public class MongoDBEventSequences : IEventSequences
                 Array.Empty<EventCompensation>());
             var collection = GetCollectionFor(eventSequenceId);
             await collection.InsertOneAsync(@event);
-
-            await HandleRetention(eventSequenceId, sequenceNumber, eventSourceId, eventType, collection);
         }
         catch (Exception ex)
         {
@@ -91,21 +89,4 @@ public class MongoDBEventSequences : IEventSequences
         JsonObject content) => throw new NotImplementedException();
 
     IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
-
-    async Task HandleRetention(
-        EventSequenceId eventSequenceId,
-        EventSequenceNumber sequenceNumber,
-        EventSourceId eventSourceId,
-        EventType eventType,
-        IMongoCollection<Event> collection)
-    {
-        if (eventSequenceId.IsInbox || eventSequenceId.IsOutbox)
-        {
-            var filter = Builders<Event>.Filter.And(
-                Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId),
-                Builders<Event>.Filter.Eq(e => e.Type, eventType.Id),
-                Builders<Event>.Filter.Ne(e => e.SequenceNumber, sequenceNumber));
-            await collection.DeleteManyAsync(filter);
-        }
-    }
 }
