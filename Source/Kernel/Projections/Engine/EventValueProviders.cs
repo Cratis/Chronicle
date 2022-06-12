@@ -43,6 +43,10 @@ public static class EventValueProviders
                         element.TryGetValue(out sourceValue);
                     }
                 }
+                else if (value is JsonObject jsonObject)
+                {
+                    sourceValue = jsonObject.AsExpandoObject();
+                }
                 currentSource = value;
             }
 
