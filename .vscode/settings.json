@@ -75,6 +75,7 @@
         "Newtonsoft",
         "PII",
         "Pkcs",
+        "propertymapper",
         "Proto",
         "protobuf",
         "Remindable",
