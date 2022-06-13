@@ -172,7 +172,12 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
                 _ => _.Address.City,
                 _ => _.Address.PostalCode,
                 _ => _.Address.Country)
-            .AppendEvent<AccountHolder, KontoEier, AccountHolderAddressChanged>();
+            .AppendEvent(_ =>
+                new AccountHolderAddressChanged(
+                    _.Changeset.Incoming.Address.AddressLine,
+                    _.Changeset.Incoming.Address.City,
+                    _.Changeset.Incoming.Address.PostalCode,
+                    _.Changeset.Incoming.Address.Country));
     }
 }
 ```
@@ -192,38 +197,55 @@ Putting it all together you'll get an adapter like below.
 ```csharp
 public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 {
+    public override AdapterId Identifier => "71741aaf-9f6b-4c6f-bfe6-af77aec464a2";
+
     public override Func<KontoEier, EventSourceId> KeyResolver => _ => _.Fnr;
 
     public override void DefineModel(IProjectionBuilderFor<AccountHolder> builder) => builder
         .From<AccountHolderRegistered>(_ => _
+            .Set(m => m.SocialSecurityNumber).ToEventSourceId()
             .Set(m => m.FirstName).To(ev => ev.FirstName)
             .Set(m => m.LastName).To(ev => ev.LastName)
-            .Set(m => m.DateOfBirth).To(ev => ev.DateOfBirth))
+            .Set(m => m.DateOfBirth).To(ev => ev.DateOfBirth)
+            .Set(m => m.Address).To(ev => ev.Address))
         .From<AccountHolderAddressChanged>(_ => _
-            .Set(m => m.Address).To(ev => ev.Address)
-            .Set(m => m.City).To(ev => ev.City)
-            .Set(m => m.PostalCode).To(ev => ev.PostalCode)
-            .Set(m => m.Country).To(ev => ev.Country));
-
-    public override void DefineImportMapping(IMappingExpression<KontoEier, AccountHolder> builder) => builder
-            .MapRecordMember(_ => _.SocialSecurityNumber, _ => _.Fnr)
-            .MapRecordMember(_ => _.FirstName, _ => _.Fornavn)
-            .MapRecordMember(_ => _.LastName, _ => _.Etternavn)
-            .MapRecordMember(_ => _.DateOfBirth, _ => _.FodselsDato)
-            .MapRecordMember(_ => _.Address, _ => _.Adresse)
-            .MapRecordMember(_ => _.City, _ => _.By)
-            .MapRecordMember(_ => _.Country, _ => _.Land);
+            .Set(m => m.Address.AddressLine).To(ev => ev.AddressLine)
+            .Set(m => m.Address.City).To(ev => ev.City)
+            .Set(m => m.Address.PostalCode).To(ev => ev.PostalCode)
+            .Set(m => m.Address.Country).To(ev => ev.Country));
 
     public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
     {
         builder
             .WithProperties(_ => _.FirstName, _ => _.LastName, _ => _.DateOfBirth)
-            .AppendEvent(_ => new AccountHolderRegistered(_.Changeset.Incoming.FirstName, _.Changeset.Incoming.LastName, _.Changeset.Incoming.DateOfBirth))
+            .AppendEvent(_ =>
+                new AccountHolderRegistered(
+                    _.Changeset.Incoming.FirstName,
+                    _.Changeset.Incoming.LastName,
+                    _.Changeset.Incoming.DateOfBirth,
+                    _.Changeset.Incoming.Address));
 
         builder
-            .WithProperties(_ => _.Address, _ => _.City, _ => _.PostalCode)
-            .AppendEvent<AccountHolder, KontoEier, AccountHolderAddressChanged>();
+            .WithProperties(
+                _ => _.Address,
+                _ => _.Address.AddressLine,
+                _ => _.Address.City,
+                _ => _.Address.PostalCode,
+                _ => _.Address.Country)
+            .AppendEvent(_ =>
+                new AccountHolderAddressChanged(
+                    _.Changeset.Incoming.Address.AddressLine,
+                    _.Changeset.Incoming.Address.City,
+                    _.Changeset.Incoming.Address.PostalCode,
+                    _.Changeset.Incoming.Address.Country));
     }
+
+    public override void DefineImportMapping(IMappingExpression<KontoEier, AccountHolder> builder) => builder
+        .MapRecordMember(_ => _.SocialSecurityNumber, _ => _.Fnr)
+        .MapRecordMember(_ => _.FirstName, _ => _.Fornavn)
+        .MapRecordMember(_ => _.LastName, _ => _.Etternavn)
+        .MapRecordMember(_ => _.DateOfBirth, _ => _.FodselsDato)
+        .MapRecordMember(_ => _.Address, (source, context) => new Address(source.Adresse, source.PostNr, source.By, source.Land));
 }
 ```
 
