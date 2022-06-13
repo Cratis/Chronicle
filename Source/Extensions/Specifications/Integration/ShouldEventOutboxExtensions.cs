@@ -15,18 +15,18 @@ public static class ShouldEventOutboxExtensions
     /// </summary>
     /// <param name="eventOutbox">The <see cref="IHaveEventOutbox"/> the assertion is for.</param>
     /// <param name="events">Events to verify.</param>
-    public static void ShouldAppendEvents(this IHaveEventOutbox eventOutbox, params object[] events) => eventOutbox.AppendedEventsToOutbox.Select(_ => _.ActualEvent).ShouldContain(events);
+    public static void ShouldAppendEventsToOutbox(this IHaveEventOutbox eventOutbox, params object[] events) => eventOutbox.AppendedEventsToOutbox.Select(_ => _.ActualEvent).ShouldContain(events);
 
     /// <summary>
     /// Assert that a set events are the only ones being appended.
     /// </summary>
     /// <param name="eventOutbox">The <see cref="IHaveEventOutbox"/> the assertion is for.</param>
     /// <param name="events">Events to verify.</param>
-    public static void ShouldOnlyAppendEvents(this IHaveEventOutbox eventOutbox, params object[] events) => eventOutbox.AppendedEventsToOutbox.Select(_ => _.ActualEvent).ShouldContainOnly(events);
+    public static void ShouldOnlyAppendEventsToOutbox(this IHaveEventOutbox eventOutbox, params object[] events) => eventOutbox.AppendedEventsToOutbox.Select(_ => _.ActualEvent).ShouldContainOnly(events);
 
     /// <summary>
     /// Assert that there has not been appended any events.
     /// </summary>
     /// <param name="eventOutbox">The <see cref="IHaveEventOutbox"/> the assertion is for.</param>
-    public static void ShouldNotAppendEvents(this IHaveEventOutbox eventOutbox) => eventOutbox.AppendedEventsToOutbox.ShouldBeEmpty();
+    public static void ShouldNotAppendEventsToOutbox(this IHaveEventOutbox eventOutbox) => eventOutbox.AppendedEventsToOutbox.ShouldBeEmpty();
 }
