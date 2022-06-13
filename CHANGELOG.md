@@ -1,3 +1,10 @@
+# [v6.4.11] - 2022-6-13 [PR: #365](https://github.com/aksio-insurtech/Cratis/pull/365)
+
+### Fixed
+
+- Fixed a regression on our specifications/test extensions that was caused by not serializing using lower camel case, which we use internally in the projection engine consistently.
+
+
 # [v6.4.10] - 2022-6-12 [PR: #364](https://github.com/aksio-insurtech/Cratis/pull/364)
 
 ### Added
