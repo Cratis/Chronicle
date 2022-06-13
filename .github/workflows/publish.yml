@@ -78,7 +78,6 @@ jobs:
       - name: Create NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ steps.release.outputs.version }}
-        continue-on-error: true
 
       - name: Push NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
