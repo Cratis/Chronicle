@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Reflection;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using AutoMapper;
@@ -18,6 +19,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
     readonly IObjectsComparer _objectsComparer;
     readonly IEventLog _eventLog;
+    readonly IEventOutbox _eventOutbox;
 
     /// <inheritdoc/>
     public IAdapterFor<TModel, TExternalModel> Adapter { get; }
@@ -35,13 +37,15 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// <param name="adapterProjection">The <see cref="IAdapterProjectionFor{TModel}"/> for the model.</param>
     /// <param name="mapper"><see cref="IMapper"/> to use for mapping between external model and model.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventLog">The <see cref="IEventLog"/> to work with.</param>
+    /// <param name="eventLog">The <see cref="IEventLog"/> for appending private events.</param>
+    /// <param name="eventOutbox">The <see cref="IEventOutbox"/> for appending public events.</param>
     public ImportOperations(
         IAdapterFor<TModel, TExternalModel> adapter,
         IAdapterProjectionFor<TModel> adapterProjection,
         IMapper mapper,
         IObjectsComparer objectsComparer,
-        IEventLog eventLog)
+        IEventLog eventLog,
+        IEventOutbox eventOutbox)
     {
         Adapter = adapter;
         Projection = adapterProjection;
@@ -50,6 +54,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         _importContexts = new();
         Adapter.DefineImport(new ImportBuilderFor<TModel, TExternalModel>(_importContexts));
         _eventLog = eventLog;
+        _eventOutbox = eventOutbox;
     }
 
     /// <inheritdoc/>
@@ -73,6 +78,11 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         foreach (var @event in context.Events)
         {
             await _eventLog.Append(eventSourceId!, @event);
+
+            if (@event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false)
+            {
+                await _eventOutbox.Append(eventSourceId!, @event);
+            }
         }
     }
 

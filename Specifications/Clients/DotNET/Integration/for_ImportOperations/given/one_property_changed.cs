@@ -39,7 +39,8 @@ public class one_property_changed : all_dependencies
             projection.Object,
             mapper.Object,
             objects_comparer.Object,
-            event_log.Object
+            event_log.Object,
+            event_outbox.Object
         );
     }
 }
