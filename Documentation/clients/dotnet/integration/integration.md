@@ -185,6 +185,10 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 For filtering for changes using the `.WithProperties()` with nested properties in complex structures.
 The system will automatically recurse within any nested property as long as you filter the top level property.
 
+If your event type is marked as a public event, it will append the event to both the event log and the outbox.
+An integration adapter can work with both private and public events, since they will be sourced from the same
+event log.
+
 > Note: There are multiple overloads of `AppendEvent`. One with a callback for creating the event and one without a callback.
 > The latter will then match properties by convention from the model type to the event type and copy the content over.
 > With the callback you have full flexibility of how you create the event and maybe there is a last minute
