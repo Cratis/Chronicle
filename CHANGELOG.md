@@ -1,3 +1,10 @@
+# [v6.4.13] - 2022-6-13 [PR: #367](https://github.com/aksio-insurtech/Cratis/pull/367)
+
+### Fixed
+
+- Fixes a problem where the proxy generator didn't include relative path information for imports when the path was a parent path.
+
+
 # [v6.4.12] - 2022-6-13 [PR: #366](https://github.com/aksio-insurtech/Cratis/pull/366)
 
 ### Fixed
