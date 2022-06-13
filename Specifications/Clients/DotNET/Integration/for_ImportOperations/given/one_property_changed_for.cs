@@ -5,7 +5,7 @@ using Aksio.Cratis.Changes;
 
 namespace Aksio.Cratis.Integration.for_ImportOperations.given;
 
-public class one_property_changed : all_dependencies
+public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
 {
     protected Model initial;
     protected Model mapped;
