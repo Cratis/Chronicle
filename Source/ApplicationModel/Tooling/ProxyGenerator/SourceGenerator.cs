@@ -222,7 +222,11 @@ public class SourceGenerator : ISourceGenerator
         var targetFolder = GetTargetFolder(type, rootNamespace, outputFolder, useRouteAsPath, baseApiRoute);
         var targetFile = Path.Combine(targetFolder, $"{type.Name}.ts");
         var relativeImport = new Uri(parentFile).MakeRelativeUri(new Uri(targetFile));
-        var importPath = Path.GetFileNameWithoutExtension(relativeImport.ToString());
+        var relativeImportAsString = relativeImport.ToString();
+        var importPath = Path.Combine(
+            Path.GetDirectoryName(relativeImportAsString),
+            Path.GetFileNameWithoutExtension(relativeImportAsString));
+
         if (Path.GetDirectoryName(targetFile) == Path.GetDirectoryName(parentFile)) importPath = $"./{importPath}";
         parentImportStatements.Add(new ImportStatement(type.Name, importPath));
 
