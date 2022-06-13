@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Specifications.Types;
 
 namespace Aksio.Cratis.Specifications;
@@ -13,7 +15,16 @@ namespace Aksio.Cratis.Specifications;
 /// </summary>
 public class EventLogForSpecifications : IEventLog
 {
-    static readonly IEventSerializer _serializer = new EventSerializer(new KnownInstancesOf<ICanProvideAdditionalEventInformation>(), new());
+    static readonly IEventSerializer _serializer = new EventSerializer(new KnownInstancesOf<ICanProvideAdditionalEventInformation>(), new JsonSerializerOptions()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters =
+                {
+                    new ConceptAsJsonConverterFactory(),
+                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
+                }
+    });
+
     readonly List<AppendedEventForSpecifications> _appendedEvents = new();
     EventSequenceNumber _sequenceNumber = EventSequenceNumber.First;
 

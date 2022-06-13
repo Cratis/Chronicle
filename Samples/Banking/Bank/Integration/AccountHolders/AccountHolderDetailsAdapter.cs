@@ -38,11 +38,17 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 
         builder
             .WithProperties(
+                _ => _.Address,
                 _ => _.Address.AddressLine,
                 _ => _.Address.City,
                 _ => _.Address.PostalCode,
                 _ => _.Address.Country)
-            .AppendEvent<AccountHolder, KontoEier, AccountHolderAddressChanged>();
+            .AppendEvent(_ =>
+                new AccountHolderAddressChanged(
+                    _.Changeset.Incoming.Address.AddressLine,
+                    _.Changeset.Incoming.Address.City,
+                    _.Changeset.Incoming.Address.PostalCode,
+                    _.Changeset.Incoming.Address.Country));
     }
 
     public override void DefineImportMapping(IMappingExpression<KontoEier, AccountHolder> builder) => builder
