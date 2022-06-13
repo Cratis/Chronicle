@@ -5,7 +5,7 @@ using Aksio.Cratis.Changes;
 
 namespace Aksio.Cratis.Integration.for_ImportOperations.given;
 
-public class no_changes : all_dependencies
+public class no_changes : all_dependencies_for<SomeEvent>
 {
     protected Model initial;
     protected ExternalModel incoming;
