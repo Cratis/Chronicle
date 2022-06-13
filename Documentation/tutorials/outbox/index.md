@@ -11,11 +11,8 @@ system by enabling one to take down microservices either temporarily or permanen
 them having a consequence to any of the other microservices.
 
 The way Cratis enables this is by providing a separate event sequence called the **Outbox**.
-It operates in a different way in that it has a retention policy attached to it.
-Within the outbox there will only be one instance per event type per event source identifier.
-
-With this constraint one might need to think a little bit different about how the.
-They are also now your contract to the outside world.
+Only events marked as public can go into the **Outbox**. This is to make a clear distinction from
+what you have privately, they represent the public contract to the outside world.
 
 > Note: Versioning (up/down-casting) of events will give a way to version these between systems.
 > Enabling the producing microservices and the consuming microservices to be at different
