@@ -15,7 +15,7 @@ public class when_importing_for_the_first_time : given.object_ready_for_import
         result = await context.Projection.GetById(social_security_number);
     }
 
-    [Fact] void should_append_account_holder_registered() => context.ShouldAppendEvents(new AccountHolderRegistered(first_name, last_name, birth_date));
+    [Fact] void should_append_account_holder_registered() => context.ShouldAppendEvents(new AccountHolderRegistered(first_name, last_name, birth_date, new(address, postal_code, city, country)));
     [Fact] void should_append_account_holder_address_changed() => context.ShouldAppendEvents(new AccountHolderAddressChanged(address, city, postal_code, country));
-    [Fact] void should_project_all_properties() => result.ShouldEqual(new AccountHolder(first_name, last_name, birth_date, social_security_number, address, city, postal_code, country));
+    [Fact] void should_project_all_properties() => result.ShouldEqual(new AccountHolder(first_name, last_name, birth_date, social_security_number, new(address, postal_code, city, country)));
 }
