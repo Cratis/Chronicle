@@ -13,6 +13,7 @@ public class all_dependencies : Specification
     protected Mock<IAdapterProjectionFor<Model>> projection;
     protected Mock<IMapper> mapper;
     protected Mock<IEventLog> event_log;
+    protected Mock<IEventOutbox> event_outbox;
 
     void Establish()
     {
@@ -20,6 +21,7 @@ public class all_dependencies : Specification
         projection = new();
         mapper = new();
         event_log = new();
+        event_outbox = new();
 
         adapter.SetupGet(_ => _.KeyResolver).Returns((ExternalModel _) => new EventSourceId(key));
         adapter.Setup(_ => _.DefineImport(IsAny<IImportBuilderFor<Model, ExternalModel>>()))
