@@ -1,3 +1,10 @@
+# [v6.5.0] - 2022-6-13 [PR: #371](https://github.com/aksio-insurtech/Cratis/pull/371)
+
+### Added
+
+- When using event types that are marked public in integration adapters, it will now append these events to both the event log and the outbox.
+
+
 # [v6.4.16] - 2022-6-13 [PR: #368](https://github.com/aksio-insurtech/Cratis/pull/368)
 
 ### Fixed
