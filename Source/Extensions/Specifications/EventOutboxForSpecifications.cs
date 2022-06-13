@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Specifications;
 /// <summary>
 /// Represents an implementation of <see cref="IEventLog"/> for specifications.
 /// </summary>
-public class EventLogForSpecifications : IEventLog
+public class EventOutboxForSpecifications : IEventOutbox
 {
     readonly EventSequenceForSpecifications _sequence = new();
 
@@ -18,5 +18,5 @@ public class EventLogForSpecifications : IEventLog
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
 
     /// <inheritdoc/>
-    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null) => _sequence.Append(eventSourceId, @event);
+    public Task Append(EventSourceId eventSourceId, object @event) => _sequence.Append(eventSourceId, @event);
 }

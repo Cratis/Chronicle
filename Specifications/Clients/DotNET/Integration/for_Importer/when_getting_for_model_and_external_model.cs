@@ -11,6 +11,7 @@ public class when_getting_for_model_and_external_model : Specification
 {
     Mock<IAdapters> adapters;
     Mock<IEventLog> event_log;
+    Mock<IEventOutbox> event_outbox;
     Mock<IAdapterFor<Model, ExternalModel>> adapter;
     Mock<IAdapterProjectionFor<Model>> projection;
     Mock<IMapper> mapper;
@@ -24,6 +25,7 @@ public class when_getting_for_model_and_external_model : Specification
     {
         adapters = new();
         event_log = new();
+        event_outbox = new();
         adapter = new();
         projection = new();
         mapper = new();
@@ -33,7 +35,7 @@ public class when_getting_for_model_and_external_model : Specification
         adapters.Setup(_ => _.GetMapperFor<Model, ExternalModel>()).Returns(mapper.Object);
 
         objects_comparer = new();
-        importer = new(adapters.Object, objects_comparer.Object, event_log.Object);
+        importer = new(adapters.Object, objects_comparer.Object, event_log.Object, event_outbox.Object);
     }
 
     void Because() => operations = importer.For<Model, ExternalModel>();
