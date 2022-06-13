@@ -14,6 +14,7 @@ public class Importer : IImporter
     readonly IObjectsComparer _objectsComparer;
     readonly IAdapters _adapters;
     readonly IEventLog _eventLog;
+    readonly IEventOutbox _eventOutbox;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Importer"/> class.
@@ -21,14 +22,17 @@ public class Importer : IImporter
     /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
     /// <param name="eventLog"><see cref="IEventLog"/> for appending events.</param>
+    /// <param name="eventOutbox"><see cref="IEventOutbox"/> for appending public events.</param>
     public Importer(
         IAdapters adapters,
         IObjectsComparer objectsComparer,
-        IEventLog eventLog)
+        IEventLog eventLog,
+        IEventOutbox eventOutbox)
     {
         _objectsComparer = objectsComparer;
         _adapters = adapters;
         _eventLog = eventLog;
+        _eventOutbox = eventOutbox;
     }
 
     /// <inheritdoc/>
@@ -37,6 +41,6 @@ public class Importer : IImporter
         var adapter = _adapters.GetFor<TModel, TExternalModel>();
         var projection = _adapters.GetProjectionFor<TModel, TExternalModel>();
         var mapper = _adapters.GetMapperFor<TModel, TExternalModel>();
-        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectsComparer, _eventLog);
+        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectsComparer, _eventLog, _eventOutbox);
     }
 }
