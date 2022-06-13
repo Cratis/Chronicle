@@ -1,3 +1,19 @@
+# [v6.4.10] - 2022-6-12 [PR: #364](https://github.com/aksio-insurtech/Cratis/pull/364)
+
+### Added
+
+- Automatically discovers all referenced assemblies and maps out types. Types now has a static method on it to ignore specific assemblies by their name prefix (`AddAssemblyPrefixesToExclude()`). By default it adds `Microsoft` and `System` to known prefixes to ignore. From the application model, this is now set up in the `.UseAksio()` to ignore known 3rd parties.
+
+### Changed
+
+- Taking out the retention policy for inbox and outbox. This does not affect any behavior, but allows for future microservices getting history.
+
+### Fixed
+
+- Support for projecting to complex types by referring to the root property without having to list all child properties recursively. Fixes #344.
+
+
+
 # [v6.4.9] - 2022-6-9 [PR: #350](https://github.com/aksio-insurtech/Cratis/pull/350)
 
 ### Fixed

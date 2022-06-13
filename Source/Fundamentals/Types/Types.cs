@@ -11,9 +11,20 @@ namespace Aksio.Cratis.Types;
 /// </summary>
 public class Types : ITypes
 {
+    static readonly List<string> _assemblyPrefixesToExclude = new()
+    {
+        "System",
+        "Microsoft",
+        "Newtonsoft"
+    };
+
+    readonly List<string> _assemblyPrefixesToInclude = new()
+    {
+        "Aksio"
+    };
+
     readonly IContractToImplementorsMap _contractToImplementorsMap = new ContractToImplementorsMap();
     readonly List<Assembly> _assemblies = new();
-    readonly string[] _assemblyPrefixesToInclude;
 
     /// <inheritdoc/>
     public IEnumerable<Assembly> Assemblies => _assemblies;
@@ -30,10 +41,16 @@ public class Types : ITypes
     /// <param name="assemblyPrefixesToInclude">Optional params of assembly prefixes to include in type discovery.</param>
     public Types(params string[] assemblyPrefixesToInclude)
     {
-        _assemblyPrefixesToInclude = assemblyPrefixesToInclude ?? Array.Empty<string>();
+        _assemblyPrefixesToInclude.AddRange(assemblyPrefixesToInclude);
         All = DiscoverAllTypes();
         _contractToImplementorsMap.Feed(All);
     }
+
+    /// <summary>
+    /// Add an assembly prefix to exclude from type discovery.
+    /// </summary>
+    /// <param name="prefixes">Prefixes to add.</param>
+    public static void AddAssemblyPrefixesToExclude(params string[] prefixes) => _assemblyPrefixesToExclude.AddRange(prefixes);
 
     /// <inheritdoc/>
     public Type FindSingle<T>() => FindSingle(typeof(T));
@@ -82,15 +99,16 @@ public class Types : ITypes
         var entryAssembly = Assembly.GetEntryAssembly();
         var dependencyModel = DependencyContext.Load(entryAssembly);
         var projectReferencedAssemblies = dependencyModel.RuntimeLibraries
-                            .Where(_ => _.Type.Equals("project", StringComparison.InvariantCultureIgnoreCase))
+                            .Where(_ => _.Type.Equals("project"))
                             .Select(_ => Assembly.Load(_.Name))
                             .ToArray();
         _assemblies.AddRange(projectReferencedAssemblies);
         ProjectReferencedAssemblies = projectReferencedAssemblies;
 
         var assemblies = dependencyModel.RuntimeLibraries
-                            .Where(_ => _.Name.StartsWith("Aksio.Cratis", StringComparison.InvariantCultureIgnoreCase) ||
-                                        _assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm, StringComparison.InvariantCultureIgnoreCase)))
+                            .Where(_ => _.RuntimeAssemblyGroups.Count > 0 &&
+                                        (_assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm)) ||
+                                        !_assemblyPrefixesToExclude.Any(asm => _.Name.StartsWith(asm))))
                             .Select(_ => Assembly.Load(_.Name))
                             .Distinct()
                             .ToArray();
