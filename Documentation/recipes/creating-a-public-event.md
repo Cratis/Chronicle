@@ -10,11 +10,6 @@ basically means that the outside world shouldn't need to piece together what sit
 inside of your microservice in the same order / sequence to get the same result.
 Your microservice should therefor take the responsibility of doing this heavy lifting.
 
-The **outbox** has a different characteristic than the **event log** as well. Instead of being
-append only, it has a retention policy to it that makes it only keep one instance per unique
-identifier (`EventSourceId`) per event type. That outside world can therefor not reason
-about its history.
-
 With C# you define a public event in the same as a private event, only difference is the
 `isPublic: true` property on the `[EventType]` attribute.
 
