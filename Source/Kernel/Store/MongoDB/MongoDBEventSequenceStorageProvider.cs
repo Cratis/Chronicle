@@ -117,6 +117,6 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var cursor = collection.Find(filter).ToCursor();
-        return Task.FromResult<IEventCursor>(new EventCursor(_converter(), cursor));
+        return Task.FromResult<IEventCursor>(new EventCursor(sequenceNumber, eventTypes ?? Array.Empty<EventType>(), _converter(), cursor));
     }
 }
