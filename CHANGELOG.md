@@ -1,3 +1,10 @@
+# [v6.5.3] - 2022-6-14 [PR: #377](https://github.com/aksio-insurtech/Cratis/pull/377)
+
+### Fixed
+
+- `JsonComplianceManager` now looks at properties from all inherited schemas / types.
+
+
 # [v6.5.2] - 2022-6-14 [PR: #375](https://github.com/aksio-insurtech/Cratis/pull/375)
 
 ### Fixed
