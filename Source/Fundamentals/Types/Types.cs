@@ -15,7 +15,12 @@ public class Types : ITypes
     {
         "System",
         "Microsoft",
-        "Newtonsoft"
+        "Newtonsoft",
+        "runtimepack",
+        "mscorlib",
+        "netstandard",
+        "WindowsBase",
+        "Namotion"
     };
 
     readonly List<string> _assemblyPrefixesToInclude = new()
@@ -109,7 +114,18 @@ public class Types : ITypes
                             .Where(_ => _.RuntimeAssemblyGroups.Count > 0 &&
                                         (_assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm)) ||
                                         !_assemblyPrefixesToExclude.Any(asm => _.Name.StartsWith(asm))))
-                            .Select(_ => Assembly.Load(_.Name))
+                            .Select(_ =>
+                            {
+                                try
+                                {
+                                    return Assembly.Load(_.Name);
+                                }
+                                catch
+                                {
+                                    return null!;
+                                }
+                            })
+                            .Where(_ => _ is not null)
                             .Distinct()
                             .ToArray();
         _assemblies.AddRange(assemblies.Where(_ => !projectReferencedAssemblies.Any(p => p == _)).Select(_ => _));
