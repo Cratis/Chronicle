@@ -1,3 +1,10 @@
+# [v6.5.2] - 2022-6-14 [PR: #375](https://github.com/aksio-insurtech/Cratis/pull/375)
+
+### Fixed
+
+- Changing to Bank microservice having the `Guid.Empty()` identifier. Since this is the default identifier if none is specified, the Kernel will work for all that has this not set. In a future version we will don't care about this type of configuration and let the connecting client tell which Microservice it is.
+
+
 # [v6.5.1] - 2022-6-14 [PR: #374](https://github.com/aksio-insurtech/Cratis/pull/374)
 
 ### Fixed
