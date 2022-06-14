@@ -5,7 +5,7 @@
         }
     },
     "microservices": {
-        "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+        "00000000-0000-0000-0000-000000000000": {
             "name": "Bank"
         }
     },
@@ -23,7 +23,7 @@
             "connectionDetails": "mongodb://localhost:27017/cratis-shared"
         },
         "microservices": {
-            "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+            "00000000-0000-0000-0000-000000000000": {
                 "shared": {
                     "eventStore": {
                         "type": "MongoDB",

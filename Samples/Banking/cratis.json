@@ -11,7 +11,7 @@
         }
     },
     "microservices": {
-        "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+        "00000000-0000-0000-0000-000000000000": {
             "name": "Bank"
         },
         "40dda9cf-38cc-4bf5-a249-ba3ce4f8861f": {
@@ -19,7 +19,7 @@
             "inbox": {
                 "fromOutboxes": [
                     {
-                        "microservice": "0e1219ec-7136-40d8-a6e6-99c05ba22a30"
+                        "microservice": "00000000-0000-0000-0000-000000000000"
                     }
                 ]
             }
@@ -39,7 +39,7 @@
             "connectionDetails": "mongodb://localhost:27017/cratis-shared"
         },
         "microservices": {
-            "0e1219ec-7136-40d8-a6e6-99c05ba22a30": {
+            "00000000-0000-0000-0000-000000000000": {
                 "shared": {
                     "eventStore": {
                         "type": "MongoDB",
