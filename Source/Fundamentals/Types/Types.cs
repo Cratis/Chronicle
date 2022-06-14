@@ -15,7 +15,8 @@ public class Types : ITypes
     {
         "System",
         "Microsoft",
-        "Newtonsoft"
+        "Newtonsoft",
+        "runtimepack"
     };
 
     readonly List<string> _assemblyPrefixesToInclude = new()
