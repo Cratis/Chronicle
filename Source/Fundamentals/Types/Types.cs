@@ -16,7 +16,11 @@ public class Types : ITypes
         "System",
         "Microsoft",
         "Newtonsoft",
-        "runtimepack"
+        "runtimepack",
+        "mscorlib",
+        "netstandard",
+        "WindowsBase",
+        "Namotion"
     };
 
     readonly List<string> _assemblyPrefixesToInclude = new()
