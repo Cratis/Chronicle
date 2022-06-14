@@ -1,3 +1,10 @@
+# [v6.5.1] - 2022-6-14 [PR: #374](https://github.com/aksio-insurtech/Cratis/pull/374)
+
+### Fixed
+
+- Kernel didn't start in docker due to it trying to explicitly load assemblies starting with `runtimepack`.
+
+
 # [v6.5.0] - 2022-6-13 [PR: #371](https://github.com/aksio-insurtech/Cratis/pull/371)
 
 ### Added
