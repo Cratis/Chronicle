@@ -14,9 +14,15 @@ the class called `Types` in the `Aksio.Cratis.Types` namespace. This implements 
 
 ## Assembly prefixes
 
-The constructor for `Types` supports taking an 'opt-in' filter for including assemblies in type discovery.
-This will make it possible to include more assemblies in addition to the default project referenced
-assemblies only. The strings you pass to it are considered prefixes, meaning that if you want to include
+By default the `Types` system will load all referenced project and package assemblies.
+You can exclude assemblies by using the static method called `Types.AddAssemblyPrefixesToExclude()`.
+This takes a `params` of strings of prefixes to assemblies to exclude.
+Out of the box, it will ignore things like `System`, `Microsoft`, `Newtonsoft`.
+
+On the flip side of this, the constructor for `Types` supports taking an explicit 'opt-in' filter for including assemblies
+in type discovery. This will make it possible to include more assemblies in addition.
+
+For both filters the strings you pass to it are considered prefixes, meaning that if you want to include
 a set of assemblies all starting with the same string, you simply put the common start.
 
 ```csharp
@@ -24,6 +30,8 @@ using Aksio.Cratis.Types;
 
 var types = new Types("Microsoft","SomeOther");
 ```
+
+> Note: When using the application model, it will exclude even more 3rd parties.
 
 ## Type Discovery
 
