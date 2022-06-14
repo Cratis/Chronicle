@@ -48,7 +48,7 @@ public class JsonComplianceManager : IJsonComplianceManager
         {
             if (schema.Properties is not null && value is not null)
             {
-                var propertySchema = schema.ActualProperties.Single(_ => _.Key == property).Value;
+                var propertySchema = schema.GetFlattenedProperties().Single(_ => _.Name == property);
                 foreach (var metadata in GetMetadata(propertySchema).Concat(complianceMetadataForContainer).DistinctBy(_ => _.metadataType))
                 {
                     if (_propertyValueHandlers.ContainsKey(metadata.metadataType))
