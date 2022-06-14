@@ -4,7 +4,7 @@
 using Sample;
 
 var builder = Host.CreateDefaultBuilder()
-                    .UseAksio(microserviceId: "0e1219ec-7136-40d8-a6e6-99c05ba22a30")
+                    .UseAksio(microserviceId: "00000000-0000-0000-0000-000000000000")
                     .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
 
 var app = builder.Build();
