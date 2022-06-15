@@ -1,3 +1,10 @@
+# [v6.5.4] - 2022-6-15 [PR: #379](https://github.com/aksio-insurtech/Cratis/pull/379)
+
+### Fixed
+
+- Fixes a problem where we got into deadlock when getting events when using `MoveNextAsync()` on MongoDB cursors. The consequence was that you only got the first 100 events of a selection. Fixes #272.
+
+
 # [v6.5.3] - 2022-6-14 [PR: #377](https://github.com/aksio-insurtech/Cratis/pull/377)
 
 ### Fixed
