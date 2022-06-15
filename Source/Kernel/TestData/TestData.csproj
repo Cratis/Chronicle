@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.TestData</AssemblyName>
+        <RootNamespace>Aksio.Cratis.TestData</RootNamespace>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+
+    <ItemGroup>
+        <ProjectReference Include="../Store/MongoDB/MongoDB.csproj"/>
+        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../../Samples/Banking/Bank/Events/Events.csproj"/>
+    </ItemGroup>
+</Project>
