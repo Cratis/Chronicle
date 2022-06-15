@@ -5,6 +5,8 @@ using MongoDB.Driver;
 
 namespace Aksio.Cratis.Events.Store.MongoDB;
 
+#pragma warning disable CA1849, MA0042 // Allow this blocking call - we get deadlocks when using MongoDB MoveNextAsync()
+
 /// <summary>
 /// Represents an implementation of <see cref="IEventCursor"/> for handling events from event sequence.
 /// </summary>
@@ -33,7 +35,8 @@ public class EventCursor : IEventCursor
     public async Task<bool> MoveNext()
     {
         if (_innerCursor is null) return false;
-        var result = await _innerCursor.MoveNextAsync();
+
+        var result = _innerCursor.MoveNext();
         if (_innerCursor.Current is not null)
         {
             Current = await Task.WhenAll(_innerCursor.Current.Select(@event => _converter.ToAppendedEvent(@event)));
