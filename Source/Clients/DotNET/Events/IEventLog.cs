@@ -16,4 +16,19 @@ public interface IEventLog
     /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default);
+
+    /// <summary>
+    /// Start a branch for a specific <see cref="BranchTypeId"/>.
+    /// </summary>
+    /// <param name="branchTypeId">Type to start.</param>
+    /// <param name="labels">Optional labels to associate with the branch.</param>
+    /// <returns><see cref="IBranch"/>.</returns>
+    Task<IBranch> Branch(BranchTypeId branchTypeId, IDictionary<string, string>? labels = default);
+
+    /// <summary>
+    /// Get branches of a specific <see cref="BranchTypeId"/>.
+    /// </summary>
+    /// <param name="branchTypeId">Type to get for.</param>
+    /// <returns>Collection of <see cref="IBranch"/>.</returns>
+    Task<IEnumerable<IBranch>> GetBranchesFor(BranchTypeId branchTypeId);
 }
