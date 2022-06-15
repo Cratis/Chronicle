@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store.Branching;
+
 namespace Aksio.Cratis.Events;
 
 /// <summary>
@@ -21,14 +23,14 @@ public interface IEventLog
     /// Start a branch for a specific <see cref="BranchTypeId"/>.
     /// </summary>
     /// <param name="branchTypeId">Type to start.</param>
-    /// <param name="labels">Optional labels to associate with the branch.</param>
+    /// <param name="tags">Optional tags to associate with the branch.</param>
     /// <returns><see cref="IBranch"/>.</returns>
-    Task<IBranch> Branch(BranchTypeId branchTypeId, IDictionary<string, string>? labels = default);
+    Task<IBranch> Branch(BranchTypeId branchTypeId, IDictionary<string, string>? tags = default);
 
     /// <summary>
     /// Get branches of a specific <see cref="BranchTypeId"/>.
     /// </summary>
     /// <param name="branchTypeId">Type to get for.</param>
     /// <returns>Collection of <see cref="IBranch"/>.</returns>
-    Task<IEnumerable<IBranch>> GetBranchesFor(BranchTypeId branchTypeId);
+    Task<IEnumerable<BranchDescriptor>> GetBranchesFor(BranchTypeId branchTypeId);
 }

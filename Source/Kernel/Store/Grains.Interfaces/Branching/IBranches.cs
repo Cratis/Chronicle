@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store.Branching;
 using Orleans;
 
 namespace Aksio.Cratis.Events.Store.Grains.Branching;
@@ -14,9 +15,9 @@ public interface IBranches : IGrainWithGuidKey
     /// Checkout the branch.
     /// </summary>
     /// <param name="branchTypeId">Type to checkout.</param>
-    /// <param name="labels">Optional labels to associate with the branch.</param>
+    /// <param name="tags">Optional tags to associate with the branch.</param>
     /// <returns>The <see cref="BranchId"/> checked out.</returns>
-    Task<BranchId> Checkout(BranchTypeId branchTypeId, IDictionary<string, string>? labels = default);
+    Task<BranchId> Checkout(BranchTypeId branchTypeId, IDictionary<string, string>? tags = default);
 
     /// <summary>
     /// Concludes a branch by its identifier.
@@ -33,5 +34,5 @@ public interface IBranches : IGrainWithGuidKey
     /// </summary>
     /// <param name="branchTypeId">Type to get for.</param>
     /// <returns>Collection of <see cref="IBranch"/>.</returns>
-    Task<IEnumerable<IBranch>> GetFor(BranchTypeId branchTypeId);
+    Task<IEnumerable<BranchDescriptor>> GetFor(BranchTypeId branchTypeId);
 }
