@@ -36,6 +36,11 @@ public class EventSequenceCacheCursor : IEventCursor
         _end = end;
         Current = eventsInCache;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
+
+        Console.WriteLine(_cache);
+        Console.WriteLine(_start);
+        Console.WriteLine(_end);
+        Console.WriteLine(_eventSequenceStorageProvider);
     }
 
     /// <inheritdoc/>

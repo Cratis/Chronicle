@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Events.Store.EventSequences.Caching.for_EventSequenceCache.given;
 
-public abstract class an_event_store_with_a_set_of_events : a_set_of_events
+public abstract class a_cache_with_a_set_of_events : a_set_of_events
 {
     protected EventSequenceCache cache;
 

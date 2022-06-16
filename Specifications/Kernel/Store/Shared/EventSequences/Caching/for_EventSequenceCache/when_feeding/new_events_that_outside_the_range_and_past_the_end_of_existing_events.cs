@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Events.Store.EventSequences.Caching.for_EventSequenceCache.when_creating;
 
-public class new_events_that_falls_partially_within_the_range_and_past_the_end_of_existing_events : given.a_cache_with_a_set_of_events
+public class new_events_that_outside_the_range_and_past_the_end_of_existing_events : given.a_cache_with_a_set_of_events
 {
     protected override EventSequenceCacheRange range => new(0, 100);
 
@@ -15,11 +15,11 @@ public class new_events_that_falls_partially_within_the_range_and_past_the_end_o
 
     void Establish()
     {
-        events = Enumerable.Range(0, 51).GenerateEvents(100);
+        events = Enumerable.Range(0, 101).GenerateEvents(200);
     }
 
     void Because() => cache.Feed(events);
 
-    [Fact] void should_have_equal_range_to_store() => cache.CurrentRange.ShouldEqual(new(51, 150));
+    [Fact] void should_have_equal_range_to_store() => cache.CurrentRange.ShouldEqual(new(200, 299));
     [Fact] void should_have_expected_number_of_events_in_content() => cache.Content.Count().ShouldEqual(range_size);
 }
