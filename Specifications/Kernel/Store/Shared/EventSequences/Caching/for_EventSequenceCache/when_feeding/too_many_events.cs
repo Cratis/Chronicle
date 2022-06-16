@@ -14,7 +14,7 @@ public class too_many_events : given.no_events_in_sequence
 
     void Because() => cache.Feed(events);
 
-    [Fact] void should_have_equal_range_to_store() => cache.CurrentRange.ShouldEqual(new(0, (ulong)range_size));
-    [Fact] void should_have_expected_number_of_events_in_content() => cache.Content.Count().ShouldEqual(range_size + 1);
-    [Fact] void should_have_the_events_that_fit_in_the_range_size() => cache.Content.ShouldContainOnly(events.Take(range_size + 1));
+    [Fact] void should_have_range_as_size_of_cache() => cache.CurrentRange.ShouldEqual(new(0, (ulong)range_size - 1));
+    [Fact] void should_have_expected_number_of_events_in_content() => cache.Content.Count().ShouldEqual(range_size);
+    [Fact] void should_have_the_events_that_fit_in_the_range_size() => cache.Content.ShouldContainOnly(events.Take(range_size));
 }
