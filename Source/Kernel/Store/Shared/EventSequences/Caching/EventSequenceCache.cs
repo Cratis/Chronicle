@@ -18,7 +18,7 @@ public class EventSequenceCache : IEventSequenceCache
     public int RangeSize { get; }
 
     /// <inheritdoc/>
-    public EventSequenceCacheRange CurrentRange { get; }
+    public EventSequenceCacheRange CurrentRange { get; private set; }
 
     /// <inheritdoc/>
     public IEnumerable<AppendedEvent> Content
@@ -49,14 +49,7 @@ public class EventSequenceCache : IEventSequenceCache
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         CurrentRange = new(0, 0);
 
-        Task.Run(async () =>
-        {
-            var cursor = await _eventSequenceStorageProvider.GetRange(eventSequenceId, 0, (ulong)rangeSize);
-            while (await cursor.MoveNext())
-            {
-                Feed(cursor.Current);
-            }
-        }).Wait();
+        Populate(eventSequenceId, rangeSize);
     }
 
     /// <inheritdoc/>
@@ -76,4 +69,18 @@ public class EventSequenceCache : IEventSequenceCache
 
     /// <inheritdoc/>
     public IEventCursor GetRange(EventSequenceNumber start, EventSequenceNumber end) => throw new NotImplementedException();
+
+    void Populate(EventSequenceId eventSequenceId, int rangeSize)
+    {
+        Task.Run(async () =>
+        {
+            var cursor = await _eventSequenceStorageProvider.GetRange(eventSequenceId, 0, (ulong)rangeSize - 1);
+            while (await cursor.MoveNext())
+            {
+                Feed(cursor.Current);
+            }
+
+            CurrentRange = new(0, _events.Last().Key);
+        }).Wait();
+    }
 }
