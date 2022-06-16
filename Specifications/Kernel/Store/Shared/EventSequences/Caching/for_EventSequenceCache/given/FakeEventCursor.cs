@@ -25,15 +25,15 @@ public class FakeEventCursor : IEventCursor
 
     public Task<bool> MoveNext()
     {
-        if (_currentSequenceNumber < _end)
+        if (_currentSequenceNumber <= _end)
         {
             var actualEnd = _currentSequenceNumber + _cursorSize;
+            var numberOfEvents = actualEnd - _currentSequenceNumber;
             if (actualEnd > _end)
             {
-                actualEnd = _end;
+                numberOfEvents = 1;
             }
 
-            var numberOfEvents = actualEnd - _currentSequenceNumber;
             Current = Enumerable.Range((int)_start.Value, (int)numberOfEvents.Value).Select(_ =>
                 new AppendedEvent(
                     new(_currentSequenceNumber + (ulong)_, new(Guid.Empty, EventGeneration.First)),
@@ -46,7 +46,7 @@ public class FakeEventCursor : IEventCursor
                         CausationId.System,
                         CausedBy.System), new JsonObject())).ToArray();
 
-            _currentSequenceNumber += _cursorSize;
+            _currentSequenceNumber += Current.Count();
             return Task.FromResult(true);
         }
 

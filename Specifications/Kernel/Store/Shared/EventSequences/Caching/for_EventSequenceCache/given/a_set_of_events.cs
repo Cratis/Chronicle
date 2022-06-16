@@ -15,7 +15,9 @@ public abstract class a_set_of_events : all_dependencies
     {
         event_sequence_id = EventSequenceId.Log;
         storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult(range.End));
-        storage_provider.Setup(_ => _.GetRange(event_sequence_id, EventSequenceNumber.First, (ulong)range_size, null, null)).Returns(
-            Task.FromResult<IEventCursor>(new FakeEventCursor(range.Start, range.End, cursor_size)));
+        storage_provider
+            .Setup(_ => _.GetRange(event_sequence_id, EventSequenceNumber.First, (ulong)range_size - 1, null, null))
+            .Returns((EventSequenceId _, EventSequenceNumber start, EventSequenceNumber end, EventSourceId? __, IEnumerable<EventType>? ___) =>
+                Task.FromResult<IEventCursor>(new FakeEventCursor(start, end, cursor_size)));
     }
 }
