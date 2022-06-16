@@ -8,7 +8,6 @@ public abstract class a_set_of_events : all_dependencies
     protected abstract EventSequenceCacheRange range { get; }
     protected abstract int cursor_size { get; }
     protected abstract int range_size { get; }
-
     protected EventSequenceId event_sequence_id;
 
     void Establish()

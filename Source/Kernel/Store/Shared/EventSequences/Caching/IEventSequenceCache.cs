@@ -6,6 +6,9 @@ namespace Aksio.Cratis.Events.Store.EventSequences.Caching;
 /// <summary>
 /// Defines a cache of appended events for an event sequence.
 /// </summary>
+/// <remarks>
+/// All ranges are inclusive on both start and end sequence number.
+/// </remarks>
 public interface IEventSequenceCache
 {
     /// <summary>
