@@ -93,7 +93,6 @@ public class EventSequenceCache : IEventSequenceCache
             }
 
             events = events.Where(_ => _.Metadata.SequenceNumber >= firstSequenceNumber && _.Metadata.SequenceNumber <= lastSequenceNumber);
-
             foreach (var @event in events)
             {
                 if (!_events.ContainsKey(@event.Metadata.SequenceNumber))
@@ -102,31 +101,43 @@ public class EventSequenceCache : IEventSequenceCache
                 }
             }
 
-            if (evictToStartOf != EventSequenceNumber.Unavailable)
-            {
-                foreach (var sequenceNumber in _events.Where(_ => _.Key <= evictToStartOf).Select(_ => _.Key).ToArray())
-                {
-                    _events.Remove(sequenceNumber);
-                }
-            }
-
-            if (evictFromEndOf != EventSequenceNumber.Unavailable)
-            {
-                foreach (var sequenceNumber in _events.Where(_ => _.Key >= evictFromEndOf).Select(_ => _.Key).ToArray())
-                {
-                    _events.Remove(sequenceNumber);
-                }
-            }
-
+            Evict(evictToStartOf, evictFromEndOf);
             CurrentRange = new(_events.First().Key, _events.Last().Key);
         }
     }
 
     /// <inheritdoc/>
-    public IEventCursor GetFrom(EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
+    public IEventCursor GetFrom(EventSequenceNumber sequenceNumber)
+    {
+        lock (_events)
+        {
+            IEnumerable<AppendedEvent> eventsInCache = Array.Empty<AppendedEvent>();
+
+            if (sequenceNumber >= CurrentRange.Start && sequenceNumber <= CurrentRange.End)
+            {
+                eventsInCache = _events.Where(_ => _.Key >= sequenceNumber).Select(_ => _.Value).ToArray();
+            }
+
+            return new EventSequenceCacheCursor(eventsInCache, _eventSequenceStorageProvider);
+        }
+    }
 
     /// <inheritdoc/>
-    public IEventCursor GetRange(EventSequenceNumber start, EventSequenceNumber end) => throw new NotImplementedException();
+    public IEventCursor GetRange(EventSequenceNumber start, EventSequenceNumber end)
+    {
+        lock (_events)
+        {
+            IEnumerable<AppendedEvent> eventsInCache = Array.Empty<AppendedEvent>();
+
+            if ((start >= CurrentRange.Start && start <= CurrentRange.End) ||
+                (end >= CurrentRange.Start && end <= CurrentRange.End))
+            {
+                eventsInCache = _events.Where(_ => _.Key >= start && _.Key <= end).Select(_ => _.Value).ToArray();
+            }
+
+            return new EventSequenceCacheCursor(eventsInCache, _eventSequenceStorageProvider);
+        }
+    }
 
     void Populate(EventSequenceId eventSequenceId, int rangeSize)
     {
@@ -138,5 +149,24 @@ public class EventSequenceCache : IEventSequenceCache
                 Feed(cursor.Current);
             }
         }).Wait();
+    }
+
+    void Evict(EventSequenceNumber evictToStartOf, EventSequenceNumber evictFromEndOf)
+    {
+        if (evictToStartOf != EventSequenceNumber.Unavailable)
+        {
+            foreach (var sequenceNumber in _events.Where(_ => _.Key <= evictToStartOf).Select(_ => _.Key).ToArray())
+            {
+                _events.Remove(sequenceNumber);
+            }
+        }
+
+        if (evictFromEndOf != EventSequenceNumber.Unavailable)
+        {
+            foreach (var sequenceNumber in _events.Where(_ => _.Key >= evictFromEndOf).Select(_ => _.Key).ToArray())
+            {
+                _events.Remove(sequenceNumber);
+            }
+        }
     }
 }
