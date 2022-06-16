@@ -56,6 +56,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
         var queueId = _mapper.GetQueueForStream(streamGuid, streamNamespace);
         if (token.SequenceNumber != -1)
         {
+            var appendedEvents = new List<AppendedEvent>();
             foreach (var @event in events)
             {
                 var appendedEvent = (@event as AppendedEvent)!;
@@ -68,9 +69,13 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                         appendedEvent.Metadata.Type,
                         appendedEvent.Context.ValidFrom,
                         appendedEvent.Content);
+
+                    appendedEvents.Add(appendedEvent);
                 }
                 catch (Exception ex)
                 {
+                    // Make sure we put all successful events on the stream for any subscribers to get.
+                    _receivers[queueId].AddAppendedEvent(streamGuid, appendedEvents, requestContext);
                     throw new UnableToAppendToEventSequence(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, ex);
                 }
             }
