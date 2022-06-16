@@ -130,7 +130,7 @@ public class EventSequenceCache : IEventSequenceCache
         {
             IEnumerable<AppendedEvent> eventsInCache = Array.Empty<AppendedEvent>();
 
-            if ((start >= CurrentRange.Start && start <= CurrentRange.End) ||
+            if ((start <= CurrentRange.Start && start <= CurrentRange.End) ||
                 (end >= CurrentRange.Start && end <= CurrentRange.End))
             {
                 eventsInCache = _events.Where(_ => _.Key >= start && _.Key <= end).Select(_ => _.Value).ToArray();
