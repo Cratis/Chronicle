@@ -13,6 +13,6 @@ public class and_there_are_events_that_fall_outside_the_default_range : given.a_
 
     void Because() => cache = new(event_sequence_id, range_size, storage_provider.Object);
 
-    [Fact] void should_have_range_set_to_first_and_last_of_allowed_range() => cache.CurrentRange.ShouldEqual(new(0, (ulong)range_size - 1));
+    [Fact] void should_have_range_set_to_first_and_last_of_allowed_range() => cache.CurrentRange.ShouldEqual(new(21, 120));
     [Fact] void should_have_expected_number_of_events_in_content() => cache.Content.Count().ShouldEqual(range_size);
 }
