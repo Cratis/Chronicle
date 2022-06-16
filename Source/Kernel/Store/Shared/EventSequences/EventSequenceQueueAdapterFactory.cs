@@ -16,7 +16,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IQueueAdapterCache _cache;
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
-    readonly ProviderFor<IEventSequences> _eventLogsProvder;
+    readonly ProviderFor<IEventSequences> _eventLogsProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
@@ -34,7 +34,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider);
         _name = name;
-        _eventLogsProvder = eventLogsProvider;
+        _eventLogsProvider = eventLogsProvider;
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventLogsProvder));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventLogsProvider));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());
