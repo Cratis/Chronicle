@@ -57,7 +57,7 @@ public class EventSequenceCache : IEventSequenceCache
     {
         lock (_events)
         {
-            events = events.Take(RangeSize + 1);
+            events = events.Take(RangeSize);
 
             var firstSequenceNumber = events.First().Metadata.SequenceNumber;
             var lastSequenceNumber = events.Last().Metadata.SequenceNumber;
@@ -118,7 +118,8 @@ public class EventSequenceCache : IEventSequenceCache
                 eventsInCache = _events.Where(_ => _.Key >= sequenceNumber).Select(_ => _.Value).ToArray();
             }
 
-            return new EventSequenceCacheCursor(eventsInCache, _eventSequenceStorageProvider);
+            var tail = _eventSequenceStorageProvider.GetTailSequenceNumber(EventSequenceId).GetAwaiter().GetResult();
+            return new EventSequenceCacheCursor(this, sequenceNumber, tail, eventsInCache, _eventSequenceStorageProvider);
         }
     }
 
@@ -135,7 +136,7 @@ public class EventSequenceCache : IEventSequenceCache
                 eventsInCache = _events.Where(_ => _.Key >= start && _.Key <= end).Select(_ => _.Value).ToArray();
             }
 
-            return new EventSequenceCacheCursor(eventsInCache, _eventSequenceStorageProvider);
+            return new EventSequenceCacheCursor(this, start, end, eventsInCache, _eventSequenceStorageProvider);
         }
     }
 
