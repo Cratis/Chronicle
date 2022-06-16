@@ -11,6 +11,11 @@ public class no_events_in_sequence : all_dependencies
     void Establish()
     {
         event_sequence_id = EventSequenceId.Log;
+        storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult((EventSequenceNumber)0));
+        storage_provider
+            .Setup(_ => _.GetRange(event_sequence_id, EventSequenceNumber.First, (ulong)100 - 1, null, null))
+            .Returns(Task.FromResult<IEventCursor>(new FakeEventCursor(0, 0, 10)));
+
         cache = new EventSequenceCache(event_sequence_id, 100, storage_provider.Object);
     }
 }

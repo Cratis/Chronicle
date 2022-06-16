@@ -61,6 +61,8 @@ public class EventSequenceCache : IEventSequenceCache
             {
                 _events.Add(@event.Metadata.SequenceNumber, @event);
             }
+
+            CurrentRange = new(_events.First().Key, _events.Last().Key);
         }
     }
 
@@ -79,8 +81,6 @@ public class EventSequenceCache : IEventSequenceCache
             {
                 Feed(cursor.Current);
             }
-
-            CurrentRange = new(0, _events.Last().Key);
         }).Wait();
     }
 }

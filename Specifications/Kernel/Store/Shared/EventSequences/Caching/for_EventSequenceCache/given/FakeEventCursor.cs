@@ -1,9 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
-using Aksio.Cratis.Execution;
-
 namespace Aksio.Cratis.Events.Store.EventSequences.Caching.for_EventSequenceCache.given;
 
 public class FakeEventCursor : IEventCursor
@@ -25,6 +22,11 @@ public class FakeEventCursor : IEventCursor
 
     public Task<bool> MoveNext()
     {
+        if (_start == _end)
+        {
+            return Task.FromResult(false);
+        }
+
         if (_currentSequenceNumber <= _end)
         {
             var actualEnd = _currentSequenceNumber + _cursorSize;
@@ -34,18 +36,7 @@ public class FakeEventCursor : IEventCursor
                 numberOfEvents = 1;
             }
 
-            Current = Enumerable.Range((int)_start.Value, (int)numberOfEvents.Value).Select(_ =>
-                new AppendedEvent(
-                    new(_currentSequenceNumber + (ulong)_, new(Guid.Empty, EventGeneration.First)),
-                    new EventContext(
-                        EventSourceId.Unspecified,
-                        DateTimeOffset.Now,
-                        DateTimeOffset.MinValue,
-                        TenantId.Development,
-                        CorrelationId.New(),
-                        CausationId.System,
-                        CausedBy.System), new JsonObject())).ToArray();
-
+            Current = Enumerable.Range((int)_start.Value, (int)numberOfEvents.Value).GenerateEvents(_currentSequenceNumber);
             _currentSequenceNumber += Current.Count();
             return Task.FromResult(true);
         }
