@@ -25,4 +25,52 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="value">Value to convert from.</param>
     /// <returns>A converted <see cref="EventSequenceNumber"/>.</returns>;
     public static implicit operator EventSequenceNumber(ulong value) => new(value);
+
+    /// <summary>
+    /// Adds a event sequence number with a value.
+    /// </summary>
+    /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
+    /// <param name="right">Value to add.</param>
+    /// <returns>new event sequence number.</returns>
+    public static EventSequenceNumber operator +(EventSequenceNumber left, ulong right) => new(left.Value + right);
+
+    /// <summary>
+    /// Adds a event sequence number with a value.
+    /// </summary>
+    /// <param name="left"><see cref="EventSequenceNumber"/> to subtract from.</param>
+    /// <param name="right">Value to add.</param>
+    /// <returns>new event sequence number.</returns>
+    public static EventSequenceNumber operator -(EventSequenceNumber left, ulong right) => new(left.Value - right);
+
+    /// <summary>
+    /// Adds a event sequence number with a value.
+    /// </summary>
+    /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
+    /// <param name="right">Value to add.</param>
+    /// <returns>new event sequence number.</returns>
+    public static EventSequenceNumber operator +(EventSequenceNumber left, int right) => new(left.Value + (ulong)right);
+
+    /// <summary>
+    /// Adds a event sequence number with a value.
+    /// </summary>
+    /// <param name="left"><see cref="EventSequenceNumber"/> to subtract from.</param>
+    /// <param name="right">Value to add.</param>
+    /// <returns>new event sequence number.</returns>
+    public static EventSequenceNumber operator -(EventSequenceNumber left, int right) => new(left.Value - (ulong)right);
+
+    /// <summary>
+    /// Adds a event sequence number with another event sequence number.
+    /// </summary>
+    /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
+    /// <param name="right"><see cref="EventSequenceNumber"/> to add.</param>
+    /// <returns>new event sequence number.</returns>
+    public static EventSequenceNumber operator +(EventSequenceNumber left, EventSequenceNumber right) => new(left.Value + right.Value);
+
+    /// <summary>
+    /// Adds a event sequence number with a value.
+    /// </summary>
+    /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
+    /// <param name="right"><see cref="EventSequenceNumber"/> to subtract.</param>
+    /// <returns>new event sequence number.</returns>
+    public static EventSequenceNumber operator -(EventSequenceNumber left, EventSequenceNumber right) => new(left.Value - right.Value);
 }
