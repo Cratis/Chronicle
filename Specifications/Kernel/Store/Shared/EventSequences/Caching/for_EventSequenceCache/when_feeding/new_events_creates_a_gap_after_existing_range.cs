@@ -3,25 +3,26 @@
 
 namespace Aksio.Cratis.Events.Store.EventSequences.Caching.for_EventSequenceCache.when_creating;
 
-public class new_events_that_falls_partially_within_the_range_and_past_the_end_of_existing_events : given.a_cache_with_a_set_of_events
+public class new_events_creates_a_gap_after_existing_range : given.a_cache_with_a_set_of_events
 {
-    static EventSequenceCacheRange expected_range = new(51, 150);
     protected override EventSequenceCacheRange range => new(0, 100);
 
     protected override int cursor_size => 10;
 
     protected override int range_size => 100;
-
-    IEnumerable<AppendedEvent> events;
+    static EventSequenceCacheRange expected_range = new(75, 174);
 
     void Establish()
     {
-        events = Enumerable.Range(0, 51).GenerateEvents(100);
+        storage_provider
+            .Setup(_ => _.GetRange(event_sequence_id, 101, 124, null, null))
+            .Returns((EventSequenceId _, EventSequenceNumber start, EventSequenceNumber end, EventSourceId? __, IEnumerable<EventType>? ___) =>
+                Task.FromResult<IEventCursor>(new FakeEventCursor(start, end, cursor_size)));
     }
 
-    void Because() => cache.Feed(events);
+    void Because() => cache.Feed(Enumerable.Range(0, 50).GenerateEvents(125));
 
-    [Fact] void should_have_equal_range_to_store() => cache.CurrentRange.ShouldEqual(expected_range);
+    [Fact] void should_have_expected_range() => cache.CurrentRange.ShouldEqual(expected_range);
     [Fact] void should_have_expected_number_of_events_in_content() => cache.Content.Count().ShouldEqual(range_size);
     [Fact] void should_contain_only_the_expected_range() => cache.Content.ShouldHaveAllInRange(expected_range);
 }
