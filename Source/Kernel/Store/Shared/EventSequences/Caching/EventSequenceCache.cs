@@ -55,14 +55,55 @@ public class EventSequenceCache : IEventSequenceCache
     /// <inheritdoc/>
     public void Feed(IEnumerable<AppendedEvent> events)
     {
+        InternalFeed(events, false);
+    }
+
+    /// <inheritdoc/>
+    public IEventCursor GetFrom(EventSequenceNumber sequenceNumber)
+    {
+        lock (_events)
+        {
+            IEnumerable<AppendedEvent> eventsInCache = Array.Empty<AppendedEvent>();
+
+            if (sequenceNumber <= CurrentRange.End)
+            {
+                eventsInCache = _events.Where(_ => _.Key >= sequenceNumber).Select(_ => _.Value).ToArray();
+            }
+
+            var tail = _eventSequenceStorageProvider.GetTailSequenceNumber(EventSequenceId).GetAwaiter().GetResult();
+            return new EventSequenceCacheCursor(this, sequenceNumber, tail, eventsInCache, _eventSequenceStorageProvider);
+        }
+    }
+
+    /// <inheritdoc/>
+    public IEventCursor GetRange(EventSequenceNumber start, EventSequenceNumber end)
+    {
+        lock (_events)
+        {
+            IEnumerable<AppendedEvent> eventsInCache = Array.Empty<AppendedEvent>();
+
+            if ((start <= CurrentRange.Start && start <= CurrentRange.End) ||
+                (end >= CurrentRange.Start && end <= CurrentRange.End))
+            {
+                eventsInCache = _events.Where(_ => _.Key >= start && _.Key <= end).Select(_ => _.Value).ToArray();
+            }
+
+            return new EventSequenceCacheCursor(this, start, end, eventsInCache, _eventSequenceStorageProvider);
+        }
+    }
+
+    void InternalFeed(IEnumerable<AppendedEvent> events, bool fillingGap)
+    {
         lock (_events)
         {
             events = events.Take(RangeSize);
 
             var firstSequenceNumber = events.First().Metadata.SequenceNumber;
             var lastSequenceNumber = events.Last().Metadata.SequenceNumber;
+            var incomingRangeSize = lastSequenceNumber - firstSequenceNumber;
             var evictToStartOf = EventSequenceNumber.Unavailable;
             var evictFromEndOf = EventSequenceNumber.Unavailable;
+            var isEmpty = _events.Count == 0;
 
             if (lastSequenceNumber > CurrentRange.End)
             {
@@ -92,6 +133,8 @@ public class EventSequenceCache : IEventSequenceCache
                 }
             }
 
+            FeedGapIfMissing(fillingGap, firstSequenceNumber, lastSequenceNumber, incomingRangeSize, isEmpty);
+
             events = events.Where(_ => _.Metadata.SequenceNumber >= firstSequenceNumber && _.Metadata.SequenceNumber <= lastSequenceNumber);
             foreach (var @event in events)
             {
@@ -106,37 +149,33 @@ public class EventSequenceCache : IEventSequenceCache
         }
     }
 
-    /// <inheritdoc/>
-    public IEventCursor GetFrom(EventSequenceNumber sequenceNumber)
+    void FeedGapIfMissing(bool fillingGap, EventSequenceNumber firstSequenceNumber, EventSequenceNumber lastSequenceNumber, EventSequenceNumber incomingRangeSize, bool isEmpty)
     {
-        lock (_events)
+        if (incomingRangeSize < (ulong)RangeSize && !isEmpty && !fillingGap)
         {
-            IEnumerable<AppendedEvent> eventsInCache = Array.Empty<AppendedEvent>();
+            var feedStart = EventSequenceNumber.Unavailable;
+            var feedEnd = EventSequenceNumber.Unavailable;
 
-            if (sequenceNumber <= CurrentRange.Start && sequenceNumber <= CurrentRange.End)
+            if (firstSequenceNumber > (CurrentRange.End + 1))
             {
-                eventsInCache = _events.Where(_ => _.Key >= sequenceNumber).Select(_ => _.Value).ToArray();
+                feedStart = CurrentRange.End + 1;
+                feedEnd = firstSequenceNumber - 1;
             }
 
-            var tail = _eventSequenceStorageProvider.GetTailSequenceNumber(EventSequenceId).GetAwaiter().GetResult();
-            return new EventSequenceCacheCursor(this, sequenceNumber, tail, eventsInCache, _eventSequenceStorageProvider);
-        }
-    }
-
-    /// <inheritdoc/>
-    public IEventCursor GetRange(EventSequenceNumber start, EventSequenceNumber end)
-    {
-        lock (_events)
-        {
-            IEnumerable<AppendedEvent> eventsInCache = Array.Empty<AppendedEvent>();
-
-            if ((start <= CurrentRange.Start && start <= CurrentRange.End) ||
-                (end >= CurrentRange.Start && end <= CurrentRange.End))
+            if (lastSequenceNumber < (CurrentRange.Start - 1) && CurrentRange.Start != 0)
             {
-                eventsInCache = _events.Where(_ => _.Key >= start && _.Key <= end).Select(_ => _.Value).ToArray();
+                feedStart = lastSequenceNumber + 1;
+                feedEnd = CurrentRange.Start - 1;
             }
 
-            return new EventSequenceCacheCursor(this, start, end, eventsInCache, _eventSequenceStorageProvider);
+            if (feedStart != EventSequenceNumber.Unavailable && feedEnd != EventSequenceNumber.Unavailable)
+            {
+                var cursor = _eventSequenceStorageProvider.GetRange(EventSequenceId, feedStart, feedEnd).GetAwaiter().GetResult();
+                while (cursor.MoveNext().GetAwaiter().GetResult())
+                {
+                    InternalFeed(cursor.Current, true);
+                }
+            }
         }
     }
 
@@ -147,7 +186,7 @@ public class EventSequenceCache : IEventSequenceCache
             var cursor = await _eventSequenceStorageProvider.GetRange(eventSequenceId, 0, (ulong)rangeSize - 1);
             while (await cursor.MoveNext())
             {
-                Feed(cursor.Current);
+                InternalFeed(cursor.Current, false);
             }
         }).Wait();
     }

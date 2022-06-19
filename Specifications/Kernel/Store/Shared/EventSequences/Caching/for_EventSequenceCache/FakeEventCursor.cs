@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Events.Store.EventSequences.Caching.for_EventSequenceCache.given;
+namespace Aksio.Cratis.Events.Store.EventSequences.Caching.for_EventSequenceCache;
 
 public class FakeEventCursor : IEventCursor
 {
@@ -33,10 +33,10 @@ public class FakeEventCursor : IEventCursor
             var numberOfEvents = actualEnd - _currentSequenceNumber;
             if (actualEnd > _end)
             {
-                numberOfEvents = 1;
+                numberOfEvents = _end - _currentSequenceNumber + 1;
             }
 
-            Current = Enumerable.Range((int)_start.Value, (int)numberOfEvents.Value).GenerateEvents(_currentSequenceNumber);
+            Current = Enumerable.Range(0, (int)numberOfEvents.Value).GenerateEvents(_currentSequenceNumber);
             _currentSequenceNumber += Current.Count();
             return Task.FromResult(true);
         }
