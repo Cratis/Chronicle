@@ -13,6 +13,8 @@ public class and_sequence_number_intersects_cache_range : given.a_cache_with_a_s
 
     IEventCursor cursor;
 
+    void Establish() => storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult((EventSequenceNumber)200));
+
     void Because() => cursor = cache.GetFrom(50);
 
     [Fact] void should_have_only_the_events_intersected() => cursor.Current.ShouldContainOnly(cache.Content.Where(_ => _.Metadata.SequenceNumber >= 50));
