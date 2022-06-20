@@ -44,8 +44,14 @@ public class EventSequenceCacheCursor : IEventCursor
     }
 
     /// <inheritdoc/>
-    public Task<bool> MoveNext() => throw new NotImplementedException();
+    public Task<bool> MoveNext()
+    {
+        return Task.FromResult(false);
+    }
 
     /// <inheritdoc/>
-    public void Dispose() => throw new NotImplementedException();
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
 }
