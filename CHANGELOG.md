@@ -1,3 +1,10 @@
+# [v6.5.5] - 2022-6-22 [PR: #386](https://github.com/aksio-insurtech/Cratis/pull/386)
+
+### Fixed
+
+- FIxing Aksio Microservice template to build the specs projects. Missing XUnit reference and was using project reference instead of package reference for the specifications extensions.
+
+
 # [v6.5.4] - 2022-6-15 [PR: #379](https://github.com/aksio-insurtech/Cratis/pull/379)
 
 ### Fixed
