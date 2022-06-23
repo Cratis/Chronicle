@@ -62,10 +62,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var projectionDefinition = builder.Build();
 
         var factory = new ProjectionFactory(new PropertyMapperExpressionResolvers());
-        var task = factory.CreateFrom(projectionDefinition);
-        task.Wait();
-
-        _projection = task.Result;
+        _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
         var objectsComparer = new ObjectsComparer();
 
