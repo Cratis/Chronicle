@@ -8,33 +8,44 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Events.Store.EventSequences;
 
 /// <summary>
-/// Represents an implementation of <see cref="IQueueCacheCursor"/> for event log regular cache scenario.
+/// Represents an implementation of <see cref="IQueueCacheCursor"/> for event log filtered for event types.
 /// </summary>
-public class EventSequenceQueueCacheCursor : IQueueCacheCursor
+public class EventSequenceQueueCacheCursorForEventTypes : IQueueCacheCursor
 {
     readonly IEventCursor _actualCursor;
     readonly IStreamIdentity _streamIdentity;
+    readonly IEnumerable<EventType> _eventTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
     /// </summary>
     /// <param name="actualCursor">The actual <see cref="IEventCursor"/>.</param>
     /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
-    public EventSequenceQueueCacheCursor(
+    /// <param name="eventTypes">Collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
+    public EventSequenceQueueCacheCursorForEventTypes(
         IEventCursor actualCursor,
-        IStreamIdentity streamIdentity)
+        IStreamIdentity streamIdentity,
+        IEnumerable<EventType> eventTypes)
     {
         _actualCursor = actualCursor;
         _streamIdentity = streamIdentity;
+        _eventTypes = eventTypes;
     }
 
     /// <inheritdoc/>
     public IBatchContainer GetCurrent(out Exception exception)
     {
         exception = null!;
+
         var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
+        var events = _actualCursor.Current.Where(_ => _eventTypes.Any(et => et.Id == _.Metadata.Type.Id)).ToArray();
+        if (events.Length == 0)
+        {
+            return null!;
+        }
+
         return new EventSequenceBatchContainer(
-            _actualCursor.Current,
+            events,
             _streamIdentity.Guid,
             microserviceAndTenant.MicroserviceId,
             microserviceAndTenant.TenantId,
