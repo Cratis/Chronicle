@@ -74,6 +74,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     public override async Task OnActivateAsync()
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
+
         var key = ObserverKey.Parse(keyAsString);
         _eventSequenceId = key.EventSequenceId;
         _microserviceId = key.MicroserviceId;
@@ -82,6 +83,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _sourceTenantId = key.SourceTenantId ?? _tenantId;
 
         _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
+
+        _logger.Activating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         var microserviceAndTenant = new MicroserviceAndTenant(_sourceMicroserviceId, _sourceTenantId);
@@ -114,10 +117,16 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
+            if (@event.Metadata.SequenceNumber < State.NextEventSequenceNumber)
+            {
+                return;
+            }
+
             var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
             await stream.OnNextAsync(@event);
 
             State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+            await WriteStateAsync();
 
             if (setLastHandled)
             {
@@ -125,6 +134,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             }
 
             var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
+
             if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
             {
                 State.RunningState = ObserverRunningState.Active;
@@ -147,6 +157,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {
+        _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
+
         _streamSubscription = await _stream!.SubscribeAsync(
             (@event, _) => handler(@event),
             State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));

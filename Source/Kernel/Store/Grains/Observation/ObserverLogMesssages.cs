@@ -36,4 +36,10 @@ public static partial class ObserverLogMesssages
 
     [LoggerMessage(8, LogLevel.Debug, "Clearing out recovering partitions for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void ClearingRecoveringPartitions(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+
+    [LoggerMessage(9, LogLevel.Debug, "Activating observer {ObserverId} for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}' - observing source microservice '{SourceMicroserviceId}' and tenant '{SourceTenantId}'")]
+    internal static partial void Activating(this ILogger logger, Guid observerId, Guid eventSequenceId, Guid microserviceId, Guid tenantId, Guid sourceMicroserviceId, Guid sourceTenantId);
+
+    [LoggerMessage(10, LogLevel.Debug, "Subscribing to stream for observer {ObserverId} for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}' - stream {StreamId} - namespace {StreamNamespace}")]
+    internal static partial void SubscribingToStream(this ILogger logger, Guid observerId, Guid eventSequenceId, Guid microserviceId, Guid tenantId, Guid streamId, string streamNamespace);
 }
