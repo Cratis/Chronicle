@@ -71,7 +71,11 @@ public class EventSequenceCache : IEventSequenceCache
             }
 
             var tail = _eventSequenceStorageProvider.GetTailSequenceNumber(EventSequenceId).GetAwaiter().GetResult();
-            return new EventSequenceCacheCursor(this, sequenceNumber, tail, eventsInCache, _eventSequenceStorageProvider);
+            if (tail == EventSequenceNumber.Unavailable)
+            {
+                tail = EventSequenceNumber.First;
+            }
+            return new EventSequenceCacheCursor(this, tail, eventsInCache, _eventSequenceStorageProvider);
         }
     }
 
@@ -88,7 +92,7 @@ public class EventSequenceCache : IEventSequenceCache
                 eventsInCache = _events.Where(_ => _.Key >= start && _.Key <= end).Select(_ => _.Value).ToArray();
             }
 
-            return new EventSequenceCacheCursor(this, start, end, eventsInCache, _eventSequenceStorageProvider);
+            return new EventSequenceCacheCursor(this, end, eventsInCache, _eventSequenceStorageProvider);
         }
     }
 
@@ -186,7 +190,10 @@ public class EventSequenceCache : IEventSequenceCache
             var cursor = await _eventSequenceStorageProvider.GetRange(eventSequenceId, 0, (ulong)rangeSize - 1);
             while (await cursor.MoveNext())
             {
-                InternalFeed(cursor.Current, false);
+                if (cursor.Current.Any())
+                {
+                    InternalFeed(cursor.Current, false);
+                }
             }
         }).Wait();
     }
