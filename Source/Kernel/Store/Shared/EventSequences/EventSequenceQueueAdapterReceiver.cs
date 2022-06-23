@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Events.Store.EventSequences;
@@ -54,21 +53,19 @@ public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
     /// Add an appended event to the receivers queue.
     /// </summary>
     /// <param name="streamGuid">The <see cref="Guid"/> identifying the stream.</param>
+    /// <param name="microserviceAndTenant">The <see cref="MicroserviceAndTenant"/> the stream belongs to.</param>
     /// <param name="events"><see cref="AppendedEvent">Events</see> to add.</param>
     /// <param name="requestContext">The request context.</param>
-    public void AddAppendedEvent(Guid streamGuid, IEnumerable<AppendedEvent> events, IDictionary<string, object> requestContext)
+    public void AddAppendedEvent(Guid streamGuid, MicroserviceAndTenant microserviceAndTenant, IEnumerable<AppendedEvent> events, IDictionary<string, object> requestContext)
     {
         if (!events.Any())
         {
             return;
         }
 
-        var microserviceIdAsString = requestContext[RequestContextKeys.MicroserviceId]?.ToString() ?? MicroserviceId.Unspecified.ToString();
-        var microserviceId = (MicroserviceId)microserviceIdAsString;
-
         lock (_eventBatches)
         {
-            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceId, events.First().Context.TenantId, requestContext));
+            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, requestContext));
         }
     }
 }
