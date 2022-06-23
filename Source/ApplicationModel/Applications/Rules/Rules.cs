@@ -107,13 +107,12 @@ public class Rules : IRules
             modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!);
 
         var projection = _clusterClient.GetGrain<IImmediateProjection>(rule.Identifier.Value, key);
-        var task = projection.GetModelInstance(projectionDefinition);
-        task.Wait();
+        var result = projection.GetModelInstance(projectionDefinition).GetAwaiter().GetResult();
 
         foreach (var property in rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
         {
             var name = property.Name.ToCamelCase();
-            var node = task.Result[name];
+            var node = result[name];
             if (node is not null)
             {
                 property.SetValue(rule, node.Deserialize(property.PropertyType, _serializerOptions));
