@@ -18,6 +18,12 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     Task<EventSequenceNumber> GetNextSequenceNumber();
 
     /// <summary>
+    /// Get the sequence number of the last (tail) event in the sequence.
+    /// </summary>
+    /// <returns>Tail sequence number.</returns>
+    Task<EventSequenceNumber> GetTailSequenceNumber();
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
