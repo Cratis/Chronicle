@@ -64,16 +64,16 @@ public class EventSequenceQueueCache : IQueueCache
             {
                 if (tokenWithFilter.EventTypes.Any())
                 {
-                    return new EventSequenceQueueCacheCursorForEventTypes(cache.GetFrom((ulong)token.SequenceNumber), streamIdentity, tokenWithFilter.EventTypes);
+                    return new EventSequenceQueueCacheCursorForEventTypes(_executionContextManager, cache, (ulong)token.SequenceNumber, streamIdentity, tokenWithFilter.EventTypes);
                 }
 
-                return new EventSequenceQueueCacheCursor(cache.GetFrom((ulong)token.SequenceNumber), streamIdentity);
+                return new EventSequenceQueueCacheCursor(_executionContextManager, cache, (ulong)token.SequenceNumber, streamIdentity);
             }
 
             return new EventSequenceQueueCacheCursorForEventTypesAndPartition(_executionContextManager, _eventLogStorageProvider(), streamIdentity, token, tokenWithFilter.EventTypes, tokenWithFilter.Partition);
         }
 
-        return new EventSequenceQueueCacheCursor(cache.GetFrom((ulong)token.SequenceNumber), streamIdentity);
+        return new EventSequenceQueueCacheCursor(_executionContextManager, cache, (ulong)token.SequenceNumber, streamIdentity);
     }
 
     /// <inheritdoc/>

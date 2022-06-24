@@ -62,9 +62,9 @@ public class EventSequenceCacheCursor : IEventCursor
             return true;
         }
 
+        var moveNext = false;
         if (_iterations > 0)
         {
-            var moveNext = false;
             var cursor = await _eventSequenceStorageProvider.GetRange(_eventSequenceId, _nextEventSequenceNumber, _lastEventSequenceNumber);
             while (await cursor.MoveNext())
             {
@@ -77,11 +77,14 @@ public class EventSequenceCacheCursor : IEventCursor
             {
                 _lastEventSequenceNumber = _end;
             }
-
-            return moveNext;
         }
 
-        return false;
+        if (!moveNext)
+        {
+            Current = Array.Empty<AppendedEvent>();
+        }
+
+        return moveNext;
     }
 
     /// <inheritdoc/>

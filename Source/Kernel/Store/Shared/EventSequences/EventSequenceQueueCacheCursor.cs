@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store.EventSequences.Caching;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
@@ -12,37 +13,71 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// </summary>
 public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
-    readonly IEventCursor _actualCursor;
+    readonly IExecutionContextManager _executionContextManager;
+    readonly IEventSequenceCache _cache;
     readonly IStreamIdentity _streamIdentity;
+    IEventCursor _actualCursor;
+    bool _forceMoveNext = true;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
     /// </summary>
-    /// <param name="actualCursor">The actual <see cref="IEventCursor"/>.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
+    /// <param name="cache"><see cref="IEventSequenceCache"/>.</param>
+    /// <param name="cursorStart">The start of the cursor.</param>
     /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
     public EventSequenceQueueCacheCursor(
-        IEventCursor actualCursor,
+        IExecutionContextManager executionContextManager,
+        IEventSequenceCache cache,
+        EventSequenceNumber cursorStart,
         IStreamIdentity streamIdentity)
     {
-        _actualCursor = actualCursor;
+        _executionContextManager = executionContextManager;
+        _cache = cache;
         _streamIdentity = streamIdentity;
+        _actualCursor = _cache.GetFrom(cursorStart);
     }
 
     /// <inheritdoc/>
     public IBatchContainer GetCurrent(out Exception exception)
     {
         exception = null!;
+        if (_actualCursor is null)
+        {
+            return null!;
+        }
+
         var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
+
+        var events = Filter(_actualCursor.Current);
+        if (!events.Any())
+        {
+            return null!;
+        }
+
         return new EventSequenceBatchContainer(
-            _actualCursor.Current,
+            events,
             _streamIdentity.Guid,
             microserviceAndTenant.MicroserviceId,
             microserviceAndTenant.TenantId,
-            new Dictionary<string, object> { { RequestContextKeys.TenantId, _streamIdentity.Namespace } });
+            new Dictionary<string, object>
+            {
+                { RequestContextKeys.MicroserviceId, microserviceAndTenant.MicroserviceId },
+                { RequestContextKeys.TenantId, microserviceAndTenant.TenantId }
+            });
     }
 
     /// <inheritdoc/>
-    public bool MoveNext() => _actualCursor.MoveNext().GetAwaiter().GetResult();
+    public bool MoveNext()
+    {
+        var result = _actualCursor.MoveNext().GetAwaiter().GetResult();
+        if (_forceMoveNext)
+        {
+            _forceMoveNext = false;
+            result = true;
+        }
+        return result;
+    }
 
     /// <inheritdoc/>
     public void RecordDeliveryFailure()
@@ -52,10 +87,25 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// <inheritdoc/>
     public void Refresh(StreamSequenceToken token)
     {
+        _forceMoveNext = true;
+        var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
+        _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
+
+        _actualCursor.Dispose();
+        _actualCursor = _cache.GetFrom((ulong)token.SequenceNumber);
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
+        _actualCursor.Dispose();
+        _actualCursor = null!;
     }
+
+    /// <summary>
+    /// Filter incoming events.
+    /// </summary>
+    /// <param name="events">Events to filter.</param>
+    /// <returns>Filtered events.</returns>
+    protected virtual IEnumerable<AppendedEvent> Filter(IEnumerable<AppendedEvent> events) => events;
 }
