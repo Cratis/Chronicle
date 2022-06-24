@@ -96,6 +96,14 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     }
 
     /// <inheritdoc/>
+    public override Task OnDeactivateAsync()
+    {
+        _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public async Task SetMetadata(ObserverName name, ObserverType type)
     {
         State.Name = name;
@@ -160,7 +168,11 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
 
         _streamSubscription = await _stream!.SubscribeAsync(
-            (@event, _) => handler(@event),
+            (@event, _) =>
+            {
+                _logger.EventReceived(@event.Metadata.Type.Id, _observerId, _eventSequenceId, _microserviceId, _tenantId);
+                return handler(@event);
+            },
             State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));
 
         // Note: Add a warm up event. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
