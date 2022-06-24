@@ -1,7 +1,8 @@
 {
     "fileOptions": {
       "excludeSearchPatterns": [
-        "./Source/ApplicationModel/Tooling/Templates/templates/**/*.csproj"
+        "./Source/ApplicationModel/Tooling/Templates/templates/**/*.csproj",
+        "./Source/ApplicationModel/Tooling/Templates/templates/**/*.Specs.csproj",
       ]
     }
   }
