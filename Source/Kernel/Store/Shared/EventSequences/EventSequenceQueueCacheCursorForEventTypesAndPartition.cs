@@ -65,7 +65,11 @@ public class EventSequenceQueueCacheCursorForEventTypesAndPartition : IQueueCach
                 _streamIdentity.Guid,
                 microserviceAndTenant.MicroserviceId,
                 microserviceAndTenant.TenantId,
-                new Dictionary<string, object> { { RequestContextKeys.TenantId, _streamIdentity.Namespace } });
+                new Dictionary<string, object>
+                {
+                    { RequestContextKeys.MicroserviceId, microserviceAndTenant.MicroserviceId },
+                    { RequestContextKeys.TenantId, microserviceAndTenant.TenantId }
+                });
         }
         catch (Exception ex)
         {
