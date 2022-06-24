@@ -32,22 +32,13 @@ public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
     }
 
     /// <inheritdoc/>
-    public Task Initialize(TimeSpan timeout)
-    {
-        return Task.CompletedTask;
-    }
+    public Task Initialize(TimeSpan timeout) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task MessagesDeliveredAsync(IList<IBatchContainer> messages)
-    {
-        return Task.CompletedTask;
-    }
+    public Task MessagesDeliveredAsync(IList<IBatchContainer> messages) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task Shutdown(TimeSpan timeout)
-    {
-        return Task.CompletedTask;
-    }
+    public Task Shutdown(TimeSpan timeout) => Task.CompletedTask;
 
     /// <summary>
     /// Add an appended event to the receivers queue.
