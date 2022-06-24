@@ -17,7 +17,6 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     readonly IEventSequenceCache _cache;
     readonly IStreamIdentity _streamIdentity;
     IEventCursor _actualCursor;
-    bool _forceMoveNext = true;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
@@ -68,16 +67,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     }
 
     /// <inheritdoc/>
-    public bool MoveNext()
-    {
-        var result = _actualCursor.MoveNext().GetAwaiter().GetResult();
-        if (_forceMoveNext)
-        {
-            _forceMoveNext = false;
-            result = true;
-        }
-        return result;
-    }
+    public bool MoveNext() => _actualCursor.MoveNext().GetAwaiter().GetResult();
 
     /// <inheritdoc/>
     public void RecordDeliveryFailure()
@@ -87,7 +77,6 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// <inheritdoc/>
     public void Refresh(StreamSequenceToken token)
     {
-        _forceMoveNext = true;
         var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
