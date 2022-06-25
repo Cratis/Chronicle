@@ -13,7 +13,11 @@ public class and_cache_starts_after_range : given.no_events_in_sequence
         storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult((EventSequenceNumber)200));
     }
 
-    void Because() => cursor = cache.GetRange(0, 25);
+    void Because()
+    {
+        cursor = cache.GetRange(0, 25);
+        cursor.MoveNext();
+    }
 
     [Fact] void should_not_receive_any_events() => cursor.Current.ShouldBeEmpty();
 }

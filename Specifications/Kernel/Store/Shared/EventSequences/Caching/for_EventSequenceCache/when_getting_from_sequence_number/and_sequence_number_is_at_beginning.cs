@@ -15,7 +15,11 @@ public class and_sequence_number_is_at_beginning : given.a_cache_with_a_set_of_e
 
     void Establish() => storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult((EventSequenceNumber)200));
 
-    void Because() => cursor = cache.GetFrom(EventSequenceNumber.First);
+    void Because()
+    {
+        cursor = cache.GetFrom(EventSequenceNumber.First);
+        cursor.MoveNext();
+    }
 
     [Fact] void should_receive_all_events() => cursor.Current.ShouldContainOnly(cache.Content);
 }

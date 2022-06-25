@@ -13,7 +13,11 @@ public class and_cache_starts_after_sequence_number : given.no_events_in_sequenc
         storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult((EventSequenceNumber)200));
     }
 
-    void Because() => cursor = cache.GetFrom(0);
+    void Because()
+    {
+        cursor = cache.GetFrom(0);
+        cursor.MoveNext();
+    }
 
     [Fact] void should_receive_all_events() => cursor.Current.ShouldEqual(cache.Content);
 }

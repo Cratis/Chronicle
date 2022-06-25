@@ -13,7 +13,11 @@ public class and_range_intersects_beginning_of_cache : given.no_events_in_sequen
         storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult((EventSequenceNumber)200));
     }
 
-    void Because() => cursor = cache.GetRange(0, 75);
+    void Because()
+    {
+        cursor = cache.GetRange(0, 75);
+        cursor.MoveNext();
+    }
 
     [Fact] void should_receive_the_beginning_of_the_cache() => cursor.Current.ShouldContainOnly(cache.Content.Take(26));
 }
