@@ -15,7 +15,11 @@ public class and_sequence_number_is_after_cache_ends : given.a_cache_with_a_set_
 
     void Establish() => storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult((EventSequenceNumber)200));
 
-    void Because() => cursor = cache.GetFrom(200);
+    void Because()
+    {
+        cursor = cache.GetFrom(200);
+        cursor.MoveNext();
+    }
 
     [Fact] void should_have_an_empty_current() => cursor.Current.ShouldBeEmpty();
 }
