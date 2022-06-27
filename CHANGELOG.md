@@ -1,3 +1,13 @@
+# [v6.5.6] - 2022-6-27 [PR: #383](https://github.com/aksio-insurtech/Cratis/pull/383)
+
+# Fixes
+
+- Resolved deadlock situations with the MongoDB client library and its async handling. (#118)
+- Formalized the concept of the warm up event we need for the internal Orleans pipeline to be hooked up and ready. (#269)
+- Introduces an event sequence cache that keeps the latest 500 events (hardcoded for now) in memory. The cache works as a sliding window based on the sequence number.
+- Fixes event sequence cache cursors so that they don't skip events.
+- Fixes observers to avoid duplicates.
+
 # [v6.5.5] - 2022-6-22 [PR: #386](https://github.com/aksio-insurtech/Cratis/pull/386)
 
 ### Fixed
