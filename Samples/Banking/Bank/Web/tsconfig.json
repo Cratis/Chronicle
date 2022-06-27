@@ -52,16 +52,16 @@
     ],
     "references": [
         {
-            "path": "../../../Source/ApplicationModel/Frontend/tsconfig.json"
+            "path": "../../../../Source/ApplicationModel/Frontend/tsconfig.json"
         },
         {
-            "path": "../../../Source/Node/React/tsconfig.json"
+            "path": "../../../../Source/Node/React/tsconfig.json"
         },
         {
-            "path": "../../../Source/Node/Fundamentals/tsconfig.json"
+            "path": "../../../../Source/Node/Fundamentals/tsconfig.json"
         },
         {
-            "path": "../../../Source/Node/TypeScript/tsconfig.json"
+            "path": "../../../../Source/Node/TypeScript/tsconfig.json"
         }
     ]
 }
