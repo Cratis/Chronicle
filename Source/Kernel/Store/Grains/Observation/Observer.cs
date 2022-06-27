@@ -177,9 +177,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
         // Note: Add a warm up event. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
-        const long sequence = -1;
         var @event = new AppendedEvent(
-            new(new EventSequenceNumber(unchecked((ulong)sequence)), new EventType(EventTypeId.Unknown, 1)),
+            new(EventSequenceNumber.WarmUp, new EventType(EventTypeId.Unknown, 1)),
             new(EventSourceId.Unspecified, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, _tenantId, CorrelationId.New(), CausationId.System, CausedBy.System, EventObservationState.Initial),
             new JsonObject());
         await _stream!.OnNextAsync(@event, new EventSequenceNumberToken());
