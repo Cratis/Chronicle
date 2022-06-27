@@ -107,8 +107,8 @@ public class EventSequenceQueueCacheCursorForEventTypesAndPartition : IQueueCach
 
     void FindEventsFrom(StreamSequenceToken token)
     {
-        // When the sequence number is -1, it is a warm up event causing it. We don't want to go to the event store to get events.
-        if (token.SequenceNumber == -1)
+        // When the sequence number represents a warm up event. We don't want to go to the event store to get events.
+        if (token.IsWarmUp())
         {
             return;
         }

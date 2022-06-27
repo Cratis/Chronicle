@@ -54,7 +54,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     public async Task QueueMessageBatchAsync<T>(Guid streamGuid, string streamNamespace, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
         var queueId = _mapper.GetQueueForStream(streamGuid, streamNamespace);
-        if (token.SequenceNumber != -1)
+        if (!token.IsWarmUp())
         {
             var appendedEvents = new List<AppendedEvent>();
             foreach (var @event in events)

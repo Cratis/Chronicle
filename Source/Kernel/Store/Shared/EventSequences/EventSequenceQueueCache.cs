@@ -38,7 +38,7 @@ public class EventSequenceQueueCache : IQueueCache
     {
         foreach (var message in messages)
         {
-            if (message is EventSequenceBatchContainer container && container.SequenceToken.SequenceNumber != -1)
+            if (message is EventSequenceBatchContainer container && !container.SequenceToken.IsWarmUp())
             {
                 var events = container.GetEvents<AppendedEvent>();
                 _caches.GetFor(new(container.StreamGuid, container.MicroserviceId, container.TenantId)).Feed(events.Select(_ => _.Item1).ToArray());
@@ -52,7 +52,7 @@ public class EventSequenceQueueCache : IQueueCache
         var microserviceAndTenant = (MicroserviceAndTenant)streamIdentity.Namespace;
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
-        if (token.SequenceNumber == -1)
+        if (token.IsWarmUp())
         {
             return new EmptyEventSequenceQueueCacheCursor();
         }
