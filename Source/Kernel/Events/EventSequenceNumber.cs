@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Events;
 public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
 {
     /// <summary>
+    /// Gets the sequence number representing the warm up event.
+    /// </summary>
+    public static readonly EventSequenceNumber WarmUp = ulong.MaxValue;
+
+    /// <summary>
     /// Gets the first sequence number.
     /// </summary>
     public static readonly EventSequenceNumber First = 0u;

@@ -74,6 +74,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     public override async Task OnActivateAsync()
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
+
         var key = ObserverKey.Parse(keyAsString);
         _eventSequenceId = key.EventSequenceId;
         _microserviceId = key.MicroserviceId;
@@ -83,6 +84,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
         _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
+        _logger.Activating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
+
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         var microserviceAndTenant = new MicroserviceAndTenant(_sourceMicroserviceId, _sourceTenantId);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
@@ -90,6 +93,14 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _recoverReminder = await GetReminder(RecoverReminder);
         await HandleReminderRegistration();
         await base.OnActivateAsync();
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync()
+    {
+        _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -114,10 +125,16 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
+            if (@event.Metadata.SequenceNumber < State.NextEventSequenceNumber)
+            {
+                return;
+            }
+
             var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
             await stream.OnNextAsync(@event);
 
             State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+            await WriteStateAsync();
 
             if (setLastHandled)
             {
@@ -125,6 +142,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             }
 
             var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
+
             if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
             {
                 State.RunningState = ObserverRunningState.Active;
@@ -147,15 +165,20 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {
+        _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
+
         _streamSubscription = await _stream!.SubscribeAsync(
-            (@event, _) => handler(@event),
+            (@event, _) =>
+            {
+                _logger.EventReceived(@event.Metadata.Type.Id, _observerId, _eventSequenceId, _microserviceId, _tenantId);
+                return handler(@event);
+            },
             State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));
 
         // Note: Add a warm up event. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
-        const long sequence = -1;
         var @event = new AppendedEvent(
-            new(new EventSequenceNumber(unchecked((ulong)sequence)), new EventType(EventTypeId.Unknown, 1)),
+            new(EventSequenceNumber.WarmUp, new EventType(EventTypeId.Unknown, 1)),
             new(EventSourceId.Unspecified, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, _tenantId, CorrelationId.New(), CausationId.System, CausedBy.System, EventObservationState.Initial),
             new JsonObject());
         await _stream!.OnNextAsync(@event, new EventSequenceNumberToken());

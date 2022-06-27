@@ -25,6 +25,16 @@ public class EventSequenceBatchContainer : IBatchContainer
     public StreamSequenceToken SequenceToken { get; }
 
     /// <summary>
+    /// Gets the microservice identifier.
+    /// </summary>
+    public MicroserviceId MicroserviceId { get; }
+
+    /// <summary>
+    /// Gets the tenant identifier.
+    /// </summary>
+    public TenantId TenantId { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceBatchContainer"/> class.
     /// </summary>
     /// <param name="events">The <see cref="AppendedEvent"/>.</param>
@@ -39,6 +49,8 @@ public class EventSequenceBatchContainer : IBatchContainer
         TenantId tenantId,
         IDictionary<string, object> requestContext)
     {
+        MicroserviceId = microserviceId;
+        TenantId = tenantId;
         _events = events;
         StreamGuid = streamGuid;
         _requestContext = requestContext;
