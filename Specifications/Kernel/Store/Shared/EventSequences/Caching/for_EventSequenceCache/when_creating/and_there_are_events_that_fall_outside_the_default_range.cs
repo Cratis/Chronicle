@@ -8,6 +8,7 @@ public class and_there_are_events_that_fall_outside_the_default_range : given.a_
     protected override EventSequenceCacheRange range => new(0, 120);
     protected override int cursor_size => 10;
     protected override int range_size => 100;
+    protected override EventSequenceNumber populate_from => 20;
 
     EventSequenceCache cache;
 

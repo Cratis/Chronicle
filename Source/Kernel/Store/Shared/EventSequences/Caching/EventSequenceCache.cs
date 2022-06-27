@@ -187,7 +187,14 @@ public class EventSequenceCache : IEventSequenceCache
     {
         Task.Run(async () =>
         {
-            var cursor = await _eventSequenceStorageProvider.GetRange(eventSequenceId, 0, (ulong)rangeSize - 1);
+            var tail = await _eventSequenceStorageProvider.GetTailSequenceNumber(eventSequenceId);
+            var start = ((long)tail.Value) - rangeSize;
+            if (start < 0)
+            {
+                start = 0;
+            }
+
+            var cursor = await _eventSequenceStorageProvider.GetRange(eventSequenceId, (ulong)start, (ulong)rangeSize - 1);
             while (await cursor.MoveNext())
             {
                 if (cursor.Current.Any())

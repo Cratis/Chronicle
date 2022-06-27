@@ -9,12 +9,16 @@ public abstract class a_set_of_events : all_dependencies
     protected abstract int cursor_size { get; }
     protected abstract int range_size { get; }
     protected EventSequenceId event_sequence_id;
+    protected virtual EventSequenceNumber populate_from => EventSequenceNumber.First;
 
     void Establish()
     {
         event_sequence_id = EventSequenceId.Log;
         storage_provider
-            .Setup(_ => _.GetRange(event_sequence_id, EventSequenceNumber.First, (ulong)range_size - 1, null, null))
+            .Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null))
+            .Returns(Task.FromResult(range.End));
+        storage_provider
+            .Setup(_ => _.GetRange(event_sequence_id, populate_from, (ulong)range_size - 1, null, null))
             .Returns((EventSequenceId _, EventSequenceNumber start, EventSequenceNumber ____, EventSourceId? __, IEnumerable<EventType>? ___) =>
                 Task.FromResult<IEventCursor>(new FakeEventCursor(start, range.End, cursor_size)));
     }
