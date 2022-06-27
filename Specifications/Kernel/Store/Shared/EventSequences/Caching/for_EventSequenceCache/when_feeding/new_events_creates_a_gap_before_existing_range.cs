@@ -10,6 +10,7 @@ public class new_events_creates_a_gap_before_existing_range : given.a_cache_with
     protected override int cursor_size => 10;
 
     protected override int range_size => 100;
+    protected override EventSequenceNumber populate_from => 100;
     static EventSequenceCacheRange expected_range = new(25, 124);
 
     void Establish()
