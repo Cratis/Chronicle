@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="xunit" Version="$(xunit)" />
+        <PackageReference Include="moq" Version="$(Moq)" />
         <PackageReference Include="Aksio.Specifications" Version="$(AksioSpecifications)" />
     </ItemGroup>
 
