@@ -40,7 +40,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
-        <PackageReference Include="moq" Version="4.13.*" />
+        <PackageReference Include="moq" Version="$(Moq)" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
     </ItemGroup>
 </Project>
