@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Specifications.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Specifications</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Extensions/Specifications/Specifications.csproj"/>
+    </ItemGroup>
+</Project>
