@@ -83,6 +83,7 @@
         "tinycolor",
         "typeparam",
         "upcaster",
-        "upserted"
+        "upserted",
+        "Xunit"
     ]
 }
