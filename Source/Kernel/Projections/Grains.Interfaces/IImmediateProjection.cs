@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Orleans;
 
@@ -21,6 +20,6 @@ public interface IImmediateProjection : IGrainWithGuidCompoundKey
     /// Get the model instance.
     /// </summary>
     /// <param name="projectionDefinition">The <see cref="ProjectionDefinition"/> to use.</param>
-    /// <returns>A projected model in the form of a <see cref="JsonObject"/>.</returns>
-    Task<JsonObject> GetModelInstance(ProjectionDefinition projectionDefinition);
+    /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
+    Task<ImmediateProjectionResult> GetModelInstance(ProjectionDefinition projectionDefinition);
 }
