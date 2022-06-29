@@ -63,16 +63,16 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         var keyValue = Adapter.KeyResolver(instance)!;
         var eventSourceId = keyValue;
         eventSourceId ??= new(keyValue.ToString()!);
-        var initial = await Projection.GetById(eventSourceId!);
+        var initialProjectionResult = await Projection.GetById(eventSourceId!);
         var mappedInstance = Mapper.Map<TModel>(instance)!;
-        var changeset = new Changeset<TModel, TModel>(_objectsComparer, mappedInstance, initial);
+        var changeset = new Changeset<TModel, TModel>(_objectsComparer, mappedInstance, initialProjectionResult.Model);
 
-        if (!_objectsComparer.Equals(initial, mappedInstance, out var differences))
+        if (!_objectsComparer.Equals(initialProjectionResult.Model, mappedInstance, out var differences))
         {
             changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences));
         }
 
-        var context = new ImportContext<TModel, TExternalModel>(changeset, new EventsToAppend());
+        var context = new ImportContext<TModel, TExternalModel>(initialProjectionResult, changeset, new EventsToAppend());
         _importContexts.OnNext(context);
 
         foreach (var @event in context.Events)
