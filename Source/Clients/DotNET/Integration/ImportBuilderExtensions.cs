@@ -62,6 +62,25 @@ public static class ImportBuilderExtensions
     }
 
     /// <summary>
+    /// Filter down to when one of the properties defined changes from a value to a null value.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <param name="properties">Properties as expressions to look for changes on.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WithPropertiesBecomingNull<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
+    {
+        var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
+
+        return builder.Where(_ =>
+        {
+            var changes = _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>);
+            return changes.Any(_ => _!.Differences.Any(_ => _.Original is not null && _.Changed is null && propertyPaths.Any(p => _.PropertyPath.Path.StartsWith(p.Path))));
+        });
+    }
+
+    /// <summary>
     /// Append an event by automatically mapping property names matching from the model onto the event.
     /// </summary>
     /// <param name="context">Observable of the <see cref="ImportContext{TModel, TExternalModel}"/>.</param>

@@ -5,12 +5,12 @@ using Aksio.Cratis.Changes;
 
 namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given;
 
-public class a_change_on_one_property : no_changes
+public class a_change_on_one_property_that_becomes_null : no_changes
 {
     void Establish()
     {
         original_model = new Model(42, "Forty Two");
-        modified_model = new Model(42, "Forty Three");
+        modified_model = new Model(42, null);
 
         changeset.Add(new PropertiesChanged<Model>(modified_model, new[]
         {
