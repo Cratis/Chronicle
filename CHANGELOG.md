@@ -1,3 +1,92 @@
+# [v6.6.0] - 2022-6-30 [PR: #392](https://github.com/aksio-insurtech/Cratis/pull/392)
+
+## Summary
+
+> Warning: This version is not marked as a **major release**, but a minor. However there is a breaking API
+> change which normally would lead us to do a **major release**. Since the API change was for non-production code, but for the automated tests/specs, we decided for this release to keep it a **minor**. The change in mind is regarding the use of `context.Projection.GetById(...)` which now returns an `AdapterProjectionResult<T>` instead. Within this result object one will find a `Model` property that is the same as what the method previously returned. Also for test/specs that work the `ProjectionSpecificationFor<T>` is affected by this were it will return a `ProjectionResult<T>` and similiarily a `Model` property on it. Sorry for violating SemVer for this.
+
+
+It is now possible to map properties on a model to properties from the event context for projections:
+
+```csharp
+public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
+    builder
+        .From<DebitAccountOpened>(_ => _
+            .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred));
+```
+
+With the new test/specification assertions, one can now assert for specific event matching a predicate given. It also supports specifying number of times the event should appear with the match in the collection of events. There are specific `.Should...()` extension methods that works with the different contexts (`AdapterSpecificationContext`, `ProjectionSpecificationContext`). The specification of `Times` is reusing the construct from Moq for this. This means now that the `Aksio.Cratis.Specifications` package has Moq as a dependency. For the specification contexts mentioned, the methods are called `.ShouldAppend...()` or `.ShouldNotAppend...()`. While if you're working directly on the enumerable of appended events, its called `.ShouldContain...()` and `.ShouldNotContain...()`.
+
+Example use:
+
+```csharp
+public class and_there_are_no_matching_event : given.no_events
+{
+    Exception result;
+
+    void Establish()
+    {
+        events.Add(new AppendedEventForSpecifications(null!, null!, null!, new MyEvent(43, "something")));
+        events.Add(new AppendedEventForSpecifications(null!, null!, null!, new MyOtherEvent(43, "something")));
+    }
+
+    void Because() => result = Catch.Exception(() => events.ShouldContainEvent<MyEvent>((ev, _) => ev.SomeInteger == 42, Exactly(2)));
+
+    [Fact] void should_assert_that_the_event_should_contain() => result.ShouldBeOfExactType<TrueException>();
+}
+```
+
+Integration adapters can now leverage a new method called `.WithPropertiesBecomingNull()`. This enables one to create a filter for specifically appending events only under the condition of specific properties becoming null.
+
+```csharp
+public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
+{
+    builder
+        .WithPropertiesBecomingNull(_ => ...)
+        .AppendEvent(_ => new SomeEvent());
+}
+```
+
+Its also now possible to specify conditional filters for when a model already exists (has events projected to form state) or not.
+
+```csharp
+public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
+{
+    builder
+        .WhenModelExists()  // or .WhenModelDoesNotExist()
+        .WithProperties(_ => ...)
+        .AppendEvent(_ => new SomeEvent());
+}
+```
+
+Similarily one can also do this for specific properties being set or not set on the projected model:
+
+
+```csharp
+public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
+{
+    builder
+        .WhenModelPropertiesAreSet(_ => _.SomeProperty, _ => _.SomeOtherProperty)  // or .WhenModelPropertiesAreNotSet(...)
+        .WithProperties(_ => ...)
+        .AppendEvent(_ => new SomeEvent());
+}
+```
+
+
+
+
+
+
+### Added
+
+- Support for mapping values from  event context in projections. (#376)
+- Adding more `.Should..()`extensions for asserting against event log / event outbox and enumerable of appended events. (#324)
+- Support for filtering for integration adapters for properties becoming null. (#373)
+- Adding conditionals for integration adapters for whether or not there is an instance of a model (events exists and gets projected). (#381)
+- Adding conditionals for integration adapters for whether or not properties are set or not during model projection. (#381)
+- Adding an Autofac `IRegistrationSource` that can late bind `IMongoCollection<>` as a delegate within the correct execution context. This is in addition to the default convention built generically to automatically hook up based on a predefined convention of constructor parameter taking `IMongoCollection<>`. The default convention is fine for the simplest scenarios, while for wrapped scenarios such as `ProviderFor<>` it doesn't work. (#380)
+
+
 # [v6.5.6] - 2022-6-27 [PR: #383](https://github.com/aksio-insurtech/Cratis/pull/383)
 
 # Fixes
