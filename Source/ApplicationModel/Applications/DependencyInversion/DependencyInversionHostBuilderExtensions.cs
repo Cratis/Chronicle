@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Applications.MongoDB;
 using Aksio.Cratis.Types;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
@@ -24,7 +25,11 @@ public static class DependencyInversionHostBuilderExtensions
         builder.UseServiceProviderFactory(new AutofacServiceProviderFactory());
         IServiceCollection? services = default;
         builder.ConfigureServices(_ => services = _);
-        builder.ConfigureContainer<ContainerBuilder>(containerBuilder => containerBuilder.RegisterDefaults(types, services));
+        builder.ConfigureContainer<ContainerBuilder>(containerBuilder =>
+        {
+            containerBuilder.RegisterDefaults(types, services);
+            containerBuilder.RegisterSource<MongoDBCollectionRegistrationSource>();
+        });
         return builder;
     }
 }
