@@ -73,6 +73,7 @@
         "middlewares",
         "Namotion",
         "Newtonsoft",
+        "notnull",
         "PII",
         "Pkcs",
         "propertymapper",
