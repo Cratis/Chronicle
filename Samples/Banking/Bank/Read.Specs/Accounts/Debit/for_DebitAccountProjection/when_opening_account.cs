@@ -12,7 +12,7 @@ public class when_opening_account : ProjectionSpecificationFor<DebitAccount>
     const string account_name = "My first account";
     const string owner_id = "f3aed250-3200-487b-8a1a-ce1661ea6fee";
 
-    DebitAccount result;
+    ProjectionResult<DebitAccount> result;
 
     protected override IProjectionFor<DebitAccount> CreateProjection() => new DebitAccountProjection();
 
@@ -22,6 +22,6 @@ public class when_opening_account : ProjectionSpecificationFor<DebitAccount>
         result = await context.GetById(account_id);
     }
 
-    [Fact] void should_set_account_name() => result.Name.Value.ShouldEqual(account_name);
-    [Fact] void should_set_owner() => result.Owner.Value.ShouldEqual(Guid.Parse(owner_id));
+    [Fact] void should_set_account_name() => result.Model.Name.Value.ShouldEqual(account_name);
+    [Fact] void should_set_owner() => result.Model.Owner.Value.ShouldEqual(Guid.Parse(owner_id));
 }
