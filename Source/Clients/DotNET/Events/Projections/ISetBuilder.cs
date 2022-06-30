@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Events.Store;
 
 namespace Aksio.Cratis.Events.Projections;
 
@@ -25,4 +26,11 @@ public interface ISetBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBui
     /// </summary>
     /// <returns>Builder continuation.</returns>
     IFromBuilder<TModel, TEvent> ToEventSourceId();
+
+    /// <summary>
+    /// Map to a property on the <see cref="EventContext"/>.
+    /// </summary>
+    /// <param name="eventContextPropertyAccessor">Property accessor for specifying which property to map to.</param>
+    /// <returns>Builder continuation.</returns>
+    IFromBuilder<TModel, TEvent> ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor);
 }

@@ -13,12 +13,16 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
         builder
             .From<DebitAccountOpened>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
-                .Set(model => model.Owner).To(@event => @event.Owner))
+                .Set(model => model.Owner).To(@event => @event.Owner)
+                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
             .From<DebitAccountNameChanged>(_ => _
-                .Set(model => model.Name).To(@event => @event.Name))
+                .Set(model => model.Name).To(@event => @event.Name)
+                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
             .From<DepositToDebitAccountPerformed>(_ => _
-                .Add(model => model.Balance).With(@event => @event.Amount))
+                .Add(model => model.Balance).With(@event => @event.Amount)
+                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
             .From<WithdrawalFromDebitAccountPerformed>(_ => _
-                .Subtract(model => model.Balance).With(@event => @event.Amount))
+                .Subtract(model => model.Balance).With(@event => @event.Amount)
+                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
             .RemovedWith<DebitAccountClosed>();
 }
