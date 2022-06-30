@@ -43,6 +43,58 @@ public static class ImportBuilderExtensions
     }
 
     /// <summary>
+    /// Filter down to when a model already exists.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelExists<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder)
+    {
+        return builder.Where(_ => _.InitialProjectionResult.ProjectedEventsCount > 0 && _.InitialProjectionResult.AffectedProperties.Any());
+    }
+
+    /// <summary>
+    /// Filter down to when a model does not exist.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelDoesNotExist<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder)
+    {
+        return builder.Where(_ => _.InitialProjectionResult.ProjectedEventsCount == 0 && !_.InitialProjectionResult.AffectedProperties.Any());
+    }
+
+    /// <summary>
+    /// Filter down to when specific properties on a model are set.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <param name="properties">Properties as expressions to look for if was set on model.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelPropertiesAreSet<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
+    {
+        var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
+        return builder.Where(_ => _.InitialProjectionResult.AffectedProperties.Any(_ => propertyPaths.Contains(_)));
+    }
+
+    /// <summary>
+    /// Filter down to when specific properties on a model are set.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <param name="properties">Properties as expressions to look for if was set on model.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelPropertiesAreNotSet<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
+    {
+        var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
+        return builder.Where(_ => !_.InitialProjectionResult.AffectedProperties.Any(_ => propertyPaths.Contains(_)));
+    }
+
+    /// <summary>
     /// Filter down to when one of the properties defined changes.
     /// </summary>
     /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
