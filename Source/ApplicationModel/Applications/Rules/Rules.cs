@@ -112,7 +112,7 @@ public class Rules : IRules
         foreach (var property in rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
         {
             var name = property.Name.ToCamelCase();
-            var node = result[name];
+            var node = result.Model[name];
             if (node is not null)
             {
                 property.SetValue(rule, node.Deserialize(property.PropertyType, _serializerOptions));

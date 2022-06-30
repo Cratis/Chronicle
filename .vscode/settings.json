@@ -73,6 +73,7 @@
         "middlewares",
         "Namotion",
         "Newtonsoft",
+        "notnull",
         "PII",
         "Pkcs",
         "propertymapper",
@@ -83,6 +84,7 @@
         "tinycolor",
         "typeparam",
         "upcaster",
-        "upserted"
+        "upserted",
+        "Xunit"
     ]
 }

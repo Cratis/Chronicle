@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Integration.for_ImportOperations.given;
 
@@ -19,7 +20,7 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
         incoming = new(43, "Forty Two");
         mapped = new(incoming.SomeInteger, incoming.SomeString);
 
-        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(initial));
+        projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, Array.Empty<PropertyPath>(), 0)));
         mapper.Setup(_ => _.Map<Model>(incoming)).Returns(mapped);
 
         objects_comparer = new();

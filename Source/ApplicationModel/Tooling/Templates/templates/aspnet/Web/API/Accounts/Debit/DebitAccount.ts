@@ -8,4 +8,5 @@ export type DebitAccount = {
     name: string;
     owner: string;
     balance?: number;
+    lastUpdated: Date;
 };

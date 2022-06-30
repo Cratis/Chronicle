@@ -27,5 +27,9 @@ public class SpecificationAdapterProjectionFor<TModel> : IAdapterProjectionFor<T
     public void Dispose() => _context.Dispose();
 
     /// <inheritdoc/>
-    public Task<TModel> GetById(ModelKey modelKey) => _context.GetById(modelKey);
+    public async Task<AdapterProjectionResult<TModel>> GetById(ModelKey modelKey)
+    {
+        var result = await _context.GetById(modelKey);
+        return new AdapterProjectionResult<TModel>(result.Model, result.AffectedProperties, result.ProjectedEventsCount);
+    }
 }

@@ -9,4 +9,5 @@ export type AccountHolder = {
     lastName: string;
     socialSecurityNumber: string;
     address: Address;
+    lastUpdated: Date;
 };

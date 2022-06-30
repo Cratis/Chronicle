@@ -85,19 +85,21 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     /// </summary>
     /// <param name="eventSourceId">The identifier.</param>
     /// <returns>Instance of the model.</returns>
-    public async Task<TModel> GetById(EventSourceId eventSourceId)
+    public async Task<ProjectionResult<TModel>> GetById(EventSourceId eventSourceId)
     {
+        var projectedEventsCount = 0;
         var cursor = await _eventSequenceStorageProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
             {
                 await _pipeline.Handle(@event);
+                projectedEventsCount++;
             }
         }
 
         var result = await _sink.FindOrDefault(new(eventSourceId, ArrayIndexers.NoIndexers));
         var json = JsonSerializer.Serialize(result);
-        return JsonSerializer.Deserialize<TModel>(json, _serializerOptions)!;
+        return new(JsonSerializer.Deserialize<TModel>(json, _serializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }
 }

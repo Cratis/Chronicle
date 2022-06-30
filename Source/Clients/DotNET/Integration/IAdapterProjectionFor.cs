@@ -16,5 +16,5 @@ public interface IAdapterProjectionFor<TModel>
     /// </summary>
     /// <param name="modelKey">The <see cref="ModelKey"/> to get for.</param>
     /// <returns>Instance of the model.</returns>
-    Task<TModel> GetById(ModelKey modelKey);
+    Task<AdapterProjectionResult<TModel>> GetById(ModelKey modelKey);
 }

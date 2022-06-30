@@ -54,26 +54,33 @@ public static class MongoDBReadModels
 
         var readModelTypes = GetMongoCollections(types).ToList();
         readModelTypes.AddRange(GetProvidersForMongoCollections(types, readModelTypes));
-        RegisterMongoCollectionTypes(services, readModelTypes, logger);
 
+        RegisterMongoCollectionTypes(services, readModelTypes, logger);
         return services;
+    }
+
+    /// <summary>
+    /// Get the actual model name typically used as the collection name from a given read model type.
+    /// </summary>
+    /// <param name="readModelType">Type of read model to get for.</param>
+    /// <returns>Name of the read model.</returns>
+    public static string GetReadModelName(Type readModelType)
+    {
+        if (readModelType.HasAttribute<ModelNameAttribute>())
+        {
+            var modelNameAttribute = readModelType.GetCustomAttribute<ModelNameAttribute>()!;
+            return modelNameAttribute.Name;
+        }
+
+        var modelName = readModelType.Name.Pluralize();
+        return modelName.ToCamelCase();
     }
 
     static void RegisterMongoCollectionTypes(IServiceCollection services, IEnumerable<Type> readModelTypes, ILogger? logger = default)
     {
         foreach (var readModelType in readModelTypes)
         {
-            var modelName = readModelType.Name;
-            if (readModelType.HasAttribute<ModelNameAttribute>())
-            {
-                var modelNameAttribute = readModelType.GetCustomAttribute<ModelNameAttribute>()!;
-                modelName = modelNameAttribute.Name;
-            }
-            else
-            {
-                modelName = readModelType.Name.Pluralize();
-                modelName = modelName.ToCamelCase();
-            }
+            var modelName = GetReadModelName(readModelType);
 
             logger?.AddingMongoDBCollectionBinding(readModelType, modelName);
             services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
