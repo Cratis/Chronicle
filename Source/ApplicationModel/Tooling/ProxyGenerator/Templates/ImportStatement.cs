@@ -6,6 +6,26 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates;
 /// <summary>
 /// Describes an import statement.
 /// </summary>
-/// <param name="Type">Type to use.</param>
-/// <param name="Module">Source module in which the type is from.</param>
-public record ImportStatement(string Type, string Module);
+public record ImportStatement
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ImportStatement"/> class.
+    /// </summary>
+    /// <param name="type">Type to use.</param>
+    /// <param name="module">Source module the type is originating from.</param>
+    public ImportStatement(string type, string module)
+    {
+        Type = type;
+        Module = module.Replace('\\', '/');
+    }
+
+    /// <summary>
+    /// Gets the type to use.
+    /// </summary>
+    public string Type { get; }
+
+    /// <summary>
+    /// Gets the source module in which the type is from.
+    /// </summary>
+    public string Module { get; }
+}
