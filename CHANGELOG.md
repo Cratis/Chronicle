@@ -4,6 +4,12 @@
 
 - Adding convenience methods for `EventContext`. (#398)
 
+``csharp
+var eventContext = EventContext.From("<some event source id>");
+
+// Use EventContext
+```
+
 ### Fixed
 
 - Fixes import paths to be correct across platforms. (#395)
