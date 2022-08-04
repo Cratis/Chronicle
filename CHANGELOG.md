@@ -1,3 +1,19 @@
+# [v6.7.0] - 2022-8-4 [PR: #400](https://github.com/aksio-insurtech/Cratis/pull/400)
+
+### Added
+
+- Adding convenience methods for `EventContext`. (#398)
+
+### Fixed
+
+- Fixes import paths to be correct across platforms. (#395)
+
+# [v6.6.1] - 2022-8-4 [PR: #400](https://github.com/aksio-insurtech/Cratis/pull/394)
+
+### Fixed
+
+- Updated webpack-cli to 4.10.0 to make it work on windows
+
 # [v6.6.0] - 2022-6-30 [PR: #392](https://github.com/aksio-insurtech/Cratis/pull/392)
 
 ## Summary
