@@ -27,6 +27,31 @@ public record EventContext(
     EventObservationState ObservationState = EventObservationState.Initial)
 {
     /// <summary>
+    /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
+    /// </summary>
+    /// <returns>A new <see cref="EventContext"/>.</returns>
+    public static EventContext Empty() => From(Guid.Empty);
+
+    /// <summary>
+    /// Creates a new <see cref="EventContext"/> from <see cref="EventSourceId"/> and other optional parameters.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to create from.</param>
+    /// <param name="occurred">Optional occurred.</param>
+    /// <param name="validFrom">Optional valid from.</param>
+    /// <returns>A new <see cref="EventContext"/>.</returns>
+    public static EventContext From(EventSourceId eventSourceId, DateTimeOffset? occurred = default, DateTimeOffset? validFrom = default)
+    {
+        return new(
+            eventSourceId,
+            occurred ?? DateTimeOffset.Now,
+            validFrom ?? DateTimeOffset.MinValue,
+            TenantId.Development,
+            CorrelationId.New(),
+            CausationId.System,
+            CausedBy.System);
+    }
+
+    /// <summary>
     /// Creates a copy of the context object with the new desired state.
     /// </summary>
     /// <param name="desiredState">The desired state.</param>
