@@ -1,3 +1,11 @@
+# [v6.7.1] - 2022-8-4 [PR: #401](https://github.com/aksio-insurtech/Cratis/pull/401)
+
+### Fixed
+
+- Messed up the API in 6.7.0 for `EventContext.Empty()` should've been `EventContext.Empty`.
+
+
+
 # [v6.7.0] - 2022-8-4 [PR: #400](https://github.com/aksio-insurtech/Cratis/pull/400)
 
 ### Added
