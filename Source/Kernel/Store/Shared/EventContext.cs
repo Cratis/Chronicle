@@ -30,7 +30,7 @@ public record EventContext(
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
     /// </summary>
     /// <returns>A new <see cref="EventContext"/>.</returns>
-    public static EventContext Empty() => From(Guid.Empty);
+    public static readonly EventContext Empty = From(Guid.Empty);
 
     /// <summary>
     /// Creates a new <see cref="EventContext"/> from <see cref="EventSourceId"/> and other optional parameters.
