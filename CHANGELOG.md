@@ -4,7 +4,7 @@
 
 - Adding convenience methods for `EventContext`. (#398)
 
-``csharp
+```csharp
 var eventContext = EventContext.From("<some event source id>");
 
 // Use EventContext
