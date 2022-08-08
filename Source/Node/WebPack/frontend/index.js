@@ -25,6 +25,7 @@ module.exports = (env, argv, basePath, callback, port, title) => {
         plugins: plugins(basePath, title),
         devtool: production ? false : 'inline-source-map',
         devServer: devServer(basePath, port),
+        cache: production ? false : {type: 'filesystem', allowCollectingMemory: true},
         watchOptions: {
             ignored: [
                 '**/for_*/**/*.ts'
