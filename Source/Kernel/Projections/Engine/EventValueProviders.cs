@@ -40,7 +40,18 @@ public static class EventValueProviders
 
                     if (sourceValue is JsonElement element)
                     {
-                        element.TryGetValue(out sourceValue);
+                        switch (element.ValueKind)
+                        {
+                            case JsonValueKind.True:
+                                sourceValue = true;
+                                break;
+                            case JsonValueKind.False:
+                                sourceValue = false;
+                                break;
+                            default:
+                                element.TryGetValue(out sourceValue);
+                                break;
+                        }
                     }
                 }
                 else if (value is JsonObject jsonObject)
