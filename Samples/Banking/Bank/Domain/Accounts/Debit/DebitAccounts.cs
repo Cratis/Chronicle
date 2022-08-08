@@ -13,5 +13,5 @@ public class DebitAccounts : Controller
     public DebitAccounts(IEventLog eventLog) => _eventLog = eventLog;
 
     [HttpPost]
-    public Task OpenDebitAccount([FromBody] OpenDebitAccount create) => _eventLog.Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner));
+    public Task OpenDebitAccount([FromBody] OpenDebitAccount create) => _eventLog.Append(create.AccountId, new DebitAccountOpened(create.Name, create.Owner, create.IncludeCard));
 }
