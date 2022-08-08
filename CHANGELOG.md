@@ -1,3 +1,11 @@
+# [v6.7.2] - 2022-8-8 [PR: #405](https://github.com/aksio-insurtech/Cratis/pull/405)
+
+### Fixed
+
+- Added cache to development to decrease startup time. (#403)
+
+
+
 # [v6.7.1] - 2022-8-4 [PR: #401](https://github.com/aksio-insurtech/Cratis/pull/401)
 
 ### Fixed
