@@ -18,10 +18,11 @@ public class when_opening_account : ProjectionSpecificationFor<DebitAccount>
 
     async Task Because()
     {
-        await context.EventLog.Append(account_id, new DebitAccountOpened(account_name, owner_id));
+        await context.EventLog.Append(account_id, new DebitAccountOpened(account_name, owner_id, true));
         result = await context.GetById(account_id);
     }
 
     [Fact] void should_set_account_name() => result.Model.Name.Value.ShouldEqual(account_name);
     [Fact] void should_set_owner() => result.Model.Owner.Value.ShouldEqual(Guid.Parse(owner_id));
+    [Fact] void should_set_has_card() => result.Model.HasCard.ShouldEqual(true);
 }
