@@ -12,6 +12,7 @@ export interface IOpenDebitAccount {
     accountId?: string;
     name?: string;
     owner?: string;
+    includeCard?: boolean;
 }
 
 export class OpenDebitAccountValidator extends CommandValidator {
@@ -19,6 +20,7 @@ export class OpenDebitAccountValidator extends CommandValidator {
         accountId: new Validator(),
         name: new Validator(),
         owner: new Validator(),
+        includeCard: new Validator(),
     };
 }
 
@@ -30,6 +32,7 @@ export class OpenDebitAccount extends Command<IOpenDebitAccount> implements IOpe
     private _accountId!: string;
     private _name!: string;
     private _owner!: string;
+    private _includeCard!: boolean;
 
     get requestArguments(): string[] {
         return [
@@ -41,6 +44,7 @@ export class OpenDebitAccount extends Command<IOpenDebitAccount> implements IOpe
             'accountId',
             'name',
             'owner',
+            'includeCard',
         ];
     }
 
@@ -67,6 +71,14 @@ export class OpenDebitAccount extends Command<IOpenDebitAccount> implements IOpe
     set owner(value: string) {
         this._owner = value;
         this.propertyChanged('owner');
+    }
+    get includeCard(): boolean {
+        return this._includeCard;
+    }
+
+    set includeCard(value: boolean) {
+        this._includeCard = value;
+        this.propertyChanged('includeCard');
     }
 
     static use(initialValues?: IOpenDebitAccount): [OpenDebitAccount, SetCommandValues<IOpenDebitAccount>] {

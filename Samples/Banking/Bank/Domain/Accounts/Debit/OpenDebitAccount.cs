@@ -10,4 +10,5 @@ namespace Domain.Accounts.Debit;
 public record OpenDebitAccount(
     [Required] AccountId AccountId,
     AccountName Name,
-    PersonId Owner);
+    PersonId Owner,
+    bool IncludeCard);

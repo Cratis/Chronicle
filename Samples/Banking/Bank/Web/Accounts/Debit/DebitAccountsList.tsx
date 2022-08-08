@@ -37,6 +37,12 @@ export const DebitAccountsList = (props: IDebitAccountsListProps) => {
             name: 'Balance',
             fieldName: 'balance',
             minWidth: 200
+        },
+        {
+            key: 'haCard',
+            name: 'Card',
+            fieldName: 'hasCard',
+            minWidth: 200
         }
     ];
 
