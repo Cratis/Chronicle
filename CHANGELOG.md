@@ -1,3 +1,10 @@
+# [v6.7.3] - 2022-8-8 [PR: #408](https://github.com/aksio-insurtech/Cratis/pull/408)
+
+### Fixed
+
+- Adding support for booleans in events for projections. (#406)
+
+
 # [v6.7.2] - 2022-8-8 [PR: #405](https://github.com/aksio-insurtech/Cratis/pull/405)
 
 ### Fixed
