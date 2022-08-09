@@ -15,7 +15,7 @@ built into it. In addition Cratis offers an application model aimed towards prod
 such as CQRS; opinionated and completely optional.
 
 Read the [documentation](./Documentation/index.md) for all the details.
-For general guidance on the core values and principles we @ Aksio use, read more [here](https://github.com/aksio-system/Home/blob/main/profile/README.md).
+For general guidance on the core values and principles we @ Aksio use, read more [here](https://github.com/aksio-insurtech/Home/blob/main/profile/README.md).
 
 If you want to jump into building this repository and possibly contributing, please refer to [contributing](./Documentation/contributing.md).
 
