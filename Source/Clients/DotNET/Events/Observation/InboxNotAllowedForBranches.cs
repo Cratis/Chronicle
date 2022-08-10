@@ -10,7 +10,6 @@ namespace Aksio.Cratis.Events.Observation;
 /// </summary>
 public class InboxNotAllowedForBranches : Exception
 {
-
     /// <summary>
     /// Initializes a new instance of the <see cref="InboxNotAllowedForBranches"/> class.
     /// </summary>

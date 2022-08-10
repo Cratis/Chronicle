@@ -15,6 +15,11 @@ public record BranchTypeId(Guid Value) : ConceptAs<Guid>(Value)
     public static readonly BranchTypeId Unknown = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
 
     /// <summary>
+    /// The <see cref="BranchTypeId"/> used when one does not want or need to specify the type.
+    /// </summary>
+    public static readonly BranchTypeId NotSpecified = Guid.Empty;
+
+    /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="BranchTypeId"/>.
     /// </summary>
     /// <param name="id"><see cref="Guid"/> to convert from.</param>

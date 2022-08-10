@@ -50,8 +50,10 @@ public class EventLog : IEventLog
     }
 
     /// <inheritdoc/>
-    public async Task<IBranch> Branch(BranchTypeId branchTypeId, IDictionary<string, string>? tags = null)
+    public async Task<IBranch> Branch(BranchTypeId? branchTypeId = default, IDictionary<string, string>? tags = default)
     {
+        branchTypeId ??= BranchTypeId.NotSpecified;
+
         var branches = _clusterClient.GetGrain<IBranches>(Guid.Empty);
         var branchId = await branches.Checkout(branchTypeId, tags);
         var executionContext = _executionContextManager.Current;

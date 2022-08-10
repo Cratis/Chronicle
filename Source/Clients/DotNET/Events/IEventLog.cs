@@ -8,24 +8,15 @@ namespace Aksio.Cratis.Events;
 /// <summary>
 /// Defines the client event log.
 /// </summary>
-public interface IEventLog
+public interface IEventLog : IEventSequence
 {
-    /// <summary>
-    /// Append a single event to the event store.
-    /// </summary>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
-    /// <param name="event">The event.</param>
-    /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default);
-
     /// <summary>
     /// Start a branch for a specific <see cref="BranchTypeId"/>.
     /// </summary>
-    /// <param name="branchTypeId">Type to start.</param>
+    /// <param name="branchTypeId">Optional branch type to start. If not specified, it will be set to NotSpecified.</param>
     /// <param name="tags">Optional tags to associate with the branch.</param>
     /// <returns><see cref="IBranch"/>.</returns>
-    Task<IBranch> Branch(BranchTypeId branchTypeId, IDictionary<string, string>? tags = default);
+    Task<IBranch> Branch(BranchTypeId? branchTypeId = default, IDictionary<string, string>? tags = default);
 
     /// <summary>
     /// Get branches of a specific <see cref="BranchTypeId"/>.
