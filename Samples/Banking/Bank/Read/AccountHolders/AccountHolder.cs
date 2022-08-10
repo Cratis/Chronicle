@@ -5,4 +5,4 @@ using Concepts.AccountHolders;
 
 namespace Read.AccountHolders;
 
-public record AccountHolder(string FirstName, string LastName, string SocialSecurityNumber, Address Address);
+public record AccountHolder(string FirstName, string LastName, string SocialSecurityNumber, Address Address, DateTimeOffset LastUpdated);

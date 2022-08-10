@@ -99,6 +99,8 @@ public class Projection : IProjection
     /// <inheritdoc/>
     public KeyResolver GetKeyResolverFor(EventType eventType)
     {
+        // We only care about the actual event type identifier and generation, any other properties should be the default
+        eventType = new(eventType.Id, eventType.Generation);
         ThrowIfMissingKeyResolverForEventType(eventType);
         return _eventTypesToKeyResolver[eventType];
     }
@@ -108,7 +110,9 @@ public class Projection : IProjection
     {
         EventTypesWithKeyResolver = eventTypesWithKeyResolver;
         EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType).ToArray();
-        _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(_ => _.EventType, _ => _.KeyResolver);
+        _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(
+            _ => new EventType(_.EventType.Id, _.EventType.Generation),
+            _ => _.KeyResolver);
     }
 
     /// <inheritdoc/>

@@ -54,8 +54,9 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     public async Task QueueMessageBatchAsync<T>(Guid streamGuid, string streamNamespace, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
         var queueId = _mapper.GetQueueForStream(streamGuid, streamNamespace);
-        if (token.SequenceNumber != -1)
+        if (!token.IsWarmUp())
         {
+            var appendedEvents = new List<AppendedEvent>();
             foreach (var @event in events)
             {
                 var appendedEvent = (@event as AppendedEvent)!;
@@ -68,14 +69,18 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                         appendedEvent.Metadata.Type,
                         appendedEvent.Context.ValidFrom,
                         appendedEvent.Content);
+
+                    appendedEvents.Add(appendedEvent);
                 }
                 catch (Exception ex)
                 {
+                    // Make sure we put all successful events on the stream for any subscribers to get.
+                    _receivers[queueId].AddAppendedEvent(streamGuid, streamNamespace, appendedEvents, requestContext);
                     throw new UnableToAppendToEventSequence(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, ex);
                 }
             }
         }
 
-        _receivers[queueId].AddAppendedEvent(streamGuid, events.Cast<AppendedEvent>().ToArray(), requestContext);
+        _receivers[queueId].AddAppendedEvent(streamGuid, streamNamespace, events.Cast<AppendedEvent>().ToArray(), requestContext);
     }
 }

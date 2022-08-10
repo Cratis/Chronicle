@@ -33,15 +33,13 @@ public static class EventSchemaExtensions
     /// <returns>Converted <see cref="EventSchema"/>.</returns>
     public static EventSchema ToEventSchema(this EventSchemaMongoDB schema)
     {
-        var task = JsonSchema.FromJsonAsync(schema.Schema);
-        task.Wait();
-
-        task.Result.EnsureCorrectMetadata();
+        var result = JsonSchema.FromJsonAsync(schema.Schema).GetAwaiter().GetResult();
+        result.EnsureCorrectMetadata();
 
         return new EventSchema(
             new EventType(
                schema.EventType,
                schema.Generation),
-            task.Result);
+            result);
     }
 }

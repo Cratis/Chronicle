@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 
@@ -48,6 +49,15 @@ public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent,
         ThrowIfOnlyEventPropertyIsSupported();
 
         _expression = "$eventSourceId";
+        return _parent;
+    }
+
+    /// <inheritdoc/>
+    public IFromBuilder<TModel, TEvent> ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
+    {
+        var property = eventContextPropertyAccessor.GetPropertyPath();
+        _expression = $"$eventContext({property})";
+
         return _parent;
     }
 

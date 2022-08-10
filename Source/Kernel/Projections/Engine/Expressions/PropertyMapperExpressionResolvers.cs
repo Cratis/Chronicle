@@ -15,6 +15,7 @@ public class PropertyMapperExpressionResolvers : IPropertyMapperExpressionResolv
     readonly IPropertyMapperExpressionResolver[] _resolvers = new IPropertyMapperExpressionResolver[]
     {
             new EventSourceIdExpressionResolver(),
+            new EventContextPropertyExpressionResolver(),
             new AddExpressionResolver(),
             new SubtractExpressionResolver(),
             new CountExpressionResolver(),

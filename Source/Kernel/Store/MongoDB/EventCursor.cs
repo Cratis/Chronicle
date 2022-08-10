@@ -33,10 +33,11 @@ public class EventCursor : IEventCursor
     public async Task<bool> MoveNext()
     {
         if (_innerCursor is null) return false;
-        var result = await _innerCursor.MoveNextAsync();
+
+        var result = await _innerCursor.MoveNextAsync().ConfigureAwait(false);
         if (_innerCursor.Current is not null)
         {
-            Current = await Task.WhenAll(_innerCursor.Current.Select(@event => _converter.ToAppendedEvent(@event)));
+            Current = (await Task.WhenAll(_innerCursor.Current.Select(@event => _converter.ToAppendedEvent(@event)))).ToArray();
         }
         else
         {

@@ -30,7 +30,7 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
-        <ProjectReference Include="Aksio.Cratis.Specifications" Version="5.0.3" />
+        <PackageReference Include="Aksio.Cratis.Specifications" Version="5.0.3" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
@@ -38,13 +38,13 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
-        <PackageReference Include="xunit" Version="$(xunit)" />
+        <PackageReference Include="xunit" Version="2.4.1" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
-        <PackageReference Include="moq" Version="4.13.*" />
+        <PackageReference Include="moq" Version="4.18.1" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
     </ItemGroup>
 

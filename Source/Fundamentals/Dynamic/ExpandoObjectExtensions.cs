@@ -33,6 +33,12 @@ public static class ExpandoObjectExtensions
 
         foreach (var (key, value) in originalAsDictionary)
         {
+            if (value is null)
+            {
+                cloneAsDictionary.Add(key, null!);
+                continue;
+            }
+
             var valueType = value.GetType();
             if (!valueType.IsPrimitive &&
                 valueType != typeof(ExpandoObject) &&

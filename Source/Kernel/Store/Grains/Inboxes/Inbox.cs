@@ -5,6 +5,7 @@ using Aksio.Cratis.Events.Store.Grains.Observation;
 using Aksio.Cratis.Events.Store.Inboxes;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Streams;
 
@@ -16,6 +17,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Inboxes;
 public class Inbox : Grain, IInbox
 {
     readonly IExecutionContextManager _executionContextManager;
+    readonly ILogger<Inbox> _logger;
     IObserver? _observer;
     IEventSequence? _inboxEventSequence;
     MicroserviceId? _microserviceId;
@@ -25,9 +27,13 @@ public class Inbox : Grain, IInbox
     /// Initializes a new instance of the <see cref="Inbox"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
-    public Inbox(IExecutionContextManager executionContextManager)
+    /// <param name="logger">Logger for logging.</param>
+    public Inbox(
+        IExecutionContextManager executionContextManager,
+        ILogger<Inbox> logger)
     {
         _executionContextManager = executionContextManager;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -64,6 +70,7 @@ public class Inbox : Grain, IInbox
     async Task HandleEvent(AppendedEvent @event, StreamSequenceToken token)
     {
         _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId!);
+        _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, @event.Metadata.SequenceNumber);
         await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, @event.Content);
     }
 }

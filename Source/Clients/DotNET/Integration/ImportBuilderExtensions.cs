@@ -43,21 +43,92 @@ public static class ImportBuilderExtensions
     }
 
     /// <summary>
-    /// Filter down to when one of the properties defined changes.
+    /// Filter down to when a model already exists.
     /// </summary>
     /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelExists<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder)
+    {
+        return builder.Where(_ => _.InitialProjectionResult.ProjectedEventsCount > 0 && _.InitialProjectionResult.AffectedProperties.Any());
+    }
+
+    /// <summary>
+    /// Filter down to when a model does not exist.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelDoesNotExist<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder)
+    {
+        return builder.Where(_ => _.InitialProjectionResult.ProjectedEventsCount == 0 && !_.InitialProjectionResult.AffectedProperties.Any());
+    }
+
+    /// <summary>
+    /// Filter down to when specific properties on a model are set.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <param name="properties">Properties as expressions to look for if was set on model.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelPropertiesAreSet<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
+    {
+        var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
+        return builder.Where(_ => _.InitialProjectionResult.AffectedProperties.Any(_ => propertyPaths.Contains(_)));
+    }
+
+    /// <summary>
+    /// Filter down to when specific properties on a model are set.
+    /// </summary>
+    /// <param name="builder"><see cref="IImportBuilderFor{TModel, TExternalModel}"/> to build the filter for.</param>
+    /// <param name="properties">Properties as expressions to look for if was set on model.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WhenModelPropertiesAreNotSet<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
+    {
+        var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
+        return builder.Where(_ => !_.InitialProjectionResult.AffectedProperties.Any(_ => propertyPaths.Contains(_)));
+    }
+
+    /// <summary>
+    /// Filter down to when one of the properties defined changes.
+    /// </summary>
+    /// <param name="context">Observable of the <see cref="ImportContext{TModel, TExternalModel}"/>.</param>
     /// <param name="properties">Properties as expressions to look for changes on.</param>
     /// <typeparam name="TModel">Type of model.</typeparam>
     /// <typeparam name="TExternalModel">Type of external model.</typeparam>
     /// <returns>Observable for chaining.</returns>
-    public static IObservable<ImportContext<TModel, TExternalModel>> WithProperties<TModel, TExternalModel>(this IImportBuilderFor<TModel, TExternalModel> builder, params Expression<Func<TModel, object>>[] properties)
+    public static IObservable<ImportContext<TModel, TExternalModel>> WithProperties<TModel, TExternalModel>(this IObservable<ImportContext<TModel, TExternalModel>> context, params Expression<Func<TModel, object>>[] properties)
     {
         var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
 
-        return builder.Where(_ =>
+        return context.Where(_ =>
         {
             var changes = _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>);
             return changes.Any(_ => _!.Differences.Any(_ => propertyPaths.Any(p => _.PropertyPath.Path.StartsWith(p.Path))));
+        });
+    }
+
+    /// <summary>
+    /// Filter down to when one of the properties defined changes from a value to a null value.
+    /// </summary>
+    /// <param name="context">Observable of the <see cref="ImportContext{TModel, TExternalModel}"/>.</param>
+    /// <param name="properties">Properties as expressions to look for changes on.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> WithPropertiesBecomingNull<TModel, TExternalModel>(this IObservable<ImportContext<TModel, TExternalModel>> context, params Expression<Func<TModel, object>>[] properties)
+    {
+        var propertyPaths = properties.Select(_ => _.GetPropertyPath()).ToArray();
+
+        return context.Where(_ =>
+        {
+            var changes = _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>);
+            return changes.Any(_ => _!.Differences.Any(_ => _.Original is not null && _.Changed is null && propertyPaths.Any(p => _.PropertyPath.Path.StartsWith(p.Path))));
         });
     }
 

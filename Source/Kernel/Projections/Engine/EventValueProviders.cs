@@ -40,7 +40,18 @@ public static class EventValueProviders
 
                     if (sourceValue is JsonElement element)
                     {
-                        element.TryGetValue(out sourceValue);
+                        switch (element.ValueKind)
+                        {
+                            case JsonValueKind.True:
+                                sourceValue = true;
+                                break;
+                            case JsonValueKind.False:
+                                sourceValue = false;
+                                break;
+                            default:
+                                element.TryGetValue(out sourceValue);
+                                break;
+                        }
                     }
                 }
                 else if (value is JsonObject jsonObject)
@@ -52,6 +63,17 @@ public static class EventValueProviders
 
             return sourceValue!;
         };
+    }
+
+    /// <summary>
+    /// Create a <see cref="ValueProvider{T}"/> that provides a value from the <see cref="EventContext"/>.
+    /// </summary>
+    /// <param name="sourceProperty">Property on the context.</param>
+    /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
+    public static ValueProvider<AppendedEvent> FromEventContext(PropertyPath sourceProperty)
+    {
+        var property = sourceProperty.GetPropertyInfoFor<EventContext>();
+        return (AppendedEvent @event) => property.GetValue(@event.Context)!;
     }
 
     /// <summary>

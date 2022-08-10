@@ -11,6 +11,7 @@
         <Humanizer>2.14.1</Humanizer>
         <Swashbuckle>6.3.0</Swashbuckle>
         <MicrosoftExtensions>6.0.0</MicrosoftExtensions>
+        <Moq>4.18.1</Moq>
         <SqlDataClient>4.8.3</SqlDataClient>
         <SystemReactive>5.0.0</SystemReactive>
         <NJsonSchema>10.6.10</NJsonSchema>

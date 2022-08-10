@@ -36,3 +36,4 @@ public class when_getting_from_event_content_nested_property : Specification
 
     [Fact] void should_return_content_of_source_property() => result.ShouldEqual(expected);
 }
+

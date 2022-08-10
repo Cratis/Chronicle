@@ -65,8 +65,14 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
-            return BsonSerializer.Deserialize<ExpandoObject>(instance);
+            var deserialized = BsonSerializer.Deserialize<ExpandoObject>(instance);
+            var deserializedAsDictionary = deserialized as IDictionary<string, object>;
+
+            HandleValueConversion(instance, deserializedAsDictionary);
+
+            return deserialized;
         }
+
         return new ExpandoObject();
     }
 
@@ -103,7 +109,18 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                             if (updateBuilder != default)
                             {
-                                updateBuilder = updateBuilder.Set(property, propertyDifference.Changed!);
+                                if (propertyDifference.Changed is DateTimeOffset)
+                                {
+                                    updateBuilder = updateBuilder.Set(property, (DateTimeOffset)propertyDifference.Changed!);
+                                }
+                                else
+                                {
+                                    updateBuilder = updateBuilder.Set(property, propertyDifference.Changed!);
+                                }
+                            }
+                            else if (propertyDifference.Changed is DateTimeOffset)
+                            {
+                                updateBuilder = updateDefinitionBuilder!.Set(property, (DateTimeOffset)propertyDifference.Changed!);
                             }
                             else
                             {
@@ -140,6 +157,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         if (!hasChanges) return;
+
+        var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+        Console.WriteLine(rendered);
 
         await collection.UpdateOneAsync(
             filter,
@@ -209,6 +229,26 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+    }
+
+    void HandleValueConversion(BsonDocument instance, IDictionary<string, object> objectInstance)
+    {
+        foreach (var element in instance)
+        {
+            // The deserializer seems to be looking for the target property type, which in the case of an expando object means
+            // it doesn't have anything to look for to resolve the target type. This seems to lead it to ignore our DateTimeOffsetSupportingBsonDateTimeSerializer.
+            // The end result of that is that it makes it a date time. Internally we want to be using DateTimeOffset for everything.
+            // MongoDB saves in UTC and Unix milliseconds since epoch.
+            if (element.Value is BsonDateTime bsonDateTime)
+            {
+                objectInstance[element.Name] = DateTimeOffset.FromUnixTimeMilliseconds(bsonDateTime.MillisecondsSinceEpoch);
+            }
+
+            if (element.Value is BsonDocument bsonDocument && objectInstance[element.Name] is IDictionary<string, object> innerObject)
+            {
+                HandleValueConversion(bsonDocument, innerObject);
+            }
+        }
     }
 
     (string Property, IEnumerable<ArrayFilterDefinition> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)

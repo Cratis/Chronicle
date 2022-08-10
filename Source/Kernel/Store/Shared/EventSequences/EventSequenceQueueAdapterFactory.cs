@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events.Store.EventSequences.Caching;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
@@ -16,7 +17,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IQueueAdapterCache _cache;
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
-    readonly ProviderFor<IEventSequences> _eventLogsProvder;
+    readonly ProviderFor<IEventSequences> _eventLogsProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
@@ -25,16 +26,18 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
     /// <param name="eventLogStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
+    /// <param name="caches">Global <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequences> eventLogsProvider,
-        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider)
+        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider,
+        IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-        _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider);
+        _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider, caches);
         _name = name;
-        _eventLogsProvder = eventLogsProvider;
+        _eventLogsProvider = eventLogsProvider;
     }
 
     /// <summary>
@@ -49,11 +52,12 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
             name,
             serviceProvider.GetService<IExecutionContextManager>()!,
             serviceProvider.GetService<ProviderFor<IEventSequences>>()!,
-            serviceProvider.GetService<ProviderFor<IEventSequenceStorageProvider>>()!);
+            serviceProvider.GetService<ProviderFor<IEventSequenceStorageProvider>>()!,
+            serviceProvider.GetService<IEventSequenceCaches>()!);
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventLogsProvder));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventLogsProvider));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());

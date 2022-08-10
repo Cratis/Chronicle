@@ -37,13 +37,13 @@ public class AdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>
     }
 
     /// <inheritdoc/>
-    public async Task<TModel> GetById(ModelKey modelKey)
+    public async Task<AdapterProjectionResult<TModel>> GetById(ModelKey modelKey)
     {
-        // TODO: Fix so that this is not constant values.
+        // TODO: Fix so that this is not constant values. Multi-tenancy!!
         var key = new ImmediateProjectionKey(ExecutionContextManager.GlobalMicroserviceId, TenantId.Development, Events.Store.EventSequenceId.Log, modelKey);
         var projection = _clusterClient.GetGrain<IImmediateProjection>(_projectionDefinition.Identifier, key);
 
-        var jsonObject = await projection.GetModelInstance(_projectionDefinition);
-        return jsonObject.Deserialize<TModel>(_jsonSerializerOptions)!;
+        var result = await projection.GetModelInstance(_projectionDefinition);
+        return new(result.Model.Deserialize<TModel>(_jsonSerializerOptions)!, result.AffectedProperties, result.ProjectedEventsCount);
     }
 }

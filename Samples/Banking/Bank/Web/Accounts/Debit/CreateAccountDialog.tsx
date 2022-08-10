@@ -11,6 +11,7 @@ import {
     IDialogContentProps,
     PrimaryButton,
     TextField,
+    Checkbox,
 } from '@fluentui/react';
 
 import { IDialogProps, DialogResult } from '@aksio/cratis-applications-frontend/dialogs';
@@ -23,19 +24,23 @@ const dialogContentProps: IDialogContentProps = {
 
 export type CreateAccountDialogResult = {
     name: string;
+    includeCard: boolean;
 };
 
 
 export const CreateAccountDialog = (props: IDialogProps<any, CreateAccountDialogResult>) => {
     const [name, setName] = useState('');
+    const [includeCard, setIncludeCard] = useState(false);
 
     const create = () => {
         setName('');
-        props.onClose(DialogResult.Success, { name });
+        setIncludeCard(false);
+        props.onClose(DialogResult.Success, { name, includeCard });
     };
 
     const cancel = () => {
         setName('');
+        setIncludeCard(false);
         props.onClose(DialogResult.Cancelled);
     };
 
@@ -47,6 +52,7 @@ export const CreateAccountDialog = (props: IDialogProps<any, CreateAccountDialog
             dialogContentProps={dialogContentProps}>
 
             <TextField label="Name" value={name} onChange={(ev, value) => setName(value!)} />
+            <Checkbox onChange={(ev, checked) => setIncludeCard(checked!) } label="Include card"/>
 
             <DialogFooter>
                 <PrimaryButton onClick={create} text="Create" />

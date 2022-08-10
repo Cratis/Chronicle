@@ -1,3 +1,175 @@
+# [v6.7.3] - 2022-8-8 [PR: #408](https://github.com/aksio-insurtech/Cratis/pull/408)
+
+### Fixed
+
+- Adding support for booleans in events for projections. (#406)
+
+
+# [v6.7.2] - 2022-8-8 [PR: #405](https://github.com/aksio-insurtech/Cratis/pull/405)
+
+### Fixed
+
+- Added cache to development to decrease startup time. (#403)
+
+
+
+# [v6.7.1] - 2022-8-4 [PR: #401](https://github.com/aksio-insurtech/Cratis/pull/401)
+
+### Fixed
+
+- Messed up the API in 6.7.0 for `EventContext.Empty()` should've been `EventContext.Empty`.
+
+
+
+# [v6.7.0] - 2022-8-4 [PR: #400](https://github.com/aksio-insurtech/Cratis/pull/400)
+
+### Added
+
+- Adding convenience methods for `EventContext`. (#398)
+
+```csharp
+var eventContext = EventContext.From("<some event source id>");
+
+// Use EventContext
+```
+
+### Fixed
+
+- Fixes import paths to be correct across platforms. (#395)
+
+# [v6.6.1] - 2022-8-4 [PR: #400](https://github.com/aksio-insurtech/Cratis/pull/394)
+
+### Fixed
+
+- Updated webpack-cli to 4.10.0 to make it work on windows
+
+# [v6.6.0] - 2022-6-30 [PR: #392](https://github.com/aksio-insurtech/Cratis/pull/392)
+
+## Summary
+
+> Warning: This version is not marked as a **major release**, but a minor. However there is a breaking API
+> change which normally would lead us to do a **major release**. Since the API change was for non-production code, but for the automated tests/specs, we decided for this release to keep it a **minor**. The change in mind is regarding the use of `context.Projection.GetById(...)` which now returns an `AdapterProjectionResult<T>` instead. Within this result object one will find a `Model` property that is the same as what the method previously returned. Also for test/specs that work the `ProjectionSpecificationFor<T>` is affected by this were it will return a `ProjectionResult<T>` and similiarily a `Model` property on it. Sorry for violating SemVer for this.
+
+
+It is now possible to map properties on a model to properties from the event context for projections:
+
+```csharp
+public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
+    builder
+        .From<DebitAccountOpened>(_ => _
+            .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred));
+```
+
+With the new test/specification assertions, one can now assert for specific event matching a predicate given. It also supports specifying number of times the event should appear with the match in the collection of events. There are specific `.Should...()` extension methods that works with the different contexts (`AdapterSpecificationContext`, `ProjectionSpecificationContext`). The specification of `Times` is reusing the construct from Moq for this. This means now that the `Aksio.Cratis.Specifications` package has Moq as a dependency. For the specification contexts mentioned, the methods are called `.ShouldAppend...()` or `.ShouldNotAppend...()`. While if you're working directly on the enumerable of appended events, its called `.ShouldContain...()` and `.ShouldNotContain...()`.
+
+Example use:
+
+```csharp
+public class and_there_are_no_matching_event : given.no_events
+{
+    Exception result;
+
+    void Establish()
+    {
+        events.Add(new AppendedEventForSpecifications(null!, null!, null!, new MyEvent(43, "something")));
+        events.Add(new AppendedEventForSpecifications(null!, null!, null!, new MyOtherEvent(43, "something")));
+    }
+
+    void Because() => result = Catch.Exception(() => events.ShouldContainEvent<MyEvent>((ev, _) => ev.SomeInteger == 42, Exactly(2)));
+
+    [Fact] void should_assert_that_the_event_should_contain() => result.ShouldBeOfExactType<TrueException>();
+}
+```
+
+Integration adapters can now leverage a new method called `.WithPropertiesBecomingNull()`. This enables one to create a filter for specifically appending events only under the condition of specific properties becoming null.
+
+```csharp
+public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
+{
+    builder
+        .WithPropertiesBecomingNull(_ => ...)
+        .AppendEvent(_ => new SomeEvent());
+}
+```
+
+Its also now possible to specify conditional filters for when a model already exists (has events projected to form state) or not.
+
+```csharp
+public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
+{
+    builder
+        .WhenModelExists()  // or .WhenModelDoesNotExist()
+        .WithProperties(_ => ...)
+        .AppendEvent(_ => new SomeEvent());
+}
+```
+
+Similarily one can also do this for specific properties being set or not set on the projected model:
+
+
+```csharp
+public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
+{
+    builder
+        .WhenModelPropertiesAreSet(_ => _.SomeProperty, _ => _.SomeOtherProperty)  // or .WhenModelPropertiesAreNotSet(...)
+        .WithProperties(_ => ...)
+        .AppendEvent(_ => new SomeEvent());
+}
+```
+
+
+
+
+
+
+### Added
+
+- Support for mapping values from  event context in projections. (#376)
+- Adding more `.Should..()`extensions for asserting against event log / event outbox and enumerable of appended events. (#324)
+- Support for filtering for integration adapters for properties becoming null. (#373)
+- Adding conditionals for integration adapters for whether or not there is an instance of a model (events exists and gets projected). (#381)
+- Adding conditionals for integration adapters for whether or not properties are set or not during model projection. (#381)
+- Adding an Autofac `IRegistrationSource` that can late bind `IMongoCollection<>` as a delegate within the correct execution context. This is in addition to the default convention built generically to automatically hook up based on a predefined convention of constructor parameter taking `IMongoCollection<>`. The default convention is fine for the simplest scenarios, while for wrapped scenarios such as `ProviderFor<>` it doesn't work. (#380)
+
+
+# [v6.5.6] - 2022-6-27 [PR: #383](https://github.com/aksio-insurtech/Cratis/pull/383)
+
+# Fixes
+
+- Resolved deadlock situations with the MongoDB client library and its async handling. (#118)
+- Formalized the concept of the warm up event we need for the internal Orleans pipeline to be hooked up and ready. (#269)
+- Introduces an event sequence cache that keeps the latest 500 events (hardcoded for now) in memory. The cache works as a sliding window based on the sequence number.
+- Fixes event sequence cache cursors so that they don't skip events.
+- Fixes observers to avoid duplicates.
+
+# [v6.5.5] - 2022-6-22 [PR: #386](https://github.com/aksio-insurtech/Cratis/pull/386)
+
+### Fixed
+
+- FIxing Aksio Microservice template to build the specs projects. Missing XUnit reference and was using project reference instead of package reference for the specifications extensions.
+
+
+# [v6.5.4] - 2022-6-15 [PR: #379](https://github.com/aksio-insurtech/Cratis/pull/379)
+
+### Fixed
+
+- Fixes a problem where we got into deadlock when getting events when using `MoveNextAsync()` on MongoDB cursors. The consequence was that you only got the first 100 events of a selection. Fixes #272.
+
+
+# [v6.5.3] - 2022-6-14 [PR: #377](https://github.com/aksio-insurtech/Cratis/pull/377)
+
+### Fixed
+
+- `JsonComplianceManager` now looks at properties from all inherited schemas / types.
+
+
+# [v6.5.2] - 2022-6-14 [PR: #375](https://github.com/aksio-insurtech/Cratis/pull/375)
+
+### Fixed
+
+- Changing to Bank microservice having the `Guid.Empty()` identifier. Since this is the default identifier if none is specified, the Kernel will work for all that has this not set. In a future version we will don't care about this type of configuration and let the connecting client tell which Microservice it is.
+
+
 # [v6.5.1] - 2022-6-14 [PR: #374](https://github.com/aksio-insurtech/Cratis/pull/374)
 
 ### Fixed

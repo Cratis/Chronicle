@@ -36,7 +36,7 @@ public class EventSequenceNumberToken : StreamSequenceToken
     /// </summary>
     public EventSequenceNumberToken()
     {
-        _sequenceNumber = -1;
+        _sequenceNumber = (long)EventSequenceNumber.WarmUp.Value;
         _eventIndex = 0;
     }
 
