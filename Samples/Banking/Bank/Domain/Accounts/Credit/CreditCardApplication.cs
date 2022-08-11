@@ -6,10 +6,10 @@ using Events.Accounts.Credit.Application;
 
 namespace Domain.Accounts.Debit;
 
-[Route($"/api/accounts/credit/{CreditCardApplication.ApplicationIdValue}")]
+[Route($"/api/accounts/credit/{ApplicationIdValue}")]
 public class CreditCardApplication : Controller
 {
-    public const string ApplicationIdValue = "applicationId";
+    const string ApplicationIdValue = "applicationId";
 
     readonly IEventLog _eventLog;
     readonly IBranch _branch;
