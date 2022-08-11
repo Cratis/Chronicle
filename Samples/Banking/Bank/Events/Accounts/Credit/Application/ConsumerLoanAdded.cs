@@ -3,4 +3,4 @@
 
 namespace Events.Accounts.Credit.Application;
 
-public record PersonalLoanAdded(double Amount);
+public record ConsumerLoanAdded(double Amount);
