@@ -19,6 +19,16 @@ public interface IBranch : IEventSequence
     BranchId Identifier { get; }
 
     /// <summary>
+    /// Gets the date and time when the branch was started.
+    /// </summary>
+    DateTimeOffset Started { get; }
+
+    /// <summary>
+    /// Gets the <see cref="EventSequenceNumber"/> the branch was started from.
+    /// </summary>
+    EventSequenceNumber BranchFrom { get; }
+
+    /// <summary>
     /// Merge the branch into the <see cref="IEventLog"/>.
     /// </summary>
     /// <returns>Awaitable task.</returns>
