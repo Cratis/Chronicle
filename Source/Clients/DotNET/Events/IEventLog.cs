@@ -19,6 +19,13 @@ public interface IEventLog : IEventSequence
     Task<IBranch> Branch(BranchTypeId? branchTypeId = default, IDictionary<string, string>? tags = default);
 
     /// <summary>
+    /// Get a specific branch.
+    /// </summary>
+    /// <param name="branchId"><see cref="BranchId"/> for the branch to get.</param>
+    /// <returns>The <see cref="IBranch"/>.</returns>
+    Task<IBranch> GetBranch(BranchId branchId);
+
+    /// <summary>
     /// Get branches of a specific <see cref="BranchTypeId"/>.
     /// </summary>
     /// <param name="branchTypeId">Type to get for.</param>

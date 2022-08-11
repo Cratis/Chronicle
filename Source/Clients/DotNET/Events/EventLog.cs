@@ -67,6 +67,12 @@ public class EventLog : IEventLog
     }
 
     /// <inheritdoc/>
+    public Task<IBranch> GetBranch(BranchId branchId)
+    {
+        return Task.FromResult<IBranch>(null!);
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<BranchDescriptor>> GetBranchesFor(BranchTypeId branchTypeId)
     {
         var branches = _clusterClient.GetGrain<IBranches>(Guid.Empty);
