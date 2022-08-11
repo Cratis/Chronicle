@@ -52,7 +52,7 @@ public class EventLog : IEventLog
     /// <inheritdoc/>
     public async Task<IBranch> Branch(
         BranchTypeId? branchTypeId = default,
-        EventSequenceNumber? branchFrom = default,
+        EventSequenceNumber? from = default,
         IDictionary<string, string>? tags = default)
     {
         branchTypeId ??= BranchTypeId.NotSpecified;
@@ -66,7 +66,14 @@ public class EventLog : IEventLog
             branchId,
             keyExtension: executionContext.ToMicroserviceAndTenant());
 
-        return new Branch(branchTypeId, branchId, _serializer, _eventTypes, eventSequence, actualBranch);
+        if (from is null)
+        {
+            // Todo: Go and get the current tail
+            from = EventSequenceNumber.First;
+        }
+
+        // Todo: Get the date time from the actual branch
+        return new Branch(branchTypeId, branchId, DateTimeOffset.UtcNow, from, _serializer, _eventTypes, eventSequence, actualBranch);
     }
 
     /// <inheritdoc/>

@@ -8,5 +8,7 @@ namespace Aksio.Cratis.Events.Store.Branching;
 /// </summary>
 /// <param name="Type">Type of branch.</param>
 /// <param name="Identifier">Identifier identifying the branch uniquely.</param>
-/// <param name="tags">Any tags associated with the branch.</param>
-public record BranchDescriptor(BranchTypeId Type, BranchId Identifier, IDictionary<string, string> tags);
+/// <param name="Started">The date and time when the branch was started.</param>
+/// <param name="From">The <see cref="EventSequenceNumber"/> the branch was started from.</param>
+/// <param name="Tags">Any tags associated with the branch.</param>
+public record BranchDescriptor(BranchTypeId Type, BranchId Identifier, DateTimeOffset Started, EventSequenceNumber From, IDictionary<string, string> Tags);

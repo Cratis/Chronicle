@@ -26,7 +26,7 @@ public interface IBranch : IEventSequence
     /// <summary>
     /// Gets the <see cref="EventSequenceNumber"/> the branch was started from.
     /// </summary>
-    EventSequenceNumber BranchFrom { get; }
+    EventSequenceNumber From { get; }
 
     /// <summary>
     /// Merge the branch into the <see cref="IEventLog"/>.

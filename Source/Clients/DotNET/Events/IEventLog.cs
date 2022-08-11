@@ -14,10 +14,10 @@ public interface IEventLog : IEventSequence
     /// Start a branch for a specific <see cref="BranchTypeId"/>.
     /// </summary>
     /// <param name="branchTypeId">Optional branch type to start. If not specified, it will be set to NotSpecified.</param>
-    /// <param name="branchFrom">Optional <see cref="EventSequenceNumber"/> to branch from. If not specified, it will branch from current tail.</param>
+    /// <param name="from">Optional <see cref="EventSequenceNumber"/> to branch from. If not specified, it will branch from current tail.</param>
     /// <param name="tags">Optional tags to associate with the branch.</param>
     /// <returns><see cref="IBranch"/>.</returns>
-    Task<IBranch> Branch(BranchTypeId? branchTypeId = default, EventSequenceNumber? branchFrom = default, IDictionary<string, string>? tags = default);
+    Task<IBranch> Branch(BranchTypeId? branchTypeId = default, EventSequenceNumber? from = default, IDictionary<string, string>? tags = default);
 
     /// <summary>
     /// Get a specific branch.

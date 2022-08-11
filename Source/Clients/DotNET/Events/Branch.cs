@@ -19,11 +19,19 @@ public class Branch : IBranch
     /// <inheritdoc/>
     public BranchId Identifier { get; }
 
+    /// <inheritdoc/>
+    public DateTimeOffset Started { get; }
+
+    /// <inheritdoc/>
+    public EventSequenceNumber From { get; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Branch"/> class.
     /// </summary>
     /// <param name="type">The <see cref="BranchTypeId"/>.</param>
     /// <param name="identifier">The unique <see cref="BranchId"/>.</param>
+    /// <param name="started">The date and time when the branch was started.</param>
+    /// <param name="from">The <see cref="EventSequenceNumber"/> the branch was started from.</param>
     /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for identifying event types.</param>
     /// <param name="sequence">The target <see cref="Store.Grains.IEventSequence"/>.</param>
@@ -31,17 +39,22 @@ public class Branch : IBranch
     public Branch(
         BranchTypeId type,
         BranchId identifier,
+        DateTimeOffset started,
+        EventSequenceNumber from,
         IEventSerializer serializer,
         IEventTypes eventTypes,
         Store.Grains.IEventSequence sequence,
         Store.Grains.Branching.IBranch actualBranch)
     {
         Type = type;
+        Identifier = identifier;
+        Started = started;
+        From = from;
+
         _serializer = serializer;
         _eventTypes = eventTypes;
         _sequence = sequence;
         _actualBranch = actualBranch;
-        Identifier = identifier;
     }
 
     /// <inheritdoc/>
