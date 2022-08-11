@@ -50,7 +50,10 @@ public class EventLog : IEventLog
     }
 
     /// <inheritdoc/>
-    public async Task<IBranch> Branch(BranchTypeId? branchTypeId = default, IDictionary<string, string>? tags = default)
+    public async Task<IBranch> Branch(
+        BranchTypeId? branchTypeId = default,
+        EventSequenceNumber? branchFrom = default,
+        IDictionary<string, string>? tags = default)
     {
         branchTypeId ??= BranchTypeId.NotSpecified;
 
