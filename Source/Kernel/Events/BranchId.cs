@@ -27,4 +27,10 @@ public record BranchId(Guid Value) : ConceptAs<Guid>(Value)
     /// <param name="id">String to convert from.</param>
     /// <returns>A converted <see cref="BranchId"/>.</returns>;
     public static implicit operator BranchId(string id) => new(Guid.Parse(id));
+
+    /// <summary>
+    /// Create a new unique instance of <see cref="BranchId"/>.
+    /// </summary>
+    /// <returns>A new <see cref="BranchId"/> instance with a unique identifier.</returns>
+    public static BranchId New() => new(Guid.NewGuid());
 }

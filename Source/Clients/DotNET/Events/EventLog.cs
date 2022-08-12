@@ -58,7 +58,7 @@ public class EventLog : IEventLog
         branchTypeId ??= BranchTypeId.NotSpecified;
 
         var branches = _clusterClient.GetGrain<IBranches>(Guid.Empty);
-        var branchId = await branches.Checkout(branchTypeId, tags);
+        var branchId = await branches.Checkout(branchTypeId, from, tags);
         var executionContext = _executionContextManager.Current;
         var branchKey = new BranchKey(executionContext.TenantId, executionContext.MicroserviceId);
         var actualBranch = _clusterClient.GetGrain<Store.Grains.Branching.IBranch>(branchId, branchKey);
@@ -68,7 +68,7 @@ public class EventLog : IEventLog
 
         if (from is null)
         {
-            // Todo: Go and get the current tail
+            // Todo: Use the from coming back from the checked out branch.
             from = EventSequenceNumber.First;
         }
 

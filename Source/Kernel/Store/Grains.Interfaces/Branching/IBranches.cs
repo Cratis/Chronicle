@@ -15,9 +15,10 @@ public interface IBranches : IGrainWithGuidKey
     /// Checkout the branch.
     /// </summary>
     /// <param name="branchTypeId">Type to checkout.</param>
-    /// <param name="tags">Optional tags to associate with the branch.</param>
+    /// <param name="from">Optional <see cref="EventSequenceNumber"/> the branch was started from. If not specified, it will branch from current tail.</param>
+    /// <param name="labels">Optional labels to associate with the branch.</param>
     /// <returns>The <see cref="BranchId"/> checked out.</returns>
-    Task<BranchId> Checkout(BranchTypeId branchTypeId, IDictionary<string, string>? tags = default);
+    Task<BranchId> Checkout(BranchTypeId branchTypeId, EventSequenceNumber? from = default, IDictionary<string, string>? labels = default);
 
     /// <summary>
     /// Concludes a branch by its identifier.
