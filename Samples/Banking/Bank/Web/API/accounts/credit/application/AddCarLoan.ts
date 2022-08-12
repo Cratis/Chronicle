@@ -6,37 +6,50 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/accounts/credit/{{remaining}}');
+const routeTemplate = Handlebars.compile('/api/accounts/credit/application/{{applicationId}}/carloan/{{remaining}}');
 
-export interface IAddPersonalLoan {
+export interface IAddCarLoan {
+    applicationId?: string;
     remaining?: number;
 }
 
-export class AddPersonalLoanValidator extends CommandValidator {
+export class AddCarLoanValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
+        applicationId: new Validator(),
         remaining: new Validator(),
     };
 }
 
-export class AddPersonalLoan extends Command<IAddPersonalLoan> implements IAddPersonalLoan {
-    readonly route: string = '/api/accounts/credit/{{remaining}}';
+export class AddCarLoan extends Command<IAddCarLoan> implements IAddCarLoan {
+    readonly route: string = '/api/accounts/credit/application/{{applicationId}}/carloan/{{remaining}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly validation: CommandValidator = new AddPersonalLoanValidator();
+    readonly validation: CommandValidator = new AddCarLoanValidator();
 
+    private _applicationId!: string;
     private _remaining!: number;
 
     get requestArguments(): string[] {
         return [
+            'applicationId',
             'remaining',
         ];
     }
 
     get properties(): string[] {
         return [
+            'applicationId',
             'remaining',
         ];
     }
 
+    get applicationId(): string {
+        return this._applicationId;
+    }
+
+    set applicationId(value: string) {
+        this._applicationId = value;
+        this.propertyChanged('applicationId');
+    }
     get remaining(): number {
         return this._remaining;
     }
@@ -46,7 +59,7 @@ export class AddPersonalLoan extends Command<IAddPersonalLoan> implements IAddPe
         this.propertyChanged('remaining');
     }
 
-    static use(initialValues?: IAddPersonalLoan): [AddPersonalLoan, SetCommandValues<IAddPersonalLoan>] {
-        return useCommand<AddPersonalLoan, IAddPersonalLoan>(AddPersonalLoan, initialValues);
+    static use(initialValues?: IAddCarLoan): [AddCarLoan, SetCommandValues<IAddCarLoan>] {
+        return useCommand<AddCarLoan, IAddCarLoan>(AddCarLoan, initialValues);
     }
 }

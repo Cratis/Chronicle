@@ -6,7 +6,7 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/accounts/credit/applicationId/consumerloan/{{remaining}}');
+const routeTemplate = Handlebars.compile('/api/accounts/credit/application/{{applicationId}}/consumerloan/{{remaining}}');
 
 export interface IAddConsumerLoan {
     applicationId?: string;
@@ -21,7 +21,7 @@ export class AddConsumerLoanValidator extends CommandValidator {
 }
 
 export class AddConsumerLoan extends Command<IAddConsumerLoan> implements IAddConsumerLoan {
-    readonly route: string = '/api/accounts/credit/applicationId/consumerloan/{{remaining}}';
+    readonly route: string = '/api/accounts/credit/application/{{applicationId}}/consumerloan/{{remaining}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new AddConsumerLoanValidator();
 

@@ -6,37 +6,50 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/accounts/credit/{{remaining}}');
+const routeTemplate = Handlebars.compile('/api/accounts/credit/application/{{applicationId}}/mortgage/{{remaining}}');
 
-export interface IAddCarLoan {
+export interface IAddMortgage {
+    applicationId?: string;
     remaining?: number;
 }
 
-export class AddCarLoanValidator extends CommandValidator {
+export class AddMortgageValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
+        applicationId: new Validator(),
         remaining: new Validator(),
     };
 }
 
-export class AddCarLoan extends Command<IAddCarLoan> implements IAddCarLoan {
-    readonly route: string = '/api/accounts/credit/{{remaining}}';
+export class AddMortgage extends Command<IAddMortgage> implements IAddMortgage {
+    readonly route: string = '/api/accounts/credit/application/{{applicationId}}/mortgage/{{remaining}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly validation: CommandValidator = new AddCarLoanValidator();
+    readonly validation: CommandValidator = new AddMortgageValidator();
 
+    private _applicationId!: string;
     private _remaining!: number;
 
     get requestArguments(): string[] {
         return [
+            'applicationId',
             'remaining',
         ];
     }
 
     get properties(): string[] {
         return [
+            'applicationId',
             'remaining',
         ];
     }
 
+    get applicationId(): string {
+        return this._applicationId;
+    }
+
+    set applicationId(value: string) {
+        this._applicationId = value;
+        this.propertyChanged('applicationId');
+    }
     get remaining(): number {
         return this._remaining;
     }
@@ -46,7 +59,7 @@ export class AddCarLoan extends Command<IAddCarLoan> implements IAddCarLoan {
         this.propertyChanged('remaining');
     }
 
-    static use(initialValues?: IAddCarLoan): [AddCarLoan, SetCommandValues<IAddCarLoan>] {
-        return useCommand<AddCarLoan, IAddCarLoan>(AddCarLoan, initialValues);
+    static use(initialValues?: IAddMortgage): [AddMortgage, SetCommandValues<IAddMortgage>] {
+        return useCommand<AddMortgage, IAddMortgage>(AddMortgage, initialValues);
     }
 }
