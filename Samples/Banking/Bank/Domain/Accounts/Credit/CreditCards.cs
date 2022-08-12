@@ -15,6 +15,6 @@ public class CreditCards : Controller
         _eventLog = eventLog;
     }
 
-    [HttpPost]
-    public Task CreateApplication() => _eventLog.Branch(BranchTypes.CreditCardApplication);
+    [HttpPost("apply")]
+    public Task ApplyForCreditCard() => _eventLog.Branch(BranchTypes.CreditCardApplication);
 }
