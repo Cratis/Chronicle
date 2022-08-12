@@ -3,4 +3,5 @@
 
 namespace Events.Accounts.Credit.Application;
 
+[EventType("94aeab74-9c37-4ea1-a392-fa61ea0c291c")]
 public record MortgageAdded(double Amount);

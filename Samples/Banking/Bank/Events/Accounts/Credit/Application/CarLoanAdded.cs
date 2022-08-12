@@ -3,4 +3,5 @@
 
 namespace Events.Accounts.Credit.Application;
 
+[EventType("d94990c2-95f2-48a6-9fed-7f56db2472f3")]
 public record CarLoanAdded(double Amount);

@@ -3,4 +3,5 @@
 
 namespace Events.Accounts.Credit.Application;
 
+[EventType("67e016b4-b33d-4f4c-89cb-41195b50d864")]
 public record YearlyIncomeRegistered(double Amount);
