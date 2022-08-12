@@ -6,40 +6,41 @@ using Events.Accounts.Credit.Application;
 
 namespace Domain.Accounts.Debit;
 
-[Route($"/api/accounts/credit/{ApplicationIdValue}")]
+[Route($"/api/accounts/credit/application/{{{ApplicationIdValue}}}")]
 public class CreditCardApplication : Controller
 {
     const string ApplicationIdValue = "applicationId";
 
     readonly IEventLog _eventLog;
-    readonly IBranch _branch;
 
     public CreditCardApplication(IEventLog eventLog)
     {
         _eventLog = eventLog;
-        var applicationId = (CreditCardApplicationId)RouteData.Values[ApplicationIdValue]!.ToString()!;
-        var task = _eventLog.GetBranch(applicationId);
-        task.Wait();
-        _branch = task.Result;
     }
 
     [HttpPost("income/{income}")]
     public Task RegisterYearlyIncome(
         [FromRoute] CreditCardApplicationId applicationId,
-        [FromRoute] double income) => _branch.Append(applicationId, new YearlyIncomeRegistered(income));
+        [FromRoute] double income) => AppendToBranch(applicationId, new YearlyIncomeRegistered(income));
 
     [HttpPost("mortgage/{remaining}")]
     public Task AddMortgage(
         [FromRoute] CreditCardApplicationId applicationId,
-        [FromRoute] double remaining) => _branch.Append(applicationId, new MortgageAdded(remaining));
+        [FromRoute] double remaining) => AppendToBranch(applicationId, new MortgageAdded(remaining));
 
     [HttpPost("carloan/{remaining}")]
     public Task AddCarLoan(
         [FromRoute] CreditCardApplicationId applicationId,
-        [FromRoute] double remaining) => _branch.Append(applicationId, new CarLoanAdded(remaining));
+        [FromRoute] double remaining) => AppendToBranch(applicationId, new CarLoanAdded(remaining));
 
     [HttpPost("consumerloan/{remaining}")]
     public Task AddConsumerLoan(
         [FromRoute] CreditCardApplicationId applicationId,
-        [FromRoute] double remaining) => _branch.Append(applicationId, new ConsumerLoanAdded(remaining));
+        [FromRoute] double remaining) => AppendToBranch(applicationId, new ConsumerLoanAdded(remaining));
+
+    async Task AppendToBranch(CreditCardApplicationId applicationId, object @event)
+    {
+        var branch = await _eventLog.GetBranch(applicationId);
+        await branch.Append(applicationId, @event);
+    }
 }
