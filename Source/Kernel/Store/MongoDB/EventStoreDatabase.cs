@@ -17,6 +17,7 @@ public class EventStoreDatabase : IEventStoreDatabase
     const string EventLogCollectionName = "event-log";
     const string OutboxCollectionName = "outbox";
     const string InboxCollectionName = "inbox";
+    const string BranchCollectionName = "branch";
 
     readonly IMongoDatabase _database;
 
@@ -53,9 +54,13 @@ public class EventStoreDatabase : IEventStoreDatabase
             {
                 collectionName = OutboxCollectionName;
             }
-            else
+            else if (eventSequenceId.IsInbox)
             {
                 collectionName = InboxCollectionName;
+            }
+            else
+            {
+                collectionName = $"{BranchCollectionName}-{eventSequenceId}";
             }
         }
 
