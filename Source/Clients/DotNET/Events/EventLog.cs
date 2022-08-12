@@ -79,7 +79,15 @@ public class EventLog : IEventLog
     /// <inheritdoc/>
     public Task<IBranch> GetBranch(BranchId branchId)
     {
-        return Task.FromResult<IBranch>(null!);
+        var executionContext = _executionContextManager.Current;
+        var branchKey = new BranchKey(executionContext.TenantId, executionContext.MicroserviceId);
+        var actualBranch = _clusterClient.GetGrain<Store.Grains.Branching.IBranch>(branchId, branchKey);
+        var eventSequence = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
+            branchId,
+            keyExtension: executionContext.ToMicroserviceAndTenant());
+
+        var branch = new Branch(BranchTypeId.NotSpecified, branchId, DateTimeOffset.UtcNow, EventSequenceNumber.First, _serializer, _eventTypes, eventSequence, actualBranch);
+        return Task.FromResult<IBranch>(branch);
     }
 
     /// <inheritdoc/>
