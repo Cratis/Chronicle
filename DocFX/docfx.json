@@ -63,13 +63,17 @@
         "globalMetadataFiles": [],
         "fileMetadataFiles": [],
         "template": [
-            "default"
+            "default",
+            "templates/unity"
         ],
-        "postProcessors": [],
+        "postProcessors": ["ExtractSearchIndex"],
         "markdownEngineName": "markdig",
         "noLangKeyword": false,
         "keepFileLink": false,
         "cleanupCacheHistory": false,
-        "disableGitFeatures": false
+        "disableGitFeatures": false,
+        "globalMetadata": {
+            "_enableSearch": "true"
+        }
     }
 }
