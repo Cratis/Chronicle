@@ -8,7 +8,6 @@ It will watch for any changes and rebuild and restart the web server after this.
 
 https://github.com/Singulink/SingulinkFX
 
-
 ## Examples to look at
 
 https://github.com/dotnet/docs/blob/main/docfx.json
