@@ -4,12 +4,12 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "watch": "npm-watch serve",
+        "watch": "concurrently 'yarn serve' 'npm-watch build'",
         "build": "dotnet msbuild -t:docfx",
-        "serve": "yarn build && cd ./_site && yarn httpserver"
+        "serve": "cd ./_site && yarn httpserver"
     },
     "watch": {
-        "serve": {
+        "build": {
             "patterns": [
                 "api",
                 "app",
@@ -23,6 +23,7 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "concurrently": "^7.3.0",
         "httpserver": "^0.3.0",
         "npm-watch": "^0.11.0"
     }
