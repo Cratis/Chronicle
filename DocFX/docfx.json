@@ -64,7 +64,7 @@
         "fileMetadataFiles": [],
         "template": [
             "default",
-            "templates/unity"
+            "templates/singulinkfx"
         ],
         "postProcessors": ["ExtractSearchIndex"],
         "markdownEngineName": "markdig",
@@ -73,7 +73,19 @@
         "cleanupCacheHistory": false,
         "disableGitFeatures": false,
         "globalMetadata": {
-            "_enableSearch": "true"
+            "_appTitle": "Cratis",
+            "_appName": "Cratis",
+            "_appFaviconPath": "images/favicon.png",
+            "_appLogoPath": "images/logo.png",
+            "_appFooter": "Documentation",
+            "_copyrightFooter": "© Aksio Insurtech. All rights reserved.",
+            "_enableSearch": true,
+            "_disableSideFilter": false,
+            "_enableNewTab": true,
+            "_disableContribution": false,
+            "_disableBreadcrumb": false
         }
     }
 }
+
+
