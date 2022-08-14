@@ -1,4 +1,6 @@
+- name: Application Model
+  href: application-model/toc.yml
 - name: .NET Client
   href: clients/dotnet/toc.yml
 - name: ASP.NET Client
-  href: clients/aspnet/toc.yml
+  href: clients/aspnetcore/toc.yml
