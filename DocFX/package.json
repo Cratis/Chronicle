@@ -4,9 +4,9 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "watch": "concurrently 'yarn serve' 'npm-watch build'",
+        "watch": "rm -rf ./_site && dotnet clean && dotnet restore && concurrently 'yarn serve' 'npm-watch build'",
         "build": "dotnet msbuild -t:docfx",
-        "serve": "cd ./_site && yarn httpserver"
+        "serve": "mkdir ./_site && cd ./_site && yarn httpserver"
     },
     "watch": {
         "build": {

@@ -8,15 +8,51 @@
                     ],
                     "exclude": [
                         "**/obj/**",
+                        "**/bin/**",
+                        "Tooling/Templates/**"
+                    ],
+                    "cwd": "../Source/ApplicationModel"
+                }
+            ],
+            "dest": "api/application-model",
+            "disableGitFeatures": false,
+            "disableDefaultFilter": false
+        },
+        {
+            "src": [
+                {
+                    "files": [
+                        "Clients/DotNET/DotNET.csproj"
+                    ],
+                    "exclude": [
+                        "**/obj/**",
+                        "**/bin/**",
+                    ],
+                    "cwd": "../Source"
+                }
+            ],
+            "dest": "api/clients/dotnet",
+            "disableGitFeatures": false,
+            "disableDefaultFilter": false
+        },
+        {
+            "src": [
+                {
+                    "files": [
+                        "Clients/AspNetCore/AspNetCore.csproj"
+                    ],
+                    "exclude": [
+                        "**/obj/**",
                         "**/bin/**"
                     ],
                     "cwd": "../Source"
                 }
             ],
-            "dest": "api",
+            "dest": "api/clients/aspnetcore",
             "disableGitFeatures": false,
             "disableDefaultFilter": false
         }
+
     ],
     "build": {
         "content": [
