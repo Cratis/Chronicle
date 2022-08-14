@@ -55,6 +55,10 @@ jobs:
         with:
           dotnet-version: '6.0.201'
 
+      - name: Restore tooling
+        working-directory: ./DocFX
+        run: dotnet restore
+
       - name: Build DocFX site
         working-directory: ./DocFX
         run: |
