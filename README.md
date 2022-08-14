@@ -14,7 +14,7 @@ It provides the core platform, referred to as the **Kernel** with client SDK (.N
 built into it. In addition Cratis offers an application model aimed towards productivity and bringing in concepts
 such as CQRS; opinionated and completely optional.
 
-Read the [documentation](./Documentation/index.md) for all the details.
+Read the documentation on our site [https://cratis.io](https://cratis.io) for all the details.
 For general guidance on the core values and principles we @ Aksio use, read more [here](https://github.com/aksio-insurtech/Home/blob/main/profile/README.md).
 
 If you want to jump into building this repository and possibly contributing, please refer to [contributing](./Documentation/contributing.md).
