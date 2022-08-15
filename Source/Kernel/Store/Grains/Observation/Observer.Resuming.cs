@@ -35,12 +35,22 @@ public partial class Observer
         }
 
         var tailSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes, eventSourceId);
+        await SubscribeForResumingPartition(eventSourceId, failedPartition.SequenceNumber, tailSequenceNumber);
+    }
 
+    /// <summary>
+    /// Subscribe to stream for a specific eventsource id and sequence number. Typically used while resuming a partition.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to subscribe for.</param>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to use as offset.</param>
+    /// <param name="tailSequenceNumber"><see cref="EventSequenceNumber"/> as the tail.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task SubscribeForResumingPartition(EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, EventSequenceNumber tailSequenceNumber)
+    {
         _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
-
         _streamSubscriptionsByEventSourceId[eventSourceId] = await _stream!.SubscribeAsync(
             async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, tailSequenceNumber),
-            new EventSequenceNumberTokenWithFilter(failedPartition.SequenceNumber, State.EventTypes, eventSourceId));
+            new EventSequenceNumberTokenWithFilter(sequenceNumber, State.EventTypes, eventSourceId));
     }
 
     async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, EventSequenceNumber tailSequenceNumber)
