@@ -29,9 +29,9 @@
     },
     "dependencies": {
         "@aksio/cratis-typescript": "1.0.0",
+        "@teamsupercell/typings-for-css-modules-loader": "2.5.1",
         "clean-webpack-plugin": "4.0.0",
         "css-loader": "6.7.1",
-        "css-modules-typescript-loader": "4.0.1",
         "file-loader": "6.2.0",
         "fork-ts-checker-webpack-plugin": "7.2.11",
         "html-webpack-plugin": "5.5.0",
