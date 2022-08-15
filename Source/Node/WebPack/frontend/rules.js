@@ -54,5 +54,15 @@ module.exports = [
             loader: 'svg-url-loader',
             options: {}
         }
+    },
+    {
+        test: /\.css$/i,
+        issuer: { not: [/\.html$/i] },
+        use: [
+            // Creates `style` nodes from JS strings
+            'style-loader',
+            // Translates CSS into CommonJS
+            'css-loader',
+        ]
     }
 ];
