@@ -77,6 +77,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
         var key = ObserverKey.Parse(keyAsString);
         _eventSequenceId = key.EventSequenceId;
+        State.EventSequenceId = _eventSequenceId;
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
         _sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
