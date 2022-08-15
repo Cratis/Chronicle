@@ -15,7 +15,7 @@ public class and_subscriber_has_unsubscribed : given.an_observer_with_event_type
     {
         state.FailPartition(first_partition, 42, Array.Empty<string>(), string.Empty);
         state.FailPartition(second_partition, 43, Array.Empty<string>(), string.Empty);
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)83));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)83));
         await observer.Unsubscribe();
     }
 

@@ -10,7 +10,7 @@ public class and_sequence_is_ahead : given.an_observer_and_two_event_types
 {
     void Establish()
     {
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
     }
 
     async Task Because() => await observer.Subscribe(event_types, observer_namespace);
