@@ -11,59 +11,38 @@ namespace Aksio.Cratis.Configuration;
 [Configuration]
 public class Storage
 {
-    bool _addedKernelMicroservice;
-    StorageType? _cluster;
-    StorageForMicroservices? _storageForMicroservices;
-
     /// <summary>
     /// The storage configuration for the cluster.
     /// </summary>
-    public StorageType Cluster
-    {
-        get => _cluster ?? new();
-        init
-        {
-            _cluster = value;
-            AddKernelMicroserviceIfNotAdded();
-        }
-    }
+    public StorageType Cluster { get; set; } = new();
 
     /// <summary>
     /// The storage configuration for all microservices.
     /// </summary>
-    public StorageForMicroservices Microservices
-    {
-        get => _storageForMicroservices ?? new();
-        init
-        {
-            _storageForMicroservices = value;
-            AddKernelMicroserviceIfNotAdded();
-        }
-    }
+    public StorageForMicroservices Microservices { get; set; } = new();
 
-    void AddKernelMicroserviceIfNotAdded()
+    /// <summary>
+    /// Configure the Kernel as a Microservice.
+    /// </summary>
+    /// <param name="tenants">Tenants the Kernel needs to support.</param>
+    public void ConfigureKernelMicroservice(IEnumerable<string> tenants)
     {
-        if (_addedKernelMicroservice || _storageForMicroservices is null || _cluster is null) return;
-
-        var tenants = _storageForMicroservices!.First().Value.Tenants.Select(_ => _.Key);
-        _storageForMicroservices[MicroserviceId.Kernel] = new()
+        Microservices[MicroserviceId.Kernel] = new()
         {
             Shared = new StorageTypes
             {
-                ["eventStore"] = _cluster,
+                ["eventStore"] = Cluster,
             },
             Tenants = new()
         };
 
         foreach (var tenant in tenants)
         {
-            _storageForMicroservices[MicroserviceId.Kernel].Tenants[tenant] = new StorageTypes
+            Microservices[MicroserviceId.Kernel].Tenants[tenant] = new StorageTypes
             {
-                ["readModels"] = _cluster,
-                ["eventStore"] = _cluster
+                ["readModels"] = Cluster,
+                ["eventStore"] = Cluster
             };
         }
-
-        _addedKernelMicroservice = true;
     }
 }

@@ -234,3 +234,25 @@ public class MyController : Controller
     }
 }
 ```
+
+## Perform operations after values bound
+
+After the values are bound to a configuration object one might want to be notified to be able to perform operations / preparations
+for the object to be used. By implementing `IPerformPostBindOperations` the system will call the `Perform()` method when values have
+been bound.
+
+```csharp
+[Configuration("cratis")]
+public class KernelConfiguration : IPerformPostBindOperations
+{
+    public Tenants Tenants { get; init; } = new();
+    public Cluster Cluster { get; init; } = new();
+    public Storage Storage { get; init; } = new();
+
+    public void Perform()
+    {
+        // Perform post configuration
+        Storage.ConfigureKernelMicroservice(Tenants.Select(_ => _.Key));
+    }
+}
+```
