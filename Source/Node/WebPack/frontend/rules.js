@@ -35,7 +35,7 @@ module.exports = [
             // Creates `style` nodes from JS strings
             'style-loader',
             // Adds typescript declarations to the css modules and allows importing and using strongly typed scss modules in react components.
-            'typings-for-css-modules-loader',
+            '@teamsupercell/typings-for-css-modules-loader',
             // Translates CSS into CommonJS
             { loader: 'css-loader', options: { modules: true, importLoaders: 1, sourceMap: true } },
             // Compiles Sass to CSS
