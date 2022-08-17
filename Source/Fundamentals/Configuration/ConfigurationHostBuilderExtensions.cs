@@ -101,6 +101,12 @@ public static class ConfigurationHostBuilderExtensions
             if (configuration.Providers.Any(_ => _.GetChildKeys(Array.Empty<string>(), null!).Any()))
             {
                 configuration.Bind(configurationObject);
+
+                if (configurationObject is IPerformPostBindOperations postPerformer)
+                {
+                    postPerformer.Perform();
+                }
+
                 services.AddSingleton(configurationObjectType, configurationObject);
 
                 services.AddChildConfigurationObjects(configurationObjectType, configurationObject);

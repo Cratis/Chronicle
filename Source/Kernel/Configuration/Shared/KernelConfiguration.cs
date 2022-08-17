@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Configuration;
 /// Represents the configuration for the Kernel.
 /// </summary>
 [Configuration("cratis")]
-public class KernelConfiguration
+public class KernelConfiguration : IPerformPostBindOperations
 {
     /// <summary>
     /// Gets the <see cref="Tenants"/> configuration.
@@ -19,15 +19,21 @@ public class KernelConfiguration
     /// <summary>
     /// Gets the <see cref="Microservice"/> configuration.
     /// </summary>
-    public Microservices Microservices { get; init; } = new();
+    public Microservices Microservices { get; init; } = new();
 
     /// <summary>
     /// Gets the <see cref="Cluster"/> configuration.
     /// </summary>
-    public Cluster Cluster { get; init; } = new();
+    public Cluster Cluster { get; init; } = new();
 
     /// <summary>
     /// Gets the <see cref="Storage"/> configuration.
     /// </summary>
-    public Storage Storage { get; init; } = new();
+    public Storage Storage { get; init; } = new();
+
+    /// <inheritdoc/>
+    public void Perform()
+    {
+        Storage.ConfigureKernelMicroservice(Tenants.Select(_ => _.Key));
+    }
 }
