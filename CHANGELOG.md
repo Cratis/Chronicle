@@ -1,3 +1,31 @@
+# [v6.8.0] - 2022-8-17 [PR: #417](https://github.com/aksio-insurtech/Cratis/pull/417)
+
+## Summary
+
+Adding support for performing operations after the config objects values has been bound up.
+Automatically recognized. Below is a sample, read more in the documentation:
+
+```csharp
+[Configuration("MyConfig")]
+public class ConfigObject : IPerformPostBindOperations
+{
+    public void Perform()
+    {
+        // Perform a post bind operation
+    }
+}
+```
+
+### Added
+
+- Configuration objects can now implement `IPerformPostBindOperations` to be called after values have been bound to it.
+
+### Fixed
+
+- Fixed issues with creating and updating module.scss.ts.d-files (Issue #411)
+- Add typings for css modules loader to common WebPack config (Issue #412)
+
+
 # [v6.7.3] - 2022-8-8 [PR: #408](https://github.com/aksio-insurtech/Cratis/pull/408)
 
 ### Fixed
