@@ -24,8 +24,7 @@ public class MoneyLaundering
         var count = await _immediateProjections.GetInstanceById<AccountsCounter>(context.EventSourceId);
         if (count.Count > 42)
         {
-            Console.WriteLine("Hellu");
+            await _eventLog.Append(Guid.Empty.ToString(), new PossibleMoneyLaunderingDetected(@event.Owner, context.EventSourceId, DateOnly.FromDateTime(context.Occurred.Date)));
         }
-        await _eventLog.Append(Guid.Empty.ToString(), new PossibleMoneyLaunderingDetected(@event.Owner, context.EventSourceId, DateOnly.FromDateTime(context.Occurred.Date)));
     }
 }
