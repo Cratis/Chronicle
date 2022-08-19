@@ -123,6 +123,26 @@ public static class TypeExtensions
     }
 
     /// <summary>
+    /// Check if a type is a DateOnly or not.
+    /// </summary>
+    /// <param name="type"><see cref="Type"/> to check.</param>
+    /// <returns>True if type is a date only, false if not.</returns>
+    public static bool IsDateOnly(this Type type)
+    {
+        return Is<DateOnly>(type);
+    }
+
+    /// <summary>
+    /// Check if a type is a TimeOnly or not.
+    /// </summary>
+    /// <param name="type"><see cref="Type"/> to check.</param>
+    /// <returns>True if type is a time only, false if not.</returns>
+    public static bool IsTimeOnly(this Type type)
+    {
+        return Is<TimeOnly>(type);
+    }
+
+    /// <summary>
     /// Check if a type is a DateTimeOffset or not.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to check.</param>
