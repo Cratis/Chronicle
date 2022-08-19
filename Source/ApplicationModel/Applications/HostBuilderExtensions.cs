@@ -3,6 +3,7 @@
 
 using System.IO.Compression;
 using Aksio.Cratis.Applications;
+using Aksio.Cratis.Conversion;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
@@ -50,6 +51,7 @@ public static class HostBuilderExtensions
 
         Internals.Types = new Types();
         Internals.Types.RegisterTypeConvertersForConcepts();
+        TypeConverters.Register();
 
         if (microserviceId is null)
         {
