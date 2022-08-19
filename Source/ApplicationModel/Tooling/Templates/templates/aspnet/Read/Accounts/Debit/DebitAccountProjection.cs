@@ -14,7 +14,8 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
             .From<DebitAccountOpened>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
                 .Set(model => model.Owner).To(@event => @event.Owner)
-                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
+                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred)
+                .Set(model => model.HasCard).To(@event => @event.IncludeCard))
             .From<DebitAccountNameChanged>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
                 .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))

@@ -6,4 +6,4 @@ using Concepts;
 namespace Events.Accounts.Debit;
 
 [EventType("66740d58-cf08-4f30-b793-6d9a306a9eef")]
-public record PossibleMoneyLaunderingDetected(PersonId PersonId, EventSourceId AccountId);
+public record PossibleMoneyLaunderingDetected(PersonId PersonId, EventSourceId AccountId, DateOnly LastOccurrence);

@@ -17,5 +17,19 @@ public class ConceptAsJsonConverter<T> : JsonConverter<T>
     public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => (T)ConceptFactory.CreateConceptInstance(typeToConvert, reader.GetString())!;
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer.WriteStringValue(value?.GetConceptValue().ToString());
+    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+    {
+        if (typeof(T).GetConceptValueType() == typeof(DateOnly))
+        {
+            writer.WriteStringValue(((DateOnly)value?.GetConceptValue()!).ToString("O"));
+        }
+        else if (typeof(T).GetConceptValueType() == typeof(TimeOnly))
+        {
+            writer.WriteStringValue(((TimeOnly)value?.GetConceptValue()!).ToString("O"));
+        }
+        else
+        {
+            writer.WriteStringValue(value?.GetConceptValue().ToString());
+        }
+    }
 }

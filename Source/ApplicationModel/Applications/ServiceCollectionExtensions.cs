@@ -30,6 +30,8 @@ public static class ServiceCollectionExtensions
             .AddJsonOptions(_ =>
             {
                 _.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
+                _.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+                _.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
                 _.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
             });
 
@@ -39,6 +41,8 @@ public static class ServiceCollectionExtensions
             Converters =
                 {
                     new ConceptAsJsonConverterFactory(),
+                    new DateOnlyJsonConverter(),
+                    new TimeOnlyJsonConverter(),
                     new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
                 }
         };
