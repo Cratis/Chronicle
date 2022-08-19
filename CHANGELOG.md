@@ -1,3 +1,17 @@
+# [v6.9.0] - 2022-8-19 [PR: #419](https://github.com/aksio-insurtech/Cratis/pull/419)
+
+## Summary
+
+Adding support for `DateOnly` and `TimeOnly` throughout all pipelines.
+
+
+### Added
+
+- Added Json converters for `DateOnly` and `TimeOnly``
+- Added Type converters for `DateOnly` and `TimeOnly``
+- Added MongoDB serializers for `DateOnly` and `TimeOnly``
+
+
 # [v6.8.0 & v6.8.1] - 2022-8-17 [PR: #417](https://github.com/aksio-insurtech/Cratis/pull/417)
 
 ## Summary
