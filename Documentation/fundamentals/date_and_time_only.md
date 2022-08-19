@@ -84,3 +84,23 @@ TypeConverters.Register();
 ```
 
 > Note: If you're using the Cratis Application Model, you do not have to manually set this up. It is automatically configured at startup.
+
+## MongoDB
+
+As with Json serialization, when we store things in MongoDB we want it to be stored in a way that makes more sense for readability but also
+for us to be able to do queries on them.
+
+In the [MongoDB extension](https://www.nuget.org/packages/Aksio.Cratis.Extensions.MongoDB/) package there is a MongoDB serializer for dealing with
+this in the same way.
+
+You can either use the serializer manually on maps defined or you can register it globally as shown below:
+
+```csharp
+using Aksio.Cratis.Extensions.MongoDB;
+using MongoDB.Bson.Serialization;
+
+BsonSerializer.RegisterSerializationProvider(new DateOnlySerializer());
+BsonSerializer.RegisterSerializationProvider(new TimeOnlySerializer());
+```
+
+> Note: If you're using the Cratis Application Model, you do not have to manually set this up. It is automatically configured at startup.
