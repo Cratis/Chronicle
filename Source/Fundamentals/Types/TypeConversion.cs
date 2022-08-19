@@ -43,6 +43,36 @@ public static class TypeConversion
         {
             val = value ?? default(DateTime);
         }
+        else if (type.IsDateOnly())
+        {
+            if (value is DateOnly)
+            {
+                val = value;
+            }
+            else if (DateOnly.TryParse(value.ToString(), out var dateOnlyValue))
+            {
+                val = dateOnlyValue;
+            }
+            else
+            {
+                val = default(DateOnly);
+            }
+        }
+        else if (type.IsTimeOnly())
+        {
+            if (value is TimeOnly)
+            {
+                val = value;
+            }
+            else if (TimeOnly.TryParse(value.ToString(), out var timeOnlyValue))
+            {
+                val = timeOnlyValue;
+            }
+            else
+            {
+                val = default(TimeOnly);
+            }
+        }
         else if (type.IsDateTimeOffset())
         {
             if (value is DateTimeOffset)
