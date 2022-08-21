@@ -1,7 +1,7 @@
 - name: Commands
   href: commands.md
-- name: Command Tracking
-  href: command-tracking.md
+- name: Command Tracker
+  href: command-tracker.md
 - name: Queries
   href: queries.md
 - name: Proxy Generation
