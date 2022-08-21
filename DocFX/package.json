@@ -4,27 +4,31 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "watch": "rm -rf ./_site && dotnet clean && dotnet restore && concurrently 'yarn serve' 'npm-watch build'",
+        "watch": "rm -rf ./_site && rm -rf ./obj && dotnet clean && dotnet restore && concurrently 'yarn serve' 'npm-watch build'",
         "build": "dotnet msbuild -t:docfx",
-        "serve": "mkdir ./_site && cd ./_site && yarn httpserver"
+        "serve": "yarn http-server ./_site"
     },
     "watch": {
         "build": {
             "patterns": [
-                "api",
                 "app",
                 "toc",
-                "index"
+                "index",
+                "../Source",
+                "../Documentation"
             ],
-            "extensions": "md,yml",
+            "ignore": [
+                "_site"
+            ],
+            "extensions": "md,yml,cs,ts,tsx",
             "quiet": false
         }
     },
     "author": "",
     "license": "ISC",
     "devDependencies": {
-        "concurrently": "^7.3.0",
-        "httpserver": "^0.3.0",
-        "npm-watch": "^0.11.0"
+        "concurrently": "7.3.0",
+        "http-server": "14.1.1",
+        "npm-watch": "0.11.0"
     }
 }

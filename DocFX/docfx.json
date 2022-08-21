@@ -26,7 +26,7 @@
                     ],
                     "exclude": [
                         "**/obj/**",
-                        "**/bin/**",
+                        "**/bin/**"
                     ],
                     "cwd": "../Source"
                 }
@@ -64,17 +64,22 @@
             },
             {
                 "files": [
-                    "articles/**.md",
-                    "articles/**/toc.yml",
+                    "**/*.md",
+                    "**/toc.yml",
                     "toc.yml",
                     "*.md"
-                ]
+                ],
+                "exclude": [
+                    "index.md"
+                ],
+                "src": "../Documentation",
+                "dest": "articles"
             },
             {
                 "files": [
-                    "**/*.md"
-                ],
-                "src": "../Documentation"
+                    "toc.yml",
+                    "*.md"
+                ]
             }
         ],
         "resource": [
@@ -82,7 +87,15 @@
                 "files": [
                     "images/**"
                 ]
+            },
+            {
+                "files": [
+                    "**/*.png"
+                ],
+                "src": "../Documentation",
+                "dest": "articles"
             }
+
         ],
         "overwrite": [
             {
