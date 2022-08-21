@@ -283,6 +283,7 @@ __pycache__/
 
 yarn.lock
 package-json.lock
+package-lock.json
 dist
 **/node_modules/
 *.tsbuildinfo

@@ -2,7 +2,7 @@
 
 * Multi-tenant
 * (New) ACID:
-  * Associative
-  * Commutative
-  * Idempotent
-  * Distributed
+  - Associative
+  - Commutative
+  - Idempotent
+  - Distributed

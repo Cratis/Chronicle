@@ -2,6 +2,7 @@
     "private": true,
     "workspaces": [
         "Source/**/*",
+        "DocFX/**/*",
         "Samples/**/*"
     ],
     "scripts": {
