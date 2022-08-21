@@ -3,7 +3,11 @@
 - name: Getting started
   href: getting-started.md
 - name: Guidance
-  href: guidance/index.md
+  href: guidance/toc.yml
+- name: Recipes
+  href: recipes/toc.yml
+- name: Tutorials
+  href: tutorials/toc.yml
 - name: Tenancy
   href: tenancy.md
 - name: Fundamentals
@@ -12,6 +16,10 @@
   href: clients/toc.yml
 - name: Application Model
   href: application-model/toc.yml
+- name: Kernel
+  href: kernel/toc.yml
+- name: Writing automated specs / tests
+  href: specifications/toc.yml
 - name: Contributing
   href: contributing.md
 - name: Principles
