@@ -65,9 +65,7 @@
             {
                 "files": [
                     "**/*.md",
-                    "**/toc.yml",
-                    "toc.yml",
-                    "*.md"
+                    "**/toc.yml"
                 ],
                 "exclude": [
                     "index.md"
@@ -90,7 +88,9 @@
             },
             {
                 "files": [
-                    "**/*.png"
+                    "**/*.png",
+                    "**/*.gif",
+                    "**/*.jpg"
                 ],
                 "src": "../Documentation",
                 "dest": "articles"
