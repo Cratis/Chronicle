@@ -1,6 +1,6 @@
 - name: Events
-  href: events.md
+  href: events/events.md
 - name: Observers
-  href: observers.md
+  href: events/observers.md
 - name: Integration
-  href: integration.md
+  href: integration/integration.md
