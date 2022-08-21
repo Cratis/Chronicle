@@ -1,4 +1,4 @@
 - name: Event
   href: event.md
 - name: Event Source
-  href: event.source.md
+  href: event-source.md
