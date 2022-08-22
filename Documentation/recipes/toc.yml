@@ -1,6 +1,6 @@
 - name: Creating an event
   href: creating-an-event.md
-- name: Appending an event to the log-messages
+- name: Appending an event to the event log
   href: appending-an-event-to-event-log.md
 - name: Observing events in the event log
   href: observing-events-in-event-log.md
