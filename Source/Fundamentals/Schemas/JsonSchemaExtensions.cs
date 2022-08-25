@@ -20,11 +20,14 @@ public static class JsonSchemaExtensions
             schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] is object[] complianceObjects)
         {
             var metadata = new List<ComplianceSchemaMetadata>();
-            foreach (IDictionary<string, object> properties in complianceObjects)
+            foreach (var complianceObject in complianceObjects)
             {
-                var metadataType = properties.FirstOrDefault(kvp => kvp.Key == nameof(ComplianceSchemaMetadata.metadataType));
-                var details = properties.FirstOrDefault(kvp => kvp.Key == nameof(ComplianceSchemaMetadata.details));
-                metadata.Add(new ComplianceSchemaMetadata(Guid.Parse(metadataType.Value.ToString()!), details.Value.ToString()!));
+                if (complianceObject is Dictionary<object, object> properties)
+                {
+                    var metadataType = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.metadataType));
+                    var details = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.details));
+                    metadata.Add(new ComplianceSchemaMetadata(Guid.Parse(metadataType.Value.ToString()!), details.Value.ToString()!));
+                }
             }
 
             schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = metadata;
