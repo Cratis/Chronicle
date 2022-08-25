@@ -29,15 +29,15 @@ public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
     /// <inheritdoc/>
     public void Process(SchemaProcessorContext context)
     {
-        if (_metadataResolver.HasMetadataFor(context.Type))
+        if (_metadataResolver.HasMetadataFor(context.ContextualType.Type))
         {
-            AddMetadataToSchema(context.Schema, _metadataResolver.GetMetadataFor(context.Type));
+            AddMetadataToSchema(context.Schema, _metadataResolver.GetMetadataFor(context.ContextualType.Type));
         }
 
         foreach (var (key, property) in context.Schema.Properties)
         {
             var propertyName = key.ToPascalCase();
-            var clrProperty = context.Type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+            var clrProperty = context.ContextualType.Type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
             if (clrProperty != default && _metadataResolver.HasMetadataFor(clrProperty))
             {
                 AddMetadataToSchema(property, _metadataResolver.GetMetadataFor(clrProperty));
@@ -61,6 +61,6 @@ public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
 
     void EnsureExtensionData(JsonSchema schema)
     {
-        if (schema.ExtensionData == null) schema.ExtensionData = new Dictionary<string, object>();
+        schema.ExtensionData ??= new Dictionary<string, object>();
     }
 }

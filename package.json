@@ -15,8 +15,9 @@
         "up": "node ./run-task-on-workspaces.js up"
     },
     "devDependencies": {
-        "edit-json-file": "1.6.0",
-        "glob": "7.2.0"
+        "edit-json-file": "1.7.0",
+        "glob": "8.0.3",
+        "npm-check-updates": "16.0.5"
     },
     "license": "MIT",
     "version": "0.0.0"
