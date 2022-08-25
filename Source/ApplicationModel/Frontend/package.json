@@ -44,7 +44,9 @@
     },
     "dependencies": {
         "@aksio/cratis-typescript": "1.0.0",
-        "@aksio/cratis-react": "1.0.0",
+        "react": "18.2.0",
+        "react-dom": "18.2.0",
+        "react-router-dom": "6.3.0",
         "handlebars": "4.7.7"
     },
     "devDependencies": {
