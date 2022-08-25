@@ -53,10 +53,7 @@ public static class HostBuilderExtensions
         Internals.Types.RegisterTypeConvertersForConcepts();
         TypeConverters.Register();
 
-        if (microserviceId is null)
-        {
-            microserviceId = MicroserviceId.Unspecified;
-        }
+        microserviceId ??= MicroserviceId.Unspecified;
 
         builder
             .UseMongoDB(Internals.Types)
