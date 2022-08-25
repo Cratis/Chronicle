@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Compliance;
+using Namotion.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema.Generation;
@@ -34,7 +35,7 @@ public class a_processor_and_a_context_for<T> : Specification
 
         var instance = new T();
         context = new(
-            typeof(T),
+            typeof(T).ToContextualType(),
             schema,
             new JsonSchemaResolver(instance, settings),
             generator,
