@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
+    "private": true,
     "scripts": {
         "watch": "rm -rf ./_site && rm -rf ./obj && dotnet clean && dotnet restore && concurrently 'yarn serve' 'npm-watch build'",
         "build": "dotnet msbuild -t:docfx",
