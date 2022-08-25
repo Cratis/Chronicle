@@ -61,6 +61,6 @@ public class ComplianceMetadataSchemaProcessor : ISchemaProcessor
 
     void EnsureExtensionData(JsonSchema schema)
     {
-        if (schema.ExtensionData == null) schema.ExtensionData = new Dictionary<string, object>();
+        schema.ExtensionData ??= schema.ExtensionData = new Dictionary<string, object>();
     }
 }
