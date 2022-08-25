@@ -27,16 +27,20 @@ public class when_invoked_with_all_values_present : Specification
         call_context = new();
         filter = new(execution_context_manager.Object);
 
+        execution_context_manager.Setup(_ => _.Set(IsAny<ExecutionContext>())).Callback((ExecutionContext ec) => execution_context = ec);
+    }
+
+    Task Because()
+    {
+        // We need to set the keys in the same async context as the filter will be invoked in
         RequestContext.Set(RequestContextKeys.MicroserviceId, microservice_id);
         RequestContext.Set(RequestContextKeys.TenantId, tenant_id);
         RequestContext.Set(RequestContextKeys.CorrelationId, correlation_id);
         RequestContext.Set(RequestContextKeys.CausationId, causation_id);
         RequestContext.Set(RequestContextKeys.CausedBy, caused_by);
 
-        execution_context_manager.Setup(_ => _.Set(IsAny<ExecutionContext>())).Callback((ExecutionContext ec) => execution_context = ec);
+        return filter.Invoke(call_context.Object);
     }
-
-    Task Because() => filter.Invoke(call_context.Object);
 
     [Fact] void should_hold_correct_microservice_id() => execution_context.MicroserviceId.ShouldEqual(microservice_id);
     [Fact] void should_hold_correct_tenant_id() => execution_context.TenantId.ShouldEqual(tenant_id);

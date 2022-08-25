@@ -27,8 +27,8 @@ public class TypeFormatSchemaProcessor : ISchemaProcessor
     /// <inheritdoc/>
     public void Process(SchemaProcessorContext context)
     {
-        if (!_typesFormatInfo.ContainsKey(context.Type)) return;
+        if (!_typesFormatInfo.ContainsKey(context.ContextualType.Type)) return;
 
-        context.Schema.Format = _typesFormatInfo[context.Type];
+        context.Schema.Format = _typesFormatInfo[context.ContextualType.Type];
     }
 }

@@ -48,7 +48,7 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '6.0.201'
+          dotnet-version: '6.0.400'
 
       - name: Restore tooling
         working-directory: ./DocFX

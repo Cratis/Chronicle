@@ -106,6 +106,6 @@ public static class SchemaExtensionMethods
 
     static void EnsureExtensionData(this JsonSchema schema)
     {
-        if (schema.ExtensionData == null) schema.ExtensionData = new Dictionary<string, object>();
+        schema.ExtensionData ??= new Dictionary<string, object>();
     }
 }
