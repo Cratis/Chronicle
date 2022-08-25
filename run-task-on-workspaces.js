@@ -53,15 +53,18 @@ function updateDependencyVersionsFromLocalWorkspaces(file, packageJson, version)
     const dependencyFields = Object.keys(packageJson).filter(_ => _.endsWith('dependencies') || _.endsWith('Dependencies'));
     for (let field of dependencyFields) {
         const dependencies = packageJson[field] ?? {};
+        const fileDependencies = file.get(field);
+
         for (let dependencyName of Object.keys(dependencies)) {
             if (workspaceNames.includes(dependencyName)) {
                 console.log(`Updating workspace ${field} '${dependencyName}' to version ${version}`);
                 dependencyName = dependencyName.replace(/\./g, '\\.');
                 field = field.replace(/\./g, '\\.');
-                const key = `${field}.${dependencyName}`;
-                file.set(key, version);
+                fileDependencies[dependencyName] = version;
             }
         }
+
+        file.set(field, fileDependencies);
     }
 }
 
@@ -91,12 +94,12 @@ for (const workspaceName in workspaces) {
                 }
 
                 console.log(`Publishing workspace '${workspaceName}' at '${workspaceRelativeLocation}'`);
-                const result = spawn('yarn', ['publish', '--verbose', '--no-git-tag-version', '--new-version', version], { cwd: workspaceAbsoluteLocation });
+                /*const result = spawn('yarn', ['publish', '--verbose', '--no-git-tag-version', '--new-version', version], { cwd: workspaceAbsoluteLocation });
                 console.log(result.stdout.toString());
                 if (result.status !== 0) {
                     process.exit(1);
                     return;
-                }
+                }*/
             }
         } else {
 
