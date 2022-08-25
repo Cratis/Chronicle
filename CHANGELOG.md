@@ -1,3 +1,10 @@
+# [v6.9.4] - 2022-8-25 [PR: #432](https://github.com/aksio-insurtech/Cratis/pull/432)
+
+### Fixed
+
+- Removing CSS rule from WebPack setup, with the SASS rule we seem to be picking up CSS as well.
+
+
 # [v6.9.3] - 2022-8-25 [PR: #431](https://github.com/aksio-insurtech/Cratis/pull/431)
 
 ### Fixed
