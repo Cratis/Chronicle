@@ -3,6 +3,7 @@
         <AssemblyName>Aksio.Cratis.Server</AssemblyName>
         <RootNamespace>Aksio.Cratis.Server</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
     </PropertyGroup>
 
     <!-- 3rd party package references -->
