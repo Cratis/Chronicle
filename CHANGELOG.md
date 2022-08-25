@@ -1,3 +1,12 @@
+# [v6.9.1] - 2022-8-25 [PR: #428](https://github.com/aksio-insurtech/Cratis/pull/428)
+
+### Fixed
+
+- React upgraded to version 18.0
+- Upgraded all NuGet dependencies to latest
+- Latest version of .NET for build actions
+
+
 # [v6.9.0] - 2022-8-19 [PR: #419](https://github.com/aksio-insurtech/Cratis/pull/419)
 
 ## Summary
