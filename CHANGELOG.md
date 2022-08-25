@@ -1,3 +1,10 @@
+# [v6.9.3] - 2022-8-25 [PR: #431](https://github.com/aksio-insurtech/Cratis/pull/431)
+
+### Fixed
+
+- Fixing script for updating versions when publishing. The `edit-json-file` package had a breaking change or bug causing problems.
+
+
 # [v6.9.2] - 2022-8-25 [PR: #430](https://github.com/aksio-insurtech/Cratis/pull/430)
 
 ### Fixed
