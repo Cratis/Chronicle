@@ -63,11 +63,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
             return new ImmediateProjectionResult(new JsonObject(), Array.Empty<PropertyPath>(), 0);
         }
 
-        if (_projection is null)
-        {
-            // TODO: This can be optimized by extracting out to a separate singleton service that holds these in-memory
-            _projection = await _projectionFactory.CreateFrom(projectionDefinition);
-        }
+        _projection ??= await _projectionFactory.CreateFrom(projectionDefinition);
 
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(_projectionKey.TenantId, CorrelationId.New(), _projectionKey.MicroserviceId);
