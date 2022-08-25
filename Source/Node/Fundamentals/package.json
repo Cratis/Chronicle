@@ -21,7 +21,9 @@
         "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
         "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
         "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha",
-        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test"
+        "ci": "yarn clean && yarn lint:ci && yarn build && yarn test",
+        "up": "ncu -u \\!'@aksio/*'"
+
     },
     "dependencies": {
         "@aksio/cratis-typescript": "1.0.0"
