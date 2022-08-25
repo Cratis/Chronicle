@@ -1,3 +1,10 @@
+# [v6.9.2] - 2022-8-25 [PR: #430](https://github.com/aksio-insurtech/Cratis/pull/430)
+
+### Fixed
+
+- Upgrading React in Aksio Microservice template
+
+
 # [v6.9.1] - 2022-8-25 [PR: #428](https://github.com/aksio-insurtech/Cratis/pull/428)
 
 ### Fixed
