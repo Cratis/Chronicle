@@ -29,5 +29,7 @@ public static class TelemetryConfigurationExtensions
                     break;
             }
         });
+
+        return builder;
     }
 }
