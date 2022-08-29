@@ -21,7 +21,7 @@ public static class TelemetryConfigurationExtensions
         {
             var telemetryConfig = _.GetTelemetryConfig();
 
-            switch( telemetryConfig.Type)
+            switch (telemetryConfig.Type)
             {
                 case TelemetryTypes.AppInsights:
                     var options = telemetryConfig.GetAppInsightsTelemetryOptions();
