@@ -1,3 +1,11 @@
+# [v6.10.0] - 2022-8-29 [PR: #437](https://github.com/aksio-insurtech/Cratis/pull/437)
+
+### Added
+
+- Adding support for Application Insights for Serilog logging
+- Adding support for Application Insights telemetry for Orleans from config
+
+
 # [v6.9.4] - 2022-8-25 [PR: #432](https://github.com/aksio-insurtech/Cratis/pull/432)
 
 ### Fixed
