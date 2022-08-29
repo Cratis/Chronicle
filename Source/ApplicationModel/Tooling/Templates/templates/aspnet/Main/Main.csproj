@@ -11,6 +11,5 @@
     </ItemGroup>
     <ItemGroup>
       <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="8.4.1" />
-      <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
     </ItemGroup>
 </Project>
