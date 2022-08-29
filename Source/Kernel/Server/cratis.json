@@ -17,6 +17,12 @@
         "gatewayPort": 30000,
         "options": {}
     },
+    "telemetry": {
+        "type": "app-insights",
+        "options": {
+            "key": ""
+        }
+    },
     "storage": {
         "cluster": {
             "type": "MongoDB",
