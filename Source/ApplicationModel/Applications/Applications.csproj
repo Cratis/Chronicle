@@ -1,11 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<AssemblyName>
-			Aksio.Cratis.Applications
-		</AssemblyName>
-		<RootNamespace>
-			Aksio.Cratis.Applications
-		</RootNamespace>
+		<AssemblyName>Aksio.Cratis.Applications</AssemblyName>
+		<RootNamespace>Aksio.Cratis.Applications</RootNamespace>
 	</PropertyGroup>
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
