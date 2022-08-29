@@ -11,6 +11,7 @@ namespace Aksio.Cratis.Extensions.Orleans.Configuration;
 /// </summary>
 public class TelemetryTypeValueResolver : IConfigurationValueResolver
 {
+    /// <inheritdoc/>
     public object Resolve(IConfiguration configuration)
     {
         return configuration.GetValue<string>("type") switch
