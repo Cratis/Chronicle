@@ -1,3 +1,10 @@
+# [v6.10.2] - 2022-8-30 [PR: #442](https://github.com/aksio-insurtech/Cratis/pull/442)
+
+### Fixed
+
+- Converting to `any` for query arguments when passed down to base type for `useQuery()` and `useObservableQuery()` hooks.
+
+
 # [v6.10.1] - 2022-8-30 [PR: #441](https://github.com/aksio-insurtech/Cratis/pull/441)
 
 ### Fixed
