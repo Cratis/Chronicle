@@ -27,6 +27,11 @@ public class KernelConfiguration : IPerformPostBindOperations
     public Cluster Cluster { get; init; } = new();
 
     /// <summary>
+    /// Gets the <see cref="Telemetry"/> configuration.
+    /// </summary>
+    public Telemetry Telemetry { get; init; } = new ();
+
+    /// <summary>
     /// Gets the <see cref="Storage"/> configuration.
     /// </summary>
     public Storage Storage { get; init; } = new();
