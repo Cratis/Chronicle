@@ -23,7 +23,7 @@ export function useQuery<TDataType, TQuery extends IQueryFor<TDataType>, TArgume
     const queryInstance = new query() as TQuery;
     const [result, setResult] = useState<QueryResult<TDataType>>(new QueryResult(queryInstance.defaultValue, true));
     const queryExecutor = (async (args?: TArguments) => {
-        const response = await queryInstance.perform(args);
+        const response = await queryInstance.perform(args as any);
         setResult(response);
     });
 
