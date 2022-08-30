@@ -1,3 +1,10 @@
+# [v6.10.1] - 2022-8-30 [PR: #441](https://github.com/aksio-insurtech/Cratis/pull/441)
+
+### Fixed
+
+- Adding the `Telemetry` configration object to the Cratis Kernel configuration object.
+
+
 # [v6.10.0] - 2022-8-29 [PR: #437](https://github.com/aksio-insurtech/Cratis/pull/437)
 
 ### Added
