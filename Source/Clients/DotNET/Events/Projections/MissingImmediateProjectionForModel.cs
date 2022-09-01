@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Events.Projections;
 
 /// <summary>
-/// Exception that is thrown when an immediate projection is missing for a model type.
+/// Exception that gets thrown when an immediate projection is missing for a model type.
 /// </summary>
 public class MissingImmediateProjectionForModel : Exception
 {
