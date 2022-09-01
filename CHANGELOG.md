@@ -1,3 +1,10 @@
+# [v6.10.9] - 2022-9-1 [PR: #454](https://github.com/aksio-insurtech/Cratis/pull/454)
+
+### Fixed
+
+- Immediate projections now set the `Id` property to the `modelKey` being  asked for. A future expansion on this will be to allow defininig which property is the `Id` property (#455)
+
+
 # [v6.10.8] - 2022-9-1 [PR: #453](https://github.com/aksio-insurtech/Cratis/pull/453)
 
 ### Fixed
