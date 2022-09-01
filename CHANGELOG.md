@@ -1,3 +1,10 @@
+# [v6.10.8] - 2022-9-1 [PR: #453](https://github.com/aksio-insurtech/Cratis/pull/453)
+
+### Fixed
+
+- Path to x64 cache used between jobs in CI/CD.
+
+
 # [v6.10.7] - 2022-9-1 [PR: #452](https://github.com/aksio-insurtech/Cratis/pull/452)
 
 ### Fixed
