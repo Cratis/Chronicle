@@ -1,3 +1,10 @@
+# [v6.10.5] - 2022-9-1 [PR: #450](https://github.com/aksio-insurtech/Cratis/pull/450)
+
+### Fixed
+
+- Tweaking publish workflow.
+
+
 # [v6.10.4] - 2022-9-1 [PR: #449](https://github.com/aksio-insurtech/Cratis/pull/449)
 
 ### Fixed
