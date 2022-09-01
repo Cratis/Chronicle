@@ -3,6 +3,7 @@
     "compilerOptions": {
         "baseUrl": ".",
         "rootDir": ".",
+        "composite": false,
         "paths": {
             "API/*": [
                 "./API/*"
