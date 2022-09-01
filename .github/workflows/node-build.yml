@@ -15,7 +15,7 @@ on:
       - "Source/Workbench/**"
 
 jobs:
-  build:
+  node-build:
     runs-on: ubuntu-latest
 
     steps:
