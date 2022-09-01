@@ -30,6 +30,9 @@ jobs:
             ./Source/Workbench/API/**/*
           key: dotnet-cache
 
+      - name: Build
+        run: dotnet build --configuration Release
+
   dotnet-x64:
     runs-on: ubuntu-latest
 
