@@ -4,6 +4,7 @@
 
 - Fixing observers to resume failed partitions as long as sequence number is the same or more than the failed sequence number. (#446)
 - Adding explicit error message when trying to get immediate projection for model type that does not have one defined.
+- Reinstated `css-modules-typescript-loader instead` of `@teamsupercell/typings-for-css-modules-loader` because it broke at production builds.
 
 
 # [v6.10.2] - 2022-8-30 [PR: #442](https://github.com/aksio-insurtech/Cratis/pull/442)
