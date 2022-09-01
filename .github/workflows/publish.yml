@@ -197,6 +197,9 @@ jobs:
     needs: [release]
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - uses: actions/cache@v3
         id: dotnet-x64-output
         with:
@@ -236,6 +239,9 @@ jobs:
     needs: [release]
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - uses: actions/cache@v3
         id: workbench-output
         with:
@@ -275,6 +281,9 @@ jobs:
     needs: [release]
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - uses: actions/cache@v3
         id: dotnet-arm64-output
         with:
