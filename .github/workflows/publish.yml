@@ -2,18 +2,100 @@ name: Publish
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
+  DOTNET_VERSION: '6.0.400'
 
 on:
   pull_request:
     types: [closed]
 
 jobs:
-  publish:
+  dotnet-build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-output
+        with:
+          path: |
+            ./Source/**/obj/**/*
+            ./Source/**/bin/**/*
+            ./Source/Workbench/API/**/*
+          key: dotnet-cache
+
+  dotnet-x64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-x64-output
+        with:
+          path: ./Source/Kernel/Server/out/arm64
+          key: dotnet-x64-cache
+
+      - name: Build x64 Kernel - self contained, ready to run
+        working-directory: ./Source/Kernel/Server
+        run: dotnet publish -c Release -r linux-x64 -p:PublishReadyToRun=true --self-contained -o out/x64
+
+  dotnet-arm64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-arm64-output
+        with:
+          path: ./Source/Kernel/Server/out/arm64
+          key: dotnet-arm64-cache
+
+      - name: Build arm64 Kernel - self contained, ready to run
+        working-directory: ./Source/Kernel/Server
+        run: dotnet publish -c Release -r linux-arm64 -p:PublishReadyToRun=true --self-contained -o out/arm64
+
+  workbench:
+    runs-on: ubuntu-latest
+    needs: [dotnet-build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: actions/cache@v3
+        id: dotnet-output
+        with:
+          path: |
+            ./Source/**/obj/**/*
+            ./Source/**/bin/**/*
+            ./Source/Workbench/API/**/*
+          key: dotnet-cache
+
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/wwwroot
+          key: workbench-cache
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -39,31 +121,25 @@ jobs:
       - name: Yarn install
         run: yarn
 
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '6.0.400'
-
-      - name: Build .NET
-        run: dotnet build --configuration Release
-
       - name: Build JS/TS
         run: |
           export NODE_OPTIONS="--max-old-space-size=4096"
           yarn build
 
-      - name: Build x64 Kernel - self contained, ready to run
-        working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -r linux-x64 -p:PublishReadyToRun=true --self-contained -o out/x64
-
-      - name: Build arm64 Kernel - self contained, ready to run
-        working-directory: ./Source/Kernel/Server
-        run: dotnet publish -c Release -r linux-arm64 -p:PublishReadyToRun=true --self-contained -o out/arm64
-
       - name: Build Workbench
         working-directory: ./Source/Workbench
         run: |
           yarn build
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [dotnet-x64, dotnet-arm64, workbench]
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Release
         id: release
@@ -72,12 +148,34 @@ jobs:
           user-name: 'Aksio Build'
           user-email: 'build@aksio.no'
 
+  publish-packages:
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/cache@v3
+        id: dotnet-output
+        with:
+          path: |
+            ./Source/**/obj/**/*
+            ./Source/**/bin/**/*
+            ./Source/Workbench/API/**/*
+          key: dotnet-cache
+
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Create NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
-        run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ steps.release.outputs.version }}
+        run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
         if: ${{ steps.release.outputs.should-publish == 'true' }}
@@ -88,7 +186,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          yarn publish-version ${{ steps.release.outputs.version }}
+          yarn publish-version ${{ needs.release.outputs.version }}
 
       - name: Git reset (package.json files changed)
         run: |
@@ -109,6 +207,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+  publish-docker-production:
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - uses: actions/cache@v3
+        id: dotnet-x64-output
+        with:
+          path: ./Source/Kernel/Server/out/x64
+          key: dotnet-x64-cache
+
       - name: Build Production Docker Image
         uses: docker/build-push-action@v2
         with:
@@ -117,10 +226,21 @@ jobs:
           file: ./Docker/Production/Dockerfile
           push: true
           tags: |
-            aksioinsurtech/cratis:${{ steps.release.outputs.version }}
+            aksioinsurtech/cratis:${{ needs.release.outputs.version }}
             aksioinsurtech/cratis:latest
           build-args: |
-            VERSION=${{ steps.release.outputs.version }}
+            VERSION=${{ needs.release.outputs.version }}
+
+  publish-docker-workbench:
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/wwwroot
+          key: workbench-cache
 
       - name: Build Workbench Image
         uses: docker/build-push-action@v2
@@ -130,10 +250,21 @@ jobs:
           file: ./Docker/Workbench/Dockerfile
           push: true
           tags: |
-            aksioinsurtech/cratis:${{ steps.release.outputs.version }}-workbench
+            aksioinsurtech/cratis:${{ needs.release.outputs.version }}-workbench
             aksioinsurtech/cratis:latest-workbench
           build-args: |
-            VERSION=${{ steps.release.outputs.version }}
+            VERSION=${{ needs.release.outputs.version }}
+
+  publish-docker-development:
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - uses: actions/cache@v3
+        id: dotnet-arm64-output
+        with:
+          path: ./Source/Kernel/Server/out/arm64
+          key: dotnet-arm64-cache
 
       - name: Build Development Docker Image
         uses: docker/build-push-action@v2
@@ -144,7 +275,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            aksioinsurtech/cratis:${{ steps.release.outputs.version }}-development
+            aksioinsurtech/cratis:${{ needs.release.outputs.version }}-development
             aksioinsurtech/cratis:latest-development
           build-args: |
-            VERSION=${{ steps.release.outputs.version }}
+            VERSION=${{ needs.release.outputs.version }}
