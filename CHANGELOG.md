@@ -1,3 +1,11 @@
+# [v6.10.3] - 2022-9-1 [PR: #448](https://github.com/aksio-insurtech/Cratis/pull/448)
+
+### Fixed
+
+- Fixing observers to resume failed partitions as long as sequence number is the same or more than the failed sequence number. (#446)
+- Adding explicit error message when trying to get immediate projection for model type that does not have one defined.
+
+
 # [v6.10.2] - 2022-8-30 [PR: #442](https://github.com/aksio-insurtech/Cratis/pull/442)
 
 ### Fixed
