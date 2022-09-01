@@ -45,7 +45,7 @@ jobs:
       - uses: actions/cache@v3
         id: dotnet-x64-output
         with:
-          path: ./Source/Kernel/Server/out/arm64
+          path: ./Source/Kernel/Server/out/x64
           key: dotnet-x64-cache
 
       - name: Build x64 Kernel - self contained, ready to run
