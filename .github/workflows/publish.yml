@@ -206,6 +206,12 @@ jobs:
           path: ./Source/Kernel/Server/out/x64
           key: dotnet-x64-cache
 
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/wwwroot
+          key: workbench-cache
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -289,6 +295,12 @@ jobs:
         with:
           path: ./Source/Kernel/Server/out/arm64
           key: dotnet-arm64-cache
+
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/wwwroot
+          key: workbench-cache
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
