@@ -1,3 +1,10 @@
+# [v6.10.4] - 2022-9-1 [PR: #449](https://github.com/aksio-insurtech/Cratis/pull/449)
+
+### Fixed
+
+- Working on optimizing CI/CD pipelines to work in parallel.
+
+
 # [v6.10.3] - 2022-9-1 [PR: #448](https://github.com/aksio-insurtech/Cratis/pull/448)
 
 ### Fixed
