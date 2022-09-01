@@ -1,3 +1,10 @@
+# [v6.10.7] - 2022-9-1 [PR: #452](https://github.com/aksio-insurtech/Cratis/pull/452)
+
+### Fixed
+
+- CI/CD workflow adjustments
+
+
 # [v6.10.6] - 2022-9-1 [PR: #451](https://github.com/aksio-insurtech/Cratis/pull/451)
 
 ### Fixed
