@@ -7,10 +7,12 @@ public class an_observer_with_event_types_a_reminder_and_two_failing_partitions 
 {
     protected const string first_partition = "0fbbbd40-1380-4a9d-bbbe-7b46b324f537";
     protected const string second_partition = "db5fa43e-32eb-4481-9e74-d13b7a501ab3";
+    protected const ulong first_partition_failed_sequence = 42;
+    protected const ulong second_partition_failed_sequence = 43;
 
     void Establish()
     {
-        state.FailPartition(first_partition, 42, Array.Empty<string>(), string.Empty);
-        state.FailPartition(second_partition, 43, Array.Empty<string>(), string.Empty);
+        state.FailPartition(first_partition, first_partition_failed_sequence, Array.Empty<string>(), string.Empty);
+        state.FailPartition(second_partition, second_partition_failed_sequence, Array.Empty<string>(), string.Empty);
     }
 }

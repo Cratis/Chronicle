@@ -126,7 +126,13 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
-            if (@event.Metadata.SequenceNumber < State.NextEventSequenceNumber)
+            var next = State.NextEventSequenceNumber;
+            if (State.IsPartitionFailed(@event.Context.EventSourceId))
+            {
+                next = State.GetFailedPartition(@event.Context.EventSourceId).SequenceNumber;
+            }
+
+            if (@event.Metadata.SequenceNumber < next)
             {
                 return;
             }
