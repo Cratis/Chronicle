@@ -9,7 +9,7 @@ public class and_catches_up_to_tail : given.an_observer_and_two_event_types_and_
 {
     async Task Establish()
     {
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
         await observer.Subscribe(event_types, observer_namespace);
     }
 
