@@ -75,6 +75,11 @@ public class ImmediateProjections : IImmediateProjections
         if (ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance is null)
         {
             var projectionType = _types.FindSingle<IImmediateProjectionFor<TModel>>();
+            if (projectionType is null)
+            {
+                throw new MissingImmediateProjectionForModel(typeof(TModel));
+            }
+
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance = (_serviceProvider.GetService(projectionType) as IImmediateProjectionFor<TModel>)!;
             var builder = new ProjectionBuilderFor<TModel>(
                 ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Identifier,
