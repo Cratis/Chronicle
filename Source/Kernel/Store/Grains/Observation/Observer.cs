@@ -77,6 +77,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
         var key = ObserverKey.Parse(keyAsString);
         _eventSequenceId = key.EventSequenceId;
+        State.EventSequenceId = _eventSequenceId;
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
         _sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
@@ -125,7 +126,13 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
-            if (@event.Metadata.SequenceNumber < State.NextEventSequenceNumber)
+            var next = State.NextEventSequenceNumber;
+            if (State.IsPartitionFailed(@event.Context.EventSourceId))
+            {
+                next = State.GetFailedPartition(@event.Context.EventSourceId).SequenceNumber;
+            }
+
+            if (@event.Metadata.SequenceNumber < next)
             {
                 return;
             }

@@ -10,7 +10,7 @@ public class and_observer_has_handled_tail : given.an_observer_and_two_event_typ
 {
     void Establish()
     {
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)42u));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)42u));
         state.LastHandled = 42;
         state.NextEventSequenceNumber = 43;
     }

@@ -13,7 +13,7 @@ public class and_observer_is_new : given.an_observer_and_two_event_types
         state.RunningState = ObserverRunningState.New;
         state.NextEventSequenceNumber = 0;
         state.EventTypes = Array.Empty<EventType>();
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
     }
 
     async Task Because() => await observer.Subscribe(event_types, Guid.NewGuid().ToString());

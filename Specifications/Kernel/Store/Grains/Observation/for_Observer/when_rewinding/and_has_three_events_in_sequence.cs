@@ -19,8 +19,8 @@ public class and_has_three_events_in_sequence : given.an_observer_and_two_event_
 
     async Task Establish()
     {
-        event_sequence_storage_provider.Setup(_ => _.GetHeadSequenceNumber(event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)2));
+        event_sequence_storage_provider.Setup(_ => _.GetHeadSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)2));
 
         await observer.Subscribe(event_types, observer_namespace);
         state.RunningState = ObserverRunningState.Active;

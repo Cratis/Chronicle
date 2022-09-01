@@ -12,7 +12,7 @@ public class and_has_two_failed_partitions_not_being_recovered : given.an_observ
     {
         state.FailPartition(first_partition, 42, Array.Empty<string>(), string.Empty);
         state.FailPartition(second_partition, 43, Array.Empty<string>(), string.Empty);
-        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_types, null)).Returns(Task.FromResult((EventSequenceNumber)44));
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)44));
     }
 
     async Task Because() => await observer.Subscribe(event_types, observer_namespace);
