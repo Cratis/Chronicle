@@ -136,6 +136,7 @@ jobs:
     needs: [dotnet-x64, dotnet-arm64, workbench]
     outputs:
       version: ${{ steps.release.outputs.version }}
+      should-publish: ${{ steps.release.outputs.should-publish }}
 
     steps:
       - name: Checkout code
@@ -149,6 +150,7 @@ jobs:
           user-email: 'build@aksio.no'
 
   publish-packages:
+    if: ${{ needs.release.outputs.should-publish == true }}
     runs-on: ubuntu-latest
     needs: [release]
 
@@ -174,15 +176,12 @@ jobs:
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Create NuGet packages
-        if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
-        if: ${{ steps.release.outputs.should-publish == 'true' }}
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
       - name: Publish NPM packages
-        if: ${{ steps.release.outputs.should-publish == 'true' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -193,6 +192,7 @@ jobs:
           git reset --hard
 
   publish-docker-production:
+    if: ${{ needs.release.outputs.should-publish == true }}
     runs-on: ubuntu-latest
     needs: [release]
 
@@ -241,6 +241,7 @@ jobs:
             VERSION=${{ needs.release.outputs.version }}
 
   publish-docker-workbench:
+    if: ${{ needs.release.outputs.should-publish == true }}
     runs-on: ubuntu-latest
     needs: [release]
 
@@ -283,6 +284,7 @@ jobs:
             VERSION=${{ needs.release.outputs.version }}
 
   publish-docker-development:
+    if: ${{ needs.release.outputs.should-publish == true }}
     runs-on: ubuntu-latest
     needs: [release]
 
