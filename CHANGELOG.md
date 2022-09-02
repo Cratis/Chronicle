@@ -1,3 +1,10 @@
+# [v6.10.17] - 2022-9-2 [PR: #464](https://github.com/aksio-insurtech/Cratis/pull/464)
+
+### Fixed
+
+- Adding NPM_AUTH_TOKEN to NPM publish package step in publish-packages job of our CI/CD.
+
+
 # [v6.10.16] - 2022-9-2 [PR: #463](https://github.com/aksio-insurtech/Cratis/pull/463)
 
 ### Fixed
