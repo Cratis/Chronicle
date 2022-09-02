@@ -1,3 +1,10 @@
+# [v6.10.13] - 2022-9-2 [PR: #459](https://github.com/aksio-insurtech/Cratis/pull/459)
+
+### Fixed
+
+- 🤞🏻 CI/CD had job conditionals using true instead of 'true' for whether or not to publish.
+
+
 # [v6.10.12] - 2022-9-2 [PR: #458](https://github.com/aksio-insurtech/Cratis/pull/458)
 
 ### Fixed
