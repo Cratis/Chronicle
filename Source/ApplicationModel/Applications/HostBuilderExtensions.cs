@@ -36,7 +36,7 @@ public static class HostBuilderExtensions
         var logger = loggerFactory.CreateLogger("Aksio setup");
         logger.SettingUpDefaults();
 
-        builder.ConfigureAppConfiguration((context, config) => config.AddJsonFile(Path.Combine("./config","appsettings.json"), optional: true, reloadOnChange: true));
+        builder.ConfigureAppConfiguration((context, config) => config.AddJsonFile(Path.Combine("./config", "appsettings.json"), optional: true, reloadOnChange: true));
 
         Types.AddAssemblyPrefixesToExclude(
             "AutoMapper",
