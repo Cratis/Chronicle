@@ -27,9 +27,7 @@ jobs:
       - uses: actions/cache@v3
         id: dotnet-x64-output
         with:
-          path: |
-            ./Source/Kernel/Server/out/x64
-            ./Source/Workbench/API
+          path: ./Source/Kernel/Server/out/x64
           key: ${{ env.DOTNET_X64_CACHE }}
 
       - name: Build x64 Kernel - self contained, ready to run
@@ -65,13 +63,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - uses: actions/cache@v3
-        id: dotnet-x64-output
-        with:
-          path: |
-            ./Source/Workbench/API
-          key: ${{ env.DOTNET_X64_CACHE }}
 
       - uses: actions/cache@v3
         id: workbench-output
@@ -166,8 +157,11 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
+      - name: Build
+        run: dotnet build --configuration Release
+
       - name: Create NuGet packages
-        run: dotnet pack --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
+        run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
