@@ -25,9 +25,9 @@ jobs:
         id: dotnet-output
         with:
           path: |
-            ./Source/**/obj/**/*
-            ./Source/**/bin/**/*
-            ./Source/Workbench/API/**/*
+            ./Source/**/obj
+            ./Source/**/bin
+            ./Source/Workbench/API
           key: dotnet-cache
 
       - name: Build
@@ -89,9 +89,9 @@ jobs:
         id: dotnet-output
         with:
           path: |
-            ./Source/**/obj/**/*
-            ./Source/**/bin/**/*
-            ./Source/Workbench/API/**/*
+            ./Source/**/obj
+            ./Source/**/bin
+            ./Source/Workbench/API
           key: dotnet-cache
 
       - uses: actions/cache@v3
@@ -170,9 +170,9 @@ jobs:
         id: dotnet-output
         with:
           path: |
-            ./Source/**/obj/**/*
-            ./Source/**/bin/**/*
-            ./Source/Workbench/API/**/*
+            ./Source/**/obj
+            ./Source/**/bin
+            ./Source/Workbench/API
           key: dotnet-cache
 
       - name: Remove any existing artifacts
