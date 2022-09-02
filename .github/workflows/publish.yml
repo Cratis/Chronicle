@@ -3,6 +3,10 @@ name: Publish
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   DOTNET_VERSION: '6.0.400'
+  DOTNET_CACHE: 'dotnet-cache-${{ github.sha }}'
+  DOTNET_X64_CACHE: 'dotnet-x64-cache-${{ github.sha }}'
+  DOTNET_ARM64_CACHE: 'dotnet-arm64-cache-${{ github.sha }}'
+  WORKBENCH_CACHE: 'web-cache-${{ github.sha }}'
 
 on:
   pull_request:
@@ -49,7 +53,7 @@ jobs:
         id: dotnet-x64-output
         with:
           path: ./Source/Kernel/Server/out/x64
-          key: dotnet-x64-cache
+          key: ${{ env.DOTNET_X64_CACHE }}
 
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
@@ -71,7 +75,7 @@ jobs:
         id: dotnet-arm64-output
         with:
           path: ./Source/Kernel/Server/out/arm64
-          key: dotnet-arm64-cache
+          key: ${{ env.DOTNET_ARM64_CACHE }}
 
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
@@ -92,13 +96,13 @@ jobs:
             ./Source/**/obj
             ./Source/**/bin
             ./Source/Workbench/API
-          key: dotnet-cache
+          key: ${{ env.DOTNET_CACHE }}
 
       - uses: actions/cache@v3
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
-          key: workbench-cache
+          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -173,7 +177,7 @@ jobs:
             ./Source/**/obj
             ./Source/**/bin
             ./Source/Workbench/API
-          key: dotnet-cache
+          key: ${{ env.DOTNET_CACHE }}
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -226,13 +230,13 @@ jobs:
         id: dotnet-x64-output
         with:
           path: ./Source/Kernel/Server/out/x64
-          key: dotnet-x64-cache
+          key: ${{ env.DOTNET_X64_CACHE }}
 
       - uses: actions/cache@v3
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
-          key: workbench-cache
+          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
@@ -275,7 +279,7 @@ jobs:
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
-          key: workbench-cache
+          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
@@ -318,13 +322,13 @@ jobs:
         id: dotnet-arm64-output
         with:
           path: ./Source/Kernel/Server/out/arm64
-          key: dotnet-arm64-cache
+          key: ${{ env.DOTNET_ARM64_CACHE }}
 
       - uses: actions/cache@v3
         id: workbench-output
         with:
           path: ./Source/Workbench/wwwroot
-          key: workbench-cache
+          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
