@@ -1,3 +1,10 @@
+# [v6.10.12] - 2022-9-2 [PR: #458](https://github.com/aksio-insurtech/Cratis/pull/458)
+
+### Fixed
+
+- Conditionals for jobs in CI/CD workflow was wrong. Hoping this will actually publish things now.
+
+
 # [v6.10.11] - 2022-9-2 [PR: #457](https://github.com/aksio-insurtech/Cratis/pull/457)
 
 ### Fixed
