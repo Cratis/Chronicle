@@ -10,6 +10,7 @@ using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.Hosting;
@@ -34,6 +35,8 @@ public static class HostBuilderExtensions
         var loggerFactory = builder.UseDefaultLogging();
         var logger = loggerFactory.CreateLogger("Aksio setup");
         logger.SettingUpDefaults();
+
+        builder.ConfigureAppConfiguration((context, config) => config.AddJsonFile(Path.Combine("./config","appsettings.json"), optional: true, reloadOnChange: true));
 
         Types.AddAssemblyPrefixesToExclude(
             "AutoMapper",
