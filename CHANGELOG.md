@@ -1,3 +1,10 @@
+# [v6.10.16] - 2022-9-2 [PR: #463](https://github.com/aksio-insurtech/Cratis/pull/463)
+
+### Fixed
+
+- Fixing publish-packages job of CI/CD with regards to the cache folder for node_modules++
+
+
 # [v6.10.15] - 2022-9-2 [PR: #462](https://github.com/aksio-insurtech/Cratis/pull/462)
 
 ### Fixed
