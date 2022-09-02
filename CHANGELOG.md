@@ -1,3 +1,10 @@
+# [v6.10.18] - 2022-9-2 [PR: #465](https://github.com/aksio-insurtech/Cratis/pull/465)
+
+### Fixed
+
+- Taking out `appsettings.json` from the built Docker images. One needs now to configure this and mount it in for logging and other things.
+
+
 # [v6.10.17] - 2022-9-2 [PR: #464](https://github.com/aksio-insurtech/Cratis/pull/464)
 
 ### Fixed
