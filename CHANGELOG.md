@@ -1,3 +1,10 @@
+# [v6.10.15] - 2022-9-2 [PR: #462](https://github.com/aksio-insurtech/Cratis/pull/462)
+
+### Fixed
+
+- Adding yarn install to the publish packages job of our CI/CD
+
+
 # [v6.10.14] - 2022-9-2 [PR: #461](https://github.com/aksio-insurtech/Cratis/pull/461)
 
 ### Fixed
