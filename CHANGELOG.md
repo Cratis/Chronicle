@@ -1,3 +1,10 @@
+# [v6.10.19] - 2022-9-2 [PR: #466](https://github.com/aksio-insurtech/Cratis/pull/466)
+
+### Fixed
+
+- Fixing cache keys for the data used for transfer between jobs, so that we actually get the artifacts built.
+
+
 # [v6.10.18] - 2022-9-2 [PR: #465](https://github.com/aksio-insurtech/Cratis/pull/465)
 
 ### Fixed
