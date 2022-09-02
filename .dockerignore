@@ -9,3 +9,4 @@ package-json.lock
 dist
 for_*
 Dockerfile
+appsettings.json
