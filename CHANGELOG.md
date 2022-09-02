@@ -1,3 +1,10 @@
+# [v6.10.11] - 2022-9-2 [PR: #457](https://github.com/aksio-insurtech/Cratis/pull/457)
+
+### Fixed
+
+- CI/CD pipeline didn't publish
+
+
 # [v6.10.9] - 2022-9-1 [PR: #454](https://github.com/aksio-insurtech/Cratis/pull/454)
 
 ### Fixed
