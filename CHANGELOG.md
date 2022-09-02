@@ -1,3 +1,11 @@
+# [v6.10.14] - 2022-9-2 [PR: #461](https://github.com/aksio-insurtech/Cratis/pull/461)
+
+### Fixed
+
+- `appsettings.json` can be placed in `./config` folder, adding it to search for the application model.
+
+
+
 # [v6.10.13] - 2022-9-2 [PR: #459](https://github.com/aksio-insurtech/Cratis/pull/459)
 
 ### Fixed
