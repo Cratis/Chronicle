@@ -29,8 +29,8 @@ jobs:
         id: dotnet-output
         with:
           path: |
-            ./Source/**/obj
-            ./Source/**/bin
+            ./Source/**/obj/**/*
+            ./Source/**/bin/**/*
             ./Source/Workbench/API
           key: dotnet-cache
 
@@ -93,8 +93,8 @@ jobs:
         id: dotnet-output
         with:
           path: |
-            ./Source/**/obj
-            ./Source/**/bin
+            ./Source/**/obj/**/*
+            ./Source/**/bin/**/*
             ./Source/Workbench/API
           key: ${{ env.DOTNET_CACHE }}
 
@@ -174,8 +174,8 @@ jobs:
         id: dotnet-output
         with:
           path: |
-            ./Source/**/obj
-            ./Source/**/bin
+            ./Source/**/obj/**/*
+            ./Source/**/bin/**/*
             ./Source/Workbench/API
           key: ${{ env.DOTNET_CACHE }}
 
