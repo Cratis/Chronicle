@@ -23,6 +23,7 @@ public static class Program
             .UseAksio(_ => _.InKernel(), microserviceId: MicroserviceId.Kernel)
             .UseOrleans(_ => _
                 .UseCluster()
+                .UseTelemetry()
                 .UseDashboard(options =>
                 {
                     options.Host = "*";

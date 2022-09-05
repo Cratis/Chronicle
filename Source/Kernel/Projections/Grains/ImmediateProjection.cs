@@ -63,11 +63,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
             return new ImmediateProjectionResult(new JsonObject(), Array.Empty<PropertyPath>(), 0);
         }
 
-        if (_projection is null)
-        {
-            // TODO: This can be optimized by extracting out to a separate singleton service that holds these in-memory
-            _projection = await _projectionFactory.CreateFrom(projectionDefinition);
-        }
+        _projection ??= await _projectionFactory.CreateFrom(projectionDefinition);
 
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(_projectionKey.TenantId, CorrelationId.New(), _projectionKey.MicroserviceId);
@@ -120,6 +116,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
         }
 
         // TODO: Conversion from ExpandoObject to JsonObject can be improved - they're effectively both just Dictionary<string, object>
+        (state as IDictionary<string, object>)!["id"] = modelKey.Value;
         var json = JsonSerializer.Serialize(state);
         var jsonObject = JsonNode.Parse(json)!;
         return new((jsonObject as JsonObject)!, affectedProperties, projectedEventsCount);

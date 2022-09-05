@@ -9,7 +9,7 @@ public class and_events_are_in_sequence : given.an_observer_and_two_event_types_
 {
     void Establish()
     {
-        state.FailPartition(event_source_id, 42, Array.Empty<string>(), string.Empty);
+        state.FailPartition(event_source_id, EventSequenceNumber.First, Array.Empty<string>(), string.Empty);
     }
 
     async Task Because()

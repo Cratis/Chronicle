@@ -1,0 +1,16 @@
+- name: Creating an event
+  href: creating-an-event.md
+- name: Appending an event to the event log
+  href: appending-an-event-to-event-log.md
+- name: Observing events in the event log
+  href: observing-events-in-event-log.md
+- name: Creating a public event
+  href: creating-a-public-event.md
+- name: Projecting to the outbox
+  href: projecting-to-outbox.md
+- name: Appending an event to the outbox
+  href: appending-an-event-to-outbox.md
+- name: Observing events in the inbox
+  href: observing-events-in-inbox.md
+- name: Extending Rules
+  href: rules/extending-rules

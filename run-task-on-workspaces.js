@@ -53,15 +53,18 @@ function updateDependencyVersionsFromLocalWorkspaces(file, packageJson, version)
     const dependencyFields = Object.keys(packageJson).filter(_ => _.endsWith('dependencies') || _.endsWith('Dependencies'));
     for (let field of dependencyFields) {
         const dependencies = packageJson[field] ?? {};
+        const fileDependencies = file.get(field);
+
         for (let dependencyName of Object.keys(dependencies)) {
             if (workspaceNames.includes(dependencyName)) {
                 console.log(`Updating workspace ${field} '${dependencyName}' to version ${version}`);
                 dependencyName = dependencyName.replace(/\./g, '\\.');
                 field = field.replace(/\./g, '\\.');
-                const key = `${field}.${dependencyName}`;
-                file.set(key, version);
+                fileDependencies[dependencyName] = version;
             }
         }
+
+        file.set(field, fileDependencies);
     }
 }
 

@@ -6,4 +6,4 @@ using Concepts.Accounts;
 
 namespace Read.Accounts.Debit;
 
-public record DebitAccount(AccountId Id, AccountName Name, PersonId Owner, double? Balance, DateTimeOffset LastUpdated);
+public record DebitAccount(AccountId Id, AccountName Name, PersonId Owner, double? Balance, bool HasCard, DateTimeOffset LastUpdated);

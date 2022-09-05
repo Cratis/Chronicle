@@ -1,0 +1,8 @@
+- name: Immediate projections
+  href: immediate-projections/index.md
+- name: Rules
+  href: rules/index.md
+- name: Outbox
+  href: outbox/index.md
+- name: Inbox
+  href: inbox/index.md

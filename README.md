@@ -3,6 +3,7 @@
 [![C# Build](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/dotnet-build.yml)
 [![Node Build](https://github.com/aksio-insurtech/Cratis/actions/workflows/node-build.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/node-build.yml)
 [![Publish](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml)
+[![Documentation Site](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml)
 [![Nuget](https://img.shields.io/nuget/v/Aksio.Cratis?logo=nuget)](http://nuget.org/packages/aksio.cratis)
 [![NPM](https://img.shields.io/npm/v/@aksio/cratis-applications-frontend?label=@aksio/cratis-applications-frontend&logo=npm)](https://www.npmjs.com/package/@aksio/cratis-applications-frontend)
 [![Docker](https://img.shields.io/docker/v/aksioinsurtech/cratis?label=Cratis%20Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/aksioinsurtech/cratis)
@@ -14,7 +15,7 @@ It provides the core platform, referred to as the **Kernel** with client SDK (.N
 built into it. In addition Cratis offers an application model aimed towards productivity and bringing in concepts
 such as CQRS; opinionated and completely optional.
 
-Read the [documentation](./Documentation/index.md) for all the details.
+Read the documentation on our site [https://cratis.io](https://cratis.io) for all the details.
 For general guidance on the core values and principles we @ Aksio use, read more [here](https://github.com/aksio-insurtech/Home/blob/main/profile/README.md).
 
 If you want to jump into building this repository and possibly contributing, please refer to [contributing](./Documentation/contributing.md).

@@ -49,6 +49,10 @@ public class MongoDBDefaults
                 .RegisterSerializationProvider(new ConceptSerializationProvider());
             BsonSerializer
                 .RegisterSerializer(new DateTimeOffsetSupportingBsonDateTimeSerializer());
+            BsonSerializer
+                .RegisterSerializer(new DateOnlySerializer());
+            BsonSerializer
+                .RegisterSerializer(new TimeOnlySerializer());
 
 #pragma warning disable CS0618
 

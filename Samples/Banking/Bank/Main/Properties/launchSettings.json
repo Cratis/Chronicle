@@ -1,8 +1,8 @@
 ﻿{
   "profiles": {
-    "Sample": {
+    "Core": {
       "commandName": "Project",
-      "dotnetRunMessages": true,
+      "dotnetRunMessages": "true",
       "launchBrowser": false,
       "applicationUrl": "http://localhost:5100",
       "environmentVariables": {

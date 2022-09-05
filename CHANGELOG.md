@@ -1,3 +1,215 @@
+# [v6.10.20] - 2022-9-2 [PR: #467](https://github.com/aksio-insurtech/Cratis/pull/467)
+
+
+
+# [v6.10.19] - 2022-9-2 [PR: #466](https://github.com/aksio-insurtech/Cratis/pull/466)
+
+### Fixed
+
+- Fixing cache keys for the data used for transfer between jobs, so that we actually get the artifacts built.
+
+
+# [v6.10.18] - 2022-9-2 [PR: #465](https://github.com/aksio-insurtech/Cratis/pull/465)
+
+### Fixed
+
+- Taking out `appsettings.json` from the built Docker images. One needs now to configure this and mount it in for logging and other things.
+
+
+# [v6.10.17] - 2022-9-2 [PR: #464](https://github.com/aksio-insurtech/Cratis/pull/464)
+
+### Fixed
+
+- Adding NPM_AUTH_TOKEN to NPM publish package step in publish-packages job of our CI/CD.
+
+
+# [v6.10.16] - 2022-9-2 [PR: #463](https://github.com/aksio-insurtech/Cratis/pull/463)
+
+### Fixed
+
+- Fixing publish-packages job of CI/CD with regards to the cache folder for node_modules++
+
+
+# [v6.10.15] - 2022-9-2 [PR: #462](https://github.com/aksio-insurtech/Cratis/pull/462)
+
+### Fixed
+
+- Adding yarn install to the publish packages job of our CI/CD
+
+
+# [v6.10.14] - 2022-9-2 [PR: #461](https://github.com/aksio-insurtech/Cratis/pull/461)
+
+### Fixed
+
+- `appsettings.json` can be placed in `./config` folder, adding it to search for the application model.
+
+
+
+# [v6.10.13] - 2022-9-2 [PR: #459](https://github.com/aksio-insurtech/Cratis/pull/459)
+
+### Fixed
+
+- 🤞🏻 CI/CD had job conditionals using true instead of 'true' for whether or not to publish.
+
+
+# [v6.10.12] - 2022-9-2 [PR: #458](https://github.com/aksio-insurtech/Cratis/pull/458)
+
+### Fixed
+
+- Conditionals for jobs in CI/CD workflow was wrong. Hoping this will actually publish things now.
+
+
+# [v6.10.11] - 2022-9-2 [PR: #457](https://github.com/aksio-insurtech/Cratis/pull/457)
+
+### Fixed
+
+- CI/CD pipeline didn't publish
+
+
+# [v6.10.9] - 2022-9-1 [PR: #454](https://github.com/aksio-insurtech/Cratis/pull/454)
+
+### Fixed
+
+- Immediate projections now set the `Id` property to the `modelKey` being  asked for. A future expansion on this will be to allow defininig which property is the `Id` property (#455)
+
+# [v6.10.8] - 2022-9-1 [PR: #453](https://github.com/aksio-insurtech/Cratis/pull/453)
+
+### Fixed
+
+- Path to x64 cache used between jobs in CI/CD.
+
+
+# [v6.10.7] - 2022-9-1 [PR: #452](https://github.com/aksio-insurtech/Cratis/pull/452)
+
+### Fixed
+
+- CI/CD workflow adjustments
+
+
+# [v6.10.6] - 2022-9-1 [PR: #451](https://github.com/aksio-insurtech/Cratis/pull/451)
+
+### Fixed
+
+- CI/CD pipeline tweaking.
+
+
+# [v6.10.5] - 2022-9-1 [PR: #450](https://github.com/aksio-insurtech/Cratis/pull/450)
+
+### Fixed
+
+- Tweaking publish workflow.
+
+
+# [v6.10.4] - 2022-9-1 [PR: #449](https://github.com/aksio-insurtech/Cratis/pull/449)
+
+### Fixed
+
+- Working on optimizing CI/CD pipelines to work in parallel.
+
+
+# [v6.10.3] - 2022-9-1 [PR: #448](https://github.com/aksio-insurtech/Cratis/pull/448)
+
+### Fixed
+
+- Fixing observers to resume failed partitions as long as sequence number is the same or more than the failed sequence number. (#446)
+- Adding explicit error message when trying to get immediate projection for model type that does not have one defined.
+- Reinstated `css-modules-typescript-loader instead` of `@teamsupercell/typings-for-css-modules-loader` because it broke at production builds.
+
+
+# [v6.10.2] - 2022-8-30 [PR: #442](https://github.com/aksio-insurtech/Cratis/pull/442)
+
+### Fixed
+
+- Converting to `any` for query arguments when passed down to base type for `useQuery()` and `useObservableQuery()` hooks.
+
+
+# [v6.10.1] - 2022-8-30 [PR: #441](https://github.com/aksio-insurtech/Cratis/pull/441)
+
+### Fixed
+
+- Adding the `Telemetry` configration object to the Cratis Kernel configuration object.
+
+
+# [v6.10.0] - 2022-8-29 [PR: #437](https://github.com/aksio-insurtech/Cratis/pull/437)
+
+### Added
+
+- Adding support for Application Insights for Serilog logging
+- Adding support for Application Insights telemetry for Orleans from config
+
+
+# [v6.9.4] - 2022-8-25 [PR: #432](https://github.com/aksio-insurtech/Cratis/pull/432)
+
+### Fixed
+
+- Removing CSS rule from WebPack setup, with the SASS rule we seem to be picking up CSS as well.
+
+
+# [v6.9.3] - 2022-8-25 [PR: #431](https://github.com/aksio-insurtech/Cratis/pull/431)
+
+### Fixed
+
+- Fixing script for updating versions when publishing. The `edit-json-file` package had a breaking change or bug causing problems.
+
+
+# [v6.9.2] - 2022-8-25 [PR: #430](https://github.com/aksio-insurtech/Cratis/pull/430)
+
+### Fixed
+
+- Upgrading React in Aksio Microservice template
+
+
+# [v6.9.1] - 2022-8-25 [PR: #428](https://github.com/aksio-insurtech/Cratis/pull/428)
+
+### Fixed
+
+- React upgraded to version 18.0
+- Upgraded all NuGet dependencies to latest
+- Latest version of .NET for build actions
+
+
+# [v6.9.0] - 2022-8-19 [PR: #419](https://github.com/aksio-insurtech/Cratis/pull/419)
+
+## Summary
+
+Adding support for `DateOnly` and `TimeOnly` throughout all pipelines.
+
+
+### Added
+
+- Added Json converters for `DateOnly` and `TimeOnly`
+- Added Type converters for `DateOnly` and `TimeOnly`
+- Added MongoDB serializers for `DateOnly` and `TimeOnly`
+
+
+# [v6.8.0 & v6.8.1] - 2022-8-17 [PR: #417](https://github.com/aksio-insurtech/Cratis/pull/417)
+
+## Summary
+
+Adding support for performing operations after the config objects values has been bound up.
+Automatically recognized. Below is a sample, read more in the documentation:
+
+```csharp
+[Configuration("MyConfig")]
+public class ConfigObject : IPerformPostBindOperations
+{
+    public void Perform()
+    {
+        // Perform a post bind operation
+    }
+}
+```
+
+### Added
+
+- Configuration objects can now implement `IPerformPostBindOperations` to be called after values have been bound to it.
+
+### Fixed
+
+- Fixed issues with creating and updating module.scss.ts.d-files (Issue #411)
+- Add typings for css modules loader to common WebPack config (Issue #412)
+
+
 # [v6.7.3] - 2022-8-8 [PR: #408](https://github.com/aksio-insurtech/Cratis/pull/408)
 
 ### Fixed

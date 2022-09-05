@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis;
 namespace Aksio.Cratis.Applications.ProxyGenerator;
 
 /// <summary>
-/// /// Represents a <see cref="ISourceGenerator"/> for generating proxies for frontend use.
+/// Represents a <see cref="ISourceGenerator"/> for generating proxies for frontend use.
 /// </summary>
 [Generator]
 public class SourceGenerator : ISourceGenerator

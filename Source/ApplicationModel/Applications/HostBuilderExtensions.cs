@@ -3,12 +3,14 @@
 
 using System.IO.Compression;
 using Aksio.Cratis.Applications;
+using Aksio.Cratis.Conversion;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.Hosting;
@@ -34,6 +36,8 @@ public static class HostBuilderExtensions
         var logger = loggerFactory.CreateLogger("Aksio setup");
         logger.SettingUpDefaults();
 
+        builder.ConfigureAppConfiguration((context, config) => config.AddJsonFile(Path.Combine("./config", "appsettings.json"), optional: true, reloadOnChange: true));
+
         Types.AddAssemblyPrefixesToExclude(
             "AutoMapper",
             "Autofac",
@@ -50,11 +54,9 @@ public static class HostBuilderExtensions
 
         Internals.Types = new Types();
         Internals.Types.RegisterTypeConvertersForConcepts();
+        TypeConverters.Register();
 
-        if (microserviceId is null)
-        {
-            microserviceId = MicroserviceId.Unspecified;
-        }
+        microserviceId ??= MicroserviceId.Unspecified;
 
         builder
             .UseMongoDB(Internals.Types)
