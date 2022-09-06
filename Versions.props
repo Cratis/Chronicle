@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-        <AksioDefaults>1.6.4</AksioDefaults>
+        <AksioDefaults>1.6.5</AksioDefaults>
         <AksioSpecifications>2.0.1</AksioSpecifications>
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
         <Autofac>6.4.0</Autofac>
