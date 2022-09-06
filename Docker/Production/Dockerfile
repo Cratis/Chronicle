@@ -4,7 +4,7 @@
 # Cratis Server
 # Build runtime image
 ####################################
-FROM mcr.microsoft.com/dotnet/runtime:6.0.1-focal
+FROM mcr.microsoft.com/dotnet/runtime:6.0-focal
 ARG CONFIGURATION=Release
 ARG VERSION
 

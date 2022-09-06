@@ -1,19 +1,35 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store.Branching;
+
 namespace Aksio.Cratis.Events;
 
 /// <summary>
 /// Defines the client event log.
 /// </summary>
-public interface IEventLog
+public interface IEventLog : IEventSequence
 {
     /// <summary>
-    /// Append a single event to the event store.
+    /// Start a branch for a specific <see cref="BranchTypeId"/>.
     /// </summary>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
-    /// <param name="event">The event.</param>
-    /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default);
+    /// <param name="branchTypeId">Optional branch type to start. If not specified, it will be set to NotSpecified.</param>
+    /// <param name="from">Optional <see cref="EventSequenceNumber"/> to branch from. If not specified, it will branch from current tail.</param>
+    /// <param name="tags">Optional tags to associate with the branch.</param>
+    /// <returns><see cref="IBranch"/>.</returns>
+    Task<IBranch> Branch(BranchTypeId? branchTypeId = default, EventSequenceNumber? from = default, IDictionary<string, string>? tags = default);
+
+    /// <summary>
+    /// Get a specific branch.
+    /// </summary>
+    /// <param name="branchId"><see cref="BranchId"/> for the branch to get.</param>
+    /// <returns>The <see cref="IBranch"/>.</returns>
+    Task<IBranch> GetBranch(BranchId branchId);
+
+    /// <summary>
+    /// Get branches of a specific <see cref="BranchTypeId"/>.
+    /// </summary>
+    /// <param name="branchTypeId">Type to get for.</param>
+    /// <returns>Collection of <see cref="IBranch"/>.</returns>
+    Task<IEnumerable<BranchDescriptor>> GetBranchesFor(BranchTypeId branchTypeId);
 }

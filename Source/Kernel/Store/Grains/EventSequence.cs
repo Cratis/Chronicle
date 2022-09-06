@@ -63,7 +63,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     public Task<EventSequenceNumber> GetNextSequenceNumber() => Task.FromResult(State.SequenceNumber);
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber() => Task.FromResult(State.SequenceNumber - 1);
+    public Task<EventSequenceNumber> GetTailSequenceNumber()
+    {
+        if (State.SequenceNumber == EventSequenceNumber.First) return Task.FromResult(EventSequenceNumber.First);
+        return Task.FromResult(State.SequenceNumber - 1);
+    }
 
     /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default)

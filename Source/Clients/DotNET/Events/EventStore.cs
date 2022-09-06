@@ -38,7 +38,7 @@ public class EventStore : IEventStore
         var eventLog = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
             EventSequenceId.Log,
             keyExtension: executionContextManager.Current.ToMicroserviceAndTenant());
-        EventLog = new EventLog(eventTypes, serializer, eventLog);
+        EventLog = new EventLog(eventTypes, serializer, eventLog, clusterClient, executionContextManager);
 
         var eventOutbox = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
             EventSequenceId.Outbox,

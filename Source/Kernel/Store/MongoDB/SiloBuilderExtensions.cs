@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Branching;
 using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.MongoDB;
+using Aksio.Cratis.Events.Store.MongoDB.Branching;
 using Aksio.Cratis.Events.Store.MongoDB.Observation;
 using Aksio.Cratis.Events.Store.Observation;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +33,7 @@ public static class SiloBuilderExtensions
             services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<EventSequencesStorageProvider>()!);
             services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ObserverStorageProvider>()!);
             services.AddSingletonNamedService<IGrainStorage>(ClientObserversState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ClientObserversStorageProvider>()!);
+            services.AddSingletonNamedService<IGrainStorage>(BranchesState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<BranchesStorageProvider>()!);
         });
 
         builder.AddPersistentStreams(

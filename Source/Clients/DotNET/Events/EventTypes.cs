@@ -34,11 +34,37 @@ public class EventTypes : IEventTypes
     public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);
 
     /// <inheritdoc/>
-    public EventType GetEventTypeFor(Type clrType) => _typesByEventType.Single(_ => _.Value == clrType).Key;
+    public EventType GetEventTypeFor(Type clrType)
+    {
+        ThrowIfMissingEventTypeForClrType(clrType);
+
+        return _typesByEventType.Single(_ => _.Value == clrType).Key;
+    }
 
     /// <inheritdoc/>
     public bool HasFor(Type clrType) => _typesByEventType.Any(_ => _.Value == clrType);
 
     /// <inheritdoc/>
-    public Type GetClrTypeFor(EventTypeId eventTypeId) => _typesByEventType.Single(_ => _.Key.Id == eventTypeId).Value;
+    public Type GetClrTypeFor(EventTypeId eventTypeId)
+    {
+        ThrowIfMissingClrTypeForEventType(eventTypeId);
+
+        return _typesByEventType.Single(_ => _.Key.Id == eventTypeId).Value;
+    }
+
+    void ThrowIfMissingEventTypeForClrType(Type clrType)
+    {
+        if (!HasFor(clrType))
+        {
+            throw new MissingEventTypeForClrType(clrType);
+        }
+    }
+
+    void ThrowIfMissingClrTypeForEventType(EventTypeId eventTypeId)
+    {
+        if (!HasFor(eventTypeId))
+        {
+            throw new MissingClrTypeForEventType(eventTypeId);
+        }
+    }
 }

@@ -3,5 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 
-export type Boolean = {
+export type CreditCardApplication = {
+    identifier: string;
+    started: Date;
 };
