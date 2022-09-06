@@ -66,11 +66,8 @@ public class EventLog : IEventLog
             branchId,
             keyExtension: executionContext.ToMicroserviceAndTenant());
 
-        if (from is null)
-        {
-            // Todo: Use the from coming back from the checked out branch.
-            from = EventSequenceNumber.First;
-        }
+        // Todo: Use the from coming back from the checked out branch.
+        from ??= EventSequenceNumber.First;
 
         // Todo: Get the date time from the actual branch
         return new Branch(branchTypeId, branchId, DateTimeOffset.UtcNow, from, _serializer, _eventTypes, eventSequence, actualBranch);
