@@ -1,3 +1,7 @@
+# [v6.10.22] - 2022-9-2 [PR: #469](https://github.com/aksio-insurtech/Cratis/pull/469)
+
+
+
 # [v6.10.20] - 2022-9-2 [PR: #467](https://github.com/aksio-insurtech/Cratis/pull/467)
 
 
