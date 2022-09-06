@@ -12,9 +12,11 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/aksio-insurtech/Cratis</RepositoryUrl>
         <PackageProjectUrl>https://github.com/aksio-insurtech/Cratis</PackageProjectUrl>
+        <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Aksio.Defaults" Version="$(AksioDefaults)" PrivateAssets="All" Condition="'$(PublishReadyToRun)' != 'true'" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
     </ItemGroup>
 </Project>
