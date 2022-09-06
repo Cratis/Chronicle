@@ -1,3 +1,10 @@
+# [v6.10.24] - 2022-9-6 [PR: #472](https://github.com/aksio-insurtech/Cratis/pull/472)
+
+### Fixed
+
+- Reverting the inclusion of PDB files. Relying on source link and .snupkg. 
+
+
 # [v6.10.22] - 2022-9-2 [PR: #469](https://github.com/aksio-insurtech/Cratis/pull/469)
 
 
