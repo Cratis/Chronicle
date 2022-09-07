@@ -1,3 +1,10 @@
+# [v6.10.25] - 2022-9-7 [PR: #473](https://github.com/aksio-insurtech/Cratis/pull/473)
+
+### Fixed
+
+- Projections are now only looking at the event type identifier and ignoring generation and whether or not it is public when filtering event types it is interested in.
+
+
 # [v6.10.24] - 2022-9-6 [PR: #472](https://github.com/aksio-insurtech/Cratis/pull/472)
 
 ### Fixed
