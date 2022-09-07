@@ -23,7 +23,7 @@ public static class ProjectionExtensions
     /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
     public static IObservable<ProjectionEventContext> From(this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
-        return observable.Where(_ => _.Event.Metadata.Type == eventType);
+        return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ public static class ProjectionExtensions
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> RemovedWith(this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
-        observable.Where(_ => _.Event.Metadata.Type == eventType).Subscribe(_ => _.Changeset.Remove());
+        observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id).Subscribe(_ => _.Changeset.Remove());
         return observable;
     }
 
@@ -84,6 +84,6 @@ public static class ProjectionExtensions
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Join(this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
-        return observable.Where(_ => _.Event.Metadata.Type == eventType);
+        return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
     }
 }
