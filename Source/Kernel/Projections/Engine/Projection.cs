@@ -82,10 +82,10 @@ public class Projection : IProjection
     }
 
     /// <inheritdoc/>
-    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Event.Metadata.Type));
+    public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Event.Metadata.Type.Id));
 
     /// <inheritdoc/>
-    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et == _.Metadata.Type));
+    public IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Metadata.Type.Id));
 
     /// <inheritdoc/>
     public void OnNext(ProjectionEventContext context)
@@ -109,7 +109,7 @@ public class Projection : IProjection
     public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver)
     {
         EventTypesWithKeyResolver = eventTypesWithKeyResolver;
-        EventTypes = eventTypesWithKeyResolver.Select(_ => _.EventType).ToArray();
+        EventTypes = eventTypesWithKeyResolver.Select(_ => new EventType(_.EventType.Id, _.EventType.Generation)).ToArray();
         _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(
             _ => new EventType(_.EventType.Id, _.EventType.Generation),
             _ => _.KeyResolver);

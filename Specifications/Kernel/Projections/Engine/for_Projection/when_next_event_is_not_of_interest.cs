@@ -6,13 +6,11 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
-using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.for_Projection;
 
-public class when_next_event_is_not_of_interest : Specification
+public class when_next_event_is_not_of_interest : given.a_projection
 {
-    Projection projection;
     bool observed;
     AppendedEvent @event;
     Changeset<AppendedEvent, ExpandoObject> changeset;
@@ -20,15 +18,6 @@ public class when_next_event_is_not_of_interest : Specification
 
     void Establish()
     {
-        projection = new Projection(
-            "0b7325dd-7a25-4681-9ab7-c387a6073547",
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            new Model(string.Empty, new JsonSchema()),
-            true,
-            Array.Empty<IProjection>());
-
         projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
         {
                 new EventTypeWithKeyResolver(new  EventType("aac3d310-ff2f-4809-a326-afe14dd9a3d6", 1), KeyResolvers.FromEventSourceId)
