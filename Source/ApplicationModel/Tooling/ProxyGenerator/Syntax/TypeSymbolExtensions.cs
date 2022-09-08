@@ -32,6 +32,8 @@ public static class TypeSymbolExtensions
         { typeof(DateTime).FullName!, new("Date") },
         { typeof(DateTimeOffset).FullName!, new("Date") },
         { typeof(Guid).FullName!, new("string") },
+        { "System.DateOnly", new("Date") },
+        { "System.TimeOnly", new("Date") },
         { "System.Text.Json.Nodes", new("any") },
         { "System.Text.Json.JsonDocument", new("any") }
     };
