@@ -1,3 +1,10 @@
+# [v6.10.26] - 2022-9-8 [PR: #475](https://github.com/aksio-insurtech/Cratis/pull/475)
+
+### Fixed
+
+- Fixing so that automated tests/specifications for projections just looks at the event type identifier and ignores the public flag when filtering. As the rest of the system does.
+
+
 # [v6.10.25] - 2022-9-7 [PR: #473](https://github.com/aksio-insurtech/Cratis/pull/473)
 
 ### Fixed
