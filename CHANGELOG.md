@@ -1,3 +1,10 @@
+# [v6.10.27] - 2022-9-8 [PR: #476](https://github.com/aksio-insurtech/Cratis/pull/476)
+
+### Fixed
+
+- Making projections accept event types based only on their identifier, ignoring generation and whether or not it is marked public.
+
+
 # [v6.10.26] - 2022-9-8 [PR: #475](https://github.com/aksio-insurtech/Cratis/pull/475)
 
 ### Fixed
