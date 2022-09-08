@@ -94,7 +94,7 @@ public class Projection : IProjection
     }
 
     /// <inheritdoc/>
-    public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(eventType);
+    public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.Keys.Any(_ => _.Id == eventType.Id);
 
     /// <inheritdoc/>
     public KeyResolver GetKeyResolverFor(EventType eventType)
