@@ -32,7 +32,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
         }
         if (eventTypes is not null)
         {
-            query = query.Where(_ => eventTypes.Any(et => et == _.Metadata.Type));
+            query = query.Where(_ => eventTypes.Any(et => et.Id == _.Metadata.Type.Id));
         }
 
         var cursor = new EventCursorForSpecifications(query.ToArray());
@@ -49,7 +49,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
         }
         if (eventTypes is not null)
         {
-            query = query.Where(_ => eventTypes.Any(et => et == _.Metadata.Type));
+            query = query.Where(_ => eventTypes.Any(et => et.Id == _.Metadata.Type.Id));
         }
 
         var cursor = new EventCursorForSpecifications(query.ToArray());
