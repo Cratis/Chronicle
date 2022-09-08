@@ -1,3 +1,11 @@
+# [v6.10.28] - 2022-9-8 [PR: #477](https://github.com/aksio-insurtech/Cratis/pull/477)
+
+### Fixed
+
+- Fixed correct type output for `DateOnly` and `TimeOnly` to JS `Date`.
+- FIxing import statements to make sure they are sanitized and adding `./` if needed, not rooted.
+
+
 # [v6.10.27] - 2022-9-8 [PR: #476](https://github.com/aksio-insurtech/Cratis/pull/476)
 
 ### Fixed
