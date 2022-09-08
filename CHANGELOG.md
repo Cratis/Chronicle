@@ -1,3 +1,10 @@
+# [v6.10.29] - 2022-9-8 [PR: #478](https://github.com/aksio-insurtech/Cratis/pull/478)
+
+### Fixed
+
+- Fixing caching between jobs for x64 and development image building, so that we actually get the binaries into the docker image.
+
+
 # [v6.10.28] - 2022-9-8 [PR: #477](https://github.com/aksio-insurtech/Cratis/pull/477)
 
 ### Fixed
