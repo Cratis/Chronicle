@@ -227,7 +227,14 @@ public class SourceGenerator : ISourceGenerator
             Path.GetDirectoryName(relativeImportAsString),
             Path.GetFileNameWithoutExtension(relativeImportAsString));
 
-        if (Path.GetDirectoryName(targetFile) == Path.GetDirectoryName(parentFile)) importPath = $"./{importPath}";
+        if (Path.GetDirectoryName(targetFile) == Path.GetDirectoryName(parentFile) ||
+            (!importPath.StartsWith("/") &&
+            !importPath.StartsWith("../") &&
+            !importPath.StartsWith("./")))
+        {
+            importPath = $"./{importPath}";
+        }
+
         parentImportStatements.Add(new ImportStatement(type.Name, importPath));
 
         var properties = type.GetMembers().Where(_ => !_.IsStatic
