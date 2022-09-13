@@ -13,6 +13,7 @@ public interface IEventOutbox
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="event">The event.</param>
+    /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, object @event);
+    Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default);
 }
