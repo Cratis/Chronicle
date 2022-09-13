@@ -18,5 +18,5 @@ public class EventOutboxForSpecifications : IEventOutbox
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
 
     /// <inheritdoc/>
-    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom) => _sequence.Append(eventSourceId, @event);
+    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default) => _sequence.Append(eventSourceId, @event);
 }
