@@ -1,3 +1,11 @@
+# [v6.10.30] - 2022-9-13 [PR: #484](https://github.com/aksio-insurtech/Cratis/pull/484)
+
+### Fixed
+
+- MongoDB concept serializer now supporting null properly. If a value ids defined as Mongo null, it will return a `default()`of the concept type.
+- Adding missing `validFrom` argument to the `IEventOutbox` interface.
+
+
 # [v6.10.29] - 2022-9-8 [PR: #478](https://github.com/aksio-insurtech/Cratis/pull/478)
 
 ### Fixed
