@@ -5,7 +5,7 @@ Cratis enables autonomous microservices:
 * Microservices can run without having to connect directly to another microservice.
 * Every microservice has its copy of data it needs to be able to run.
 
-For a reliable system, this makes sense as their are no dependencies that can be broken
+For a reliable system, this makes sense as there are no dependencies that can be broken
 or unfulfilled and cause problems for each microservice. It also adds flexibility to your
 system by enabling one to take down microservices either temporarily or permanently without
 them having a consequence to any of the other microservices.
