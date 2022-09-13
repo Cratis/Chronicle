@@ -61,6 +61,11 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
             value = GetDeserializedValue(valueType, ref bsonReader);
         }
 
+        if (value is null)
+        {
+            return default!;
+        }
+
         return (T)ConceptFactory.CreateConceptInstance(ValueType, value);
     }
 

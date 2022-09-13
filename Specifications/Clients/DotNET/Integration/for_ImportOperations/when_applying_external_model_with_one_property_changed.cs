@@ -17,8 +17,8 @@ public class when_applying_external_model_with_one_property_changed : given.one_
             .Callback((EventSourceId _, object @event, DateTimeOffset? __) => event_appended_to_event_log = (@event as SomeEvent)!);
 
         event_outbox
-            .Setup(_ => _.Append(IsAny<EventSourceId>(), IsAny<object>()))
-            .Callback((EventSourceId _, object @event) => event_appended_to_outbox = (@event as SomeEvent)!);
+            .Setup(_ => _.Append(IsAny<EventSourceId>(), IsAny<object>(), null))
+            .Callback((EventSourceId _, object @event, DateTimeOffset? __) => event_appended_to_outbox = (@event as SomeEvent)!);
     }
 
     async Task Because() => await operations.Apply(incoming);
