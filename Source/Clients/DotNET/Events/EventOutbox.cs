@@ -29,7 +29,7 @@ public class EventOutbox : IEventOutbox
     }
 
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, object @event)
+    public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default)
     {
         var type = @event.GetType();
         var eventType = _eventTypes.GetEventTypeFor(type);
@@ -39,6 +39,6 @@ public class EventOutbox : IEventOutbox
         }
 
         var eventAsJson = await _serializer.Serialize(@event!);
-        await _eventOutbox.Append(eventSourceId, eventType, eventAsJson);
+        await _eventOutbox.Append(eventSourceId, eventType, eventAsJson, validFrom);
     }
 }
