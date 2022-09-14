@@ -1,3 +1,10 @@
+# [v6.10.31] - 2022-9-14 [PR: #492](https://github.com/aksio-insurtech/Cratis/pull/492)
+
+### Fixed
+
+- Making it clearer when an event type is missing from the event schema store by throwing an explicit exception.
+
+
 # [v6.10.30] - 2022-9-13 [PR: #484](https://github.com/aksio-insurtech/Cratis/pull/484)
 
 ### Fixed
