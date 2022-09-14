@@ -49,6 +49,11 @@ public static class TypeSymbolExtensions
                         methodSymbol.DeclaredAccessibility == Accessibility.Public &&
                         methodSymbol.MethodKind != MethodKind.Constructor).Cast<IMethodSymbol>();
 
+    /// <summary>
+    /// Get all public instance <see cref="IPropertySymbol">properties</see> from <see cref="ITypeSymbol"/>.
+    /// </summary>
+    /// <param name="type"><see cref="ITypeSymbol"/> to get for.</param>
+    /// <returns>All properties.</returns>
     public static IEnumerable<IPropertySymbol> GetPublicPropertiesFrom(this ITypeSymbol type) =>
          type.GetMembers().Where(_ => !_.IsStatic
             && _ is IPropertySymbol propertySymbol
