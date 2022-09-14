@@ -101,6 +101,11 @@ public class MongoDBSchemaStore : ISchemaStore
         var schemas = await result.ToListAsync();
         _schemasByTypeAndGeneration[type] = schemas.ToDictionary(_ => (EventGeneration)_.Generation, _ => _.ToEventSchema());
 
+        if (schemas.Count == 0)
+        {
+            throw new MissingEventSchemaForEventType(type, generation);
+        }
+
         return schemas[0].ToEventSchema();
     }
 
