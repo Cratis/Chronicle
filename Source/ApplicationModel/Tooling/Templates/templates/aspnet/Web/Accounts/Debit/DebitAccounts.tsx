@@ -31,7 +31,7 @@ import { DebitAccountsList } from './DebitAccountsList';
 
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
-    const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use({ owner: 'edd60145-a6df-493f-b48d-35ffdaaefc4c' });
+    const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use();
 
 
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();
@@ -42,8 +42,11 @@ export const DebitAccounts = () => {
         if (result === DialogResult.Success && output) {
             setOpenDebitAccountValues({
                 accountId: Guid.create().toString(),
-                name: output.name,
-                includeCard: output.includeCard
+                details: {
+                    owner: 'edd60145-a6df-493f-b48d-35ffdaaefc4c',
+                    name: output.name,
+                    includeCard: output.includeCard
+                }
             });
             const result = await openDebitAccount.execute();
             if (!result.isSuccess) {
