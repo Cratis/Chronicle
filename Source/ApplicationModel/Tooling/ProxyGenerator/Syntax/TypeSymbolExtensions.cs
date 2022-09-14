@@ -54,7 +54,6 @@ public static class TypeSymbolExtensions
             && _ is IPropertySymbol propertySymbol
             && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>();
 
-
     /// <summary>
     /// Get <see cref="PropertyDescriptor">property descriptors</see> from all properties on a type.
     /// </summary>
