@@ -14,7 +14,23 @@ namespace Aksio.Cratis.Json;
 public class ConceptAsJsonConverter<T> : JsonConverter<T>
 {
     /// <inheritdoc/>
-    public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => (T)ConceptFactory.CreateConceptInstance(typeToConvert, reader.GetString())!;
+    public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        object? value;
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.True:
+            case JsonTokenType.False:
+                value = reader.GetBoolean();
+                break;
+
+            default:
+                value = reader.GetString();
+                break;
+        }
+
+        return (T)ConceptFactory.CreateConceptInstance(typeToConvert, value)!;
+    }
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
