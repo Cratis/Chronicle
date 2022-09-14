@@ -76,8 +76,16 @@ public class SourceGenerator : ISourceGenerator
         {
             var route = GetRoute(baseApiRoute, commandMethod);
 
+            // if (route == "/api/accounts/debit")
+            // {
+            //     while (!System.Diagnostics.Debugger.IsAttached) Thread.Sleep(10);
+            // }
             var properties = new List<PropertyDescriptor>();
             var importStatements = new HashSet<ImportStatement>();
+
+            var typeName = commandMethod.Name;
+            var targetFile = Path.Combine(targetFolder, $"{typeName}.ts");
+
             foreach (var parameter in commandMethod.Parameters)
             {
                 var isNullable = parameter.Type.NullableAnnotation == NullableAnnotation.Annotated;
@@ -93,20 +101,25 @@ public class SourceGenerator : ISourceGenerator
                 }
                 else
                 {
-                    properties.AddRange(parameter.Type.GetPropertyDescriptorsFrom(out var additionalImportStatements));
-                    additionalImportStatements.ForEach(_ => importStatements.Add(_));
+                    var publicProperties = parameter.Type.GetPublicPropertiesFrom();
+                    properties.AddRange(GetPropertyDescriptorsAndOutputComplexTypes(
+                        rootNamespace,
+                        outputFolder,
+                        useRouteAsPath,
+                        baseApiRoute,
+                        targetFile,
+                        publicProperties,
+                        importStatements));
                 }
             }
 
             var requestArguments = GetRequestArgumentsFrom(commandMethod, ref route, importStatements);
 
-            var typeName = commandMethod.Name;
             var commandDescriptor = new CommandDescriptor(route, typeName, properties, importStatements, requestArguments);
             var renderedTemplate = TemplateTypes.Command(commandDescriptor);
             if (renderedTemplate != default)
             {
-                var file = Path.Combine(targetFolder, $"{typeName}.ts");
-                WriteFile(file, renderedTemplate);
+                WriteFile(targetFile, renderedTemplate);
             }
         }
     }
@@ -237,11 +250,22 @@ public class SourceGenerator : ISourceGenerator
 
         parentImportStatements.Add(new ImportStatement(type.Name, importPath));
 
-        var properties = type.GetMembers().Where(_ => !_.IsStatic
-            && _ is IPropertySymbol propertySymbol
-            && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>();
+        var properties = type.GetPublicPropertiesFrom();
 
         var typeImportStatements = new HashSet<ImportStatement>();
+        var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(rootNamespace, outputFolder, useRouteAsPath, baseApiRoute, targetFile, properties, typeImportStatements);
+
+        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
+        var renderedTemplate = TemplateTypes.Type(typeDescriptor);
+        if (renderedTemplate != default)
+        {
+            Directory.CreateDirectory(targetFolder);
+            WriteFile(targetFile, renderedTemplate);
+        }
+    }
+
+    static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsAndOutputComplexTypes(string rootNamespace, string outputFolder, bool useRouteAsPath, string baseApiRoute, string targetFile, IEnumerable<IPropertySymbol> properties, HashSet<ImportStatement> typeImportStatements)
+    {
         var propertyDescriptors = new List<PropertyDescriptor>();
 
         foreach (var property in properties)
@@ -270,13 +294,7 @@ public class SourceGenerator : ISourceGenerator
             }
         }
 
-        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
-        var renderedTemplate = TemplateTypes.Type(typeDescriptor);
-        if (renderedTemplate != default)
-        {
-            Directory.CreateDirectory(targetFolder);
-            WriteFile(targetFile, renderedTemplate);
-        }
+        return propertyDescriptors;
     }
 
     static string GetRoute(string baseApiRoute, IMethodSymbol commandMethod)

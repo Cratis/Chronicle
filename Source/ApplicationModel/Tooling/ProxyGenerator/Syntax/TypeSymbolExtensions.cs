@@ -49,6 +49,12 @@ public static class TypeSymbolExtensions
                         methodSymbol.DeclaredAccessibility == Accessibility.Public &&
                         methodSymbol.MethodKind != MethodKind.Constructor).Cast<IMethodSymbol>();
 
+    public static IEnumerable<IPropertySymbol> GetPublicPropertiesFrom(this ITypeSymbol type) =>
+         type.GetMembers().Where(_ => !_.IsStatic
+            && _ is IPropertySymbol propertySymbol
+            && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>();
+
+
     /// <summary>
     /// Get <see cref="PropertyDescriptor">property descriptors</see> from all properties on a type.
     /// </summary>
@@ -61,11 +67,7 @@ public static class TypeSymbolExtensions
         var allImportStatements = new HashSet<ImportStatement>();
         additionalImportStatements = allImportStatements;
 
-        var properties = type.GetMembers().Where(_ => !_.IsStatic
-            && _ is IPropertySymbol propertySymbol
-            && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>();
-
-        return properties.Select(_ =>
+        return GetPublicPropertiesFrom(type).Select(_ =>
         {
             var returnType = _.GetMethod!.ReturnType;
             var isNullable = returnType.NullableAnnotation == NullableAnnotation.Annotated;

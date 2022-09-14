@@ -42,8 +42,10 @@ export const DebitAccounts = () => {
         if (result === DialogResult.Success && output) {
             setOpenDebitAccountValues({
                 accountId: Guid.create().toString(),
-                name: output.name,
-                includeCard: output.includeCard
+                details: {
+                    output.name,
+                    includeCard: output.includeCard
+                }
             });
             const result = await openDebitAccount.execute();
             if (!result.isSuccess) {
