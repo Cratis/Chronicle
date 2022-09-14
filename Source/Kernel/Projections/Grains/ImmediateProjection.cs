@@ -116,7 +116,10 @@ public class ImmediateProjection : Grain, IImmediateProjection
         }
 
         // TODO: Conversion from ExpandoObject to JsonObject can be improved - they're effectively both just Dictionary<string, object>
-        (state as IDictionary<string, object>)!["id"] = modelKey.Value;
+        if (modelKey is not null)
+        {
+            (state as IDictionary<string, object>)!["id"] = modelKey.Value;
+        }
         var json = JsonSerializer.Serialize(state);
         var jsonObject = JsonNode.Parse(json)!;
         return new((jsonObject as JsonObject)!, affectedProperties, projectedEventsCount);
