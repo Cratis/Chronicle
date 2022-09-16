@@ -1,3 +1,10 @@
+# [v6.10.32] - 2022-9-16 [PR: #495](https://github.com/aksio-insurtech/Cratis/pull/495)
+
+### Fixed
+
+- Fixing `DateOnlySerializer` to use mid-day point for time component when serializing to Bson Date. Without it, the date will slide a day per serialization due to timezones.
+
+
 # [v6.10.31] - 2022-9-14 [PR: #492](https://github.com/aksio-insurtech/Cratis/pull/492)
 
 ### Fixed
