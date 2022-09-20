@@ -25,11 +25,12 @@ public abstract class converter_for_converting_from_json<TConcept, TUnderlying> 
     void Because()
     {
         var input = FormattedInput;
-        Utf8JsonReader reader = new(Encoding.UTF8.GetBytes(input).AsSpan());
-        if (input.StartsWith('"'))
-        {
-            reader.Read();  // Skip quote
-        }
+        var fullJson = $"{{ \"prop\": {input} }}";
+
+        Utf8JsonReader reader = new(Encoding.UTF8.GetBytes(fullJson).AsSpan());
+        reader.Read();  // Start object
+        reader.Read();  // Property
+        reader.Read();  // Value
         result = converter.Read(ref reader, typeof(TConcept), default);
     }
 
