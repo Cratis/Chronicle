@@ -1,3 +1,10 @@
+# [v6.10.33] - 2022-9-20 [PR: #496](https://github.com/aksio-insurtech/Cratis/pull/496)
+
+### Fixed
+
+- Fixing JSON serialization of concepts to not just write them as strings.
+
+
 # [v6.10.32] - 2022-9-16 [PR: #495](https://github.com/aksio-insurtech/Cratis/pull/495)
 
 ### Fixed
