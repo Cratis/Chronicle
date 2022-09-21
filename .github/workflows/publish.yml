@@ -117,7 +117,7 @@ jobs:
 
       - name: Release
         id: release
-        uses: cratis/release-action@v1
+        uses: aksio-insurtech/release-action@v1
         with:
           user-name: 'Aksio Build'
           user-email: 'build@aksio.no'
