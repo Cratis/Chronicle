@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM nginx
+FROM nginx:1.23.1
 
 WORKDIR /app
 
