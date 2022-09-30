@@ -33,6 +33,7 @@ jobs:
           user-email: "build@aksio.no"
 
   kernel:
+    if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     needs: [release]
 
@@ -55,9 +56,10 @@ jobs:
         working-directory: ./Source/Kernel/Server
         run: |
           dotnet publish -c Debug -o out/x64
-          copy out/x64 out/arm64
+          cp out/x64 out/arm64
 
   workbench:
+    if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     needs: [release]
 
