@@ -139,9 +139,14 @@ jobs:
       - name: Push NuGet packages
         run: dotnet nuget push '${{ env.NUGET_OUTPUT }}/*.nupkg' --skip-duplicate --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            NuGet packages for this PR, e.g. Aksio.Cratis:
+            https://github.com/aksio-insurtech/Cratis/packages/1655206?version=${{ needs.release.outputs.version }}
+          allow-repeats: false
 
   publish-npm-packages:
     if: needs.release.outputs.publish == 'true'
@@ -158,6 +163,10 @@ jobs:
           node-version: 16.x
           registry-url: "https://registry.npmjs.org"
 
+
+      # - name: Get yarn cache directory path
+      #   id: yarn-cache-dir-path
+      #   run: echo "::set-output name=dir::$(yarn cache dir)"
       # - uses: actions/cache@v2
       #   id: yarn-cache
       #   with:
@@ -233,3 +242,12 @@ jobs:
             ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
+
+      - uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            Docker Image for this PR:
+            ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
+          allow-repeats: false
