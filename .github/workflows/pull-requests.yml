@@ -50,7 +50,7 @@ jobs:
       - uses: actions/cache@v3
         id: kernel-output
         with:
-          path: ./Source/Kernel/Server/out/x64
+          path: ./Source/Kernel/Server/out
           key: ${{ env.KERNEL_CACHE }}
 
       - name: Build
@@ -160,6 +160,7 @@ jobs:
       #     path: |
       #       **/node_modules
       #       **/.eslintcache
+      #       **/yarn.lock
       #       ${{ steps.yarn-cache-dir-path.outputs.dir }}
       #     key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
       #     restore-keys: |
