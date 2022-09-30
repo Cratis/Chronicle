@@ -130,11 +130,14 @@ jobs:
       - name: Build
         run: dotnet build --configuration Debug
 
+      - name: Add GitHub Package Registry to NuGet
+        run: nuget sources add -name "GitHub" -Source ${{ env.NUGET_SOURCE }} -Username aksio-insurtech -Password ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Debug -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
-        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source "${{ env.NUGET_SOURCE }}"
+        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source "GitHub"
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
