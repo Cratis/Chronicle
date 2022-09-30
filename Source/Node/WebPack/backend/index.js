@@ -10,6 +10,7 @@ const webpack = require('webpack');
 // https://stackoverflow.com/questions/53801293/webpack-4-cant-find-package-json-in-production-mode
 // https://blog.webbylab.com/minimal_size_docker_image_for_your_nodejs_app/
 
+
 module.exports = (env, argv, callback) => {
     const production = argv.mode === 'production';
 
