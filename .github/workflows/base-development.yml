@@ -60,7 +60,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            aksioinsurtech/cratis-base:${{ needs.release.outputs.version }}-development
-            aksioinsurtech/cratis-base:latest-development
+            aksioinsurtech/cratis-base:${{ needs.release.outputs.version }}
+            aksioinsurtech/cratis-base:latest
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
