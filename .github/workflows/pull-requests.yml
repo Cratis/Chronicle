@@ -57,7 +57,7 @@ jobs:
         working-directory: ./Source/Kernel/Server
         run: |
           dotnet publish -c Debug -o out/x64
-          cp out/x64 out/arm64
+          cp -r out/x64 out/arm64
 
   workbench:
     if: needs.release.outputs.publish == 'true'
