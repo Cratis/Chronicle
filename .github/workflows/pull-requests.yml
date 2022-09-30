@@ -131,7 +131,7 @@ jobs:
         run: dotnet build --configuration Debug
 
       - name: Add GitHub Package Registry to NuGet
-        run: dotnet nuget add source sources add ${{ env.NUGET_SOURCE }} --name "GitHub" --username aksio-insurtech --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+        run: dotnet nuget add source sources add "${{ env.NUGET_SOURCE }}" --name "GitHub" --username aksio-insurtech --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
 
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Debug -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
