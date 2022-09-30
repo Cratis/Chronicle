@@ -1,4 +1,4 @@
-name: .NET Build
+name: PR Prerelase
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
