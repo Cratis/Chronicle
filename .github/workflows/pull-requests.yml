@@ -181,7 +181,7 @@ jobs:
   publish-docker:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [workbench, kernel]
+    needs: [workbench, kernel, release]
 
     steps:
       - name: Checkout code
