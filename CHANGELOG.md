@@ -1,3 +1,10 @@
+# [v6.10.34] - 2022-9-30 [PR: #508](https://github.com/aksio-insurtech/Cratis/pull/508)
+
+### Fixed
+
+- Introducing a base development Docker image to improve build times dramatically.
+
+
 # [v6.10.33] - 2022-9-20 [PR: #496](https://github.com/aksio-insurtech/Cratis/pull/496)
 
 ### Fixed
