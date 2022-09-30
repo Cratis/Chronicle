@@ -2,6 +2,7 @@ name: PR Prerelase
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
+  NUGET_SOURCE: https://nuget.pkg.github.com/aksio-insurtech
   DOTNET_VERSION: "6.0.400"
   KERNEL_CACHE: "kernel-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
@@ -133,7 +134,7 @@ jobs:
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
-        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
+        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source "${{ env.NUGET_SOURCE }}"
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
