@@ -9,10 +9,12 @@ on:
       - "Docker/BaseDevelopment/**"
 
 jobs:
-  publish-docker-development:
-    if: needs.release.outputs.publish == 'true'
+  release:
     runs-on: ubuntu-latest
-    needs: [release]
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      publish: ${{ steps.release.outputs.should-publish }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
 
     steps:
       - name: Checkout code
@@ -24,6 +26,15 @@ jobs:
         with:
           user-name: "Aksio Build"
           user-email: "build@aksio.no"
+
+  publish-docker:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
