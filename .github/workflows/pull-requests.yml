@@ -13,8 +13,6 @@ on:
       - "**"
     paths:
       - "Source/**"
-      - "!Source/Node/**"
-      - "!Source/Workbench/**"
 
 jobs:
   release:
