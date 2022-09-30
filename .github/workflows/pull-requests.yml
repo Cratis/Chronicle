@@ -137,7 +137,7 @@ jobs:
         run: dotnet pack --no-build --configuration Debug -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
-        run: nuget push '${{ env.NUGET_OUTPUT }}/*.nupkg' -source "GitHub" -SkipDuplicate
+        run: nuget push '${{ env.NUGET_OUTPUT }}/*.nupkg' -source "GitHub" -SkipDuplicate -ApiKey ${{ secrets.GITHUB_TOKEN }}
         # run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source ${{ env.NUGET_SOURCE }}
 
       - name: Get yarn cache directory path
