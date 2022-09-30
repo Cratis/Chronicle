@@ -2,18 +2,18 @@ name: PR Prerelase
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
+  NUGET_SOURCE: https://nuget.pkg.github.com/aksio-insurtech/index.json
   DOTNET_VERSION: "6.0.400"
   KERNEL_CACHE: "kernel-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
   pull_request:
+    types: [opened, edited, synchronize, reopened]
     branches:
       - "**"
     paths:
       - "Source/**"
-      - "!Source/Node/**"
-      - "!Source/Workbench/**"
 
 jobs:
   release:
@@ -35,6 +35,7 @@ jobs:
           user-email: "build@aksio.no"
 
   kernel:
+    if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     needs: [release]
 
@@ -50,16 +51,17 @@ jobs:
       - uses: actions/cache@v3
         id: kernel-output
         with:
-          path: ./Source/Kernel/Server/out/x64
+          path: ./Source/Kernel/Server/out
           key: ${{ env.KERNEL_CACHE }}
 
       - name: Build
         working-directory: ./Source/Kernel/Server
         run: |
           dotnet publish -c Debug -o out/x64
-          copy out/x64 out/arm64
+          cp -r out/x64 out/arm64
 
   workbench:
+    if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     needs: [release]
 
@@ -89,6 +91,7 @@ jobs:
           path: |
             **/node_modules
             **/.eslintcache
+            **/yarn.lock
             ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
@@ -125,17 +128,26 @@ jobs:
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Debug
+
+      - name: Add GitHub Package Registry to NuGet
+        run: dotnet nuget add source --name github --username aksio-insurtech --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
 
       - name: Create NuGet packages
-        run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
+        run: dotnet pack --no-build --configuration Debug -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - name: Push NuGet packages
-        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
+        run: dotnet nuget push '${{ env.NUGET_OUTPUT }}/*.nupkg' --skip-duplicate --timeout 900 --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Add comment for NuGet packages
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            NuGet packages for this PR, e.g. Aksio.Cratis:
+            https://github.com/aksio-insurtech/Cratis/packages/1655206?version=${{ needs.release.outputs.version }}
+          allow-repeats: false
 
   publish-npm-packages:
     if: needs.release.outputs.publish == 'true'
@@ -152,12 +164,17 @@ jobs:
           node-version: 16.x
           registry-url: "https://registry.npmjs.org"
 
+
+      # - name: Get yarn cache directory path
+      #   id: yarn-cache-dir-path
+      #   run: echo "::set-output name=dir::$(yarn cache dir)"
       # - uses: actions/cache@v2
       #   id: yarn-cache
       #   with:
       #     path: |
       #       **/node_modules
       #       **/.eslintcache
+      #       **/yarn.lock
       #       ${{ steps.yarn-cache-dir-path.outputs.dir }}
       #     key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
       #     restore-keys: |
@@ -180,7 +197,7 @@ jobs:
   publish-docker:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [workbench, kernel]
+    needs: [workbench, kernel, release]
 
     steps:
       - name: Checkout code
@@ -207,7 +224,7 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@master
 
-      - name: Login to DockerHub
+      - name: Login to GitHub Docker Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
@@ -226,3 +243,13 @@ jobs:
             ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
+
+      - name: Add comment for Docker image
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            Docker Image for this PR:
+            https://ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
+          allow-repeats: false
