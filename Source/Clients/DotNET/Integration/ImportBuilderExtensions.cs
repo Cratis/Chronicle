@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Reflection;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using AutoMapper;
 
@@ -109,10 +110,10 @@ public static class ImportBuilderExtensions
         return context.Where(_ =>
         {
             var changes = _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>);
-            return changes.Any(_ => _!.Differences.Any(_ => propertyPaths.Any(p => _.PropertyPath.Path.StartsWith(p.Path))));
+            return changes.Any(_ => _!.Differences.Any(d => d.PropertyChanged(propertyPaths)));
         });
     }
-
+    
     /// <summary>
     /// Filter down to when one of the properties defined changes from a value to a null value.
     /// </summary>
@@ -128,9 +129,37 @@ public static class ImportBuilderExtensions
         return context.Where(_ =>
         {
             var changes = _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>);
-            return changes.Any(_ => _!.Differences.Any(_ => _.Original is not null && _.Changed is null && propertyPaths.Any(p => _.PropertyPath.Path.StartsWith(p.Path))));
+            return changes.Any(_ => _!.Differences.Any(_ => _.Original is not null && _.Changed is null && _.PropertyChanged(propertyPaths)));
         });
     }
+    
+    /// <summary>
+    /// Checks if the property difference is an exact match or a nested property of any of the propertyPaths.
+    /// </summary>
+    /// <param name="propertyDifference">The changed property.</param>
+    /// <param name="propertyPaths">The detection paths to check against.</param>
+    /// <returns>True if the changed property is an exact match or a child node of the configured property path.</returns>
+    static bool PropertyChanged(this PropertyDifference propertyDifference, PropertyPath[] propertyPaths) =>
+        propertyPaths.Any(
+            propertyPath =>
+            {
+                var changedPath = propertyDifference.PropertyPath.Path;
+                var detectionPath = propertyPath.Path;
+
+                // Detect exact path change.
+                if (changedPath.Equals(detectionPath))
+                {
+                    return true;
+                }
+
+                // Detect nested changes.
+                if (changedPath.Length > detectionPath.Length && changedPath[detectionPath.Length] == '.')
+                {
+                    return changedPath.StartsWith(detectionPath);
+                }
+
+                return false;
+            });
 
     /// <summary>
     /// Append an event by automatically mapping property names matching from the model onto the event.

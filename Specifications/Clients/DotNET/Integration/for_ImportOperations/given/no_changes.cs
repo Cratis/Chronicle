@@ -15,7 +15,7 @@ public class no_changes : all_dependencies_for<SomeEvent>
 
     void Establish()
     {
-        initial = new(42, "Forty Two");
+        initial = new(42, "Forty Two", "Two");
         incoming = new(42, "Forty Two");
 
         projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, Array.Empty<PropertyPath>(), 0)));
