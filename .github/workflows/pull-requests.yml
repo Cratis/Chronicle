@@ -252,4 +252,6 @@ jobs:
           message: |
             Docker Image for this PR:
             https://ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
+
+            docker run ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
           allow-repeats: false
