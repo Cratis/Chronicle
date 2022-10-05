@@ -4,8 +4,8 @@
 # Cratis Server
 # Build runtime image
 ####################################
-ARG VERSION
 FROM mcr.microsoft.com/dotnet/runtime:6.0.1-focal
+ARG VERSION
 
 RUN echo Version = ${VERSION}
 

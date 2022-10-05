@@ -64,4 +64,3 @@ jobs:
             aksioinsurtech/cratis-base:latest
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
-            ENTRYPOINT=pr_entrypoint.sh
