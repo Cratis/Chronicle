@@ -120,7 +120,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetRange(
+    public Task<IEventCursor> GetRange(
         EventSequenceId eventSequenceId,
         EventSequenceNumber start,
         EventSequenceNumber end,
@@ -147,6 +147,6 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         var filter = Builders<Event>.Filter.And(filters.ToArray());
 
         var cursor = collection.Find(filter).ToCursor();
-        return new EventCursor(_converterProvider(), cursor);
+        return Task.FromResult<IEventCursor>(new EventCursor(_converterProvider(), cursor));
     }
 }
