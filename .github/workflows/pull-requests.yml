@@ -243,6 +243,7 @@ jobs:
             ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
+            ENTRYPOINT=pr_entrypoint.sh
 
       - name: Add comment for Docker image
         uses: mshick/add-pr-comment@v1
