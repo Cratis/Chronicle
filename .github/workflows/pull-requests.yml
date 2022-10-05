@@ -14,6 +14,7 @@ on:
       - "**"
     paths:
       - "Source/**"
+      - ".github/workflows/**"
 
 jobs:
   release:
