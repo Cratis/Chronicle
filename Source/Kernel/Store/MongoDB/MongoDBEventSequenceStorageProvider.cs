@@ -28,7 +28,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     /// <inheritdoc/>
-    public async Task<EventSequenceNumber> GetHeadSequenceNumber(
+    public Task<EventSequenceNumber> GetHeadSequenceNumber(
         EventSequenceId eventSequenceId,
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
@@ -46,12 +46,12 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         }
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
-        var highest = await collection.Find(filter).SortBy(_ => _.SequenceNumber).Limit(1).SingleOrDefaultAsync().ConfigureAwait(false);
-        return highest?.SequenceNumber ?? EventSequenceNumber.Unavailable;
+        var highest = collection.Find(filter).SortBy(_ => _.SequenceNumber).Limit(1).SingleOrDefault();
+        return Task.FromResult(highest?.SequenceNumber ?? EventSequenceNumber.Unavailable);
     }
 
     /// <inheritdoc/>
-    public async Task<EventSequenceNumber> GetTailSequenceNumber(
+    public Task<EventSequenceNumber> GetTailSequenceNumber(
         EventSequenceId eventSequenceId,
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
@@ -72,8 +72,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         }
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
-        var highest = await collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleOrDefaultAsync().ConfigureAwait(false);
-        return highest?.SequenceNumber ?? EventSequenceNumber.Unavailable;
+        var highest = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleOrDefault();
+        return Task.FromResult(highest?.SequenceNumber ?? EventSequenceNumber.Unavailable);
     }
 
     /// <inheritdoc/>
@@ -87,12 +87,12 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
-        var @event = await collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleAsync().ConfigureAwait(false);
+        var @event = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).Single();
         return await _converterProvider().ToAppendedEvent(@event);
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetFromSequenceNumber(
+    public Task<IEventCursor> GetFromSequenceNumber(
         EventSequenceId eventSequenceId,
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = null,
@@ -115,8 +115,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         }
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
-        var cursor = await collection.Find(filter).ToCursorAsync().ConfigureAwait(false);
-        return new EventCursor(_converterProvider(), cursor);
+        var cursor = collection.Find(filter).ToCursor();
+        return Task.FromResult<IEventCursor>(new EventCursor(_converterProvider(), cursor));
     }
 
     /// <inheritdoc/>
@@ -145,7 +145,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         }
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
-        var cursor = await collection.Find(filter).ToCursorAsync().ConfigureAwait(false);
+
+        var cursor = collection.Find(filter).ToCursor();
         return new EventCursor(_converterProvider(), cursor);
     }
 }

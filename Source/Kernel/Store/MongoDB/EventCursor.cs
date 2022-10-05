@@ -34,7 +34,7 @@ public class EventCursor : IEventCursor
     {
         if (_innerCursor is null) return false;
 
-        var result = await _innerCursor.MoveNextAsync().ConfigureAwait(false);
+        var result = _innerCursor.MoveNext();
         if (_innerCursor.Current is not null)
         {
             Current = (await Task.WhenAll(_innerCursor.Current.Select(@event => _converter.ToAppendedEvent(@event)))).ToArray();
