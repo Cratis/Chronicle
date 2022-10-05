@@ -5,7 +5,7 @@
 # Build runtime image
 ####################################
 ARG VERSION
-FROM mcr.microsoft.com/dotnet/runtime:6.0.1-focal
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-focal
 
 RUN echo Version = ${VERSION}
 
