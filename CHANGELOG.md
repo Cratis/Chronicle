@@ -1,3 +1,10 @@
+# [vundefined] - 2022-10-5 [PR: #517](https://github.com/aksio-insurtech/Cratis/pull/517)
+
+### Fixed
+
+- Changing the base image to the ASP.NET Core runtime for the base development image.
+
+
 # [v6.10.34] - 2022-9-30 [PR: #508](https://github.com/aksio-insurtech/Cratis/pull/508)
 
 ### Fixed
