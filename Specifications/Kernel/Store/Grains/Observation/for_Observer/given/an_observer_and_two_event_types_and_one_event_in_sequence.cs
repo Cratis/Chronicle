@@ -17,7 +17,7 @@ public class an_observer_and_two_event_types_and_one_event_in_sequence : an_obse
 
         appended_event = new AppendedEvent(
             new(EventSequenceNumber.First, event_types.ToArray()[0]),
-            new(event_source_id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(event_source_id, EventSequenceNumber.First, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));

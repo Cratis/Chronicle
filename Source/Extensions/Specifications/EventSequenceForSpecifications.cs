@@ -48,6 +48,7 @@ public class EventSequenceForSpecifications
             new(_sequenceNumber, eventTypeAttribute!.Type),
             new(
                 eventSourceId,
+                _sequenceNumber,
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.MinValue,
                 TenantId.Development,

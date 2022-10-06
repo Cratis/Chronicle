@@ -86,6 +86,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 new(State.SequenceNumber, eventType),
                 new(
                     eventSourceId,
+                    State.SequenceNumber,
                     DateTimeOffset.UtcNow,
                     validFrom ?? DateTimeOffset.MinValue,
                     _microserviceAndTenant.TenantId,

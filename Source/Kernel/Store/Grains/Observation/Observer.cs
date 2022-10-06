@@ -186,7 +186,16 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
         var @event = new AppendedEvent(
             new(EventSequenceNumber.WarmUp, new EventType(EventTypeId.Unknown, 1)),
-            new(EventSourceId.Unspecified, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, _tenantId, CorrelationId.New(), CausationId.System, CausedBy.System, EventObservationState.Initial),
+            new(
+                EventSourceId.Unspecified,
+                EventSequenceNumber.WarmUp,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow,
+                _tenantId,
+                CorrelationId.New(),
+                CausationId.System,
+                CausedBy.System,
+                EventObservationState.Initial),
             new JsonObject());
         await _stream!.OnNextAsync(@event, new EventSequenceNumberToken());
     }
