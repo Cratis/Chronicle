@@ -7,3 +7,4 @@ export * from './IEquatable';
 export * from './PropertyAccessor';
 export * from './PropertyAccessorDescriptor';
 export * from './PropertyPathResolverProxyHandler';
+export * from './fieldDecorator';
