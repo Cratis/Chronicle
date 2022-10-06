@@ -22,12 +22,12 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
 
         first_partition_appended_event = new AppendedEvent(
             new(first_partition_failed_sequence, event_types.ToArray()[0]),
-            new(first_partition, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(first_partition, 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
         second_partition_appended_event = new AppendedEvent(
             new(second_partition_failed_sequence, event_types.ToArray()[0]),
-            new(second_partition, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(second_partition, 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
         events_received = new();

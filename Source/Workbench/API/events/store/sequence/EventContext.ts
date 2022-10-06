@@ -6,6 +6,7 @@ import { EventObservationState } from './EventObservationState';
 
 export type EventContext = {
     eventSourceId: string;
+    sequenceNumber: number;
     occurred: Date;
     validFrom: Date;
     tenantId: string;
