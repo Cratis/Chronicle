@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { PotentialMoneyLaundryCase } from './PotentialMoneyLaundryCase';
 import Handlebars from 'handlebars';
 
@@ -18,7 +18,7 @@ export class AllPotentialMoneyLaundryCases extends QueryFor<PotentialMoneyLaundr
         ];
     }
 
-    static use(): [QueryResult<PotentialMoneyLaundryCase[]>, PerformQuery] {
+    static use(): [QueryResultWithState<PotentialMoneyLaundryCase[]>, PerformQuery] {
         return useQuery<PotentialMoneyLaundryCase[], AllPotentialMoneyLaundryCases>(AllPotentialMoneyLaundryCases);
     }
 }

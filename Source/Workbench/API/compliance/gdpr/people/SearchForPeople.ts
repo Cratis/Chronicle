@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { Person } from './Person';
 import Handlebars from 'handlebars';
 
@@ -22,7 +22,7 @@ export class SearchForPeople extends QueryFor<Person[], SearchForPeopleArguments
         ];
     }
 
-    static use(args?: SearchForPeopleArguments): [QueryResult<Person[]>, PerformQuery<SearchForPeopleArguments>] {
+    static use(args?: SearchForPeopleArguments): [QueryResultWithState<Person[]>, PerformQuery<SearchForPeopleArguments>] {
         return useQuery<Person[], SearchForPeople, SearchForPeopleArguments>(SearchForPeople, args);
     }
 }

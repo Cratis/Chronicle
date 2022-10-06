@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { Microservice } from './Microservice';
 import Handlebars from 'handlebars';
 
@@ -18,7 +18,7 @@ export class Microservices extends QueryFor<Microservice[]> {
         ];
     }
 
-    static use(): [QueryResult<Microservice[]>, PerformQuery] {
+    static use(): [QueryResultWithState<Microservice[]>, PerformQuery] {
         return useQuery<Microservice[], Microservices>(Microservices);
     }
 }

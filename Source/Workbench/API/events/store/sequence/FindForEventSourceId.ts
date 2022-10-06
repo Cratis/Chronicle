@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { AppendedEvent } from './AppendedEvent';
 import Handlebars from 'handlebars';
 
@@ -24,7 +24,7 @@ export class FindForEventSourceId extends QueryFor<AppendedEvent[], FindForEvent
         ];
     }
 
-    static use(args?: FindForEventSourceIdArguments): [QueryResult<AppendedEvent[]>, PerformQuery<FindForEventSourceIdArguments>] {
+    static use(args?: FindForEventSourceIdArguments): [QueryResultWithState<AppendedEvent[]>, PerformQuery<FindForEventSourceIdArguments>] {
         return useQuery<AppendedEvent[], FindForEventSourceId, FindForEventSourceIdArguments>(FindForEventSourceId, args);
     }
 }

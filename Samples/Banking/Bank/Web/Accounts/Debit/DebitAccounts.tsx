@@ -32,7 +32,7 @@ import { DebitAccountsList } from './DebitAccountsList';
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
     const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use();
-
+    console.log(accounts);
 
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();
     const [accountsStartingWith, queryAccountsStartingWith] = StartingWith.use({ filter: '' });

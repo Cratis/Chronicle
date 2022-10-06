@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { DebitAccountLatestTransactions } from './DebitAccountLatestTransactions';
 import Handlebars from 'handlebars';
 
@@ -22,7 +22,7 @@ export class LatestTransactions extends QueryFor<DebitAccountLatestTransactions,
         ];
     }
 
-    static use(args?: LatestTransactionsArguments): [QueryResult<DebitAccountLatestTransactions>, PerformQuery<LatestTransactionsArguments>] {
+    static use(args?: LatestTransactionsArguments): [QueryResultWithState<DebitAccountLatestTransactions>, PerformQuery<LatestTransactionsArguments>] {
         return useQuery<DebitAccountLatestTransactions, LatestTransactions, LatestTransactionsArguments>(LatestTransactions, args);
     }
 }

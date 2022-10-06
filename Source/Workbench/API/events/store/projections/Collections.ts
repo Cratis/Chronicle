@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { ProjectionCollection } from './ProjectionCollection';
 import Handlebars from 'handlebars';
 
@@ -24,7 +24,7 @@ export class Collections extends QueryFor<ProjectionCollection[], CollectionsArg
         ];
     }
 
-    static use(args?: CollectionsArguments): [QueryResult<ProjectionCollection[]>, PerformQuery<CollectionsArguments>] {
+    static use(args?: CollectionsArguments): [QueryResultWithState<ProjectionCollection[]>, PerformQuery<CollectionsArguments>] {
         return useQuery<ProjectionCollection[], Collections, CollectionsArguments>(Collections, args);
     }
 }

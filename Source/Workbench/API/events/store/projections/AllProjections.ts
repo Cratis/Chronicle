@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { Projection } from './Projection';
 import Handlebars from 'handlebars';
 
@@ -22,7 +22,7 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
         ];
     }
 
-    static use(args?: AllProjectionsArguments): [QueryResult<Projection[]>, PerformQuery<AllProjectionsArguments>] {
+    static use(args?: AllProjectionsArguments): [QueryResultWithState<Projection[]>, PerformQuery<AllProjectionsArguments>] {
         return useQuery<Projection[], AllProjections, AllProjectionsArguments>(AllProjections, args);
     }
 }
