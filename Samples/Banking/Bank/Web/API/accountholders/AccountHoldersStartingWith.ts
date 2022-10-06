@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { AccountHolder } from './AccountHolder';
 import Handlebars from 'handlebars';
 
@@ -22,7 +22,7 @@ export class AccountHoldersStartingWith extends QueryFor<AccountHolder[], Accoun
         ];
     }
 
-    static use(args?: AccountHoldersStartingWithArguments): [QueryResult<AccountHolder[]>, PerformQuery<AccountHoldersStartingWithArguments>] {
+    static use(args?: AccountHoldersStartingWithArguments): [QueryResultWithState<AccountHolder[]>, PerformQuery<AccountHoldersStartingWithArguments>] {
         return useQuery<AccountHolder[], AccountHoldersStartingWith, AccountHoldersStartingWithArguments>(AccountHoldersStartingWith, args);
     }
 }

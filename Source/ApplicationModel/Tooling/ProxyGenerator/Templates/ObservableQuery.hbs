@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
@@ -50,21 +50,21 @@ export class {{Name}} extends ObservableQueryFor<{{Model}}> {
 
 {{#if Arguments.[0]}}
 {{#if IsEnumerable}}
-    static use(args?: {{Name}}Arguments): [QueryResult<{{Model}}[]>] {
+    static use(args?: {{Name}}Arguments): [QueryResultWithState<{{Model}}[]>] {
         return useObservableQuery<{{Model}}[], {{Name}}, {{Name}}Arguments>({{Name}}, args);
     }
 {{else}}
-    static use(args?: {{Name}}Arguments): [QueryResult<{{Model}}>] {
+    static use(args?: {{Name}}Arguments): [QueryResultWithState<{{Model}}>] {
         return useObservableQuery<{{Model}}, {{Name}}, {{Name}}Arguments>({{Name}}, args);
     }
 {{/if}}
 {{else}}
 {{#if IsEnumerable}}
-    static use(): [QueryResult<{{Model}}[]>] {
+    static use(): [QueryResultWithState<{{Model}}[]>] {
         return useObservableQuery<{{Model}}[], {{Name}}>({{Name}});
     }
 {{else}}
-    static use(): [QueryResult<{{Model}}>] {
+    static use(): [QueryResultWithState<{{Model}}>] {
         return useObservableQuery<{{Model}}, {{Name}}>({{Name}});
     }
 {{/if}}

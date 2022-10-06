@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { DebitAccount } from './DebitAccount';
 import Handlebars from 'handlebars';
 
@@ -22,7 +22,7 @@ export class StartingWith extends QueryFor<DebitAccount[], StartingWithArguments
         ];
     }
 
-    static use(args?: StartingWithArguments): [QueryResult<DebitAccount[]>, PerformQuery<StartingWithArguments>] {
+    static use(args?: StartingWithArguments): [QueryResultWithState<DebitAccount[]>, PerformQuery<StartingWithArguments>] {
         return useQuery<DebitAccount[], StartingWith, StartingWithArguments>(StartingWith, args);
     }
 }

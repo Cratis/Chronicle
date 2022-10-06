@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/sequence/{eventSequenceId}/count');
@@ -17,7 +17,7 @@ export class Count extends QueryFor<number> {
         ];
     }
 
-    static use(): [QueryResult<number>, PerformQuery] {
+    static use(): [QueryResultWithState<number>, PerformQuery] {
         return useQuery<number, Count>(Count);
     }
 }

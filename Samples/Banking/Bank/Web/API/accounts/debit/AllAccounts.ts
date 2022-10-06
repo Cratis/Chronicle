@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
 import { DebitAccount } from './DebitAccount';
 import Handlebars from 'handlebars';
 
@@ -18,7 +18,7 @@ export class AllAccounts extends ObservableQueryFor<DebitAccount[]> {
         ];
     }
 
-    static use(): [QueryResult<DebitAccount[]>] {
+    static use(): [QueryResultWithState<DebitAccount[]>] {
         return useObservableQuery<DebitAccount[], AllAccounts>(AllAccounts);
     }
 }

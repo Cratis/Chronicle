@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { EventHistogramEntry } from './EventHistogramEntry';
 import Handlebars from 'handlebars';
 
@@ -22,7 +22,7 @@ export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArgument
         ];
     }
 
-    static use(args?: HistogramArguments): [QueryResult<EventHistogramEntry[]>, PerformQuery<HistogramArguments>] {
+    static use(args?: HistogramArguments): [QueryResultWithState<EventHistogramEntry[]>, PerformQuery<HistogramArguments>] {
         return useQuery<EventHistogramEntry[], Histogram, HistogramArguments>(Histogram, args);
     }
 }

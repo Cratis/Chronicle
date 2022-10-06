@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { EventTypeInformation } from './EventTypeInformation';
 import Handlebars from 'handlebars';
 
@@ -22,7 +22,7 @@ export class AllEventTypes extends QueryFor<EventTypeInformation[], AllEventType
         ];
     }
 
-    static use(args?: AllEventTypesArguments): [QueryResult<EventTypeInformation[]>, PerformQuery<AllEventTypesArguments>] {
+    static use(args?: AllEventTypesArguments): [QueryResultWithState<EventTypeInformation[]>, PerformQuery<AllEventTypesArguments>] {
         return useQuery<EventTypeInformation[], AllEventTypes, AllEventTypesArguments>(AllEventTypes, args);
     }
 }

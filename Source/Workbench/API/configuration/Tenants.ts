@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { Tenant } from './Tenant';
 import Handlebars from 'handlebars';
 
@@ -18,7 +18,7 @@ export class Tenants extends QueryFor<Tenant[]> {
         ];
     }
 
-    static use(): [QueryResult<Tenant[]>, PerformQuery] {
+    static use(): [QueryResultWithState<Tenant[]>, PerformQuery] {
         return useQuery<Tenant[], Tenants>(Tenants);
     }
 }
