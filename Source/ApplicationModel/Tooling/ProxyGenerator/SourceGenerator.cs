@@ -91,9 +91,11 @@ public class SourceGenerator : ISourceGenerator
                 var isNullable = parameter.Type.NullableAnnotation == NullableAnnotation.Annotated;
                 if (parameter.Type.IsKnownType())
                 {
+                    var targetType = parameter.Type.GetTypeScriptType(out var additionalImportStatements);
                     properties.Add(new(
                         parameter.Name,
-                        parameter.Type.GetTypeScriptType(out var additionalImportStatements),
+                        targetType.Type,
+                        targetType.Constructor,
                         parameter.Type.IsEnumerable(),
                         isNullable
                     ));
@@ -169,7 +171,7 @@ public class SourceGenerator : ISourceGenerator
 
                 var queryArguments = GetRequestArgumentsFrom(queryMethod, ref route, importStatements);
 
-                var typeName = actualType.IsKnownType() ? actualType.GetTypeScriptType(out _) : actualType.Name;
+                var typeName = actualType.IsKnownType() ? actualType.GetTypeScriptType(out _).Type : actualType.Name;
                 var queryDescriptor = new QueryDescriptor(route, queryMethod.Name, typeName, isEnumerable, importStatements, queryArguments);
                 var renderedTemplate = modelTypeAsNamedType.IsObservableClient() ?
                     TemplateTypes.ObservableQuery(queryDescriptor) :
@@ -217,7 +219,7 @@ public class SourceGenerator : ISourceGenerator
                     queryArguments.Add(
                         new(
                             parameter.Name,
-                            parameter.Type.GetTypeScriptType(out var additionalImportStatements),
+                            parameter.Type.GetTypeScriptType(out var additionalImportStatements).Type,
                             parameter.NullableAnnotation == NullableAnnotation.Annotated));
 
                     additionalImportStatements.ForEach(_ => importStatements.Add(_));
@@ -286,11 +288,11 @@ public class SourceGenerator : ISourceGenerator
                     }
                 }
                 OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, isEnumerable, isNullable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, actualType.Name, isEnumerable, isNullable));
             }
             else
             {
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType, isEnumerable, isNullable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType.Type, targetType.Constructor, isEnumerable, isNullable));
             }
         }
 

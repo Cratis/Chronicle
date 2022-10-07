@@ -14,28 +14,28 @@ public static class TypeSymbolExtensions
     /// <summary>
     /// Gets the definition of any type.
     /// </summary>
-    public const string AnyType = "any";
+    public static readonly TargetType AnyType = new("any", "Object");
 
     static readonly Dictionary<string, TargetType> _primitiveTypeMap = new()
     {
-        { typeof(bool).FullName!, new("boolean") },
-        { typeof(string).FullName!, new("string") },
-        { typeof(short).FullName!, new("number") },
-        { typeof(int).FullName!, new("number") },
-        { typeof(long).FullName!, new("number") },
-        { typeof(ushort).FullName!, new("number") },
-        { typeof(uint).FullName!, new("number") },
-        { typeof(ulong).FullName!, new("number") },
-        { typeof(float).FullName!, new("number") },
-        { typeof(double).FullName!, new("number") },
-        { typeof(decimal).FullName!, new("number") },
-        { typeof(DateTime).FullName!, new("Date") },
-        { typeof(DateTimeOffset).FullName!, new("Date") },
-        { typeof(Guid).FullName!, new("string") },
-        { "System.DateOnly", new("Date") },
-        { "System.TimeOnly", new("Date") },
-        { "System.Text.Json.Nodes", new("any") },
-        { "System.Text.Json.JsonDocument", new("any") }
+        { typeof(bool).FullName!, new("boolean", "Boolean") },
+        { typeof(string).FullName!, new("string", "String") },
+        { typeof(short).FullName!, new("number", "Number") },
+        { typeof(int).FullName!, new("number", "Number") },
+        { typeof(long).FullName!, new("number", "Number") },
+        { typeof(ushort).FullName!, new("number", "Number") },
+        { typeof(uint).FullName!, new("number", "Number") },
+        { typeof(ulong).FullName!, new("number", "Number") },
+        { typeof(float).FullName!, new("number", "Number") },
+        { typeof(double).FullName!, new("number", "Number") },
+        { typeof(decimal).FullName!, new("number", "Number") },
+        { typeof(DateTime).FullName!, new("Date",  "Date") },
+        { typeof(DateTimeOffset).FullName!, new("Date", "Date") },
+        { typeof(Guid).FullName!, new("string", "String") },
+        { "System.DateOnly", new("Date", "Date") },
+        { "System.TimeOnly", new("Date", "Date") },
+        { "System.Text.Json.Nodes", new("any", "Object") },
+        { "System.Text.Json.JsonDocument", new("any", "Object") }
     };
 
     /// <summary>
@@ -75,9 +75,11 @@ public static class TypeSymbolExtensions
         {
             var returnType = _.GetMethod!.ReturnType;
             var isNullable = returnType.NullableAnnotation == NullableAnnotation.Annotated;
+            var targetType = returnType.GetTypeScriptType(out var importStatements);
             var descriptor = new PropertyDescriptor(
                 _.Name,
-                returnType.GetTypeScriptType(out var importStatements),
+                targetType.Type,
+                targetType.Constructor,
                 returnType.IsEnumerable(),
                 isNullable);
 
@@ -92,7 +94,7 @@ public static class TypeSymbolExtensions
     /// <param name="symbol"><see cref="ITypeSymbol"/> to get for.</param>
     /// <param name="additionalImportStatements">Any additional <see cref="ImportStatement">import statements</see> needed.</param>
     /// <returns>TypeScript type.</returns>
-    public static string GetTypeScriptType(this ITypeSymbol symbol, out IEnumerable<ImportStatement> additionalImportStatements)
+    public static TargetType GetTypeScriptType(this ITypeSymbol symbol, out IEnumerable<ImportStatement> additionalImportStatements)
     {
         var imports = new List<ImportStatement>();
         additionalImportStatements = imports;
@@ -108,7 +110,7 @@ public static class TypeSymbolExtensions
             {
                 imports.Add(new(targetType.Type, targetType.ImportFromModule));
             }
-            return targetType.Type;
+            return targetType;
         }
         return AnyType;
     }

@@ -27,10 +27,23 @@ import { LatestTransactions } from 'API/accounts/debit/LatestTransactions';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
 import { CommandTracker, CommandTrackerContext, useCommandTracker } from '@aksio/cratis-applications-frontend/commands';
 import { DebitAccountsList } from './DebitAccountsList';
+import 'reflect-metadata';
 
 
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
+
+    const d = new DebitAccount();
+    console.log(d);
+    debugger;
+
+    let metadata = Reflect.getMetadata('fields', DebitAccount);
+    console.log(metadata);
+
+    metadata = Reflect.getOwnMetadata('fields', DebitAccount.prototype);
+
+    debugger;
+
     const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use();
 
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();
