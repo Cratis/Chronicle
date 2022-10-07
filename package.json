@@ -17,7 +17,8 @@
     "devDependencies": {
         "edit-json-file": "1.7.0",
         "glob": "8.0.3",
-        "npm-check-updates": "16.0.5"
+        "npm-check-updates": "16.0.5",
+        "module-alias": "2.2.2"
     },
     "license": "MIT",
     "version": "0.0.0"

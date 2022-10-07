@@ -1,6 +1,8 @@
 module.exports = function (wallaby) {
     return {
         files: [
+            { pattern: 'package.json', instrument: false },
+            { pattern: 'Source/**/package.json', instrument: false },
             '!Source/**/*.d.ts*',
             '!Source/**/for_*/**/when_*.ts*',
             'Source/**/*.ts*'
@@ -21,6 +23,23 @@ module.exports = function (wallaby) {
         },
 
         setup: wallaby => {
+            const { glob } = require('glob');
+            const { addAliases } = require('module-alias');
+            const fs = require('fs');
+            const path = require('path');
+
+            const rootFolder = wallaby.projectCacheDir;
+            const getAliases = () => {
+                const aliases = {};
+                const searchPath = path.join(rootFolder, 'Source/**/package.json');
+                glob.sync(searchPath).forEach(packageJson => {
+                    const packageName = require(packageJson).name;
+                    aliases[packageName] = path.dirname(packageJson);
+                });
+                return aliases;
+            }
+            addAliases(getAliases());
+
             const mocha = wallaby.testFramework;
 
             const chai = require('chai');
