@@ -10,6 +10,18 @@ import { ValidationError } from '../validation/ValidationError';
  */
 export class CommandResult implements ICommandResult {
 
+    static empty: CommandResult = new CommandResult({
+        correlationId: Guid.empty.toString(),
+        isSuccess: true,
+        isAuthorized: true,
+        isValid: true,
+        hasExceptions: false,
+        validationErrors: [],
+        exceptionMessages: [],
+        exceptionStackTrace: ''
+    });
+
+
     /** @inheritdoc */
     readonly correlationId: Guid;
 
