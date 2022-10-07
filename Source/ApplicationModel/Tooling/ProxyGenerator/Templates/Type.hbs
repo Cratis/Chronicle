@@ -2,24 +2,28 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
+
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
 
-export type {{Name}} = {
+export class {{Name}} {
     {{#Properties}}
     {{#if IsEnumerable}}
+    @field({{Constructor}}[])
     {{#if IsNullable}}
     {{camelcase Name}}?: {{Type}}[];
     {{else}}
-    {{camelcase Name}}: {{Type}}[];
+    {{camelcase Name}}!: {{Type}}[];
     {{/if}}
     {{else}}
+    @field({{Constructor}})
     {{#if IsNullable}}
     {{camelcase Name}}?: {{Type}};
     {{else}}
-    {{camelcase Name}}: {{Type}};
+    {{camelcase Name}}!: {{Type}};
     {{/if}}
     {{/if}}
     {{/Properties}}
-};
+}

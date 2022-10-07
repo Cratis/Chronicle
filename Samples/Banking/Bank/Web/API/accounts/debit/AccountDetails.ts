@@ -2,9 +2,14 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
 
-export type AccountDetails = {
-    name: string;
-    owner: string;
-    includeCard: boolean;
-};
+
+export class AccountDetails {
+    @field(String)
+    name!: string;
+    @field(String)
+    owner!: string;
+    @field(Boolean)
+    includeCard!: boolean;
+}
