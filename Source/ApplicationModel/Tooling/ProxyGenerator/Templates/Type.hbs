@@ -11,7 +11,7 @@ import { {{Type}} } from '{{Module}}';
 export class {{Name}} {
     {{#Properties}}
     {{#if IsEnumerable}}
-    @field({{Constructor}}[])
+    @field({{Constructor}}, true)
     {{#if IsNullable}}
     {{camelcase Name}}?: {{Type}}[];
     {{else}}
