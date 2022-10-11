@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -21,18 +22,21 @@ public class MongoDBDefaults
     static bool _initialized;
     readonly IEnumerable<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
     readonly ITypes _types;
+    readonly IDerivedTypes _derivedTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBDefaults"/> class.
     /// </summary>
     /// <param name="types"><see cref="ITypes"/> for general type discovery.</param>
-    public MongoDBDefaults(ITypes types)
+    /// <param name="derivedTypes"><see cref="IDerivedTypes"/> in the system.</param>
+    public MongoDBDefaults(ITypes types, IDerivedTypes derivedTypes)
     {
         _conventionPackFilters = types
             .FindMultiple<ICanFilterMongoDBConventionPacksForType>()
             .Select(_ => (Activator.CreateInstance(_) as ICanFilterMongoDBConventionPacksForType)!)
             .ToArray();
         _types = types;
+        _derivedTypes = derivedTypes;
     }
 
     /// <summary>
@@ -63,6 +67,11 @@ public class MongoDBDefaults
 #pragma warning restore CS0618
             BsonSerializer
                 .RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+
+            foreach (var derivedType in _derivedTypes.TypesWithDerivatives)
+            {
+                BsonSerializer.RegisterDiscriminatorConvention(derivedType, new DerivedTypeDiscriminatorConvention(_derivedTypes));
+            }
 
             RegisterConventionAsPack(ConventionPacks.CamelCase, new CamelCaseElementNameConvention());
             RegisterConventionAsPack(ConventionPacks.IgnoreExtraElements, new IgnoreExtraElementsConvention(true));

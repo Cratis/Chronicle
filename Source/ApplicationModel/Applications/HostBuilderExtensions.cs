@@ -7,6 +7,7 @@ using Aksio.Cratis.Conversion;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
+using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -55,16 +56,18 @@ public static class HostBuilderExtensions
         Internals.Types = new Types();
         Internals.Types.RegisterTypeConvertersForConcepts();
         TypeConverters.Register();
+        var derivedTypes = new DerivedTypes(Internals.Types);
 
         microserviceId ??= MicroserviceId.Unspecified;
 
         builder
-            .UseMongoDB(Internals.Types)
+            .UseMongoDB(Internals.Types, derivedTypes)
             .UseCratis(microserviceId, Internals.Types, configureDelegate, loggerFactory)
             .ConfigureServices(_ =>
             {
                 _
                 .AddSingleton(Internals.Types)
+                .AddSingleton<IDerivedTypes>(derivedTypes)
                 .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
                 .AddConfigurationObjects(Internals.Types, searchSubPaths: new[] { "config" }, logger: logger)
                 .AddControllersFromProjectReferencedAssembles(Internals.Types)

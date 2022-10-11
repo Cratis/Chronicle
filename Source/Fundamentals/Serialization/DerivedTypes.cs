@@ -19,6 +19,9 @@ public class DerivedTypes : IDerivedTypes
     readonly IDictionary<Type, IEnumerable<DerivedTypeAndIdentifier>> _targetTypeToDerivedType;
     readonly IDictionary<Type, Type> _derivedTypeToTargetType;
 
+    /// <inheritdoc/>
+    public IEnumerable<Type> TypesWithDerivatives => _targetTypeToDerivedType.Keys;
+
     /// <summary>
     /// Initializes a new instance of <see cref="ITypes"/>.
     /// </summary>
@@ -55,6 +58,9 @@ public class DerivedTypes : IDerivedTypes
 
         return _derivedTypeToTargetType[derivedType];
     }
+
+    /// <inheritdoc/>
+    public bool IsDerivedType(Type type) => _derivedTypeToTargetType.Keys.Any(_ => _ == type);
 
     Type GetTargetTypeFrom(Type derivedType)
     {
