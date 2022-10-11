@@ -16,6 +16,10 @@ export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasF
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: any[] = [];
 
+    constructor() {
+        super(any, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'microserviceId',

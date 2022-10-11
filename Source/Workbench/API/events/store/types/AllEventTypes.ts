@@ -16,6 +16,10 @@ export class AllEventTypes extends QueryFor<EventTypeInformation[], AllEventType
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventTypeInformation[] = [];
 
+    constructor() {
+        super(EventTypeInformation, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'microserviceId',

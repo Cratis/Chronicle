@@ -18,6 +18,10 @@ export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
 
+    constructor() {
+        super(AppendedEvent, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'eventSequenceId',

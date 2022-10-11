@@ -16,6 +16,10 @@ export class LatestTransactions extends QueryFor<DebitAccountLatestTransactions,
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: DebitAccountLatestTransactions = {} as any;
 
+    constructor() {
+        super(DebitAccountLatestTransactions, false);
+    }
+
     get requestArguments(): string[] {
         return [
             'accountId',

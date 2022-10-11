@@ -17,6 +17,10 @@ export class Collections extends QueryFor<ProjectionCollection[], CollectionsArg
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ProjectionCollection[] = [];
 
+    constructor() {
+        super(ProjectionCollection, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'microserviceId',

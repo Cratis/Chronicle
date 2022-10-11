@@ -16,6 +16,10 @@ export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArgument
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventHistogramEntry[] = [];
 
+    constructor() {
+        super(EventHistogramEntry, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'eventSequenceId',

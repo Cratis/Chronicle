@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
 import { Person } from './Person';
 import Handlebars from 'handlebars';
 
@@ -13,12 +13,16 @@ export class AllPeople extends ObservableQueryFor<Person[]> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Person[] = [];
 
+    constructor() {
+        super(Person, true);
+    }
+
     get requestArguments(): string[] {
         return [
         ];
     }
 
-    static use(): [QueryResult<Person[]>] {
+    static use(): [QueryResultWithState<Person[]>] {
         return useObservableQuery<Person[], AllPeople>(AllPeople);
     }
 }

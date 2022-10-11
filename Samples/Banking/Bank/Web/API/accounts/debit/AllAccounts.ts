@@ -13,6 +13,10 @@ export class AllAccounts extends ObservableQueryFor<DebitAccount[]> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: DebitAccount[] = [];
 
+    constructor() {
+        super(DebitAccount, true);
+    }
+
     get requestArguments(): string[] {
         return [
         ];
