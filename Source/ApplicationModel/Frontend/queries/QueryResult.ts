@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { Constructor } from '@aksio/cratis-fundamentals';
+import { JsonSerializer } from '@aksio/cratis-fundamentals/JsonSerializer';
+
 type QueryResultFromServer<TDataType> = {
     data: TDataType;
     isSuccess: boolean;
@@ -25,8 +28,16 @@ export class QueryResult<TDataType> {
      * @param {Response} [response] Response to create from.
      * @returns A new {@link QueryResult}.
      */
-    static async fromResponse<TModel>(response: Response): Promise<QueryResult<TModel>> {
+    static async fromResponse<TModel>(response: Response, instanceType: Constructor, enumerable: boolean): Promise<QueryResult<TModel>> {
         const jsonResponse = await response.json() as QueryResultFromServer<TModel>;
-        return new QueryResult(jsonResponse.data, jsonResponse.isSuccess && response.ok);
+
+        let data: any = jsonResponse.data;
+        if( enumerable ) {
+            data = JsonSerializer.deserializeArrayFromInstance(instanceType, data);
+        } else {
+            data = JsonSerializer.deserializeFromInstance(instanceType, data);
+        }
+
+        return new QueryResult(data, jsonResponse.isSuccess && response.ok);
     }
 }

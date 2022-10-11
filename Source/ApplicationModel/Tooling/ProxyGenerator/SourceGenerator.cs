@@ -75,11 +75,6 @@ public class SourceGenerator : ISourceGenerator
         foreach (var commandMethod in methods.Where(_ => _.GetAttributes().Any(_ => _.IsHttpPostAttribute())))
         {
             var route = GetRoute(baseApiRoute, commandMethod);
-
-            // if (route == "/api/accounts/debit")
-            // {
-            //     while (!System.Diagnostics.Debugger.IsAttached) Thread.Sleep(10);
-            // }
             var properties = new List<PropertyDescriptor>();
             var importStatements = new HashSet<ImportStatement>();
 

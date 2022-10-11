@@ -40,6 +40,10 @@ export class {{Name}} extends ObservableQueryFor<{{Model}}> {
     readonly defaultValue: {{Model}} = {} as any;
 {{/if}}
 
+    constructor() {
+        super({{Model}}, {{lowercase IsEnumerable}});
+    }
+
     get requestArguments(): string[] {
         return [
             {{#Arguments}}

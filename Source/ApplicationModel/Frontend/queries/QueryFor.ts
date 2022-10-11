@@ -5,6 +5,7 @@ import { IQueryFor } from './IQueryFor';
 import { QueryResult } from "./QueryResult";
 import Handlebars from 'handlebars';
 import { ValidateRequestArguments } from './ValidateRequestArguments';
+import { Constructor } from '@aksio/cratis-fundamentals';
 
 /**
  * Represents an implementation of {@link IQueryFor}.
@@ -15,6 +16,14 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
     abstract readonly routeTemplate: Handlebars.TemplateDelegate;
     abstract get requestArguments(): string[];
     abstract defaultValue: TDataType;
+
+    /**
+     * Initializes a new instance of the {@link ObservableQueryFor<,>}} class.
+     * @param modelType Type of model, if an enumerable, this is the instance type.
+     * @param enumerable Whether or not it is an enumerable.
+     */
+     constructor(readonly modelType: Constructor, readonly enumerable: boolean) {
+    }
 
     /** @inheritdoc */
     async perform(args?: TArguments): Promise<QueryResult<TDataType>> {
@@ -35,6 +44,6 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
             }
         });
 
-        return await QueryResult.fromResponse<TDataType>(response);
+        return await QueryResult.fromResponse<TDataType>(response,this.modelType, this.enumerable);
     }
 }
