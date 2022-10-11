@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Serialization;
 public interface IDerivedTypes
 {
     /// <summary>
+    /// Gets all the types that has derivatives.
+    /// </summary>
+    IEnumerable<Type> TypesWithDerivatives { get; }
+
+    /// <summary>
     /// Get the derived type for a target type.
     /// </summary>
     /// <param name="targetType">Target type to get for.</param>
@@ -22,4 +27,11 @@ public interface IDerivedTypes
     /// <param name="derivedType">Derived type to get from.</param>
     /// <returns>The target type.</returns>
     Type GetTargetTypeFor(Type derivedType);
+
+    /// <summary>
+    /// Check if a type is a derived type.
+    /// </summary>
+    /// <param name="type">Type to check.</param>
+    /// <returns>True if it is a derived type, false if not.</returns>
+    bool IsDerivedType(Type type);
 }
