@@ -13,6 +13,10 @@ export class AllAccountHolders extends QueryFor<AccountHolder[]> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AccountHolder[] = [];
 
+    constructor() {
+        super(AccountHolder, true);
+    }
+
     get requestArguments(): string[] {
         return [
         ];

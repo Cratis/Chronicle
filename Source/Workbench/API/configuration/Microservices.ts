@@ -13,6 +13,10 @@ export class Microservices extends QueryFor<Microservice[]> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Microservice[] = [];
 
+    constructor() {
+        super(Microservice, true);
+    }
+
     get requestArguments(): string[] {
         return [
         ];

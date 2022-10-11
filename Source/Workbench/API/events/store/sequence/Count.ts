@@ -12,6 +12,10 @@ export class Count extends QueryFor<number> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: number = {} as any;
 
+    constructor() {
+        super(number, false);
+    }
+
     get requestArguments(): string[] {
         return [
         ];

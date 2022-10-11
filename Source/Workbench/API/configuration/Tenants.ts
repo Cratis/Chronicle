@@ -13,6 +13,10 @@ export class Tenants extends QueryFor<Tenant[]> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Tenant[] = [];
 
+    constructor() {
+        super(Tenant, true);
+    }
+
     get requestArguments(): string[] {
         return [
         ];

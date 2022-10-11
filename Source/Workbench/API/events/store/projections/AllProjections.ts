@@ -16,6 +16,10 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsArgumen
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Projection[] = [];
 
+    constructor() {
+        super(Projection, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'microserviceId',

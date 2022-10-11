@@ -16,6 +16,10 @@ export class AccountHoldersStartingWith extends QueryFor<AccountHolder[], Accoun
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AccountHolder[] = [];
 
+    constructor() {
+        super(AccountHolder, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'filter',

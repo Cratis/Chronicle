@@ -16,6 +16,10 @@ export class StartingWith extends QueryFor<DebitAccount[], StartingWithArguments
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: DebitAccount[] = [];
 
+    constructor() {
+        super(DebitAccount, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'filter',

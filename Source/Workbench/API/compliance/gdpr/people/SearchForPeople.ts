@@ -16,6 +16,10 @@ export class SearchForPeople extends QueryFor<Person[], SearchForPeopleArguments
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: Person[] = [];
 
+    constructor() {
+        super(Person, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'query',

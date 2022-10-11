@@ -2,8 +2,12 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
 
-export type ProjectionCollection = {
-    name: string;
-    documentCount: number;
-};
+
+export class ProjectionCollection {
+    @field(String)
+    name!: string;
+    @field(Number)
+    documentCount!: number;
+}

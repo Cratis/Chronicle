@@ -9,6 +9,6 @@ import { AccountTransaction } from './AccountTransaction';
 export class DebitAccountLatestTransactions {
     @field(String)
     id!: string;
-    @field(AccountTransaction[])
+    @field(AccountTransaction, true)
     transactions!: AccountTransaction[];
 }

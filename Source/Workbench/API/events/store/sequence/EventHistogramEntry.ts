@@ -2,8 +2,12 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
 
-export type EventHistogramEntry = {
-    date: Date;
-    count: number;
-};
+
+export class EventHistogramEntry {
+    @field(Date)
+    date!: Date;
+    @field(Number)
+    count!: number;
+}

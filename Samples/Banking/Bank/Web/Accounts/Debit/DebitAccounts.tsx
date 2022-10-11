@@ -32,18 +32,6 @@ import 'reflect-metadata';
 
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
-
-    const d = new DebitAccount();
-    console.log(d);
-    debugger;
-
-    let metadata = Reflect.getMetadata('fields', DebitAccount);
-    console.log(metadata);
-
-    metadata = Reflect.getOwnMetadata('fields', DebitAccount.prototype);
-
-    debugger;
-
     const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use();
 
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();

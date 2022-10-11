@@ -13,6 +13,10 @@ export class AllEventSequences extends QueryFor<EventSequenceInformation[]> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventSequenceInformation[] = [];
 
+    constructor() {
+        super(EventSequenceInformation, true);
+    }
+
     get requestArguments(): string[] {
         return [
         ];

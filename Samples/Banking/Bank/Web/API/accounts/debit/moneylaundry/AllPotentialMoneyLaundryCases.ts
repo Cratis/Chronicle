@@ -13,6 +13,10 @@ export class AllPotentialMoneyLaundryCases extends QueryFor<PotentialMoneyLaundr
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: PotentialMoneyLaundryCase[] = [];
 
+    constructor() {
+        super(PotentialMoneyLaundryCase, true);
+    }
+
     get requestArguments(): string[] {
         return [
         ];
