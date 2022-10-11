@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using System.Reflection;
 using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Types;
@@ -58,11 +57,7 @@ public class ContractToImplementorsMap : IContractToImplementorsMap
         });
     }
 
-    bool IsImplementation(Type type)
-    {
-        var typeInfo = type.GetTypeInfo();
-        return !typeInfo.IsInterface && !typeInfo.IsAbstract;
-    }
+    bool IsImplementation(Type type) => !type.IsInterface && !type.IsAbstract;
 
     ConcurrentBag<Type> GetImplementingTypesFor(Type contract)
     {
