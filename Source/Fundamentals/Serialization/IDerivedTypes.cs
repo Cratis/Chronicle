@@ -34,4 +34,11 @@ public interface IDerivedTypes
     /// <param name="type">Type to check.</param>
     /// <returns>True if it is a derived type, false if not.</returns>
     bool IsDerivedType(Type type);
+
+    /// <summary>
+    /// Check if a type has derivative types.
+    /// </summary>
+    /// <param name="type">Type to check.</param>
+    /// <returns>True if it has derivatives, false if not.</returns>
+    bool HasDerivatives(Type type);
 }
