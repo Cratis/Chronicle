@@ -8,10 +8,10 @@ public class when_initializing_with_multiple_types_having_same_identifier : give
     interface ITargetType { }
 
     [DerivedType("fc13ac34-b69b-4438-8ebc-bc91bb5e2ee6")]
-    class FirstDerivedType : ITargetType { }
+    record FirstDerivedType : ITargetType { }
 
     [DerivedType("fc13ac34-b69b-4438-8ebc-bc91bb5e2ee6")]
-    class SecondDerivedType : ITargetType { }
+    record SecondDerivedType : ITargetType { }
 
     Exception result;
 

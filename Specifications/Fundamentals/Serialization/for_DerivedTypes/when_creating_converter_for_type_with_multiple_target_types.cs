@@ -9,7 +9,7 @@ public class when_initializing_with_type_with_multiple_target_types : given.deri
     interface ISecond { }
 
     [DerivedType("fc13ac34-b69b-4438-8ebc-bc91bb5e2ee6")]
-    class DerivedType : IFirst, ISecond { }
+    record DerivedType : IFirst, ISecond { }
 
     Exception result;
 
