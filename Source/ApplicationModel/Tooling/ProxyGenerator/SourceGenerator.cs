@@ -263,40 +263,38 @@ public class SourceGenerator : ISourceGenerator
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(rootNamespace, outputFolder, useRouteAsPath, baseApiRoute, targetFile, properties, typeImportStatements);
 
         string renderedTemplate = null!;
-        if (type.DeclaringSyntaxReferences.Length > 0)
-        {
-            switch (type.DeclaringSyntaxReferences[0].GetSyntax())
-            {
-                case InterfaceDeclarationSyntax:
-                    {
-                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
-                        renderedTemplate = TemplateTypes.Interface(typeDescriptor);
-                    }
-                    break;
-                case ClassDeclarationSyntax:
-                case RecordDeclarationSyntax:
-                    {
-                        var derivedType = false;
-                        var derivedTypeIdentifier = string.Empty;
-                        if (_derivedTypes.Any(_ => _.Equals(type)))
-                        {
-                            var attribute = type.GetAttributes().SingleOrDefault(_ => _.AttributeClass?.ToString() == "Aksio.Cratis.Serialization.DerivedTypeAttribute");
-                            if (attribute is not null)
-                            {
-                                derivedType = true;
-                                derivedTypeIdentifier = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
-                            }
-                        }
 
-                        var hasPropertiesWithDerivatives = propertyDescriptors.Any(_ => _.HasDerivatives);
-                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements, derivedType, derivedTypeIdentifier, HasPropertiesWithDerivatives: hasPropertiesWithDerivatives);
-                        renderedTemplate = TemplateTypes.Type(typeDescriptor);
+        switch (type.TypeKind)
+        {
+            case TypeKind.Interface:
+                {
+                    var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
+                    renderedTemplate = TemplateTypes.Interface(typeDescriptor);
+                }
+                break;
+            case TypeKind.Class:
+                {
+                    var derivedType = false;
+                    var derivedTypeIdentifier = string.Empty;
+                    if (_derivedTypes.Any(_ => _.Equals(type)))
+                    {
+                        var attribute = type.GetAttributes().SingleOrDefault(_ => _.AttributeClass?.ToString() == "Aksio.Cratis.Serialization.DerivedTypeAttribute");
+                        if (attribute is not null)
+                        {
+                            derivedType = true;
+                            derivedTypeIdentifier = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                        }
                     }
-                    break;
-                case EnumDeclarationSyntax enumDeclaration:
-                    renderedTemplate = TemplateTypes.Enum(type.GetEnumDescriptor(enumDeclaration));
-                    break;
-            }
+
+                    var hasPropertiesWithDerivatives = propertyDescriptors.Any(_ => _.HasDerivatives);
+                    var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements, derivedType, derivedTypeIdentifier, HasPropertiesWithDerivatives: hasPropertiesWithDerivatives);
+                    renderedTemplate = TemplateTypes.Type(typeDescriptor);
+                }
+                break;
+            case TypeKind.Enum:
+                var enumDeclaration = (type.DeclaringSyntaxReferences[0].GetSyntax() as EnumDeclarationSyntax)!;
+                renderedTemplate = TemplateTypes.Enum(type.GetEnumDescriptor(enumDeclaration));
+                break;
         }
 
         if (renderedTemplate != default)
