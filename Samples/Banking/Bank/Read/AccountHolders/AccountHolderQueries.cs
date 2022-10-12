@@ -32,10 +32,5 @@ public class AccountHolderQueries : Controller
     }
 
     [HttpGet("with-accounts")]
-    public IEnumerable<AccountHolderWithAccounts> AllAccountHoldersWithAccounts() => new AccountHolderWithAccounts[] {
-        new AccountHolderWithAccounts("Blah", "Blah", "123123", new("Somewhere", "3230", "Sandefjord", "Norway"), new IAccount[] {
-            new DebitAccount("b4e4b614-f7c3-4815-afe5-9b57fc46df0f", "Debit", AccountType.Debit),
-            new CreditAccount("029d7dff-133d-4193-a079-edd06a343b22", "Credit", AccountType.Credit),
-        })
-    };
+    public IEnumerable<AccountHolderWithAccounts> AllAccountHoldersWithAccounts() => _withAccountsCollection.Find(_ => true).ToList();
 }
