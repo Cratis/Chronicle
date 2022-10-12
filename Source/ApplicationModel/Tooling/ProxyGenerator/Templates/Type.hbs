@@ -3,6 +3,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { field } from '@aksio/cratis-fundamentals';
+{{#if HasPropertiesWithDerivatives}}
+import { derivatives } from '@aksio/cratis-fundamentals';
+{{/if}}
 {{#if IsDerived }}
 import { derivedType } from '@aksio/cratis-fundamentals';
 {{/if}}
@@ -18,6 +21,17 @@ export class {{Name}} {
     {{#Properties}}
     {{#if IsEnumerable}}
     @field({{Constructor}}, true)
+    {{#if HasDerivatives}}
+    @derivatives(
+    {{#Derivatives}}
+    {{#if @last}}
+        {{this}}
+    {{else}}
+        {{this}},
+    {{/if}}
+    {{/Derivatives}}
+    )
+    {{/if}}
     {{#if IsNullable}}
     {{camelcase Name}}?: {{Type}}[];
     {{else}}
@@ -25,6 +39,17 @@ export class {{Name}} {
     {{/if}}
     {{else}}
     @field({{Constructor}})
+    {{#if HasDerivatives}}
+    @derivatives(
+    {{#Derivatives}}
+    {{#if @last}}
+        {{this}}
+    {{else}}
+        {{this}},
+    {{/if}}
+    {{/Derivatives}}
+    )
+    {{/if}}
     {{#if IsNullable}}
     {{camelcase Name}}?: {{Type}};
     {{else}}

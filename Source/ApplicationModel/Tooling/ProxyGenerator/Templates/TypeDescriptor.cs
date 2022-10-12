@@ -11,4 +11,5 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates;
 /// <param name="Imports">Additional import statements.</param>
 /// <param name="IsDerived">Optionally if the type is a derived type. Defaults to false.</param>
 /// <param name="DerivedTypeId">Optionally the derived type identifier. Defaults to empty string.</param>
-public record TypeDescriptor(string Name, IEnumerable<PropertyDescriptor> Properties, IEnumerable<ImportStatement> Imports, bool IsDerived = false, string DerivedTypeId = "");
+/// <param name="HasPropertiesWithDerivatives">Whether or not there are any properties that hold a type that requires derivatives.</param>
+public record TypeDescriptor(string Name, IEnumerable<PropertyDescriptor> Properties, IEnumerable<ImportStatement> Imports, bool IsDerived = false, string DerivedTypeId = "", bool HasPropertiesWithDerivatives = false);

@@ -11,4 +11,6 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates;
 /// <param name="Constructor">The JavaScript constructor for the type.</param>
 /// <param name="IsEnumerable">Whether or not the property is an enumerable or not.</param>
 /// <param name="IsNullable">Whether or not the property is nullable or not.</param>
-public record PropertyDescriptor(string Name, string Type, string Constructor, bool IsEnumerable, bool IsNullable);
+/// <param name="HasDerivatives">Whether or not the property type has derivatives, typically if it is an interface type.</param>
+/// <param name="Derivatives">Optionally any derivatives of the type.</param>
+public record PropertyDescriptor(string Name, string Type, string Constructor, bool IsEnumerable, bool IsNullable, bool HasDerivatives, IEnumerable<string>? Derivatives = default);

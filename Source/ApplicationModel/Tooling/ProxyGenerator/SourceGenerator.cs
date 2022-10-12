@@ -101,7 +101,8 @@ public class SourceGenerator : ISourceGenerator
                         targetType.Type,
                         targetType.Constructor,
                         parameter.Type.IsEnumerable(),
-                        isNullable
+                        isNullable,
+                        false
                     ));
                     additionalImportStatements.ForEach(_ => importStatements.Add(_));
                 }
@@ -268,11 +269,6 @@ public class SourceGenerator : ISourceGenerator
             {
                 case InterfaceDeclarationSyntax:
                     {
-                        foreach (var derivedType in _derivedTypes.Where(_ => _.Interfaces.Any(i => i.Equals(type))))
-                        {
-                            OutputType(derivedType, rootNamespace, outputFolder, parentFile, typeImportStatements, useRouteAsPath, baseApiRoute);
-                        }
-
                         var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
                         renderedTemplate = TemplateTypes.Interface(typeDescriptor);
                     }
@@ -292,7 +288,8 @@ public class SourceGenerator : ISourceGenerator
                             }
                         }
 
-                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements, derivedType, derivedTypeIdentifier);
+                        var hasPropertiesWithDerivatives = propertyDescriptors.Any(_ => _.HasDerivatives);
+                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements, derivedType, derivedTypeIdentifier, HasPropertiesWithDerivatives: hasPropertiesWithDerivatives);
                         renderedTemplate = TemplateTypes.Type(typeDescriptor);
                     }
                     break;
@@ -321,6 +318,8 @@ public class SourceGenerator : ISourceGenerator
             var isNullable = property.Type.NullableAnnotation == NullableAnnotation.Annotated;
             if (targetType == TypeSymbolExtensions.AnyType)
             {
+                var hasDerivatives = false;
+                var derivatives = new List<string>();
                 var actualType = property.Type;
                 var constructorType = actualType.Name;
 
@@ -338,12 +337,24 @@ public class SourceGenerator : ISourceGenerator
                     }
                 }
 
+                if (actualType.TypeKind == TypeKind.Interface)
+                {
+                    constructorType = "Object";
+                    hasDerivatives = true;
+
+                    foreach (var derivedType in _derivedTypes.Where(_ => _.Interfaces.Any(i => i.Equals(actualType))))
+                    {
+                        OutputType(derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                        derivatives.Add(derivedType.Name);
+                    }
+                }
+
                 OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable, hasDerivatives, derivatives));
             }
             else
             {
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType.Type, targetType.Constructor, isEnumerable, isNullable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType.Type, targetType.Constructor, isEnumerable, isNullable, false));
             }
         }
 

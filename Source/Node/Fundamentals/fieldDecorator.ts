@@ -4,7 +4,7 @@
 import { Constructor } from './Constructor';
 import { Fields } from './Fields';
 
-export function field(targetType: Constructor, enumerable?: boolean) {
+export function field(targetType: Constructor, enumerable?: boolean, hasDerivatives?: boolean) {
     return function (target: any, propertyKey: string) {
         Fields.addFieldToType(target.constructor, propertyKey, targetType, enumerable || false);
     };
