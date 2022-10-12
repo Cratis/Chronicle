@@ -7,8 +7,15 @@ namespace Read.AccountHolders;
 public class AccountHolderQueries : Controller
 {
     readonly IMongoCollection<AccountHolder> _collection;
+    readonly IMongoCollection<AccountHolderWithAccounts> _withAccountsCollection;
 
-    public AccountHolderQueries(IMongoCollection<AccountHolder> collection) => _collection = collection;
+    public AccountHolderQueries(
+        IMongoCollection<AccountHolder> collection,
+        IMongoCollection<AccountHolderWithAccounts> withAccountsCollection)
+    {
+        _collection = collection;
+        _withAccountsCollection = withAccountsCollection;
+    }
 
     [HttpGet]
     public IEnumerable<AccountHolder> AllAccountHolders() => _collection.Find(_ => true).ToList();
@@ -23,4 +30,7 @@ public class AccountHolderQueries : Controller
         var result = await _collection.FindAsync(filterDocument);
         return result.ToList();
     }
+
+    [HttpGet("with-accounts")]
+    public IEnumerable<AccountHolderWithAccounts> AllAccountHoldersWithAccounts() => _withAccountsCollection.Find(_ => true).ToList();
 }
