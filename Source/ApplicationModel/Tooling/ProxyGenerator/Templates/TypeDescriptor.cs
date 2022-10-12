@@ -9,4 +9,6 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates;
 /// <param name="Name">Name of the type.</param>
 /// <param name="Properties">Properties on the type.</param>
 /// <param name="Imports">Additional import statements.</param>
-public record TypeDescriptor(string Name, IEnumerable<PropertyDescriptor> Properties, IEnumerable<ImportStatement> Imports);
+/// <param name="IsDerived">Optionally if the type is a derived type. Defaults to false.</param>
+/// <param name="DerivedTypeId">Optionally the derived type identifier. Defaults to empty string.</param>
+public record TypeDescriptor(string Name, IEnumerable<PropertyDescriptor> Properties, IEnumerable<ImportStatement> Imports, bool IsDerived = false, string DerivedTypeId = "");

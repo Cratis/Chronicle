@@ -261,7 +261,6 @@ public class SourceGenerator : ISourceGenerator
         var typeImportStatements = new HashSet<ImportStatement>();
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(rootNamespace, outputFolder, useRouteAsPath, baseApiRoute, targetFile, properties, typeImportStatements);
 
-
         string renderedTemplate = null!;
         if (type.DeclaringSyntaxReferences.Length > 0)
         {
@@ -281,7 +280,19 @@ public class SourceGenerator : ISourceGenerator
                 case ClassDeclarationSyntax:
                 case RecordDeclarationSyntax:
                     {
-                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
+                        var derivedType = false;
+                        var derivedTypeIdentifier = string.Empty;
+                        if (_derivedTypes.Any(_ => _.Equals(type)))
+                        {
+                            var attribute = type.GetAttributes().SingleOrDefault(_ => _.AttributeClass?.ToString() == "Aksio.Cratis.Serialization.DerivedTypeAttribute");
+                            if (attribute is not null)
+                            {
+                                derivedType = true;
+                                derivedTypeIdentifier = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                            }
+                        }
+
+                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements, derivedType, derivedTypeIdentifier);
                         renderedTemplate = TemplateTypes.Type(typeDescriptor);
                     }
                     break;

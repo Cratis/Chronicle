@@ -3,11 +3,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { field } from '@aksio/cratis-fundamentals';
+{{#if IsDerived }}
+import { derivedType } from '@aksio/cratis-fundamentals';
+{{/if}}
 
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
 
+{{#if IsDerived }}
+@derivedType('{{DerivedTypeId}}')
+{{/if}}
 export class {{Name}} {
     {{#Properties}}
     {{#if IsEnumerable}}
