@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Text.Json;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
@@ -23,13 +24,15 @@ public class MongoDBDefaults
     readonly IEnumerable<ICanFilterMongoDBConventionPacksForType> _conventionPackFilters;
     readonly ITypes _types;
     readonly IDerivedTypes _derivedTypes;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBDefaults"/> class.
     /// </summary>
     /// <param name="types"><see cref="ITypes"/> for general type discovery.</param>
     /// <param name="derivedTypes"><see cref="IDerivedTypes"/> in the system.</param>
-    public MongoDBDefaults(ITypes types, IDerivedTypes derivedTypes)
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use.</param>
+    public MongoDBDefaults(ITypes types, IDerivedTypes derivedTypes, JsonSerializerOptions jsonSerializerOptions)
     {
         _conventionPackFilters = types
             .FindMultiple<ICanFilterMongoDBConventionPacksForType>()
@@ -37,6 +40,7 @@ public class MongoDBDefaults
             .ToArray();
         _types = types;
         _derivedTypes = derivedTypes;
+        _jsonSerializerOptions = jsonSerializerOptions;
     }
 
     /// <summary>
@@ -72,6 +76,8 @@ public class MongoDBDefaults
             {
                 BsonSerializer.RegisterDiscriminatorConvention(derivedType, new DerivedTypeDiscriminatorConvention(_derivedTypes));
             }
+            BsonSerializer
+                .RegisterSerializationProvider(new DerivedTypeSerializerProvider(_derivedTypes, _jsonSerializerOptions));
 
             RegisterConventionAsPack(ConventionPacks.CamelCase, new CamelCaseElementNameConvention());
             RegisterConventionAsPack(ConventionPacks.IgnoreExtraElements, new IgnoreExtraElementsConvention(true));
