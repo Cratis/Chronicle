@@ -17,7 +17,7 @@ export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasF
     readonly defaultValue: any[] = [];
 
     constructor() {
-        super(any, true);
+        super(Object, true);
     }
 
     get requestArguments(): string[] {
