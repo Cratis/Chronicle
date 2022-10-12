@@ -61,35 +61,6 @@ public static class TypeSymbolExtensions
             && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>();
 
     /// <summary>
-    /// Get <see cref="PropertyDescriptor">property descriptors</see> from all properties on a type.
-    /// </summary>
-    /// <param name="type"><see cref="ITypeSymbol"/> to get for.</param>
-    /// <param name="additionalImportStatements">Any additional <see cref="ImportStatement">import statements</see> needed.</param>
-    /// <returns>All <see cref="PropertyDescriptor">property descriptors</see> for type.</returns>
-    public static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsFrom(this ITypeSymbol type, out IEnumerable<ImportStatement> additionalImportStatements)
-    {
-        var descriptors = new List<PropertyDescriptor>();
-        var allImportStatements = new HashSet<ImportStatement>();
-        additionalImportStatements = allImportStatements;
-
-        return GetPublicPropertiesFrom(type).Select(_ =>
-        {
-            var returnType = _.GetMethod!.ReturnType;
-            var isNullable = returnType.NullableAnnotation == NullableAnnotation.Annotated;
-            var targetType = returnType.GetTypeScriptType(out var importStatements);
-            var descriptor = new PropertyDescriptor(
-                _.Name,
-                targetType.Type,
-                targetType.Constructor,
-                returnType.IsEnumerable(),
-                isNullable);
-
-            importStatements.ForEach(_ => allImportStatements.Add(_));
-            return descriptor;
-        }).ToArray();
-    }
-
-    /// <summary>
     /// Get the type script type string for a given <see cref="ITypeSymbol"/>.
     /// </summary>
     /// <param name="symbol"><see cref="ITypeSymbol"/> to get for.</param>
