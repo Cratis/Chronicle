@@ -8,6 +8,6 @@ export * from './PropertyAccessor';
 export * from './PropertyAccessorDescriptor';
 export * from './PropertyPathResolverProxyHandler';
 export * from './fieldDecorator';
-export * from './derivativesDecorator';
 export * from './derivedTypeDecorator';
 export * from './JsonSerializer';
+export * from './DerivedType';
