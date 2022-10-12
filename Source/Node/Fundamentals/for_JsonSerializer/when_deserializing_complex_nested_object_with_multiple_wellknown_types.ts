@@ -8,19 +8,19 @@ import { Constructor } from '../Constructor';
 
 class OtherType {
     @field(Number)
-    someNumber: number;
+    someNumber!: number;
 
     @field(String)
-    someString: string;
+    someString!: string;
 
     @field(Date)
-    someDate: Date;
+    someDate!: Date;
 
     @field(Date)
-    collectionOfDates: Date[];
+    collectionOfDates!: Date[];
 
     @field(Number)
-    collectionOfNumbers: number[];
+    collectionOfNumbers!: number[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -29,36 +29,36 @@ interface ITargetType { }
 @derivedType('ad7593d1-71be-4e26-9026-aedb32fc43d3')
 class FirstDerivative implements ITargetType {
     @field(Number)
-    firstDerivativeProperty: number;
+    firstDerivativeProperty!: number;
 }
 
 @derivedType('a038ca48-360e-46a7-8cb2-882ff21bb623')
 class SecondDerivative implements ITargetType {
     @field(Number)
-    secondDerivativeProperty: number;
+    secondDerivativeProperty!: number;
 }
 
 class TopLevel {
     @field(Number)
-    someNumber: number;
+    someNumber!: number;
 
     @field(String)
-    someString: string;
+    someString!: string;
 
     @field(Date)
-    someDate: Date;
+    someDate!: Date;
 
     @field(Boolean)
-    someBoolean: boolean;
+    someBoolean!: boolean;
 
     @field(OtherType)
-    otherType: OtherType;
+    otherType!: OtherType;
 
     @field(OtherType, true)
-    collectionOfOtherType: OtherType[];
+    collectionOfOtherType!: OtherType[];
 
     @field(Object, true, [FirstDerivative, SecondDerivative])
-    collectionOfDerivedTypes: ITargetType[];
+    collectionOfDerivedTypes!: ITargetType[];
 }
 
 const json = '{' +

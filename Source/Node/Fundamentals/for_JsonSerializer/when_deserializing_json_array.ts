@@ -7,13 +7,13 @@ import { JsonSerializer } from '../JsonSerializer';
 
 class TheType {
     @field(Number)
-    someNumber: number;
+    someNumber!: number;
 
     @field(String)
-    someString: string;
+    someString!: string;
 
     @field(Date)
-    someDate: Date;
+    someDate!: Date;
 }
 
 const json = '[{' +
