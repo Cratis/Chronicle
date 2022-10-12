@@ -23,10 +23,17 @@ import { GenerationSchemasForType } from 'API/events/store/types/GenerationSchem
 
 const eventTypesColumns: IColumn[] = [
     {
+        key: 'identifier',
+        name: 'Identifier',
+        fieldName: 'identifier',
+        minWidth: 100,
+        maxWidth: 200,
+    },
+    {
         key: 'name',
         name: 'Name',
         fieldName: 'name',
-        minWidth: 200
+        minWidth: 300
     },
     {
         key: 'generations',
