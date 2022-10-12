@@ -1,6 +1,5 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 namespace Aksio.Cratis.Serialization;
 
 /// <summary>
@@ -9,6 +8,16 @@ namespace Aksio.Cratis.Serialization;
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class DerivedTypeAttribute : Attribute
 {
+    /// <summary>
+    /// Gets the unique identifier of the derived type.
+    /// </summary>
+    public DerivedTypeId Identifier { get; }
+
+    /// <summary>
+    /// Gets the optional target type.
+    /// </summary>
+    public Type? TargetType { get; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DerivedTypeAttribute"/> class.
     /// </summary>
@@ -19,14 +28,4 @@ public sealed class DerivedTypeAttribute : Attribute
         Identifier = identifier;
         TargetType = targetType;
     }
-
-    /// <summary>
-    /// Gets the unique identifier of the derived type.
-    /// </summary>
-    public DerivedTypeId Identifier { get; }
-
-    /// <summary>
-    /// Gets the optional target type.
-    /// </summary>
-    public Type? TargetType { get; }
 }
