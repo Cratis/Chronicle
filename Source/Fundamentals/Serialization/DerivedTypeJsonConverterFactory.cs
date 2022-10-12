@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Serialization;
 
@@ -24,9 +23,9 @@ public class DerivedTypeJsonConverterFactory : JsonConverterFactory
     }
 
     /// <inheritdoc/>
-    public override bool CanConvert(Type typeToConvert) => typeToConvert.HasAttribute<DerivedTypeAttribute>();
+    public override bool CanConvert(Type typeToConvert) => _derivedTypes.HasDerivatives(typeToConvert);
 
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
-        Activator.CreateInstance(typeof(DerivedTypeJsonConverter<>).MakeGenericType(_derivedTypes.GetTargetTypeFor(typeToConvert)), _derivedTypes) as JsonConverter;
+        Activator.CreateInstance(typeof(DerivedTypeJsonConverter<>).MakeGenericType(typeToConvert), _derivedTypes) as JsonConverter;
 }
