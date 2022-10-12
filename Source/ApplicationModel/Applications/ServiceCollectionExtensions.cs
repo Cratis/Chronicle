@@ -18,22 +18,6 @@ public static class ServiceCollectionExtensions
 {
     internal static JsonSerializerOptions? JsonSerializerOptions;
 
-    internal static void ConfigureJsonSerializerOptions(IDerivedTypes derivedTypes)
-    {
-        JsonSerializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-            {
-                new ConceptAsJsonConverterFactory(),
-                new DateOnlyJsonConverter(),
-                new TimeOnlyJsonConverter(),
-                new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
-                new DerivedTypeJsonConverterFactory(derivedTypes)
-            }
-        };
-    }
-
     /// <summary>
     /// Add all controllers from all project referenced assemblies.
     /// </summary>
@@ -69,5 +53,21 @@ public static class ServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    internal static void ConfigureJsonSerializerOptions(IDerivedTypes derivedTypes)
+    {
+        JsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters =
+            {
+                new ConceptAsJsonConverterFactory(),
+                new DateOnlyJsonConverter(),
+                new TimeOnlyJsonConverter(),
+                new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
+                new DerivedTypeJsonConverterFactory(derivedTypes)
+            }
+        };
     }
 }
