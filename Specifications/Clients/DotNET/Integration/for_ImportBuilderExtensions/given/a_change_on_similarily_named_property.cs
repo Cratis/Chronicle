@@ -5,19 +5,19 @@ using Aksio.Cratis.Changes;
 
 namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given;
 
-public class a_change_on_one_property : no_changes
+public class a_change_on_similarily_named_property : no_changes
 {
     void Establish()
     {
         original_model = new Model(42, "Forty Two", "Two");
-        modified_model = new Model(42, "Forty Three", "Three");
+        modified_model = new Model(42, "Forty Two", "Three");
 
         changeset.Add(new PropertiesChanged<Model>(modified_model, new[]
         {
-                new PropertyDifference(
-                    new(nameof(Model.SomeString)),
-                    original_model.SomeString,
-                    modified_model.SomeString)
-            }));
+            new PropertyDifference(
+                new(nameof(Model.SomeString2)),
+                original_model.SomeString2,
+                modified_model.SomeString2)
+        }));
     }
 }

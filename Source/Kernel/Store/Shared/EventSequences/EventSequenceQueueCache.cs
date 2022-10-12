@@ -49,6 +49,11 @@ public class EventSequenceQueueCache : IQueueCache
     /// <inheritdoc/>
     public IQueueCacheCursor GetCacheCursor(IStreamIdentity streamIdentity, StreamSequenceToken token)
     {
+        if (token is null)
+        {
+            return new EmptyEventSequenceQueueCacheCursor();
+        }
+
         var microserviceAndTenant = (MicroserviceAndTenant)streamIdentity.Namespace;
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
