@@ -14,9 +14,13 @@ namespace Aksio.Cratis.Extensions.MongoDB;
 /// </summary>
 public class DerivedTypeDiscriminatorConvention : IDiscriminatorConvention
 {
+    /// <summary>
+    /// The name of the property used by serializer as a discriminator.
+    /// </summary>
     public const string PropertyName = "_derivedTypeId";
     readonly IDerivedTypes _derivedTypes;
 
+    /// <inheritdoc/>
     public string ElementName => PropertyName;
 
     /// <summary>

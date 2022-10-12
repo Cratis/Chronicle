@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Extensions.MongoDB;
 /// <summary>
 /// Represents a <see cref="SerializerBase{T}"/> for serializing and deserializing types that hold the <see cref="DerivedTypeAttribute"/>.
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">Type to be serialized.</typeparam>
 public class DerivedTypeSerializer<T> : SerializerBase<T>
 {
     readonly JsonSerializerOptions _options;
