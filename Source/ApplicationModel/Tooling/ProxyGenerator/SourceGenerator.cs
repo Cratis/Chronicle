@@ -176,8 +176,11 @@ public class SourceGenerator : ISourceGenerator
 
                 var queryArguments = GetRequestArgumentsFrom(queryMethod, ref route, importStatements);
 
-                var typeName = actualType.IsKnownType() ? actualType.GetTypeScriptType(out _).Type : actualType.Name;
-                var queryDescriptor = new QueryDescriptor(route, queryMethod.Name, typeName, isEnumerable, importStatements, queryArguments);
+                var typeScriptType = actualType.GetTypeScriptType(out _);
+                var knownType = actualType.IsKnownType();
+                var typeName = knownType ? typeScriptType.Type : actualType.Name;
+                var constructor = knownType ? typeScriptType.Constructor : actualType.Name;
+                var queryDescriptor = new QueryDescriptor(route, queryMethod.Name, typeName, constructor, isEnumerable, importStatements, queryArguments);
                 var renderedTemplate = modelTypeAsNamedType.IsObservableClient() ?
                     TemplateTypes.ObservableQuery(queryDescriptor) :
                     TemplateTypes.Query(queryDescriptor);
