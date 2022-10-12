@@ -2,8 +2,14 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
 
-export type Microservice = {
-    id: string;
-    name: string;
-};
+
+export class Microservice {
+
+    @field(String)
+    id!: string;
+
+    @field(String)
+    name!: string;
+}

@@ -9,6 +9,9 @@
             "path": "../../Node/Fundamentals/tsconfig.json"
         },
         {
+            "path": "../../Node/React/tsconfig.json"
+        },
+        {
             "path": "../../Node/TypeScript/tsconfig.json"
         }
     ],

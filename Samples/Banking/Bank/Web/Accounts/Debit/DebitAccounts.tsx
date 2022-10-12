@@ -27,12 +27,14 @@ import { LatestTransactions } from 'API/accounts/debit/LatestTransactions';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
 import { CommandTracker, CommandTrackerContext, useCommandTracker } from '@aksio/cratis-applications-frontend/commands';
 import { DebitAccountsList } from './DebitAccountsList';
+import 'reflect-metadata';
+import { AllAccountHoldersWithAccounts } from 'API/accountholders/AllAccountHoldersWithAccounts';
 
 
 export const DebitAccounts = () => {
     const [accounts] = AllAccounts.use();
     const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use();
-
+    const [holdersWithAccounts] = AllAccountHoldersWithAccounts.use();
 
     const [latestTransactionsForAccount, queryLatestTransactionsForAccount] = LatestTransactions.use();
     const [accountsStartingWith, queryAccountsStartingWith] = StartingWith.use({ filter: '' });

@@ -2,12 +2,26 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
 
-export type DebitAccount = {
-    id: string;
-    name: string;
-    owner: string;
+
+export class DebitAccount {
+
+    @field(String)
+    id!: string;
+
+    @field(String)
+    name!: string;
+
+    @field(String)
+    owner!: string;
+
+    @field(Number)
     balance?: number;
-    hasCard: boolean;
-    lastUpdated: Date;
-};
+
+    @field(Boolean)
+    hasCard!: boolean;
+
+    @field(Date)
+    lastUpdated!: Date;
+}

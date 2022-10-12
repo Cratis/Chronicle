@@ -6,6 +6,7 @@ using Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 using Aksio.Cratis.Applications.ProxyGenerator.Templates;
 using HandlebarsDotNet;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Aksio.Cratis.Applications.ProxyGenerator;
 
@@ -17,6 +18,7 @@ public class SourceGenerator : ISourceGenerator
 {
     static readonly Regex _routeRegex = new(@"(\{[\w]*\})", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
     static readonly Dictionary<string, int> _fileHashes = new();
+    static readonly List<ITypeSymbol> _derivedTypes = new();
 
     /// <inheritdoc/>
     public void Initialize(GeneratorInitializationContext context)
@@ -40,12 +42,19 @@ public class SourceGenerator : ISourceGenerator
 
         var useRouteAsPath = !string.IsNullOrEmpty(useRouteAsPathAsString);
 
+        foreach (var derivedType in receiver!.DerivedTypes)
+        {
+            var model = context.Compilation.GetSemanticModel(derivedType.SyntaxTree, true);
+            if (model.GetDeclaredSymbol(derivedType) is not ITypeSymbol type) continue;
+            _derivedTypes.Add(type);
+        }
+
         foreach (var classDeclaration in receiver!.Candidates)
         {
             try
             {
                 var model = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree, true);
-                if (!(model.GetDeclaredSymbol(classDeclaration) is ITypeSymbol type)) continue;
+                if (model.GetDeclaredSymbol(classDeclaration) is not ITypeSymbol type) continue;
 
                 if (string.IsNullOrEmpty(rootNamespace))
                 {
@@ -75,11 +84,6 @@ public class SourceGenerator : ISourceGenerator
         foreach (var commandMethod in methods.Where(_ => _.GetAttributes().Any(_ => _.IsHttpPostAttribute())))
         {
             var route = GetRoute(baseApiRoute, commandMethod);
-
-            // if (route == "/api/accounts/debit")
-            // {
-            //     while (!System.Diagnostics.Debugger.IsAttached) Thread.Sleep(10);
-            // }
             var properties = new List<PropertyDescriptor>();
             var importStatements = new HashSet<ImportStatement>();
 
@@ -91,11 +95,14 @@ public class SourceGenerator : ISourceGenerator
                 var isNullable = parameter.Type.NullableAnnotation == NullableAnnotation.Annotated;
                 if (parameter.Type.IsKnownType())
                 {
+                    var targetType = parameter.Type.GetTypeScriptType(out var additionalImportStatements);
                     properties.Add(new(
                         parameter.Name,
-                        parameter.Type.GetTypeScriptType(out var additionalImportStatements),
+                        targetType.Type,
+                        targetType.Constructor,
                         parameter.Type.IsEnumerable(),
-                        isNullable
+                        isNullable,
+                        false
                     ));
                     additionalImportStatements.ForEach(_ => importStatements.Add(_));
                 }
@@ -169,8 +176,11 @@ public class SourceGenerator : ISourceGenerator
 
                 var queryArguments = GetRequestArgumentsFrom(queryMethod, ref route, importStatements);
 
-                var typeName = actualType.IsKnownType() ? actualType.GetTypeScriptType(out _) : actualType.Name;
-                var queryDescriptor = new QueryDescriptor(route, queryMethod.Name, typeName, isEnumerable, importStatements, queryArguments);
+                var typeScriptType = actualType.GetTypeScriptType(out _);
+                var knownType = actualType.IsKnownType();
+                var typeName = knownType ? typeScriptType.Type : actualType.Name;
+                var constructor = knownType ? typeScriptType.Constructor : actualType.Name;
+                var queryDescriptor = new QueryDescriptor(route, queryMethod.Name, typeName, constructor, isEnumerable, importStatements, queryArguments);
                 var renderedTemplate = modelTypeAsNamedType.IsObservableClient() ?
                     TemplateTypes.ObservableQuery(queryDescriptor) :
                     TemplateTypes.Query(queryDescriptor);
@@ -217,7 +227,7 @@ public class SourceGenerator : ISourceGenerator
                     queryArguments.Add(
                         new(
                             parameter.Name,
-                            parameter.Type.GetTypeScriptType(out var additionalImportStatements),
+                            parameter.Type.GetTypeScriptType(out var additionalImportStatements).Type,
                             parameter.NullableAnnotation == NullableAnnotation.Annotated));
 
                     additionalImportStatements.ForEach(_ => importStatements.Add(_));
@@ -255,8 +265,41 @@ public class SourceGenerator : ISourceGenerator
         var typeImportStatements = new HashSet<ImportStatement>();
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(rootNamespace, outputFolder, useRouteAsPath, baseApiRoute, targetFile, properties, typeImportStatements);
 
-        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
-        var renderedTemplate = TemplateTypes.Type(typeDescriptor);
+        string renderedTemplate = null!;
+
+        switch (type.TypeKind)
+        {
+            case TypeKind.Interface:
+                {
+                    var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
+                    renderedTemplate = TemplateTypes.Interface(typeDescriptor);
+                }
+                break;
+            case TypeKind.Class:
+                {
+                    var derivedType = false;
+                    var derivedTypeIdentifier = string.Empty;
+                    if (_derivedTypes.Any(_ => SymbolEqualityComparer.Default.Equals(_, type)))
+                    {
+                        var attribute = type.GetAttributes().SingleOrDefault(_ => _.AttributeClass?.ToString() == "Aksio.Cratis.Serialization.DerivedTypeAttribute");
+                        if (attribute is not null)
+                        {
+                            derivedType = true;
+                            derivedTypeIdentifier = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                        }
+                    }
+
+                    var hasPropertiesWithDerivatives = propertyDescriptors.Any(_ => _.HasDerivatives);
+                    var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements, derivedType, derivedTypeIdentifier, HasPropertiesWithDerivatives: hasPropertiesWithDerivatives);
+                    renderedTemplate = TemplateTypes.Type(typeDescriptor);
+                }
+                break;
+            case TypeKind.Enum:
+                var enumDeclaration = (type.DeclaringSyntaxReferences[0].GetSyntax() as EnumDeclarationSyntax)!;
+                renderedTemplate = TemplateTypes.Enum(type.GetEnumDescriptor(enumDeclaration));
+                break;
+        }
+
         if (renderedTemplate != default)
         {
             Directory.CreateDirectory(targetFolder);
@@ -276,21 +319,43 @@ public class SourceGenerator : ISourceGenerator
             var isNullable = property.Type.NullableAnnotation == NullableAnnotation.Annotated;
             if (targetType == TypeSymbolExtensions.AnyType)
             {
+                var hasDerivatives = false;
+                var derivatives = new List<string>();
                 var actualType = property.Type;
-                if (isEnumerable)
+                var constructorType = actualType.Name;
+
+                if (property.Type.TypeKind == TypeKind.Enum)
+                {
+                    constructorType = "Number";
+                }
+                else if (isEnumerable)
                 {
                     var namedType = (INamedTypeSymbol)property.Type;
                     if (namedType.TypeArguments != default && namedType.TypeArguments.Length > 0)
                     {
                         actualType = ((INamedTypeSymbol)property.Type).TypeArguments[0];
+                        constructorType = actualType.Name;
                     }
                 }
+
+                if (actualType.TypeKind == TypeKind.Interface)
+                {
+                    constructorType = "Object";
+                    hasDerivatives = true;
+
+                    foreach (var derivedType in _derivedTypes.Where(_ => _.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, actualType))))
+                    {
+                        OutputType(derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                        derivatives.Add(derivedType.Name);
+                    }
+                }
+
                 OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, isEnumerable, isNullable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable, hasDerivatives, derivatives));
             }
             else
             {
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType, isEnumerable, isNullable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, targetType.Type, targetType.Constructor, isEnumerable, isNullable, false));
             }
         }
 

@@ -14,6 +14,7 @@ global using Aksio.Cratis.Events.Projections;
 global using Aksio.Cratis.Events.Store;
 global using Aksio.Cratis.Integration;
 global using Aksio.Cratis.Models;
+global using Aksio.Cratis.Serialization;
 global using AutoMapper;
 global using FluentValidation;
 global using Microsoft.AspNetCore.Mvc;

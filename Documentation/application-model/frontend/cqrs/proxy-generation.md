@@ -127,7 +127,7 @@ public record DebitAccount(AccountId Id, AccountName Name, PersonId Owner, doubl
 This all gets generated into the following TypeScript code:
 
 ```typescript
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { DebitAccount } from './DebitAccount';
 import Handlebars from 'handlebars';
 
@@ -138,7 +138,7 @@ export class AllAccounts extends QueryFor<DebitAccount> {
     readonly route: string = '/api/accounts/debit';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
 
-    static use(): [QueryResult<DebitAccount>, PerformQuery] {
+    static use(): [QueryResultWithState<DebitAccount>, PerformQuery] {
         return useQuery<DebitAccount, AllAccounts>(AllAccounts);
     }
 }
@@ -146,6 +146,10 @@ export class AllAccounts extends QueryFor<DebitAccount> {
 
 > Note: For observable queries, this is a little bit different, read more about how you do this from [backend](../queries.md) and
 > [frontend](./queries.md).
+
+The return type for the static method called `.use()` representing a React hook is of type `QueryResultWithState<>`.
+This type contains additional information on whether or not the query is being performed or it is finished. This can be helpful for
+knowing what to render and one could for instance enable a spinner when the property `isPerforming` is true.
 
 ## Getting started
 

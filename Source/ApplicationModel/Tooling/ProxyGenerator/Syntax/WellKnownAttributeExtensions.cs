@@ -15,6 +15,7 @@ public static class WellKnownAttributeExtensions
     const string FromRouteAttribute = "Microsoft.AspNetCore.Mvc.FromRouteAttribute";
     const string FromQueryAttribute = "Microsoft.AspNetCore.Mvc.FromQueryAttribute";
     const string RouteAttribute = "Microsoft.AspNetCore.Mvc.RouteAttribute";
+    const string DerivedTypeAttribute = "Aksio.Cratis.Serialization.DerivedTypeAttribute";
 
     /// <summary>
     /// Get the route attribute - if any.
@@ -72,38 +73,33 @@ public static class WellKnownAttributeExtensions
     /// </summary>
     /// <param name="symbol">Symbol to check.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsHttpPostAttribute(this AttributeData symbol)
-    {
-        return symbol.AttributeClass?.ToString() == HttpPostAttribute;
-    }
+    public static bool IsHttpPostAttribute(this AttributeData symbol) => symbol.AttributeClass?.ToString() == HttpPostAttribute;
 
     /// <summary>
     /// Check whether or not a symbol is an HttpGet attribute.
     /// </summary>
     /// <param name="symbol">Symbol to check.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsHttpGetAttribute(this AttributeData symbol)
-    {
-        return symbol.AttributeClass?.ToString() == HttpGetAttribute;
-    }
+    public static bool IsHttpGetAttribute(this AttributeData symbol) => symbol.AttributeClass?.ToString() == HttpGetAttribute;
 
     /// <summary>
     /// Check whether or not a symbol is an FromRoute attribute.
     /// </summary>
     /// <param name="symbol">Symbol to check.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsFromRouteAttribute(this AttributeData symbol)
-    {
-        return symbol.AttributeClass?.ToString() == FromRouteAttribute;
-    }
+    public static bool IsFromRouteAttribute(this AttributeData symbol) => symbol.AttributeClass?.ToString() == FromRouteAttribute;
 
     /// <summary>
     /// Check whether or not a symbol is an FromQuery attribute.
     /// </summary>
     /// <param name="symbol">Symbol to check.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsFromQueryAttribute(this AttributeData symbol)
-    {
-        return symbol.AttributeClass?.ToString() == FromQueryAttribute;
-    }
+    public static bool IsFromQueryAttribute(this AttributeData symbol) => symbol.AttributeClass?.ToString() == FromQueryAttribute;
+
+    /// <summary>
+    /// Check whether or not a symbol is an DerivedTypeAttribute.
+    /// </summary>
+    /// <param name="symbol">Symbol to check.</param>
+    /// <returns>True if it is, false if not.</returns>
+    public static bool IsDerivedTypeAttribute(this AttributeData symbol) => symbol.AttributeClass?.ToString() == DerivedTypeAttribute;
 }

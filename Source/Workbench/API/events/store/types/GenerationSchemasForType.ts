@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/types/schemas/{{eventTypeId}}?microserviceId={{microserviceId}}');
@@ -16,6 +16,10 @@ export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasF
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: any[] = [];
 
+    constructor() {
+        super(Object, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'microserviceId',
@@ -23,7 +27,7 @@ export class GenerationSchemasForType extends QueryFor<any[], GenerationSchemasF
         ];
     }
 
-    static use(args?: GenerationSchemasForTypeArguments): [QueryResult<any[]>, PerformQuery<GenerationSchemasForTypeArguments>] {
+    static use(args?: GenerationSchemasForTypeArguments): [QueryResultWithState<any[]>, PerformQuery<GenerationSchemasForTypeArguments>] {
         return useQuery<any[], GenerationSchemasForType, GenerationSchemasForTypeArguments>(GenerationSchemasForType, args);
     }
 }

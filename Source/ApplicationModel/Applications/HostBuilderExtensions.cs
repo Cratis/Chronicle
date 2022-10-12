@@ -7,6 +7,7 @@ using Aksio.Cratis.Conversion;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
+using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -55,19 +56,23 @@ public static class HostBuilderExtensions
         Internals.Types = new Types();
         Internals.Types.RegisterTypeConvertersForConcepts();
         TypeConverters.Register();
+        var derivedTypes = new DerivedTypes(Internals.Types);
 
         microserviceId ??= MicroserviceId.Unspecified;
 
+        ServiceCollectionExtensions.ConfigureJsonSerializerOptions(derivedTypes);
+
         builder
-            .UseMongoDB(Internals.Types)
+            .UseMongoDB(Internals.Types, derivedTypes, ServiceCollectionExtensions.JsonSerializerOptions!)
             .UseCratis(microserviceId, Internals.Types, configureDelegate, loggerFactory)
             .ConfigureServices(_ =>
             {
                 _
                 .AddSingleton(Internals.Types)
+                .AddSingleton<IDerivedTypes>(derivedTypes)
                 .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
                 .AddConfigurationObjects(Internals.Types, searchSubPaths: new[] { "config" }, logger: logger)
-                .AddControllersFromProjectReferencedAssembles(Internals.Types)
+                .AddControllersFromProjectReferencedAssembles(Internals.Types, derivedTypes)
                 .AddSwaggerGen(options =>
                 {
                     var files = Directory.GetFiles(AppContext.BaseDirectory).Where(file => Path.GetExtension(file) == ".xml");

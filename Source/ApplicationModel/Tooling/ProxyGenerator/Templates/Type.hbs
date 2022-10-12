@@ -2,24 +2,59 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
+{{#if IsDerived }}
+import { derivedType } from '@aksio/cratis-fundamentals';
+{{/if}}
+
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
 
-export type {{Name}} = {
+{{#if IsDerived }}
+@derivedType('{{DerivedTypeId}}')
+{{/if}}
+export class {{Name}} {
     {{#Properties}}
+
     {{#if IsEnumerable}}
+    {{#if HasDerivatives}}
+    @field({{Constructor}}, true, [
+    {{#Derivatives}}
+    {{#if @last}}
+        {{this}}
+    {{else}}
+        {{this}},
+    {{/if}}
+    {{/Derivatives}}
+    ])
+    {{else}}
+    @field({{Constructor}}, true)
+    {{/if}}
     {{#if IsNullable}}
     {{camelcase Name}}?: {{Type}}[];
     {{else}}
-    {{camelcase Name}}: {{Type}}[];
+    {{camelcase Name}}!: {{Type}}[];
     {{/if}}
     {{else}}
+    {{#if HasDerivatives}}
+    @field({{Constructor}}, false, [
+    {{#Derivatives}}
+    {{#if @last}}
+        {{this}}
+    {{else}}
+        {{this}},
+    {{/if}}
+    {{/Derivatives}}
+    ])
+    {{else}}
+    @field({{Constructor}})
+    {{/if}}
     {{#if IsNullable}}
     {{camelcase Name}}?: {{Type}};
     {{else}}
-    {{camelcase Name}}: {{Type}};
+    {{camelcase Name}}!: {{Type}};
     {{/if}}
     {{/if}}
     {{/Properties}}
-};
+}

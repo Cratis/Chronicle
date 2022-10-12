@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 import { AppendedEvent } from './AppendedEvent';
 import Handlebars from 'handlebars';
 
@@ -18,6 +18,10 @@ export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
 
+    constructor() {
+        super(AppendedEvent, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'eventSequenceId',
@@ -26,7 +30,7 @@ export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
         ];
     }
 
-    static use(args?: FindForArguments): [QueryResult<AppendedEvent[]>, PerformQuery<FindForArguments>] {
+    static use(args?: FindForArguments): [QueryResultWithState<AppendedEvent[]>, PerformQuery<FindForArguments>] {
         return useQuery<AppendedEvent[], FindFor, FindForArguments>(FindFor, args);
     }
 }
