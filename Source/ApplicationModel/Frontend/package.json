@@ -43,6 +43,7 @@
         "up": "ncu -u \\!'@aksio/*'"
     },
     "dependencies": {
+        "@aksio/cratis-fundamentals": "1.0.0",
         "@aksio/cratis-typescript": "1.0.0",
         "@aksio/cratis-react": "1.0.0",
         "handlebars": "4.7.7"

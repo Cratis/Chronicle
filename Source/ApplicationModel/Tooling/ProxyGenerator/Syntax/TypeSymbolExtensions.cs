@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Applications.ProxyGenerator.Templates;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 
@@ -14,28 +15,28 @@ public static class TypeSymbolExtensions
     /// <summary>
     /// Gets the definition of any type.
     /// </summary>
-    public const string AnyType = "any";
+    public static readonly TargetType AnyType = new("any", "Object");
 
     static readonly Dictionary<string, TargetType> _primitiveTypeMap = new()
     {
-        { typeof(bool).FullName!, new("boolean") },
-        { typeof(string).FullName!, new("string") },
-        { typeof(short).FullName!, new("number") },
-        { typeof(int).FullName!, new("number") },
-        { typeof(long).FullName!, new("number") },
-        { typeof(ushort).FullName!, new("number") },
-        { typeof(uint).FullName!, new("number") },
-        { typeof(ulong).FullName!, new("number") },
-        { typeof(float).FullName!, new("number") },
-        { typeof(double).FullName!, new("number") },
-        { typeof(decimal).FullName!, new("number") },
-        { typeof(DateTime).FullName!, new("Date") },
-        { typeof(DateTimeOffset).FullName!, new("Date") },
-        { typeof(Guid).FullName!, new("string") },
-        { "System.DateOnly", new("Date") },
-        { "System.TimeOnly", new("Date") },
-        { "System.Text.Json.Nodes", new("any") },
-        { "System.Text.Json.JsonDocument", new("any") }
+        { typeof(bool).FullName!, new("boolean", "Boolean") },
+        { typeof(string).FullName!, new("string", "String") },
+        { typeof(short).FullName!, new("number", "Number") },
+        { typeof(int).FullName!, new("number", "Number") },
+        { typeof(long).FullName!, new("number", "Number") },
+        { typeof(ushort).FullName!, new("number", "Number") },
+        { typeof(uint).FullName!, new("number", "Number") },
+        { typeof(ulong).FullName!, new("number", "Number") },
+        { typeof(float).FullName!, new("number", "Number") },
+        { typeof(double).FullName!, new("number", "Number") },
+        { typeof(decimal).FullName!, new("number", "Number") },
+        { typeof(DateTime).FullName!, new("Date",  "Date") },
+        { typeof(DateTimeOffset).FullName!, new("Date", "Date") },
+        { typeof(Guid).FullName!, new("string", "String") },
+        { "System.DateOnly", new("Date", "Date") },
+        { "System.TimeOnly", new("Date", "Date") },
+        { "System.Text.Json.Nodes", new("any", "Object") },
+        { "System.Text.Json.JsonDocument", new("any", "Object") }
     };
 
     /// <summary>
@@ -60,39 +61,12 @@ public static class TypeSymbolExtensions
             && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>();
 
     /// <summary>
-    /// Get <see cref="PropertyDescriptor">property descriptors</see> from all properties on a type.
-    /// </summary>
-    /// <param name="type"><see cref="ITypeSymbol"/> to get for.</param>
-    /// <param name="additionalImportStatements">Any additional <see cref="ImportStatement">import statements</see> needed.</param>
-    /// <returns>All <see cref="PropertyDescriptor">property descriptors</see> for type.</returns>
-    public static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsFrom(this ITypeSymbol type, out IEnumerable<ImportStatement> additionalImportStatements)
-    {
-        var descriptors = new List<PropertyDescriptor>();
-        var allImportStatements = new HashSet<ImportStatement>();
-        additionalImportStatements = allImportStatements;
-
-        return GetPublicPropertiesFrom(type).Select(_ =>
-        {
-            var returnType = _.GetMethod!.ReturnType;
-            var isNullable = returnType.NullableAnnotation == NullableAnnotation.Annotated;
-            var descriptor = new PropertyDescriptor(
-                _.Name,
-                returnType.GetTypeScriptType(out var importStatements),
-                returnType.IsEnumerable(),
-                isNullable);
-
-            importStatements.ForEach(_ => allImportStatements.Add(_));
-            return descriptor;
-        }).ToArray();
-    }
-
-    /// <summary>
     /// Get the type script type string for a given <see cref="ITypeSymbol"/>.
     /// </summary>
     /// <param name="symbol"><see cref="ITypeSymbol"/> to get for.</param>
     /// <param name="additionalImportStatements">Any additional <see cref="ImportStatement">import statements</see> needed.</param>
     /// <returns>TypeScript type.</returns>
-    public static string GetTypeScriptType(this ITypeSymbol symbol, out IEnumerable<ImportStatement> additionalImportStatements)
+    public static TargetType GetTypeScriptType(this ITypeSymbol symbol, out IEnumerable<ImportStatement> additionalImportStatements)
     {
         var imports = new List<ImportStatement>();
         additionalImportStatements = imports;
@@ -108,7 +82,7 @@ public static class TypeSymbolExtensions
             {
                 imports.Add(new(targetType.Type, targetType.ImportFromModule));
             }
-            return targetType.Type;
+            return targetType;
         }
         return AnyType;
     }
@@ -173,6 +147,32 @@ public static class TypeSymbolExtensions
     public static bool IsObservableClient(this ITypeSymbol symbol)
     {
         return symbol.ToDisplayString().StartsWith("Aksio.Cratis.Applications.Queries.ClientObservable<");
+    }
+
+    /// <summary>
+    /// Gets an <see cref="EnumDescriptor"/> from a type symbol which is an enum.
+    /// </summary>
+    /// <param name="symbol"><see cref="ITypeSymbol"/> to get for.</param>
+    /// <param name="syntax">The <see cref="EnumDeclarationSyntax"/> for the type.</param>
+    /// <returns><see cref="EnumDescriptor"/>.</returns>
+    public static EnumDescriptor GetEnumDescriptor(this ITypeSymbol symbol, EnumDeclarationSyntax syntax)
+    {
+        var currentEnumValue = 0;
+        var enumValues = new List<EnumValueDescriptor>();
+        foreach (var member in syntax.Members)
+        {
+            if (member.EqualsValue is not null)
+            {
+                currentEnumValue = int.Parse(member.EqualsValue.Value.ToString());
+            }
+            else
+            {
+                currentEnumValue++;
+            }
+            enumValues.Add(new(member.Identifier.Text, currentEnumValue));
+        }
+
+        return new EnumDescriptor(symbol.Name, enumValues);
     }
 
     static string GetTypeName(ITypeSymbol symbol)

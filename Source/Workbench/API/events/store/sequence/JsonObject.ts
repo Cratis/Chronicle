@@ -2,7 +2,10 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
 
-export type JsonObject = {
-    count: number;
-};
+
+export class JsonObject {
+    @field(Number)
+    count!: number;
+}

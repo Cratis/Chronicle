@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { ObservableQueryFor, QueryResult, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
+import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
 import { ObserverState } from './ObserverState';
 import Handlebars from 'handlebars';
 
@@ -17,6 +17,10 @@ export class AllObservers extends ObservableQueryFor<ObserverState[], AllObserve
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverState[] = [];
 
+    constructor() {
+        super(ObserverState, true);
+    }
+
     get requestArguments(): string[] {
         return [
             'microserviceId',
@@ -24,7 +28,7 @@ export class AllObservers extends ObservableQueryFor<ObserverState[], AllObserve
         ];
     }
 
-    static use(args?: AllObserversArguments): [QueryResult<ObserverState[]>] {
+    static use(args?: AllObserversArguments): [QueryResultWithState<ObserverState[]>] {
         return useObservableQuery<ObserverState[], AllObservers, AllObserversArguments>(AllObservers, args);
     }
 }

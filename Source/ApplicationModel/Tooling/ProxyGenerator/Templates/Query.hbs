@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResult, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
+import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
 {{/Imports}}
@@ -40,6 +40,10 @@ export class {{Name}} extends QueryFor<{{Model}}> {
     readonly defaultValue: {{Model}} = {} as any;
 {{/if}}
 
+    constructor() {
+        super({{Constructor}}, {{lowercase IsEnumerable}});
+    }
+
     get requestArguments(): string[] {
         return [
             {{#Arguments}}
@@ -50,21 +54,21 @@ export class {{Name}} extends QueryFor<{{Model}}> {
 
 {{#if Arguments.[0]}}
 {{#if IsEnumerable}}
-    static use(args?: {{Name}}Arguments): [QueryResult<{{Model}}[]>, PerformQuery<{{Name}}Arguments>] {
+    static use(args?: {{Name}}Arguments): [QueryResultWithState<{{Model}}[]>, PerformQuery<{{Name}}Arguments>] {
         return useQuery<{{Model}}[], {{Name}}, {{Name}}Arguments>({{Name}}, args);
     }
 {{else}}
-    static use(args?: {{Name}}Arguments): [QueryResult<{{Model}}>, PerformQuery<{{Name}}Arguments>] {
+    static use(args?: {{Name}}Arguments): [QueryResultWithState<{{Model}}>, PerformQuery<{{Name}}Arguments>] {
         return useQuery<{{Model}}, {{Name}}, {{Name}}Arguments>({{Name}}, args);
     }
 {{/if}}
 {{else}}
 {{#if IsEnumerable}}
-    static use(): [QueryResult<{{Model}}[]>, PerformQuery] {
+    static use(): [QueryResultWithState<{{Model}}[]>, PerformQuery] {
         return useQuery<{{Model}}[], {{Name}}>({{Name}});
     }
 {{else}}
-    static use(): [QueryResult<{{Model}}>, PerformQuery] {
+    static use(): [QueryResultWithState<{{Model}}>, PerformQuery] {
         return useQuery<{{Model}}, {{Name}}>({{Name}});
     }
 {{/if}}

@@ -10,14 +10,19 @@ public static class RangeExtensions
 {
     public static IEnumerable<AppendedEvent> GenerateEvents(this IEnumerable<int> range, EventSequenceNumber sequenceNumberOffset) =>
         range.Select(_ =>
-            new AppendedEvent(
-                new(sequenceNumberOffset + (ulong)_, new(Guid.Empty, EventGeneration.First)),
+        {
+            var sequenceNumber = sequenceNumberOffset + (ulong)_;
+            return new AppendedEvent(
+                new(sequenceNumber, new(Guid.Empty, EventGeneration.First)),
                 new EventContext(
                     EventSourceId.Unspecified,
+                    sequenceNumber,
                     DateTimeOffset.Now,
                     DateTimeOffset.MinValue,
                     TenantId.Development,
                     CorrelationId.New(),
                     CausationId.System,
-                    CausedBy.System), new JsonObject())).ToArray();
+                    CausedBy.System), new JsonObject());
+            }).ToArray();
+
 }

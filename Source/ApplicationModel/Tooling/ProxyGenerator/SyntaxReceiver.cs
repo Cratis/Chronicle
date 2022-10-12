@@ -13,17 +13,29 @@ namespace Aksio.Cratis.Applications.ProxyGenerator;
 public class SyntaxReceiver : ISyntaxReceiver
 {
     readonly List<ClassDeclarationSyntax> _candidates = new();
+    readonly List<TypeDeclarationSyntax> _derivedTypes = new();
 
     /// <summary>
     /// Gets the candidates for code generation.
     /// </summary>
     public IEnumerable<ClassDeclarationSyntax> Candidates => _candidates;
 
+    /// <summary>
+    /// Gets the derived types for code generation.
+    /// </summary>
+    public IEnumerable<TypeDeclarationSyntax> DerivedTypes => _derivedTypes;
+
     /// <inheritdoc/>
     public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
     {
+        if (syntaxNode is TypeDeclarationSyntax typeSyntax && typeSyntax.IsDerivedType())
+        {
+            _derivedTypes.Add(typeSyntax);
+            return;
+        }
         if (syntaxNode is not ClassDeclarationSyntax classSyntax) return;
         if (!classSyntax.IsController()) return;
+
         _candidates.Add(classSyntax);
     }
 }

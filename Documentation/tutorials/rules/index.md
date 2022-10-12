@@ -118,6 +118,7 @@ public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAc
 {
     public override RuleId Identifier => "9c09c285-0eea-4632-ac2d-0d23c7ac10ba";
 }
+```
 
 The first generic parameter is telling that the type itself will be the holder of the state. Note that this has to be the rules type itself.
 For the second parameter we specify the command type; `OpenDebitAccount`. With this in place the system will automatically discover the

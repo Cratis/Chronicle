@@ -33,17 +33,17 @@ public class and_has_three_events_in_sequence : given.an_observer_and_two_event_
 
         first_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First, event_types.ToArray()[0]),
-            new(event_source_id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(event_source_id, EventSequenceNumber.First, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
         second_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First + 1, event_types.ToArray()[0]),
-            new(event_source_id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(event_source_id, EventSequenceNumber.First + 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
         third_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First + 2, event_types.ToArray()[0]),
-            new(event_source_id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(event_source_id, EventSequenceNumber.First + 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new JsonObject());
 
         state.LastHandled = EventSequenceNumber.First + 2;

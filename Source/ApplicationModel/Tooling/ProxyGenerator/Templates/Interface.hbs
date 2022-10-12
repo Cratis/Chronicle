@@ -2,13 +2,16 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { DayOfWeek } from './DayOfWeek';
+{{#Imports}}
+import { {{Type}} } from '{{Module}}';
+{{/Imports}}
 
-export type DateOnly = {
-    year: number;
-    month: number;
-    day: number;
-    dayOfWeek: DayOfWeek;
-    dayOfYear: number;
-    dayNumber: number;
-};
+export interface {{Name}} {
+    {{#Properties}}
+    {{#if IsEnumerable}}
+    {{camelcase Name}}: {{Type}}[];
+    {{else}}
+    {{camelcase Name}}: {{Type}};
+    {{/if}}
+    {{/Properties}}
+}
