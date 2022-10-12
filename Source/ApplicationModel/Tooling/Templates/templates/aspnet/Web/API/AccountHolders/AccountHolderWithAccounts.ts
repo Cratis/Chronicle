@@ -5,8 +5,11 @@
 import { field } from '@aksio/cratis-fundamentals';
 
 import { Address } from './Address';
+import { CreditAccount } from './CreditAccount';
+import { DebitAccount } from './DebitAccount';
+import { IAccount } from './IAccount';
 
-export class AccountHolder {
+export class AccountHolderWithAccounts {
 
     @field(String)
     firstName!: string;
@@ -20,6 +23,9 @@ export class AccountHolder {
     @field(Address)
     address!: Address;
 
-    @field(Date)
-    lastUpdated!: Date;
+    @field(Object, true, [
+        CreditAccount,
+        DebitAccount
+    ])
+    accounts!: IAccount[];
 }

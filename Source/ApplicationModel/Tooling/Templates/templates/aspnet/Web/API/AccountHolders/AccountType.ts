@@ -2,6 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-
-export type DayOfWeek = {
-};
+export enum AccountType {
+    debit = 1,
+    credit = 2,
+}
