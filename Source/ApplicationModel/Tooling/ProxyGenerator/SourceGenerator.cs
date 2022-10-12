@@ -6,6 +6,7 @@ using Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 using Aksio.Cratis.Applications.ProxyGenerator.Templates;
 using HandlebarsDotNet;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Aksio.Cratis.Applications.ProxyGenerator;
 
@@ -17,6 +18,7 @@ public class SourceGenerator : ISourceGenerator
 {
     static readonly Regex _routeRegex = new(@"(\{[\w]*\})", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
     static readonly Dictionary<string, int> _fileHashes = new();
+    static readonly List<ITypeSymbol> _derivedTypes = new();
 
     /// <inheritdoc/>
     public void Initialize(GeneratorInitializationContext context)
@@ -40,12 +42,19 @@ public class SourceGenerator : ISourceGenerator
 
         var useRouteAsPath = !string.IsNullOrEmpty(useRouteAsPathAsString);
 
+        foreach (var derivedType in receiver!.DerivedTypes)
+        {
+            var model = context.Compilation.GetSemanticModel(derivedType.SyntaxTree, true);
+            if (model.GetDeclaredSymbol(derivedType) is not ITypeSymbol type) continue;
+            _derivedTypes.Add(type);
+        }
+
         foreach (var classDeclaration in receiver!.Candidates)
         {
             try
             {
                 var model = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree, true);
-                if (!(model.GetDeclaredSymbol(classDeclaration) is ITypeSymbol type)) continue;
+                if (model.GetDeclaredSymbol(classDeclaration) is not ITypeSymbol type) continue;
 
                 if (string.IsNullOrEmpty(rootNamespace))
                 {
@@ -252,8 +261,36 @@ public class SourceGenerator : ISourceGenerator
         var typeImportStatements = new HashSet<ImportStatement>();
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(rootNamespace, outputFolder, useRouteAsPath, baseApiRoute, targetFile, properties, typeImportStatements);
 
-        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
-        var renderedTemplate = TemplateTypes.Type(typeDescriptor);
+
+        string renderedTemplate = null!;
+        if (type.DeclaringSyntaxReferences.Length > 0)
+        {
+            switch (type.DeclaringSyntaxReferences[0].GetSyntax())
+            {
+                case InterfaceDeclarationSyntax:
+                    {
+                        foreach (var derivedType in _derivedTypes.Where(_ => _.Interfaces.Any(i => i.Equals(type))))
+                        {
+                            OutputType(derivedType, rootNamespace, outputFolder, parentFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                        }
+
+                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
+                        renderedTemplate = TemplateTypes.Interface(typeDescriptor);
+                    }
+                    break;
+                case ClassDeclarationSyntax:
+                case RecordDeclarationSyntax:
+                    {
+                        var typeDescriptor = new TypeDescriptor(type.Name, propertyDescriptors, typeImportStatements);
+                        renderedTemplate = TemplateTypes.Type(typeDescriptor);
+                    }
+                    break;
+                case EnumDeclarationSyntax enumDeclaration:
+                    renderedTemplate = TemplateTypes.Enum(type.GetEnumDescriptor(enumDeclaration));
+                    break;
+            }
+        }
+
         if (renderedTemplate != default)
         {
             Directory.CreateDirectory(targetFolder);
@@ -274,16 +311,24 @@ public class SourceGenerator : ISourceGenerator
             if (targetType == TypeSymbolExtensions.AnyType)
             {
                 var actualType = property.Type;
-                if (isEnumerable)
+                var constructorType = actualType.Name;
+
+                if (property.Type.TypeKind == TypeKind.Enum)
+                {
+                    constructorType = "Number";
+                }
+                else if (isEnumerable)
                 {
                     var namedType = (INamedTypeSymbol)property.Type;
                     if (namedType.TypeArguments != default && namedType.TypeArguments.Length > 0)
                     {
                         actualType = ((INamedTypeSymbol)property.Type).TypeArguments[0];
+                        constructorType = actualType.Name;
                     }
                 }
+
                 OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, actualType.Name, isEnumerable, isNullable));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable));
             }
             else
             {

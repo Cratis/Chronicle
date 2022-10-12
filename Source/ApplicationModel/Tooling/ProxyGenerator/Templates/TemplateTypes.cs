@@ -16,6 +16,16 @@ public static class TemplateTypes
     public static readonly HandlebarsTemplate<object, object> Type = Handlebars.Compile(GetTemplate("Type"));
 
     /// <summary>
+    /// The template for a type.
+    /// </summary>
+    public static readonly HandlebarsTemplate<object, object> Interface = Handlebars.Compile(GetTemplate("Interface"));
+
+    /// <summary>
+    /// The template for a type.
+    /// </summary>
+    public static readonly HandlebarsTemplate<object, object> Enum = Handlebars.Compile(GetTemplate("Enum"));
+
+    /// <summary>
     /// The template for a command.
     /// </summary>
     public static readonly HandlebarsTemplate<object, object> Command = Handlebars.Compile(GetTemplate("Command"));

@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Applications.ProxyGenerator.Templates;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 
@@ -175,6 +176,32 @@ public static class TypeSymbolExtensions
     public static bool IsObservableClient(this ITypeSymbol symbol)
     {
         return symbol.ToDisplayString().StartsWith("Aksio.Cratis.Applications.Queries.ClientObservable<");
+    }
+
+    /// <summary>
+    /// Gets an <see cref="EnumDescriptor"/> from a type symbol which is an enum.
+    /// </summary>
+    /// <param name="symbol"><see cref="ITypeSymbol"/> to get for.</param>
+    /// <param name="syntax">The <see cref="EnumDeclarationSyntax"/> for the type.</param>
+    /// <returns><see cref="EnumDescriptor"/>.</returns>
+    public static EnumDescriptor GetEnumDescriptor(this ITypeSymbol symbol, EnumDeclarationSyntax syntax)
+    {
+        var currentEnumValue = 0;
+        var enumValues = new List<EnumValueDescriptor>();
+        foreach (var member in syntax.Members)
+        {
+            if (member.EqualsValue is not null)
+            {
+                currentEnumValue = int.Parse(member.EqualsValue.Value.ToString());
+            }
+            else
+            {
+                currentEnumValue++;
+            }
+            enumValues.Add(new(member.Identifier.Text, currentEnumValue));
+        }
+
+        return new EnumDescriptor(symbol.Name, enumValues);
     }
 
     static string GetTypeName(ITypeSymbol symbol)
