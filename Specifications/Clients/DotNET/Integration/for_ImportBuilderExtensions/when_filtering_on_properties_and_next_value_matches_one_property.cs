@@ -15,7 +15,13 @@ public class when_filtering_on_properties_and_next_value_matches_one_property : 
         context.Subscribe(_ => result = _);
     }
 
-    void Because() => subject.OnNext(new ImportContext<Model, ExternalModel>(new AdapterProjectionResult<Model>(new(0, string.Empty), Array.Empty<PropertyPath>(), 0), changeset, events_to_append));
+    void Because() =>
+        subject.OnNext(
+            new ImportContext<Model, ExternalModel>(
+                new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), Array.Empty<PropertyPath>(), 0),
+                changeset,
+                events_to_append));
 
-    [Fact] void should_filter_through_the_context() => result.ShouldNotBeNull();
+    [Fact]
+    void should_filter_through_the_context() => result.ShouldNotBeNull();
 }

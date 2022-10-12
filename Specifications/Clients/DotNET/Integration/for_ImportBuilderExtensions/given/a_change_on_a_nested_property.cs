@@ -33,8 +33,8 @@ public class a_change_on_a_nested_property : Specification
 
                 return false;
             });
-        original_model = new(42, "Forty Two", new(43, "Forty Three"));
-        modified_model = new(42, "Forty Two", new(44, "Forty Three"));
+        original_model = new(42, "Forty Two", new(43, "Forty Three", "Three"));
+        modified_model = new(42, "Forty Two", new(44, "Forty Three", "Four"));
         changeset = new(objects_comparer.Object, modified_model, original_model);
         changeset.Add(new PropertiesChanged<ComplexModel>(modified_model, new[]
         {

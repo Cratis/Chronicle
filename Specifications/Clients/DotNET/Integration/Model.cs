@@ -3,4 +3,4 @@
 
 namespace Aksio.Cratis.Integration;
 
-public record Model(int SomeInteger, string SomeString);
+public record Model(int SomeInteger, string SomeString, string SomeString2);

@@ -5,20 +5,20 @@ using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions;
 
-public class when_filtering_on_model_not_exists_and_it_does : given.no_changes
+public class when_filtering_on_properties_and_next_value_with_similar_name_is_changed : given.a_change_on_similarily_named_property
 {
     ImportContext<Model, ExternalModel> result;
 
     void Establish()
     {
-        context = import_builder.WhenModelDoesNotExist();
+        context = import_builder.WithProperties(_ => _.SomeString);
         context.Subscribe(_ => result = _);
     }
 
     void Because() =>
         subject.OnNext(
             new ImportContext<Model, ExternalModel>(
-                new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), new PropertyPath[] { new(nameof(Model.SomeString)) }, 1),
+                new AdapterProjectionResult<Model>(new(0, default, default), Array.Empty<PropertyPath>(), 0),
                 changeset,
                 events_to_append));
 

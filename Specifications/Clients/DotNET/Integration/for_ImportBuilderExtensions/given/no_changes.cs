@@ -21,8 +21,8 @@ public class no_changes : Specification
     {
         subject = new Subject<ImportContext<Model, ExternalModel>>();
         import_builder = new ImportBuilderFor<Model, ExternalModel>(subject);
-        modified_model = new Model(42, "Forty Two");
-        original_model = new Model(42, "Forty Two");
+        modified_model = new Model(42, "Forty Two", "Two");
+        original_model = new Model(42, "Forty Two", "Two");
         objects_comparer = new();
         objects_comparer.Setup(_ => _.Equals(original_model, modified_model, out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
         changeset = new(objects_comparer.Object, modified_model, original_model);

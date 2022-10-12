@@ -16,9 +16,9 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
 
     void Establish()
     {
-        initial = new(42, "Forty Two");
+        initial = new(42, "Forty Two", "Two");
         incoming = new(43, "Forty Two");
-        mapped = new(incoming.SomeInteger, incoming.SomeString);
+        mapped = new(incoming.SomeInteger, incoming.SomeString, null);
 
         projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, Array.Empty<PropertyPath>(), 0)));
         mapper.Setup(_ => _.Map<Model>(incoming)).Returns(mapped);

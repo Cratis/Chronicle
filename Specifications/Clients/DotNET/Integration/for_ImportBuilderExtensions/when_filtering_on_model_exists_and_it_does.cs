@@ -15,7 +15,13 @@ public class when_filtering_on_model_exists_and_it_does : given.no_changes
         context.Subscribe(_ => result = _);
     }
 
-    void Because() => subject.OnNext(new ImportContext<Model, ExternalModel>(new AdapterProjectionResult<Model>(new(0, string.Empty), new PropertyPath[] { new(nameof(Model.SomeString)) }, 1), changeset, events_to_append));
+    void Because() =>
+        subject.OnNext(
+            new ImportContext<Model, ExternalModel>(
+                new AdapterProjectionResult<Model>(new(0, string.Empty, string.Empty), new PropertyPath[] { new(nameof(Model.SomeString)) }, 1),
+                changeset,
+                events_to_append));
 
-    [Fact] void should_filter_through_the_context() => result.ShouldNotBeNull();
+    [Fact]
+    void should_filter_through_the_context() => result.ShouldNotBeNull();
 }

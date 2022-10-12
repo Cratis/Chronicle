@@ -9,8 +9,8 @@ public class changes_on_two_properties : no_changes
 {
     void Establish()
     {
-        modified_model = new Model(43, "Forty Three");
-        original_model = new Model(42, "Forty Two");
+        modified_model = new Model(43, "Forty Three", "Three");
+        original_model = new Model(42, "Forty Two", "Two");
 
         changeset.Add(new PropertiesChanged<Model>(modified_model, new[]
         {

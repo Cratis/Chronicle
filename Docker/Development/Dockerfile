@@ -4,15 +4,17 @@
 # Cratis Server
 # Build runtime image
 ####################################
-ARG VERSION
 FROM aksioinsurtech/cratis-base
+ARG VERSION
+ARG ENTRYPOINT=entrypoint.sh
 
 RUN echo Version = ${VERSION}
+RUN echo ${ENTRYPOINT}
 
 WORKDIR /app
 
 # Create entrypoint that runs both MongoDB and Runtime
-COPY Docker/entrypoint.sh ./entrypoint.sh
+COPY Docker/${ENTRYPOINT} ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
 COPY Docker/copy-server-files.sh ./copy-server-files.sh
