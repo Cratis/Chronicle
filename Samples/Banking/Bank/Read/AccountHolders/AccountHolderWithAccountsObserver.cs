@@ -45,6 +45,7 @@ public class AccountHolderWithAccountsObserver
         await _collection.ReplaceOneAsync(_ => _.Id == personId, model, new ReplaceOptions { IsUpsert = true });
     }
 
+#pragma warning disable CA5351
     PersonId GetPersonIdFromString(string input)
     {
         using var md5 = MD5.Create();
