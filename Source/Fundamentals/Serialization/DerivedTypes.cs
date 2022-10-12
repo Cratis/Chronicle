@@ -60,7 +60,10 @@ public class DerivedTypes : IDerivedTypes
     }
 
     /// <inheritdoc/>
-    public bool IsDerivedType(Type type) => _derivedTypeToTargetType.Keys.Any(_ => _ == type);
+    public bool IsDerivedType(Type type) => _derivedTypeToTargetType.ContainsKey(type);
+
+    /// <inheritdoc/>
+    public bool HasDerivatives(Type type) => _targetTypeToDerivedType.ContainsKey(type);
 
     Type GetTargetTypeFrom(Type derivedType)
     {
