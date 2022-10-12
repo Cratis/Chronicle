@@ -276,7 +276,7 @@ public class SourceGenerator : ISourceGenerator
                 {
                     var derivedType = false;
                     var derivedTypeIdentifier = string.Empty;
-                    if (_derivedTypes.Any(_ => _.Equals(type)))
+                    if (_derivedTypes.Any(_ => SymbolEqualityComparer.Default.Equals(_, type)))
                     {
                         var attribute = type.GetAttributes().SingleOrDefault(_ => _.AttributeClass?.ToString() == "Aksio.Cratis.Serialization.DerivedTypeAttribute");
                         if (attribute is not null)
@@ -340,7 +340,7 @@ public class SourceGenerator : ISourceGenerator
                     constructorType = "Object";
                     hasDerivatives = true;
 
-                    foreach (var derivedType in _derivedTypes.Where(_ => _.Interfaces.Any(i => i.Equals(actualType))))
+                    foreach (var derivedType in _derivedTypes.Where(_ => _.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, actualType))))
                     {
                         OutputType(derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
                         derivatives.Add(derivedType.Name);
