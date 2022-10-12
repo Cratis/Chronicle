@@ -2,9 +2,15 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
+import { field } from '@aksio/cratis-fundamentals';
+
 import { AccountTransaction } from './AccountTransaction';
 
-export type DebitAccountLatestTransactions = {
-    id: string;
-    transactions: AccountTransaction[];
-};
+export class DebitAccountLatestTransactions {
+
+    @field(String)
+    id!: string;
+
+    @field(AccountTransaction, true)
+    transactions!: AccountTransaction[];
+}

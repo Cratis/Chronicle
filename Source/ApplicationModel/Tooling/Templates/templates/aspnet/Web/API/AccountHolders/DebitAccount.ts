@@ -3,16 +3,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { field } from '@aksio/cratis-fundamentals';
+import { derivedType } from '@aksio/cratis-fundamentals';
 
+import { AccountType } from './AccountType';
 
-export class AccountDetails {
+@derivedType('2c025801-2223-402c-a42a-893845bb1077')
+export class DebitAccount {
+
+    @field(String)
+    id!: string;
 
     @field(String)
     name!: string;
 
-    @field(String)
-    owner!: string;
-
-    @field(Boolean)
-    includeCard!: boolean;
+    @field(Number)
+    type!: AccountType;
 }
