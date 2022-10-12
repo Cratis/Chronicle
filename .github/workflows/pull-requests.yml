@@ -14,6 +14,7 @@ on:
       - "**"
     paths:
       - "Source/**"
+      - ".github/workflows/**"
 
 jobs:
   release:
@@ -243,6 +244,7 @@ jobs:
             ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
           build-args: |
             VERSION=${{ needs.release.outputs.version }}
+            ENTRYPOINT=pr_entrypoint.sh
 
       - name: Add comment for Docker image
         uses: mshick/add-pr-comment@v1
@@ -252,4 +254,6 @@ jobs:
           message: |
             Docker Image for this PR:
             https://ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
+
+            docker run ghcr.io/aksio-insurtech/cratis:${{ needs.release.outputs.version }}
           allow-repeats: false
