@@ -6,10 +6,13 @@ import { field } from '@aksio/cratis-fundamentals';
 
 
 export class PersonalInformation {
+
     @field(String)
     identifier!: string;
+
     @field(String)
     type!: string;
+
     @field(String)
     value!: string;
 }

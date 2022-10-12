@@ -4,6 +4,7 @@
 import { Constructor } from './Constructor';
 import { Field } from './Field';
 import { Fields } from './Fields';
+import { DerivedType } from './DerivedType';
 
 type typeSerializer = (value: any) => any;
 
@@ -18,7 +19,13 @@ const deserializeValue = (field: Field, value: any) => {
     if (typeSerializers.has(field.type)) {
         return typeSerializers.get(field.type)!(value);
     } else {
-        return JsonSerializer.deserialize(field.type, JSON.stringify(value));
+        let type = field.type;
+        if (field.derivatives.length > 0 && value[JsonSerializer.DerivedTypeIdProperty]) {
+            const derivedTypeId = value[JsonSerializer.DerivedTypeIdProperty];
+            type = field.derivatives.find(_ => DerivedType.get(_) == derivedTypeId) || type;
+        }
+
+        return JsonSerializer.deserialize(type, JSON.stringify(value));
     }
 };
 
@@ -26,6 +33,7 @@ const deserializeValue = (field: Field, value: any) => {
  * Represents a serializer for JSON.
  */
 export class JsonSerializer {
+    static readonly DerivedTypeIdProperty: string = "_derivedTypeId";
 
     /**
      * Deserialize a JSON string to the specific type.

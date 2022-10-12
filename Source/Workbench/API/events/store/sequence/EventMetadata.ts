@@ -7,8 +7,10 @@ import { field } from '@aksio/cratis-fundamentals';
 import { EventType } from './EventType';
 
 export class EventMetadata {
+
     @field(Number)
     sequenceNumber!: number;
+
     @field(EventType)
     type!: EventType;
 }

@@ -6,6 +6,7 @@ import { field } from '@aksio/cratis-fundamentals';
 
 
 export class AccountTransaction {
+
     @field(Number)
     amount!: number;
 }

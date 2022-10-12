@@ -6,10 +6,13 @@ import { field } from '@aksio/cratis-fundamentals';
 
 
 export class EventType {
+
     @field(String)
     id!: string;
+
     @field(Number)
     generation!: number;
+
     @field(Boolean)
     isPublic!: boolean;
 }
