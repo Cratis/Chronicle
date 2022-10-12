@@ -6,3 +6,5 @@
   href: concepts.md
 - name: Types
   href: types.md
+- name: Serialization
+  href: serialization.md
