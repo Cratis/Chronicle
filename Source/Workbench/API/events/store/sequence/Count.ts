@@ -13,7 +13,7 @@ export class Count extends QueryFor<number> {
     readonly defaultValue: number = {} as any;
 
     constructor() {
-        super(number, false);
+        super(Number, false);
     }
 
     get requestArguments(): string[] {
