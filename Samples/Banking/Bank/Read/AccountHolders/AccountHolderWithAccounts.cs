@@ -6,4 +6,3 @@ using Concepts.AccountHolders;
 namespace Read.AccountHolders;
 
 public record AccountHolderWithAccounts(string FirstName, string LastName, string SocialSecurityNumber, Address Address, IEnumerable<IAccount> Accounts);
-
