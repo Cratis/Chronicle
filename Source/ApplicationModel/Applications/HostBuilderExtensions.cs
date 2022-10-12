@@ -70,7 +70,7 @@ public static class HostBuilderExtensions
                 .AddSingleton<IDerivedTypes>(derivedTypes)
                 .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
                 .AddConfigurationObjects(Internals.Types, searchSubPaths: new[] { "config" }, logger: logger)
-                .AddControllersFromProjectReferencedAssembles(Internals.Types)
+                .AddControllersFromProjectReferencedAssembles(Internals.Types, derivedTypes)
                 .AddSwaggerGen(options =>
                 {
                     var files = Directory.GetFiles(AppContext.BaseDirectory).Where(file => Path.GetExtension(file) == ".xml");

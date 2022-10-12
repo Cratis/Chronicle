@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
@@ -20,8 +21,9 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="types"><see cref="ITypes"/> for discovery.</param>
+    /// <param name="derivedTypes"><see cref="IDerivedTypes"/> for JSON serialization purposes.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddControllersFromProjectReferencedAssembles(this IServiceCollection services, ITypes types)
+    public static IServiceCollection AddControllersFromProjectReferencedAssembles(this IServiceCollection services, ITypes types, IDerivedTypes derivedTypes)
     {
         var controllerBuilder = services
             .AddControllers(_ => _
@@ -33,6 +35,7 @@ public static class ServiceCollectionExtensions
                 _.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
                 _.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
                 _.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
+                _.JsonSerializerOptions.Converters.Add(new DerivedTypeJsonConverterFactory(derivedTypes));
             });
 
         var serializerOptions = new JsonSerializerOptions()
@@ -43,7 +46,8 @@ public static class ServiceCollectionExtensions
                     new ConceptAsJsonConverterFactory(),
                     new DateOnlyJsonConverter(),
                     new TimeOnlyJsonConverter(),
-                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
+                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
+                    new DerivedTypeJsonConverterFactory(derivedTypes)
                 }
         };
 
