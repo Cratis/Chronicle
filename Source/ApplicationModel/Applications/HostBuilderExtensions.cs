@@ -60,8 +60,10 @@ public static class HostBuilderExtensions
 
         microserviceId ??= MicroserviceId.Unspecified;
 
+        ServiceCollectionExtensions.ConfigureJsonSerializerOptions(derivedTypes);
+
         builder
-            .UseMongoDB(Internals.Types, derivedTypes)
+            .UseMongoDB(Internals.Types, derivedTypes, ServiceCollectionExtensions.JsonSerializerOptions!)
             .UseCratis(microserviceId, Internals.Types, configureDelegate, loggerFactory)
             .ConfigureServices(_ =>
             {

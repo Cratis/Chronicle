@@ -16,6 +16,24 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    internal static JsonSerializerOptions? JsonSerializerOptions;
+
+    internal static void ConfigureJsonSerializerOptions(IDerivedTypes derivedTypes)
+    {
+        JsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters =
+            {
+                new ConceptAsJsonConverterFactory(),
+                new DateOnlyJsonConverter(),
+                new TimeOnlyJsonConverter(),
+                new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
+                new DerivedTypeJsonConverterFactory(derivedTypes)
+            }
+        };
+    }
+
     /// <summary>
     /// Add all controllers from all project referenced assemblies.
     /// </summary>
@@ -25,33 +43,25 @@ public static class ServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddControllersFromProjectReferencedAssembles(this IServiceCollection services, ITypes types, IDerivedTypes derivedTypes)
     {
+        if (JsonSerializerOptions is null)
+        {
+            ConfigureJsonSerializerOptions(derivedTypes);
+        }
+
         var controllerBuilder = services
             .AddControllers(_ => _
                 .AddRules()
                 .AddCQRS())
             .AddJsonOptions(_ =>
             {
-                _.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
-                _.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
-                _.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
-                _.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
-                _.JsonSerializerOptions.Converters.Add(new DerivedTypeJsonConverterFactory(derivedTypes));
+                _.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                foreach (var converter in JsonSerializerOptions!.Converters)
+                {
+                    _.JsonSerializerOptions.Converters.Add(converter);
+                }
             });
 
-        var serializerOptions = new JsonSerializerOptions()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-                {
-                    new ConceptAsJsonConverterFactory(),
-                    new DateOnlyJsonConverter(),
-                    new TimeOnlyJsonConverter(),
-                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
-                    new DerivedTypeJsonConverterFactory(derivedTypes)
-                }
-        };
-
-        services.AddSingleton(serializerOptions);
+        services.AddSingleton(JsonSerializerOptions!);
 
         foreach (var controllerAssembly in types.ProjectReferencedAssemblies.Where(_ => _.DefinedTypes.Any(type => type.Implements(typeof(Controller)))))
         {
