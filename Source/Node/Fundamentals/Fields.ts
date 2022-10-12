@@ -9,12 +9,12 @@ import { Field } from './Field';
  * Represents a system working with fields on types.
  */
 export class Fields {
-    static addFieldToType(target: Constructor, field: string, fieldType: Constructor, enumerable: boolean) {
+    static addFieldToType(target: Constructor, field: string, fieldType: Constructor, enumerable: boolean, derivatives: Constructor[]) {
         let fields: Map<string, Field> = new Map<string, Field>();
         if (Reflect.hasOwnMetadata('fields', target)) {
             fields = Reflect.getOwnMetadata('fields', target);
         }
-        fields.set(field, new Field(field, fieldType, enumerable));
+        fields.set(field, new Field(field, fieldType, enumerable, derivatives));
         Reflect.defineMetadata('fields', fields, target);
     }
 
