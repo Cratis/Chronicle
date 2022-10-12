@@ -8,7 +8,7 @@ public class when_getting_derived_type_without_any_matching_derived_type_identif
     interface ITargetType { }
 
     [DerivedType("fc13ac34-b69b-4438-8ebc-bc91bb5e2ee6")]
-    class DerivedType : ITargetType { }
+    record DerivedType : ITargetType { }
 
     DerivedTypes derived_types;
     Exception result;

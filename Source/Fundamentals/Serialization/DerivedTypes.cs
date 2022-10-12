@@ -51,7 +51,7 @@ public class DerivedTypes : IDerivedTypes
     /// <inheritdoc/>
     public Type GetTargetTypeFor(Type derivedType)
     {
-        if( !_derivedTypeToTargetType.ContainsKey(derivedType))
+        if (!_derivedTypeToTargetType.ContainsKey(derivedType))
         {
             throw new MissingTargetTypeForDerivedType(derivedType);
         }
@@ -66,7 +66,7 @@ public class DerivedTypes : IDerivedTypes
     {
         var attribute = derivedType.GetCustomAttribute<DerivedTypeAttribute>()!;
         var targetType = attribute.TargetType;
-        var interfaces = derivedType.GetInterfaces();
+        var interfaces = derivedType.GetInterfaces().Where(_ => !_.Namespace?.StartsWith("System") ?? true).ToArray();
 
         if (targetType is null)
         {

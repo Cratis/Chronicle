@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Serialization.for_DerivedTypes;
 public class when_initializing_without_target_type : given.derived_types
 {
     [DerivedType("fc13ac34-b69b-4438-8ebc-bc91bb5e2ee6")]
-    class DerivedType { }
+    record DerivedType { }
 
     Exception result;
 

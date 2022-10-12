@@ -8,7 +8,7 @@ public class when_checking_if_has_derived_type_for_known_type : given.derived_ty
     interface ITargetType { }
 
     [DerivedType("fc13ac34-b69b-4438-8ebc-bc91bb5e2ee6")]
-    class DerivedType : ITargetType { }
+    record DerivedType : ITargetType { }
 
     bool result;
 

@@ -9,7 +9,7 @@ public class when_initializing_with_type_with_target_type_mismatch : given.deriv
     interface ISecond { }
 
     [DerivedType("fc13ac34-b69b-4438-8ebc-bc91bb5e2ee6", typeof(ISecond))]
-    class DerivedType : IFirst { }
+    record DerivedType : IFirst { }
 
     Exception result;
 
