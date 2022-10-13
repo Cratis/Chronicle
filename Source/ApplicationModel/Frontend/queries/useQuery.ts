@@ -5,6 +5,7 @@ import { IQueryFor } from './IQueryFor';
 import { Constructor } from '@aksio/cratis-fundamentals';
 import { useState, useEffect } from 'react';
 import { QueryResultWithState } from './QueryResultWithState';
+import { QueryResult } from './QueryResult';
 
 /**
  * Delegate type for performing a {@link IQueryFor} in the context of the {@link useQuery} hook.
@@ -24,7 +25,7 @@ export function useQuery<TDataType, TQuery extends IQueryFor<TDataType>, TArgume
     const [result, setResult] = useState<QueryResultWithState<TDataType>>(new QueryResultWithState(queryInstance.defaultValue, true, true, false));
     const queryExecutor = (async (args?: TArguments) => {
         const response = await queryInstance.perform(args as any);
-        setResult(new QueryResultWithState(response.data, response.isSuccess, false, response.isSuccess));
+        setResult(new QueryResultWithState(response.data, response.isSuccess, false, response.hasData));
     });
 
     useEffect(() => {
@@ -32,7 +33,7 @@ export function useQuery<TDataType, TQuery extends IQueryFor<TDataType>, TArgume
     }, []);
 
     return [result, async (args?: TArguments) => {
-        setResult(new QueryResultWithState(result.data, result.isSuccess, true, result.isSuccess));
+        setResult(new QueryResultWithState(result.data, result.isSuccess, true, false));
         await queryExecutor(args);
     }];
 }
