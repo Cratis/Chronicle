@@ -5,12 +5,14 @@ module.exports = function (wallaby) {
             { pattern: 'Source/**/package.json', instrument: false },
             '!Source/**/*.d.ts*',
             '!Source/**/for_*/**/when_*.ts*',
+            '!Source/**/for_*/**/and_*.ts*',
             'Source/**/*.ts*'
         ],
 
         tests: [
             '!Source/**/*.d.ts*',
-            'Source/**/for_*/**/when_*.ts*'
+            'Source/**/for_*/**/when_*.ts*',
+            'Source/**/for_*/**/and_*.ts*'
         ],
 
         testFramework: 'mocha',
