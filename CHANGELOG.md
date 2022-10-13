@@ -5,7 +5,7 @@
 - Making all MongoDB calls done during streams and grains to be synchronous. They're probably using `.ConfigureAwait(false)` or `Task.Run()` inside the C# driver that prevents it from returning gracefully back to the task context the Orleans task scheduler is expecting.
 
 
-# [vundefined] - 2022-10-5 [PR: #517](https://github.com/aksio-insurtech/Cratis/pull/517)
+# [v6.10.35] - 2022-10-5 [PR: #517](https://github.com/aksio-insurtech/Cratis/pull/517)
 
 ### Fixed
 
