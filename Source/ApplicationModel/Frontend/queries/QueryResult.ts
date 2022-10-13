@@ -20,6 +20,7 @@ export class QueryResult<TDataType> {
      * @param {boolean} isSuccess Whether or not the query was successful.
      */
     constructor(readonly data: TDataType, readonly isSuccess: boolean) {
+        console.log('hello');
     }
 
     /**
@@ -32,12 +33,29 @@ export class QueryResult<TDataType> {
         const jsonResponse = await response.json() as QueryResultFromServer<TModel>;
 
         let data: any = jsonResponse.data;
-        if( enumerable ) {
+        if (enumerable) {
             data = JsonSerializer.deserializeArrayFromInstance(instanceType, data);
         } else {
             data = JsonSerializer.deserializeFromInstance(instanceType, data);
         }
 
         return new QueryResult(data, jsonResponse.isSuccess && response.ok);
+    }
+
+    /**
+     * Gets whether or not the query has data.
+     */
+    get hasData(): boolean {
+        if (this.data) {
+            if (this.data.constructor === Array) {
+                if ((this.data as any).length || 0 > 0) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -23,7 +23,7 @@ export function useObservableQuery<TDataType, TQuery extends IObservableQueryFor
     useEffect(() => {
         const subscription = queryInstance.subscribe(_ => {
             const response = _ as unknown as QueryResult<TDataType>;
-            setResult(new QueryResultWithState(response.data, response.isSuccess, false, response.isSuccess));
+            setResult(new QueryResultWithState(response.data, response.isSuccess, false, response.hasData));
         }, args as any);
 
         return () => subscription.unsubscribe();
