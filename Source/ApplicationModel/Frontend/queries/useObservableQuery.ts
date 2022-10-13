@@ -17,13 +17,13 @@ import { QueryResult } from './QueryResult';
  */
 export function useObservableQuery<TDataType, TQuery extends IObservableQueryFor<TDataType>, TArguments = {}>(query: Constructor<TQuery>, args?: TArguments): [QueryResultWithState<TDataType>] {
     const queryInstance = new query() as TQuery;
-    const [result, setResult] = useState<QueryResultWithState<TDataType>>(new QueryResultWithState(queryInstance.defaultValue, true, true, false));
+    const [result, setResult] = useState<QueryResultWithState<TDataType>>(new QueryResultWithState(queryInstance.defaultValue, true, true));
     const argumentsDependency = queryInstance.requestArguments.map(_ => args?.[_]);
 
     useEffect(() => {
         const subscription = queryInstance.subscribe(_ => {
             const response = _ as unknown as QueryResult<TDataType>;
-            setResult(new QueryResultWithState(response.data, response.isSuccess, false, response.hasData));
+            setResult(new QueryResultWithState(response.data, response.isSuccess, false));
         }, args as any);
 
         return () => subscription.unsubscribe();
