@@ -1,3 +1,21 @@
+# [v6.11.1] - 2022-10-13 [PR: #526](https://github.com/aksio-insurtech/Cratis/pull/526)
+
+### Added
+
+- Adding the `EventSequenceNumber` to `EventContext` - observers will now be able to see which sequence number the event is within its source sequence. (#498)
+- Adding state for query results for the React hooks, enabling one to know if the query is performing or not. Can then typically used for loading spinners or similar. (#500)
+- Introducing `[DerivedType]` for defining discriminators used by serializers. (#515, #501)
+- Adding sequence number to the event context (#498)
+- Proxy generator support for derived types. (#518)
+- Adding support for derived types deserialization in the frontend. (#520)
+
+### Fixed
+
+- Fixing proxy generator to output enums. (#261)
+- Fixing frontend deserializer to convert from string representation of dates to actual `Date` type. (#208)
+- Avoid confusion of properties that starts with the same text. This fix will prioritize an exact match for properties and at the same time supported nested properties from a top level. (#512)
+
+
 # [v6.10.36] - 2022-10-12 [PR: #516](https://github.com/aksio-insurtech/Cratis/pull/516)
 
 ### Fixed
