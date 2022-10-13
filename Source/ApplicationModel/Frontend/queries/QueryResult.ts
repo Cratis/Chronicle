@@ -32,12 +32,30 @@ export class QueryResult<TDataType> {
         const jsonResponse = await response.json() as QueryResultFromServer<TModel>;
 
         let data: any = jsonResponse.data;
-        if( enumerable ) {
+        if (enumerable) {
             data = JsonSerializer.deserializeArrayFromInstance(instanceType, data);
         } else {
             data = JsonSerializer.deserializeFromInstance(instanceType, data);
         }
 
         return new QueryResult(data, jsonResponse.isSuccess && response.ok);
+    }
+
+    /**
+     * Gets whether or not the query has data.
+     */
+    get hasData(): boolean {
+        const data = this.data as any;
+        if (data) {
+            if (data.constructor && data.constructor === Array) {
+                if (data.length || 0 > 0) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
