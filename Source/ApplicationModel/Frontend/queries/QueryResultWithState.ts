@@ -14,9 +14,8 @@ export class QueryResultWithState<TDataType> extends QueryResult<TDataType> {
      * @param {TDataType} data The items returned, if any - can be empty.
      * @param {boolean} isSuccess Whether or not the query was successful.
      * @param {boolean} isPerforming Whether or not the query is being performed. True if its performing, false if it is done.
-     * @param {boolean} hasData Whether or not there is data in the result.
      */
-    constructor(readonly data: TDataType, readonly isSuccess: boolean, readonly isPerforming: boolean, readonly hasData: boolean) {
+    constructor(readonly data: TDataType, readonly isSuccess: boolean, readonly isPerforming: boolean) {
         super(data, isSuccess);
     }
 }
