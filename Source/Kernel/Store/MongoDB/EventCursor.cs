@@ -5,6 +5,8 @@ using MongoDB.Driver;
 
 namespace Aksio.Cratis.Events.Store.MongoDB;
 
+#pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
+
 /// <summary>
 /// Represents an implementation of <see cref="IEventCursor"/> for handling events from event sequence.
 /// </summary>
