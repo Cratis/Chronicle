@@ -26,6 +26,38 @@ export const MyComponent = () => {
 };
 ```
 
+> Note: All data resulting from a query will be strongly typed based on the metadata provided by the proxy generator.
+> You can read more about how serialization works [here](../../../fundamentals/serialization.md).
+
+### Return tuple
+
+If the query is a regular request / response type of query, the tuple returned contains two elements.
+If it is an observable query, it only returns the first element of the tuple.
+
+The return values are:
+
+- The query result
+- Delegate for issuing the query again
+
+#### QueryResultWithState
+
+The query result returned is a type called `QueryResultWithState` this is a sub type of `QueryResult`
+adding properties that are relevant when working in React.
+
+From the base `QueryResult` one gets the following properties:
+
+| Property | Description |
+| -------- | ----------- |
+| data     | The actual data returned in the type expected. |
+| isSuccess | Boolean telling whether or not the query was successful or not. |
+
+On top of this `QueryResultWithState` adds the following properties:
+
+| Property | Description |
+| -------- | ----------- |
+| hasData  | Boolean indicating whether or not there is data in the result. |
+| isPerforming | Boolean that is true when an operation is working to get data from the server. |
+
 ### Parameters
 
 Queries can have parameters they can be used for instance for filtering.
