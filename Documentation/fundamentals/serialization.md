@@ -86,7 +86,12 @@ This metadata will allow it to properly deserialize known types.
 Lets say we create an HTTP GET API endpoint that returns the following C# structure:
 
 ```csharp
-public record AccountHolderWithAccounts(string FirstName, string LastName, string SocialSecurityNumber, Address Address, IEnumerable<IAccount> Accounts);
+public record AccountHolderWithAccounts(
+    string FirstName,
+    string LastName,
+    string SocialSecurityNumber,
+    Address Address,
+    IEnumerable<IAccount> Accounts);
 ```
 
 This will generate the following:
