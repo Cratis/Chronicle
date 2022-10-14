@@ -317,27 +317,44 @@ public class SourceGenerator : ISourceGenerator
 
         foreach (var property in properties)
         {
-            var targetType = property.Type.GetTypeScriptType(out var additionalImportStatements);
+            if (property.Name == "SatsKap19" && property.ContainingType.Name == "VedtakAP19441953")
+            {
+                while (!System.Diagnostics.Debugger.IsAttached) Thread.Sleep(10);
+            }
+
+            var propertyType = property.Type;
+            var isNullable = false;
+            if (property.NullableAnnotation == NullableAnnotation.Annotated && property.Type is INamedTypeSymbol namedTypeSymbol)
+            {
+                isNullable = true;
+                propertyType = namedTypeSymbol.TypeArguments.FirstOrDefault() ?? propertyType;
+            }
+            else
+            {
+                isNullable = property.Type.NullableAnnotation == NullableAnnotation.Annotated;
+            }
+
+            var targetType = propertyType.GetTypeScriptType(out var additionalImportStatements);
             additionalImportStatements.ForEach(_ => typeImportStatements.Add(_));
-            var isEnumerable = property.Type.IsEnumerable();
-            var isNullable = property.Type.NullableAnnotation == NullableAnnotation.Annotated;
+            var isEnumerable = propertyType.IsEnumerable();
+
             if (targetType == TypeSymbolExtensions.AnyType)
             {
                 var hasDerivatives = false;
                 var derivatives = new List<string>();
-                var actualType = property.Type;
+                var actualType = propertyType;
                 var constructorType = actualType.Name;
 
-                if (property.Type.TypeKind == TypeKind.Enum)
+                if (propertyType.TypeKind == TypeKind.Enum)
                 {
                     constructorType = "Number";
                 }
                 else if (isEnumerable)
                 {
-                    var namedType = (INamedTypeSymbol)property.Type;
+                    var namedType = (INamedTypeSymbol)propertyType;
                     if (namedType.TypeArguments != default && namedType.TypeArguments.Length > 0)
                     {
-                        actualType = ((INamedTypeSymbol)property.Type).TypeArguments[0];
+                        actualType = ((INamedTypeSymbol)propertyType).TypeArguments[0];
                         constructorType = actualType.Name;
                     }
                 }
