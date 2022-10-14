@@ -1,3 +1,10 @@
+# [v6.11.4] - 2022-10-14 [PR: #530](https://github.com/aksio-insurtech/Cratis/pull/530)
+
+### Fixed
+
+- Removing reference to the proxy generator for all assemblies related to Kernel and just add it to the API projects. This way we're not pulling the proxy generator implicitly into everything when referencing the C# SDK. (Plus added benefit of faster Cratis compile times :))
+
+
 # [v6.11.3] - 2022-10-14 [PR: #528](https://github.com/aksio-insurtech/Cratis/pull/528)
 
 ### Fixed
