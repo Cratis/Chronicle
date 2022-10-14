@@ -4,6 +4,8 @@
         <RootNamespace>Aksio.Cratis.Events.Schemas.Api</RootNamespace>
     </PropertyGroup>
 
+    <Import Project="../../ProxyGeneration.props"/>
+
     <ItemGroup>
         <ProjectReference Include="../Shared/Shared.csproj" />
     </ItemGroup>

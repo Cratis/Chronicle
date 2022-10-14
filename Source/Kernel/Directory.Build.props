@@ -1,15 +1,5 @@
 <Project>
     <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props"/>
-    <PropertyGroup>
-        <AksioProxyOutput>$(MSBuildThisFileDirectory)../Workbench/API</AksioProxyOutput>
-        <AksioUseRouteAsPath>true</AksioUseRouteAsPath>
-    </PropertyGroup>
-
-    <Import Project="$(MSBuildThisFileDirectory)../ApplicationModel/Tooling/ProxyGenerator/build/Aksio.Cratis.Applications.ProxyGenerator.props"/>
-
-    <ItemGroup>
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../ApplicationModel/Tooling/ProxyGenerator/ProxyGenerator.csproj" OutputItemType="Analyzer" Private="true"/>
-    </ItemGroup>
 
     <ItemGroup>
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>
