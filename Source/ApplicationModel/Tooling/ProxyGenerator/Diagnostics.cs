@@ -19,7 +19,7 @@ public static class Diagnostics
             "Missing output path",
             "Missing output path for generating proxies to. Add <AksioProxyOutput/> to your .csproj file. Will not output proxies.",
             "Generation",
-            DiagnosticSeverity.Info,
+            DiagnosticSeverity.Warning,
             true),
         default);
 
@@ -35,4 +35,21 @@ public static class Diagnostics
             DiagnosticSeverity.Error,
             true),
         default);
+
+    /// <summary>
+    /// The <see cref="Diagnostic"/> to report when the output path is missing.
+    /// </summary>
+    /// <param name="exception">The exception that occurred.</param>
+    /// <returns><see cref="Diagnostics"/> for reporting.</returns>
+    public static Diagnostic UnknownError(Exception exception) => Diagnostic.Create(
+        new DiagnosticDescriptor(
+            "AKSIO0000",
+            "Error during proxy generation",
+            "Error '{0}' happened during proxy generation.",
+            "Generation",
+            DiagnosticSeverity.Warning,
+            true,
+            "Stack:\n{1}"),
+        default,
+        messageArgs: new object[] { exception.Message, exception.StackTrace });
 }
