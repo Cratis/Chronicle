@@ -4,6 +4,8 @@
         <RootNamespace>Aksio.Cratis.Events.Projections.Api</RootNamespace>
     </PropertyGroup>
 
+    <Import Project="../../ProxyGeneration.props"/>
+
     <ItemGroup>
         <ProjectReference Include="../Engine/Engine.csproj" />
         <ProjectReference Include="../../../ApplicationModel/CQRS.MongoDB/CQRS.MongoDB.csproj"/>
