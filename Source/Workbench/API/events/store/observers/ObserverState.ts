@@ -11,32 +11,46 @@ import { FailedObserverPartition } from './FailedObserverPartition';
 import { RecoveringFailedObserverPartition } from './RecoveringFailedObserverPartition';
 
 export class ObserverState {
+
     @field(String)
     id!: string;
+
     @field(EventType, true)
     eventTypes!: EventType[];
+
     @field(String)
     eventSequenceId!: string;
+
     @field(String)
     observerId!: string;
+
     @field(String)
     name!: string;
-    @field(ObserverType)
+
+    @field(Number)
     type!: ObserverType;
+
     @field(Number)
     nextEventSequenceNumber!: number;
+
     @field(Number)
     lastHandled!: number;
-    @field(ObserverRunningState)
+
+    @field(Number)
     runningState!: ObserverRunningState;
+
     @field(String)
     currentNamespace!: string;
+
     @field(FailedObserverPartition, true)
     failedPartitions!: FailedObserverPartition[];
+
     @field(RecoveringFailedObserverPartition, true)
     recoveringPartitions!: RecoveringFailedObserverPartition[];
+
     @field(Boolean)
     hasFailedPartitions!: boolean;
+
     @field(Boolean)
     isRecoveringAnyPartition!: boolean;
 }

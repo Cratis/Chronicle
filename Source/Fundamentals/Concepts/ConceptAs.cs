@@ -34,6 +34,6 @@ public record ConceptAs<T>
     /// <inheritdoc/>
     public sealed override string ToString()
     {
-        return Value?.ToString() ?? "[n/a]";
+        return Value!.ToString() ?? "[n/a]";
     }
 }

@@ -6,7 +6,6 @@ using Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 using Aksio.Cratis.Applications.ProxyGenerator.Templates;
 using HandlebarsDotNet;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Aksio.Cratis.Applications.ProxyGenerator;
 
@@ -41,7 +40,6 @@ public class SourceGenerator : ISourceGenerator
         context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.aksiouserouteaspath", out var useRouteAsPathAsString);
 
         var useRouteAsPath = !string.IsNullOrEmpty(useRouteAsPathAsString);
-
         foreach (var derivedType in receiver!.DerivedTypes)
         {
             var model = context.Compilation.GetSemanticModel(derivedType.SyntaxTree, true);
@@ -73,7 +71,7 @@ public class SourceGenerator : ISourceGenerator
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Errors {ex}");
+                context.ReportDiagnostic(Diagnostics.UnknownError(ex));
             }
         }
     }
@@ -263,7 +261,14 @@ public class SourceGenerator : ISourceGenerator
         var properties = type.GetPublicPropertiesFrom();
 
         var typeImportStatements = new HashSet<ImportStatement>();
-        var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(rootNamespace, outputFolder, useRouteAsPath, baseApiRoute, targetFile, properties, typeImportStatements);
+        var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(
+            rootNamespace,
+            outputFolder,
+            useRouteAsPath,
+            baseApiRoute,
+            targetFile,
+            properties,
+            typeImportStatements);
 
         string renderedTemplate = null!;
 
@@ -295,8 +300,7 @@ public class SourceGenerator : ISourceGenerator
                 }
                 break;
             case TypeKind.Enum:
-                var enumDeclaration = (type.DeclaringSyntaxReferences[0].GetSyntax() as EnumDeclarationSyntax)!;
-                renderedTemplate = TemplateTypes.Enum(type.GetEnumDescriptor(enumDeclaration));
+                renderedTemplate = TemplateTypes.Enum(type.GetEnumDescriptor());
                 break;
         }
 
@@ -343,7 +347,7 @@ public class SourceGenerator : ISourceGenerator
                     constructorType = "Object";
                     hasDerivatives = true;
 
-                    foreach (var derivedType in _derivedTypes.Where(_ => _.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, actualType))))
+                    foreach (var derivedType in _derivedTypes.ToArray().Where(_ => _.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, actualType))))
                     {
                         OutputType(derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
                         derivatives.Add(derivedType.Name);
