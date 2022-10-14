@@ -1,3 +1,10 @@
+# [v6.11.3] - 2022-10-14 [PR: #528](https://github.com/aksio-insurtech/Cratis/pull/528)
+
+### Fixed
+
+- Fixing a problem with enum proxy generators that were too complex and looking for the wrong syntax element during compilation, causing them to crash when enum was in a 3rd party referenced assembly.
+
+
 # [v6.11.2] - 2022-10-13 [PR: #527](https://github.com/aksio-insurtech/Cratis/pull/527)
 
 ### Fixed
