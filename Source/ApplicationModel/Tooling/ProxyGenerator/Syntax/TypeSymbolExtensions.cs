@@ -1,10 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
 using Aksio.Cratis.Applications.ProxyGenerator.Templates;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 
@@ -154,51 +152,13 @@ public static class TypeSymbolExtensions
     /// Gets an <see cref="EnumDescriptor"/> from a type symbol which is an enum.
     /// </summary>
     /// <param name="type"><see cref="ITypeSymbol"/> to get for.</param>
-    /// <param name="context">The current <see cref="GeneratorExecutionContext"/>.</param>
     /// <returns><see cref="EnumDescriptor"/>.</returns>
-    public static EnumDescriptor GetEnumDescriptor(this ITypeSymbol type, GeneratorExecutionContext context)
+    public static EnumDescriptor GetEnumDescriptor(this ITypeSymbol type)
     {
-        var currentEnumValue = 0;
-        List<EnumValueDescriptor> enumValues = null!;
-
-        while (!System.Diagnostics.Debugger.IsAttached) Thread.Sleep(10);
-
-        if (type.DeclaringSyntaxReferences.Length == 0)
-        {
-            var reference = context.Compilation.ExternalReferences.FirstOrDefault(_ => _.Display?.Contains(type.ContainingAssembly.MetadataName) ?? false);
-            if (reference is not null)
-            {
-                var assembly = Assembly.LoadFile(reference.Display);
-                var enumType = $"{type.ContainingNamespace}.{type.Name}";
-                var actualType = assembly.GetType(enumType);
-                if (actualType is not null)
-                {
-                    var names = Enum.GetNames(actualType);
-                    var values = Enum.GetValues(actualType).Cast<int>().ToList();
-                    enumValues = names
-                        .Select((name, index) => new EnumValueDescriptor(name, values[index]))
-                        .ToList();
-                }
-            }
-        }
-        else
-        {
-            enumValues = new List<EnumValueDescriptor>();
-            var syntax = (type.DeclaringSyntaxReferences[0].GetSyntax() as EnumDeclarationSyntax)!;
-            foreach (var member in syntax.Members)
-            {
-                if (member.EqualsValue is not null)
-                {
-                    currentEnumValue = int.Parse(member.EqualsValue.Value.ToString());
-                }
-                else
-                {
-                    currentEnumValue++;
-                }
-                enumValues.Add(new(member.Identifier.Text, currentEnumValue));
-            }
-        }
-
+        var enumValues = type
+                            .GetMembers()
+                            .Where(_ => _ is IFieldSymbol).Cast<IFieldSymbol>()
+                            .Select(_ => new EnumValueDescriptor(_.Name, int.Parse(_.ConstantValue?.ToString() ?? "0")));
         return new EnumDescriptor(type.Name, enumValues);
     }
 
