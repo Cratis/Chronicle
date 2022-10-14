@@ -1,3 +1,10 @@
+# [v6.11.2] - 2022-10-13 [PR: #527](https://github.com/aksio-insurtech/Cratis/pull/527)
+
+### Fixed
+
+- Frontend queries based now has a `hasData` property which reflects correctly whether or not there actually is data. This gets used in the `QueryResultWithState` and can be used inside the frontend to check if there actually is data and make decisions based on it.
+
+
 # [v6.11.1] - 2022-10-13 [PR: #526](https://github.com/aksio-insurtech/Cratis/pull/526)
 
 ### Added
