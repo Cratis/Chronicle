@@ -1,3 +1,10 @@
+# [v6.11.5] - 2022-10-14 [PR: #534](https://github.com/aksio-insurtech/Cratis/pull/534)
+
+### Fixed
+
+- Supporting nullable properties. When one has an enum that is marked as a nullable in a type, it does not have the type itself annotated as nullable, but the property.
+
+
 # [v6.11.4] - 2022-10-14 [PR: #530](https://github.com/aksio-insurtech/Cratis/pull/530)
 
 ### Fixed
