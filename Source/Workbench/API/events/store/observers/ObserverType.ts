@@ -2,8 +2,9 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { field } from '@aksio/cratis-fundamentals';
-
-
-export class ObserverType {
+export enum ObserverType {
+    unknown = 0,
+    client = 1,
+    projection = 2,
+    inbox = 3,
 }
