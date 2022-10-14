@@ -44,7 +44,7 @@ public static class Diagnostics
     public static Diagnostic UnknownError(Exception exception) => Diagnostic.Create(
         new DiagnosticDescriptor(
             "AKSIO0000",
-            "Error during proxy generation",
+            "Error during proxy generation.",
             "Error '{0}' happened during proxy generation.",
             "Generation",
             DiagnosticSeverity.Warning,
