@@ -317,11 +317,6 @@ public class SourceGenerator : ISourceGenerator
 
         foreach (var property in properties)
         {
-            if (property.Name == "SatsKap19" && property.ContainingType.Name == "VedtakAP19441953")
-            {
-                while (!System.Diagnostics.Debugger.IsAttached) Thread.Sleep(10);
-            }
-
             var propertyType = property.Type;
             var isNullable = false;
             if (property.NullableAnnotation == NullableAnnotation.Annotated && property.Type is INamedTypeSymbol namedTypeSymbol)
