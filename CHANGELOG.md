@@ -1,3 +1,10 @@
+# [v6.11.6] - 2022-10-14 [PR: #536](https://github.com/aksio-insurtech/Cratis/pull/536)
+
+### Fixed
+
+- Removing debugger statement in proxy generator that was left in while hunting down a problem.
+
+
 # [v6.11.5] - 2022-10-14 [PR: #534](https://github.com/aksio-insurtech/Cratis/pull/534)
 
 ### Fixed
