@@ -33,12 +33,32 @@ public interface IProjectionBuilderFor<TModel>
     IProjectionBuilderFor<TModel> NotRewindable();
 
     /// <summary>
-    /// Start building the from expressions for a specific event type.
+    /// Sets the initial values to use for a new model instance.
+    /// </summary>
+    /// <param name="initialValueProviderCallback"></param>
+    /// <returns>Builder continuation.</returns>
+    /// <remarks>
+    /// If one does not provide initial values, the projection engine will leave properties
+    /// out that hasn't been met by an event projection expression. This will effectively render
+    /// the properties null and might not be desirable when reading instances of the models.
+    /// </remarks>
+    IProjectionBuilderFor<TModel> WithInitialValues(Func<TModel> initialValueProviderCallback);
+
+    /// <summary>
+    /// Start building a from expressions for a specific event type.
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
     IProjectionBuilderFor<TModel> From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback);
+
+    /// <summary>
+    /// Start building a join expressions for a specific event type.
+    /// </summary>
+    /// <param name="builderCallback">Callback for building.</param>
+    /// <typeparam name="TEvent">Type of event.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    IProjectionBuilderFor<TModel> Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback);
 
     /// <summary>
     /// Define an event type that causes a delete in the projected result.

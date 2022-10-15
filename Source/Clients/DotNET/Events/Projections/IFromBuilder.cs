@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Store;
 
 namespace Aksio.Cratis.Events.Projections;
 
@@ -22,6 +23,13 @@ public interface IFromBuilder<TModel, TEvent>
     IFromBuilder<TModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
     /// <summary>
+    /// Define what key to use based on a value in the <see cref="EventContext"/>.
+    /// </summary>
+    /// <param name="keyAccessor">Accessor for the property within <see cref="EventContext"/> to use.</param>
+    /// <returns>Builder continuation.</returns>
+    IFromBuilder<TModel, TEvent> UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor);
+
+    /// <summary>
     /// Define what property on the event represents the parent key. This is typically used in child relationships to identify the parent model to
     /// work with.
     /// </summary>
@@ -29,6 +37,20 @@ public interface IFromBuilder<TModel, TEvent>
     /// <param name="keyAccessor">Accessor for the property to use.</param>
     /// <returns>Builder continuation.</returns>
     IFromBuilder<TModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
+
+    /// <summary>
+    /// Define what key to use based on a composite of properties within the event.
+    /// </summary>
+    /// <param name="keyAccessor"></param>
+    /// <returns>Builder continuation.</returns>
+    IFromBuilder<TModel, TEvent> UsingCompositeKey(params Expression<Func<TEvent, object>>[] keyAccessor);
+
+    /// <summary>
+    /// Define what key to use based on a composite of properties within the <see cref="EventContext"/>.
+    /// </summary>
+    /// <param name="keyAccessor"></param>
+    /// <returns>Builder continuation.</returns>
+    IFromBuilder<TModel, TEvent> UsingCompositeKeyFromContext(params Expression<Func<EventContext, object>>[] keyAccessor);
 
     /// <summary>
     /// Start building the add operation to a target property on the model.
