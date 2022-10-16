@@ -4,9 +4,8 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.Expressions.for_EventContextPropertyExpressionResolver;
+namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_EventContextPropertyExpressionResolver;
 
 public class when_trying_to_resolve_valid_add_expression_against_model_and_event : Specification
 {
@@ -28,7 +27,7 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
         resolver = new();
     }
 
-    void Because() => resolver.Resolve("targetProperty", "$eventContext(occurred)")(@event, target, ArrayIndexers.NoIndexers);
+    void Because() => resolver.Resolve("$eventContext(occurred)")(@event);
 
     [Fact] void should_resolve_to_a_propertymapper_that_can_gets_property_from_context() => ((DateTimeOffset)((dynamic)target).targetProperty).ShouldEqual(occurred);
 }

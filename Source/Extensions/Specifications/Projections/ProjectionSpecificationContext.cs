@@ -57,11 +57,11 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()));
 
-        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator);
+        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, new JsonSerializerOptions());
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 
-        var factory = new ProjectionFactory(new PropertyMapperExpressionResolvers());
+        var factory = new ProjectionFactory(new ModelPropertyExpressionResolvers(new EventValueProviderExpressionResolvers()));
         _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
         var objectsComparer = new ObjectsComparer();

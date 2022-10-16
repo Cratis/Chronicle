@@ -6,31 +6,33 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.Expressions.for_CountExpressionResolver;
+namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties.for_AddExpressionResolver;
 
-public class when_trying_to_resolve_valid_count_expression_against_model_with_no_content : Specification
+public class when_trying_to_resolve_valid_add_expression_against_model_and_event : Specification
 {
-    CountExpressionResolver resolver;
+    Mock<IEventValueProviderExpressionResolvers> event_value_resolvers;
+    AddExpressionResolver resolver;
     AppendedEvent @event;
     ExpandoObject target;
 
     void Establish()
     {
         target = new();
-        var content = new JsonObject();
+        var content = new JsonObject
+        {
+            ["sourceProperty"] = 42d
+        };
         @event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
             new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", "50308963-d8b5-4b6e-97c7-e2486e8237e1", "bfb7fd4a-1822-4937-a6d1-52464a173f84"),
             content);
-        resolver = new();
+
+        event_value_resolvers = new();
+        resolver = new(event_value_resolvers.Object);
     }
 
-    void Because()
-    {
-        resolver.Resolve("targetProperty", "$count()")(@event, target, ArrayIndexers.NoIndexers);
-        resolver.Resolve("targetProperty", "$count()")(@event, target, ArrayIndexers.NoIndexers);
-    }
+    void Because() => resolver.Resolve("targetProperty", "$add(sourceProperty)")(@event, target, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_resolve_to_a_propertymapper_that_counts_into_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(2d);
+    [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(42d);
 }

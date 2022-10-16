@@ -6,21 +6,18 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.Expressions.for_AddExpressionResolver;
+namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties.for_CountExpressionResolver;
 
-public class when_trying_to_resolve_valid_add_expression_against_model_and_event : Specification
+public class when_trying_to_resolve_valid_count_expression_against_model_with_no_content : Specification
 {
-    AddExpressionResolver resolver;
+    CountExpressionResolver resolver;
     AppendedEvent @event;
     ExpandoObject target;
 
     void Establish()
     {
         target = new();
-        var content = new JsonObject
-        {
-            ["sourceProperty"] = 42d
-        };
+        var content = new JsonObject();
         @event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),
@@ -29,7 +26,11 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
         resolver = new();
     }
 
-    void Because() => resolver.Resolve("targetProperty", "$add(sourceProperty)")(@event, target, ArrayIndexers.NoIndexers);
+    void Because()
+    {
+        resolver.Resolve("targetProperty", "$count()")(@event, target, ArrayIndexers.NoIndexers);
+        resolver.Resolve("targetProperty", "$count()")(@event, target, ArrayIndexers.NoIndexers);
+    }
 
-    [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(42d);
+    [Fact] void should_resolve_to_a_propertymapper_that_counts_into_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(2d);
 }
