@@ -20,7 +20,8 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
 {
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
-    readonly Dictionary<EventType, FromDefinition> _fromDefintions = new();
+    readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
+    readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
     readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     readonly string _modelName;
     string _identifiedBy = string.Empty;
@@ -46,7 +47,17 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
         var builder = new FromBuilder<TChildModel, TEvent>();
         builderCallback(builder);
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        _fromDefintions[eventType] = builder.Build();
+        _fromDefinitions[eventType] = builder.Build();
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IChildrenBuilder<TParentModel, TChildModel> Join<TEvent>(Action<IJoinBuilder<TChildModel, TEvent>> builderCallback)
+    {
+        var builder = new JoinBuilder<TChildModel, TEvent>();
+        builderCallback(builder);
+        var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
+        _joinDefinitions[eventType] = builder.Build();
         return this;
     }
 
@@ -79,7 +90,8 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
         return new ChildrenDefinition(
             _identifiedBy,
             new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
-            _fromDefintions,
+            _fromDefinitions,
+            _joinDefinitions,
             _childrenDefinitions,
             _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
     }

@@ -9,14 +9,16 @@ using Aksio.Cratis.Reflection;
 namespace Aksio.Cratis.Events.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="ISetBuilder{TModel, TEvent, TProperty}"/>.
+/// Represents an implementation of <see cref="ISetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/>.
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
-public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent, TProperty>
+/// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
+public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISetBuilder<TModel, TEvent, TProperty, TParentBuilder>
+    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
 {
-    readonly IFromBuilder<TModel, TEvent> _parent;
+    readonly TParentBuilder _parent;
     readonly bool _forceEventProperty;
     string _expression = string.Empty;
 
@@ -24,12 +26,12 @@ public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent,
     public PropertyPath TargetProperty { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty}"/> class.
+    /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
     /// </summary>
     /// <param name="parent">Parent builder.</param>
     /// <param name="targetProperty">Target property we're building for.</param>
     /// <param name="forceEventProperty">Whether or not to force this to have to map to a target property or not.</param>
-    public SetBuilder(IFromBuilder<TModel, TEvent> parent, PropertyPath targetProperty, bool forceEventProperty = false)
+    public SetBuilder(TParentBuilder parent, PropertyPath targetProperty, bool forceEventProperty = false)
     {
         _parent = parent;
         TargetProperty = targetProperty;
@@ -37,14 +39,14 @@ public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent,
     }
 
     /// <inheritdoc/>
-    public IFromBuilder<TModel, TEvent> To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
+    public TParentBuilder To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
         _expression = eventPropertyAccessor.GetPropertyPath();
         return _parent;
     }
 
     /// <inheritdoc/>
-    public IFromBuilder<TModel, TEvent> ToEventSourceId()
+    public TParentBuilder ToEventSourceId()
     {
         ThrowIfOnlyEventPropertyIsSupported();
 
@@ -53,7 +55,7 @@ public class SetBuilder<TModel, TEvent, TProperty> : ISetBuilder<TModel, TEvent,
     }
 
     /// <inheritdoc/>
-    public IFromBuilder<TModel, TEvent> ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
+    public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
         var property = eventContextPropertyAccessor.GetPropertyPath();
         _expression = $"$eventContext({property})";

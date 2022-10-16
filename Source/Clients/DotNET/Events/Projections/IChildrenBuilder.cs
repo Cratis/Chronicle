@@ -22,6 +22,14 @@ public interface IChildrenBuilder<TParentModel, TChildModel>
     IChildrenBuilder<TParentModel, TChildModel> From<TEvent>(Action<IFromBuilder<TChildModel, TEvent>> builderCallback);
 
     /// <summary>
+    /// Start building a join expressions for a specific event type.
+    /// </summary>
+    /// <param name="builderCallback">Callback for building.</param>
+    /// <typeparam name="TEvent">Type of event.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    IChildrenBuilder<TParentModel, TChildModel> Join<TEvent>(Action<IJoinBuilder<TChildModel, TEvent>> builderCallback);
+
+    /// <summary>
     /// Sets the property that identifies the child model in the collection within the parent.
     /// </summary>
     /// <param name="propertyExpression">The expression that represents the property used to identify.</param>
