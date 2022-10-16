@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_EventContextPropertyExpressionResolver;
 
-public class when_asking_can_resolve_for_add_expression : Specification
+public class when_asking_can_resolve_for_event_context_expression : Specification
 {
     EventContextPropertyExpressionResolver resolver;
     bool result;
