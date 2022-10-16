@@ -84,7 +84,8 @@ public class ImmediateProjections : IImmediateProjections
             var builder = new ProjectionBuilderFor<TModel>(
                 ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Identifier,
                 _eventTypes,
-                _schemaGenerator);
+                _schemaGenerator,
+                _jsonSerializerOptions);
 
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Define(builder);
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition = builder.Build();
