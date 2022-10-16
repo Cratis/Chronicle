@@ -6,13 +6,13 @@ namespace Aksio.Cratis.Events.Projections.Expressions;
 /// <summary>
 /// Exception that gets thrown when an event value expression is not supported.
 /// </summary>
-public class UnsupportedPropertyMapperExpression : Exception
+public class UnsupportedModelPropertyExpression : Exception
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="UnsupportedPropertyMapperExpression"/> class.
+    /// Initializes a new instance of the <see cref="UnsupportedModelPropertyExpression"/> class.
     /// </summary>
     /// <param name="expression">The unsupported expression.</param>
-    public UnsupportedPropertyMapperExpression(string expression) : base($"Couldn't find an property mapper for the expression '{expression}'")
+    public UnsupportedModelPropertyExpression(string expression) : base($"Unknown model property expression '{expression}'")
     {
     }
 }

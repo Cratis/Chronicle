@@ -8,9 +8,9 @@ using Aksio.Cratis.Properties;
 namespace Aksio.Cratis.Events.Projections.Expressions;
 
 /// <summary>
-/// Defines a resolver of expressions related to property mapping.
+/// Defines a resolver of expressions related to target properties on the model.
 /// </summary>
-public interface IPropertyMapperExpressionResolver
+public interface IModelPropertyExpressionResolver
 {
     /// <summary>
     /// Called to check if the resolver can resolve the expression.

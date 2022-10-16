@@ -13,13 +13,13 @@ namespace Aksio.Cratis.Events.Projections;
 /// </summary>
 public class ProjectionFactory : IProjectionFactory
 {
-    readonly IPropertyMapperExpressionResolvers _propertyMapperExpressionResolvers;
+    readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
     /// </summary>
-    /// <param name="propertyMapperExpressionResolvers"><see cref="IPropertyMapperExpressionResolvers"/> for resolving expressions for properties.</param>
-    public ProjectionFactory(IPropertyMapperExpressionResolvers propertyMapperExpressionResolvers)
+    /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
+    public ProjectionFactory(IModelPropertyExpressionResolvers propertyMapperExpressionResolvers)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
     }
