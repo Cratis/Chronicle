@@ -11,12 +11,14 @@ namespace Aksio.Cratis.Events.Projections;
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
-public interface ISubtractBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilder
+/// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
+public interface ISubtractBuilder<TModel, TEvent, TProperty, TParentBuilder> : IPropertyExpressionBuilder
+    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
 {
     /// <summary>
     /// Add with a property on the event.
     /// </summary>
     /// <param name="eventPropertyAccessor">Event property accessor for defining the source property.</param>
     /// <returns>Builder continuation.</returns>
-    IFromBuilder<TModel, TEvent> With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor);
+    TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor);
 }
