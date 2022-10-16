@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Models;
@@ -23,12 +24,14 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     readonly ProjectionId _identifier;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
     readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
     bool _isRewindable = true;
     string _modelName;
     string? _name;
+    JsonDocument? _initialValues;
     EventType? _removedWithEvent;
 
     /// <summary>
@@ -37,15 +40,17 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     /// <param name="identifier">The unique identifier for the projection.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionBuilderFor(
         ProjectionId identifier,
         IEventTypes eventTypes,
-        IJsonSchemaGenerator schemaGenerator)
+        IJsonSchemaGenerator schemaGenerator,
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _identifier = identifier;
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
-
+        _jsonSerializerOptions = jsonSerializerOptions;
         if (typeof(TModel).HasAttribute<ModelNameAttribute>())
         {
             _modelName = typeof(TModel).GetCustomAttribute<ModelNameAttribute>(false)!.Name;
@@ -78,7 +83,12 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> WithInitialValues(Func<TModel> initialValueProviderCallback) => throw new NotImplementedException();
+    public IProjectionBuilderFor<TModel> WithInitialValues(Func<TModel> initialValueProviderCallback)
+    {
+        var instance = initialValueProviderCallback();
+        _initialValues = JsonSerializer.SerializeToDocument(instance, typeof(TModel), _jsonSerializerOptions);
+        return this;
+    }
 
     /// <inheritdoc/>
     public IProjectionBuilderFor<TModel> From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback)
@@ -115,7 +125,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     /// <inheritdoc/>
     public IProjectionBuilderFor<TModel> Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
     {
-        var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes, _schemaGenerator);
+        var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes, _schemaGenerator, _jsonSerializerOptions);
         builderCallback(builder);
         _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
         return this;
@@ -136,6 +146,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
             _name ?? modelType.FullName ?? "[N/A]",
             new ModelDefinition(_modelName, modelSchema.ToJson()),
             _isRewindable,
+            _initialValues ?? JsonDocument.Parse("{}"),
             _fromDefinitions,
             _joinDefinitions,
             _childrenDefinitions,
