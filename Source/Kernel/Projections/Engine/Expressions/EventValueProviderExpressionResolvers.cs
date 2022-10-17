@@ -16,7 +16,9 @@ public class EventValueProviderExpressionResolvers : IEventValueProviderExpressi
     {
         new EventSourceIdExpressionResolver(),
         new EventContextPropertyExpressionResolver(),
-        new EventContentExpressionProvider()
+        new EventContentExpressionProvider(),
+        new CompositeValueProviderExpressionResolver(),
+        new CompositeFromEventContextValueProviderExpressionResolver()
     };
 
     /// <inheritdoc/>

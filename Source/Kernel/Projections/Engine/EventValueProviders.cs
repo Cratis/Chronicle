@@ -65,6 +65,28 @@ public static class EventValueProviders
     }
 
     /// <summary>
+    /// Create a <see cref="ValueProvider{T}"/> that provides a composite value based on multiple properties in the event context.
+    /// </summary>
+    /// <param name="sourceProperties">Source properties.</param>
+    /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
+    public static ValueProvider<AppendedEvent> EventContextComposite(IEnumerable<PropertyPath> sourceProperties)
+    {
+        return (AppendedEvent @event) =>
+        {
+            var builder = new StringBuilder();
+            foreach (var sourceProperty in sourceProperties)
+            {
+                if (builder.Length > 0)
+                {
+                    builder.Append("+");
+                }
+                builder.Append(sourceProperty.GetValue(@event.Context, ArrayIndexers.NoIndexers));
+            }
+            return builder.ToString();
+        };
+    }
+
+    /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that generates a new unique identifier from the event metadata.
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
