@@ -15,5 +15,5 @@ public class EventContentExpressionProvider : IEventValueProviderExpressionResol
     public bool CanResolve(string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
 
     /// <inheritdoc/>
-    public ValueProvider<AppendedEvent> Resolve(string expression) => EventValueProviders.FromEventContent(expression);
+    public ValueProvider<AppendedEvent> Resolve(string expression) => EventValueProviders.EventContent(expression);
 }
