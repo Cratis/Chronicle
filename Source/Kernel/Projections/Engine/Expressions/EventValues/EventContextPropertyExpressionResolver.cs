@@ -21,6 +21,6 @@ public class EventContextPropertyExpressionResolver : IEventValueProviderExpress
     public ValueProvider<AppendedEvent> Resolve(string expression)
     {
         var match = _regularExpression.Match(expression);
-        return EventValueProviders.FromEventContext(match.Groups["property"].Value);
+        return EventValueProviders.EventContext(match.Groups["property"].Value);
     }
 }

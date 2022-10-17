@@ -7,7 +7,7 @@ using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.given;
 
-public record MyEvent(int Something);
+public record MyEvent(int Something, string SomethingElse);
 
 public class an_appended_event : Specification
 {
@@ -17,11 +17,12 @@ public class an_appended_event : Specification
 
     void Establish()
     {
-        MyEvent = new MyEvent(42);
+        MyEvent = new MyEvent(42, "Forty two");
         occurred = DateTimeOffset.UtcNow;
         var content = new JsonObject(new KeyValuePair<string, JsonNode>[]
         {
-            new(nameof(given.MyEvent.Something).ToCamelCase(), MyEvent.Something)
+            new(nameof(given.MyEvent.Something).ToCamelCase(), MyEvent.Something),
+            new(nameof(given.MyEvent.SomethingElse).ToCamelCase(), MyEvent.SomethingElse)
         });
         @event = new(
             new(0,

@@ -15,5 +15,5 @@ public class EventSourceIdExpressionResolver : IEventValueProviderExpressionReso
     public bool CanResolve(string expression) => expression == "$eventSourceId";
 
     /// <inheritdoc/>
-    public ValueProvider<AppendedEvent> Resolve(string expression) => EventValueProviders.FromEventSourceId;
+    public ValueProvider<AppendedEvent> Resolve(string expression) => EventValueProviders.EventSourceId;
 }

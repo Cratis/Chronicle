@@ -15,7 +15,7 @@ public static class KeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers))!;
+    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers))!;
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
@@ -28,14 +28,14 @@ public static class KeyResolvers
     {
         return (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
-            var key = EventValueProviders.FromEventContent(keyProperty)(@event);
+            var key = EventValueProviders.EventContent(keyProperty)(@event);
             if (!projection.HasParent)
             {
                 return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
             }
 
             var arrayIndexers = new List<ArrayIndexer>();
-            var parentKey = EventValueProviders.FromEventSourceId(@event);
+            var parentKey = EventValueProviders.EventSourceId(@event);
             arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, key));
             return Task.FromResult(new Key(parentKey, new ArrayIndexers(arrayIndexers)))!;
         };
@@ -53,7 +53,7 @@ public static class KeyResolvers
         return async (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
             var arrayIndexers = new List<ArrayIndexer>();
-            var parentKey = EventValueProviders.FromEventContent(parentKeyProperty)(@event);
+            var parentKey = EventValueProviders.EventContent(parentKeyProperty)(@event);
             var currentProjection = projection;
             while (currentProjection.HasParent)
             {
@@ -74,7 +74,7 @@ public static class KeyResolvers
                 parentKey = resolvedParentKey.Value;
             }
 
-            arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.FromEventSourceId(@event)));
+            arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
 
             return new(parentKey, new ArrayIndexers(arrayIndexers));
         };
