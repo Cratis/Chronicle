@@ -7,7 +7,7 @@ public class when_asking_can_resolve_for_known_expression : given.model_property
 {
     bool result;
 
-    void Because() => result = resolvers.CanResolve(string.Empty, "$eventSourceId");
+    void Because() => result = resolvers.CanResolve(string.Empty, "$add($eventSourceId)");
 
     [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
 }

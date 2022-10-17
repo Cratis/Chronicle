@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties;
 /// </summary>
 public class SubtractExpressionResolver : IModelPropertyExpressionResolver
 {
-    static readonly Regex _regularExpression = new("\\$subtract\\((?<expression>[A-Za-z.]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = new($"\\$subtract\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
     readonly IEventValueProviderExpressionResolvers _eventValueProviderExpressionResolvers;
 
     /// <summary>
