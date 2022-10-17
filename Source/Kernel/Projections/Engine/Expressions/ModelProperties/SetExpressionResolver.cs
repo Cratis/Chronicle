@@ -24,7 +24,7 @@ public class SetExpressionResolver : IModelPropertyExpressionResolver
     }
 
     /// <inheritdoc/>
-    public bool CanResolve(PropertyPath targetProperty, string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);
+    public bool CanResolve(PropertyPath targetProperty, string expression) => _eventValueProviderExpressionResolvers.CanResolve(expression);
 
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, _eventValueProviderExpressionResolvers.Resolve(expression));

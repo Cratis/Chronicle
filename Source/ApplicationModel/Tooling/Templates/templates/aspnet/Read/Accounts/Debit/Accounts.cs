@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Concepts.Accounts;
+
 namespace Read.Accounts.Debit;
 
 [Route("/api/accounts/debit")]
@@ -34,7 +36,7 @@ public class Accounts : Controller
     }
 
     [HttpGet("latest-transactions/{accountId}")]
-    public DebitAccountLatestTransactions LatestTransactions([FromRoute] Guid accountId)
+    public DebitAccountLatestTransactions LatestTransactions([FromRoute] AccountId accountId)
     {
         var items = _latestTransactionsCollection.Find(_ => _.Id == accountId).ToList();
         if (items.Count == 0) return null!;

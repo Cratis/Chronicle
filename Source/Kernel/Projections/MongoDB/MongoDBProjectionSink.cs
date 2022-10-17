@@ -58,7 +58,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<ExpandoObject> FindOrDefault(Key key)
+    public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var collection = GetCollection();
         var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.Value.ToString()));
@@ -73,7 +73,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             return deserialized;
         }
 
-        return new ExpandoObject();
+        return default;
     }
 
     /// <inheritdoc/>

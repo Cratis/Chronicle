@@ -26,10 +26,10 @@ public class ModelPropertyExpressionResolvers : IModelPropertyExpressionResolver
 
         _resolvers = new IModelPropertyExpressionResolver[]
             {
-                new SetExpressionResolver(_eventValueProviderExpressionResolvers),
                 new AddExpressionResolver(_eventValueProviderExpressionResolvers),
                 new SubtractExpressionResolver(_eventValueProviderExpressionResolvers),
-                new CountExpressionResolver()
+                new CountExpressionResolver(),
+                new SetExpressionResolver(_eventValueProviderExpressionResolvers)
             };
     }
 

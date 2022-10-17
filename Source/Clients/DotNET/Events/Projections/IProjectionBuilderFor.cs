@@ -33,16 +33,16 @@ public interface IProjectionBuilderFor<TModel>
     IProjectionBuilderFor<TModel> NotRewindable();
 
     /// <summary>
-    /// Sets the initial values to use for a new model instance.
+    /// Sets the initial state to use for new instances of the model.
     /// </summary>
-    /// <param name="initialValueProviderCallback">Builder callback.</param>
+    /// <param name="initialModelStateProviderCallback">Callback for providing an instance of the model representing the initial state.</param>
     /// <returns>Builder continuation.</returns>
     /// <remarks>
-    /// If one does not provide initial values, the projection engine will leave properties
+    /// If one does not provide initial state, the projection engine will leave properties
     /// out that hasn't been met by an event projection expression. This will effectively render
     /// the properties null and might not be desirable when reading instances of the models.
     /// </remarks>
-    IProjectionBuilderFor<TModel> WithInitialValues(Func<TModel> initialValueProviderCallback);
+    IProjectionBuilderFor<TModel> WithInitialModelState(Func<TModel> initialModelStateProviderCallback);
 
     /// <summary>
     /// Start building a from expressions for a specific event type.

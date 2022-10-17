@@ -11,6 +11,7 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
 
     public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
         builder
+            .WithInitialModelState(() => new(Guid.Empty, string.Empty, Guid.Empty, 0, false, DateTimeOffset.MinValue))
             .From<DebitAccountOpened>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
                 .Set(model => model.Owner).To(@event => @event.Owner)
