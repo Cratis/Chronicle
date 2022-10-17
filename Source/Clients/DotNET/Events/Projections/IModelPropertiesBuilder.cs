@@ -42,14 +42,14 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <summary>
     /// Define what key to use based on a composite of properties within the event.
     /// </summary>
-    /// <param name="keyAccessor"></param>
+    /// <param name="keyAccessor">Variable params holding expressions representing properties making up the composite.</param>
     /// <returns>Builder continuation.</returns>
     TBuilder UsingCompositeKey(params Expression<Func<TEvent, object>>[] keyAccessor);
 
     /// <summary>
     /// Define what key to use based on a composite of properties within the <see cref="EventContext"/>.
     /// </summary>
-    /// <param name="keyAccessor"></param>
+    /// <param name="keyAccessor">Variable params holding expressions representing properties making up the composite.</param>
     /// <returns>Builder continuation.</returns>
     TBuilder UsingCompositeKeyFromContext(params Expression<Func<EventContext, object>>[] keyAccessor);
 

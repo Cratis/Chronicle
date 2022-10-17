@@ -16,6 +16,10 @@ public class ModelPropertyExpressionResolvers : IModelPropertyExpressionResolver
     readonly IModelPropertyExpressionResolver[] _resolvers;
     readonly IEventValueProviderExpressionResolvers _eventValueProviderExpressionResolvers;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelPropertyExpressionResolvers"/> class.
+    /// </summary>
+    /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> to use for value provider resolvers.</param>
     public ModelPropertyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers)
     {
         _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
