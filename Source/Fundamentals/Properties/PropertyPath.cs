@@ -265,14 +265,18 @@ public class PropertyPath
 
         foreach (var segment in Segments)
         {
+            if (currentType is null) break;
+
             currentPropertyInfo =
                 currentType.GetProperty(segment.Value, BindingFlags.Public | BindingFlags.Instance) ??
                 currentType.GetProperty(segment.Value.ToPascalCase(), BindingFlags.Public | BindingFlags.Instance);
+
+            currentType = currentPropertyInfo?.PropertyType;
         }
 
         if (currentPropertyInfo is null)
         {
-            throw new UnableToResolvePropertyPathOnType(currentType, this);
+            throw new UnableToResolvePropertyPathOnType(rootType, this);
         }
 
         return currentPropertyInfo;
