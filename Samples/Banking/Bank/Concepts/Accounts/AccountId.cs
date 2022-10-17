@@ -5,6 +5,7 @@ namespace Concepts.Accounts;
 
 public record AccountId(Guid Value) : ConceptAs<Guid>(Value)
 {
+    public static implicit operator AccountId(Guid value) => new(value);
     public static implicit operator AccountId(string value) => new(Guid.Parse(value));
     public static implicit operator AccountId(EventSourceId value) => new(Guid.Parse(value.Value));
     public static implicit operator EventSourceId(AccountId value) => new(value.ToString());

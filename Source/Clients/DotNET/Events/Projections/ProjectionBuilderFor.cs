@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Models;
@@ -31,7 +32,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     bool _isRewindable = true;
     string _modelName;
     string? _name;
-    JsonDocument? _initialValues;
+    JsonObject _initialState = (JsonObject)JsonNode.Parse("{}")!;
     EventType? _removedWithEvent;
 
     /// <summary>
@@ -83,10 +84,10 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> WithInitialValues(Func<TModel> initialValueProviderCallback)
+    public IProjectionBuilderFor<TModel> WithInitialModelState(Func<TModel> initialModelStateProviderCallback)
     {
-        var instance = initialValueProviderCallback();
-        _initialValues = JsonSerializer.SerializeToDocument(instance, typeof(TModel), _jsonSerializerOptions);
+        var instance = initialModelStateProviderCallback();
+        _initialState = JsonObject.Create(JsonSerializer.SerializeToDocument(instance, typeof(TModel), _jsonSerializerOptions).RootElement)!;
         return this;
     }
 
@@ -146,7 +147,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
             _name ?? modelType.FullName ?? "[N/A]",
             new ModelDefinition(_modelName, modelSchema.ToJson()),
             _isRewindable,
-            _initialValues ?? JsonDocument.Parse("{}"),
+            _initialState,
             _fromDefinitions,
             _joinDefinitions,
             _childrenDefinitions,

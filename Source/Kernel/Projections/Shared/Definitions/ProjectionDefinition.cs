@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections.Definitions;
@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Events.Projections.Definitions;
 /// <param name="Name">Friendly display name of the projection.</param>
 /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
 /// <param name="IsRewindable">Whether or not the projection is rewindable.</param>
-/// <param name="InitialValues">The initial values to use with the model for new instances.</param>
+/// <param name="InitialModelState">The initial state to use for new instances of the model.</param>
 /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Join">All the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
@@ -23,7 +23,7 @@ public record ProjectionDefinition(
     ProjectionName Name,
     ModelDefinition Model,
     bool IsRewindable,
-    JsonDocument InitialValues,
+    JsonObject InitialModelState,
     IDictionary<EventType, FromDefinition> From,
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,

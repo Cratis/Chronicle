@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -15,6 +16,11 @@ public interface IProjection
     /// Gets the unique identifier of the <see cref="IProjection"/>.
     /// </summary>
     ProjectionId Identifier { get; }
+
+    /// <summary>
+    /// Gets the initial state used for each model instance.
+    /// </summary>
+    ExpandoObject InitialModelState { get; }
 
     /// <summary>
     /// Gets the name of the projection.

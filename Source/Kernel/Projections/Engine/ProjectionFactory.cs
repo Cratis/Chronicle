@@ -1,8 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Expressions;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using NJsonSchema;
 
@@ -56,6 +59,7 @@ public class ProjectionFactory : IProjectionFactory
 
         var projection = new Projection(
             projectionDefinition.Identifier,
+            projectionDefinition.InitialModelState?.AsExpandoObject() ?? new ExpandoObject(),
             name,
             path,
             childrenAccessorProperty,

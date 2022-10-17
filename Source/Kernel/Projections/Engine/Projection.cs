@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Events.Store;
@@ -18,6 +19,9 @@ public class Projection : IProjection
 
     /// <inheritdoc/>
     public ProjectionId Identifier { get; }
+
+    /// <inheritdoc/>
+    public ExpandoObject InitialModelState { get; }
 
     /// <inheritdoc/>
     public ProjectionName Name { get; }
@@ -56,6 +60,7 @@ public class Projection : IProjection
     /// Initializes a new instance of the <see cref="Projection"/> class.
     /// </summary>
     /// <param name="identifier">The unique identifier of the projection.</param>
+    /// <param name="initialModelState">The initial state to use for new model instances.</param>
     /// <param name="name">The name of the projection.</param>
     /// <param name="path">The qualified path of the projection.</param>
     /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
@@ -64,6 +69,7 @@ public class Projection : IProjection
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
         ProjectionId identifier,
+        ExpandoObject initialModelState,
         ProjectionName name,
         ProjectionPath path,
         PropertyPath childrenPropertyPath,
@@ -72,6 +78,7 @@ public class Projection : IProjection
         IEnumerable<IProjection> childProjections)
     {
         Identifier = identifier;
+        InitialModelState = initialModelState;
         Name = name;
         Model = model;
         IsRewindable = rewindable;

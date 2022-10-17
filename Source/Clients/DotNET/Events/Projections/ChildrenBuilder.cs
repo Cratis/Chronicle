@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
@@ -28,7 +29,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
     readonly string _modelName;
     string _identifiedBy = string.Empty;
     EventType? _removedWithEvent;
-    JsonDocument? _initialValues;
+    JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
 
     /// <summary>
     /// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -51,7 +52,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
     public IChildrenBuilder<TParentModel, TChildModel> WithInitialValues(Func<TChildModel> initialValueProviderCallback)
     {
         var instance = initialValueProviderCallback();
-        _initialValues = JsonSerializer.SerializeToDocument(instance, typeof(TChildModel), _jsonSerializerOptions);
+        _initialValues = JsonObject.Create(JsonSerializer.SerializeToDocument(instance, typeof(TChildModel), _jsonSerializerOptions).RootElement)!;
         return this;
     }
 
@@ -104,7 +105,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
         return new ChildrenDefinition(
             _identifiedBy,
             new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
-            _initialValues ?? JsonDocument.Parse("{}"),
+            _initialValues,
             _fromDefinitions,
             _joinDefinitions,
             _childrenDefinitions,
