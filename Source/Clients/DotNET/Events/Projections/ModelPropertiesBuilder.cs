@@ -17,9 +17,14 @@ namespace Aksio.Cratis.Events.Projections;
 public class ModelPropertiesBuilder<TModel, TEvent, TBuilder> : IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
 {
+    #pragma warning disable CA1051 // Visible instance fields
+    #pragma warning disable SA1600 // Elements should be documented
+    #pragma warning disable SA1629, CA1002, MA0016 // Return abstract
     protected readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
     protected string? _parentKey;
     protected string? _key;
+    #pragma warning restore CA1629, CA1002, MA0016 // Return abstract
+    #pragma warning restore CA1600 // Elements should be documented
 
     /// <inheritdoc/>
     public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)

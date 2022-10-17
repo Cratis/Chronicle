@@ -16,7 +16,7 @@ public interface IChildrenBuilder<TParentModel, TChildModel>
     /// <summary>
     /// Sets the initial values to use for a new model instance.
     /// </summary>
-    /// <param name="initialValueProviderCallback"></param>
+    /// <param name="initialValueProviderCallback">Callback for building.</param>
     /// <returns>Builder continuation.</returns>
     /// <remarks>
     /// If one does not provide initial values, the projection engine will leave properties
