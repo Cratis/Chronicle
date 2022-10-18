@@ -1,3 +1,10 @@
+# [v6.11.7] - 2022-10-18 [PR: #541](https://github.com/aksio-insurtech/Cratis/pull/541)
+
+### Fixed
+
+- `JsonSerializer` was referenced wrongly within `DerivedType`.
+
+
 # [v6.11.6] - 2022-10-14 [PR: #536](https://github.com/aksio-insurtech/Cratis/pull/536)
 
 ### Fixed
