@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_CompositeF
 
 public class when_asking_can_resolve_for_regular_property : Specification
 {
-    CompositeValueProviderExpressionResolver resolvers;
+    CompositeFromEventContextValueProviderExpressionResolver resolvers;
     bool result;
 
     void Establish() => resolvers = new();
