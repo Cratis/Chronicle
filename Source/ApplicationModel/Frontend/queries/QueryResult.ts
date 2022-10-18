@@ -1,8 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Constructor } from '@aksio/cratis-fundamentals';
-import { JsonSerializer } from '@aksio/cratis-fundamentals/JsonSerializer';
+import { Constructor, JsonSerializer } from '@aksio/cratis-fundamentals';
 
 type QueryResultFromServer<TDataType> = {
     data: TDataType;
