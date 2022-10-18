@@ -23,6 +23,6 @@ public class CompositeFromEventContextValueProviderExpressionResolver : IEventVa
         var match = _regularExpression.Match(expression);
         var properties = match.Groups["properties"].Value;
         var propertyPaths = properties.Split(',').Select(_ => (PropertyPath)_.Trim());
-        return EventValueProviders.EventContentComposite(propertyPaths);
+        return EventValueProviders.EventContextComposite(propertyPaths);
     }
 }

@@ -3,9 +3,9 @@
 
 namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_CompositeFromEventContextValueProviderExpressionResolver;
 
-public class when_trying_to_resolve_valid_event_content_expression : given.an_appended_event
+public class when_trying_to_resolve_valid_composite_event_context_expression : given.an_appended_event
 {
-    CompositeValueProviderExpressionResolver resolver;
+    CompositeFromEventContextValueProviderExpressionResolver resolver;
     object result;
 
     void Establish() => resolver = new();

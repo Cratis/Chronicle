@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.EventValues;
 /// </summary>
 public class CompositeValueProviderExpressionResolver : IEventValueProviderExpressionResolver
 {
-    static readonly Regex _regularExpression = new("\\$compositeFromContext\\((?<properties>.*?)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = new("\\$composite\\((?<properties>.*?)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
     /// <inheritdoc/>
     public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;
@@ -23,6 +23,6 @@ public class CompositeValueProviderExpressionResolver : IEventValueProviderExpre
         var match = _regularExpression.Match(expression);
         var properties = match.Groups["properties"].Value;
         var propertyPaths = properties.Split(',').Select(_ => (PropertyPath)_.Trim());
-        return EventValueProviders.EventContextComposite(propertyPaths);
+        return EventValueProviders.EventContentComposite(propertyPaths);
     }
 }
