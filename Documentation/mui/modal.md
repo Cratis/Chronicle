@@ -9,6 +9,20 @@ The goal of the modal dialog encapsulation is:
 - Encourage separation of dialogs into their own components
 - Take out the verbosity of all the MUI artifacts for building up a dialog
 
+## ModalProvider
+
+For the modals to work, it needs a provider typically added at the top level of your application.
+
+```tsx
+import { ModalProvider } from '@aksio/cratis-mui';
+
+ReactDOM.render(
+    <ModalProvider>
+        {/* ... rest of your application... */}
+    </ModalProvider>
+)
+```
+
 ## useModal hook
 
 The `useModal` hook gives you a simple way of using the standardized modals.
@@ -39,7 +53,7 @@ For simple confirmation dialogs where one wants to ask a question and let the us
 by clicking ok/cancel or yes/no is a very common scenario in applications.
 
 ```tsx
-import { useModal, ModalResult } from '@aksio/cratis-mui';
+import { useModal, ModalButtons, ModalResult } from '@aksio/cratis-mui';
 
 export const Transfer = () => {
     const [amount, setAmount] = useState(0);
@@ -75,6 +89,8 @@ Instead of passing a string to the `useModal` hook for the content, you can pass
 Lets say you have a modal for editing a bank accounts details:
 
 ```tsx
+import { IModalProps } from '@aksio/cratis-mui';
+
 export interface EditAccountInput {
     name: string;
     description: string;
@@ -110,7 +126,7 @@ export const EditAccountDetails =  (props: IModalProps<EditAccountInput, EditAcc
 > return the state from the dialog.
 
 ```tsx
-import { useModal, ModalResult } from '@aksio/cratis-mui';
+import { useModal, ModalButtons, ModalResult } from '@aksio/cratis-mui';
 import { EditAccountDetails } from './EditAccountDetails';
 
 type BankAccount = {
@@ -155,3 +171,33 @@ export const BankAccounts = () => {
 
 > Note: Since the `EditAccountDetails` component specifies an input type, we can't just call it without
 > passing a value. So the buttons `onClick` calls a method that forwards values from the `selectedBankAccount`.
+
+If you don't need any input, the component can just pass `{}` to the first generic argument:
+
+```tsx
+import { IModalProps } from '@aksio/cratis-mui';
+
+export interface CreateAccountOutput {
+    name: string;
+    description: string;
+}
+
+export const CreateAccount =  (props: IModalProps<{}}, CreateAccountOutput>) => {
+    const [name, setName] = useState(props.input.name);
+    const [description, setDescription] = useState(props.input.description);
+
+    props.onClose(result => {
+        return {
+            name,
+            description
+        }
+    });
+
+    return (
+        <div>
+            <TextField label='Name' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
+            <TextField label='Description' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
+        </div>
+    );
+};
+```
