@@ -1,3 +1,10 @@
+# [v6.11.8] - 2022-10-19 [PR: #543](https://github.com/aksio-insurtech/Cratis/pull/543)
+
+### Added
+
+- MUI package with utilities when working with MUI/Material. Currently only has an encapsulation for modals. See docs for more details.
+
+
 # [v6.11.7] - 2022-10-18 [PR: #541](https://github.com/aksio-insurtech/Cratis/pull/541)
 
 ### Fixed
