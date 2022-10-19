@@ -6,9 +6,9 @@ import { ModalButtons } from './Modal';
 import { ModalContext, OnCloseCallback } from './ModalContext';
 
 export enum ModalResult {
-    Success,
-    Failed,
-    Dismissed
+    success,
+    failed,
+    dismissed
 }
 
 export type ShowModal<T = {}> = (input?: T) => void;
