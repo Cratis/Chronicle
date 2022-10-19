@@ -16,6 +16,8 @@
   href: clients/toc.yml
 - name: Application Model
   href: application-model/toc.yml
+- name: MUI Support
+  href: mui/toc.yml
 - name: Kernel
   href: kernel/toc.yml
 - name: Writing automated specs / tests
