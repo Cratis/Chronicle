@@ -23,11 +23,11 @@ export interface IModalRenderProps {
 
 export const Modal = (props: IModalRenderProps) => {
     const success = () => {
-        props.closeModal?.(ModalResult.Success);
+        props.closeModal?.(ModalResult.success);
     };
 
     const dismiss = () => {
-        props.closeModal?.(ModalResult.Dismissed);
+        props.closeModal?.(ModalResult.dismissed);
     };
 
     return (
