@@ -1,0 +1,32 @@
+{
+    "name": "@aksio/cratis-mui",
+    "version": "1.0.0",
+    "description": "",
+    "author": "Aksio Insurtech",
+    "license": "MIT",
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "dist",
+        "**/*.ts"
+    ],
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "typings": "dist/index.d.ts",
+    "scripts": {
+        "prepublish": "yarn build",
+        "clean": "tsc -b --clean",
+        "build": "tsc -b",
+        "lint": "eslint --cache . --ext .ts,.tsx --quiet --fix",
+        "lint:ci": "eslint --cache . --ext .ts,.tsx --quiet",
+        "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha",
+        "ci": "yarn clean && yarn lint:ci && yarn test && yarn build",
+        "up": "ncu -u \\!'@aksio/*'"
+    },
+    "dependencies": {
+        "@aksio/cratis-typescript": "1.0.0",
+        "@mui/material": "5.10.10"
+    },
+    "devDependencies": {}
+}
