@@ -1,5 +1,7 @@
 # Modal Dialogs
 
+> Part of the [@aksio/cratis-mui](https://www.npmjs.com/package/@aksio/cratis-mui) package.
+
 The goal of the modal dialog encapsulation is:
 
 - Provide a way for simple dialogs with a description and just ok/cancel or yes/no buttons
