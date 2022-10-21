@@ -4,17 +4,17 @@
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections.Expressions;
+namespace Aksio.Cratis.Events.Projections.Expressions.EventValues;
 
 /// <summary>
-/// Defines a resolver of expressions for providing values from events.
+/// Defines a system for resolving a event value provider expression. It represents known expression resolvers in the system.
 /// </summary>
-public interface IEventValueProviderExpressionResolver
+public interface IEventValueProviderExpressionResolvers
 {
     /// <summary>
-    /// Called to check if the resolver can resolve the expression.
+    /// Called to verify if the resolver can resolve the expression.
     /// </summary>
-    /// <param name="expression">Expression to check.</param>
+    /// <param name="expression">Expression to resolve.</param>
     /// <returns>True if it can resolve, false if not.</returns>
     bool CanResolve(string expression);
 
@@ -22,6 +22,6 @@ public interface IEventValueProviderExpressionResolver
     /// Called to resolve the expression.
     /// </summary>
     /// <param name="expression">Expression to resolve.</param>
-    /// <returns><see cref="ValueProvider{Event}"/> it resolves to.</returns>
+    /// <returns><see cref="PropertyMapper{Event, ExpandoObject}"/> it resolves to.</returns>
     ValueProvider<AppendedEvent> Resolve(string expression);
 }

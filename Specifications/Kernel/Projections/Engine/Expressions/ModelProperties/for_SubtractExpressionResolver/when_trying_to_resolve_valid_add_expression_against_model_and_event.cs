@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties.for_SubtractExpressionResolver;

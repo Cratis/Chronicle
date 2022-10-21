@@ -5,6 +5,7 @@ using System.Dynamic;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Expressions;
+using Aksio.Cratis.Events.Projections.Expressions.Keys;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using NJsonSchema;
@@ -17,14 +18,19 @@ namespace Aksio.Cratis.Events.Projections;
 public class ProjectionFactory : IProjectionFactory
 {
     readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
+    readonly IKeyExpressionResolvers _keyExpressionResolvers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
     /// </summary>
     /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
-    public ProjectionFactory(IModelPropertyExpressionResolvers propertyMapperExpressionResolvers)
+    /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
+    public ProjectionFactory(
+        IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
+        IKeyExpressionResolvers keyExpressionResolvers)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
+        _keyExpressionResolvers = keyExpressionResolvers;
     }
 
     /// <inheritdoc/>
@@ -104,9 +110,9 @@ public class ProjectionFactory : IProjectionFactory
         {
             keyResolver = KeyResolvers.FromParentHierarchy(projection, from.ParentKey!, actualIdentifiedByProperty);
         }
-        else if (!string.IsNullOrEmpty(from.Key))
+        else if (!string.IsNullOrEmpty(from.Key) && _keyExpressionResolvers.CanResolve(from.Key))
         {
-            keyResolver = KeyResolvers.FromEventContent(projection, from.Key, actualIdentifiedByProperty);
+            keyResolver = _keyExpressionResolvers.Resolve(projection, from.Key, actualIdentifiedByProperty);
         }
         else
         {

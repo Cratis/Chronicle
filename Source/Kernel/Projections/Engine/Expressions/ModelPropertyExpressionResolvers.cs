@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Events.Projections.Expressions.ModelProperties;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;

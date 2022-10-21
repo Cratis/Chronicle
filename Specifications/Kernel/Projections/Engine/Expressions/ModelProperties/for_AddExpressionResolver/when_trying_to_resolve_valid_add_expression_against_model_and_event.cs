@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 
