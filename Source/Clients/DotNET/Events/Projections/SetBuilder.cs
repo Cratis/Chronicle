@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Events.Projections.Expressions;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
@@ -16,11 +17,10 @@ namespace Aksio.Cratis.Events.Projections;
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISetBuilder<TModel, TEvent, TProperty, TParentBuilder>
-    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
 {
     readonly TParentBuilder _parent;
     readonly bool _forceEventProperty;
-    string _expression = string.Empty;
+    IEventValueExpression? _expression;
 
     /// <inheritdoc/>
     public PropertyPath TargetProperty { get; }
@@ -41,7 +41,7 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISetBuilder
     /// <inheritdoc/>
     public TParentBuilder To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        _expression = eventPropertyAccessor.GetPropertyPath();
+        _expression = new EventContentPropertyExpression(eventPropertyAccessor.GetPropertyPath());
         return _parent;
     }
 
@@ -49,24 +49,31 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISetBuilder
     public TParentBuilder ToEventSourceId()
     {
         ThrowIfOnlyEventPropertyIsSupported();
-
-        _expression = "$eventSourceId";
+        _expression = new EventSourceIdExpression();
         return _parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
-        var property = eventContextPropertyAccessor.GetPropertyPath();
-        _expression = $"$eventContext({property})";
-
+        _expression = new EventContextPropertyExpression(eventContextPropertyAccessor.GetPropertyPath());
         return _parent;
     }
 
     /// <inheritdoc/>
     public string Build()
     {
-        return _expression;
+        ThrowIfMissingToExpression();
+
+        return _expression!.Build();
+    }
+
+    void ThrowIfMissingToExpression()
+    {
+        if (_expression is null)
+        {
+            throw new MissingToExpression(typeof(TModel), typeof(TEvent), TargetProperty);
+        }
     }
 
     void ThrowIfOnlyEventPropertyIsSupported()

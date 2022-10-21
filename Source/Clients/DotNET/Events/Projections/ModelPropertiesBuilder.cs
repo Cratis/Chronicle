@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using Aksio.Cratis.Concepts;
+using Aksio.Cratis.Events.Projections.Expressions;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Reflection;
 
@@ -17,26 +18,26 @@ namespace Aksio.Cratis.Events.Projections;
 public class ModelPropertiesBuilder<TModel, TEvent, TBuilder> : IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     where TBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TBuilder>
 {
-    #pragma warning disable CA1051 // Visible instance fields
-    #pragma warning disable SA1600 // Elements should be documented
-    #pragma warning disable SA1629, CA1002, MA0016 // Return abstract
+#pragma warning disable CA1051 // Visible instance fields
+#pragma warning disable SA1600 // Elements should be documented
+#pragma warning disable SA1629, CA1002, MA0016 // Return abstract
     protected readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
-    protected string? _parentKey;
-    protected string? _key;
-    #pragma warning restore CA1629, CA1002, MA0016 // Return abstract
-    #pragma warning restore CA1600 // Elements should be documented
+    protected IKeyBuilder _parentKey = new KeyBuilder(new EventSourceIdExpression());
+    protected IKeyBuilder _key = new KeyBuilder(new EventSourceIdExpression());
+#pragma warning restore CA1629, CA1002, MA0016 // Return abstract
+#pragma warning restore CA1600 // Elements should be documented
 
     /// <inheritdoc/>
     public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _key = keyAccessor.GetPropertyPath();
+        _key = new KeyBuilder(new EventContentPropertyExpression(keyAccessor.GetPropertyPath()));
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _parentKey = keyAccessor.GetPropertyPath();
+        _parentKey = new KeyBuilder(new EventContentPropertyExpression(keyAccessor.GetPropertyPath()));
         return (this as TBuilder)!;
     }
 
@@ -44,10 +45,10 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder> : IModelProperties
     public TBuilder UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public TBuilder UsingCompositeKey(params Expression<Func<TEvent, object>>[] keyAccessor) => throw new NotImplementedException();
+    public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public TBuilder UsingCompositeKeyFromContext(params Expression<Func<EventContext, object>>[] keyAccessor) => throw new NotImplementedException();
+    public TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IAddBuilder<TModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
