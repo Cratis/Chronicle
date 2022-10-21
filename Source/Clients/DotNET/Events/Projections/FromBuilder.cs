@@ -15,6 +15,6 @@ public class FromBuilder<TModel, TEvent> : ModelPropertiesBuilder<TModel, TEvent
     /// <inheritdoc/>
     public FromDefinition Build() => new(
         Properties: _propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()),
-        Key: _key,
-        ParentKey: _parentKey);
+        Key: _key.Build(),
+        ParentKey: _parentKey.Build());
 }

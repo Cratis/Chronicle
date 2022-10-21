@@ -14,7 +14,6 @@ namespace Aksio.Cratis.Events.Projections;
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 public interface ISetBuilder<TModel, TEvent, TProperty, TParentBuilder> : IPropertyExpressionBuilder
-    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
 {
     /// <summary>
     /// Straight map to a property on the event.
