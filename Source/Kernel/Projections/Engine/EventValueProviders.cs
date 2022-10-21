@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Store;
@@ -32,28 +31,6 @@ public static class EventValueProviders
     }
 
     /// <summary>
-    /// Create a <see cref="ValueProvider{T}"/> that provides a composite value based on multiple properties in the event content.
-    /// </summary>
-    /// <param name="sourceProperties">Source properties.</param>
-    /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> EventContentComposite(IEnumerable<PropertyPath> sourceProperties)
-    {
-        return (AppendedEvent @event) =>
-        {
-            var builder = new StringBuilder();
-            foreach (var property in sourceProperties)
-            {
-                if (builder.Length > 0)
-                {
-                    builder.Append("+");
-                }
-                builder.Append(GetValueFromEventContent(@event, property));
-            }
-            return builder.ToString();
-        };
-    }
-
-    /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that provides a value from the <see cref="Store.EventContext"/>.
     /// </summary>
     /// <param name="sourceProperty">Property on the context.</param>
@@ -62,28 +39,6 @@ public static class EventValueProviders
     {
         var property = sourceProperty.GetPropertyInfoFor<EventContext>();
         return (AppendedEvent @event) => property.GetValue(@event.Context)!;
-    }
-
-    /// <summary>
-    /// Create a <see cref="ValueProvider{T}"/> that provides a composite value based on multiple properties in the event context.
-    /// </summary>
-    /// <param name="sourceProperties">Source properties.</param>
-    /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> EventContextComposite(IEnumerable<PropertyPath> sourceProperties)
-    {
-        return (AppendedEvent @event) =>
-        {
-            var builder = new StringBuilder();
-            foreach (var sourceProperty in sourceProperties)
-            {
-                if (builder.Length > 0)
-                {
-                    builder.Append("+");
-                }
-                builder.Append(sourceProperty.GetValue(@event.Context, ArrayIndexers.NoIndexers));
-            }
-            return builder.ToString();
-        };
     }
 
     /// <summary>
