@@ -61,7 +61,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var collection = GetCollection();
-        var serializedKey = key.Value.ToBsonDocument();
+
+        var serializedKey = GetBsonValueFrom(key.Value);
         var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", serializedKey));
         var instance = result.SingleOrDefault();
         if (instance != default)
@@ -84,7 +85,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         UpdateDefinition<BsonDocument>? updateBuilder = default;
         var hasChanges = false;
 
-        var serializedKey = key.Value.ToBsonDocument();
+        var serializedKey = GetBsonValueFrom(key.Value);
         var filter = Builders<BsonDocument>.Filter.Eq("_id", serializedKey);
         var collection = GetCollection();
 
@@ -229,6 +230,17 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+    }
+
+    BsonValue GetBsonValueFrom(object value)
+    {
+        var type = value.GetType();
+        if (type.IsPrimitive || type == typeof(Guid) || type == typeof(string))
+        {
+            return BsonValue.Create(value);
+        }
+
+        return value.ToBsonDocument();
     }
 
     void HandleValueConversion(BsonDocument instance, IDictionary<string, object> objectInstance)
