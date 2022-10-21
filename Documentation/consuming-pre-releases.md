@@ -19,17 +19,36 @@ from for instance `aksio-insurtech/cratis:latest-development` to the specific on
 
 ## NuGet
 
-All Docker container images can be found [here](https://github.com/orgs/aksio-insurtech/packages?ecosystem=nuget).
+All NuGet container images can be found [here](https://github.com/orgs/aksio-insurtech/packages?ecosystem=nuget).
 
-NuGet supports having multiple sources, you can simply add a source through having a local `NuGet.Config` file at the root of your
-repository and add the pre-release source for it as follows:
+To consume packages, you'll need to configure either your global or local to your NuGet project. To start with you'll need a GitHub personal access token,
+read the [GitHub documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) on how this works.
+
+NuGet supports having multiple sources, if you want to configure this globally available for all projects on your computer you can simply add a source using the dotnet CLI:
+
+```shell
+dotnet nuget add source --username USERNAME --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name aksio "https://nuget.pkg.github.com/aksio-insurtech/index.json"
+```
+
+If you want to set it up locally for your repository, you can drop inn a `NuGet.Config` file into your repository configured with the username and token.
+
+> Note: The token is your personal access token, and if it is a read only token it is safe for other users to use. But if it has write access to anything, you should
+> not share this token with anyone.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
     <packageSources>
-        <add key="CratisPreReleases" value="https://nuget.pkg.github.com/aksio-insurtech/index.json" />
+        <add key="AksioPreReleases" value="https://nuget.pkg.github.com/aksio-insurtech/index.json" />
     </packageSources>
+
+
+    <packageSourceCredentials>
+        <AksioPreReleases>
+            <add key="Username" value="USERNAME" />
+            <add key="cleartextpassword" value="TOKEN" />
+        </AksioPreReleases>
+    </packageSourceCredentials>
 </configuration>
 ```
 
@@ -39,6 +58,8 @@ For instance in your `.csproj` file(s):
 ```xml
 <PackageReference Include="Aksio.Cratis" Version="6.11.6-pr537.adedc72"/>
 ```
+
+> For more details, read the [GitHub documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#authenticating-to-github-packages).
 
 ## NPM
 
