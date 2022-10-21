@@ -19,6 +19,12 @@ public interface IProjection : IGrainWithGuidCompoundKey
     Task<JsonObject> GetModelInstanceById(EventSourceId eventSourceId);
 
     /// <summary>
+    /// Refresh the projection definition.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task RefreshDefinition();
+
+    /// <summary>
     /// Ensure the projection exists and is started.
     /// </summary>
     /// <returns>Awaitable task.</returns>

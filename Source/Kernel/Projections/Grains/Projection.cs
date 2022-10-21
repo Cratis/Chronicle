@@ -34,6 +34,11 @@ public class Projection : Grain, IProjection
     EngineProjection? _projection;
     IProjectionPipeline? _pipeline;
     IObserver? _observer;
+    ProjectionId _projectionId;
+    ProjectionDefinition? _definition;
+    ProjectionPipelineDefinition? _pipelineDefinition;
+    TenantId? _tenantId;
+    MicroserviceId? _microserviceId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projection"/> class.
@@ -61,30 +66,42 @@ public class Projection : Grain, IProjection
         _objectsComparer = objectsComparer;
         _eventProvider = eventProvider;
         _executionContextManager = executionContextManager;
+        _projectionId = ProjectionId.NotSet;
     }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
-        var projectionId = this.GetPrimaryKey(out var keyAsString);
+        _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ProjectionKey.Parse(keyAsString);
+        _microserviceId = key.MicroserviceId;
+        _tenantId = key.TenantId;
 
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
 
-        var projectionDefinition = await _projectionDefinitionsProvider().GetFor(projectionId);
-        var pipelineDefinition = await _projectionPipelineDefinitionsProvider().GetFor(projectionId);
-        _projection = await _projectionFactory.CreateFrom(projectionDefinition);
-        _pipeline = _projectionPipelineFactory.CreateFrom(_projection, pipelineDefinition);
+        await RefreshDefinition();
 
-        _observer = GrainFactory.GetGrain<IObserver>(projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
 
         var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
-        var stream = streamProvider.GetStream<AppendedEvent>(projectionId, key);
+        var stream = streamProvider.GetStream<AppendedEvent>(_projectionId, key);
         await stream.SubscribeAsync(HandleEvent);
 
-        await _observer.SetMetadata(projectionDefinition.Name.Value, ObserverType.Projection);
-        await _observer.Subscribe(_projection.EventTypes, key.ToString());
+        await _observer.SetMetadata(_definition!.Name.Value, ObserverType.Projection);
+        await _observer.Subscribe(_projection!.EventTypes, key.ToString());
+    }
+
+    /// <inheritdoc/>
+    public async Task RefreshDefinition()
+    {
+        // TODO: This is a temporary work-around till we fix #264 & #265
+        _executionContextManager.Establish(_tenantId!, CorrelationId.New(), _microserviceId);
+
+        _definition = await _projectionDefinitionsProvider().GetFor(_projectionId);
+        _pipelineDefinition = await _projectionPipelineDefinitionsProvider().GetFor(_projectionId);
+        _projection = await _projectionFactory.CreateFrom(_definition);
+        _pipeline = _projectionPipelineFactory.CreateFrom(_projection, _pipelineDefinition);
     }
 
     /// <inheritdoc/>
