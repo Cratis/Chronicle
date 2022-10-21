@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.ObjectModel;
 using System.Security.Cryptography;
 using System.Text;
 using Concepts;
@@ -14,10 +15,12 @@ namespace Read.AccountHolders;
 public class AccountHolderWithAccountsObserver
 {
     readonly IMongoCollection<AccountHolderWithAccounts> _collection;
+    readonly IImmediateProjections _immediateProjections;
 
-    public AccountHolderWithAccountsObserver(IMongoCollection<AccountHolderWithAccounts> collection)
+    public AccountHolderWithAccountsObserver(IMongoCollection<AccountHolderWithAccounts> collection, IImmediateProjections immediateProjections)
     {
         _collection = collection;
+        _immediateProjections = immediateProjections;
     }
 
     public Task AccountHolderRegistered(AccountHolderRegistered @event, EventContext context)
@@ -30,8 +33,9 @@ public class AccountHolderWithAccountsObserver
     public async Task CreditAccountOpened(CreditAccountOpened @event, EventContext context)
     {
         var personId = @event.Owner;
+        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(personId.Value);
         var result = await _collection.FindAsync(_ => _.Id == @event.Owner);
-        var model = result.First();
+        var model = result.FirstOrDefault() ?? (new(personId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>()));
         model.Accounts.Add(new CreditAccount(@context.EventSourceId, @event.Name, AccountType.Credit));
         await _collection.ReplaceOneAsync(_ => _.Id == personId, model, new ReplaceOptions { IsUpsert = true });
     }
@@ -39,8 +43,9 @@ public class AccountHolderWithAccountsObserver
     public async Task DebitAccountOpened(DebitAccountOpened @event, EventContext context)
     {
         var personId = @event.Owner;
+        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(personId.Value);
         var result = await _collection.FindAsync(_ => _.Id == @event.Owner);
-        var model = result.First();
+        var model = result.FirstOrDefault() ?? (new(personId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>()));
         model.Accounts.Add(new DebitAccount(@context.EventSourceId, @event.Name, AccountType.Debit));
         await _collection.ReplaceOneAsync(_ => _.Id == personId, model, new ReplaceOptions { IsUpsert = true });
     }
