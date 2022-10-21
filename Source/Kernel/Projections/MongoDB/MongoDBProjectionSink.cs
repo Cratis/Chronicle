@@ -61,7 +61,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var collection = GetCollection();
-        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", key.Value.ToString()));
+        var serializedKey = key.Value.ToBsonDocument();
+        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", serializedKey));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
@@ -83,7 +84,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         UpdateDefinition<BsonDocument>? updateBuilder = default;
         var hasChanges = false;
 
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", key.Value.ToString());
+        var serializedKey = key.Value.ToBsonDocument();
+        var filter = Builders<BsonDocument>.Filter.Eq("_id", serializedKey);
         var collection = GetCollection();
 
         if (changeset.HasBeenRemoved())
@@ -159,8 +161,6 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         if (!hasChanges) return;
 
         var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
-        Console.WriteLine(rendered);
-
         await collection.UpdateOneAsync(
             filter,
             updateBuilder,

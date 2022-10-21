@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.Keys;
 /// </summary>
 public class CompositeKeyExpressionResolver : IKeyExpressionResolver
 {
-    static readonly Regex _regularExpression = new("\\$composite\\((?<expressions>.*?)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = new("\\$composite\\((?<expressions>[\\w=$\\({\\).,]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
     readonly IEventValueProviderExpressionResolvers _resolvers;
 
@@ -29,8 +29,8 @@ public class CompositeKeyExpressionResolver : IKeyExpressionResolver
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
         var match = _regularExpression.Match(expression);
-        var properties = match.Groups["expressions"].Value;
-        var expressions = properties.Split(',').Select(_ => _.Trim());
+        var rawExpressions = match.Groups["expressions"].Value;
+        var expressions = rawExpressions.Split(',').Select(_ => _.Trim());
         var propertiesWithKeyValueProviders = expressions.Select(_ =>
         {
             var keyValue = _.Split('=');

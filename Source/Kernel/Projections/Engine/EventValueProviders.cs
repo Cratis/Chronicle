@@ -37,8 +37,7 @@ public static class EventValueProviders
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
     public static ValueProvider<AppendedEvent> EventContext(PropertyPath sourceProperty)
     {
-        var property = sourceProperty.GetPropertyInfoFor<EventContext>();
-        return (AppendedEvent @event) => property.GetValue(@event.Context)!;
+        return (AppendedEvent @event) => sourceProperty.GetValue(@event.Context, ArrayIndexers.NoIndexers)!;
     }
 
     /// <summary>
