@@ -42,13 +42,29 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder> : IModelProperties
     }
 
     /// <inheritdoc/>
-    public TBuilder UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor) => throw new NotImplementedException();
+    public TBuilder UsingKeyFromContext(Expression<Func<TEvent, EventContext>> keyAccessor)
+    {
+        _parentKey = new KeyBuilder(new EventContextPropertyExpression(keyAccessor.GetPropertyPath()));
+        return (this as TBuilder)!;
+    }
 
     /// <inheritdoc/>
-    public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback) => throw new NotImplementedException();
+    public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
+    {
+        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
+        builderCallback(compositeKeyBuilder);
+        _parentKey = compositeKeyBuilder;
+        return (this as TBuilder)!;
+    }
 
     /// <inheritdoc/>
-    public TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback) => throw new NotImplementedException();
+    public TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
+    {
+        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
+        builderCallback(compositeKeyBuilder);
+        _key = compositeKeyBuilder;
+        return (this as TBuilder)!;
+    }
 
     /// <inheritdoc/>
     public IAddBuilder<TModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
