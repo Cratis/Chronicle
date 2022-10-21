@@ -89,6 +89,7 @@ public class Projections : Grain, IProjections
                 var key = new ProjectionKey(_microserviceId, tenant, Store.EventSequenceId.Log);
                 var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
                 await projection.Ensure();
+                await projection.RefreshDefinition();
                 if (isNew)
                 {
                     _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
