@@ -17,7 +17,7 @@ public class DebitAccounts
 
     public DebitAccounts(IEventLog eventLog) => _eventLog = eventLog;
 
-    public Task OpenDebitAccount(AccountName Name, PersonId Owner) => _eventLog.Append(Guid.NewGuid().ToString(), new DebitAccountOpened(Name, Owner));
+    public Task OpenDebitAccount(AccountName Name, CustomerId Owner) => _eventLog.Append(Guid.NewGuid().ToString(), new DebitAccountOpened(Name, Owner));
 }
 ```
 

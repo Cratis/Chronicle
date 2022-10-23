@@ -18,7 +18,7 @@ To create a query, all you need is a model type and a controller with an action 
 Lets start with the model:
 
 ```csharp
-public record DebitAccount(AccountId Id, AccountName Name, PersonId Owner, double Balance);
+public record DebitAccount(AccountId Id, AccountName Name, CustomerId Owner, double Balance);
 ```
 
 > Note: This particular model represents its values as concepts - a value type encapsulation that

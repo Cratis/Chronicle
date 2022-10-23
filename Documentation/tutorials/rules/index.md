@@ -107,7 +107,7 @@ name associated with it. This name makes sense to make sure is unique.
 The action that opens the account takes a complex type; a command:
 
 ```csharp
-public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, CustomerId Owner);
 ```
 
 With this command we can now create rules for it. Start by creating a file in your domain (./Domain/Accounts/Debit) called `OpenDebitAccountRules.cs`.
