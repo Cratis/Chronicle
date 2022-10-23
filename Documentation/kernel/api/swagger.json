@@ -1034,8 +1034,8 @@
       "DeletePIIForPerson": {
         "type": "object",
         "properties": {
-          "personId": {
-            "$ref": "#/components/schemas/PersonId"
+          "CustomerId": {
+            "$ref": "#/components/schemas/CustomerId"
           }
         },
         "additionalProperties": false
@@ -1519,7 +1519,7 @@
         "type": "object",
         "properties": {
           "id": {
-            "$ref": "#/components/schemas/PersonId"
+            "$ref": "#/components/schemas/CustomerId"
           },
           "socialSecurityNumber": {
             "$ref": "#/components/schemas/SocialSecurityNumber"
@@ -1552,7 +1552,7 @@
         },
         "additionalProperties": false
       },
-      "PersonId": {
+      "CustomerId": {
         "type": "object",
         "properties": {
           "value": {

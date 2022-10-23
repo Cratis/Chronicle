@@ -23,7 +23,7 @@ public Task OpenDebitAccount([FromBody] OpenDebitAccount create) => _eventLog.Ap
 And the command in this case looking like:
 
 ```csharp
-public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, CustomerId Owner);
 ```
 
 This all gets generated into a TypeScript representation:

@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Concepts.Accounts;
 using Concepts.Customers;
 
-namespace Domain.Accounts.Debit;
+namespace Domain.Customers;
 
-public record AccountDetails(AccountName Name, CustomerId Owner, CardEnabledOnAccount IncludeCard);
+public record RegisterCustomer(CustomerId CustomerId, FirstName FirstName, LastName LastName, SocialSecurityNumber SocialSecurityNumber);
