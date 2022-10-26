@@ -9,7 +9,7 @@ public class and_issuing_public_event_with_type_that_is_included : given.an_obse
 
     void Establish()
     {
-        filtered = observable.From(new EventType(@event.Metadata.Type.Id, 1, true));
+        filtered = observable.WhereEventTypeEquals(new EventType(@event.Metadata.Type.Id, 1, true));
         filtered.Subscribe(_ => received.Add(_));
     }
 

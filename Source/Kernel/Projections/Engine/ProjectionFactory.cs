@@ -74,7 +74,8 @@ public class ProjectionFactory : IProjectionFactory
             childProjections);
 
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value, actualIdentifiedByProperty)).ToList();
+        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, kvp.Value.ParentKey)).ToList();
+        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
 
         if (projectionDefinition.RemovedWith != default)
         {
@@ -93,7 +94,7 @@ public class ProjectionFactory : IProjectionFactory
         {
             var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
             projection.Event
-                .From(eventType)
+                .WhereEventTypeEquals(eventType)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
@@ -103,16 +104,17 @@ public class ProjectionFactory : IProjectionFactory
         return projection;
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, FromDefinition from, PropertyPath actualIdentifiedByProperty)
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, string key, PropertyPath actualIdentifiedByProperty, string? parentKey = null)
     {
         KeyResolver keyResolver;
-        if (!string.IsNullOrEmpty(from.ParentKey))
+
+        if (!string.IsNullOrEmpty(parentKey))
         {
-            keyResolver = KeyResolvers.FromParentHierarchy(projection, from.ParentKey!, actualIdentifiedByProperty);
+            keyResolver = KeyResolvers.FromParentHierarchy(projection, parentKey, actualIdentifiedByProperty);
         }
-        else if (!string.IsNullOrEmpty(from.Key) && _keyExpressionResolvers.CanResolve(from.Key))
+        else if (!string.IsNullOrEmpty(key) && _keyExpressionResolvers.CanResolve(key))
         {
-            keyResolver = _keyExpressionResolvers.Resolve(projection, from.Key, actualIdentifiedByProperty);
+            keyResolver = _keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
         }
         else
         {

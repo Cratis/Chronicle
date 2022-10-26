@@ -8,8 +8,7 @@ namespace Aksio.Cratis.Events.Projections.Definitions;
 /// <summary>
 /// Represents the definition for join with a specific event.
 /// </summary>
-/// <param name="on">The property representing the model property one is joining on.</param>
+/// <param name="On">The property representing the model property one is joining on.</param>
 /// <param name="Properties">Properties and expressions for each property.</param>
-/// <param name="Key">Optional key expression, represents the key to use for identifying the model instance. If not specified; eventSourceId will be used.</param>
-/// <param name="ParentKey">Optional parent key expression, typically used in child relationships for identifying parent model.</param>
-public record JoinDefinition(PropertyPath on, IDictionary<PropertyPath, string> Properties, string? Key, string? ParentKey);
+/// <param name="Key">Key expression, represents the key to use for identifying the model instance.</param>
+public record JoinDefinition(PropertyPath On, IDictionary<PropertyPath, string> Properties, string Key);
