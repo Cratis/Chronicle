@@ -3,4 +3,7 @@
 
 namespace Concepts.Customers;
 
-public record LastName(string Value) : ConceptAs<string>(Value);
+public record LastName(string Value) : ConceptAs<string>(Value)
+{
+    public static implicit operator LastName(string value) => new(value);
+}
