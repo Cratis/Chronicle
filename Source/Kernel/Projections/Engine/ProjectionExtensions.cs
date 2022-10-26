@@ -43,10 +43,11 @@ public static class ProjectionExtensions
             var onValue = onModelProperty.GetValue(_.Changeset.InitialState, ArrayIndexers.NoIndexers);
             if (onValue is null)
             {
+                Console.WriteLine(onValue);
             }
             else
             {
-                //
+                Console.WriteLine(onValue);
             }
 
             joinSubject.OnNext(_ with
