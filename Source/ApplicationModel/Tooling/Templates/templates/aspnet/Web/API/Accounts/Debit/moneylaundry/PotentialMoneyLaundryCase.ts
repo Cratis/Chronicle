@@ -8,7 +8,7 @@ import { field } from '@aksio/cratis-fundamentals';
 export class PotentialMoneyLaundryCase {
 
     @field(String)
-    personId!: string;
+    customerId!: string;
 
     @field(String)
     accountId!: string;
