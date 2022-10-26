@@ -10,7 +10,7 @@ public class Customers : Controller
 {
     readonly IEventLog _eventLog;
 
-    public  Customers(IEventLog eventLog) => _eventLog = eventLog;
+    public Customers(IEventLog eventLog) => _eventLog = eventLog;
 
     [HttpPost]
     public Task RegisterCustomer(RegisterCustomer command) => _eventLog.Append(command.CustomerId, new CustomerRegistered(command.FirstName, command.LastName, command.SocialSecurityNumber));
