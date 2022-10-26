@@ -40,15 +40,6 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
     /// <summary>
-    /// Define what property on the event represents the parent key, based on a composite of expressions. This is typically used in child relationships
-    /// to identify the parent model to work with.
-    /// </summary>
-    /// <typeparam name="TKeyType">Type of key.</typeparam>
-    /// <param name="builderCallback">Builder callback for building the composite key.</param>
-    /// <returns>Builder continuation.</returns>
-    TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback);
-
-    /// <summary>
     /// Define what key to use based on a composite of expressions.
     /// </summary>
     /// <typeparam name="TKeyType">Type of key.</typeparam>

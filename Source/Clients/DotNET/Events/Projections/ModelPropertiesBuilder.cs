@@ -49,15 +49,6 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder> : IModelProperties
     }
 
     /// <inheritdoc/>
-    public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
-    {
-        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
-        builderCallback(compositeKeyBuilder);
-        _parentKey = compositeKeyBuilder;
-        return (this as TBuilder)!;
-    }
-
-    /// <inheritdoc/>
     public TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
     {
         var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();

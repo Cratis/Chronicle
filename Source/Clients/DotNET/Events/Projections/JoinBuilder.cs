@@ -30,10 +30,9 @@ public class JoinBuilder<TModel, TEvent> : ModelPropertiesBuilder<TModel, TEvent
         ThrowIfMissingOn();
 
         return new(
-            on: _on!,
+            On: _on!,
             Properties: _propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()),
-            Key: _key.Build(),
-            ParentKey: _parentKey.Build());
+            Key: _key.Build());
     }
 
     void ThrowIfMissingOn()
