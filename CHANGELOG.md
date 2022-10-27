@@ -1,3 +1,10 @@
+# [v6.12.1] - 2022-10-27 [PR: #556](https://github.com/aksio-insurtech/Cratis/pull/556)
+
+### Fixed
+
+- Due to #359 the frontend does not get a valid JSON on 200 OK responses. This is now taken into account and it will return a valid command result if this happens.
+
+
 # [v6.12.0] - 2022-10-27 [PR: #537](https://github.com/aksio-insurtech/Cratis/pull/537)
 
 ### Added
