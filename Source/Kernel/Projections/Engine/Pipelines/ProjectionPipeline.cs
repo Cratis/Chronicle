@@ -65,6 +65,7 @@ public class ProjectionPipeline : IProjectionPipeline
         var key = await keyResolver(_eventProvider, @event);
         _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
         var initialState = await Sink.FindOrDefault(key);
+        initialState ??= Projection.InitialModelState;
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset);
         await HandleEventFor(Projection, context);

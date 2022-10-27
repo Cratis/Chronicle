@@ -8,32 +8,34 @@ using Aksio.Cratis.Reflection;
 namespace Aksio.Cratis.Events.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAddBuilder{TModel, TEvent, TProperty}"/>.
+/// Represents an implementation of <see cref="ISubtractBuilder{TModel, TEvent, TProperty, TParentBuilder}"/>.
 /// </summary>
 /// <typeparam name="TModel">Model to build for.</typeparam>
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
-public class SubtractBuilder<TModel, TEvent, TProperty> : ISubtractBuilder<TModel, TEvent, TProperty>
+/// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
+public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISubtractBuilder<TModel, TEvent, TProperty, TParentBuilder>
+    where TParentBuilder : class, IModelPropertiesBuilder<TModel, TEvent, TParentBuilder>
 {
-    readonly IFromBuilder<TModel, TEvent> _parent;
+    readonly TParentBuilder _parent;
     string _expression = string.Empty;
 
     /// <inheritdoc/>
     public PropertyPath TargetProperty { get; }
 
     /// <summary>
-    /// /// Initializes a new instance of the <see cref="SubtractBuilder{TModel, TEvent, TProperty}"/> class.
+    /// /// Initializes a new instance of the <see cref="SubtractBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
     /// </summary>
     /// <param name="parent">Parent builder.</param>
     /// <param name="targetProperty">Target property we're building for.</param>
-    public SubtractBuilder(IFromBuilder<TModel, TEvent> parent, PropertyPath targetProperty)
+    public SubtractBuilder(TParentBuilder parent, PropertyPath targetProperty)
     {
         _parent = parent;
         TargetProperty = targetProperty;
     }
 
     /// <inheritdoc/>
-    public IFromBuilder<TModel, TEvent> With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
+    public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
         _expression = $"$subtract({eventPropertyAccessor.GetPropertyPath()})";
         return _parent;

@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
@@ -21,9 +22,40 @@ public static class ProjectionExtensions
     /// <param name="observable"><see cref="IObservable{T}"/> to filter.</param>
     /// <param name="eventType"><see cref="EventType"/> to filter for.</param>
     /// <returns>Filtered <see cref="IObservable{T}"/>.</returns>
-    public static IObservable<ProjectionEventContext> From(this IObservable<ProjectionEventContext> observable, EventType eventType)
+    public static IObservable<ProjectionEventContext> WhereEventTypeEquals(this IObservable<ProjectionEventContext> observable, EventType eventType)
     {
         return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
+    }
+
+    /// <summary>
+    /// Join with an event.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="onModelProperty">The property on the model to join on.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> Join(
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath onModelProperty)
+    {
+        var joinSubject = new Subject<ProjectionEventContext>();
+        observable.Subscribe(_ =>
+        {
+            var onValue = onModelProperty.GetValue(_.Changeset.InitialState, ArrayIndexers.NoIndexers);
+            if (onValue is null)
+            {
+                Console.WriteLine(onValue);
+            }
+            else
+            {
+                Console.WriteLine(onValue);
+            }
+
+            joinSubject.OnNext(_ with
+            {
+            });
+        });
+        Console.WriteLine(onModelProperty);
+        return joinSubject;
     }
 
     /// <summary>

@@ -41,7 +41,7 @@ public class DebitAccounts : Controller
 The action takes a complex type called `OpenDebitAccount` that looks like this:
 
 ```csharp
-public record OpenDebitAccount(AccountId AccountId, AccountName Name, PersonId Owner);
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, CustomerId Owner);
 ```
 
 This will generate:
@@ -121,7 +121,7 @@ public IEnumerable<DebitAccount> AllAccounts() => _collection.Find(_ => true).To
 And the read model in this case looking like:
 
 ```csharp
-public record DebitAccount(AccountId Id, AccountName Name, PersonId Owner, double Balance);
+public record DebitAccount(AccountId Id, AccountName Name, CustomerId Owner, double Balance);
 ```
 
 This all gets generated into the following TypeScript code:

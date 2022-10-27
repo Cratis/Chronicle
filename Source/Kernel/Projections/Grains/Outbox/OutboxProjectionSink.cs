@@ -93,7 +93,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<ExpandoObject> FindOrDefault(Key key)
+    public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         if (_replaying) return new ExpandoObject();
 
@@ -116,7 +116,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
         }
         catch
         {
-            return new ExpandoObject();
+            return default;
         }
     }
 

@@ -18,7 +18,7 @@ public class when_accessing_event_source_id : Specification
                 new("2f005aaf-2f4e-4a47-92ea-63687ef74bd4", 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "123b8935-a1a4-410d-aace-e340d48f0aa0", "41f18595-4748-4b01-88f7-4c0d0907aa90", "50308963-d8b5-4b6e-97c7-e2486e8237e1", "bfb7fd4a-1822-4937-a6d1-52464a173f84"),
                 new JsonObject());
 
-    void Because() => result = EventValueProviders.FromEventSourceId(@event);
+    void Because() => result = EventValueProviders.EventSourceId(@event);
 
     [Fact] void should_return_the_guid_from_event_source_id_from_the_event() => result.ShouldEqual(@event.Context.EventSourceId.Value);
 }

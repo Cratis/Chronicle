@@ -11,9 +11,9 @@ for projecting to it from a `DebitAccountOpened` event:
 
 ```csharp
 [EventType("3daa0bf9-4cca-455e-87bc-c27dade3eb11")]
-public record DebitAccountOpened(AccountName Name, PersonId Owner);
+public record DebitAccountOpened(AccountName Name, CustomerId Owner);
 
-public record DebitAccount(AccountId Id, AccountName Name, PersonId Owner, double? Balance);
+public record DebitAccount(AccountId Id, AccountName Name, CustomerId Owner, double? Balance);
 
 public class DebitAccountProjection : IProjectionFor<DebitAccount>
 {

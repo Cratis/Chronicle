@@ -24,7 +24,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     public ProjectionSinkTypeName Name => "InMemory";
 
     /// <inheritdoc/>
-    public Task<ExpandoObject> FindOrDefault(Key key)
+    public Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var collection = GetCollection();
 
@@ -38,7 +38,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             modelInstance = new ExpandoObject();
         }
 
-        return Task.FromResult(modelInstance);
+        return Task.FromResult<ExpandoObject?>(modelInstance);
     }
 
     /// <inheritdoc/>
