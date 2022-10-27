@@ -122,7 +122,7 @@ public class Rules : IRules
 
     ProjectionDefinition CreateProjection<TTarget>(IRule rule)
     {
-        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _eventTypes, _jsonSchemaGenerator);
+        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
 
         var ruleType = typeof(TTarget);
         var defineStateMethod = ruleType.GetMethod("DefineState", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);

@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Concepts;
 using Concepts.Accounts;
+using Concepts.Customers;
 
 namespace Read.Accounts.Debit;
 
-public record PotentialMoneyLaundryCase(PersonId PersonId, AccountId AccountId, DateOnly LastOccurrence);
+public record PotentialMoneyLaundryCase(CustomerId CustomerId, AccountId AccountId, DateOnly LastOccurrence);

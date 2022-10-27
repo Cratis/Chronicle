@@ -41,7 +41,7 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
     /// <inheritdoc/>
     public Task<IAdapterProjectionFor<TModel>> CreateFor<TModel, TExternalModel>(IAdapterFor<TModel, TExternalModel> adapter)
     {
-        var projectionBuilder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, _eventTypes, _schemaGenerator);
+        var projectionBuilder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, _eventTypes, _schemaGenerator, _jsonSerializerOptions);
         adapter.DefineModel(projectionBuilder);
         var projectionDefinition = projectionBuilder.Build();
         return Task.FromResult<IAdapterProjectionFor<TModel>>(new AdapterProjectionFor<TModel>(projectionDefinition, _clusterClient, _jsonSerializerOptions));

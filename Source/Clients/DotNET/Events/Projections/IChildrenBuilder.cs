@@ -14,12 +14,32 @@ namespace Aksio.Cratis.Events.Projections;
 public interface IChildrenBuilder<TParentModel, TChildModel>
 {
     /// <summary>
+    /// Sets the initial values to use for a new model instance.
+    /// </summary>
+    /// <param name="initialValueProviderCallback">Callback for building.</param>
+    /// <returns>Builder continuation.</returns>
+    /// <remarks>
+    /// If one does not provide initial values, the projection engine will leave properties
+    /// out that hasn't been met by an event projection expression. This will effectively render
+    /// the properties null and might not be desirable when reading instances of the models.
+    /// </remarks>
+    IChildrenBuilder<TParentModel, TChildModel> WithInitialValues(Func<TChildModel> initialValueProviderCallback);
+
+    /// <summary>
     /// Start building the from expressions for a specific event type.
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <typeparam name="TEvent">Type of event.</typeparam>
     /// <returns>Builder continuation.</returns>
     IChildrenBuilder<TParentModel, TChildModel> From<TEvent>(Action<IFromBuilder<TChildModel, TEvent>> builderCallback);
+
+    /// <summary>
+    /// Start building a join expressions for a specific event type.
+    /// </summary>
+    /// <param name="builderCallback">Callback for building.</param>
+    /// <typeparam name="TEvent">Type of event.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    IChildrenBuilder<TParentModel, TChildModel> Join<TEvent>(Action<IJoinBuilder<TChildModel, TEvent>> builderCallback);
 
     /// <summary>
     /// Sets the property that identifies the child model in the collection within the parent.

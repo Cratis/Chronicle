@@ -8,6 +8,8 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Projections.Expressions;
+using Aksio.Cratis.Events.Projections.Expressions.EventValues;
+using Aksio.Cratis.Events.Projections.Expressions.Keys;
 using Aksio.Cratis.Events.Projections.InMemory;
 using Aksio.Cratis.Events.Projections.Pipelines;
 using Aksio.Cratis.Events.Store;
@@ -57,11 +59,15 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()));
 
-        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator);
+        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, new JsonSerializerOptions());
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 
-        var factory = new ProjectionFactory(new PropertyMapperExpressionResolvers());
+        var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers();
+        var factory = new ProjectionFactory(
+            new ModelPropertyExpressionResolvers(
+                eventValueProviderExpressionResolvers),
+            new KeyExpressionResolvers(eventValueProviderExpressionResolvers));
         _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
         var objectsComparer = new ObjectsComparer();

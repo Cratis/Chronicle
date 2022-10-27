@@ -902,7 +902,7 @@ This operation does not require authentication
 
 ```json
 {
-  "personId": {
+  "CustomerId": {
     "value": "string"
   }
 }
@@ -1008,7 +1008,7 @@ Status Code **200**
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
-|» id|[PersonId](#schemapersonid)|false|none|Represents the concept of a unique identifier that identifies a person.|
+|» id|[CustomerId](#schemaCustomerId)|false|none|Represents the concept of a unique identifier that identifies a person.|
 |»» value|string¦null|false|none|Gets or inits the underlying value for the instance.|
 |» socialSecurityNumber|[SocialSecurityNumber](#schemasocialsecuritynumber)|false|none|none|
 |»» value|string¦null|false|none|Gets or inits the underlying value for the instance.|
@@ -1129,7 +1129,7 @@ Status Code **200**
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
 |*anonymous*|[[Person](#schemaperson)]|false|none|none|
-|» id|[PersonId](#schemapersonid)|false|none|Represents the concept of a unique identifier that identifies a person.|
+|» id|[CustomerId](#schemaCustomerId)|false|none|Represents the concept of a unique identifier that identifies a person.|
 |»» value|string¦null|false|none|Gets or inits the underlying value for the instance.|
 |» socialSecurityNumber|[SocialSecurityNumber](#schemasocialsecuritynumber)|false|none|none|
 |»» value|string¦null|false|none|Gets or inits the underlying value for the instance.|
@@ -1542,7 +1542,7 @@ Encapsulation representing the creation and registration of a key for a specific
 
 ```json
 {
-  "personId": {
+  "CustomerId": {
     "value": "string"
   }
 }
@@ -1553,7 +1553,7 @@ Encapsulation representing the creation and registration of a key for a specific
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
-|personId|[PersonId](#schemapersonid)|false|none|Represents the concept of a unique identifier that identifies a person.|
+|CustomerId|[CustomerId](#schemaCustomerId)|false|none|Represents the concept of a unique identifier that identifies a person.|
 
 <h2 id="tocS_EncryptionKeyIdentifier">EncryptionKeyIdentifier</h2>
 <!-- backwards compatibility -->
@@ -2402,7 +2402,7 @@ Defines the different types of observers.
 
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
-|id|[PersonId](#schemapersonid)|false|none|Represents the concept of a unique identifier that identifies a person.|
+|id|[CustomerId](#schemaCustomerId)|false|none|Represents the concept of a unique identifier that identifies a person.|
 |socialSecurityNumber|[SocialSecurityNumber](#schemasocialsecuritynumber)|false|none|none|
 |firstName|[FirstName](#schemafirstname)|false|none|none|
 |lastName|[LastName](#schemalastname)|false|none|none|
@@ -2412,12 +2412,12 @@ Defines the different types of observers.
 |country|[Country](#schemacountry)|false|none|none|
 |personalInformation|[[PersonalInformation](#schemapersonalinformation)]¦null|false|none|none|
 
-<h2 id="tocS_PersonId">PersonId</h2>
+<h2 id="tocS_CustomerId">CustomerId</h2>
 <!-- backwards compatibility -->
-<a id="schemapersonid"></a>
-<a id="schema_PersonId"></a>
-<a id="tocSpersonid"></a>
-<a id="tocspersonid"></a>
+<a id="schemaCustomerId"></a>
+<a id="schema_CustomerId"></a>
+<a id="tocSCustomerId"></a>
+<a id="tocsCustomerId"></a>
 
 ```json
 {

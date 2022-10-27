@@ -2,6 +2,8 @@
   href: intro.md
 - name: Getting started
   href: getting-started.md
+- name: Consuming pre releases
+  href: consuming-pre-releases.md
 - name: Guidance
   href: guidance/toc.yml
 - name: Recipes

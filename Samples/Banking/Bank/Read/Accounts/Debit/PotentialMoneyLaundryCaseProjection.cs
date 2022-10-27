@@ -11,7 +11,7 @@ public class PotentialMoneyLaundryCaseProjection : IProjectionFor<PotentialMoney
 
     public void Define(IProjectionBuilderFor<PotentialMoneyLaundryCase> builder) => builder
         .From<PossibleMoneyLaunderingDetected>(_ => _
-            .Set(model => model.PersonId).To(@event => @event.PersonId)
+            .Set(model => model.CustomerId).To(@event => @event.CustomerId)
             .Set(model => model.AccountId).To(@event => @event.AccountId)
             .Set(model => model.LastOccurrence).To(@event => @event.LastOccurrence));
 }

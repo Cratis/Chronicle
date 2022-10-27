@@ -27,7 +27,7 @@ public interface IProjectionSink
     /// </summary>
     /// <param name="key">Key of the model to find.</param>
     /// <returns>A model instance with the data from the source, or an empty object.</returns>
-    Task<ExpandoObject> FindOrDefault(Key key);
+    Task<ExpandoObject?> FindOrDefault(Key key);
 
     /// <summary>
     /// Update or insert model based on key.

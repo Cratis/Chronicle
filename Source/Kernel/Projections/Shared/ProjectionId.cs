@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Events.Projections;
 public record ProjectionId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
+    /// The value representing an unset projection identifier.
+    /// </summary>
+    public static readonly ProjectionId NotSet = Guid.Empty;
+
+    /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionId"/>.
     /// </summary>
     /// <param name="value"><see cref="Guid"/> to convert from.</param>

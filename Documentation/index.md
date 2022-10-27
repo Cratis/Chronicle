@@ -15,6 +15,7 @@ We also have [guidance](./guidance/index.md) for how to work with Cratis and oth
 | Topic | Description |
 | ------- | ----------- |
 | [Getting started](./getting-started.md) | Getting started |
+| [Consuming pre releases](./consuming-pre-releases.md) | How to consume pre releases of artifacts |
 | [Tutorials](./tutorials/index.md) | Guided tutorials |
 | [Recipes](./recipes/index.md) | How to do specific tasks |
 | [Tenancy](./tenancy.md) | What is tenancy and how does it work? |

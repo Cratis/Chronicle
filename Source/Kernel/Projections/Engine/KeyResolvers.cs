@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -15,29 +17,48 @@ public static class KeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.FromEventSourceId(@event), ArrayIndexers.NoIndexers))!;
+    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers))!;
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
     /// </summary>
     /// <param name="projection"><see cref="IProjection"/> to start at.</param>
-    /// <param name="keyProperty">Property that holds the key on the event.</param>
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
+    /// <param name="eventValueProvider">The actual <see cref="ValueProvider{T}"/> for resolving key.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static KeyResolver FromEventContent(IProjection projection, PropertyPath keyProperty, PropertyPath identifiedByProperty)
+    public static KeyResolver FromEventValueProvider(IProjection projection, PropertyPath identifiedByProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
         return (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
-            var key = EventValueProviders.FromEventContent(keyProperty)(@event);
+            var key = eventValueProvider(@event);
             if (!projection.HasParent)
             {
                 return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
             }
 
             var arrayIndexers = new List<ArrayIndexer>();
-            var parentKey = EventValueProviders.FromEventSourceId(@event);
+            var parentKey = EventValueProviders.EventSourceId(@event);
             arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, key));
             return Task.FromResult(new Key(parentKey, new ArrayIndexers(arrayIndexers)))!;
+        };
+    }
+
+    /// <summary>
+    /// Create a <see cref="KeyResolver"/> that provides a key value which is a composite of a set of <see cref="ValueProvider{T}"/>.
+    /// </summary>
+    /// <param name="propertiesWithKeyValueProviders">Target property paths in key and resolvers to use for resolving.</param>
+    /// <returns>A new <see cref="KeyResolver"/>.</returns>
+    public static KeyResolver Composite(IDictionary<PropertyPath, ValueProvider<AppendedEvent>> propertiesWithKeyValueProviders)
+    {
+        return (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
+        {
+            var key = new ExpandoObject();
+            foreach (var keyValue in propertiesWithKeyValueProviders)
+            {
+                var actualTarget = key.EnsurePath(keyValue.Key, ArrayIndexers.NoIndexers) as IDictionary<string, object>;
+                actualTarget[keyValue.Key.LastSegment.Value] = keyValue.Value(@event);
+            }
+            return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers));
         };
     }
 
@@ -53,7 +74,7 @@ public static class KeyResolvers
         return async (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
             var arrayIndexers = new List<ArrayIndexer>();
-            var parentKey = EventValueProviders.FromEventContent(parentKeyProperty)(@event);
+            var parentKey = EventValueProviders.EventContent(parentKeyProperty)(@event);
             var currentProjection = projection;
             while (currentProjection.HasParent)
             {
@@ -74,7 +95,7 @@ public static class KeyResolvers
                 parentKey = resolvedParentKey.Value;
             }
 
-            arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.FromEventSourceId(@event)));
+            arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
 
             return new(parentKey, new ArrayIndexers(arrayIndexers));
         };

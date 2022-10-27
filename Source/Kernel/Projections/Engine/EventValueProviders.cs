@@ -18,62 +18,26 @@ public static class EventValueProviders
     /// Create a <see cref="ValueProvider{T}"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static readonly ValueProvider<AppendedEvent> FromEventSourceId = (AppendedEvent @event) => @event.Context.EventSourceId.ToString();
+    public static readonly ValueProvider<AppendedEvent> EventSourceId = (AppendedEvent @event) => @event.Context.EventSourceId.ToString();
 
     /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that provides a value from the event content.
     /// </summary>
     /// <param name="sourceProperty">Source property.</param>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> FromEventContent(PropertyPath sourceProperty)
+    public static ValueProvider<AppendedEvent> EventContent(PropertyPath sourceProperty)
     {
-        return (AppendedEvent @event) =>
-        {
-            JsonNode? currentSource = @event.Content;
-            object? sourceValue = null;
-            foreach (var property in sourceProperty.Segments)
-            {
-                var value = currentSource![property.Value];
-                if (value is JsonValue jsonValue)
-                {
-                    jsonValue.TryGetValue(out sourceValue);
-
-                    if (sourceValue is JsonElement element)
-                    {
-                        switch (element.ValueKind)
-                        {
-                            case JsonValueKind.True:
-                                sourceValue = true;
-                                break;
-                            case JsonValueKind.False:
-                                sourceValue = false;
-                                break;
-                            default:
-                                element.TryGetValue(out sourceValue);
-                                break;
-                        }
-                    }
-                }
-                else if (value is JsonObject jsonObject)
-                {
-                    sourceValue = jsonObject.AsExpandoObject();
-                }
-                currentSource = value;
-            }
-
-            return sourceValue!;
-        };
+        return (AppendedEvent @event) => GetValueFromEventContent(@event, sourceProperty);
     }
 
     /// <summary>
-    /// Create a <see cref="ValueProvider{T}"/> that provides a value from the <see cref="EventContext"/>.
+    /// Create a <see cref="ValueProvider{T}"/> that provides a value from the <see cref="Store.EventContext"/>.
     /// </summary>
     /// <param name="sourceProperty">Property on the context.</param>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static ValueProvider<AppendedEvent> FromEventContext(PropertyPath sourceProperty)
+    public static ValueProvider<AppendedEvent> EventContext(PropertyPath sourceProperty)
     {
-        var property = sourceProperty.GetPropertyInfoFor<EventContext>();
-        return (AppendedEvent @event) => property.GetValue(@event.Context)!;
+        return (AppendedEvent @event) => sourceProperty.GetValue(@event.Context, ArrayIndexers.NoIndexers)!;
     }
 
     /// <summary>
@@ -81,4 +45,41 @@ public static class EventValueProviders
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
     public static ValueProvider<AppendedEvent> UniqueIdentifier() => (AppendedEvent @event) => $"{@event.Metadata.SequenceNumber}-{@event.Context.Occurred.ToUnixTimeMilliseconds()}";
+
+    static object GetValueFromEventContent(AppendedEvent @event, PropertyPath sourceProperty)
+    {
+        JsonNode? currentSource = @event.Content;
+        object? sourceValue = null;
+        foreach (var property in sourceProperty.Segments)
+        {
+            var value = currentSource![property.Value];
+            if (value is JsonValue jsonValue)
+            {
+                jsonValue.TryGetValue(out sourceValue);
+
+                if (sourceValue is JsonElement element)
+                {
+                    switch (element.ValueKind)
+                    {
+                        case JsonValueKind.True:
+                            sourceValue = true;
+                            break;
+                        case JsonValueKind.False:
+                            sourceValue = false;
+                            break;
+                        default:
+                            element.TryGetValue(out sourceValue);
+                            break;
+                    }
+                }
+            }
+            else if (value is JsonObject jsonObject)
+            {
+                sourceValue = jsonObject.AsExpandoObject();
+            }
+            currentSource = value;
+        }
+
+        return sourceValue!;
+    }
 }

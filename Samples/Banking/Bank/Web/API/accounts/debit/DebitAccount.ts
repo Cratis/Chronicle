@@ -4,6 +4,7 @@
 
 import { field } from '@aksio/cratis-fundamentals';
 
+import { Owner } from './Owner';
 
 export class DebitAccount {
 
@@ -14,7 +15,10 @@ export class DebitAccount {
     name!: string;
 
     @field(String)
-    owner!: string;
+    ownerId!: string;
+
+    @field(Owner)
+    owner!: Owner;
 
     @field(Number)
     balance?: number;
