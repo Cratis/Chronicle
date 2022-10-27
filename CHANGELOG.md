@@ -1,3 +1,13 @@
+# [v6.12.0] - 2022-10-27 [PR: #537](https://github.com/aksio-insurtech/Cratis/pull/537)
+
+### Added
+
+- Support for setting initial model state for new instances of model used when defining a projection. `IProjectionBuilderFor` has a new `.WithInitialModelState()` method.
+- Support for composite keys with projections. For model property builders (e.g. `.From()`) has new methods: `.UseCompositeKey<TKeyType>()` allowing to build up a typed composite key. (#539)
+- Started work on support for joining on events with projections. For model property builders (e.g. `.From()`) there is now a `.Join<TEvent>()` method allowing to set up relationships with other events. API is in place, but doesn't do much. (#538)
+
+
+
 # [v6.11.8] - 2022-10-19 [PR: #543](https://github.com/aksio-insurtech/Cratis/pull/543)
 
 ### Added
