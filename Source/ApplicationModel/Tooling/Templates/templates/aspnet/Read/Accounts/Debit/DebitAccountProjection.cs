@@ -13,24 +13,18 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
     public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
         builder
             .WithInitialModelState(() => new(Guid.Empty, string.Empty, Guid.Empty, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
-
-            .Join<CustomerRegistered>(_ => _
-                .On(model => model.OwnerId)
-                .Set(model => model.Owner.FirstName).To(@event => @event.FirstName)
-                .Set(model => model.Owner.LastName).To(@event => @event.LastName))
+            .All(_ => _
+                .Set(model => model.LastUpdated).ToEventContextProperty(ContextBoundObject => ContextBoundObject.Occurred)
+                .IncludeChildProjections())
             .From<DebitAccountOpened>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
                 .Set(model => model.OwnerId).To(@event => @event.Owner)
-                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred)
                 .Set(model => model.HasCard).To(@event => @event.IncludeCard))
             .From<DebitAccountNameChanged>(_ => _
-                .Set(model => model.Name).To(@event => @event.Name)
-                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
+                .Set(model => model.Name).To(@event => @event.Name))
             .From<DepositToDebitAccountPerformed>(_ => _
-                .Add(model => model.Balance).With(@event => @event.Amount)
-                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
+                .Add(model => model.Balance).With(@event => @event.Amount))
             .From<WithdrawalFromDebitAccountPerformed>(_ => _
-                .Subtract(model => model.Balance).With(@event => @event.Amount)
-                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred))
+                .Subtract(model => model.Balance).With(@event => @event.Amount))
             .RemovedWith<DebitAccountClosed>();
 }
