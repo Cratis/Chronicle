@@ -95,7 +95,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             return;
         }
 
-        var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
+        var arrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
         foreach (var change in changeset.Changes)
         {
@@ -103,7 +103,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
                     {
-                        var allArrayFilters = new List<ArrayFilterDefinition>();
+                        var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
                         foreach (var propertyDifference in propertiesChanged.Differences)
                         {
@@ -152,7 +152,16 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
                         var (property, arrayFilters) = ConvertToMongoDBProperty(childrenProperty, arrayIndexers);
                         arrayFiltersForDocument.AddRange(arrayFilters);
-                        updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
+
+                        if (updateBuilder is not null)
+                        {
+                            updateBuilder = updateBuilder.AddToSet(property, document);
+                        }
+                        else
+                        {
+                            updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
+                        }
+
                         hasChanges = true;
                     }
                     break;
@@ -161,6 +170,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
         if (!hasChanges) return;
 
+        var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
         var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
         await collection.UpdateOneAsync(
             filter,
@@ -168,7 +178,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             new UpdateOptions
             {
                 IsUpsert = true,
-                ArrayFilters = arrayFiltersForDocument.ToArray()
+                ArrayFilters = distinctArrayFilters
             });
 
         await Task.CompletedTask;
@@ -263,9 +273,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
     }
 
-    (string Property, IEnumerable<ArrayFilterDefinition> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
+    (string Property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
     {
-        var arrayFilters = new List<ArrayFilterDefinition>();
+        var arrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         var propertyBuilder = new StringBuilder();
         var currentPropertyPath = new PropertyPath(string.Empty);
 
