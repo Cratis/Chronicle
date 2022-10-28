@@ -1,3 +1,39 @@
+# [v6.13.0] - 2022-10-28 [PR: #557](https://github.com/aksio-insurtech/Cratis/pull/557)
+
+### Added
+
+- Adding the ability to project to model properties from properties from the event context from all events in a projection. Useful when one wants to set something like `LastUpdated` date time and base it on the `Occurred`.
+
+```csharp
+public class DebitAccountProjection : IProjectionFor<DebitAccount>
+{
+    public ProjectionId Identifier => "d1bb5522-5512-42ce-938a-d176536bb01d";
+
+    public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
+        builder
+            .WithInitialModelState(() => new(Guid.Empty, string.Empty, Guid.Empty, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
+
+            // Set LastUpdated to Occurred for all events, and include any child projections
+            .All(_ => _
+                .Set(model => model.LastUpdated).ToEventContextProperty(ContextBoundObject => ContextBoundObject.Occurred)
+                .IncludeChildProjections())
+
+            .From<DebitAccountOpened>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name)
+                .Set(model => model.OwnerId).To(@event => @event.Owner)
+                .Set(model => model.HasCard).To(@event => @event.IncludeCard))
+            .From<DebitAccountNameChanged>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name))
+            .From<DepositToDebitAccountPerformed>(_ => _
+                .Add(model => model.Balance).With(@event => @event.Amount))
+            .From<WithdrawalFromDebitAccountPerformed>(_ => _
+                .Subtract(model => model.Balance).With(@event => @event.Amount))
+            .RemovedWith<DebitAccountClosed>();
+}
+
+```
+
+
 # [v6.12.1] - 2022-10-27 [PR: #556](https://github.com/aksio-insurtech/Cratis/pull/556)
 
 ### Fixed
