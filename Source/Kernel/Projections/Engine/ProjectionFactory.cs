@@ -103,6 +103,7 @@ public class ProjectionFactory : IProjectionFactory
         {
             var propertyMappers = projectionDefinition.All.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value));
             projection.Event
+                .WhereEventTypeEquals(eventType)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
