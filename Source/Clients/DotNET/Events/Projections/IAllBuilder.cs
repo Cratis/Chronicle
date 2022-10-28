@@ -18,4 +18,10 @@ public interface IAllBuilder<TModel>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>The <see cref="IAllSetBuilder{TModel, TBuilder}"/> to build up the property expressions.</returns>
     IAllSetBuilder<TModel, IAllBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+    /// <summary>
+    /// Instruct the all definition to include all child projections.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    IAllBuilder<TModel> IncludeChildProjections();
 }
