@@ -118,8 +118,9 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
         var builder = new AllBuilder<TModel>();
         builderCallback(builder);
         var allDefinition = builder.Build();
-        allDefinition.Properties.Concat(_allDefinition.Properties);
-        _allDefinition = allDefinition;
+        _allDefinition = new AllDefinition(
+            new Dictionary<PropertyPath, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
+            allDefinition.IncludeChildren);
         return this;
     }
 
