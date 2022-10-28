@@ -21,7 +21,9 @@ public class TypeFormatSchemaProcessor : ISchemaProcessor
         { typeof(decimal), "decimal" },
         { typeof(byte), "byte" },
         { typeof(DateTime), "date-time" },
-        { typeof(DateTimeOffset), "date-time" },
+        { typeof(DateTimeOffset), "date-time-offset" },
+        { typeof(DateOnly), "date" },
+        { typeof(TimeOnly), "time" },
     };
 
     /// <inheritdoc/>
