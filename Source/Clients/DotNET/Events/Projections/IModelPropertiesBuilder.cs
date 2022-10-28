@@ -76,6 +76,6 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
-    /// <returns>Builder continuation.</returns>
+    /// <returns>The <see cref="ISetBuilder{TModel, Tevent, TProperty, TBuilder}"/> to continue building on.</returns>
     ISetBuilder<TModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 }

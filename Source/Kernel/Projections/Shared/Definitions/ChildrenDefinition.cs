@@ -15,6 +15,7 @@ namespace Aksio.Cratis.Events.Projections.Definitions;
 /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Join">All the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="Children">All the <see cref="ChildrenDefinition"/> for properties on model.</param>
+/// <param name="All">The full <see cref="AllDefinition"/>.</param>
 /// <param name="RemovedWith">The definition of what removes a child, if any.</param>
 public record ChildrenDefinition(
     PropertyPath IdentifiedBy,
@@ -23,4 +24,5 @@ public record ChildrenDefinition(
     IDictionary<EventType, FromDefinition> From,
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
-    RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, true, InitialModelState, From, Join, Children, RemovedWith);
+    AllDefinition All,
+    RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, true, InitialModelState, From, Join, Children, All, RemovedWith);
