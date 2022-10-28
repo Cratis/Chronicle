@@ -14,6 +14,7 @@ namespace Aksio.Cratis.Events.Projections;
 public class AllBuilder<TModel> : IAllBuilder<TModel>
 {
     readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
+    bool _includeChildren;
 
     /// <inheritdoc/>
     public IAllSetBuilder<TModel, IAllBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
@@ -23,9 +24,16 @@ public class AllBuilder<TModel> : IAllBuilder<TModel>
         return setBuilder;
     }
 
+    /// <inheritdoc/>
+    public IAllBuilder<TModel> IncludeChildProjections()
+    {
+        _includeChildren = true;
+        return this;
+    }
+
     /// <summary>
     /// Builds a <see cref="AllDefinition"/> from expressions.
     /// </summary>
     /// <returns>A new <see cref="AllDefinition"/> instance.</returns>
-    public AllDefinition Build() => new(_propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()));
+    public AllDefinition Build() => new(_propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()), _includeChildren);
 }

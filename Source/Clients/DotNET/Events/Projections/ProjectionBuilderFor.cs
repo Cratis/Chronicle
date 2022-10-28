@@ -29,7 +29,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
     readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
-    AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>());
+    AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>(), false);
     bool _isRewindable = true;
     string _modelName;
     string? _name;
@@ -118,7 +118,8 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
         var builder = new AllBuilder<TModel>();
         builderCallback(builder);
         var allDefinition = builder.Build();
-        _allDefinition.Properties.Concat(allDefinition.Properties);
+        allDefinition.Properties.Concat(_allDefinition.Properties);
+        _allDefinition = allDefinition;
         return this;
     }
 
