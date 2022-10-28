@@ -27,6 +27,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
     readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
     readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     readonly string _modelName;
+    AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>(), false);
     string _identifiedBy = string.Empty;
     EventType? _removedWithEvent;
     JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
@@ -77,6 +78,18 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
     }
 
     /// <inheritdoc/>
+    public IChildrenBuilder<TParentModel, TChildModel> All(Action<IAllBuilder<TChildModel>> builderCallback)
+    {
+        var builder = new AllBuilder<TChildModel>();
+        builderCallback(builder);
+        var allDefinition = builder.Build();
+        _allDefinition = new AllDefinition(
+            new Dictionary<PropertyPath, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
+            allDefinition.IncludeChildren);
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy<TProperty>(Expression<Func<TChildModel, TProperty>> propertyExpression)
     {
         _identifiedBy = propertyExpression.GetPropertyPath();
@@ -109,6 +122,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
             _fromDefinitions,
             _joinDefinitions,
             _childrenDefinitions,
+            _allDefinition,
             _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
     }
 }

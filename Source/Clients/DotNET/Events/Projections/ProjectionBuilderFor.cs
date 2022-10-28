@@ -29,6 +29,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
     readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
+    AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>(), false);
     bool _isRewindable = true;
     string _modelName;
     string? _name;
@@ -112,6 +113,18 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     }
 
     /// <inheritdoc/>
+    public IProjectionBuilderFor<TModel> All(Action<IAllBuilder<TModel>> builderCallback)
+    {
+        var builder = new AllBuilder<TModel>();
+        builderCallback(builder);
+        var allDefinition = builder.Build();
+        _allDefinition = new AllDefinition(
+            new Dictionary<PropertyPath, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
+            allDefinition.IncludeChildren);
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IProjectionBuilderFor<TModel> RemovedWith<TEvent>()
     {
         if (_removedWithEvent != default)
@@ -151,6 +164,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
             _fromDefinitions,
             _joinDefinitions,
             _childrenDefinitions,
+            _allDefinition,
             _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
     }
 }
