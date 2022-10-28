@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Events.Accounts.Debit;
-using Events.Customers;
 
 namespace Read.Accounts.Debit;
 
@@ -14,7 +13,7 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
         builder
             .WithInitialModelState(() => new(Guid.Empty, string.Empty, Guid.Empty, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
             .All(_ => _
-                .Set(model => model.LastUpdated).ToEventContextProperty(ContextBoundObject => ContextBoundObject.Occurred)
+                .Set(model => model.LastUpdated).ToEventContextProperty(context => context.Occurred)
                 .IncludeChildProjections())
             .From<DebitAccountOpened>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
