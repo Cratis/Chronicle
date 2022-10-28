@@ -25,29 +25,29 @@ public class AccountHolderWithAccountsObserver
 
     public Task AccountHolderRegistered(AccountHolderRegistered @event, EventContext context)
     {
-        var CustomerId = GetCustomerIdFromString(context.EventSourceId);
-        var model = new AccountHolderWithAccounts(CustomerId, @event.FirstName, @event.LastName, new());
-        return _collection.ReplaceOneAsync(_ => _.Id == CustomerId, model, new ReplaceOptions { IsUpsert = true });
+        var customerId = GetCustomerIdFromString(context.EventSourceId);
+        var model = new AccountHolderWithAccounts(customerId, @event.FirstName, @event.LastName, new());
+        return _collection.ReplaceOneAsync(_ => _.Id == customerId, model, new ReplaceOptions { IsUpsert = true });
     }
 
     public async Task CreditAccountOpened(CreditAccountOpened @event, EventContext context)
     {
-        var CustomerId = @event.Owner;
-        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(CustomerId.Value);
+        var customerId = @event.Owner;
+        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(customerId.Value);
         var result = await _collection.FindAsync(_ => _.Id == @event.Owner);
-        var model = result.FirstOrDefault() ?? new(CustomerId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>());
+        var model = result.FirstOrDefault() ?? new(customerId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>());
         model.Accounts.Add(new CreditAccount(@context.EventSourceId, @event.Name, AccountType.Credit));
-        await _collection.ReplaceOneAsync(_ => _.Id == CustomerId, model, new ReplaceOptions { IsUpsert = true });
+        await _collection.ReplaceOneAsync(_ => _.Id == customerId, model, new ReplaceOptions { IsUpsert = true });
     }
 
     public async Task DebitAccountOpened(DebitAccountOpened @event, EventContext context)
     {
-        var CustomerId = @event.Owner;
-        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(CustomerId.Value);
+        var customerId = @event.Owner;
+        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(customerId.Value);
         var result = await _collection.FindAsync(_ => _.Id == @event.Owner);
-        var model = result.FirstOrDefault() ?? new(CustomerId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>());
+        var model = result.FirstOrDefault() ?? new(customerId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>());
         model.Accounts.Add(new DebitAccount(@context.EventSourceId, @event.Name, AccountType.Debit));
-        await _collection.ReplaceOneAsync(_ => _.Id == CustomerId, model, new ReplaceOptions { IsUpsert = true });
+        await _collection.ReplaceOneAsync(_ => _.Id == customerId, model, new ReplaceOptions { IsUpsert = true });
     }
 
 #pragma warning disable CA5351

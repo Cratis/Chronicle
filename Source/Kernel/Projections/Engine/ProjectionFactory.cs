@@ -83,12 +83,31 @@ public class ProjectionFactory : IProjectionFactory
             projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
         }
 
+        var eventTypesForAll = new List<EventType>();
+        eventTypesForAll.AddRange(projectionDefinition.From.Keys);
+        eventTypesForAll.AddRange(projectionDefinition.Join.Keys);
+
         foreach (var child in childProjections)
         {
             child.SetParent(projection);
             eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
+
+            if (projectionDefinition.All.IncludeChildren)
+            {
+                eventTypesForAll.AddRange(child.EventTypes);
+            }
         }
         projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType).ToArray());
+
+        foreach (var eventType in eventTypesForAll)
+        {
+            var propertyMappers = projectionDefinition.All.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value));
+            projection.Event
+                .Project(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty,
+                    propertyMappers);
+        }
 
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
