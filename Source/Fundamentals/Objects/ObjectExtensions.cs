@@ -34,7 +34,7 @@ public static class ObjectExtensions
 
         if (source is Guid)
         {
-            return (T)Convert.ChangeType(new Guid(source!.ToString()!), typeof(T));
+            return source;
         }
 
         var valueType = source.GetType();

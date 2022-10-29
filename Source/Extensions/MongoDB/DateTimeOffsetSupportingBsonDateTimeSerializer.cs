@@ -19,7 +19,7 @@ namespace Aksio.Cratis.Extensions.MongoDB;
 public class DateTimeOffsetSupportingBsonDateTimeSerializer : StructSerializerBase<DateTimeOffset>,
              IRepresentationConfigurable<DateTimeOffsetSupportingBsonDateTimeSerializer>
 {
-    readonly string _stringSerializationFormat = "YYYY-MM-ddTHH:mm:ss.FFFFFFK";
+    public static readonly string StringSerializationFormat = "YYYY-MM-ddTHH:mm:ss.FFFFFFK";
 
     /// <inheritdoc/>
     public BsonType Representation { get; }
@@ -59,7 +59,7 @@ public class DateTimeOffsetSupportingBsonDateTimeSerializer : StructSerializerBa
         {
             case BsonType.String:
                 var stringValue = bsonReader.ReadString();
-                return DateTimeOffset.ParseExact(stringValue, _stringSerializationFormat, DateTimeFormatInfo.InvariantInfo);
+                return DateTimeOffset.ParseExact(stringValue, StringSerializationFormat, DateTimeFormatInfo.InvariantInfo);
 
             case BsonType.DateTime:
                 var dateTimeValue = bsonReader.ReadDateTime();
@@ -78,7 +78,7 @@ public class DateTimeOffsetSupportingBsonDateTimeSerializer : StructSerializerBa
         switch (Representation)
         {
             case BsonType.String:
-                bsonWriter.WriteString(value.ToString(_stringSerializationFormat, DateTimeFormatInfo.InvariantInfo));
+                bsonWriter.WriteString(value.ToString(StringSerializationFormat, DateTimeFormatInfo.InvariantInfo));
                 break;
 
             case BsonType.DateTime:
