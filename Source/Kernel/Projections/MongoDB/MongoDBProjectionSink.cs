@@ -24,6 +24,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     readonly Model _model;
     readonly IExecutionContextManager _executionContextManager;
     readonly IMongoDBClientFactory _clientFactory;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly Storage _configuration;
     readonly IMongoDatabase _database;
 
@@ -43,16 +44,19 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     /// <param name="model"><see cref="Model"/> the store is for.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public MongoDBProjectionSink(
         Model model,
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
+        IExpandoObjectConverter expandoObjectConverter,
         Storage configuration)
     {
         _model = model;
         _executionContextManager = executionContextManager;
         _clientFactory = clientFactory;
+        _expandoObjectConverter = expandoObjectConverter;
         _configuration = configuration;
         _database = GetDatabase();
     }
@@ -67,12 +71,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
-            var deserialized = BsonSerializer.Deserialize<ExpandoObject>(instance);
-            var deserializedAsDictionary = deserialized as IDictionary<string, object>;
-
-            HandleValueConversion(instance, deserializedAsDictionary);
-
-            return deserialized;
+            var converted = _expandoObjectConverter.ToExpandoObject(instance, _model.Schema);
+            Console.WriteLine("Hello");
+            return converted;
         }
 
         return default;

@@ -38,7 +38,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             ReflectionService = new ReflectionService(),
         };
         settings.SchemaProcessors.Add(new ComplianceMetadataSchemaProcessor(metadataResolver));
-        settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor());
+        settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(new TypeFormats()));
         _generator = new NJsonSchemaGenerator(settings);
     }
 
