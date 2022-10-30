@@ -60,6 +60,15 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     }
 
     /// <inheritdoc/>
+    public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, IArrayIndexers arrayIndexers)
+    {
+        var workingState = InitialState.Clone()!;
+        var changeset = new Changeset<TSource, TTarget>(_comparer, Incoming, workingState);
+        Add(new Joined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        return changeset;
+    }
+
+    /// <inheritdoc/>
     public void AddChild<TChild>(
         PropertyPath childrenProperty,
         PropertyPath identifiedByProperty,

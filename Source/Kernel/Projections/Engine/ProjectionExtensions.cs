@@ -47,12 +47,18 @@ public static class ProjectionExtensions
             }
             else
             {
-                Console.WriteLine(onValue);
+                // Conditions:
+                // - Parent event comes first.
+                //   - When join event comes, resolve all relationships that matches key (simple update)
+                // - Join event comes first
+                //   - When parent event comes, find events that match the relationship on key
+                //   - Hook up additional action for events that modifies the onModelProperty
+                var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
+                joinSubject.OnNext(_ with
+                {
+                    Changeset = changeset
+                });
             }
-
-            joinSubject.OnNext(_ with
-            {
-            });
         });
         Console.WriteLine(onModelProperty);
         return joinSubject;
@@ -106,16 +112,5 @@ public static class ProjectionExtensions
     {
         observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id).Subscribe(_ => _.Changeset.Remove());
         return observable;
-    }
-
-    /// <summary>
-    /// Join with a specific <see cref="EventType"/>.
-    /// </summary>
-    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-    /// <param name="eventType"><see cref="EventType"/> to join with.</param>
-    /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> Join(this IObservable<ProjectionEventContext> observable, EventType eventType)
-    {
-        return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
     }
 }
