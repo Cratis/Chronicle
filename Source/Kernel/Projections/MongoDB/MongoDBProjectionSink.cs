@@ -262,7 +262,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                                 joinUpdateBuilder,
                                 new UpdateOptions
                                 {
-                                    IsUpsert = true,
+                                    IsUpsert = false,
                                     ArrayFilters = joinArrayFiltersForDocument.ToArray()
                                 }));
                         }
