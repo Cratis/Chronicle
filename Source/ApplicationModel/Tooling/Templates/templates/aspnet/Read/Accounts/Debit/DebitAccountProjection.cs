@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Events.AccountHolders;
 using Events.Accounts.Debit;
-using Events.Customers;
 
 namespace Read.Accounts.Debit;
 
@@ -12,13 +12,15 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
 
     public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
         builder
-            .WithInitialModelState(() => new(Guid.Empty, string.Empty, Guid.Empty, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
-            .All(_ => _
-                .Set(model => model.LastUpdated).ToEventContextProperty(ContextBoundObject => ContextBoundObject.Occurred)
-                .IncludeChildProjections())
+            .WithInitialModelState(() => new(Guid.Empty, string.Empty, null!, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
+
+            .Join<AccountHolderRegistered>(_ => _
+                .On(model => model.AccountHolderId)
+                .Set(model => model.AccountHolder.FirstName).To(@event => @event.FirstName)
+                .Set(model => model.AccountHolder.LastName).To(@event => @event.LastName))
             .From<DebitAccountOpened>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name)
-                .Set(model => model.OwnerId).To(@event => @event.Owner)
+                .Set(model => model.AccountHolderId).To(@event => @event.Owner)
                 .Set(model => model.HasCard).To(@event => @event.IncludeCard))
             .From<DebitAccountNameChanged>(_ => _
                 .Set(model => model.Name).To(@event => @event.Name))

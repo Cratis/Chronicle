@@ -16,6 +16,8 @@ using MongoDB.Driver;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB;
 
+#pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
+
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in MongoDB.
 /// </summary>
@@ -96,72 +98,11 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
-
-        foreach (var change in changeset.Changes)
-        {
-            switch (change)
-            {
-                case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    {
-                        var allArrayFilters = new List<ArrayFilterDefinition>();
-
-                        foreach (var propertyDifference in propertiesChanged.Differences)
-                        {
-                            var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
-                            allArrayFilters.AddRange(arrayFilters);
-
-                            if (updateBuilder != default)
-                            {
-                                if (propertyDifference.Changed is DateTimeOffset)
-                                {
-                                    updateBuilder = updateBuilder.Set(property, (DateTimeOffset)propertyDifference.Changed!);
-                                }
-                                else
-                                {
-                                    updateBuilder = updateBuilder.Set(property, propertyDifference.Changed!);
-                                }
-                            }
-                            else if (propertyDifference.Changed is DateTimeOffset)
-                            {
-                                updateBuilder = updateDefinitionBuilder!.Set(property, (DateTimeOffset)propertyDifference.Changed!);
-                            }
-                            else
-                            {
-                                updateBuilder = updateDefinitionBuilder!.Set(property, propertyDifference.Changed!);
-                            }
-                        }
-
-                        arrayFiltersForDocument.AddRange(allArrayFilters);
-
-                        hasChanges = propertiesChanged.Differences.Any();
-                    }
-                    break;
-
-                case ChildAdded childAdded:
-                    {
-                        var document = childAdded.State.ToBsonDocument();
-
-                        var segments = childAdded.ChildrenProperty.Segments.ToArray();
-                        var childrenProperty = new PropertyPath(string.Empty);
-                        for (var i = 0; i < segments.Length - 1; i++)
-                        {
-                            childrenProperty += segments[i].ToString()!;
-                        }
-
-                        childrenProperty += segments[^1].Value;
-                        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
-                        var (property, arrayFilters) = ConvertToMongoDBProperty(childrenProperty, arrayIndexers);
-                        arrayFiltersForDocument.AddRange(arrayFilters);
-                        updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
-                        hasChanges = true;
-                    }
-                    break;
-            }
-        }
+        await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
 
         if (!hasChanges) return;
 
-        var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+        // var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
         await collection.UpdateOneAsync(
             filter,
             updateBuilder,
@@ -170,8 +111,6 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                 IsUpsert = true,
                 ArrayFilters = arrayFiltersForDocument.ToArray()
             });
-
-        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -230,6 +169,117 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+    }
+
+    Task ApplyActualChanges(
+        Key key,
+        IEnumerable<Change> changes,
+        UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
+        ref UpdateDefinition<BsonDocument>? updateBuilder,
+        ref bool hasChanges,
+        List<ArrayFilterDefinition> arrayFiltersForDocument)
+    {
+        var joinTasks = new List<Task>();
+
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    {
+                        var allArrayFilters = new List<ArrayFilterDefinition>();
+
+                        foreach (var propertyDifference in propertiesChanged.Differences)
+                        {
+                            var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+                            allArrayFilters.AddRange(arrayFilters);
+
+                            if (updateBuilder is not null)
+                            {
+                                if (propertyDifference.Changed is DateTimeOffset)
+                                {
+                                    updateBuilder = updateBuilder.Set(property, (DateTimeOffset)propertyDifference.Changed!);
+                                }
+                                else
+                                {
+                                    updateBuilder = updateBuilder.Set(property, propertyDifference.Changed!);
+                                }
+                            }
+                            else if (propertyDifference.Changed is DateTimeOffset)
+                            {
+                                updateBuilder = updateDefinitionBuilder!.Set(property, (DateTimeOffset)propertyDifference.Changed!);
+                            }
+                            else
+                            {
+                                updateBuilder = updateDefinitionBuilder!.Set(property, propertyDifference.Changed!);
+                            }
+                        }
+
+                        arrayFiltersForDocument.AddRange(allArrayFilters);
+
+                        hasChanges = propertiesChanged.Differences.Any();
+                    }
+                    break;
+
+                case ChildAdded childAdded:
+                    {
+                        var document = childAdded.State.ToBsonDocument();
+
+                        var segments = childAdded.ChildrenProperty.Segments.ToArray();
+                        var childrenProperty = new PropertyPath(string.Empty);
+                        for (var i = 0; i < segments.Length - 1; i++)
+                        {
+                            childrenProperty += segments[i].ToString()!;
+                        }
+
+                        childrenProperty += segments[^1].Value;
+                        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
+                        var (property, arrayFilters) = ConvertToMongoDBProperty(childrenProperty, arrayIndexers);
+                        arrayFiltersForDocument.AddRange(arrayFilters);
+                        updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
+                        hasChanges = true;
+                    }
+                    break;
+
+                case Joined joined:
+                    {
+                        var (property, arrayFilters) = ConvertToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+
+                        UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
+                        var hasJoinChanges = false;
+
+                        var serializedKey = GetBsonValueFrom(key.Value);
+                        var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
+
+                        var collection = GetCollection();
+
+                        var joinArrayFiltersForDocument = new List<ArrayFilterDefinition>();
+                        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument).Wait();
+
+                        if (hasJoinChanges)
+                        {
+                            // var rendered = joinUpdateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+                            joinTasks.Add(collection.UpdateOneAsync(
+                                filter,
+                                joinUpdateBuilder,
+                                new UpdateOptions
+                                {
+                                    IsUpsert = false,
+                                    ArrayFilters = joinArrayFiltersForDocument.ToArray()
+                                }));
+                        }
+                    }
+                    break;
+
+                case ResolvedJoined resolvedJoined:
+                    {
+                        ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
+                    }
+                    break;
+            }
+        }
+
+        return Task.WhenAll(joinTasks);
     }
 
     BsonValue GetBsonValueFrom(object value)

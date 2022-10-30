@@ -23,6 +23,9 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     public TTarget InitialState { get; }
 
     /// <inheritdoc/>
+    public TTarget CurrentState { get; private set; }
+
+    /// <inheritdoc/>
     public IEnumerable<Change> Changes => _changes;
 
     /// <inheritdoc/>
@@ -39,6 +42,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
         _comparer = comparer;
         Incoming = incoming;
         InitialState = initialState;
+        CurrentState = initialState;
     }
 
     /// <inheritdoc/>
@@ -50,13 +54,35 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     /// <inheritdoc/>
     public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
     {
-        var workingState = InitialState.Clone()!;
+        var workingState = CurrentState.Clone()!;
         SetProperties(workingState, propertyMappers, arrayIndexers);
 
-        if (!_comparer.Equals(InitialState, workingState, out var differences))
+        if (!_comparer.Equals(CurrentState, workingState, out var differences))
         {
             Add(new PropertiesChanged<TTarget>(workingState, differences));
         }
+
+        CurrentState = workingState;
+    }
+
+    /// <inheritdoc/>
+    public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, IArrayIndexers arrayIndexers)
+    {
+        var workingState = InitialState.Clone()!;
+        var changeset = new Changeset<TSource, TTarget>(_comparer, Incoming, workingState);
+        Add(new Joined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        CurrentState = workingState;
+        return changeset;
+    }
+
+    /// <inheritdoc/>
+    public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, IArrayIndexers arrayIndexers)
+    {
+        var workingState = CurrentState.Clone()!;
+        var changeset = new Changeset<TSource, TTarget>(_comparer, incoming, workingState);
+        Add(new ResolvedJoined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        CurrentState = workingState;
+        return changeset;
     }
 
     /// <inheritdoc/>
@@ -68,7 +94,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
         IArrayIndexers arrayIndexers)
         where TChild : new()
     {
-        var workingState = InitialState.Clone()!;
+        var workingState = CurrentState.Clone()!;
         var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty, arrayIndexers);
 
         if (!items.Contains(identifiedByProperty, key))
@@ -79,12 +105,13 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
             SetProperties(workingState, propertyMappers, arrayIndexers);
             Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
         }
+        CurrentState = workingState;
     }
 
     /// <inheritdoc/>
     public void Remove()
     {
-        Add(new Removed(InitialState.Clone()!));
+        Add(new Removed(CurrentState.Clone()!));
     }
 
     /// <inheritdoc/>
