@@ -67,7 +67,8 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var factory = new ProjectionFactory(
             new ModelPropertyExpressionResolvers(
                 eventValueProviderExpressionResolvers),
-            new KeyExpressionResolvers(eventValueProviderExpressionResolvers));
+            new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
+            new EventSequenceStorageProviderForSpecifications(_eventLog));
         _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
         var objectsComparer = new ObjectsComparer();
