@@ -16,6 +16,8 @@ using MongoDB.Driver;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB;
 
+#pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
+
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in MongoDB.
 /// </summary>
@@ -100,7 +102,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
         if (!hasChanges) return;
 
-        var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+        // var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
         await collection.UpdateOneAsync(
             filter,
             updateBuilder,
@@ -256,7 +258,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                         if (hasJoinChanges)
                         {
-                            var rendered = joinUpdateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+                            // var rendered = joinUpdateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
                             joinTasks.Add(collection.UpdateOneAsync(
                                 filter,
                                 joinUpdateBuilder,
