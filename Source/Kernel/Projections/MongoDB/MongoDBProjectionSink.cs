@@ -96,8 +96,88 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
+        ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
 
-        foreach (var change in changeset.Changes)
+        if (!hasChanges) return;
+
+        var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+        await collection.UpdateOneAsync(
+            filter,
+            updateBuilder,
+            new UpdateOptions
+            {
+                IsUpsert = true,
+                ArrayFilters = arrayFiltersForDocument.ToArray()
+            });
+    }
+
+    /// <inheritdoc/>
+    public async Task BeginReplay()
+    {
+        _isReplaying = true;
+        await PrepareInitialRun();
+    }
+
+    /// <inheritdoc/>
+    public async Task EndReplay()
+    {
+        _isReplaying = false;
+        var rewindName = ReplayCollectionName;
+        var rewoundCollectionsPrefix = $"{_model.Name}-";
+        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
+        var nextCollectionSequenceNumber = 1;
+        var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
+        if (rewoundCollectionNames.Length > 0)
+        {
+            nextCollectionSequenceNumber = rewoundCollectionNames
+                .Select(_ =>
+                {
+                    var postfix = _.Substring(rewoundCollectionsPrefix.Length);
+                    if (int.TryParse(postfix, out var value))
+                    {
+                        return value;
+                    }
+                    return -1;
+                })
+                .Where(_ => _ >= 0)
+                .OrderByDescending(_ => _)
+                .First() + 1;
+        }
+        var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
+
+        if (collectionNames.Contains(_model.Name))
+        {
+            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
+        }
+
+        if (collectionNames.Contains(rewindName))
+        {
+            await _database.RenameCollectionAsync(rewindName, _model.Name);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task PrepareInitialRun()
+    {
+        var collection = GetCollection();
+        return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
+
+    void ApplyActualChanges(
+        Key key,
+        IEnumerable<Change> changes,
+        UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
+        ref UpdateDefinition<BsonDocument>? updateBuilder,
+        ref bool hasChanges,
+        List<ArrayFilterDefinition> arrayFiltersForDocument)
+    {
+        foreach (var change in changes)
         {
             switch (change)
             {
@@ -159,90 +239,17 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                 case Joined joined:
                     {
-                        Console.WriteLine("Joined");
+                        Console.WriteLine("Hello");
                     }
                     break;
 
                 case ResolvedJoined resolvedJoined:
                     {
-                        Console.WriteLine("Resolved Joined");
+                        ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
                     }
                     break;
-
             }
         }
-
-        if (!hasChanges) return;
-
-        var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
-        await collection.UpdateOneAsync(
-            filter,
-            updateBuilder,
-            new UpdateOptions
-            {
-                IsUpsert = true,
-                ArrayFilters = arrayFiltersForDocument.ToArray()
-            });
-
-        await Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public async Task BeginReplay()
-    {
-        _isReplaying = true;
-        await PrepareInitialRun();
-    }
-
-    /// <inheritdoc/>
-    public async Task EndReplay()
-    {
-        _isReplaying = false;
-        var rewindName = ReplayCollectionName;
-        var rewoundCollectionsPrefix = $"{_model.Name}-";
-        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
-        var nextCollectionSequenceNumber = 1;
-        var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
-        if (rewoundCollectionNames.Length > 0)
-        {
-            nextCollectionSequenceNumber = rewoundCollectionNames
-                .Select(_ =>
-                {
-                    var postfix = _.Substring(rewoundCollectionsPrefix.Length);
-                    if (int.TryParse(postfix, out var value))
-                    {
-                        return value;
-                    }
-                    return -1;
-                })
-                .Where(_ => _ >= 0)
-                .OrderByDescending(_ => _)
-                .First() + 1;
-        }
-        var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
-
-        if (collectionNames.Contains(_model.Name))
-        {
-            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
-        }
-
-        if (collectionNames.Contains(rewindName))
-        {
-            await _database.RenameCollectionAsync(rewindName, _model.Name);
-        }
-    }
-
-    /// <inheritdoc/>
-    public Task PrepareInitialRun()
-    {
-        var collection = GetCollection();
-        return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 
     BsonValue GetBsonValueFrom(object value)
