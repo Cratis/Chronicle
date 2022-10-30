@@ -96,7 +96,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
-        ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
+        await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
 
         if (!hasChanges) return;
 
@@ -169,7 +169,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    void ApplyActualChanges(
+    Task ApplyActualChanges(
         Key key,
         IEnumerable<Change> changes,
         UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
@@ -177,6 +177,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         ref bool hasChanges,
         List<ArrayFilterDefinition> arrayFiltersForDocument)
     {
+        var joinTasks = new List<Task>();
+
         foreach (var change in changes)
         {
             switch (change)
@@ -190,7 +192,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                             var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
                             allArrayFilters.AddRange(arrayFilters);
 
-                            if (updateBuilder != default)
+                            if (updateBuilder is not null)
                             {
                                 if (propertyDifference.Changed is DateTimeOffset)
                                 {
@@ -239,7 +241,31 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                 case Joined joined:
                     {
-                        Console.WriteLine("Hello");
+                        var (property, arrayFilters) = ConvertToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+
+                        UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
+                        var hasJoinChanges = false;
+
+                        var serializedKey = GetBsonValueFrom(key.Value);
+                        var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
+
+                        var collection = GetCollection();
+
+                        var joinArrayFiltersForDocument = new List<ArrayFilterDefinition>();
+                        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument).Wait();
+
+                        if (hasJoinChanges)
+                        {
+                            var rendered = joinUpdateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+                            joinTasks.Add(collection.UpdateOneAsync(
+                                filter,
+                                joinUpdateBuilder,
+                                new UpdateOptions
+                                {
+                                    IsUpsert = true,
+                                    ArrayFilters = joinArrayFiltersForDocument.ToArray()
+                                }));
+                        }
                     }
                     break;
 
@@ -250,6 +276,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                     break;
             }
         }
+
+        return Task.WhenAll(joinTasks);
     }
 
     BsonValue GetBsonValueFrom(object value)

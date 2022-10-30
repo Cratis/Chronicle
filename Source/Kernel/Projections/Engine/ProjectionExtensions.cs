@@ -40,15 +40,11 @@ public static class ProjectionExtensions
         var joinSubject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
-            var onValue = onModelProperty.GetValue(_.Changeset.InitialState, ArrayIndexers.NoIndexers);
-            if (onValue is not null)
+            var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
+            joinSubject.OnNext(_ with
             {
-                var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
-                joinSubject.OnNext(_ with
-                {
-                    Changeset = changeset
-                });
-            }
+                Changeset = changeset
+            });
         });
         return joinSubject;
     }
@@ -73,16 +69,21 @@ public static class ProjectionExtensions
             var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, ArrayIndexers.NoIndexers);
             if (onValue is not null)
             {
-                var task = eventProvider.GetLastInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
-                task.Wait();
-                var lastEventInstance = task.Result;
-
-                var changeset = _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
-                joinSubject.OnNext(_ with
+                var checkTask = eventProvider.HasInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                checkTask.Wait();
+                if (checkTask.Result)
                 {
-                    Event = lastEventInstance,
-                    Changeset = changeset
-                });
+                    var lastEventInstanceTask = eventProvider.GetLastInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                    lastEventInstanceTask.Wait();
+                    var lastEventInstance = lastEventInstanceTask.Result;
+
+                    var changeset = _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
+                    joinSubject.OnNext(_ with
+                    {
+                        Event = lastEventInstance,
+                        Changeset = changeset
+                    });
+                }
             }
         });
         return joinSubject;
