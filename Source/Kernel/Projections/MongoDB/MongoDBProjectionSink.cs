@@ -162,6 +162,13 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         Console.WriteLine("Joined");
                     }
                     break;
+
+                case ResolvedJoined resolvedJoined:
+                    {
+                        Console.WriteLine("Resolved Joined");
+                    }
+                    break;
+
             }
         }
 
