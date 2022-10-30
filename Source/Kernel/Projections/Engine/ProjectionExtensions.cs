@@ -43,12 +43,6 @@ public static class ProjectionExtensions
             var onValue = onModelProperty.GetValue(_.Changeset.InitialState, ArrayIndexers.NoIndexers);
             if (onValue is not null)
             {
-                // Conditions:
-                // - Parent event comes first.
-                //   - When join event comes, resolve all relationships that matches key (simple update)
-                // - Join event comes first
-                //   - When parent event comes, find events that match the relationship on key
-                //   - Hook up additional action for events that modifies the onModelProperty
                 var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
                 joinSubject.OnNext(_ with
                 {
