@@ -120,6 +120,18 @@ public class ProjectionFactory : IProjectionFactory
                     propertyMappers);
         }
 
+        foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
+        {
+            var propertyMappers = joinDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
+            projection.Event
+                .WhereEventTypeEquals(eventType)
+                .Join(joinDefinition.On)
+                .Project(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty,
+                    propertyMappers);
+        }
+
         return projection;
     }
 

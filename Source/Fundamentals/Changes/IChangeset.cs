@@ -49,7 +49,16 @@ public interface IChangeset<TSource, TTarget>
     void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers);
 
     /// <summary>
-    /// Applies properties to the child in the model to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// Apply a join change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="onProperty">The property defining the property it was joined on.</param>
+    /// <param name="key">Key representing the join.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <returns>A changeset that is scoped for the join.</returns>
+    IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, IArrayIndexers arrayIndexers);
+
+    /// <summary>
+    /// Applies properties to the child in the model to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     /// <typeparam name="TChild">Type of child.</typeparam>
     /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
@@ -62,12 +71,12 @@ public interface IChangeset<TSource, TTarget>
         where TChild : new();
 
     /// <summary>
-    /// Apply a remove change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// Apply a remove change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     void Remove();
 
     /// <summary>
-    /// Apply a remove child change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// Apply a remove child change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     void RemoveChild();
 

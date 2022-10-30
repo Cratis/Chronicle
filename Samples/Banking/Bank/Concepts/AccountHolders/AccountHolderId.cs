@@ -3,10 +3,9 @@
 
 namespace Concepts.AccountHolders;
 
-public record AccountHolderId(Guid Value) : ConceptAs<Guid>(Value)
+public record AccountHolderId(string Value) : ConceptAs<string>(Value)
 {
     public static implicit operator EventSourceId(AccountHolderId id) => new(id.ToString());
-    public static implicit operator AccountHolderId(Guid value) => new(value);
-    public static implicit operator AccountHolderId(string value) => new(Guid.Parse(value));
-    public static implicit operator AccountHolderId(EventSourceId value) => new(Guid.Parse(value.Value));
+    public static implicit operator AccountHolderId(EventSourceId id) => new(id.Value);
+    public static implicit operator AccountHolderId(string value) => new(value);
 }

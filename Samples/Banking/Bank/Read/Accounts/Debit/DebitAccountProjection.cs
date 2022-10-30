@@ -12,7 +12,7 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
 
     public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
         builder
-            .WithInitialModelState(() => new(Guid.Empty, string.Empty, Guid.Empty, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
+            .WithInitialModelState(() => new(Guid.Empty, string.Empty, string.Empty, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
 
             .Join<AccountHolderRegistered>(_ => _
                 .On(model => model.AccountHolderId)

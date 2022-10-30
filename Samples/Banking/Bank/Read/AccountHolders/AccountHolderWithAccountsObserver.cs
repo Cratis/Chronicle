@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.ObjectModel;
-using System.Security.Cryptography;
-using System.Text;
 using Concepts.AccountHolders;
 using Events.AccountHolders;
 using Events.Accounts.Credit;
@@ -25,7 +23,7 @@ public class AccountHolderWithAccountsObserver
 
     public Task AccountHolderRegistered(AccountHolderRegistered @event, EventContext context)
     {
-        var customerId = GetCustomerIdFromString(context.EventSourceId);
+        var customerId = (AccountHolderId)context.EventSourceId;
         var model = new AccountHolderWithAccounts(customerId, @event.FirstName, @event.LastName, new());
         return _collection.ReplaceOneAsync(_ => _.Id == customerId, model, new ReplaceOptions { IsUpsert = true });
     }
@@ -48,13 +46,5 @@ public class AccountHolderWithAccountsObserver
         var model = result.FirstOrDefault() ?? new(customerId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>());
         model.Accounts.Add(new DebitAccount(@context.EventSourceId, @event.Name, AccountType.Debit));
         await _collection.ReplaceOneAsync(_ => _.Id == customerId, model, new ReplaceOptions { IsUpsert = true });
-    }
-
-#pragma warning disable CA5351
-    AccountHolderId GetCustomerIdFromString(string input)
-    {
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
-        return new AccountHolderId(new Guid(hash));
     }
 }
