@@ -16,8 +16,6 @@ public partial class Observer
         _logger.Subscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
 
         State.CurrentNamespace = observerNamespace;
-        State.EventTypes = eventTypes;
-        await WriteStateAsync();
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
@@ -37,11 +35,15 @@ public partial class Observer
 
         if (HasDefinitionChanged(eventTypes))
         {
+            State.EventTypes = eventTypes;
+            await WriteStateAsync();
             await Rewind();
             return;
         }
 
         State.RunningState = ObserverRunningState.Subscribing;
+        State.EventTypes = eventTypes;
+
         var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
 
         var nextSequenceNumber = lastSequenceNumber + 1;
