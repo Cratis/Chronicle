@@ -1,3 +1,39 @@
+# [v6.14.0] - 2022-10-30 [PR: #559](https://github.com/aksio-insurtech/Cratis/pull/559)
+
+### Added
+
+- Support for join expressions. This supports a full eventual consistent model enabling events to be out of order in the relationship. The projected end result will be resolved when events are there.
+
+```csharp
+public class DebitAccountProjection : IProjectionFor<DebitAccount>
+{
+    public ProjectionId Identifier => "d1bb5522-5512-42ce-938a-d176536bb01d";
+
+    public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
+        builder
+            .WithInitialModelState(() => new(Guid.Empty, string.Empty, null!, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
+
+            // This is how one sets up the relationship
+            .Join<AccountHolderRegistered>(_ => _
+                .On(model => model.AccountHolderId)  // There has to be a property that holds the key, typically the event source Id of the other type being joined.
+                .Set(model => model.AccountHolder.FirstName).To(@event => @event.FirstName)
+                .Set(model => model.AccountHolder.LastName).To(@event => @event.LastName))
+            .From<DebitAccountOpened>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name)
+                .Set(model => model.AccountHolderId).To(@event => @event.Owner)
+                .Set(model => model.HasCard).To(@event => @event.IncludeCard))
+            .From<DebitAccountNameChanged>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name))
+            .From<DepositToDebitAccountPerformed>(_ => _
+                .Add(model => model.Balance).With(@event => @event.Amount))
+            .From<WithdrawalFromDebitAccountPerformed>(_ => _
+                .Subtract(model => model.Balance).With(@event => @event.Amount))
+            .RemovedWith<DebitAccountClosed>();
+}
+
+```
+
+
 # [v6.13.0] - 2022-10-28 [PR: #557](https://github.com/aksio-insurtech/Cratis/pull/557)
 
 ### Added
