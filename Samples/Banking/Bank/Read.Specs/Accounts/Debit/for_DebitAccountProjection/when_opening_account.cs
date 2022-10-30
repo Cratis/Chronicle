@@ -23,6 +23,6 @@ public class when_opening_account : ProjectionSpecificationFor<DebitAccount>
     }
 
     [Fact] void should_set_account_name() => result.Model.Name.Value.ShouldEqual(account_name);
-    [Fact] void should_set_owner_id() => result.Model.OwnerId.Value.ShouldEqual(Guid.Parse(owner_id));
+    [Fact] void should_set_owner_id() => result.Model.AccountHolderId.Value.ShouldEqual(owner_id);
     [Fact] void should_set_has_card() => ((bool)result.Model.HasCard).ShouldEqual(true);
 }
