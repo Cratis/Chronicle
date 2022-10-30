@@ -27,6 +27,15 @@ public interface IEventSequenceStorageProvider
     Task<EventSequenceNumber> GetTailSequenceNumber(EventSequenceId eventSequenceId, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>
+    /// Check if there is an instance of a specific event type for an event source.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
+    /// <returns>The <see cref="AppendedEvent"/> found.</returns>
+    Task<bool> HasInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId);
+
+    /// <summary>
     /// Get the last instance of a specific event type for an event source.
     /// </summary>
     /// <param name="eventSequenceId">The event sequence to get for.</param>

@@ -79,6 +79,18 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     /// <inheritdoc/>
+    public Task<bool> HasInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId)
+    {
+        var filter = Builders<Event>.Filter.And(
+            Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
+            Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
+
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var count = collection.Find(filter).CountDocuments();
+        return Task.FromResult(count > 0);
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent> GetLastInstanceFor(
         EventSequenceId eventSequenceId,
         EventTypeId eventTypeId,
