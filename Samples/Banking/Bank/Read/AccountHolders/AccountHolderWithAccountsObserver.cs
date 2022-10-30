@@ -4,7 +4,7 @@
 using System.Collections.ObjectModel;
 using System.Security.Cryptography;
 using System.Text;
-using Concepts.Customers;
+using Concepts.AccountHolders;
 using Events.AccountHolders;
 using Events.Accounts.Credit;
 using Events.Accounts.Debit;
@@ -51,10 +51,10 @@ public class AccountHolderWithAccountsObserver
     }
 
 #pragma warning disable CA5351
-    CustomerId GetCustomerIdFromString(string input)
+    AccountHolderId GetCustomerIdFromString(string input)
     {
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
-        return new CustomerId(new Guid(hash));
+        return new AccountHolderId(new Guid(hash));
     }
 }
