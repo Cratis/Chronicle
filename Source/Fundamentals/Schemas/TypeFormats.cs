@@ -21,7 +21,8 @@ public class TypeFormats : ITypeFormats
         { typeof(DateTime), "date-time" },
         { typeof(DateTimeOffset), "date-time-offset" },
         { typeof(DateOnly), "date" },
-        { typeof(TimeOnly), "time" }
+        { typeof(TimeOnly), "time" },
+        { typeof(Guid), "guid" }
     };
 
     /// <inheritdoc/>

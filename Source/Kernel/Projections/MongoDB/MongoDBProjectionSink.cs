@@ -8,6 +8,7 @@ using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 using MongoDB.Bson;
@@ -71,9 +72,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
-            var converted = _expandoObjectConverter.ToExpandoObject(instance, _model.Schema);
-            Console.WriteLine("Hello");
-            return converted;
+            return _expandoObjectConverter.ToExpandoObject(instance, _model.Schema);
         }
 
         return default;
@@ -140,7 +139,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                 case ChildAdded childAdded:
                     {
-                        var document = childAdded.State.ToBsonDocument();
+                        var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
+                        var document = _expandoObjectConverter.ToBson((childAdded.State as ExpandoObject)!, schema);
 
                         var segments = childAdded.ChildrenProperty.Segments.ToArray();
                         var childrenProperty = new PropertyPath(string.Empty);
