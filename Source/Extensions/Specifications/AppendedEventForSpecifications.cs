@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 
 namespace Aksio.Cratis.Specifications;
@@ -16,5 +16,5 @@ namespace Aksio.Cratis.Specifications;
 public record AppendedEventForSpecifications(
     EventMetadata Metadata,
     EventContext Context,
-    JsonObject Content,
+    ExpandoObject Content,
     object ActualEvent) : AppendedEvent(Metadata, Context, Content);
