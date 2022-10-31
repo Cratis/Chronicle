@@ -23,6 +23,11 @@ public interface IChangeset<TSource, TTarget>
     TTarget InitialState { get; }
 
     /// <summary>
+    /// Gets the current state with all the changes in the changeset applied.
+    /// </summary>
+    TTarget CurrentState { get; }
+
+    /// <summary>
     /// Gets all the changes for the changeset.
     /// </summary>
     IEnumerable<Change> Changes { get; }
@@ -49,7 +54,26 @@ public interface IChangeset<TSource, TTarget>
     void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers);
 
     /// <summary>
-    /// Applies properties to the child in the model to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// Apply a join change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="onProperty">The property defining the property it was joined on.</param>
+    /// <param name="key">Key representing the join.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <returns>A changeset that is scoped for the join.</returns>
+    IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, IArrayIndexers arrayIndexers);
+
+    /// <summary>
+    /// Apply a join resolution change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="onProperty">The property defining the property it was joined on.</param>
+    /// <param name="key">Key representing the join.</param>
+    /// <param name="incoming">The incoming change that resolved the join.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <returns>A changeset that is scoped for the join.</returns>
+    IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, IArrayIndexers arrayIndexers);
+
+    /// <summary>
+    /// Applies properties to the child in the model to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     /// <typeparam name="TChild">Type of child.</typeparam>
     /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
@@ -62,12 +86,12 @@ public interface IChangeset<TSource, TTarget>
         where TChild : new();
 
     /// <summary>
-    /// Apply a remove change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// Apply a remove change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     void Remove();
 
     /// <summary>
-    /// Apply a remove child change to the <see cref="Changeset{TSource, TTarget}"/>.
+    /// Apply a remove child change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     void RemoveChild();
 

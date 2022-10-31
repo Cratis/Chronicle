@@ -6,6 +6,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Expressions;
 using Aksio.Cratis.Events.Projections.Expressions.Keys;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using NJsonSchema;
@@ -19,18 +20,22 @@ public class ProjectionFactory : IProjectionFactory
 {
     readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
     readonly IKeyExpressionResolvers _keyExpressionResolvers;
+    readonly IEventSequenceStorageProvider _eventProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
     /// </summary>
     /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for providing events from the event store.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
-        IKeyExpressionResolvers keyExpressionResolvers)
+        IKeyExpressionResolvers keyExpressionResolvers,
+        IEventSequenceStorageProvider eventProvider)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;
+        _eventProvider = eventProvider;
     }
 
     /// <inheritdoc/>
@@ -93,11 +98,38 @@ public class ProjectionFactory : IProjectionFactory
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
+            var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
             var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
             propertyMappers.AddRange(propertyMappersForAllEventTypes);
+            var projected = projection.Event
+                .WhereEventTypeEquals(eventType)
+                .Project(
+                    childrenAccessorProperty,
+                    actualIdentifiedByProperty,
+                    propertyMappers);
 
+            if (joinExpressions.Any())
+            {
+                foreach (var (joinEventType, joinDefinition) in joinExpressions)
+                {
+                    var joinPropertyMappers = joinDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
+                    projected = projected
+                        .ResolveJoin(_eventProvider, joinEventType, joinDefinition.On)
+                        .Project(
+                            childrenAccessorProperty,
+                            actualIdentifiedByProperty,
+                            joinPropertyMappers);
+                }
+            }
+        }
+
+        foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
+        {
+            var propertyMappers = joinDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+            propertyMappers.AddRange(propertyMappersForAllEventTypes);
             projection.Event
                 .WhereEventTypeEquals(eventType)
+                .Join(joinDefinition.On)
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,

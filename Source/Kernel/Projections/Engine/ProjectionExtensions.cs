@@ -32,7 +32,7 @@ public static class ProjectionExtensions
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
-    /// <returns>The observable for continuation.</returns>
+    /// <returns>An observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Join(
         this IObservable<ProjectionEventContext> observable,
         PropertyPath onModelProperty)
@@ -40,21 +40,52 @@ public static class ProjectionExtensions
         var joinSubject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
-            var onValue = onModelProperty.GetValue(_.Changeset.InitialState, ArrayIndexers.NoIndexers);
-            if (onValue is null)
-            {
-                Console.WriteLine(onValue);
-            }
-            else
-            {
-                Console.WriteLine(onValue);
-            }
-
+            var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
             joinSubject.OnNext(_ with
             {
+                Changeset = changeset
             });
         });
-        Console.WriteLine(onModelProperty);
+        return joinSubject;
+    }
+
+    /// <summary>
+    /// Resolve a join for events that has happened.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting the event in the past.</param>
+    /// <param name="joinEventType">Type of event to be joined.</param>
+    /// <param name="onModelProperty">The property on the model to join on.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> ResolveJoin(
+        this IObservable<ProjectionEventContext> observable,
+        IEventSequenceStorageProvider eventProvider,
+        EventType joinEventType,
+        PropertyPath onModelProperty)
+    {
+        var joinSubject = new Subject<ProjectionEventContext>();
+        observable.Subscribe(_ =>
+        {
+            var onValue = onModelProperty.GetValue(_.Changeset.CurrentState, ArrayIndexers.NoIndexers);
+            if (onValue is not null)
+            {
+                var checkTask = eventProvider.HasInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                checkTask.Wait();
+                if (checkTask.Result)
+                {
+                    var lastEventInstanceTask = eventProvider.GetLastInstanceFor(EventSequenceId.Log, joinEventType.Id, onValue.ToString()!);
+                    lastEventInstanceTask.Wait();
+                    var lastEventInstance = lastEventInstanceTask.Result;
+
+                    var changeset = _.Changeset.ResolvedJoin(onModelProperty, _.Key.Value, lastEventInstance, _.Key.ArrayIndexers);
+                    joinSubject.OnNext(_ with
+                    {
+                        Event = lastEventInstance,
+                        Changeset = changeset
+                    });
+                }
+            }
+        });
         return joinSubject;
     }
 
@@ -106,16 +137,5 @@ public static class ProjectionExtensions
     {
         observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id).Subscribe(_ => _.Changeset.Remove());
         return observable;
-    }
-
-    /// <summary>
-    /// Join with a specific <see cref="EventType"/>.
-    /// </summary>
-    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-    /// <param name="eventType"><see cref="EventType"/> to join with.</param>
-    /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> Join(this IObservable<ProjectionEventContext> observable, EventType eventType)
-    {
-        return observable.Where(_ => _.Event.Metadata.Type.Id == eventType.Id);
     }
 }

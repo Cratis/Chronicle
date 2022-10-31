@@ -9,9 +9,9 @@ using Aksio.Cratis.Properties;
 namespace Aksio.Cratis.Events.Projections.Json;
 
 /// <summary>
-/// Represents a <see cref="JsonConverter"/> that can convert to a dictionary of <see cref="PropertyPath"/> and <see cref="FromDefinition"/>.
+/// Represents a <see cref="JsonConverter"/> that can convert to a dictionary of <see cref="PropertyPath"/> and <see cref="JoinDefinition"/>.
 /// </summary>
-public class FromDefinitionsConverter : DictionaryJsonConverter<EventType, FromDefinition>
+public class JoinDefinitionsConverter : DictionaryJsonConverter<EventType, JoinDefinition>
 {
     /// <inheritdoc/>
     protected override EventType GetKeyFromString(string key) => new(key, 1);

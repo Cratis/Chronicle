@@ -4,28 +4,12 @@
 
 import { field } from '@aksio/cratis-fundamentals';
 
-import { AccountHolder } from './AccountHolder';
 
-export class DebitAccount {
-
-    @field(String)
-    id!: string;
+export class AccountHolder {
 
     @field(String)
-    name!: string;
+    firstName!: string;
 
     @field(String)
-    accountHolderId!: string;
-
-    @field(AccountHolder)
-    accountHolder!: AccountHolder;
-
-    @field(Number)
-    balance?: number;
-
-    @field(Boolean)
-    hasCard!: boolean;
-
-    @field(Date)
-    lastUpdated!: Date;
+    lastName!: string;
 }
