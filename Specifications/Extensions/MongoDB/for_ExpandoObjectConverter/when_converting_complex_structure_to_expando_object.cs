@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Globalization;
 using MongoDB.Bson;
 
 namespace Aksio.Cratis.Extensions.MongoDB.for_ExpandoObjectConverter;
@@ -23,6 +24,10 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
         expando.floatValue = 42.42;
         expando.doubleValue = 42.42;
         expando.guidValue = "3023e769-4594-45fd-938e-9b231cf3e3f5";
+        expando.dateTimeValue = "2022-10-31T14:51:32.8450000Z";
+        expando.dateTimeOffsetValue = "2022-10-31T14:51:32.8450000Z";
+        expando.dateOnlyValue = "2022-10-31";
+        expando.timeOnlyValue = "2022-10-31T14:51:32";
         expando.reference = new ExpandoObject();
         expando.reference.intValue = 43;
         expando.reference.floatValue = 43.43;
@@ -54,6 +59,14 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_set_top_level_double_value_to_hold_correct_value() => result.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)source_dynamic.doubleValue);
     [Fact] void should_set_top_level_guid_value_to_be_of_binary_type() => result.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
     [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => result.GetElement("guidValue").Value.AsGuid.ShouldEqual(Guid.Parse((string)source_dynamic.guidValue));
+    [Fact] void should_set_top_level_date_time_value_to_be_of_date_time_type() => result.GetElement("dateTimeValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => result.GetElement("dateTimeValue").Value.ToUniversalTime().ShouldEqual(DateTime.Parse((string)source_dynamic.dateTimeValue).ToUniversalTime());
+    [Fact] void should_set_top_level_date_time_offset_value_to_be_of_date_time_type() => result.GetElement("dateTimeOffsetValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => DateTimeOffset.FromUnixTimeMilliseconds(((BsonDateTime)result.GetElement("dateTimeOffsetValue").Value).MillisecondsSinceEpoch).ShouldEqual(DateTimeOffset.Parse((string)source_dynamic.dateTimeOffsetValue));
+    [Fact] void should_set_top_level_date_only_value_to_be_of_date_time_type() => result.GetElement("dateOnlyValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_date_only_value_to_hold_correct_value() => DateOnly.FromDateTime(result.GetElement("dateOnlyValue").Value.ToUniversalTime()).ShouldEqual(DateOnly.Parse((string)source_dynamic.dateOnlyValue));
+    [Fact] void should_set_top_level_time_only_value_to_be_of_date_time_type() => result.GetElement("timeOnlyValue").Value.ShouldBeOfExactType<BsonDateTime>();
+    [Fact] void should_set_top_level_time_only_value_to_hold_correct_value() => TimeOnly.FromDateTime(result.GetElement("timeOnlyValue").Value.ToUniversalTime()).ShouldEqual(TimeOnly.FromDateTime(DateTime.Parse((string)source_dynamic.timeOnlyValue)));
 
     [Fact] void should_reference_object_int_value_to_be_of_int_type() => result.GetElement("reference").Value.AsBsonDocument.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
     [Fact] void should_reference_object_int_value_to_hold_correct_value() => result.GetElement("reference").Value.AsBsonDocument.GetElement("intValue").Value.AsInt32.ShouldEqual((int)source_dynamic.reference.intValue);
