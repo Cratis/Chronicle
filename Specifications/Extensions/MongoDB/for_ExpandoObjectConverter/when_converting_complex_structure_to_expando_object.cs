@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Globalization;
 using MongoDB.Bson;
 
 namespace Aksio.Cratis.Extensions.MongoDB.for_ExpandoObjectConverter;
