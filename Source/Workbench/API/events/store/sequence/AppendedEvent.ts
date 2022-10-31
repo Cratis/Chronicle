@@ -6,7 +6,7 @@ import { field } from '@aksio/cratis-fundamentals';
 
 import { EventMetadata } from './EventMetadata';
 import { EventContext } from './EventContext';
-import { JsonObject } from './JsonObject';
+import { ExpandoObject } from './ExpandoObject';
 
 export class AppendedEvent {
 
@@ -16,6 +16,6 @@ export class AppendedEvent {
     @field(EventContext)
     context!: EventContext;
 
-    @field(JsonObject, true)
-    content!: JsonObject[];
+    @field(ExpandoObject, true)
+    content!: ExpandoObject[];
 }

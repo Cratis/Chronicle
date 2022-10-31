@@ -12,8 +12,8 @@ using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using IExpandoObjectConverter = Aksio.Cratis.Extensions.MongoDB.IExpandoObjectConverter;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB;
 
