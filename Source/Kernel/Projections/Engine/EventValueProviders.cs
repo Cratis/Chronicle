@@ -27,7 +27,7 @@ public static class EventValueProviders
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
     public static ValueProvider<AppendedEvent> EventContent(PropertyPath sourceProperty)
     {
-        return (AppendedEvent @event) => GetValueFromEventContent(@event, sourceProperty);
+        return (AppendedEvent @event) => sourceProperty.GetValue(@event.Content, ArrayIndexers.NoIndexers)!;
     }
 
     /// <summary>
@@ -45,41 +45,4 @@ public static class EventValueProviders
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
     public static ValueProvider<AppendedEvent> UniqueIdentifier() => (AppendedEvent @event) => $"{@event.Metadata.SequenceNumber}-{@event.Context.Occurred.ToUnixTimeMilliseconds()}";
-
-    static object GetValueFromEventContent(AppendedEvent @event, PropertyPath sourceProperty)
-    {
-        JsonNode? currentSource = @event.Content;
-        object? sourceValue = null;
-        foreach (var property in sourceProperty.Segments)
-        {
-            var value = currentSource![property.Value];
-            if (value is JsonValue jsonValue)
-            {
-                jsonValue.TryGetValue(out sourceValue);
-
-                if (sourceValue is JsonElement element)
-                {
-                    switch (element.ValueKind)
-                    {
-                        case JsonValueKind.True:
-                            sourceValue = true;
-                            break;
-                        case JsonValueKind.False:
-                            sourceValue = false;
-                            break;
-                        default:
-                            element.TryGetValue(out sourceValue);
-                            break;
-                    }
-                }
-            }
-            else if (value is JsonObject jsonObject)
-            {
-                sourceValue = jsonObject.AsExpandoObject();
-            }
-            currentSource = value;
-        }
-
-        return sourceValue!;
-    }
 }

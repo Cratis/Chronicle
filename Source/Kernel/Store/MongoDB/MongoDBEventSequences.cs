@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
@@ -42,7 +43,7 @@ public class MongoDBEventSequences : IEventSequences
         EventSourceId eventSourceId,
         EventType eventType,
         DateTimeOffset validFrom,
-        JsonObject content)
+        ExpandoObject content)
     {
         try
         {
@@ -62,7 +63,7 @@ public class MongoDBEventSequences : IEventSequences
                 eventSourceId,
                 new Dictionary<string, BsonDocument>
                 {
-                        { eventType.Generation.ToString(), BsonDocument.Parse(content.ToJsonString()) }
+                        { eventType.Generation.ToString(), BsonDocument.Parse(content.ToJson()) }
                 },
                 Array.Empty<EventCompensation>());
             var collection = GetCollectionFor(eventSequenceId);
@@ -86,7 +87,7 @@ public class MongoDBEventSequences : IEventSequences
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         DateTimeOffset validFrom,
-        JsonObject content) => throw new NotImplementedException();
+        ExpandoObject content) => throw new NotImplementedException();
 
     IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
 }
