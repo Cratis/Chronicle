@@ -15,7 +15,7 @@ public class TimeOnlySerializer : StructSerializerBase<TimeOnly>
     /// <inheritdoc/>
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TimeOnly value)
     {
-        var dateTime = DateTime.MinValue;
+        var dateTime = DateTime.UnixEpoch;
         dateTime += value.ToTimeSpan();
         var ticks = BsonUtils.ToMillisecondsSinceEpoch(dateTime);
         context.Writer.WriteDateTime(ticks);
