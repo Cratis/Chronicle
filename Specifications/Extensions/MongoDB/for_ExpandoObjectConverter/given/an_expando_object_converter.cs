@@ -24,8 +24,10 @@ public class an_expando_object_converter : Specification
             },
             ReflectionService = new ReflectionService(),
         };
+        var typeFormats = new TypeFormats();
+        settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(typeFormats));
         var generator = new NJsonSchemaGenerator(settings);
         schema = generator.Generate(typeof(TargetType));
-        converter = new(new TypeFormats());
+        converter = new(typeFormats);
     }
 }

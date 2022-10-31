@@ -319,7 +319,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 return new BsonDateTime(actualValue.ToDateTime(new TimeOnly(12, 0)));
 
             case TimeOnly actualValue:
-                return new BsonDateTime(BsonUtils.ToMillisecondsSinceEpoch(DateTime.MinValue + actualValue.ToTimeSpan()));
+                return new BsonDateTime(BsonUtils.ToMillisecondsSinceEpoch(DateTime.UnixEpoch + actualValue.ToTimeSpan()));
 
             case Guid actualValue:
                 return new BsonBinaryData(actualValue, GuidRepresentation.Standard);
