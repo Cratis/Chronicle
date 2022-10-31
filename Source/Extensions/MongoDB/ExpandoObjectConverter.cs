@@ -63,11 +63,6 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             object? value;
             var name = GetNameForPropertyInExpandoObject(element);
 
-            if (name == "dateTimeValue")
-            {
-                Console.WriteLine("Hello");
-            }
-
             if (!schema.ActualProperties.ContainsKey(name))
             {
                 value = ConvertUnknownSchemaTypeToClrType(element.Value);
@@ -408,7 +403,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         if (targetType == typeof(TimeOnly) && value is BsonDateTime bsonTimeOnly)
         {
             var dateTime = bsonTimeOnly.ToUniversalTime();
-            return new DateOnly(dateTime.Year, dateTime.Month, dateTime.Day);
+            return new TimeOnly(dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Millisecond);
         }
 
         return null;
