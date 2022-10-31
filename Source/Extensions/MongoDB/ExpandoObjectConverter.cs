@@ -63,6 +63,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             object? value;
             var name = GetNameForPropertyInExpandoObject(element);
 
+            if (name == "dateTimeValue")
+            {
+                Console.WriteLine("Hello");
+            }
+
             if (!schema.ActualProperties.ContainsKey(name))
             {
                 value = ConvertUnknownSchemaTypeToClrType(element.Value);

@@ -19,7 +19,7 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
             new BsonElement("intValue", 43),
             new BsonElement("floatValue", 43.43),
             new BsonElement("doubleValue", 43.43),
-            new BsonElement("guidValue", new BsonBinaryData(Guid.Parse("4f8cef8b-0443-4e4b-9c94-42fac316b241"), GuidRepresentation.Standard)),
+            new BsonElement("guidValue", new BsonBinaryData(Guid.Parse("4f8cef8b-0443-4e4b-9c94-42fac316b241"), GuidRepresentation.Standard))
         }.AsEnumerable());
 
         child = new BsonDocument(new BsonElement[]
@@ -36,6 +36,10 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
             new BsonElement("floatValue", 42.42),
             new BsonElement("doubleValue", 42.42),
             new BsonElement("guidValue", "251b9fbe-83d4-4306-9a5d-9d0e7d4dd456"),
+            new BsonElement("dateTimeValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
+            new BsonElement("dateTimeOffsetValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
+            new BsonElement("dateOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
+            new BsonElement("timeOnlyValue", new BsonDateTime(DateTime.Parse("2022-10-31T14:51:32.8450000Z"))),
             new BsonElement("reference", reference),
             new BsonElement("children", new BsonArray(new BsonDocument[]
             {
@@ -54,6 +58,10 @@ public class when_converting_complex_structure_to_bson_document : given.an_expan
     [Fact] void should_set_top_level_double_value_to_hold_correct_value() => ((double)result.doubleValue).ShouldEqual(source.GetElement("doubleValue").Value.AsDouble);
     [Fact] void should_set_top_level_guid_value_to_be_of_guid_type() => ((object)result.guidValue).ShouldBeOfExactType<Guid>();
     [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => ((Guid)result.guidValue).ShouldEqual(Guid.Parse(source.GetElement("guidValue").Value.AsString));
+    [Fact] void should_set_top_level_date_time_value_to_be_of_date_time_type() => ((object)result.dateTimeValue).ShouldBeOfExactType<DateTime>();
+    [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => ((DateTime)result.dateTimeValue).ShouldEqual(source.GetElement("dateTimeValue").Value.ToUniversalTime());
+    [Fact] void should_set_top_level_date_time_offset_value_to_be_of_date_time_offset_type() => ((object)result.dateTimeOffsetValue).ShouldBeOfExactType<DateTimeOffset>();
+    [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => ((DateTimeOffset)result.dateTimeOffsetValue).ShouldEqual(DateTimeOffset.FromUnixTimeMilliseconds(((BsonDateTime)source.GetElement("dateTimeOffsetValue").Value).MillisecondsSinceEpoch));
 
     [Fact] void should_reference_level_int_value_to_be_of_int_type() => ((object)result.reference.intValue).ShouldBeOfExactType<int>();
     [Fact] void should_reference_level_int_value_to_hold_correct_value() => ((int)result.reference.intValue).ShouldEqual(reference.GetElement("intValue").Value.AsInt32);
