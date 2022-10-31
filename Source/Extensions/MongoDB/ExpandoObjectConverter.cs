@@ -19,6 +19,10 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 {
     readonly ITypeFormats _typeFormats;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class.
+    /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
     public ExpandoObjectConverter(ITypeFormats typeFormats) =>
         _typeFormats = typeFormats;
 
