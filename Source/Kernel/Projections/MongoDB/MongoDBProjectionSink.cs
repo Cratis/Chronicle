@@ -17,6 +17,8 @@ using MongoDB.Driver;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB;
 
+#pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
+
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in MongoDB.
 /// </summary>
@@ -96,8 +98,91 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         var arrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
+        await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
+        var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
-        foreach (var change in changeset.Changes)
+        if (!hasChanges) return;
+
+        // var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+        await collection.UpdateOneAsync(
+            filter,
+            updateBuilder,
+            new UpdateOptions
+            {
+                IsUpsert = true,
+                ArrayFilters = distinctArrayFilters
+            });
+    }
+
+    /// <inheritdoc/>
+    public async Task BeginReplay()
+    {
+        _isReplaying = true;
+        await PrepareInitialRun();
+    }
+
+    /// <inheritdoc/>
+    public async Task EndReplay()
+    {
+        _isReplaying = false;
+        var rewindName = ReplayCollectionName;
+        var rewoundCollectionsPrefix = $"{_model.Name}-";
+        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
+        var nextCollectionSequenceNumber = 1;
+        var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
+        if (rewoundCollectionNames.Length > 0)
+        {
+            nextCollectionSequenceNumber = rewoundCollectionNames
+                .Select(_ =>
+                {
+                    var postfix = _.Substring(rewoundCollectionsPrefix.Length);
+                    if (int.TryParse(postfix, out var value))
+                    {
+                        return value;
+                    }
+                    return -1;
+                })
+                .Where(_ => _ >= 0)
+                .OrderByDescending(_ => _)
+                .First() + 1;
+        }
+        var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
+
+        if (collectionNames.Contains(_model.Name))
+        {
+            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
+        }
+
+        if (collectionNames.Contains(rewindName))
+        {
+            await _database.RenameCollectionAsync(rewindName, _model.Name);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task PrepareInitialRun()
+    {
+        var collection = GetCollection();
+        return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
+
+    Task ApplyActualChanges(
+        Key key,
+        IEnumerable<Change> changes,
+        UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
+        ref UpdateDefinition<BsonDocument>? updateBuilder,
+        ref bool hasChanges,
+        List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument)
+    {
+        var joinTasks = new List<Task>();
+
+        foreach (var change in changes)
         {
             switch (change)
             {
@@ -166,81 +251,46 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         hasChanges = true;
                     }
                     break;
+
+                case Joined joined:
+                    {
+                        var (property, arrayFilters) = ConvertToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+
+                        UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
+                        var hasJoinChanges = false;
+
+                        var serializedKey = GetBsonValueFrom(key.Value);
+                        var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
+
+                        var collection = GetCollection();
+
+                        var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
+                        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument).Wait();
+
+                        if (hasJoinChanges)
+                        {
+                            // var rendered = joinUpdateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
+                            joinTasks.Add(collection.UpdateOneAsync(
+                                filter,
+                                joinUpdateBuilder,
+                                new UpdateOptions
+                                {
+                                    IsUpsert = false,
+                                    ArrayFilters = joinArrayFiltersForDocument.ToArray()
+                                }));
+                        }
+                    }
+                    break;
+
+                case ResolvedJoined resolvedJoined:
+                    {
+                        ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
+                    }
+                    break;
             }
         }
 
-        if (!hasChanges) return;
-
-        var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
-        var rendered = updateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
-        await collection.UpdateOneAsync(
-            filter,
-            updateBuilder,
-            new UpdateOptions
-            {
-                IsUpsert = true,
-                ArrayFilters = distinctArrayFilters
-            });
-
-        await Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public async Task BeginReplay()
-    {
-        _isReplaying = true;
-        await PrepareInitialRun();
-    }
-
-    /// <inheritdoc/>
-    public async Task EndReplay()
-    {
-        _isReplaying = false;
-        var rewindName = ReplayCollectionName;
-        var rewoundCollectionsPrefix = $"{_model.Name}-";
-        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
-        var nextCollectionSequenceNumber = 1;
-        var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
-        if (rewoundCollectionNames.Length > 0)
-        {
-            nextCollectionSequenceNumber = rewoundCollectionNames
-                .Select(_ =>
-                {
-                    var postfix = _.Substring(rewoundCollectionsPrefix.Length);
-                    if (int.TryParse(postfix, out var value))
-                    {
-                        return value;
-                    }
-                    return -1;
-                })
-                .Where(_ => _ >= 0)
-                .OrderByDescending(_ => _)
-                .First() + 1;
-        }
-        var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
-
-        if (collectionNames.Contains(_model.Name))
-        {
-            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
-        }
-
-        if (collectionNames.Contains(rewindName))
-        {
-            await _database.RenameCollectionAsync(rewindName, _model.Name);
-        }
-    }
-
-    /// <inheritdoc/>
-    public Task PrepareInitialRun()
-    {
-        var collection = GetCollection();
-        return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
+        return Task.WhenAll(joinTasks);
     }
 
     BsonValue GetBsonValueFrom(object value)
@@ -252,26 +302,6 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         return value.ToBsonDocument();
-    }
-
-    void HandleValueConversion(BsonDocument instance, IDictionary<string, object> objectInstance)
-    {
-        foreach (var element in instance)
-        {
-            // The deserializer seems to be looking for the target property type, which in the case of an expando object means
-            // it doesn't have anything to look for to resolve the target type. This seems to lead it to ignore our DateTimeOffsetSupportingBsonDateTimeSerializer.
-            // The end result of that is that it makes it a date time. Internally we want to be using DateTimeOffset for everything.
-            // MongoDB saves in UTC and Unix milliseconds since epoch.
-            if (element.Value is BsonDateTime bsonDateTime)
-            {
-                objectInstance[element.Name] = DateTimeOffset.FromUnixTimeMilliseconds(bsonDateTime.MillisecondsSinceEpoch);
-            }
-
-            if (element.Value is BsonDocument bsonDocument && objectInstance[element.Name] is IDictionary<string, object> innerObject)
-            {
-                HandleValueConversion(bsonDocument, innerObject);
-            }
-        }
     }
 
     (string Property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)

@@ -6,11 +6,11 @@ using Aksio.Cratis.Properties;
 namespace Aksio.Cratis.Changes;
 
 /// <summary>
-/// Represents a join.
+/// Represents a resolved join.
 /// </summary>
 /// <param name="State">State of the object being joined.</param>
 /// <param name="Key">The key used for the join.</param>
 /// <param name="OnProperty">The property being joined.</param>
 /// <param name="ArrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
 /// <param name="Changes">Changes applicable for the join change.</param>
-public record Joined(object State, object Key, PropertyPath OnProperty, IArrayIndexers ArrayIndexers, IEnumerable<Change> Changes) : Change(State);
+public record ResolvedJoined(object State, object Key, PropertyPath OnProperty, IArrayIndexers ArrayIndexers, IEnumerable<Change> Changes) : Change(State);
