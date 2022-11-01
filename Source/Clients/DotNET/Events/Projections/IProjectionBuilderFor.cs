@@ -65,7 +65,7 @@ public interface IProjectionBuilderFor<TModel>
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <returns>Builder continuation.</returns>
-    IProjectionBuilderFor<TModel> Every(Action<IFromEveryBuilder<TModel>> builderCallback);
+    IProjectionBuilderFor<TModel> FromEvery(Action<IFromEveryBuilder<TModel>> builderCallback);
 
     /// <summary>
     /// Define an event type that causes a delete in the projected result.
