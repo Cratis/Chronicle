@@ -137,7 +137,7 @@ public class Projection : Grain, IProjection
                     switch (change)
                     {
                         case PropertiesChanged<ExpandoObject> propertiesChanged:
-                            state = state.OverwriteWith((change.State as ExpandoObject)!);
+                            state = state.MergeWith((change.State as ExpandoObject)!);
                             break;
 
                         case ChildAdded childAdded:

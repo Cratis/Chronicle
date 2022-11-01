@@ -109,4 +109,10 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var json = JsonSerializer.Serialize(result);
         return new(JsonSerializer.Deserialize<TModel>(json, _serializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }
+
+    /// <summary>
+    /// Gets the count of model instances that was affected within this projection context.
+    /// </summary>
+    /// <returns>The number of models affected.</returns>
+    public int ModelCount() => _sink.GetCollection().Count;
 }
