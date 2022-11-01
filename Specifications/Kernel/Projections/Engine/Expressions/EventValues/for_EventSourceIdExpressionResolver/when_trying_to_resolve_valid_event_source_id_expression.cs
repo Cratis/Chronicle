@@ -12,5 +12,5 @@ public class when_trying_to_resolve_valid_event_source_id_expression : given.an_
 
     void Because() => result = resolver.Resolve("$eventSourceId")(@event);
 
-    [Fact] void should_resolve_to_a_value_provider_that_gets_event_source_id() => result.ShouldEqual(@event.Context.EventSourceId.Value);
+    [Fact] void should_resolve_to_a_value_provider_that_gets_event_source_id() => result.ShouldEqual(@event.Context.EventSourceId);
 }

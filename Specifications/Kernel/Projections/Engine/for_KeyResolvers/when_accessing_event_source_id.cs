@@ -20,5 +20,5 @@ public class when_accessing_event_source_id : Specification
 
     void Because() => result = EventValueProviders.EventSourceId(@event);
 
-    [Fact] void should_return_the_guid_from_event_source_id_from_the_event() => result.ShouldEqual(@event.Context.EventSourceId.Value);
+    [Fact] void should_return_the_guid_from_event_source_id_from_the_event() => result.ShouldEqual(@event.Context.EventSourceId);
 }
