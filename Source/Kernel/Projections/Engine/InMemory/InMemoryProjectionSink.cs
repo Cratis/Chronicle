@@ -23,10 +23,15 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "InMemory";
 
+    /// <summary>
+    /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
+    /// </summary>
+    public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
+
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        var collection = GetCollection();
+        var collection = Collection;
 
         ExpandoObject modelInstance;
         if (collection.ContainsKey(key.Value))
@@ -45,7 +50,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
         var state = changeset.InitialState.Clone();
-        var collection = GetCollection();
+        var collection = Collection;
 
         if (changeset.HasBeenRemoved())
         {
@@ -56,6 +61,33 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         collection[key.Value] = ApplyActualChanges(changeset.Changes, state);
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task BeginReplay()
+    {
+        _isReplaying = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task EndReplay()
+    {
+        _isReplaying = false;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task PrepareInitialRun()
+    {
+        Collection.Clear();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
     }
 
     ExpandoObject ApplyActualChanges(IEnumerable<Change> changes, ExpandoObject state)
@@ -81,37 +113,4 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 
         return state;
     }
-
-    /// <inheritdoc/>
-    public Task BeginReplay()
-    {
-        _isReplaying = true;
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task EndReplay()
-    {
-        _isReplaying = false;
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task PrepareInitialRun()
-    {
-        GetCollection().Clear();
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>
-    /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
-    /// </summary>
-    /// <returns>The collection.</returns>
-    public Dictionary<object, ExpandoObject> GetCollection() => _isReplaying ? _rewindCollection : _collection;
 }
