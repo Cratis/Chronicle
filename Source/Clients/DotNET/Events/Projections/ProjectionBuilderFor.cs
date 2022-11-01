@@ -113,7 +113,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> All(Action<IAllBuilder<TModel>> builderCallback)
+    public IProjectionBuilderFor<TModel> Every(Action<IAllBuilder<TModel>> builderCallback)
     {
         var builder = new AllBuilder<TModel>();
         builderCallback(builder);

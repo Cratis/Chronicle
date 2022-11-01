@@ -42,11 +42,11 @@ public interface IChildrenBuilder<TParentModel, TChildModel>
     IChildrenBuilder<TParentModel, TChildModel> Join<TEvent>(Action<IJoinBuilder<TChildModel, TEvent>> builderCallback);
 
     /// <summary>
-    /// Start building property expressions that applies for all events being projected from.
+    /// Start building property expressions that applies for every events being projected from.
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> All(Action<IAllBuilder<TChildModel>> builderCallback);
+    IChildrenBuilder<TParentModel, TChildModel> Every(Action<IAllBuilder<TChildModel>> builderCallback);
 
     /// <summary>
     /// Sets the property that identifies the child model in the collection within the parent.

@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Events.Projections;
 /// Defines the builder for building properties that can be set by all events.
 /// </summary>
 /// <typeparam name="TModel">Type of model to build for.</typeparam>
-public interface IAllBuilder<TModel>
+public interface IFromEveryBuilder<TModel>
 {
     /// <summary>
     /// Start building the set operation to a target property on the model.
@@ -17,11 +17,11 @@ public interface IAllBuilder<TModel>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>The <see cref="IAllSetBuilder{TModel, TBuilder}"/> to build up the property expressions.</returns>
-    IAllSetBuilder<TModel, IAllBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+    IAllSetBuilder<TModel, IFromEveryBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
     /// Instruct the all definition to include all child projections.
     /// </summary>
     /// <returns>Builder continuation.</returns>
-    IAllBuilder<TModel> IncludeChildProjections();
+    IFromEveryBuilder<TModel> IncludeChildProjections();
 }
