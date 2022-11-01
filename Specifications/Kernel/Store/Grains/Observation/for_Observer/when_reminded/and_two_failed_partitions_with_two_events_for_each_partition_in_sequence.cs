@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Execution;
 using Orleans.Runtime;
@@ -23,12 +23,12 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
         first_partition_appended_event = new AppendedEvent(
             new(first_partition_failed_sequence, event_types.ToArray()[0]),
             new(first_partition, 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
-            new JsonObject());
+            new ExpandoObject());
 
         second_partition_appended_event = new AppendedEvent(
             new(second_partition_failed_sequence, event_types.ToArray()[0]),
             new(second_partition, 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
-            new JsonObject());
+            new ExpandoObject());
 
         events_received = new();
         observer_stream.Setup(_ => _.OnNextAsync(IsAny<AppendedEvent>(), IsAny<StreamSequenceToken>()))
