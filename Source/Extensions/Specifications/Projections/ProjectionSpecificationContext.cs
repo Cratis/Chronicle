@@ -117,5 +117,5 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     /// Gets the count of model instances that was affected within this projection context.
     /// </summary>
     /// <returns>The number of models affected.</returns>
-    public int ModelCount() => _sink.GetCollection().Count;
+    public int ModelCount() => _sink.Collection.Count;
 }
