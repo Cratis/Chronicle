@@ -48,7 +48,7 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
         child_dynamic = child_expando;
     }
 
-    void Because() => result = converter.ToBson(source, schema);
+    void Because() => result = converter.ToBsonDocument(source, schema);
 
     [Fact] void should_set_top_level_int_value_to_be_of_int_type() => result.GetElement("intValue").Value.ShouldBeOfExactType<BsonInt32>();
     [Fact] void should_set_top_level_int_value_to_hold_correct_value() => result.GetElement("intValue").Value.AsInt32.ShouldEqual((int)source_dynamic.intValue);

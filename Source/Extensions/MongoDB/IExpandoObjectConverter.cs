@@ -26,5 +26,5 @@ public interface IExpandoObjectConverter
     /// <param name="expandoObject">The <see cref="ExpandoObject"/> to convert.</param>
     /// <param name="schema">The <see cref="JsonSchema"/> with the type information.</param>
     /// <returns>A new <see cref="BsonDocument"/> instance.</returns>
-    BsonDocument ToBson(ExpandoObject expandoObject, JsonSchema schema);
+    BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema);
 }

@@ -4,7 +4,6 @@
 using System.Collections;
 using System.Dynamic;
 using System.Globalization;
-using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using MongoDB.Bson;
@@ -27,7 +26,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         _typeFormats = typeFormats;
 
     /// <inheritdoc/>
-    public BsonDocument ToBson(ExpandoObject expandoObject, JsonSchema schema)
+    public BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema)
     {
         var document = new BsonDocument();
         foreach (var keyValue in expandoObject as IDictionary<string, object?>)
@@ -82,7 +81,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         if (value is ExpandoObject expando)
         {
-            return ToBson(
+            return ToBsonDocument(
                 expando,
                 schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
@@ -157,7 +156,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return array;
         }
 
-        return ConvertToBsonValueFromClrType(value);
+        return value.ToBsonValue();
     }
 
     object? ConvertUnknownSchemaTypeToClrType(BsonValue value)
@@ -258,73 +257,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
         input = TypeConversion.Convert(targetType, input);
 
-        return ConvertToBsonValueFromClrType(input);
-    }
-
-    BsonValue ConvertToBsonValueFromClrType(object? input)
-    {
-        if (input is null)
-        {
-            return BsonNull.Value;
-        }
-
-        if (input.IsConcept())
-        {
-            input = input.GetConceptValue();
-        }
-
-        switch (input)
-        {
-            case short actualValue:
-                return new BsonInt32(actualValue);
-
-            case ushort actualValue:
-                return new BsonInt32(actualValue);
-
-            case int actualValue:
-                return new BsonInt32(actualValue);
-
-            case uint actualValue:
-                return new BsonInt32((int)actualValue);
-
-            case long actualValue:
-                return new BsonInt64(actualValue);
-
-            case ulong actualValue:
-                return new BsonInt64((long)actualValue);
-
-            case float actualValue:
-                return new BsonDouble(actualValue);
-
-            case double actualValue:
-                return new BsonDouble(actualValue);
-
-            case decimal actualValue:
-                return new BsonDecimal128(actualValue);
-
-            case bool actualValue:
-                return new BsonBoolean(actualValue);
-
-            case string actualValue:
-                return new BsonString(actualValue);
-
-            case DateTime actualValue:
-                return new BsonDateTime(actualValue);
-
-            case DateTimeOffset actualValue:
-                return new BsonDateTime(actualValue.ToUnixTimeMilliseconds());
-
-            case DateOnly actualValue:
-                return new BsonDateTime(actualValue.ToDateTime(new TimeOnly(12, 0)));
-
-            case TimeOnly actualValue:
-                return new BsonDateTime(BsonUtils.ToMillisecondsSinceEpoch(DateTime.UnixEpoch + actualValue.ToTimeSpan()));
-
-            case Guid actualValue:
-                return new BsonBinaryData(actualValue, GuidRepresentation.Standard);
-        }
-
-        return BsonNull.Value;
+        return input.ToBsonValue();
     }
 
     object? ConvertBsonValueToSchemaType(BsonValue value, JsonSchemaProperty schemaProperty)
