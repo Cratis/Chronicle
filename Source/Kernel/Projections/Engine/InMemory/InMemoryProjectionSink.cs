@@ -53,14 +53,33 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             return Task.CompletedTask;
         }
 
-        foreach (var change in changeset.Changes)
-        {
-            state = state.MergeWith((change.State as ExpandoObject)!);
-        }
-
-        collection[key.Value] = state;
+        collection[key.Value] = ApplyActualChanges(changeset.Changes, state);
 
         return Task.CompletedTask;
+    }
+
+    ExpandoObject ApplyActualChanges(IEnumerable<Change> changes, ExpandoObject state)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject>:
+                case ChildAdded:
+                    state = state.MergeWith((change.State as ExpandoObject)!);
+                    break;
+
+                case Joined joined:
+                    state = ApplyActualChanges(joined.Changes, state);
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    state = ApplyActualChanges(resolvedJoin.Changes, state);
+                    break;
+            }
+        }
+
+        return state;
     }
 
     /// <inheritdoc/>
