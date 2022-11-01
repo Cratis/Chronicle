@@ -82,9 +82,9 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         if (value is ExpandoObject expando)
         {
-            return ToBson(expando, schemaProperty.IsArray ?
-                schemaProperty.Item.Reference ?? schemaProperty.Item :
-                schemaProperty.ActualTypeSchema);
+            return ToBson(
+                expando,
+                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
         BsonValue result;
@@ -113,22 +113,21 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         if (bsonValue is BsonDocument childDocument)
         {
-            return ToExpandoObject(childDocument, schemaProperty.IsArray ?
-                schemaProperty.Item.Reference ?? schemaProperty.Item :
-                schemaProperty.ActualTypeSchema);
+            return ToExpandoObject(
+                childDocument,
+                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
-        else if (bsonValue is BsonArray array)
+
+        if (bsonValue is BsonArray array)
         {
             return array.Select(_ => ConvertFromBsonValue(_, schemaProperty)).ToArray();
         }
-        else if (_typeFormats.IsKnown(schemaProperty.Format))
+
+        if (_typeFormats.IsKnown(schemaProperty.Format))
         {
             return ConvertBsonValueToSchemaType(bsonValue, schemaProperty);
         }
-        else
-        {
-            return ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
-        }
+        return ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
     }
 
     BsonValue ConvertUnknownSchemaTypeToBsonValue(object? value)

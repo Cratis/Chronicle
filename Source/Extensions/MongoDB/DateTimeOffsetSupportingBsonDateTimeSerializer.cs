@@ -19,6 +19,9 @@ namespace Aksio.Cratis.Extensions.MongoDB;
 public class DateTimeOffsetSupportingBsonDateTimeSerializer : StructSerializerBase<DateTimeOffset>,
              IRepresentationConfigurable<DateTimeOffsetSupportingBsonDateTimeSerializer>
 {
+    /// <summary>
+    /// The serialization format used.
+    /// </summary>
     public static readonly string StringSerializationFormat = "YYYY-MM-ddTHH:mm:ss.FFFFFFK";
 
     /// <inheritdoc/>
