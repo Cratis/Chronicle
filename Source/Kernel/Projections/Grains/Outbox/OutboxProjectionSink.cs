@@ -65,7 +65,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
         var state = changeset.InitialState.Clone();
         foreach (var change in changeset.Changes)
         {
-            state = state.OverwriteWith((change.State as ExpandoObject)!);
+            state = state.MergeWith((change.State as ExpandoObject)!);
         }
 
         var eventType = _model.Schema.GetEventType();

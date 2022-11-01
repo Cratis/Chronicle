@@ -95,7 +95,7 @@ public static class ExpandoObjectExtensions
     /// <param name="left">The left <see cref="ExpandoObject"/>.</param>
     /// <param name="right">The right <see cref="ExpandoObject"/>.</param>
     /// <returns>A new <see cref="ExpandoObject"/>.</returns>
-    public static ExpandoObject OverwriteWith(this ExpandoObject left, ExpandoObject right)
+    public static ExpandoObject MergeWith(this ExpandoObject left, ExpandoObject right)
     {
         var result = left.Clone();
         var resultAsDictionary = result as IDictionary<string, object>;
@@ -107,7 +107,7 @@ public static class ExpandoObjectExtensions
             if (resultAsDictionary.ContainsKey(key) && resultAsDictionary[key] is ExpandoObject leftValueExpandoObject &&
                 value is ExpandoObject valueAsExpandoObject)
             {
-                rightValue = leftValueExpandoObject.OverwriteWith(valueAsExpandoObject);
+                rightValue = leftValueExpandoObject.MergeWith(valueAsExpandoObject);
             }
             else if (rightValue is ExpandoObject rightValueAsExpandoObject)
             {

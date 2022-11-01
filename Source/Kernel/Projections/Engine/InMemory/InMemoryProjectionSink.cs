@@ -13,8 +13,8 @@ namespace Aksio.Cratis.Events.Projections.InMemory;
 /// </summary>
 public class InMemoryProjectionSink : IProjectionSink, IDisposable
 {
-    readonly Dictionary<string, ExpandoObject> _collection = new();
-    readonly Dictionary<string, ExpandoObject> _rewindCollection = new();
+    readonly Dictionary<object, ExpandoObject> _collection = new();
+    readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -29,9 +29,9 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         var collection = GetCollection();
 
         ExpandoObject modelInstance;
-        if (collection.ContainsKey(key.Value.ToString()!))
+        if (collection.ContainsKey(key.Value))
         {
-            modelInstance = collection[key.Value.ToString()!];
+            modelInstance = collection[key.Value];
         }
         else
         {
@@ -49,16 +49,16 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 
         if (changeset.HasBeenRemoved())
         {
-            collection.Remove(key.Value.ToString()!);
+            collection.Remove(key.Value);
             return Task.CompletedTask;
         }
 
         foreach (var change in changeset.Changes)
         {
-            state = state.OverwriteWith((change.State as ExpandoObject)!);
+            state = state.MergeWith((change.State as ExpandoObject)!);
         }
 
-        collection[key.Value.ToString()!] = state;
+        collection[key.Value] = state;
 
         return Task.CompletedTask;
     }
@@ -90,5 +90,9 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    Dictionary<string, ExpandoObject> GetCollection() => _isReplaying ? _rewindCollection : _collection;
+    /// <summary>
+    /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
+    /// </summary>
+    /// <returns>The collection.</returns>
+    public Dictionary<object, ExpandoObject> GetCollection() => _isReplaying ? _rewindCollection : _collection;
 }
