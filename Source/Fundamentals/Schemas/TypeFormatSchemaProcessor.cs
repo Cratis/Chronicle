@@ -12,6 +12,10 @@ public class TypeFormatSchemaProcessor : ISchemaProcessor
 {
     readonly ITypeFormats _typeFormats;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TypeFormatSchemaProcessor"/> class.
+    /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving type formats.</param>
     public TypeFormatSchemaProcessor(ITypeFormats typeFormats) => _typeFormats = typeFormats;
 
     /// <inheritdoc/>

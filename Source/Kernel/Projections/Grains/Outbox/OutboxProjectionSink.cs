@@ -9,7 +9,6 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.Grains;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Objects;
 using Orleans;
 

@@ -79,9 +79,9 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         if (value is ExpandoObject expando)
         {
-            return ToJsonObject(expando, schemaProperty.IsArray ?
-                schemaProperty.Item.Reference ?? schemaProperty.Item :
-                schemaProperty.ActualTypeSchema);
+            return ToJsonObject(
+                expando,
+                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
         JsonNode? result;
@@ -110,22 +110,21 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         if (jsonNode is JsonObject childObject)
         {
-            return ToExpandoObject(childObject, schemaProperty.IsArray ?
-                schemaProperty.Item.Reference ?? schemaProperty.Item :
-                schemaProperty.ActualTypeSchema);
+            return ToExpandoObject(
+                childObject,
+                schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
-        else if (jsonNode is JsonArray array)
+
+        if (jsonNode is JsonArray array)
         {
             return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty)).ToArray();
         }
-        else if (_typeFormats.IsKnown(schemaProperty.Format))
+
+        if (_typeFormats.IsKnown(schemaProperty.Format))
         {
             return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
         }
-        else
-        {
-            return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
-        }
+        return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
     }
 
     object? ConvertJsonValueFromUnknownFormat(JsonNode jsonNode, JsonSchemaProperty schemaProperty)
