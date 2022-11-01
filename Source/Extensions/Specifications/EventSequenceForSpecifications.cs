@@ -42,7 +42,7 @@ public class EventSequenceForSpecifications
                 CorrelationId.New(),
                 CausationId.System,
                 CausedBy.System),
-            @event.AsExpandoObject(),
+            @event.AsExpandoObject(true),
             @event));
         _sequenceNumber++;
 
