@@ -78,7 +78,7 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
     }
 
     /// <inheritdoc/>
-    public IChildrenBuilder<TParentModel, TChildModel> All(Action<IAllBuilder<TChildModel>> builderCallback)
+    public IChildrenBuilder<TParentModel, TChildModel> Every(Action<IAllBuilder<TChildModel>> builderCallback)
     {
         var builder = new AllBuilder<TChildModel>();
         builderCallback(builder);
