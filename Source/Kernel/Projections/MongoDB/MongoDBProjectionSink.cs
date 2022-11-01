@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using System.Text;
 using Aksio.Cratis.Changes;
@@ -225,7 +226,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                 case ChildAdded childAdded:
                     {
                         var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
-                        var document = _expandoObjectConverter.ToBson((childAdded.State as ExpandoObject)!, schema);
+                        var document = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
 
                         var segments = childAdded.ChildrenProperty.Segments.ToArray();
                         var childrenProperty = new PropertyPath(string.Empty);
@@ -295,13 +296,32 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
     BsonValue GetBsonValueFrom(object value)
     {
-        var type = value.GetType();
-        if (type.IsPrimitive || type == typeof(Guid) || type == typeof(string))
+        if (value is ExpandoObject expandoObject)
         {
-            return BsonValue.Create(value);
+            var expandoObjectAsDictionary = expandoObject as IDictionary<string, object>;
+            var document = new BsonDocument();
+
+            foreach (var kvp in expandoObjectAsDictionary)
+            {
+                document[GetNameForPropertyInBsonDocument(kvp.Key)] = GetBsonValueFrom(kvp.Value);
+            }
+
+            return document;
         }
 
-        return value.ToBsonDocument();
+        if (value is IEnumerable enumerable)
+        {
+            var array = new BsonArray();
+
+            foreach (var item in enumerable)
+            {
+                array.Add(GetBsonValueFrom(item));
+            }
+
+            return array;
+        }
+
+        return value.ToBsonValue();
     }
 
     (string Property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
@@ -333,12 +353,10 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         if (arrayIndexer is not null)
                         {
                             propertyBuilder.AppendFormat("{0}.$[{1}]", segment.Value, collectionIdentifier);
-                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(
-                                new BsonDocument(
-                                    new Dictionary<string, object>
-                                    {
-                                            { $"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier }
-                                    })));
+                            var filter = new ExpandoObject();
+                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier);
+                            var document = GetBsonValueFrom(filter) as BsonDocument;
+                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(document));
                         }
                         else
                         {
@@ -364,4 +382,13 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
+
+    string GetNameForPropertyInBsonDocument(string name)
+    {
+        if (name == "id")
+        {
+            return "_id";
+        }
+        return name;
+    }
 }
