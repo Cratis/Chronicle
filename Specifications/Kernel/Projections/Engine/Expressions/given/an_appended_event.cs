@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Strings;
 
@@ -19,11 +19,12 @@ public class an_appended_event : Specification
     {
         MyEvent = new MyEvent(42, "Forty two");
         occurred = DateTimeOffset.UtcNow;
-        var content = new JsonObject(new KeyValuePair<string, JsonNode>[]
-        {
-            new(nameof(given.MyEvent.Something).ToCamelCase(), MyEvent.Something),
-            new(nameof(given.MyEvent.SomethingElse).ToCamelCase(), MyEvent.SomethingElse)
-        });
+
+        var content = new ExpandoObject();
+        var contentAsDictionary = content as IDictionary<string, object?>;
+        contentAsDictionary.Add(nameof(given.MyEvent.Something).ToCamelCase(), MyEvent.Something);
+        contentAsDictionary.Add(nameof(given.MyEvent.SomethingElse).ToCamelCase(), MyEvent.SomethingElse);
+
         @event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),

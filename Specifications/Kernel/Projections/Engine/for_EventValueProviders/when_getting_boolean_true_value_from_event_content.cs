@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -16,10 +16,8 @@ public class when_getting_boolean_true_value_from_event_content : Specification
 
     void Establish()
     {
-        var content = new JsonObject
-        {
-            ["propertySet"] = expected
-        };
+        var content = new ExpandoObject();
+        ((dynamic)content).propertySet = expected;
 
         @event = new(
             new(0,
@@ -33,4 +31,3 @@ public class when_getting_boolean_true_value_from_event_content : Specification
 
     [Fact] void should_return_content_of_source_property() => result.ShouldEqual(expected);
 }
-
