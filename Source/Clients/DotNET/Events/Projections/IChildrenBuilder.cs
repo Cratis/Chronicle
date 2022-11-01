@@ -46,7 +46,7 @@ public interface IChildrenBuilder<TParentModel, TChildModel>
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> Every(Action<IAllBuilder<TChildModel>> builderCallback);
+    IChildrenBuilder<TParentModel, TChildModel> FromEvery(Action<IFromEveryBuilder<TChildModel>> builderCallback);
 
     /// <summary>
     /// Sets the property that identifies the child model in the collection within the parent.
