@@ -282,7 +282,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                     }
                     break;
 
-                case ResolvedJoined resolvedJoined:
+                case ResolvedJoin resolvedJoined:
                     {
                         ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
                     }
