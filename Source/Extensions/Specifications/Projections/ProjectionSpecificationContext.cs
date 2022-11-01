@@ -32,7 +32,10 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters =
                 {
-                    new ConceptAsJsonConverterFactory()
+                    new ConceptAsJsonConverterFactory(),
+                    new DateOnlyJsonConverter(),
+                    new TimeOnlyJsonConverter(),
+                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
                 }
     };
 
