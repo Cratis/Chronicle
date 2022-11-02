@@ -29,13 +29,8 @@ RUN wget --no-check-certificate -qO - https://www.mongodb.org/static/pgp/server-
     && apt-get install -y --no-install-recommends \
     mongodb-org-server \
     mongodb-org-shell \
+    mongodb-database-tools \
     && rm -rf /var/lib/apt/lists/*
-
-# Install MongoDB Tools
-RUN if [ $(dpkg --print-architecture) == "amd64" ]; then ARCH="x86_64"; else ARCH="arm64"; fi \
-    && wget --no-check-certificate https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-${ARCH}-100.6.0.deb \
-    && apt install ./mongodb-database-tools-*.deb \
-    && rm -f ./mongodb-database-tools-*.deb
 
 # Setup MongoDB as single-node replicaset
 RUN mkdir -p /data/db /data/configdb \
