@@ -13,8 +13,8 @@ namespace Aksio.Cratis.Events.Projections.InMemory;
 /// </summary>
 public class InMemoryProjectionSink : IProjectionSink, IDisposable
 {
-    readonly Dictionary<string, ExpandoObject> _collection = new();
-    readonly Dictionary<string, ExpandoObject> _rewindCollection = new();
+    readonly Dictionary<object, ExpandoObject> _collection = new();
+    readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -23,15 +23,20 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "InMemory";
 
+    /// <summary>
+    /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
+    /// </summary>
+    public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
+
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        var collection = GetCollection();
+        var collection = Collection;
 
         ExpandoObject modelInstance;
-        if (collection.ContainsKey(key.Value.ToString()!))
+        if (collection.ContainsKey(key.Value))
         {
-            modelInstance = collection[key.Value.ToString()!];
+            modelInstance = collection[key.Value];
         }
         else
         {
@@ -45,20 +50,15 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
         var state = changeset.InitialState.Clone();
-        var collection = GetCollection();
+        var collection = Collection;
 
         if (changeset.HasBeenRemoved())
         {
-            collection.Remove(key.Value.ToString()!);
+            collection.Remove(key.Value);
             return Task.CompletedTask;
         }
 
-        foreach (var change in changeset.Changes)
-        {
-            state = state.OverwriteWith((change.State as ExpandoObject)!);
-        }
-
-        collection[key.Value.ToString()!] = state;
+        collection[key.Value] = ApplyActualChanges(changeset.Changes, state);
 
         return Task.CompletedTask;
     }
@@ -80,7 +80,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// <inheritdoc/>
     public Task PrepareInitialRun()
     {
-        GetCollection().Clear();
+        Collection.Clear();
         return Task.CompletedTask;
     }
 
@@ -90,5 +90,27 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    Dictionary<string, ExpandoObject> GetCollection() => _isReplaying ? _rewindCollection : _collection;
+    ExpandoObject ApplyActualChanges(IEnumerable<Change> changes, ExpandoObject state)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject>:
+                case ChildAdded:
+                    state = state.MergeWith((change.State as ExpandoObject)!);
+                    break;
+
+                case Joined joined:
+                    state = ApplyActualChanges(joined.Changes, state);
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    state = ApplyActualChanges(resolvedJoin.Changes, state);
+                    break;
+            }
+        }
+
+        return state;
+    }
 }

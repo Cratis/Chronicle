@@ -113,9 +113,9 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> All(Action<IAllBuilder<TModel>> builderCallback)
+    public IProjectionBuilderFor<TModel> FromEvery(Action<IFromEveryBuilder<TModel>> builderCallback)
     {
-        var builder = new AllBuilder<TModel>();
+        var builder = new FromEveryBuilder<TModel>();
         builderCallback(builder);
         var allDefinition = builder.Build();
         _allDefinition = new AllDefinition(

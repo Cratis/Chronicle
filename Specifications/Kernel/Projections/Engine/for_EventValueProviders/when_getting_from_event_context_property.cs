@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -17,7 +17,7 @@ public class when_getting_from_event_context_property : Specification
     void Establish()
     {
         occurred = DateTimeOffset.UtcNow;
-        var content = new JsonObject();
+        var content = new ExpandoObject();
         @event = new(
             new(0,
             new("02405794-91e7-4e4f-8ad1-f043070ca297", 1)),

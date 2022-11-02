@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Orleans.Streams;
@@ -34,17 +34,17 @@ public class and_has_three_events_in_sequence : given.an_observer_and_two_event_
         first_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First, event_types.ToArray()[0]),
             new(event_source_id, EventSequenceNumber.First, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
-            new JsonObject());
+            new ExpandoObject());
 
         second_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First + 1, event_types.ToArray()[0]),
             new(event_source_id, EventSequenceNumber.First + 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
-            new JsonObject());
+            new ExpandoObject());
 
         third_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First + 2, event_types.ToArray()[0]),
             new(event_source_id, EventSequenceNumber.First + 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
-            new JsonObject());
+            new ExpandoObject());
 
         state.LastHandled = EventSequenceNumber.First + 2;
         appended_events = new();

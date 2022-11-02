@@ -80,7 +80,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     {
         var workingState = CurrentState.Clone()!;
         var changeset = new Changeset<TSource, TTarget>(_comparer, incoming, workingState);
-        Add(new ResolvedJoined(workingState, key, onProperty, arrayIndexers, changeset.Changes));
+        Add(new ResolvedJoin(workingState, key, onProperty, arrayIndexers, changeset.Changes));
         CurrentState = workingState;
         return changeset;
     }

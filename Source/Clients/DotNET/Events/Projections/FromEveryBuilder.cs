@@ -8,24 +8,24 @@ using Aksio.Cratis.Reflection;
 namespace Aksio.Cratis.Events.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IAllBuilder{TModel}"/>.
+/// Represents an implementation of <see cref="IFromEveryBuilder{TModel}"/>.
 /// </summary>
 /// <typeparam name="TModel">Type of model to build for.</typeparam>
-public class AllBuilder<TModel> : IAllBuilder<TModel>
+public class FromEveryBuilder<TModel> : IFromEveryBuilder<TModel>
 {
     readonly List<IPropertyExpressionBuilder> _propertyExpressions = new();
     bool _includeChildren;
 
     /// <inheritdoc/>
-    public IAllSetBuilder<TModel, IAllBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
+    public IAllSetBuilder<TModel, IFromEveryBuilder<TModel>> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor)
     {
-        var setBuilder = new AllSetBuilder<TModel, IAllBuilder<TModel>>(this, modelPropertyAccessor.GetPropertyPath());
+        var setBuilder = new AllSetBuilder<TModel, IFromEveryBuilder<TModel>>(this, modelPropertyAccessor.GetPropertyPath());
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }
 
     /// <inheritdoc/>
-    public IAllBuilder<TModel> IncludeChildProjections()
+    public IFromEveryBuilder<TModel> IncludeChildProjections()
     {
         _includeChildren = true;
         return this;

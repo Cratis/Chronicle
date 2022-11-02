@@ -42,7 +42,7 @@ public class when_overwriting_object_with_other : Specification
         right_as_dynamic.RightOnlyNested.String = "Forty Nine";
     }
 
-    void Because() => result_as_dynamic = result = left.OverwriteWith(right);
+    void Because() => result_as_dynamic = result = left.MergeWith(right);
 
     [Fact] void should_create_a_new_object() => (result.GetHashCode() != left.GetHashCode() && result.GetHashCode() != right.GetHashCode()).ShouldBeTrue();
     [Fact] void should_overwrite_integer() => ((int)result_as_dynamic.Integer).ShouldEqual(43);

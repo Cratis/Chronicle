@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.Text.Json;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Specifications.Types;
 
 namespace Aksio.Cratis.Specifications;
 
@@ -15,16 +14,6 @@ namespace Aksio.Cratis.Specifications;
 /// </summary>
 public class EventSequenceForSpecifications
 {
-    static readonly IEventSerializer _serializer = new EventSerializer(new KnownInstancesOf<ICanProvideAdditionalEventInformation>(), new JsonSerializerOptions()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters =
-                {
-                    new ConceptAsJsonConverterFactory(),
-                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
-                }
-    });
-
     readonly List<AppendedEventForSpecifications> _appendedEvents = new();
     EventSequenceNumber _sequenceNumber = EventSequenceNumber.First;
 
@@ -39,10 +28,8 @@ public class EventSequenceForSpecifications
     /// <param name="eventSourceId">The event source to append for.</param>
     /// <param name="event">Event to append.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Append(EventSourceId eventSourceId, object @event)
+    public Task Append(EventSourceId eventSourceId, object @event)
     {
-        var json = await _serializer.Serialize(@event);
-
         var eventTypeAttribute = @event.GetType().GetCustomAttribute<EventTypeAttribute>();
         _appendedEvents.Add(new(
             new(_sequenceNumber, eventTypeAttribute!.Type),
@@ -55,8 +42,10 @@ public class EventSequenceForSpecifications
                 CorrelationId.New(),
                 CausationId.System,
                 CausedBy.System),
-            json,
+            @event.AsExpandoObject(true),
             @event));
         _sequenceNumber++;
+
+        return Task.CompletedTask;
     }
 }

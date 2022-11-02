@@ -32,7 +32,10 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters =
                 {
-                    new ConceptAsJsonConverterFactory()
+                    new ConceptAsJsonConverterFactory(),
+                    new DateOnlyJsonConverter(),
+                    new TimeOnlyJsonConverter(),
+                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
                 }
     };
 
@@ -106,7 +109,13 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         }
 
         var result = await _sink.FindOrDefault(new(eventSourceId, ArrayIndexers.NoIndexers));
-        var json = JsonSerializer.Serialize(result);
+        var json = JsonSerializer.Serialize(result, _serializerOptions);
         return new(JsonSerializer.Deserialize<TModel>(json, _serializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }
+
+    /// <summary>
+    /// Gets the count of model instances that was affected within this projection context.
+    /// </summary>
+    /// <returns>The number of models affected.</returns>
+    public int ModelCount() => _sink.Collection.Count;
 }

@@ -7,6 +7,7 @@ using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Objects;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Dynamic;
 
@@ -68,8 +69,9 @@ public static class ExpandoObjectExtensions
     /// Converts an object to a dynamic <see cref="ExpandoObject"/>.
     /// </summary>
     /// <param name="original">Original object to convert.</param>
+    /// <param name="camelCaseProperties">Whether or not to camel case the properties.</param>
     /// <returns>A new <see cref="ExpandoObject"/> representing the given object.</returns>
-    public static ExpandoObject AsExpandoObject(this object original)
+    public static ExpandoObject AsExpandoObject(this object original, bool camelCaseProperties = false)
     {
         if (original is ExpandoObject) return (original as ExpandoObject)!;
 
@@ -78,12 +80,13 @@ public static class ExpandoObjectExtensions
 
         foreach (var property in original.GetType().GetProperties())
         {
+            var propertyName = camelCaseProperties ? property.Name.ToCamelCase() : property.Name;
             var value = property.GetValue(original, null);
             if (value != null)
             {
                 value = GetActualValueFrom(value);
             }
-            expandoAsDictionary[property.Name] = value!;
+            expandoAsDictionary[propertyName] = value!;
         }
 
         return expando;
@@ -95,7 +98,7 @@ public static class ExpandoObjectExtensions
     /// <param name="left">The left <see cref="ExpandoObject"/>.</param>
     /// <param name="right">The right <see cref="ExpandoObject"/>.</param>
     /// <returns>A new <see cref="ExpandoObject"/>.</returns>
-    public static ExpandoObject OverwriteWith(this ExpandoObject left, ExpandoObject right)
+    public static ExpandoObject MergeWith(this ExpandoObject left, ExpandoObject right)
     {
         var result = left.Clone();
         var resultAsDictionary = result as IDictionary<string, object>;
@@ -107,7 +110,7 @@ public static class ExpandoObjectExtensions
             if (resultAsDictionary.ContainsKey(key) && resultAsDictionary[key] is ExpandoObject leftValueExpandoObject &&
                 value is ExpandoObject valueAsExpandoObject)
             {
-                rightValue = leftValueExpandoObject.OverwriteWith(valueAsExpandoObject);
+                rightValue = leftValueExpandoObject.MergeWith(valueAsExpandoObject);
             }
             else if (rightValue is ExpandoObject rightValueAsExpandoObject)
             {
@@ -252,6 +255,10 @@ public static class ExpandoObjectExtensions
         if (!valueType.IsPrimitive &&
             valueType != typeof(string) &&
             valueType != typeof(Guid) &&
+            valueType != typeof(DateOnly) &&
+            valueType != typeof(DateTime) &&
+            valueType != typeof(DateTimeOffset) &&
+            valueType != typeof(TimeOnly) &&
             !valueType.IsConcept())
         {
             if (value is IEnumerable enumerableValue)
