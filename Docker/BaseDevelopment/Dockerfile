@@ -32,10 +32,10 @@ RUN wget --no-check-certificate -qO - https://www.mongodb.org/static/pgp/server-
     && rm -rf /var/lib/apt/lists/*
 
 # Install MongoDB Tools
-RUN if [ $(dpkg --print-architecture) == "amd64" ]; then ARCH="x86_x64" else ARCH="arm64" fi \
-    && wget --no-check-certificate https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-$(ARCH)-100.6.0.deb \
+RUN if [ $(dpkg --print-architecture) == "amd64" ]; then ARCH="x86_64"; else ARCH="arm64"; fi \
+    && wget --no-check-certificate https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-${ARCH}-100.6.0.deb \
     && apt install ./mongodb-database-tools-*.deb \
-    && rm -f ./mongodb-database-tools-*.deb \
+    && rm -f ./mongodb-database-tools-*.deb
 
 # Setup MongoDB as single-node replicaset
 RUN mkdir -p /data/db /data/configdb \
@@ -49,4 +49,3 @@ VOLUME /data/db /data/configdb
 # Add Tini to get a real init process
 RUN curl -LJ https://github.com/krallin/tini/releases/download/v0.19.0/tini-$(dpkg --print-architecture) --output /usr/bin/tini
 RUN chmod +x /usr/bin/tini
-
