@@ -19,6 +19,13 @@ public static class JsonValueExtensions
     /// <returns>The converted type.</returns>
     public static object? ToTargetTypeValue(this JsonValue value, Type targetType)
     {
+        var types = value.GetType().GetGenericArguments();
+        var sourceType = targetType;
+        if (types.Length == 1)
+        {
+            sourceType = types[0];
+        }
+
         switch (Type.GetTypeCode(targetType))
         {
             case TypeCode.Int16:
@@ -40,6 +47,11 @@ public static class JsonValueExtensions
                 return value.GetValue<ulong>();
 
             case TypeCode.Single:
+                if (sourceType == typeof(double))
+                {
+                    var result = value.GetValue<double>();
+                    return Convert.ChangeType(result, typeof(float));
+                }
                 return value.GetValue<float>();
 
             case TypeCode.Double:
@@ -57,21 +69,42 @@ public static class JsonValueExtensions
 
         if (targetType == typeof(Guid))
         {
-            return Guid.Parse(value.GetValue<string>());
+            if (sourceType == typeof(string))
+            {
+                return Guid.Parse(value.GetValue<string>());
+            }
+            return value.GetValue<Guid>();
         }
 
         if (targetType == typeof(DateTimeOffset))
         {
+            if (sourceType == typeof(DateTime))
+            {
+                var actualValue = value.GetValue<DateTime>();
+                var utc = DateTime.SpecifyKind(actualValue, DateTimeKind.Utc);
+                return (DateTimeOffset)utc;
+            }
+
             return value.GetValue<DateTimeOffset>();
         }
 
         if (targetType == typeof(DateOnly))
         {
+            if (sourceType == typeof(DateTime))
+            {
+                return DateOnly.FromDateTime(value.GetValue<DateTime>());
+            }
+
             return value.GetValue<DateOnly>();
         }
 
         if (targetType == typeof(TimeOnly))
         {
+            if (sourceType == typeof(DateTime))
+            {
+                return TimeOnly.FromDateTime(value.GetValue<DateTime>());
+            }
+
             return value.GetValue<TimeOnly>();
         }
 
