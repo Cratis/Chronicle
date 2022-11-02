@@ -1,3 +1,10 @@
+# [v6.15.4] - 2022-11-2 [PR: #563](https://github.com/aksio-insurtech/Cratis/pull/563)
+
+### Fixed
+
+- Adding MongoDB Tools to the base development image.
+
+
 # [v6.15.3] - 2022-11-2 [PR: #562](https://github.com/aksio-insurtech/Cratis/pull/562)
 
 ### Fixed
