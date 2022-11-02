@@ -13,7 +13,9 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
     public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
         builder
             .WithInitialModelState(() => new(Guid.Empty, string.Empty, null!, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
-
+            .FromEvery(_ => _
+                .Set(m => m.LastUpdated).ToEventContextProperty(c => c.Occurred)
+                .IncludeChildProjections())
             .Join<AccountHolderRegistered>(_ => _
                 .On(model => model.AccountHolderId)
                 .Set(model => model.AccountHolder.FirstName).To(@event => @event.FirstName)

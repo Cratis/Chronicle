@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -16,13 +16,9 @@ public class when_getting_complex_object_from_event_content_accessed_by_root_pro
 
     void Establish()
     {
-        var content = new JsonObject
-        {
-            ["complex_object"] = new JsonObject
-            {
-                ["sourceString"] = expected
-            }
-        };
+        var content = new ExpandoObject();
+        ((dynamic)content).complex_object = new ExpandoObject();
+        ((dynamic)content).complex_object.sourceString = expected;
 
         @event = new(
             new(0,

@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.Observation;
@@ -196,7 +196,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 CausationId.System,
                 CausedBy.System,
                 EventObservationState.Initial),
-            new JsonObject());
+            new ExpandoObject());
         await _stream!.OnNextAsync(@event, new EventSequenceNumberToken());
     }
 

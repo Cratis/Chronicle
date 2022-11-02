@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
@@ -16,13 +16,9 @@ public class when_getting_from_event_content_nested_property : Specification
 
     void Establish()
     {
-        var content = new JsonObject
-        {
-            ["nested"] = new JsonObject
-            {
-                ["sourceString"] = expected
-            }
-        };
+        var content = new ExpandoObject();
+        ((dynamic)content).nested = new ExpandoObject();
+        ((dynamic)content).nested.sourceString = expected;
 
         @event = new(
             new(0,

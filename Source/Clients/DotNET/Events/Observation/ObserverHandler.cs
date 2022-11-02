@@ -69,7 +69,10 @@ public class ObserverHandler
     public async Task OnNext(AppendedEvent @event)
     {
         var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
-        var content = await _eventSerializer.Deserialize(eventType, @event.Content);
+
+        // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
+        var json = await _eventSerializer.Serialize(@event.Content);
+        var content = await _eventSerializer.Deserialize(eventType, json);
         await _observerInvoker.Invoke(content, @event.Context);
     }
 }

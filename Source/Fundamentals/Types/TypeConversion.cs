@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Types;
@@ -19,6 +20,11 @@ public static class TypeConversion
     public static object Convert(Type type, object value)
     {
         var val = new object();
+
+        if (value.IsConcept())
+        {
+            value = value.GetConceptValue();
+        }
 
         if (type.IsGuid())
         {

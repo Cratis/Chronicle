@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using System.Text;
 using Aksio.Cratis.Changes;
@@ -8,11 +9,12 @@ using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using IExpandoObjectConverter = Aksio.Cratis.Extensions.MongoDB.IExpandoObjectConverter;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB;
 
@@ -26,6 +28,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     readonly Model _model;
     readonly IExecutionContextManager _executionContextManager;
     readonly IMongoDBClientFactory _clientFactory;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly Storage _configuration;
     readonly IMongoDatabase _database;
 
@@ -45,16 +48,19 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     /// <param name="model"><see cref="Model"/> the store is for.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public MongoDBProjectionSink(
         Model model,
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
+        IExpandoObjectConverter expandoObjectConverter,
         Storage configuration)
     {
         _model = model;
         _executionContextManager = executionContextManager;
         _clientFactory = clientFactory;
+        _expandoObjectConverter = expandoObjectConverter;
         _configuration = configuration;
         _database = GetDatabase();
     }
@@ -69,12 +75,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
-            var deserialized = BsonSerializer.Deserialize<ExpandoObject>(instance);
-            var deserializedAsDictionary = deserialized as IDictionary<string, object>;
-
-            HandleValueConversion(instance, deserializedAsDictionary);
-
-            return deserialized;
+            return _expandoObjectConverter.ToExpandoObject(instance, _model.Schema);
         }
 
         return default;
@@ -97,8 +98,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             return;
         }
 
-        var arrayFiltersForDocument = new List<ArrayFilterDefinition>();
+        var arrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
+        var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         if (!hasChanges) return;
 
@@ -109,7 +111,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             new UpdateOptions
             {
                 IsUpsert = true,
-                ArrayFilters = arrayFiltersForDocument.ToArray()
+                ArrayFilters = distinctArrayFilters
             });
     }
 
@@ -177,7 +179,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
-        List<ArrayFilterDefinition> arrayFiltersForDocument)
+        List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument)
     {
         var joinTasks = new List<Task>();
 
@@ -187,14 +189,14 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
                     {
-                        var allArrayFilters = new List<ArrayFilterDefinition>();
+                        var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
                         foreach (var propertyDifference in propertiesChanged.Differences)
                         {
                             var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
                             allArrayFilters.AddRange(arrayFilters);
 
-                            if (updateBuilder is not null)
+                            if (updateBuilder != default)
                             {
                                 if (propertyDifference.Changed is DateTimeOffset)
                                 {
@@ -223,7 +225,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                 case ChildAdded childAdded:
                     {
-                        var document = childAdded.State.ToBsonDocument();
+                        var schema = _model.Schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
+                        var document = _expandoObjectConverter.ToBsonDocument((childAdded.State as ExpandoObject)!, schema);
 
                         var segments = childAdded.ChildrenProperty.Segments.ToArray();
                         var childrenProperty = new PropertyPath(string.Empty);
@@ -236,7 +239,16 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
                         var (property, arrayFilters) = ConvertToMongoDBProperty(childrenProperty, arrayIndexers);
                         arrayFiltersForDocument.AddRange(arrayFilters);
-                        updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
+
+                        if (updateBuilder is not null)
+                        {
+                            updateBuilder = updateBuilder.AddToSet(property, document);
+                        }
+                        else
+                        {
+                            updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
+                        }
+
                         hasChanges = true;
                     }
                     break;
@@ -253,7 +265,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                         var collection = GetCollection();
 
-                        var joinArrayFiltersForDocument = new List<ArrayFilterDefinition>();
+                        var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
                         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument).Wait();
 
                         if (hasJoinChanges)
@@ -271,7 +283,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                     }
                     break;
 
-                case ResolvedJoined resolvedJoined:
+                case ResolvedJoin resolvedJoined:
                     {
                         ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
                     }
@@ -284,38 +296,37 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
     BsonValue GetBsonValueFrom(object value)
     {
-        var type = value.GetType();
-        if (type.IsPrimitive || type == typeof(Guid) || type == typeof(string))
+        if (value is ExpandoObject expandoObject)
         {
-            return BsonValue.Create(value);
-        }
+            var expandoObjectAsDictionary = expandoObject as IDictionary<string, object>;
+            var document = new BsonDocument();
 
-        return value.ToBsonDocument();
-    }
-
-    void HandleValueConversion(BsonDocument instance, IDictionary<string, object> objectInstance)
-    {
-        foreach (var element in instance)
-        {
-            // The deserializer seems to be looking for the target property type, which in the case of an expando object means
-            // it doesn't have anything to look for to resolve the target type. This seems to lead it to ignore our DateTimeOffsetSupportingBsonDateTimeSerializer.
-            // The end result of that is that it makes it a date time. Internally we want to be using DateTimeOffset for everything.
-            // MongoDB saves in UTC and Unix milliseconds since epoch.
-            if (element.Value is BsonDateTime bsonDateTime)
+            foreach (var kvp in expandoObjectAsDictionary)
             {
-                objectInstance[element.Name] = DateTimeOffset.FromUnixTimeMilliseconds(bsonDateTime.MillisecondsSinceEpoch);
+                document[GetNameForPropertyInBsonDocument(kvp.Key)] = GetBsonValueFrom(kvp.Value);
             }
 
-            if (element.Value is BsonDocument bsonDocument && objectInstance[element.Name] is IDictionary<string, object> innerObject)
-            {
-                HandleValueConversion(bsonDocument, innerObject);
-            }
+            return document;
         }
+
+        if (value is IEnumerable enumerable)
+        {
+            var array = new BsonArray();
+
+            foreach (var item in enumerable)
+            {
+                array.Add(GetBsonValueFrom(item));
+            }
+
+            return array;
+        }
+
+        return value.ToBsonValue();
     }
 
-    (string Property, IEnumerable<ArrayFilterDefinition> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
+    (string Property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
     {
-        var arrayFilters = new List<ArrayFilterDefinition>();
+        var arrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         var propertyBuilder = new StringBuilder();
         var currentPropertyPath = new PropertyPath(string.Empty);
 
@@ -342,12 +353,10 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         if (arrayIndexer is not null)
                         {
                             propertyBuilder.AppendFormat("{0}.$[{1}]", segment.Value, collectionIdentifier);
-                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(
-                                new BsonDocument(
-                                    new Dictionary<string, object>
-                                    {
-                                            { $"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier }
-                                    })));
+                            var filter = new ExpandoObject();
+                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier);
+                            var document = GetBsonValueFrom(filter) as BsonDocument;
+                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(document));
                         }
                         else
                         {
@@ -373,4 +382,13 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
+
+    string GetNameForPropertyInBsonDocument(string name)
+    {
+        if (name == "id")
+        {
+            return "_id";
+        }
+        return name;
+    }
 }

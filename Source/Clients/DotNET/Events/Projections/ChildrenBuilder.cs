@@ -78,9 +78,9 @@ public class ChildrenBuilder<TParentModel, TChildModel> : IChildrenBuilder<TPare
     }
 
     /// <inheritdoc/>
-    public IChildrenBuilder<TParentModel, TChildModel> All(Action<IAllBuilder<TChildModel>> builderCallback)
+    public IChildrenBuilder<TParentModel, TChildModel> FromEvery(Action<IFromEveryBuilder<TChildModel>> builderCallback)
     {
-        var builder = new AllBuilder<TChildModel>();
+        var builder = new FromEveryBuilder<TChildModel>();
         builderCallback(builder);
         var allDefinition = builder.Build();
         _allDefinition = new AllDefinition(

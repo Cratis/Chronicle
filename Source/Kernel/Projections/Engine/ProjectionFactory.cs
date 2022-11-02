@@ -88,36 +88,19 @@ public class ProjectionFactory : IProjectionFactory
             projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
         }
 
-        var eventTypesForAll = new List<EventType>();
-        eventTypesForAll.AddRange(projectionDefinition.From.Keys);
-        eventTypesForAll.AddRange(projectionDefinition.Join.Keys);
-
         foreach (var child in childProjections)
         {
             child.SetParent(projection);
             eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
-
-            if (projectionDefinition.All.IncludeChildren)
-            {
-                eventTypesForAll.AddRange(child.EventTypes);
-            }
         }
         projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType).ToArray());
 
-        foreach (var eventType in eventTypesForAll)
-        {
-            var propertyMappers = projectionDefinition.All.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value));
-            projection.Event
-                .Project(
-                    childrenAccessorProperty,
-                    actualIdentifiedByProperty,
-                    propertyMappers);
-        }
-
+        var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
             var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
-            var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
+            var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+            propertyMappers.AddRange(propertyMappersForAllEventTypes);
             var projected = projection.Event
                 .WhereEventTypeEquals(eventType)
                 .Project(
@@ -142,7 +125,8 @@ public class ProjectionFactory : IProjectionFactory
 
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
-            var propertyMappers = joinDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
+            var propertyMappers = joinDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+            propertyMappers.AddRange(propertyMappersForAllEventTypes);
             projection.Event
                 .WhereEventTypeEquals(eventType)
                 .Join(joinDefinition.On)
@@ -150,6 +134,23 @@ public class ProjectionFactory : IProjectionFactory
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
                     propertyMappers);
+        }
+
+        if (projectionDefinition.All.IncludeChildren)
+        {
+            var childEventTypes = projection
+                .EventTypes
+                .Where(_ => !projectionDefinition.From.Any(kvp => kvp.Key == _) && !projectionDefinition.Join.Any(kvp => kvp.Key == _));
+
+            foreach (var eventType in childEventTypes)
+            {
+                projection.Event
+                    .WhereEventTypeEquals(eventType)
+                    .Project(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty,
+                        propertyMappersForAllEventTypes);
+            }
         }
 
         return projection;

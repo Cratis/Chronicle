@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
 using Orleans.Streams;
@@ -30,7 +30,7 @@ public class and_has_only_one_event_in_sequence : given.an_observer_and_two_even
         event_in_sequence = new AppendedEvent(
            new(EventSequenceNumber.First, event_types.ToArray()[0]),
            new(event_source_id, EventSequenceNumber.First, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
-           new JsonObject());
+           new ExpandoObject());
 
         state.LastHandled = EventSequenceNumber.First;
         appended_events = new();

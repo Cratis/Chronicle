@@ -103,7 +103,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
                                 affectedProperties.Add(difference.PropertyPath);
                             }
 
-                            state = state.OverwriteWith((change.State as ExpandoObject)!);
+                            state = state.MergeWith((change.State as ExpandoObject)!);
                             break;
 
                         case ChildAdded childAdded:

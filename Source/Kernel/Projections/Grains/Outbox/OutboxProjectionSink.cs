@@ -9,7 +9,6 @@ using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Store.Grains;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Objects;
 using Orleans;
 
@@ -66,7 +65,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
         var state = changeset.InitialState.Clone();
         foreach (var change in changeset.Changes)
         {
-            state = state.OverwriteWith((change.State as ExpandoObject)!);
+            state = state.MergeWith((change.State as ExpandoObject)!);
         }
 
         var eventType = _model.Schema.GetEventType();
@@ -101,18 +100,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
         try
         {
             var lastInstance = await _eventSequenceStorageProvider.GetLastInstanceFor(EventSequenceId.Outbox, eventType.Id, key.Value.ToString()!);
-            return lastInstance.Content.AsExpandoObject((value) =>
-                value switch
-                {
-                    short => double.Parse(value.ToString()!),
-                    int => double.Parse(value.ToString()!),
-                    long => double.Parse(value.ToString()!),
-                    ushort => double.Parse(value.ToString()!),
-                    uint => double.Parse(value.ToString()!),
-                    ulong => double.Parse(value.ToString()!),
-                    float => double.Parse(value.ToString()!),
-                    _ => value
-                });
+            return lastInstance.Content;
         }
         catch
         {

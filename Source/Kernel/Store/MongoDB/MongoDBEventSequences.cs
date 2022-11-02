@@ -1,9 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
+using System.Dynamic;
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Json;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -18,19 +20,27 @@ public class MongoDBEventSequences : IEventSequences
     readonly ILogger<MongoDBEventSequences> _logger;
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ISchemaStore _schemaStore;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
 
     /// <summary>
     /// Initializes a new instance of <see cref="MongoDBEventSequences"/>.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
     /// <param name="eventStoreDatabaseProvider"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
+    /// <param name="schemaStore">The <see cref="ISchemaStore"/> for working with the schema types.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public MongoDBEventSequences(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ISchemaStore schemaStore,
+        IExpandoObjectConverter expandoObjectConverter,
         ILogger<MongoDBEventSequences> logger)
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+        _schemaStore = schemaStore;
+        _expandoObjectConverter = expandoObjectConverter;
         _logger = logger;
         _executionContextManager = executionContextManager;
     }
@@ -42,10 +52,13 @@ public class MongoDBEventSequences : IEventSequences
         EventSourceId eventSourceId,
         EventType eventType,
         DateTimeOffset validFrom,
-        JsonObject content)
+        ExpandoObject content)
     {
         try
         {
+            var schema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
+            var jsonObject = _expandoObjectConverter.ToJsonObject(content, schema.Schema);
+            var document = BsonDocument.Parse(jsonObject.ToString());
             _logger.Appending(
                 sequenceNumber,
                 eventSequenceId,
@@ -62,7 +75,7 @@ public class MongoDBEventSequences : IEventSequences
                 eventSourceId,
                 new Dictionary<string, BsonDocument>
                 {
-                        { eventType.Generation.ToString(), BsonDocument.Parse(content.ToJsonString()) }
+                        { eventType.Generation.ToString(), document }
                 },
                 Array.Empty<EventCompensation>());
             var collection = GetCollectionFor(eventSequenceId);
@@ -86,7 +99,7 @@ public class MongoDBEventSequences : IEventSequences
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         DateTimeOffset validFrom,
-        JsonObject content) => throw new NotImplementedException();
+        ExpandoObject content) => throw new NotImplementedException();
 
     IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
 }

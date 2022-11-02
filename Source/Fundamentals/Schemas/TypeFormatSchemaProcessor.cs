@@ -10,25 +10,19 @@ namespace Aksio.Cratis.Schemas;
 /// </summary>
 public class TypeFormatSchemaProcessor : ISchemaProcessor
 {
-    readonly Dictionary<Type, string> _typesFormatInfo = new()
-    {
-        { typeof(int), "int32" },
-        { typeof(uint), "uint32" },
-        { typeof(long), "int64" },
-        { typeof(ulong), "uint64" },
-        { typeof(float), "float" },
-        { typeof(double), "double" },
-        { typeof(decimal), "decimal" },
-        { typeof(byte), "byte" },
-        { typeof(DateTime), "date-time" },
-        { typeof(DateTimeOffset), "date-time" },
-    };
+    readonly ITypeFormats _typeFormats;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TypeFormatSchemaProcessor"/> class.
+    /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving type formats.</param>
+    public TypeFormatSchemaProcessor(ITypeFormats typeFormats) => _typeFormats = typeFormats;
 
     /// <inheritdoc/>
     public void Process(SchemaProcessorContext context)
     {
-        if (!_typesFormatInfo.ContainsKey(context.ContextualType.Type)) return;
+        if (!_typeFormats.IsKnown(context.ContextualType.Type)) return;
 
-        context.Schema.Format = _typesFormatInfo[context.ContextualType.Type];
+        context.Schema.Format = _typeFormats.GetFormatForType(context.ContextualType.Type);
     }
 }

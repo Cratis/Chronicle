@@ -61,11 +61,11 @@ public interface IProjectionBuilderFor<TModel>
     IProjectionBuilderFor<TModel> Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback);
 
     /// <summary>
-    /// Start building property expressions that applies for all events being projected from.
+    /// Start building property expressions that applies for every events being projected from.
     /// </summary>
     /// <param name="builderCallback">Callback for building.</param>
     /// <returns>Builder continuation.</returns>
-    IProjectionBuilderFor<TModel> All(Action<IAllBuilder<TModel>> builderCallback);
+    IProjectionBuilderFor<TModel> FromEvery(Action<IFromEveryBuilder<TModel>> builderCallback);
 
     /// <summary>
     /// Define an event type that causes a delete in the projected result.
