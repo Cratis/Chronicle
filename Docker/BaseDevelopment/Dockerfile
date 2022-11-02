@@ -31,6 +31,11 @@ RUN wget --no-check-certificate -qO - https://www.mongodb.org/static/pgp/server-
     mongodb-org-shell \
     && rm -rf /var/lib/apt/lists/*
 
+# Install MongoDB Tools
+RUN wget --no-check-certificate https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-$(dpkg --print--architecture)-100.6.0.deb \
+    && apt install ./mongodb-database-tools-*.deb \
+    && rm -f ./mongodb-database-tools-*.deb \
+
 # Setup MongoDB as single-node replicaset
 RUN mkdir -p /data/db /data/configdb \
     && chown -R mongodb:mongodb /data/db /data/configdb \
