@@ -1,3 +1,10 @@
+# [v6.15.6] - 2022-11-2 [PR: #565](https://github.com/aksio-insurtech/Cratis/pull/565)
+
+### Fixed
+
+- Fixed `ExpandoObjectConverter` for edge case value conversions for double <-> float and also for different date & time types.
+
+
 # [v6.15.5] - 2022-11-2 [PR: #564](https://github.com/aksio-insurtech/Cratis/pull/564)
 
 ### Fixed
