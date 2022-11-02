@@ -2,7 +2,7 @@
 
 ####################################
 # Cratis Server
-# Build runtime image
+# Build runtime image.
 ####################################
 FROM aksioinsurtech/cratis-base
 ARG VERSION
