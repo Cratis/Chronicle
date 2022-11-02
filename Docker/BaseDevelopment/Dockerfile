@@ -32,7 +32,8 @@ RUN wget --no-check-certificate -qO - https://www.mongodb.org/static/pgp/server-
     && rm -rf /var/lib/apt/lists/*
 
 # Install MongoDB Tools
-RUN wget --no-check-certificate https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-$(dpkg --print--architecture)-100.6.0.deb \
+RUN if [ $(dpkg --print-architecture) == "amd64" ]; then ARCH="x86_x64" else ARCH="arm64" fi \
+    && wget --no-check-certificate https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2004-$(ARCH)-100.6.0.deb \
     && apt install ./mongodb-database-tools-*.deb \
     && rm -f ./mongodb-database-tools-*.deb \
 
