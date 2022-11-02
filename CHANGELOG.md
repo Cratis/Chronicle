@@ -1,3 +1,63 @@
+# [v6.15.0] - 2022-11-2 [PR: #558](https://github.com/aksio-insurtech/Cratis/pull/558)
+
+## Summary
+
+This release is primarily about making projections more consistent in types, fixing problems that occurred when introducing the `.All()` functionality, which turned out to be broken due to internals not working as expected.
+
+Below is a full sample of how a projection with `.FromEvery()` and `.Join()` works:
+
+```csharp
+public class DebitAccountProjection : IProjectionFor<DebitAccount>
+{
+    public ProjectionId Identifier => "d1bb5522-5512-42ce-938a-d176536bb01d";
+
+    public void Define(IProjectionBuilderFor<DebitAccount> builder) =>
+        builder
+            .WithInitialModelState(() => new(Guid.Empty, string.Empty, null!, new(string.Empty, string.Empty), 0, false, DateTimeOffset.MinValue))
+
+            // From every event in the projection, including any child projections - set last updated
+            .FromEvery(_ => _
+                .Set(m => m.LastUpdated).ToEventContextProperty(c => c.Occurred)
+                .IncludeChildProjections())
+
+            // Join in events from a different event source identifier
+            .Join<AccountHolderRegistered>(_ => _
+                .On(model => model.AccountHolderId)
+                .Set(model => model.AccountHolder.FirstName).To(@event => @event.FirstName)
+                .Set(model => model.AccountHolder.LastName).To(@event => @event.LastName))
+
+            .From<DebitAccountOpened>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name)
+                .Set(model => model.AccountHolderId).To(@event => @event.Owner)
+                .Set(model => model.HasCard).To(@event => @event.IncludeCard))
+            .From<DebitAccountNameChanged>(_ => _
+                .Set(model => model.Name).To(@event => @event.Name))
+            .From<DepositToDebitAccountPerformed>(_ => _
+                .Add(model => model.Balance).With(@event => @event.Amount))
+            .From<WithdrawalFromDebitAccountPerformed>(_ => _
+                .Subtract(model => model.Balance).With(@event => @event.Amount))
+            .RemovedWith<DebitAccountClosed>();
+}
+
+```
+
+### Added
+
+- Adding extension method for `MongoDBCollectionExtensions` for getting a single document by id. You can now do `collection.FindById(<your id>)`. The type of Id will be inferred.
+- Adding extension method for `MongoDBCollectionExtensions` for observing a single document by id for `ClientObservable`. You can now do `collection.ObserveById(<your id>)`. The type of Id will be inferred.
+- Adding extension method for `MongoDBCollectionExtensions` for observing a single document based on a filter or LINQ expression for `ClientObservable`. You can now do `collection.ObserveSingle(<your id>)`. The type of Id will be inferred.
+
+
+### Fixed
+
+- CHANGE: Since `.All()` was broken, we decided not to bump the major for a rename. This method is now called `.FromEvery()` reflecting that is working on every event for the projection.
+- Limiting changes when using `.FromEvery()` that are applied to one for the specific event type that occurs rather than one for all event types projection projects.
+- Making sure we have distinct array indexers, no duplicates.
+- Adding property `.ModelCount()` on the `ProjectionSpecificationContext` to get the number of models affected within the context.
+- Improved type safety internal to the event store by changing from `JsonObject` to `ExpandoObject` and honoring the JSON schema passed in for both event types and model types.
+- Supporting join expressions for Projections in context of specifications.
+
+
 # [v6.14.0] - 2022-10-30 [PR: #559](https://github.com/aksio-insurtech/Cratis/pull/559)
 
 ### Added
