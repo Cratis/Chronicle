@@ -45,7 +45,7 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
 
 - Adding extension method for `MongoDBCollectionExtensions` for getting a single document by id. You can now do `collection.FindById(<your id>)`. The type of Id will be inferred.
 - Adding extension method for `MongoDBCollectionExtensions` for observing a single document by id for `ClientObservable`. You can now do `collection.ObserveById(<your id>)`. The type of Id will be inferred.
-- Adding extension method for `MongoDBCollectionExtensions` for observing a single document based on a filter or LINQ expression for `ClientObservable`. You can now do `collection.ObserveSingle(<your id>)`. The type of Id will be inferred.
+- Adding extension method for `MongoDBCollectionExtensions` for observing a single document based on a filter or LINQ expression for `ClientObservable`. You can now do `collection.ObserveSingle(<your filter>)`. The type of Id will be inferred.
 
 
 ### Fixed
