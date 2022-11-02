@@ -66,5 +66,5 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
     [Fact] void should_set_child_object_int_value_to_hold_correct_value() => result["children"].AsArray()[0]["intValue"].GetValue<int>().ShouldEqual((int)child_dynamic.intValue);
     [Fact] void should_set_child_object_float_value_to_hold_correct_value() => result["children"].AsArray()[0]["floatValue"].GetValue<float>().ShouldEqual((float)child_dynamic.floatValue);
     [Fact] void should_set_child_object_double_value_to_hold_correct_value() => result["children"].AsArray()[0]["doubleValue"].GetValue<double>().ShouldEqual((double)child_dynamic.doubleValue);
-    [Fact] void should_set_child_object_guid_value_to_hold_correct_value() => result["children"].AsArray()[0]["guidValue"].GetValue<Guid>().ShouldEqual((Guid)child_dynamic.guidValue);
+    [Fact] void should_set_child_object_guid_value_to_hold_correct_value() => result["children"].AsArray()[0]["guidValue"].GetValue<Guid>().ShouldEqual(Guid.Parse((string)child_dynamic.guidValue));
 }

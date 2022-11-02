@@ -60,11 +60,6 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         {
             object? value;
 
-            if (name == "floatValue")
-            {
-                Console.WriteLine("Hello");
-            }
-
             if (!schema.ActualProperties.ContainsKey(name))
             {
                 value = ConvertUnknownSchemaTypeToClrType(sourceValue!);
