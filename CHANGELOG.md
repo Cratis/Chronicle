@@ -1,5 +1,8 @@
 # [v6.15.5] - 2022-11-2 [PR: #564](https://github.com/aksio-insurtech/Cratis/pull/564)
 
+### Fixed
+
+- The MongoDB Tools now actually working in the base development image.
 
 
 # [v6.15.4] - 2022-11-2 [PR: #563](https://github.com/aksio-insurtech/Cratis/pull/563)
@@ -335,7 +338,7 @@ public class DebitAccountProjection : IProjectionFor<DebitAccount>
 
 ### Fixed
 
-- Reverting the inclusion of PDB files. Relying on source link and .snupkg. 
+- Reverting the inclusion of PDB files. Relying on source link and .snupkg.
 
 
 # [v6.10.22] - 2022-9-2 [PR: #469](https://github.com/aksio-insurtech/Cratis/pull/469)
