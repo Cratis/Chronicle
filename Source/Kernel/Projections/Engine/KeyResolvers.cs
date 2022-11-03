@@ -85,6 +85,7 @@ public static class KeyResolvers
                 var keyResolver = currentProjection.GetKeyResolverFor(firstEvent);
                 var resolvedParentKey = await keyResolver(eventProvider, parentEvent);
                 parentKey = resolvedParentKey.Value;
+                arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
             }
 
             return new(parentKey, new ArrayIndexers(arrayIndexers));
