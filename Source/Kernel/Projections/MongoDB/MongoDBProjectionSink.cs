@@ -11,9 +11,11 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NJsonSchema;
 using IExpandoObjectConverter = Aksio.Cratis.Extensions.MongoDB.IExpandoObjectConverter;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB;
@@ -29,6 +31,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     readonly IExecutionContextManager _executionContextManager;
     readonly IMongoDBClientFactory _clientFactory;
     readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly ITypeFormats _typeFormats;
     readonly Storage _configuration;
     readonly IMongoDatabase _database;
 
@@ -49,18 +52,21 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public MongoDBProjectionSink(
         Model model,
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
         IExpandoObjectConverter expandoObjectConverter,
+        ITypeFormats typeFormats,
         Storage configuration)
     {
         _model = model;
         _executionContextManager = executionContextManager;
         _clientFactory = clientFactory;
         _expandoObjectConverter = expandoObjectConverter;
+        _typeFormats = typeFormats;
         _configuration = configuration;
         _database = GetDatabase();
     }
@@ -70,8 +76,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     {
         var collection = GetCollection();
 
-        var serializedKey = GetBsonValueFrom(key.Value);
-        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", serializedKey));
+        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key)));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
@@ -88,8 +93,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         UpdateDefinition<BsonDocument>? updateBuilder = default;
         var hasChanges = false;
 
-        var serializedKey = GetBsonValueFrom(key.Value);
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", serializedKey);
+        var filter = Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key));
         var collection = GetCollection();
 
         if (changeset.HasBeenRemoved())
@@ -196,13 +200,15 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                             var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
                             allArrayFilters.AddRange(arrayFilters);
 
+                            var value = ConvertToBsonValueForKnownTargetProperty(propertyDifference.Changed, property);
+
                             if (updateBuilder != default)
                             {
-                                updateBuilder = updateBuilder.Set(property, GetBsonValueFrom(propertyDifference.Changed!));
+                                updateBuilder = updateBuilder.Set(property, value);
                             }
                             else
                             {
-                                updateBuilder = updateDefinitionBuilder.Set(property, GetBsonValueFrom(propertyDifference.Changed!));
+                                updateBuilder = updateDefinitionBuilder.Set(property, value);
                             }
                         }
 
@@ -281,6 +287,60 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         return Task.WhenAll(joinTasks);
+    }
+
+    BsonValue ConvertKeyToBsonValue(Key key)
+    {
+        var bsonValue = key.Value is ExpandoObject ?
+                _expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, _model.Schema.GetSchemaForPropertyPath("id")) :
+                ConvertToBsonValueForKnownTargetProperty(key.Value, "id");
+
+        // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
+        if (bsonValue == BsonNull.Value)
+        {
+            return new BsonString(key.Value.ToString());
+        }
+
+        return bsonValue;
+    }
+
+    BsonValue ConvertToBsonValueForKnownTargetProperty(object? input, PropertyPath property)
+    {
+        BsonValue value = BsonNull.Value;
+        var schemaProperty = _model.Schema.GetSchemaPropertyForPropertyPath(property);
+        if (schemaProperty is not null)
+        {
+            return ConvertToBsonValue(input, schemaProperty);
+        }
+
+        return value;
+    }
+
+    BsonValue ConvertToBsonValue(object? input, JsonSchemaProperty schemaProperty)
+    {
+        if (_typeFormats.IsKnown(schemaProperty.Format))
+        {
+            var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
+            return input.ToBsonValue(targetType);
+        }
+
+        var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
+        if (value == BsonNull.Value && input is ExpandoObject expandoObject)
+        {
+            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
+        }
+
+        if (value == BsonNull.Value && value is IEnumerable enumerable)
+        {
+            var items = new List<BsonValue>();
+            foreach (var item in enumerable)
+            {
+                items.Add(ConvertToBsonValue(item, schemaProperty));
+            }
+            return new BsonArray(items);
+        }
+
+        return value;
     }
 
     BsonValue GetBsonValueFrom(object value)

@@ -5,6 +5,7 @@ using System.Dynamic;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Events.Projections.MongoDB;
 
@@ -15,6 +16,7 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
 {
     readonly IMongoDBClientFactory _clientFactory;
     readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly ITypeFormats _typeFormats;
     readonly IExecutionContextManager _executionContextManager;
     readonly Storage _configuration;
 
@@ -27,16 +29,19 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> to use.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public MongoDBProjectionSinkFactory(
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
         IExpandoObjectConverter expandoObjectConverter,
+        ITypeFormats typeFormats,
         Storage configuration)
     {
+        _executionContextManager = executionContextManager;
         _clientFactory = clientFactory;
         _expandoObjectConverter = expandoObjectConverter;
-        _executionContextManager = executionContextManager;
+        _typeFormats = typeFormats;
         _configuration = configuration;
     }
 
@@ -47,5 +52,6 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
             _executionContextManager,
             _clientFactory,
             _expandoObjectConverter,
+            _typeFormats,
             _configuration);
 }
