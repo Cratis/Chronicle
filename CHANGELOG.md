@@ -1,3 +1,10 @@
+# [v6.15.8] - 2022-11-3 [PR: #567](https://github.com/aksio-insurtech/Cratis/pull/567)
+
+### Fixed
+
+- The MongoDB Projection Sink is now much stricter on the models schema and target types and will convert both keys and properties according to the schema.
+
+
 # [v6.15.7] - 2022-11-3 [PR: #566](https://github.com/aksio-insurtech/Cratis/pull/566)
 
 ### Fixed
