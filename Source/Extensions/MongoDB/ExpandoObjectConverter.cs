@@ -3,9 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
-using System.Globalization;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
 using MongoDB.Bson;
 using NJsonSchema;
 
@@ -93,7 +91,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         }
         else
         {
-            result = ConvertToBsonValueFromUnknownFormat(value, schemaProperty);
+            result = value.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
         }
 
         if (result == BsonNull.Value && value is IEnumerable enumerable)
@@ -124,7 +122,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
         if (_typeFormats.IsKnown(schemaProperty.Format))
         {
-            return ConvertBsonValueToSchemaType(bsonValue, schemaProperty);
+            return bsonValue.ToTargetType(_typeFormats.GetTypeForFormat(schemaProperty.Format));
         }
         return ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
     }
@@ -200,31 +198,6 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return null;
     }
 
-    BsonValue ConvertToBsonValueFromUnknownFormat(object? value, JsonSchemaProperty schemaProperty)
-    {
-        if (value is null)
-        {
-            return BsonNull.Value;
-        }
-
-        switch (schemaProperty.Type)
-        {
-            case JsonObjectType.String:
-                return new BsonString(value is string actualString ? actualString : value.ToString()!);
-
-            case JsonObjectType.Boolean:
-                return new BsonBoolean(value is bool actualBool ? actualBool : bool.Parse(value.ToString()!));
-
-            case JsonObjectType.Integer:
-                return new BsonInt32(value is int actualInt ? actualInt : int.Parse(value.ToString()!));
-
-            case JsonObjectType.Number:
-                return new BsonDouble(value is double actualDouble ? actualDouble : double.Parse(value.ToString()!));
-        }
-
-        return BsonNull.Value;
-    }
-
     object? ConvertBsonValueFromUnknownFormat(BsonValue value, JsonSchemaProperty schemaProperty)
     {
         switch (schemaProperty.Type)
@@ -249,96 +222,8 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
     BsonValue ConvertToBsonValueBasedOnSchemaType(object? input, JsonSchemaProperty schemaProperty)
     {
-        if (input is null)
-        {
-            return BsonNull.Value;
-        }
-
         var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
-        input = TypeConversion.Convert(targetType, input);
-
-        return input.ToBsonValue();
-    }
-
-    object? ConvertBsonValueToSchemaType(BsonValue value, JsonSchemaProperty schemaProperty)
-    {
-        var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
-
-        switch (Type.GetTypeCode(targetType))
-        {
-            case TypeCode.Int16:
-                return (short)value.ToInt32();
-
-            case TypeCode.UInt16:
-                return (ushort)value.ToInt32();
-
-            case TypeCode.Int32:
-                return value.ToInt32();
-
-            case TypeCode.UInt32:
-                return (uint)value.ToInt32();
-
-            case TypeCode.Int64:
-                return value.ToInt64();
-
-            case TypeCode.UInt64:
-                return (ulong)value.ToInt64();
-
-            case TypeCode.Single:
-                return (float)value.ToDouble();
-
-            case TypeCode.Double:
-                return value.ToDouble();
-
-            case TypeCode.Decimal:
-                return value.ToDecimal();
-
-            case TypeCode.DateTime:
-                return value.ToUniversalTime();
-
-            case TypeCode.Byte:
-                return (byte)value.ToInt32();
-        }
-
-        if (targetType == typeof(Guid))
-        {
-            if (value is BsonString bsonString)
-            {
-                return Guid.Parse(bsonString.ToString()!);
-            }
-
-            if (value is BsonBinaryData bsonBinaryData)
-            {
-                return bsonBinaryData.ToGuid(GuidRepresentation.Standard);
-            }
-        }
-
-        if (targetType == typeof(DateTimeOffset))
-        {
-            if (value is BsonDateTime bsonDateTime)
-            {
-                return DateTimeOffset.FromUnixTimeMilliseconds(bsonDateTime.MillisecondsSinceEpoch);
-            }
-
-            if (value is BsonString bsonString)
-            {
-                return DateTimeOffset.ParseExact(bsonString.ToString()!, DateTimeOffsetSupportingBsonDateTimeSerializer.StringSerializationFormat, DateTimeFormatInfo.InvariantInfo);
-            }
-        }
-
-        if (targetType == typeof(DateOnly) && value is BsonDateTime bsonDateOnly)
-        {
-            var dateTime = bsonDateOnly.ToUniversalTime();
-            return new DateOnly(dateTime.Year, dateTime.Month, dateTime.Day);
-        }
-
-        if (targetType == typeof(TimeOnly) && value is BsonDateTime bsonTimeOnly)
-        {
-            var dateTime = bsonTimeOnly.ToUniversalTime();
-            return new TimeOnly(dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Millisecond);
-        }
-
-        return null;
+        return input.ToBsonValue(targetType);
     }
 
     string GetNameForPropertyInExpandoObject(BsonElement element)

@@ -50,6 +50,41 @@ public static class JsonSchemaExtensions
         return schema;
     }
 
+    /// <summary>
+    /// Gets the <see cref="JsonSchemaProperty"/> within the schema hierarchy based on a <see cref="PropertyPath"/>.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    /// <param name="propertyPath"><see cref="PropertyPath"/> to get for.</param>
+    /// <returns>The actual <see cref="JsonSchemaProperty"/>.</returns>
+    public static JsonSchemaProperty? GetSchemaPropertyForPropertyPath(this JsonSchema schema, PropertyPath propertyPath)
+    {
+        var segments = propertyPath.Segments.ToArray();
+        for (var segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
+        {
+            var segment = segments[segmentIndex];
+
+            if (schema.ActualProperties.ContainsKey(segment.Value))
+            {
+                if (segmentIndex == segments.Length - 1)
+                {
+                    return schema.ActualProperties[segment.Value];
+                }
+
+                var schemaProperty = schema.ActualProperties[segment.Value];
+                if (schemaProperty.IsArray)
+                {
+                    schema = schema.ActualProperties[segment.Value].Item.Reference;
+                }
+                else
+                {
+                    schema = schemaProperty.ActualTypeSchema;
+                }
+            }
+        }
+
+        return null;
+    }
+
     static void CollectPropertiesFrom(JsonSchema schema, List<JsonSchemaProperty> properties)
     {
         properties.AddRange(schema.ActualProperties.Select(_ => _.Value));
