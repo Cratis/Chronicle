@@ -198,22 +198,11 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                             if (updateBuilder != default)
                             {
-                                if (propertyDifference.Changed is DateTimeOffset)
-                                {
-                                    updateBuilder = updateBuilder.Set(property, (DateTimeOffset)propertyDifference.Changed!);
-                                }
-                                else
-                                {
-                                    updateBuilder = updateBuilder.Set(property, propertyDifference.Changed!);
-                                }
-                            }
-                            else if (propertyDifference.Changed is DateTimeOffset)
-                            {
-                                updateBuilder = updateDefinitionBuilder!.Set(property, (DateTimeOffset)propertyDifference.Changed!);
+                                updateBuilder = updateBuilder.Set(property, GetBsonValueFrom(propertyDifference.Changed!));
                             }
                             else
                             {
-                                updateBuilder = updateDefinitionBuilder!.Set(property, propertyDifference.Changed!);
+                                updateBuilder = updateDefinitionBuilder.Set(property, GetBsonValueFrom(propertyDifference.Changed!));
                             }
                         }
 
@@ -309,7 +298,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             return document;
         }
 
-        if (value is IEnumerable enumerable)
+        var bsonValue = value.ToBsonValue();
+        if (bsonValue == BsonNull.Value && value is IEnumerable enumerable)
         {
             var array = new BsonArray();
 
@@ -321,7 +311,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             return array;
         }
 
-        return value.ToBsonValue();
+        return bsonValue;
     }
 
     (string Property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
