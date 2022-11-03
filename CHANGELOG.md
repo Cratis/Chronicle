@@ -1,3 +1,10 @@
+# [v6.15.7] - 2022-11-3 [PR: #566](https://github.com/aksio-insurtech/Cratis/pull/566)
+
+### Fixed
+
+- Making sure we set the correct type based on the model schema for properties in a changeset. This fixes an exception that occurred when Guids were used, as it didn't know how to make them with the correct guid representation for Mongo.
+
+
 # [v6.15.6] - 2022-11-2 [PR: #565](https://github.com/aksio-insurtech/Cratis/pull/565)
 
 ### Fixed
