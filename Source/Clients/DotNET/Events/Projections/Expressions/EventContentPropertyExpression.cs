@@ -7,7 +7,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions;
 
 /// <summary>
 /// Represents a <see cref="IEventValueExpression"/> that builds an event content property accessor expression.
-/// /// </summary>
+/// </summary>
 public class EventContentPropertyExpression : IEventValueExpression
 {
     readonly PropertyPath _propertyPath;

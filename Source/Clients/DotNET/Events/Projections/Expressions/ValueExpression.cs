@@ -16,5 +16,6 @@ public class ValueExpression : IEventValueExpression
     /// <param name="value">The value to set.</param>
     public ValueExpression(string value) => _value = value;
 
+    /// <inheritdoc/>
     public string Build() => $"$value({_value})";
 }
