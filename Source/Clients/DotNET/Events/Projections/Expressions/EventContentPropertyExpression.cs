@@ -6,8 +6,8 @@ using Aksio.Cratis.Properties;
 namespace Aksio.Cratis.Events.Projections.Expressions;
 
 /// <summary>
-/// Represents a <see cref="IKeyBuilder"/> that builds an event content property accessor expression.
-/// </summary>
+/// Represents a <see cref="IEventValueExpression"/> that builds an event content property accessor expression.
+/// /// </summary>
 public class EventContentPropertyExpression : IEventValueExpression
 {
     readonly PropertyPath _propertyPath;
