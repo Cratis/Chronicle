@@ -1,3 +1,11 @@
+# [v6.15.11] - 2022-11-4 [PR: #574](https://github.com/aksio-insurtech/Cratis/pull/574)
+
+### Fixed
+
+- `DateOnly`and `TimeOnly` serialization from `JsonValue` now parses the string if its not a `DateTime` source type.
+- Switched to using the `System.Text.Json` serializer when saving the event content in the event log, which then persists `DateOnly`and `TimeOnly` and other types with converters correctly.
+
+
 # [v6.15.10] - 2022-11-4 [PR: #572](https://github.com/aksio-insurtech/Cratis/pull/572)
 
 ### Fixed
