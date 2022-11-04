@@ -95,7 +95,7 @@ public static class JsonValueExtensions
                 return DateOnly.FromDateTime(value.GetValue<DateTime>());
             }
 
-            return value.GetValue<DateOnly>();
+            return DateOnly.Parse(value.GetValue<string>());
         }
 
         if (targetType == typeof(TimeOnly))
@@ -105,7 +105,7 @@ public static class JsonValueExtensions
                 return TimeOnly.FromDateTime(value.GetValue<DateTime>());
             }
 
-            return value.GetValue<TimeOnly>();
+            return TimeOnly.Parse(value.GetValue<string>());
         }
 
         return null;
