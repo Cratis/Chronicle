@@ -80,9 +80,9 @@ public static class KeyResolvers
             {
                 arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
                 currentProjection = currentProjection.Parent!;
-                var firstEvent = currentProjection.EventTypes.First()!;
-                var parentEvent = await eventProvider.GetLastInstanceFor(EventSequenceId.Log, firstEvent.Id, parentKey.ToString()!);
-                var keyResolver = currentProjection.GetKeyResolverFor(firstEvent);
+                var parentEvent = await eventProvider.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.ToString()!, currentProjection.EventTypes.Select(_ => _.Id));
+                var eventType = currentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);
+                var keyResolver = currentProjection.GetKeyResolverFor(eventType);
                 var resolvedParentKey = await keyResolver(eventProvider, parentEvent);
                 parentKey = resolvedParentKey.Value;
                 arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
