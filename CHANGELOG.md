@@ -1,3 +1,10 @@
+# [v6.15.10] - 2022-11-4 [PR: #572](https://github.com/aksio-insurtech/Cratis/pull/572)
+
+### Fixed
+
+- Making parent hierarchy key resolution use any of the parents event types, not forcing the first in its definition. The first in the definition might not be the first that gets appended.
+
+
 # [v6.15.9] - 2022-11-4 [PR: #571](https://github.com/aksio-insurtech/Cratis/pull/571)
 
 ### Fixed
