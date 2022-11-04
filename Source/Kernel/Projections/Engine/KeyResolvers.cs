@@ -66,10 +66,11 @@ public static class KeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides a key value hierarchically upwards in Child->Parent relationships.
     /// </summary>
     /// <param name="projection"><see cref="IProjection"/> to start at.</param>
+    /// <param name="thisLevelKeyResolver">see cref=KeyResolver"/> to use for resolving the key for the incoming event.</param>
     /// <param name="parentKeyProperty">The property that represents the parent key.</param>
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static KeyResolver FromParentHierarchy(IProjection projection, PropertyPath parentKeyProperty, PropertyPath identifiedByProperty)
+    public static KeyResolver FromParentHierarchy(IProjection projection, KeyResolver thisLevelKeyResolver, PropertyPath parentKeyProperty, PropertyPath identifiedByProperty)
     {
         return async (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
@@ -78,7 +79,7 @@ public static class KeyResolvers
             var currentProjection = projection;
             if (currentProjection.HasParent)
             {
-                arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
+                arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, thisLevelKeyResolver(eventProvider, @event)));
                 currentProjection = currentProjection.Parent!;
                 var parentEvent = await eventProvider.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.ToString()!, currentProjection.EventTypes.Select(_ => _.Id));
                 var eventType = currentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);
