@@ -1,3 +1,12 @@
+# [v6.15.9] - 2022-11-4 [PR: #571](https://github.com/aksio-insurtech/Cratis/pull/571)
+
+### Fixed
+
+- FIxing conversion of events to treat null values as null and not try to convert them to target type.
+- The array indexer values - key is now honoring the target models type representing the key. Making child relations work again.
+- Fixing the recursiveness of the internal `.FromParentHierarchy()` key resolver to actually be recursive. Its implementation was completely wrong where it did a recurse, but also a loop of its own hierarchy and getting random results.
+
+
 # [v6.15.8] - 2022-11-3 [PR: #567](https://github.com/aksio-insurtech/Cratis/pull/567)
 
 ### Fixed
