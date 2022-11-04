@@ -5,6 +5,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines;
@@ -18,6 +19,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     readonly IEventSequenceStorageProvider _eventProvider;
     readonly IObjectsComparer _objectsComparer;
     readonly IChangesetStorage _changesetStorage;
+    readonly ITypeFormats _typeFormats;
     readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
@@ -27,18 +29,21 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> in the system.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public ProjectionPipelineFactory(
         IProjectionSinks projectionSinks,
         IEventSequenceStorageProvider eventProvider,
         IObjectsComparer objectsComparer,
         IChangesetStorage changesetStorage,
+        ITypeFormats typeFormats,
         ILoggerFactory loggerFactory)
     {
         _projectionSinks = projectionSinks;
         _eventProvider = eventProvider;
         _objectsComparer = objectsComparer;
         _changesetStorage = changesetStorage;
+        _typeFormats = typeFormats;
         _loggerFactory = loggerFactory;
     }
 
@@ -58,6 +63,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
             sink,
             _objectsComparer,
             _changesetStorage,
+            _typeFormats,
             _loggerFactory.CreateLogger<ProjectionPipeline>());
     }
 }

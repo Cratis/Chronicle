@@ -76,26 +76,17 @@ public static class KeyResolvers
             var arrayIndexers = new List<ArrayIndexer>();
             var parentKey = EventValueProviders.EventContent(parentKeyProperty)(@event);
             var currentProjection = projection;
-            while (currentProjection.HasParent)
+            if (currentProjection.HasParent)
             {
-                currentProjection = currentProjection.Parent;
-                if (currentProjection?.HasParent != true)
-                {
-                    break;
-                }
-
-                if (!currentProjection.ChildrenPropertyPath.IsRoot)
-                {
-                    arrayIndexers.Add(new(currentProjection.ChildrenPropertyPath, parentKeyProperty, parentKey));
-                }
+                arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
+                currentProjection = currentProjection.Parent!;
                 var firstEvent = currentProjection.EventTypes.First()!;
                 var parentEvent = await eventProvider.GetLastInstanceFor(EventSequenceId.Log, firstEvent.Id, parentKey.ToString()!);
                 var keyResolver = currentProjection.GetKeyResolverFor(firstEvent);
                 var resolvedParentKey = await keyResolver(eventProvider, parentEvent);
                 parentKey = resolvedParentKey.Value;
+                arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
             }
-
-            arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
 
             return new(parentKey, new ArrayIndexers(arrayIndexers));
         };
