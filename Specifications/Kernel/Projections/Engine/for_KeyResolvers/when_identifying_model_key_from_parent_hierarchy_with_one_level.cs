@@ -6,7 +6,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections;
+namespace Aksio.Cratis.Events.Projections.for_KeyResolvers;
 
 public class when_identifying_model_key_from_parent_hierarchy_with_one_level : Specification
 {

@@ -5,7 +5,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Events.Projections;
+namespace Aksio.Cratis.Events.Projections.for_KeyResolvers;
 
 public class when_identifying_model_key_from_parent_hierarchy_with_four_levels : Specification
 {
@@ -74,11 +74,11 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         third_level_event = CreateEvent(3, third_level_event_type, third_level_key, new { parentId = second_level_key });
         forth_level_event = CreateEvent(4, forth_level_event_type, forth_level_key, new { parentId = third_level_key });
 
-        root_projection = SetupProjection(root_event_type, root_key, "firstLevels");
-        first_level_projection = SetupProjection(first_level_event_type, first_level_key, "secondLevels", root_projection.Object);
-        second_level_projection = SetupProjection(second_level_event_type, second_level_key, "thirdLevels", first_level_projection.Object);
-        third_level_projection = SetupProjection(third_level_event_type, third_level_key, "forthLevels", second_level_projection.Object);
-        forth_level_projection = SetupProjection(forth_level_event_type, forth_level_key, parent: third_level_projection.Object);
+        root_projection = SetupProjection(root_event_type, root_key);
+        first_level_projection = SetupProjection(first_level_event_type, first_level_key, "firstLevels", root_projection.Object);
+        second_level_projection = SetupProjection(second_level_event_type, second_level_key, "secondLevels", first_level_projection.Object);
+        third_level_projection = SetupProjection(third_level_event_type, third_level_key, "thirdLevels", second_level_projection.Object);
+        forth_level_projection = SetupProjection(forth_level_event_type, forth_level_key, "forthLevels", third_level_projection.Object);
 
         storage = new();
         storage.Setup(_ => _.GetLastInstanceFor(EventSequenceId.Log, root_event_type.Id, root_key)).Returns(Task.FromResult(root_event));
