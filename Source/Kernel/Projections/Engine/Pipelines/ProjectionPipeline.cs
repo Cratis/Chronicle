@@ -6,7 +6,12 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Json;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Types;
 using Microsoft.Extensions.Logging;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines;
 
@@ -17,6 +22,7 @@ public class ProjectionPipeline : IProjectionPipeline
 {
     readonly IObjectsComparer _objectsComparer;
     readonly IChangesetStorage _changesetStorage;
+    readonly ITypeFormats _typeFormats;
     readonly ILogger<ProjectionPipeline> _logger;
     readonly IEventSequenceStorageProvider _eventProvider;
 
@@ -34,6 +40,7 @@ public class ProjectionPipeline : IProjectionPipeline
     /// <param name="sink"><see cref="IProjectionSink"/> to use.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ProjectionPipeline(
         IProjection projection,
@@ -41,12 +48,14 @@ public class ProjectionPipeline : IProjectionPipeline
         IProjectionSink sink,
         IObjectsComparer objectsComparer,
         IChangesetStorage changesetStorage,
+        ITypeFormats typeFormats,
         ILogger<ProjectionPipeline> logger)
     {
         _eventProvider = eventProvider;
         Sink = sink;
         _objectsComparer = objectsComparer;
         _changesetStorage = changesetStorage;
+        _typeFormats = typeFormats;
         Projection = projection;
         _logger = logger;
     }
@@ -63,6 +72,7 @@ public class ProjectionPipeline : IProjectionPipeline
         var correlationId = CorrelationId.New();
         var keyResolver = Projection.GetKeyResolverFor(@event.Metadata.Type);
         var key = await keyResolver(_eventProvider, @event);
+        key = EnsureCorrectTypeForArrayIndexersOnKey(key);
         _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
         var initialState = await Sink.FindOrDefault(key);
         initialState ??= Projection.InitialModelState;
@@ -80,6 +90,43 @@ public class ProjectionPipeline : IProjectionPipeline
         {
             await Sink.EndReplay();
         }
+    }
+
+    Key EnsureCorrectTypeForArrayIndexersOnKey(Key key)
+    {
+        return key with
+        {
+            ArrayIndexers = new ArrayIndexers(
+                key.ArrayIndexers.All.Select(_ =>
+                {
+                    var targetType = _.Identifier.GetType();
+                    var originalType = targetType;
+                    var schemaProperty = Projection.Model.Schema.GetSchemaPropertyForPropertyPath(_.ArrayProperty + _.IdentifierProperty);
+                    if (schemaProperty is not null)
+                    {
+                        if (_typeFormats.IsKnown(schemaProperty.Format))
+                        {
+                            targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
+                        }
+                        else
+                        {
+                            targetType = schemaProperty.Type switch
+                            {
+                                JsonObjectType.String => typeof(string),
+                                JsonObjectType.Boolean => typeof(bool),
+                                JsonObjectType.Integer => typeof(int),
+                                JsonObjectType.Null => typeof(double),
+                                _ => targetType
+                            };
+                        }
+                    }
+
+                    return targetType == originalType ? _ : _ with
+                    {
+                        Identifier = TypeConversion.Convert(targetType, _.Identifier)
+                    };
+                }))
+        };
     }
 
     async Task HandleEventFor(IProjection projection, ProjectionEventContext context)
