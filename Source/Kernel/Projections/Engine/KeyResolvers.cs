@@ -78,8 +78,8 @@ public static class KeyResolvers
             var currentProjection = projection;
             if (currentProjection.HasParent)
             {
+                arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
                 currentProjection = currentProjection.Parent!;
-                arrayIndexers.Add(new(currentProjection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
                 var firstEvent = currentProjection.EventTypes.First()!;
                 var parentEvent = await eventProvider.GetLastInstanceFor(EventSequenceId.Log, firstEvent.Id, parentKey.ToString()!);
                 var keyResolver = currentProjection.GetKeyResolverFor(firstEvent);
