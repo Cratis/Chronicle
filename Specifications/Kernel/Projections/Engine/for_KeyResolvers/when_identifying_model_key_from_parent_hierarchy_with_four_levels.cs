@@ -81,11 +81,11 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         forth_level_projection = SetupProjection(forth_level_event_type, forth_level_key, "forthLevels", third_level_projection.Object);
 
         storage = new();
-        storage.Setup(_ => _.GetLastInstanceFor(EventSequenceId.Log, root_event_type.Id, root_key)).Returns(Task.FromResult(root_event));
-        storage.Setup(_ => _.GetLastInstanceFor(EventSequenceId.Log, first_level_event_type.Id, first_level_key)).Returns(Task.FromResult(first_level_event));
-        storage.Setup(_ => _.GetLastInstanceFor(EventSequenceId.Log, second_level_event_type.Id, second_level_key)).Returns(Task.FromResult(second_level_event));
-        storage.Setup(_ => _.GetLastInstanceFor(EventSequenceId.Log, third_level_event_type.Id, third_level_key)).Returns(Task.FromResult(third_level_event));
-        storage.Setup(_ => _.GetLastInstanceFor(EventSequenceId.Log, forth_level_event_type.Id, forth_level_key)).Returns(Task.FromResult(forth_level_event));
+        storage.Setup(_ => _.GetLastInstanceOfAny(EventSequenceId.Log, root_key, new[] { root_event_type.Id })).Returns(Task.FromResult(root_event));
+        storage.Setup(_ => _.GetLastInstanceOfAny(EventSequenceId.Log, first_level_key, new[] { first_level_event_type.Id })).Returns(Task.FromResult(first_level_event));
+        storage.Setup(_ => _.GetLastInstanceOfAny(EventSequenceId.Log, second_level_key, new[] { second_level_event_type.Id })).Returns(Task.FromResult(second_level_event));
+        storage.Setup(_ => _.GetLastInstanceOfAny(EventSequenceId.Log, third_level_key, new[] { third_level_event_type.Id })).Returns(Task.FromResult(third_level_event));
+        storage.Setup(_ => _.GetLastInstanceOfAny(EventSequenceId.Log, forth_level_key, new[] { forth_level_event_type.Id })).Returns(Task.FromResult(forth_level_event));
     }
 
     async Task Because() => result = await KeyResolvers.FromParentHierarchy(forth_level_projection.Object, "parentId", "childId")(storage.Object, forth_level_event);
