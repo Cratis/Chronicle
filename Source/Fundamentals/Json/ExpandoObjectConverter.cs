@@ -58,18 +58,20 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
         foreach (var (name, sourceValue) in document)
         {
-            object? value;
-
-            if (!schema.ActualProperties.ContainsKey(name))
+            object? value = null;
+            if (sourceValue is not null)
             {
-                value = ConvertUnknownSchemaTypeToClrType(sourceValue!);
+                if (!schema.ActualProperties.ContainsKey(name))
+                {
+                    value = ConvertUnknownSchemaTypeToClrType(sourceValue!);
+                }
+                else
+                {
+                    var schemaProperty = schema.ActualProperties[name];
+                    value = ConvertFromJsonNode(sourceValue!, schemaProperty);
+                }
             }
-            else
-            {
-                var schemaProperty = schema.ActualProperties[name];
-                value = ConvertFromJsonNode(sourceValue!, schemaProperty);
-            }
-            expandoObjectAsDictionary[name] = value;
+            expandoObjectAsDictionary[name] = value!;
         }
 
         return expandoObject;
