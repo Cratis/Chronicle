@@ -106,6 +106,23 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     /// <inheritdoc/>
+    public async Task<AppendedEvent> GetLastInstanceOfAny(
+        EventSequenceId eventSequenceId,
+        EventSourceId eventSourceId,
+        IEnumerable<EventTypeId> eventTypes)
+    {
+        var anyEventTypes = Builders<Event>.Filter.Or(eventTypes.Select(et => Builders<Event>.Filter.Eq(_ => _.Type, et)));
+
+        var filter = Builders<Event>.Filter.And(
+            anyEventTypes,
+            Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
+
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var @event = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).Single();
+        return await _converterProvider().ToAppendedEvent(@event);
+    }
+
+    /// <inheritdoc/>
     public Task<IEventCursor> GetFromSequenceNumber(
         EventSequenceId eventSequenceId,
         EventSequenceNumber sequenceNumber,

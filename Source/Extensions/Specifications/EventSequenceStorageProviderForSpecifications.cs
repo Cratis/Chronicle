@@ -70,6 +70,13 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     }
 
     /// <inheritdoc/>
+    public Task<AppendedEvent> GetLastInstanceOfAny(EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes)
+    {
+        var lastInstance = _eventLog.AppendedEvents.Where(_ => eventTypes.Any(et => et == _.Metadata.Type.Id) && _.Context.EventSourceId == eventSourceId).OrderByDescending(_ => _.Metadata.SequenceNumber).First();
+        return Task.FromResult(new AppendedEvent(lastInstance.Metadata, lastInstance.Context, lastInstance.Content));
+    }
+
+    /// <inheritdoc/>
     public Task<bool> HasInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
         var count = _eventLog.AppendedEvents.Count(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId);
