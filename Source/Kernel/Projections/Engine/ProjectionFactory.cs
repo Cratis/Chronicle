@@ -160,17 +160,18 @@ public class ProjectionFactory : IProjectionFactory
     {
         KeyResolver keyResolver;
 
-        if (!string.IsNullOrEmpty(parentKey))
-        {
-            keyResolver = KeyResolvers.FromParentHierarchy(projection, parentKey, actualIdentifiedByProperty);
-        }
-        else if (!string.IsNullOrEmpty(key) && _keyExpressionResolvers.CanResolve(key))
+        if (!string.IsNullOrEmpty(key) && _keyExpressionResolvers.CanResolve(key))
         {
             keyResolver = _keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
         }
         else
         {
             keyResolver = KeyResolvers.FromEventSourceId;
+        }
+
+        if (!string.IsNullOrEmpty(parentKey))
+        {
+            keyResolver = KeyResolvers.FromParentHierarchy(projection, keyResolver, parentKey, actualIdentifiedByProperty);
         }
 
         return new EventTypeWithKeyResolver(eventType, keyResolver);
