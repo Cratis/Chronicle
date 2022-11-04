@@ -45,6 +45,15 @@ public interface IEventSequenceStorageProvider
     Task<AppendedEvent> GetLastInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId);
 
     /// <summary>
+    /// Get the last instance of any of the specified event types for a specific event source.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
+    /// <param name="eventTypes">Any in the collection of <see cref="EventTypeId"/> to get for.</param>
+    /// <returns>The <see cref="AppendedEvent"/> found.</returns>
+    Task<AppendedEvent> GetLastInstanceOfAny(EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes);
+
+    /// <summary>
     /// Get events using a specific sequence number as starting point within the event sequence.
     /// </summary>
     /// <param name="eventSequenceId">The event sequence to get for.</param>
