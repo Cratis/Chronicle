@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 
-namespace Aksio.Cratis.Events.Projections;
+namespace Aksio.Cratis.Events.Projections.for_EventValueProviders;
 
 public class when_accessing_event_source_id : Specification
 {
