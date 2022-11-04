@@ -94,7 +94,7 @@ public class ProjectionPipeline : IProjectionPipeline
 
     Key EnsureCorrectTypeForArrayIndexersOnKey(Key key)
     {
-        key = key with
+        return key with
         {
             ArrayIndexers = new ArrayIndexers(
                 key.ArrayIndexers.All.Select(_ =>
@@ -127,7 +127,6 @@ public class ProjectionPipeline : IProjectionPipeline
                     };
                 }))
         };
-        return key;
     }
 
     async Task HandleEventFor(IProjection projection, ProjectionEventContext context)
