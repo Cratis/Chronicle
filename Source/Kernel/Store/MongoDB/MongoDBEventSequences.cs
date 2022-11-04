@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Execution;
@@ -22,6 +23,7 @@ public class MongoDBEventSequences : IEventSequences
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
     readonly ISchemaStore _schemaStore;
     readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of <see cref="MongoDBEventSequences"/>.
@@ -30,17 +32,20 @@ public class MongoDBEventSequences : IEventSequences
     /// <param name="eventStoreDatabaseProvider"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
     /// <param name="schemaStore">The <see cref="ISchemaStore"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
+    /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public MongoDBEventSequences(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
         ISchemaStore schemaStore,
         IExpandoObjectConverter expandoObjectConverter,
+        JsonSerializerOptions jsonSerializerOptions,
         ILogger<MongoDBEventSequences> logger)
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
         _schemaStore = schemaStore;
         _expandoObjectConverter = expandoObjectConverter;
+        _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
         _executionContextManager = executionContextManager;
     }
@@ -58,7 +63,7 @@ public class MongoDBEventSequences : IEventSequences
         {
             var schema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
             var jsonObject = _expandoObjectConverter.ToJsonObject(content, schema.Schema);
-            var document = BsonDocument.Parse(jsonObject.ToString());
+            var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, _jsonSerializerOptions));
             _logger.Appending(
                 sequenceNumber,
                 eventSequenceId,
