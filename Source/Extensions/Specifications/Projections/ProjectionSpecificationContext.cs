@@ -84,6 +84,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             _sink,
             objectsComparer,
             new NullChangesetStorage(),
+            new TypeFormats(),
             new NullLogger<ProjectionPipeline>());
     }
 
