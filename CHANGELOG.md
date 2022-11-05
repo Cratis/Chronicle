@@ -1,3 +1,10 @@
+# [v6.16.1] - 2022-11-5 [PR: #578](https://github.com/aksio-insurtech/Cratis/pull/578)
+
+### Fixed
+
+- Fixed Immediate projections after internal type safety changes, making sure we can serialize the result properly. It crashed under certain circumstances.
+
+
 # [v6.16.0] - 2022-11-5 [PR: #577](https://github.com/aksio-insurtech/Cratis/pull/577)
 
 ## Summary
