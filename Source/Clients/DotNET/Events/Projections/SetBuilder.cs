@@ -41,7 +41,13 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISetBuilder
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
     {
-        _expression = new ValueExpression(value?.ToString() ?? string.Empty);
+        object actualValue = value!;
+        if (value?.GetType().IsEnum ?? false)
+        {
+            actualValue = Convert.ToInt32(value);
+        }
+
+        _expression = new ValueExpression(actualValue?.ToString() ?? string.Empty);
         return _parent;
     }
 
