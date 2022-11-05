@@ -1,14 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_EventContentExpressionProvider;
+namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_EventContentExpressionResolver;
 
-public class when_asking_can_resolve_for_regular_property : Specification
+public class when_asking_can_resolve_for_known_expression : Specification
 {
-    EventContentExpressionProvider resolvers;
+    EventContentExpressionResolver resolvers;
     bool result;
 
-    void Establish() => resolvers = new EventContentExpressionProvider();
+    void Establish() => resolvers = new EventContentExpressionResolver();
 
     void Because() => result = resolvers.CanResolve("someProperty");
 
