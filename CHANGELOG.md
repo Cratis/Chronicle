@@ -1,3 +1,18 @@
+# [v6.16.0] - 2022-11-5 [PR: #577](https://github.com/aksio-insurtech/Cratis/pull/577)
+
+## Summary
+
+This version brings improved stability and predictability to child relationships.
+It is now possible to specify a relationship of events where all the events are linked to the same event source id.
+The resolution through the parent key will by default resolve itself by using the parents event source id if no `.UsingParentKey()` or the new `.UsingParentKeyFromContext()` is specified. With such a structure, you might need to resolve the actual key for the child item, this can now be done by using the `.UsingKey()` on the child level of the projection.
+
+### Added
+
+- Supporting `.UsingKey()` for identifying child items without forcing it to be identified through the `EventSourceId`.
+- Add support for mapping to constants using `.ToValue()`for the set builders for projections. (#573)
+- Support for using parent key from context `.UsingParentKeyFromContext()`. (#576)
+
+
 # [v6.15.11] - 2022-11-4 [PR: #574](https://github.com/aksio-insurtech/Cratis/pull/574)
 
 ### Fixed
