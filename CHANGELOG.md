@@ -1,3 +1,10 @@
+# [v6.16.2] - 2022-11-5 [PR: #580](https://github.com/aksio-insurtech/Cratis/pull/580)
+
+### Fixed
+
+- Fixing so that we get the actual enum value as an integer before sending it to the kernel for the `.ToValue()` support till we have implemented #579.
+
+
 # [v6.16.1] - 2022-11-5 [PR: #578](https://github.com/aksio-insurtech/Cratis/pull/578)
 
 ### Fixed
