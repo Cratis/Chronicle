@@ -51,7 +51,11 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
         root_projection.Setup(_ => _.GetKeyResolverFor(root_event_type)).Returns((_, __) => Task.FromResult(new Key(parent_key, ArrayIndexers.NoIndexers)));
     }
 
-    async Task Because() => result = await KeyResolvers.FromParentHierarchy(child_projection.Object, "parentId", "childId")(storage.Object, @event);
+    async Task Because() => result = await KeyResolvers.FromParentHierarchy(
+        child_projection.Object,
+        KeyResolvers.FromEventSourceId,
+        KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+        "childId")(storage.Object, @event);
 
     [Fact] void should_return_expected_key() => result.Value.ShouldEqual(parent_key);
 }

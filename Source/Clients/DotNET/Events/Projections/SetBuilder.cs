@@ -39,6 +39,13 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISetBuilder
     }
 
     /// <inheritdoc/>
+    public TParentBuilder ToValue(TProperty value)
+    {
+        _expression = new ValueExpression(value?.ToString() ?? string.Empty);
+        return _parent;
+    }
+
+    /// <inheritdoc/>
     public TParentBuilder To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
         _expression = new EventContentPropertyExpression(eventPropertyAccessor.GetPropertyPath());

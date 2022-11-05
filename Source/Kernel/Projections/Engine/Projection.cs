@@ -45,6 +45,9 @@ public class Projection : IProjection
     public IEnumerable<EventType> EventTypes { get; private set; } = Array.Empty<EventType>();
 
     /// <inheritdoc/>
+    public IEnumerable<EventType> ExclusiveEventTypes { get; private set; } = Array.Empty<EventType>();
+
+    /// <inheritdoc/>
     public IEnumerable<IProjection> ChildProjections { get; }
 
     /// <inheritdoc/>
@@ -120,6 +123,9 @@ public class Projection : IProjection
         _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(
             _ => new EventType(_.EventType.Id, _.EventType.Generation),
             _ => _.KeyResolver);
+
+        var childEventTypes = ChildProjections.SelectMany(p => p.EventTypes);
+        ExclusiveEventTypes = EventTypes.Where(_ => !childEventTypes.Any(et => et == _)).ToArray();
     }
 
     /// <inheritdoc/>

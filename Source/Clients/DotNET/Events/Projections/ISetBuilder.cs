@@ -16,6 +16,13 @@ namespace Aksio.Cratis.Events.Projections;
 public interface ISetBuilder<TModel, TEvent, TProperty, TParentBuilder> : IPropertyExpressionBuilder
 {
     /// <summary>
+    /// Set the property to a specific value.
+    /// </summary>
+    /// <param name="value">Value to set.</param>
+    /// <returns>Builder continuation.</returns>
+    TParentBuilder ToValue(TProperty value);
+
+    /// <summary>
     /// Straight map to a property on the event.
     /// </summary>
     /// <param name="eventPropertyAccessor">Event property accessor for defining the source property.</param>
