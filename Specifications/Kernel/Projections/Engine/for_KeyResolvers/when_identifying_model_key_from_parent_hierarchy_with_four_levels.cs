@@ -47,15 +47,18 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     Mock<IProjection> SetupProjection(EventType eventType, string key, string childrenProperty = "no-levels", IProjection? parent = null)
     {
         var projection = new Mock<IProjection>();
-        projection.SetupGet(_ => _.EventTypes).Returns(new EventType[] {
-            eventType
-        });
+        projection.SetupGet(_ => _.EventTypes).Returns(new [] { eventType });
+        projection.SetupGet(_ => _.ExclusiveEventTypes).Returns(new[] { eventType });
         projection.SetupGet(_ => _.Path).Returns(childrenProperty);
         projection.SetupGet(_ => _.ChildrenPropertyPath).Returns(childrenProperty);
 
         if (parent is not null)
         {
-            projection.Setup(_ => _.GetKeyResolverFor(eventType)).Returns(KeyResolvers.FromParentHierarchy(projection.Object, KeyResolvers.FromEventSourceId, "parentId", "childId"));
+            projection.Setup(_ => _.GetKeyResolverFor(eventType)).Returns(KeyResolvers.FromParentHierarchy(
+                projection.Object,
+                KeyResolvers.FromEventSourceId,
+                KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+                "childId"));
             projection.SetupGet(_ => _.HasParent).Returns(true);
             projection.SetupGet(_ => _.Parent).Returns(parent);
         }
@@ -88,7 +91,11 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
         storage.Setup(_ => _.GetLastInstanceOfAny(EventSequenceId.Log, forth_level_key, new[] { forth_level_event_type.Id })).Returns(Task.FromResult(forth_level_event));
     }
 
-    async Task Because() => result = await KeyResolvers.FromParentHierarchy(forth_level_projection.Object, KeyResolvers.FromEventSourceId, "parentId", "childId")(storage.Object, forth_level_event);
+    async Task Because() => result = await KeyResolvers.FromParentHierarchy(
+        forth_level_projection.Object,
+        KeyResolvers.FromEventSourceId,
+        KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
+        "childId")(storage.Object, forth_level_event);
 
     [Fact] void should_return_expected_key() => result.Value.ShouldEqual(root_key);
     [Fact] void should_hold_array_indexer_for_first_level_with_correct_identifier() => result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "firstLevels").Identifier.ToString().ShouldEqual(first_level_key);
