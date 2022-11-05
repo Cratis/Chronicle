@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Orleans;
 using EngineProjection = Aksio.Cratis.Events.Projections.IProjection;
@@ -23,6 +23,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
     readonly IProjectionFactory _projectionFactory;
     readonly IObjectsComparer _objectsComparer;
     readonly IEventSequenceStorageProvider _eventProvider;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
     EngineProjection? _projection;
     ImmediateProjectionKey? _projectionKey;
@@ -33,16 +34,19 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public ImmediateProjection(
         IProjectionFactory projectionFactory,
         IObjectsComparer objectsComparer,
         IEventSequenceStorageProvider eventProvider,
+        IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager)
     {
         _projectionFactory = projectionFactory;
         _objectsComparer = objectsComparer;
         _eventProvider = eventProvider;
+        _expandoObjectConverter = expandoObjectConverter;
         _executionContextManager = executionContextManager;
     }
 
@@ -93,36 +97,12 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
                 projectedEventsCount++;
 
-                foreach (var change in changeset.Changes)
-                {
-                    switch (change)
-                    {
-                        case PropertiesChanged<ExpandoObject> propertiesChanged:
-                            foreach (var difference in propertiesChanged.Differences)
-                            {
-                                affectedProperties.Add(difference.PropertyPath);
-                            }
-
-                            state = state.MergeWith((change.State as ExpandoObject)!);
-                            break;
-
-                        case ChildAdded childAdded:
-                            var items = state.EnsureCollection<ExpandoObject>(childAdded.ChildrenProperty, key.ArrayIndexers);
-                            items.Add(childAdded.Child.AsExpandoObject());
-                            break;
-                    }
-                }
+                state = ApplyActualChanges(key, changeset.Changes, changeset.InitialState, affectedProperties);
             }
         }
 
-        // TODO: Conversion from ExpandoObject to JsonObject can be improved - they're effectively both just Dictionary<string, object>
-        if (modelKey is not null)
-        {
-            (state as IDictionary<string, object>)!["id"] = modelKey.Value;
-        }
-        var json = JsonSerializer.Serialize(state);
-        var jsonObject = JsonNode.Parse(json)!;
-        return new((jsonObject as JsonObject)!, affectedProperties, projectedEventsCount);
+        var jsonObject = _expandoObjectConverter.ToJsonObject(state, _projection.Model.Schema);
+        return new(jsonObject, affectedProperties, projectedEventsCount);
     }
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
@@ -136,5 +116,37 @@ public class ImmediateProjection : Grain, IImmediateProjection
         {
             await HandleEventFor(child, context);
         }
+    }
+
+    ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state, HashSet<PropertyPath> affectedProperties)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    foreach (var difference in propertiesChanged.Differences)
+                    {
+                        affectedProperties.Add(difference.PropertyPath);
+                    }
+                    state = state.MergeWith((change.State as ExpandoObject)!);
+                    break;
+
+                case ChildAdded childAdded:
+                    var items = state.EnsureCollection<ExpandoObject>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    items.Add(childAdded.Child.AsExpandoObject());
+                    break;
+
+                case Joined joined:
+                    state = ApplyActualChanges(key, joined.Changes, state, affectedProperties);
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    state = ApplyActualChanges(key, resolvedJoin.Changes, state, affectedProperties);
+                    break;
+            }
+        }
+
+        return state;
     }
 }
