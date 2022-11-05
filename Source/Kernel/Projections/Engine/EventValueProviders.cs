@@ -38,6 +38,13 @@ public static class EventValueProviders
     }
 
     /// <summary>
+    /// Create a <see cref="ValueProvider{T}"/> that provides a constant value.
+    /// </summary>
+    /// <param name="value">Constant to provide.</param>
+    /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
+    public static ValueProvider<AppendedEvent> Value(string value) => (AppendedEvent _) => value;
+
+    /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that generates a new unique identifier from the event metadata.
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>

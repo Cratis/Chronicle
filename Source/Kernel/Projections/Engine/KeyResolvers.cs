@@ -22,24 +22,14 @@ public static class KeyResolvers
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
     /// </summary>
-    /// <param name="projection"><see cref="IProjection"/> to start at.</param>
-    /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
     /// <param name="eventValueProvider">The actual <see cref="ValueProvider{T}"/> for resolving key.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static KeyResolver FromEventValueProvider(IProjection projection, PropertyPath identifiedByProperty, ValueProvider<AppendedEvent> eventValueProvider)
+    public static KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> eventValueProvider)
     {
         return (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
             var key = eventValueProvider(@event);
-            if (!projection.HasParent)
-            {
-                return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
-            }
-
-            var arrayIndexers = new List<ArrayIndexer>();
-            var parentKey = EventValueProviders.EventSourceId(@event);
-            arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, key));
-            return Task.FromResult(new Key(parentKey, new ArrayIndexers(arrayIndexers)))!;
+            return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
         };
     }
 
@@ -66,29 +56,34 @@ public static class KeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides a key value hierarchically upwards in Child->Parent relationships.
     /// </summary>
     /// <param name="projection"><see cref="IProjection"/> to start at.</param>
-    /// <param name="parentKeyProperty">The property that represents the parent key.</param>
+    /// <param name="keyResolver">see cref=KeyResolver"/> to use for resolving the key for the incoming event.</param>
+    /// <param name="parentKeyResolver">The property that represents the parent key.</param>
     /// <param name="identifiedByProperty">The property that identifies the key on the child object.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static KeyResolver FromParentHierarchy(IProjection projection, PropertyPath parentKeyProperty, PropertyPath identifiedByProperty)
+    public static KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty)
     {
         return async (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
         {
             var arrayIndexers = new List<ArrayIndexer>();
-            var parentKey = EventValueProviders.EventContent(parentKeyProperty)(@event);
-            var currentProjection = projection;
-            if (currentProjection.HasParent)
+            var parentKey = await parentKeyResolver(eventProvider, @event);
+            if (projection.HasParent)
             {
-                arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, EventValueProviders.EventSourceId(@event)));
-                currentProjection = currentProjection.Parent!;
-                var parentEvent = await eventProvider.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.ToString()!, currentProjection.EventTypes.Select(_ => _.Id));
-                var eventType = currentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);
-                var keyResolver = currentProjection.GetKeyResolverFor(eventType);
-                var resolvedParentKey = await keyResolver(eventProvider, parentEvent);
-                parentKey = resolvedParentKey.Value;
-                arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
+                var key = await keyResolver(eventProvider, @event);
+                arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
+                var parentProjection = projection.Parent!;
+                var parentEventTypeIds = parentProjection.ExclusiveEventTypes.Select(_ => _.Id).ToArray();
+                if (parentEventTypeIds.Length > 0)
+                {
+                    var parentEvent = await eventProvider.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.Value.ToString()!, parentEventTypeIds);
+                    var eventType = parentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);
+                    var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
+                    var resolvedParentKey = await keyResolverForEventType(eventProvider, parentEvent);
+                    parentKey = resolvedParentKey;
+                    arrayIndexers.AddRange(resolvedParentKey.ArrayIndexers.All);
+                }
             }
 
-            return new(parentKey, new ArrayIndexers(arrayIndexers));
+            return new(parentKey.Value, new ArrayIndexers(arrayIndexers));
         };
     }
 }

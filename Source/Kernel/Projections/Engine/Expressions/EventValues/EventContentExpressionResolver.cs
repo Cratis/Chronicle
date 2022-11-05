@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.EventValues;
 /// <summary>
 /// Represents a <see cref="IModelPropertyExpressionResolver"/> for resolving value from a property on the content of an <see cref="AppendedEvent"/>.
 /// </summary>
-public class EventContentExpressionProvider : IEventValueProviderExpressionResolver
+public class EventContentExpressionResolver : IEventValueProviderExpressionResolver
 {
     /// <inheritdoc/>
     public bool CanResolve(string expression) => !expression.StartsWith("$", StringComparison.InvariantCultureIgnoreCase);

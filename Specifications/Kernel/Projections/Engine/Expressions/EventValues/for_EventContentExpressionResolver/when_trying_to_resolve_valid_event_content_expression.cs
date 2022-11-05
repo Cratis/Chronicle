@@ -1,11 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_EventContentExpressionProvider;
+namespace Aksio.Cratis.Events.Projections.Expressions.EventValues.for_EventContentExpressionResolver;
 
 public class when_trying_to_resolve_valid_event_content_expression : given.an_appended_event
 {
-    EventContentExpressionProvider resolver;
+    EventContentExpressionResolver resolver;
     object result;
 
     void Establish() => resolver = new();
