@@ -40,6 +40,15 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     TBuilder UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
     /// <summary>
+    /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent model to
+    /// work with.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
+    /// <param name="keyAccessor">Accessor for the property to use.</param>
+    /// <returns>Builder continuation.</returns>
+    TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
+
+    /// <summary>
     /// Define what key to use based on a composite of expressions.
     /// </summary>
     /// <typeparam name="TKeyType">Type of key.</typeparam>
@@ -76,6 +85,6 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
-    /// <returns>The <see cref="ISetBuilder{TModel, Tevent, TProperty, TBuilder}"/> to continue building on.</returns>
+    /// <returns>The <see cref="ISetBuilder{TModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
     ISetBuilder<TModel, TEvent, TProperty, TBuilder> Set<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 }
