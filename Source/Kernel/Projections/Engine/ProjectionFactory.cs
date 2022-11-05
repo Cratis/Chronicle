@@ -45,14 +45,16 @@ public class ProjectionFactory : IProjectionFactory
             definition,
             PropertyPath.Root,
             PropertyPath.Root,
-            ProjectionPath.GetRootFor(definition.Identifier));
+            ProjectionPath.GetRootFor(definition.Identifier),
+            false);
 
     async Task<IProjection> CreateProjectionFrom(
         ProjectionName name,
         ProjectionDefinition projectionDefinition,
         PropertyPath childrenAccessorProperty,
         PropertyPath identifiedByProperty,
-        ProjectionPath path)
+        ProjectionPath path,
+        bool hasParent)
     {
         var actualIdentifiedByProperty = identifiedByProperty.IsRoot ? new PropertyPath("_id") : identifiedByProperty;
 
@@ -61,10 +63,10 @@ public class ProjectionFactory : IProjectionFactory
                 kvp.Value,
                 childrenAccessorProperty.AddArrayIndex(kvp.Key),
                 kvp.Value.IdentifiedBy,
-                $"{path} -> ChildrenAt({kvp.Key.Path})"));
+                $"{path} -> ChildrenAt({kvp.Key.Path})",
+                true));
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-
         var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
         var model = new Model(projectionDefinition.Model.Name, modelSchema);
 
@@ -78,22 +80,8 @@ public class ProjectionFactory : IProjectionFactory
             projectionDefinition.IsRewindable,
             childProjections);
 
-        // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, kvp.Value.ParentKey)).ToList();
-        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
-
-        if (projectionDefinition.RemovedWith != default)
-        {
-            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
-            projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
-        }
-
-        foreach (var child in childProjections)
-        {
-            child.SetParent(projection);
-            eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
-        }
-        projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType).ToArray());
+        SetParentOnAllChildProjections(projection, childProjections);
+        ResolveEventsForProjection(projection, childProjections, projectionDefinition, actualIdentifiedByProperty, hasParent);
 
         var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
@@ -156,24 +144,52 @@ public class ProjectionFactory : IProjectionFactory
         return projection;
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, string key, PropertyPath actualIdentifiedByProperty, string? parentKey = null)
+    void ResolveEventsForProjection(IProjection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {
-        KeyResolver keyResolver;
+        // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
+        var eventsForProjection = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToList();
+        eventsForProjection.AddRange(projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverFor(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty)));
 
-        if (!string.IsNullOrEmpty(key) && _keyExpressionResolvers.CanResolve(key))
+        if (projectionDefinition.RemovedWith != default)
         {
-            keyResolver = _keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
-        }
-        else
-        {
-            keyResolver = KeyResolvers.FromEventSourceId;
+            eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
+            projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
         }
 
-        if (!string.IsNullOrEmpty(parentKey))
+        foreach (var child in childProjections)
         {
-            keyResolver = KeyResolvers.FromParentHierarchy(projection, keyResolver, parentKey, actualIdentifiedByProperty);
+            eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
+        }
+        projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType).ToArray());
+    }
+
+    void SetParentOnAllChildProjections(Projection projection, IProjection[] childProjections)
+    {
+        foreach (var child in childProjections)
+        {
+            child.SetParent(projection);
+        }
+    }
+
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, string key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, string? parentKey = null)
+    {
+        var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
+        if (hasParent)
+        {
+            var parentKeyResolver = GetKeyResolverFor(projection, parentKey, actualIdentifiedByProperty);
+            keyResolver = KeyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
         }
 
         return new EventTypeWithKeyResolver(eventType, keyResolver);
+    }
+
+    KeyResolver GetKeyResolverFor(IProjection projection, string? key, PropertyPath actualIdentifiedByProperty)
+    {
+        if (!string.IsNullOrEmpty(key) && _keyExpressionResolvers.CanResolve(key))
+        {
+            return _keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
+        }
+
+        return KeyResolvers.FromEventSourceId;
     }
 }

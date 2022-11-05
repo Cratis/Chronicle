@@ -68,6 +68,11 @@ public interface IProjection
     IEnumerable<EventType> EventTypes { get; }
 
     /// <summary>
+    /// Gets the <see cref="EventType">event types</see> that are exclusive to this projection and not including any of the child projections.
+    /// </summary>
+    IEnumerable<EventType> ExclusiveEventTypes { get; }
+
+    /// <summary>
     /// Gets the <see cref="EventTypeWithKeyResolver"/> collection.
     /// </summary>
     IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; }

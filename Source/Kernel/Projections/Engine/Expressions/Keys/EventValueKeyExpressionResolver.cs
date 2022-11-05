@@ -25,6 +25,6 @@ public class EventValueKeyExpressionResolver : IKeyExpressionResolver
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
-        return KeyResolvers.FromEventValueProvider(projection, identifiedByProperty, _resolvers.Resolve(expression));
+        return KeyResolvers.FromEventValueProvider(_resolvers.Resolve(expression));
     }
 }
