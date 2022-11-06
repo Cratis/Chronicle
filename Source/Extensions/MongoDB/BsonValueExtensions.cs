@@ -194,7 +194,11 @@ public static class BsonValueExtensions
             return BsonNull.Value;
         }
 
-        switch (schemaProperty.Type)
+        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
+                    schemaProperty.Reference.Type :
+                    schemaProperty.Type;
+
+        switch (type)
         {
             case JsonObjectType.String:
                 return new BsonString(value is string actualString ? actualString : value.ToString()!);
