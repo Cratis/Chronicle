@@ -31,14 +31,15 @@ public static class JsonSchemaExtensions
     /// <returns>The actual <see cref="JsonSchema"/>.</returns>
     public static JsonSchema GetSchemaForPropertyPath(this JsonSchema schema, PropertyPath propertyPath)
     {
+        var properties = schema.GetFlattenedProperties();
         foreach (var segment in propertyPath.Segments)
         {
-            if (schema.ActualProperties.ContainsKey(segment.Value))
+            var schemaProperty = properties.SingleOrDefault(_ => _.Name == segment.Value);
+            if (schemaProperty is not null)
             {
-                var schemaProperty = schema.ActualProperties[segment.Value];
                 if (schemaProperty.IsArray)
                 {
-                    schema = schema.ActualProperties[segment.Value].Item.Reference;
+                    schema = schemaProperty.Item.Reference;
                 }
                 else
                 {
@@ -59,21 +60,22 @@ public static class JsonSchemaExtensions
     public static JsonSchemaProperty? GetSchemaPropertyForPropertyPath(this JsonSchema schema, PropertyPath propertyPath)
     {
         var segments = propertyPath.Segments.ToArray();
+        var properties = schema.GetFlattenedProperties();
         for (var segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
         {
             var segment = segments[segmentIndex];
 
-            if (schema.ActualProperties.ContainsKey(segment.Value))
+            var schemaProperty = properties.SingleOrDefault(_ => _.Name == segment.Value);
+            if (schemaProperty is not null)
             {
                 if (segmentIndex == segments.Length - 1)
                 {
-                    return schema.ActualProperties[segment.Value];
+                    return schemaProperty;
                 }
 
-                var schemaProperty = schema.ActualProperties[segment.Value];
                 if (schemaProperty.IsArray)
                 {
-                    schema = schema.ActualProperties[segment.Value].Item.Reference;
+                    schema = schemaProperty.Item.Reference;
                 }
                 else
                 {
