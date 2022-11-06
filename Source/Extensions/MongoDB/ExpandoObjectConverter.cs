@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
@@ -27,18 +28,19 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     public BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema)
     {
         var document = new BsonDocument();
+        var schemaProperties = schema.GetFlattenedProperties();
         foreach (var keyValue in expandoObject as IDictionary<string, object?>)
         {
             BsonValue value = BsonNull.Value;
 
             var name = keyValue.Key;
-            if (!schema.ActualProperties.ContainsKey(name))
+            var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
+            if (schemaProperty is null)
             {
                 ConvertUnknownSchemaTypeToBsonValue(keyValue.Value);
             }
             else
             {
-                var schemaProperty = schema.ActualProperties[name];
                 value = ConvertToBsonValue(keyValue.Value, schemaProperty);
             }
 
@@ -54,19 +56,20 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
+        var schemaProperties = schema.GetFlattenedProperties();
 
         foreach (var element in document.Elements)
         {
             object? value;
             var name = GetNameForPropertyInExpandoObject(element);
 
-            if (!schema.ActualProperties.ContainsKey(name))
+            var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
+            if (schemaProperty is null)
             {
                 value = ConvertUnknownSchemaTypeToClrType(element.Value);
             }
             else
             {
-                var schemaProperty = schema.ActualProperties[name];
                 value = ConvertFromBsonValue(element.Value, schemaProperty);
             }
             expandoObjectAsDictionary[name] = value;

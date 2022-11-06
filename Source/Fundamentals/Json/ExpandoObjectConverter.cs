@@ -29,18 +29,19 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     public JsonObject ToJsonObject(ExpandoObject expandoObject, JsonSchema schema)
     {
         var jsonObject = new JsonObject();
+        var schemaProperties = schema.GetFlattenedProperties();
         foreach (var keyValue in expandoObject as IDictionary<string, object?>)
         {
             JsonNode? value = null;
 
             var name = keyValue.Key;
-            if (!schema.ActualProperties.ContainsKey(name))
+            var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
+            if (schemaProperty is null)
             {
                 ConvertUnknownSchemaTypeToJsonValue(keyValue.Value);
             }
             else
             {
-                var schemaProperty = schema.ActualProperties[name];
                 value = ConvertToJsonNode(keyValue.Value, schemaProperty);
             }
 
@@ -56,18 +57,19 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
+        var schemaProperties = schema.GetFlattenedProperties();
         foreach (var (name, sourceValue) in document)
         {
             object? value = null;
             if (sourceValue is not null)
             {
-                if (!schema.ActualProperties.ContainsKey(name))
+                var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
+                if (schemaProperty is null)
                 {
                     value = ConvertUnknownSchemaTypeToClrType(sourceValue!);
                 }
                 else
                 {
-                    var schemaProperty = schema.ActualProperties[name];
                     value = ConvertFromJsonNode(sourceValue!, schemaProperty);
                 }
             }
