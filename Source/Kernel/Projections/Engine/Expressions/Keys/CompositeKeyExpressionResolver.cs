@@ -46,8 +46,9 @@ public class CompositeKeyExpressionResolver : IKeyExpressionResolver
             {
                 throw new InvalidCompositeKeyPropertyMappingExpression(projection.Identifier, identifiedByProperty, _);
             }
+            var actualProperty = identifiedByProperty + keyValue[0];
 
-            var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(identifiedByProperty)!;
+            var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(actualProperty)!;
             schemaProperty ??= new JsonSchemaProperty
             {
                 Type = JsonObjectType.String
