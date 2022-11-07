@@ -7,6 +7,7 @@ using Aksio.Cratis.Conversion;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
@@ -60,10 +61,10 @@ public static class HostBuilderExtensions
 
         microserviceId ??= MicroserviceId.Unspecified;
 
-        ServiceCollectionExtensions.ConfigureJsonSerializerOptions(derivedTypes);
+        Globals.Configure(derivedTypes);
 
         builder
-            .UseMongoDB(Internals.Types, derivedTypes, ServiceCollectionExtensions.JsonSerializerOptions!)
+            .UseMongoDB(Internals.Types, derivedTypes, Globals.JsonSerializerOptions!)
             .UseCratis(microserviceId, Internals.Types, configureDelegate, loggerFactory)
             .ConfigureServices(_ =>
             {

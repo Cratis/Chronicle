@@ -28,8 +28,8 @@ public class when_trying_to_resolve_valid_count_expression_against_model_with_co
 
     void Because()
     {
-        resolver.Resolve("targetProperty", "$count()")(@event, target, ArrayIndexers.NoIndexers);
-        resolver.Resolve("targetProperty", "$count()")(@event, target, ArrayIndexers.NoIndexers);
+        resolver.Resolve("targetProperty", new(), "$count()")(@event, target, ArrayIndexers.NoIndexers);
+        resolver.Resolve("targetProperty", new(), "$count()")(@event, target, ArrayIndexers.NoIndexers);
     }
 
     [Fact] void should_resolve_to_a_propertymapper_that_counts_into_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(44d);

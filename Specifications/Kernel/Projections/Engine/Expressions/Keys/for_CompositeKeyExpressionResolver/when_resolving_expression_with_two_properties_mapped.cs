@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver;
 
@@ -20,8 +21,8 @@ public class when_resolving_expression_with_two_properties_mapped : given.a_reso
 
     void Establish()
     {
-        event_value_provider_resolvers.Setup(_ => _.Resolve("$first")).Returns(first);
-        event_value_provider_resolvers.Setup(_ => _.Resolve("$second")).Returns(second);
+        event_value_provider_resolvers.Setup(_ => _.Resolve(IsAny<JsonSchemaProperty>(), "$first")).Returns(first);
+        event_value_provider_resolvers.Setup(_ => _.Resolve(IsAny<JsonSchemaProperty>(), "$second")).Returns(second);
     }
 
     async Task Because() => result = await resolver.Resolve(projection.Object, $"$composite({first_property}=$first, {second_property}=$second)", "target")(null!, null!);

@@ -66,7 +66,8 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 
-        var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers();
+        var typeFormats = new TypeFormats();
+        var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
         var factory = new ProjectionFactory(
             new ModelPropertyExpressionResolvers(
                 eventValueProviderExpressionResolvers),
@@ -77,14 +78,14 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var objectsComparer = new ObjectsComparer();
 
         _eventSequenceStorageProvider = new EventSequenceStorageProviderForSpecifications(_eventLog);
-        _sink = new InMemoryProjectionSink();
+        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats);
         _pipeline = new ProjectionPipeline(
             _projection,
             _eventSequenceStorageProvider,
             _sink,
             objectsComparer,
             new NullChangesetStorage(),
-            new TypeFormats(),
+            typeFormats,
             new NullLogger<ProjectionPipeline>());
     }
 

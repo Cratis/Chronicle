@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.RegularExpressions;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties;
 
@@ -19,5 +20,5 @@ public class CountExpressionResolver : IModelPropertyExpressionResolver
     public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
 
     /// <inheritdoc/>
-    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression) => PropertyMappers.Count(targetProperty);
+    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Count(targetProperty);
 }
