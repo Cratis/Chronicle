@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 
@@ -44,8 +45,8 @@ public static class ObjectExtensions
             return (T)ConceptFactory.CreateConceptInstance(valueType, source.GetConceptValue());
         }
 
-        var sourceAsString = JsonSerializer.Serialize(source);
-        return (T)JsonSerializer.Deserialize(sourceAsString, valueType)!;
+        var sourceAsString = JsonSerializer.Serialize(source, Globals.JsonSerializerOptions);
+        return (T)JsonSerializer.Deserialize(sourceAsString, valueType, Globals.JsonSerializerOptions)!;
     }
 
     /// <summary>
