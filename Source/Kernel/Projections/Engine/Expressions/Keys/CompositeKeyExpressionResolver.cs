@@ -4,6 +4,8 @@
 using System.Text.RegularExpressions;
 using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.Keys;
 
@@ -45,10 +47,16 @@ public class CompositeKeyExpressionResolver : IKeyExpressionResolver
                 throw new InvalidCompositeKeyPropertyMappingExpression(projection.Identifier, identifiedByProperty, _);
             }
 
+            var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(identifiedByProperty)!;
+            schemaProperty ??= new JsonSchemaProperty
+            {
+                Type = JsonObjectType.String
+            };
+
             return new
             {
                 Property = new PropertyPath(keyValue[0]),
-                KeyResolver = _resolvers.Resolve(keyValue[1])
+                KeyResolver = _resolvers.Resolve(schemaProperty, keyValue[1])
             };
         }).ToDictionary(_ => _.Property, _ => _.KeyResolver);
 

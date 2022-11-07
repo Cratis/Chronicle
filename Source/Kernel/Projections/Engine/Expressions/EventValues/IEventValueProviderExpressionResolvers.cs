@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.EventValues;
 
@@ -21,7 +22,11 @@ public interface IEventValueProviderExpressionResolvers
     /// <summary>
     /// Called to resolve the expression.
     /// </summary>
+    /// <param name="targetSchemaProperty"><see cref="JsonSchemaProperty"/> representing the target property we're resolving for.</param>
     /// <param name="expression">Expression to resolve.</param>
-    /// <returns><see cref="PropertyMapper{Event, ExpandoObject}"/> it resolves to.</returns>
-    ValueProvider<AppendedEvent> Resolve(string expression);
+    /// <returns><see cref="ValueProvider{AppendedEvent}"/> it resolves to.</returns>
+    /// <remarks>
+    /// By having the target property, we know what type is expected and can resolve the value to the expected target type.
+    /// </remarks>
+    ValueProvider<AppendedEvent> Resolve(JsonSchemaProperty targetSchemaProperty, string expression);
 }

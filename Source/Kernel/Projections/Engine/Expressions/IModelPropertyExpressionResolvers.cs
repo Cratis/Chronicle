@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions;
 
@@ -24,7 +25,8 @@ public interface IModelPropertyExpressionResolvers
     /// Called to resolve the expression.
     /// </summary>
     /// <param name="targetProperty">The target property we're mapping to.</param>
+    /// <param name="targetPropertySchema">The target properties <see cref="JsonSchemaProperty"/>.</param>
     /// <param name="expression">Expression to resolve.</param>
     /// <returns><see cref="PropertyMapper{Event, ExpandoObject}"/> it resolves to.</returns>
-    PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression);
+    PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression);
 }

@@ -3,6 +3,8 @@
 
 using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.Keys;
 
@@ -25,6 +27,11 @@ public class EventValueKeyExpressionResolver : IKeyExpressionResolver
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
-        return KeyResolvers.FromEventValueProvider(_resolvers.Resolve(expression));
+        var schemaProperty = projection.Model.Schema.GetSchemaPropertyForPropertyPath(identifiedByProperty)!;
+        schemaProperty ??= new JsonSchemaProperty
+        {
+            Type = JsonObjectType.String
+        };
+        return KeyResolvers.FromEventValueProvider(_resolvers.Resolve(schemaProperty, expression));
     }
 }

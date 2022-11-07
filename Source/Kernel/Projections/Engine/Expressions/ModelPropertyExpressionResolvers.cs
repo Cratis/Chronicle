@@ -6,6 +6,7 @@ using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Events.Projections.Expressions.ModelProperties;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions;
 
@@ -38,11 +39,11 @@ public class ModelPropertyExpressionResolvers : IModelPropertyExpressionResolver
     public bool CanResolve(PropertyPath targetProperty, string expression) => _resolvers.Any(_ => _.CanResolve(targetProperty, expression));
 
     /// <inheritdoc/>
-    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
+    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression)
     {
         var resolver = Array.Find(_resolvers, _ => _.CanResolve(targetProperty, expression));
         ThrowIfUnsupportedModelPropertyExpression(expression, resolver);
-        return resolver!.Resolve(targetProperty, expression);
+        return resolver!.Resolve(targetProperty, targetPropertySchema, expression);
     }
 
     void ThrowIfUnsupportedModelPropertyExpression(string expression, IModelPropertyExpressionResolver? resolver)

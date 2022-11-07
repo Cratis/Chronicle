@@ -5,6 +5,7 @@ using System.Dynamic;
 using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties;
 
@@ -28,5 +29,6 @@ public class SetExpressionResolver : IModelPropertyExpressionResolver
     public bool CanResolve(PropertyPath targetProperty, string expression) => _eventValueProviderExpressionResolvers.CanResolve(expression);
 
     /// <inheritdoc/>
-    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression) => PropertyMappers.FromEventValueProvider(targetProperty, _eventValueProviderExpressionResolvers.Resolve(expression));
+    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) =>
+        PropertyMappers.FromEventValueProvider(targetProperty, _eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, expression));
 }
