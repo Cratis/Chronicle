@@ -3,7 +3,6 @@
 
 using System.Collections;
 using System.Dynamic;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
