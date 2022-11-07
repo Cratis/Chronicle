@@ -1,3 +1,10 @@
+# [v6.16.4] - 2022-11-7 [PR: #583](https://github.com/aksio-insurtech/Cratis/pull/583)
+
+### Fixed
+
+- Composite key resolver now maintains the correct property path, enabling it to resolve to the correct type for the nested properties.
+
+
 # [v6.16.3] - 2022-11-7 [PR: #582](https://github.com/aksio-insurtech/Cratis/pull/582)
 
 ### Fixed
