@@ -200,7 +200,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                             var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
                             allArrayFilters.AddRange(arrayFilters);
 
-                            var value = ConvertToBsonValueForKnownTargetProperty(propertyDifference.Changed, property);
+                            var value = ConvertToBsonValueForKnownTargetProperty(propertyDifference.Changed, propertyDifference.PropertyPath);
 
                             if (updateBuilder != default)
                             {
