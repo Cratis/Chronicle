@@ -5,4 +5,4 @@ using Concepts.AccountHolders;
 
 namespace Integration.AccountHolders;
 
-public record AccountHolder(string FirstName, string LastName, DateTime DateOfBirth, string SocialSecurityNumber, Address Address);
+public record AccountHolder(string FirstName, string LastName, DateOnly DateOfBirth, string SocialSecurityNumber, Address Address);

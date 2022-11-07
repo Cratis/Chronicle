@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
 using Concepts.AccountHolders;
 using Events.AccountHolders;
 
@@ -10,11 +12,11 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 {
     public override AdapterId Identifier => "71741aaf-9f6b-4c6f-bfe6-af77aec464a2";
 
-    public override Func<KontoEier, EventSourceId> KeyResolver => _ => _.Fnr;
+    public override Func<KontoEier, EventSourceId> KeyResolver => _ => GetDeterministicId(_.Fnr);
 
     public override void DefineModel(IProjectionBuilderFor<AccountHolder> builder) => builder
         .From<AccountHolderRegistered>(_ => _
-            .Set(m => m.SocialSecurityNumber).ToEventSourceId()
+            .Set(m => m.SocialSecurityNumber).To(e => e.SocialSecurityNumber)
             .Set(m => m.FirstName).To(ev => ev.FirstName)
             .Set(m => m.LastName).To(ev => ev.LastName)
             .Set(m => m.DateOfBirth).To(ev => ev.DateOfBirth)
@@ -28,13 +30,14 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
     public override void DefineImport(IImportBuilderFor<AccountHolder, KontoEier> builder)
     {
         builder
-            .WithProperties(_ => _.FirstName, _ => _.LastName, _ => _.DateOfBirth)
+            .WithProperties(_ => _.FirstName, _ => _.LastName, _ => _.DateOfBirth, _ => _.SocialSecurityNumber)
             .AppendEvent(_ =>
                 new AccountHolderRegistered(
                     _.Changeset.Incoming.FirstName,
                     _.Changeset.Incoming.LastName,
                     _.Changeset.Incoming.DateOfBirth,
-                    _.Changeset.Incoming.Address));
+                    _.Changeset.Incoming.Address,
+                    _.Changeset.Incoming.SocialSecurityNumber));
 
         builder
             .WithProperties(
@@ -57,4 +60,12 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
         .MapRecordMember(_ => _.LastName, _ => _.Etternavn)
         .MapRecordMember(_ => _.DateOfBirth, _ => _.FodselsDato)
         .MapRecordMember(_ => _.Address, (source, context) => new Address(source.Adresse, source.PostNr, source.By, source.Land));
+
+    Guid GetDeterministicId(string input)
+    {
+        #pragma warning disable CA5351
+        using var md5 = MD5.Create();
+        var hash = md5.ComputeHash(Encoding.Default.GetBytes(input));
+        return new Guid(hash);
+    }
 }

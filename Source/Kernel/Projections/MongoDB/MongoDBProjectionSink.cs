@@ -9,7 +9,6 @@ using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Strings;
@@ -200,7 +199,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                             var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
                             allArrayFilters.AddRange(arrayFilters);
 
-                            var value = ConvertToBsonValueForKnownTargetProperty(propertyDifference.Changed, property);
+                            var value = ConvertToBsonValueForKnownTargetProperty(propertyDifference.Changed, propertyDifference.PropertyPath);
 
                             if (updateBuilder != default)
                             {

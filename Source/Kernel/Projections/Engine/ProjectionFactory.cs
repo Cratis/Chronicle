@@ -9,6 +9,7 @@ using Aksio.Cratis.Events.Projections.Expressions.Keys;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections;
@@ -56,7 +57,7 @@ public class ProjectionFactory : IProjectionFactory
         ProjectionPath path,
         bool hasParent)
     {
-        var actualIdentifiedByProperty = identifiedByProperty.IsRoot ? new PropertyPath("_id") : identifiedByProperty;
+        var actualIdentifiedByProperty = identifiedByProperty.IsRoot ? new PropertyPath("id") : identifiedByProperty;
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                 name,
@@ -83,11 +84,11 @@ public class ProjectionFactory : IProjectionFactory
         SetParentOnAllChildProjections(projection, childProjections);
         ResolveEventsForProjection(projection, childProjections, projectionDefinition, actualIdentifiedByProperty, hasParent);
 
-        var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value));
+        var propertyMappersForAllEventTypes = projectionDefinition.All.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
             var joinExpressions = projectionDefinition.Join.Where(join => fromDefinition.Properties.Any(from => join.Value.On == from.Key));
-            var propertyMappers = fromDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+            var propertyMappers = fromDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
             propertyMappers.AddRange(propertyMappersForAllEventTypes);
             var projected = projection.Event
                 .WhereEventTypeEquals(eventType)
@@ -100,7 +101,7 @@ public class ProjectionFactory : IProjectionFactory
             {
                 foreach (var (joinEventType, joinDefinition) in joinExpressions)
                 {
-                    var joinPropertyMappers = joinDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
+                    var joinPropertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
                     projected = projected
                         .ResolveJoin(_eventProvider, joinEventType, joinDefinition.On)
                         .Project(
@@ -113,7 +114,7 @@ public class ProjectionFactory : IProjectionFactory
 
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
-            var propertyMappers = joinDefinition.Properties.Select(kvp => _propertyMapperExpressionResolvers.Resolve(childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
+            var propertyMappers = joinDefinition.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToList();
             propertyMappers.AddRange(propertyMappersForAllEventTypes);
             projection.Event
                 .WhereEventTypeEquals(eventType)
@@ -143,6 +144,9 @@ public class ProjectionFactory : IProjectionFactory
 
         return projection;
     }
+
+    PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(IProjection projection, PropertyPath propertyPath, string expression) =>
+        _propertyMapperExpressionResolvers.Resolve(propertyPath, projection.Model.Schema.GetSchemaPropertyForPropertyPath(propertyPath)!, expression);
 
     void ResolveEventsForProjection(IProjection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
     {

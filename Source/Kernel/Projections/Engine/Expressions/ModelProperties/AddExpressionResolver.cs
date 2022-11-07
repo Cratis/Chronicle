@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties;
 
@@ -30,9 +31,9 @@ public class AddExpressionResolver : IModelPropertyExpressionResolver
     public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
 
     /// <inheritdoc/>
-    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, string expression)
+    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression)
     {
         var match = _regularExpression.Match(expression);
-        return PropertyMappers.AddWithEventValueProvider(targetProperty, _eventValueProviderExpressionResolvers.Resolve(match.Groups["expression"].Value));
+        return PropertyMappers.AddWithEventValueProvider(targetProperty, _eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
     }
 }

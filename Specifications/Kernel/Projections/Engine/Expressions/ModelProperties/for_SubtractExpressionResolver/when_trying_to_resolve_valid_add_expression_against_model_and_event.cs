@@ -5,6 +5,7 @@ using System.Dynamic;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Events.Projections.Expressions.EventValues;
 using Aksio.Cratis.Properties;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties.for_SubtractExpressionResolver;
 
@@ -29,11 +30,11 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
             content);
 
         event_value_resolvers = new();
-        event_value_resolvers.Setup(_ => _.Resolve(IsAny<string>())).Returns((AppendedEvent _) => 2d);
+        event_value_resolvers.Setup(_ => _.Resolve(IsAny<JsonSchemaProperty>(), IsAny<string>())).Returns((AppendedEvent _) => 2d);
         resolver = new(event_value_resolvers.Object);
     }
 
-    void Because() => resolver.Resolve("targetProperty", "$subtract(sourceProperty)")(@event, target, ArrayIndexers.NoIndexers);
+    void Because() => resolver.Resolve("targetProperty", new(), "$subtract(sourceProperty)")(@event, target, ArrayIndexers.NoIndexers);
 
     [Fact] void should_resolve_to_a_propertymapper_that_can_subtract_from_the_property() => ((double)((dynamic)target).targetProperty).ShouldEqual(40d);
 }

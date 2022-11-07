@@ -6,12 +6,10 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines;
 
@@ -99,29 +97,14 @@ public class ProjectionPipeline : IProjectionPipeline
             ArrayIndexers = new ArrayIndexers(
                 key.ArrayIndexers.All.Select(_ =>
                 {
-                    var targetType = _.Identifier.GetType();
-                    var originalType = targetType;
-                    var schemaProperty = Projection.Model.Schema.GetSchemaPropertyForPropertyPath(_.ArrayProperty + _.IdentifierProperty);
-                    if (schemaProperty is not null)
+                    var originalType = _.Identifier.GetType();
+                    var targetType = Projection.Model.Schema.GetTargetTypeForPropertyPath(_.ArrayProperty + _.IdentifierProperty, _typeFormats);
+                    if (targetType is null)
                     {
-                        if (_typeFormats.IsKnown(schemaProperty.Format))
-                        {
-                            targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
-                        }
-                        else
-                        {
-                            targetType = schemaProperty.Type switch
-                            {
-                                JsonObjectType.String => typeof(string),
-                                JsonObjectType.Boolean => typeof(bool),
-                                JsonObjectType.Integer => typeof(int),
-                                JsonObjectType.Null => typeof(double),
-                                _ => targetType
-                            };
-                        }
+                        return _;
                     }
 
-                    return targetType == originalType ? _ : _ with
+                    return _ with
                     {
                         Identifier = TypeConversion.Convert(targetType, _.Identifier)
                     };

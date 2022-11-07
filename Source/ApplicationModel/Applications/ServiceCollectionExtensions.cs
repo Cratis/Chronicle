@@ -16,8 +16,6 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-    internal static JsonSerializerOptions? JsonSerializerOptions;
-
     /// <summary>
     /// Add all controllers from all project referenced assemblies.
     /// </summary>
@@ -27,10 +25,7 @@ public static class ServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddControllersFromProjectReferencedAssembles(this IServiceCollection services, ITypes types, IDerivedTypes derivedTypes)
     {
-        if (JsonSerializerOptions is null)
-        {
-            ConfigureJsonSerializerOptions(derivedTypes);
-        }
+        Globals.Configure(derivedTypes);
 
         var controllerBuilder = services
             .AddControllers(_ => _
@@ -39,13 +34,13 @@ public static class ServiceCollectionExtensions
             .AddJsonOptions(_ =>
             {
                 _.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                foreach (var converter in JsonSerializerOptions!.Converters)
+                foreach (var converter in Globals.JsonSerializerOptions!.Converters)
                 {
                     _.JsonSerializerOptions.Converters.Add(converter);
                 }
             });
 
-        services.AddSingleton(JsonSerializerOptions!);
+        services.AddSingleton(Globals.JsonSerializerOptions!);
 
         foreach (var controllerAssembly in types.ProjectReferencedAssemblies.Where(_ => _.DefinedTypes.Any(type => type.Implements(typeof(Controller)))))
         {
@@ -53,21 +48,5 @@ public static class ServiceCollectionExtensions
         }
 
         return services;
-    }
-
-    internal static void ConfigureJsonSerializerOptions(IDerivedTypes derivedTypes)
-    {
-        JsonSerializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-            {
-                new ConceptAsJsonConverterFactory(),
-                new DateOnlyJsonConverter(),
-                new TimeOnlyJsonConverter(),
-                new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
-                new DerivedTypeJsonConverterFactory(derivedTypes)
-            }
-        };
     }
 }
