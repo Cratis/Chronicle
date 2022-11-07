@@ -15,7 +15,7 @@ public static class EventValueProviders
     /// Create a <see cref="ValueProvider{T}"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
-    public static readonly ValueProvider<AppendedEvent> EventSourceId = (AppendedEvent @event) => @event.Context.EventSourceId;
+    public static readonly ValueProvider<AppendedEvent> EventSourceId = (AppendedEvent @event) => @event.Context.EventSourceId.Value;
 
     /// <summary>
     /// Create a <see cref="ValueProvider{T}"/> that provides a value from the event content.
