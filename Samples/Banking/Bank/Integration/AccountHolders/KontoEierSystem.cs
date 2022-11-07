@@ -10,7 +10,7 @@ public class KontoEierSystem : IKontoEierSystem
             "03050712345",
             "John",
             "Doe",
-            new DateTime(2007, 5, 3),
+            new DateOnly(2007, 5, 3),
             "Greengrass 42",
             "Paradise City",
             "48321",
