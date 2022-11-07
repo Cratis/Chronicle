@@ -78,7 +78,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var objectsComparer = new ObjectsComparer();
 
         _eventSequenceStorageProvider = new EventSequenceStorageProviderForSpecifications(_eventLog);
-        _sink = new InMemoryProjectionSink();
+        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats);
         _pipeline = new ProjectionPipeline(
             _projection,
             _eventSequenceStorageProvider,
