@@ -9,8 +9,8 @@ public class when_importing_for_the_second_time_without_changes : given.object_r
 {
     void Establish()
     {
-        context.EventLog.Append(social_security_number, new AccountHolderRegistered(first_name, last_name, birth_date, new(address, city, postal_code, country)));
-        context.EventLog.Append(social_security_number, new AccountHolderAddressChanged(address, city, postal_code, country));
+        context.EventLog.Append(event_source_id, new AccountHolderRegistered(first_name, last_name, birth_date, new(address, city, postal_code, country), social_security_number));
+        context.EventLog.Append(event_source_id, new AccountHolderAddressChanged(address, city, postal_code, country));
     }
 
     Task Because() => context.Import(object_to_import);

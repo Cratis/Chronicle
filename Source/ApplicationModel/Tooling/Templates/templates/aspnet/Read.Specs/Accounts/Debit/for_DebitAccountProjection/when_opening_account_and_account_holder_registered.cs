@@ -32,7 +32,8 @@ public class when_opening_account_and_account_holder_registered : ProjectionSpec
                     string.Empty,
                     string.Empty,
                     string.Empty,
-                    string.Empty)));
+                    string.Empty),
+                "12345678901"));
 
         result = await context.GetById(account_id);
     }
