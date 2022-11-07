@@ -7,6 +7,7 @@ namespace Integration.AccountHolders.for_AccountHolderDetailsAdapter.given;
 
 public class person_information : AdapterSpecificationFor<AccountHolder, KontoEier>
 {
+    protected const string event_source_id = "e31ed8bf-27ed-31ad-c95c-a75e21365973";
     protected const string social_security_number = "12345678901";
     protected const string first_name = "Bør";
     protected const string last_name = "Børson";
