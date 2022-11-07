@@ -45,7 +45,10 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 value = ConvertToJsonNode(keyValue.Value, schemaProperty);
             }
 
-            jsonObject[name] = value;
+            if (value is not null)
+            {
+                jsonObject[name] = value;
+            }
         }
 
         return jsonObject;
@@ -73,7 +76,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                     value = ConvertFromJsonNode(sourceValue!, schemaProperty);
                 }
             }
-            expandoObjectAsDictionary[name] = value!;
+
+            if (value is not null)
+            {
+                expandoObjectAsDictionary[name] = value;
+            }
         }
 
         return expandoObject;
