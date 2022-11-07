@@ -66,12 +66,14 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 
-        var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers();
+        var typeFormats = new TypeFormats();
+        var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
         var factory = new ProjectionFactory(
             new ModelPropertyExpressionResolvers(
                 eventValueProviderExpressionResolvers),
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
-            new EventSequenceStorageProviderForSpecifications(_eventLog));
+            new EventSequenceStorageProviderForSpecifications(_eventLog),
+            typeFormats);
         _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
         var objectsComparer = new ObjectsComparer();
@@ -84,7 +86,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             _sink,
             objectsComparer,
             new NullChangesetStorage(),
-            new TypeFormats(),
+            typeFormats,
             new NullLogger<ProjectionPipeline>());
     }
 
