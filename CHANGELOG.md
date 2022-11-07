@@ -1,3 +1,15 @@
+# [v6.16.3] - 2022-11-7 [PR: #582](https://github.com/aksio-insurtech/Cratis/pull/582)
+
+### Fixed
+
+- Supporting inherited properties in model schemas.
+- Adding support for resolving target type based on reference type, for instance enums will be such a thing.
+- Fixing a bug introduced in MongoDB projection sink where it tried to resolve using the wrong property and couldn't find the target type as a result.
+- Projections event value resolvers now convert to the target type, assuring we have the correct types when comparing what we already have in the system and what we project ontop.
+- Fixing object cloning that leverages JSON serialization to support the custom converters.
+- Fixing the `InMemoryProjectionSink` to honor the actual key target types.
+
+
 # [v6.16.2] - 2022-11-5 [PR: #580](https://github.com/aksio-insurtech/Cratis/pull/580)
 
 ### Fixed
