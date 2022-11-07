@@ -45,7 +45,7 @@ export const DebitAccounts = () => {
             setOpenDebitAccountValues({
                 accountId: Guid.create().toString(),
                 details: {
-                    owner: 'edd60145-a6df-493f-b48d-35ffdaaefc4c',
+                    owner: '744e9992-9938-9b9d-ab37-3a8aaff59447',
                     name: output.name,
                     includeCard: output.includeCard
                 }

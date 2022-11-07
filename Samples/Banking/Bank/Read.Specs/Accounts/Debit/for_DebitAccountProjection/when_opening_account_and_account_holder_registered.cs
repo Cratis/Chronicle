@@ -27,7 +27,7 @@ public class when_opening_account_and_account_holder_registered : ProjectionSpec
             new AccountHolderRegistered(
                 first_name,
                 last_name,
-                DateTime.UtcNow,
+                DateOnly.FromDateTime(DateTime.UtcNow),
                 new(
                     string.Empty,
                     string.Empty,
