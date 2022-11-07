@@ -6,12 +6,10 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events.Projections.Changes;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Projections.Pipelines;
 

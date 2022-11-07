@@ -22,7 +22,6 @@ public class ProjectionFactory : IProjectionFactory
     readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
     readonly IKeyExpressionResolvers _keyExpressionResolvers;
     readonly IEventSequenceStorageProvider _eventProvider;
-    readonly ITypeFormats _typeFormats;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
@@ -30,17 +29,14 @@ public class ProjectionFactory : IProjectionFactory
     /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for providing events from the event store.</param>
-    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual types from JSON schemas.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
         IKeyExpressionResolvers keyExpressionResolvers,
-        IEventSequenceStorageProvider eventProvider,
-        ITypeFormats typeFormats)
+        IEventSequenceStorageProvider eventProvider)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;
         _eventProvider = eventProvider;
-        _typeFormats = typeFormats;
     }
 
     /// <inheritdoc/>
