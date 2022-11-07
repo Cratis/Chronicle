@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Aksio.Cratis.Serialization;
 
 namespace Aksio.Cratis.Json;
@@ -43,6 +44,7 @@ public static class Globals
         _jsonSerializerOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters =
             {
                 new ConceptAsJsonConverterFactory(),
