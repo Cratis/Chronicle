@@ -56,7 +56,7 @@ public class CompositeKeyExpressionResolver : IKeyExpressionResolver
 
             return new
             {
-                Property =  new PropertyPath(keyValue[0]),
+                Property = new PropertyPath(keyValue[0]),
                 KeyResolver = _resolvers.Resolve(schemaProperty, keyValue[1])
             };
         }).ToDictionary(_ => _.Property, _ => _.KeyResolver);
