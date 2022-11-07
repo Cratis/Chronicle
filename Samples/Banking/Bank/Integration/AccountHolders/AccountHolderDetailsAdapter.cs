@@ -63,6 +63,7 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 
     Guid GetDeterministicId(string input)
     {
+        #pragma warning disable CA5351
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(Encoding.Default.GetBytes(input));
         return new Guid(hash);
