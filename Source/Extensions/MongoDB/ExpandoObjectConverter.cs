@@ -72,7 +72,10 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 value = ConvertFromBsonValue(element.Value, schemaProperty);
             }
 
-            expandoObjectAsDictionary[name] = value;
+            if (value is not null)
+            {
+                expandoObjectAsDictionary[name] = value;
+            }
         }
 
         return expandoObject;
