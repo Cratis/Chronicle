@@ -44,7 +44,7 @@ public static class Globals
         _jsonSerializerOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             Converters =
             {
                 new ConceptAsJsonConverterFactory(),
