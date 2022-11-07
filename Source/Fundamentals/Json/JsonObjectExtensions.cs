@@ -19,7 +19,7 @@ public static class JsonObjectExtensions
     /// <returns>A new <see cref="JsonObject"/> instance.</returns>
     public static JsonObject DeepClone(this JsonObject json)
     {
-        return (JsonNode.Parse(json.ToJsonString()) as JsonObject)!;
+        return (JsonNode.Parse(json.ToJsonString(Globals.JsonSerializerOptions)) as JsonObject)!;
     }
 
     /// <summary>
