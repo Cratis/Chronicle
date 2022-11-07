@@ -36,7 +36,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
             if (schemaProperty is null)
             {
-                ConvertUnknownSchemaTypeToBsonValue(keyValue.Value);
+                value = ConvertUnknownSchemaTypeToBsonValue(keyValue.Value);
             }
             else
             {
@@ -71,6 +71,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             {
                 value = ConvertFromBsonValue(element.Value, schemaProperty);
             }
+
             expandoObjectAsDictionary[name] = value;
         }
 
