@@ -5,6 +5,8 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Events.Projections.InMemory;
 
@@ -15,6 +17,8 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = new();
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
+    readonly Model _model;
+    readonly ITypeFormats _typeFormats;
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -28,15 +32,27 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// </summary>
     public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryProjectionSink"/> class.
+    /// </summary>
+    /// <param name="model">The target <see cref="Model"/>.</param>
+    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
+    public InMemoryProjectionSink(Model model, ITypeFormats typeFormats)
+    {
+        _model = model;
+        _typeFormats = typeFormats;
+    }
+
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var collection = Collection;
+        var keyValue = GetActualKeyValue(key);
 
         ExpandoObject modelInstance;
-        if (collection.ContainsKey(key.Value))
+        if (collection.ContainsKey(keyValue))
         {
-            modelInstance = collection[key.Value];
+            modelInstance = collection[keyValue];
         }
         else
         {
@@ -58,7 +74,8 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             return Task.CompletedTask;
         }
 
-        collection[key.Value] = ApplyActualChanges(changeset.Changes, state);
+        var keyValue = GetActualKeyValue(key);
+        collection[keyValue] = ApplyActualChanges(changeset.Changes, state);
 
         return Task.CompletedTask;
     }
@@ -88,6 +105,22 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+    }
+
+    object GetActualKeyValue(Key key)
+    {
+        var targetType = _model.Schema.GetTargetTypeForPropertyPath("id", _typeFormats);
+        if (targetType is not null)
+        {
+            return TypeConversion.Convert(targetType, key.Value);
+        }
+
+        if (key.Value.IsConcept())
+        {
+            return key.Value.GetConceptValue();
+        }
+
+        return key.Value;
     }
 
     ExpandoObject ApplyActualChanges(IEnumerable<Change> changes, ExpandoObject state)
