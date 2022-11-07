@@ -1,3 +1,12 @@
+# [v6.16.5] - 2022-11-7 [PR: #584](https://github.com/aksio-insurtech/Cratis/pull/584)
+
+### Fixed
+
+- Making deep cloning of JSON objects use the global `JsonSerializerOptions` to support the types we support.
+- Setting default ignore condition for JSON serialization to ignore null values.
+- Ignoring properties that are null when converting to `ExpandoObject` and `JsonObject` internally. The JSON serializer will then ignore these properties when deserializing in the client.
+
+
 # [v6.16.4] - 2022-11-7 [PR: #583](https://github.com/aksio-insurtech/Cratis/pull/583)
 
 ### Fixed
