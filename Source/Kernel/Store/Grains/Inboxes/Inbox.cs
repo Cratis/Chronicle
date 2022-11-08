@@ -79,10 +79,11 @@ public class Inbox : Grain, IInbox
 
     async Task HandleEvent(AppendedEvent @event, StreamSequenceToken token)
     {
-        _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId!);
-        _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, @event.Metadata.SequenceNumber);
+        _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId);
 
         var eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+        _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);
+
         var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
         await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, content!);
     }

@@ -11,6 +11,6 @@ namespace Aksio.Cratis.Events.Store.Grains.Inboxes;
 /// </summary>
 public static partial class InboxLogMessages
 {
-    [LoggerMessage(0, LogLevel.Debug, "Forwarding event ({EventTypeId}) with sequence number from origin {SequenceNumber} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
-    internal static partial void ForwardingEvent(this ILogger logger, TenantId tenantId, MicroserviceId microserviceId, EventTypeId eventTypeId, EventSequenceNumber sequenceNumber);
+    [LoggerMessage(0, LogLevel.Debug, "Forwarding event ({EventName}-{EventTypeId}) with sequence number from origin {SequenceNumber} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
+    internal static partial void ForwardingEvent(this ILogger logger, TenantId tenantId, MicroserviceId microserviceId, EventTypeId eventTypeId, string eventName, EventSequenceNumber sequenceNumber);
 }

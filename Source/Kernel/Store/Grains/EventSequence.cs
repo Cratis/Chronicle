@@ -73,18 +73,20 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default)
     {
-        _logger.Appending(
-            _microserviceAndTenant.MicroserviceId,
-            _microserviceAndTenant.TenantId,
-            _eventSequenceId,
-            eventType,
-            eventSourceId,
-            State.SequenceNumber);
-
         var updateSequenceNumber = false;
         try
         {
             var eventSchema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
+
+            _logger.Appending(
+                _microserviceAndTenant.MicroserviceId,
+                _microserviceAndTenant.TenantId,
+                _eventSequenceId,
+                eventType,
+                eventSchema.Schema.GetDisplayName(),
+                eventSourceId,
+                State.SequenceNumber);
+
             var compliantEvent = await _jsonComplianceManagerProvider().Apply(eventSchema.Schema, eventSourceId, content);
 
             var compliantEventAsExpandoObject = _expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
@@ -110,6 +112,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             _logger.FailedAppending(
                 _microserviceAndTenant.MicroserviceId,
                 _microserviceAndTenant.TenantId,
+                eventType,
                 ex.StreamId,
                 ex.EventSourceId,
                 ex.SequenceNumber,
