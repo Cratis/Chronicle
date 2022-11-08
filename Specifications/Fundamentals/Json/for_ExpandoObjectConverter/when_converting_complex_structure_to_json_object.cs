@@ -22,6 +22,7 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
         expando.intValue = 42;
         expando.floatValue = 42.42;
         expando.doubleValue = 42.42;
+        expando.enumValue = 2;
         expando.guidValue = "3023e769-4594-45fd-938e-9b231cf3e3f5";
         expando.dateTimeValue = "2022-10-31T14:51:32.8450000Z";
         expando.dateTimeOffsetValue = "2022-10-31T14:51:32.8450000Z";
@@ -52,6 +53,7 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
     [Fact] void should_set_top_level_int_value_to_hold_correct_value() => result["intValue"].GetValue<int>().ShouldEqual((int)source_dynamic.intValue);
     [Fact] void should_set_top_level_float_value_to_hold_correct_value() => result["floatValue"].GetValue<float>().ShouldEqual((float)source_dynamic.floatValue);
     [Fact] void should_set_top_level_double_value_to_hold_correct_value() => result["doubleValue"].GetValue<double>().ShouldEqual((double)source_dynamic.doubleValue);
+    [Fact] void should_set_top_level_enum_value_to_hold_correct_value() => result["enumValue"].GetValue<int>().ShouldEqual((int)source_dynamic.enumValue);
     [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => result["guidValue"].GetValue<Guid>().ShouldEqual(Guid.Parse((string)source_dynamic.guidValue));
     [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => result["dateTimeValue"].GetValue<DateTime>().ShouldEqual(DateTime.Parse((string)source_dynamic.dateTimeValue));
     [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => result["dateTimeOffsetValue"].GetValue<DateTimeOffset>().ShouldEqual(DateTimeOffset.Parse((string)source_dynamic.dateTimeOffsetValue));
