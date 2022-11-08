@@ -11,14 +11,14 @@ namespace Aksio.Cratis.Events.Store.Grains;
 /// </summary>
 public static partial class EventSequenceLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Appending '{EventType}' for EventSource {EventSource} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for microservice {MicroserviceId} on tenant {TenantId}")]
-    internal static partial void Appending(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventType eventType, EventSourceId eventSource, ulong sequenceNumber);
+    [LoggerMessage(0, LogLevel.Information, "Appending '{EventName}-{EventType}' for EventSource {EventSource} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for microservice {MicroserviceId} on tenant {TenantId}")]
+    internal static partial void Appending(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventType eventType, string eventName, EventSourceId eventSource, ulong sequenceNumber);
 
-    [LoggerMessage(1, LogLevel.Information, "Compensatin event @ {SequenceNumber} in event sequence {EventSequenceId} - event type {EventType} for microservice '{MicroserviceId}' on tenant {TenantId}")]
-    internal static partial void Compensating(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, EventType eventTYpe, EventSequenceId eventSequenceId, ulong sequenceNumber);
+    [LoggerMessage(1, LogLevel.Information, "Compensatin event @ {SequenceNumber} in event sequence {EventSequenceId} - event type '{EventType}' for microservice '{MicroserviceId}' on tenant {TenantId}")]
+    internal static partial void Compensating(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, EventType eventType, EventSequenceId eventSequenceId, ulong sequenceNumber);
 
-    [LoggerMessage(2, LogLevel.Critical, "Failed appending event at sequence {SequenceNumber} for event source {EventSourceId} to stream {StreamId} for microservice '{MicroserviceId}' on tenant {TenantId}")]
-    internal static partial void FailedAppending(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, Guid streamId, string eventSourceId, ulong sequenceNumber, Exception exception);
+    [LoggerMessage(2, LogLevel.Critical, "Failed appending event type '{EventType}' at sequence {SequenceNumber} for event source {EventSourceId} to stream {StreamId} for microservice '{MicroserviceId}' on tenant {TenantId}")]
+    internal static partial void FailedAppending(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, EventType eventType, Guid streamId, string eventSourceId, ulong sequenceNumber, Exception exception);
 
     [LoggerMessage(3, LogLevel.Error, "Error when appending event at sequence {SequenceNumber} for event source {EventSourceId} to event sequence {EventSequenceId} for microservice {MicroserviceId} on tenant {TenantId}")]
     internal static partial void ErrorAppending(this ILogger logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, string eventSourceId, ulong sequenceNumber, Exception exception);
