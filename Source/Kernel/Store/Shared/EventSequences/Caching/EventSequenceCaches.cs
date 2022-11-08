@@ -39,6 +39,6 @@ public class EventSequenceCaches : IEventSequenceCaches
         }
 
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
-        return _caches[key] = new EventSequenceCache(key.EventSequenceId, 500, _eventLogStorageProvider());
+        return _caches[key] = new EventSequenceCache(key.EventSequenceId, 20000, _eventLogStorageProvider());
     }
 }
