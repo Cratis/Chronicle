@@ -1,3 +1,10 @@
+# [v6.16.9] - 2022-11-8 [PR: #590](https://github.com/aksio-insurtech/Cratis/pull/590)
+
+### Fixed
+
+- Fixing so that we get the schema-store using the `ProviderFor<>`. It is singleton per microservice, but we were just injecting it without thinking of the scoping of where it was injected. The consequence of that is that we were getting the wrong schema store every now and then.
+
+
 # [v6.16.8] - 2022-11-8 [PR: #589](https://github.com/aksio-insurtech/Cratis/pull/589)
 
 ### Fixed
