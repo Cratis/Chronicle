@@ -28,20 +28,22 @@ public class MongoDBSchemaStore : ISchemaStore
     }
 
     /// <inheritdoc/>
-    public async Task Populate()
+    public Task Populate()
     {
-        var findResult = await GetCollection().FindAsync(_ => true);
-        var allSchemas = await findResult.ToListAsync();
+        var findResult = GetCollection().Find(_ => true);
+        var allSchemas = findResult.ToList();
 
         _schemasByTypeAndGeneration =
             allSchemas!.GroupBy(_ => _.EventType)
             .ToDictionary(
                 _ => (EventTypeId)_.Key,
                 _ => _.ToDictionary(es => (EventGeneration)es.Generation, es => es.ToEventSchema()));
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task Register(EventType type, string friendlyName, JsonSchema schema)
+    public Task Register(EventType type, string friendlyName, JsonSchema schema)
     {
         // If we have a schema for the event type on the given generation and the schemas differ - throw an exception (only in production)
         // .. if they're the same. Ignore saving.
@@ -59,32 +61,34 @@ public class MongoDBSchemaStore : ISchemaStore
         }
         _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
         var mongoEventSchema = eventSchema.ToMongoDB();
-        await GetCollection().ReplaceOneAsync(
+        GetCollection().ReplaceOne(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,
             new ReplaceOptions { IsUpsert = true });
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
+    public Task<IEnumerable<EventSchema>> GetLatestForAllEventTypes()
     {
-        var result = await GetCollection().FindAsync(_ => true);
-        var schemas = await result.ToListAsync();
-        return schemas
+        var result = GetCollection().Find(_ => true);
+        var schemas = result.ToList();
+        return Task.FromResult(schemas
             .GroupBy(_ => _.EventType)
-            .Select(_ => _.OrderByDescending(_ => _.Generation).First().ToEventSchema());
+            .Select(_ => _.OrderByDescending(_ => _.Generation).First().ToEventSchema()));
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
+    public Task<IEnumerable<EventSchema>> GetAllGenerationsForEventType(EventType eventType)
     {
         var collection = GetCollection();
         var filter = Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, eventType.Id.Value);
-        var result = await collection.FindAsync(filter);
-        var schemas = await result.ToListAsync();
-        return schemas
+        var result = collection.Find(filter);
+        var schemas = result.ToList();
+        return Task.FromResult(schemas
             .OrderBy(_ => _.Generation)
-            .Select(_ => _.ToEventSchema());
+            .Select(_ => _.ToEventSchema()));
     }
 
     /// <inheritdoc/>
