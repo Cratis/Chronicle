@@ -88,17 +88,17 @@ public class MongoDBSchemaStore : ISchemaStore
     }
 
     /// <inheritdoc/>
-    public async Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
+    public Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
         if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
         {
-            return _schemasByTypeAndGeneration[type][generation];
+            return Task.FromResult(_schemasByTypeAndGeneration[type][generation]);
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = await GetCollection().FindAsync(filter);
-        var schemas = await result.ToListAsync();
+        var result = GetCollection().Find(filter);
+        var schemas = result.ToList();
         _schemasByTypeAndGeneration[type] = schemas.ToDictionary(_ => (EventGeneration)_.Generation, _ => _.ToEventSchema());
 
         if (schemas.Count == 0)
@@ -106,22 +106,22 @@ public class MongoDBSchemaStore : ISchemaStore
             throw new MissingEventSchemaForEventType(type, generation);
         }
 
-        return schemas[0].ToEventSchema();
+        return Task.FromResult(schemas[0].ToEventSchema());
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default)
+    public Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
         if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
-        var result = await GetCollection().FindAsync(filter);
-        var schemas = await result.ToListAsync();
-        return schemas.Count == 1;
+        var result = GetCollection().Find(filter);
+        var schemas = result.ToList();
+        return Task.FromResult(schemas.Count == 1);
     }
 
     IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(SchemasCollection);
