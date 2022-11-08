@@ -1,3 +1,11 @@
+# [v6.16.7] - 2022-11-8 [PR: #588](https://github.com/aksio-insurtech/Cratis/pull/588)
+
+### Fixed
+
+- Moved away from using async API for mongo db schema store.
+- Supporting enums all the way through the pipeline.
+
+
 # [v6.16.6] - 2022-11-8 [PR: #586](https://github.com/aksio-insurtech/Cratis/pull/586)
 
 ### Fixed
