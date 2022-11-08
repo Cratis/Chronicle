@@ -1,3 +1,10 @@
+# [v6.16.8] - 2022-11-8 [PR: #589](https://github.com/aksio-insurtech/Cratis/pull/589)
+
+### Fixed
+
+- Changing all MongoDB calls for the schema store to be synchronous. To avoid problems with the Orleans task model.
+
+
 # [v6.16.7] - 2022-11-8 [PR: #588](https://github.com/aksio-insurtech/Cratis/pull/588)
 
 ### Fixed
