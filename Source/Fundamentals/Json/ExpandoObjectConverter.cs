@@ -141,7 +141,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     object? ConvertJsonValueFromUnknownFormat(JsonNode jsonNode, JsonSchemaProperty schemaProperty)
     {
         var value = jsonNode.AsValue();
-        switch (schemaProperty.Type)
+        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
+                schemaProperty.Reference.Type :
+                schemaProperty.Type;
+
+        switch (type)
         {
             case JsonObjectType.String:
                 var valueAsString = value.GetValue<string>();
@@ -245,7 +249,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return null;
         }
 
-        switch (schemaProperty.Type)
+        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
+                schemaProperty.Reference.Type :
+                schemaProperty.Type;
+
+        switch (type)
         {
             case JsonObjectType.String:
                 return JsonValue.Create<string>(value is string actualString ? actualString : value.ToString()!);

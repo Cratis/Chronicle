@@ -22,6 +22,7 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
         expando.intValue = 42;
         expando.floatValue = 42.42;
         expando.doubleValue = 42.42;
+        expando.enumValue = 2;
         expando.guidValue = "3023e769-4594-45fd-938e-9b231cf3e3f5";
         expando.dateTimeValue = "2022-10-31T14:51:32.8450000Z";
         expando.dateTimeOffsetValue = "2022-10-31T14:51:32.8450000Z";
@@ -56,6 +57,8 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_set_top_level_float_value_to_hold_correct_value() => result.GetElement("floatValue").Value.AsDouble.ShouldEqual((float)source_dynamic.floatValue);
     [Fact] void should_set_top_level_double_value_to_be_of_double_type() => result.GetElement("doubleValue").Value.ShouldBeOfExactType<BsonDouble>();
     [Fact] void should_set_top_level_double_value_to_hold_correct_value() => result.GetElement("doubleValue").Value.AsDouble.ShouldEqual((double)source_dynamic.doubleValue);
+    [Fact] void should_set_top_level_enum_value_to_be_of_double_type() => result.GetElement("enumValue").Value.ShouldBeOfExactType<BsonInt32>();
+    [Fact] void should_set_top_level_enum_value_to_hold_correct_value() => result.GetElement("enumValue").Value.AsInt32.ShouldEqual((int)source_dynamic.enumValue);
     [Fact] void should_set_top_level_guid_value_to_be_of_binary_type() => result.GetElement("guidValue").Value.ShouldBeOfExactType<BsonBinaryData>();
     [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => result.GetElement("guidValue").Value.AsGuid.ShouldEqual(Guid.Parse((string)source_dynamic.guidValue));
     [Fact] void should_set_top_level_date_time_value_to_be_of_date_time_type() => result.GetElement("dateTimeValue").Value.ShouldBeOfExactType<BsonDateTime>();
