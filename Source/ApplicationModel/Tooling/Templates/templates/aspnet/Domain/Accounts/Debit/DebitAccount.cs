@@ -20,7 +20,7 @@ public class DebitAccount : Controller
     public Task CloseDebitAccount(
         [FromRoute]
         [AccountMustBeEmpty(IsModelKey = true)]
-        AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed());
+        AccountId accountId) => _eventLog.Append(accountId, new DebitAccountClosed(DebitAccountCloseReason.CustomerRequest));
 
     [HttpPost("deposit/{amount}")]
     public Task DepositToAccount([FromRoute] AccountId accountId, [FromRoute] double amount) => _eventLog.Append(accountId, new DepositToDebitAccountPerformed(amount));
