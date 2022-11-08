@@ -5,7 +5,6 @@ namespace Concepts.Accounts;
 
 public enum DebitAccountCloseReason
 {
-    None = 0,
     Fraud = 1,
     CustomerRequest = 2
 }
