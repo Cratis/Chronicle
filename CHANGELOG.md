@@ -1,3 +1,11 @@
+# [v6.16.6] - 2022-11-8 [PR: #586](https://github.com/aksio-insurtech/Cratis/pull/586)
+
+### Fixed
+
+- We have identified a major bug in the cache. We will remove our cache implementation and go for the vanilla Orleans one instead, very soon. Until that point, we've set the cache to hold 20K events for now. This is absolutely not good.
+- Adding more details with event names to the log.
+
+
 # [v6.16.5] - 2022-11-7 [PR: #584](https://github.com/aksio-insurtech/Cratis/pull/584)
 
 ### Fixed
