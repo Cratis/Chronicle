@@ -21,7 +21,7 @@ public class MongoDBEventSequences : IEventSequences
     readonly ILogger<MongoDBEventSequences> _logger;
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
-    readonly ISchemaStore _schemaStore;
+    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
 
@@ -30,20 +30,20 @@ public class MongoDBEventSequences : IEventSequences
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
     /// <param name="eventStoreDatabaseProvider"><see cref="ProviderFor{T}">Provider for</see> <see cref="IMongoDatabase"/>.</param>
-    /// <param name="schemaStore">The <see cref="ISchemaStore"/> for working with the schema types.</param>
+    /// <param name="schemaStoreProvider">The <see cref="ISchemaStore"/> for working with the schema types.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public MongoDBEventSequences(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
-        ISchemaStore schemaStore,
+        ProviderFor<ISchemaStore> schemaStoreProvider,
         IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<MongoDBEventSequences> logger)
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
-        _schemaStore = schemaStore;
+        _schemaStoreProvider = schemaStoreProvider;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
@@ -61,7 +61,7 @@ public class MongoDBEventSequences : IEventSequences
     {
         try
         {
-            var schema = await _schemaStore.GetFor(eventType.Id, eventType.Generation);
+            var schema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
             var jsonObject = _expandoObjectConverter.ToJsonObject(content, schema.Schema);
             var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, _jsonSerializerOptions));
             _logger.Appending(
