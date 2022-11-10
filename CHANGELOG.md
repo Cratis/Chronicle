@@ -1,3 +1,14 @@
+# [v6.17.0] - 2022-11-10 [PR: #598](https://github.com/aksio-insurtech/Cratis/pull/598)
+
+### Added
+
+- `useCommand()` now returns a third component to the tuple; `ClearCommandValues` which sets them all to undefined. The proxy generator honors this and creates a proxy that does the same. (#595)
+
+### Fixed
+
+- Fixing the `SetCommandValues` returned from `useCommand()` to only ignore properties that are either undefined or null. Allowing for empty strings to be set. (#596)
+
+
 # [v6.16.9] - 2022-11-8 [PR: #590](https://github.com/aksio-insurtech/Cratis/pull/590)
 
 ### Fixed
