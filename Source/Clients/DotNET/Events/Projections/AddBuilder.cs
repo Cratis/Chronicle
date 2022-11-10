@@ -44,6 +44,16 @@ public class AddBuilder<TModel, TEvent, TProperty, TParentBuilder> : IAddBuilder
     /// <inheritdoc/>
     public string Build()
     {
+        ThrowIfMissingAddWithExpression();
+
         return _expression;
+    }
+
+    void ThrowIfMissingAddWithExpression()
+    {
+        if( string.IsNullOrEmpty(_expression) )
+        {
+            throw new MissingAddWithExpression(typeof(TModel), TargetProperty);
+        }
     }
 }
