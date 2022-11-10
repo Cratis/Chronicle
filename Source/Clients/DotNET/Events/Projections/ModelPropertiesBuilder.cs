@@ -26,6 +26,16 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder> : IModelProperties
     protected IKeyBuilder _key = new KeyBuilder(new EventSourceIdExpression());
 #pragma warning restore CA1629, CA1002, MA0016 // Return abstract
 #pragma warning restore CA1600 // Elements should be documented
+    readonly IProjectionBuilderFor<TModel> _projectionBuilder;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelPropertiesBuilder{TModel, TEvent, TBuilder}"/>.
+    /// </summary>
+    /// <param name="projectionBuilder"></param>
+    protected ModelPropertiesBuilder(IProjectionBuilderFor<TModel> projectionBuilder)
+    {
+        _projectionBuilder = projectionBuilder;
+    }
 
     /// <inheritdoc/>
     public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
@@ -97,5 +107,13 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder> : IModelProperties
     {
         _propertyExpressions.Add(new CountBuilder<TModel, TEvent, TProperty>(modelPropertyAccessor.GetPropertyPath()));
         return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
+    public IAddChildBuilder<TChildModel, TEvent, TBuilder> AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty)
+    {
+        IAddChildBuilder<TChildModel, TEvent, TBuilder> builder = null!;
+        _projectionBuilder.Children(targetProperty, childrenBuilder => builder = new AddChildBuilder<TModel, TChildModel, TEvent, TBuilder>(childrenBuilder, (this as TBuilder)!));
+        return builder!;
     }
 }
