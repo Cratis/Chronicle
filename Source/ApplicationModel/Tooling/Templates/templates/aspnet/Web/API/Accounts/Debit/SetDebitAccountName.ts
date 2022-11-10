@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/cratis-applications-frontend/commands';
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
@@ -59,7 +59,7 @@ export class SetDebitAccountName extends Command<ISetDebitAccountName> implement
         this.propertyChanged('name');
     }
 
-    static use(initialValues?: ISetDebitAccountName): [SetDebitAccountName, SetCommandValues<ISetDebitAccountName>] {
+    static use(initialValues?: ISetDebitAccountName): [SetDebitAccountName, SetCommandValues<ISetDebitAccountName>, ClearCommandValues] {
         return useCommand<SetDebitAccountName, ISetDebitAccountName>(SetDebitAccountName, initialValues);
     }
 }
