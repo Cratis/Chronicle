@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections;
 
@@ -17,6 +18,11 @@ public class AddChildBuilder<TParentModel, TChildModel, TEvent, TParentBuilder> 
     readonly IChildrenBuilder<TParentModel, TChildModel> _childrenBuilder;
     readonly TParentBuilder _parentBuilder;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AddChildBuilder{TParentModel, TChildModel, TEvent, TParentBuilder}"/> class.
+    /// </summary>
+    /// <param name="childrenBuilder">The children builder to use internally.</param>
+    /// <param name="parentBuilder">THe parent builder to continue build on for the fluent interface.</param>
     public AddChildBuilder(IChildrenBuilder<TParentModel, TChildModel> childrenBuilder, TParentBuilder parentBuilder)
     {
         _childrenBuilder = childrenBuilder;
@@ -33,6 +39,13 @@ public class AddChildBuilder<TParentModel, TChildModel, TEvent, TParentBuilder> 
     /// <inheritdoc/>
     public TParentBuilder FromObject(Expression<Func<TEvent, IEnumerable<TChildModel>>> propertyWithChild)
     {
+        _childrenBuilder.From<TEvent>(_ =>
+        {
+            foreach (var property in typeof(TChildModel).GetProperties())
+            {
+            }
+        });
+
         return _parentBuilder;
     }
 }
