@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/cratis-applications-frontend/commands';
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import { AccountDetails } from './AccountDetails';
 import Handlebars from 'handlebars';
@@ -58,7 +58,7 @@ export class OpenDebitAccount extends Command<IOpenDebitAccount> implements IOpe
         this.propertyChanged('details');
     }
 
-    static use(initialValues?: IOpenDebitAccount): [OpenDebitAccount, SetCommandValues<IOpenDebitAccount>] {
+    static use(initialValues?: IOpenDebitAccount): [OpenDebitAccount, SetCommandValues<IOpenDebitAccount>, ClearCommandValues] {
         return useCommand<OpenDebitAccount, IOpenDebitAccount>(OpenDebitAccount, initialValues);
     }
 }
