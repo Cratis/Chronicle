@@ -8,8 +8,9 @@ import React from 'react';
 import { CommandTrackerContext } from './CommandTracker';
 
 export type SetCommandValues<TCommandContent> = (command: TCommandContent) => void;
+export type ClearCommandValues = () => void;
 
-export function useCommand<TCommand extends Command, TCommandContent>(commandType: Constructor<TCommand>, initialValues?: TCommandContent): [TCommand, SetCommandValues<TCommandContent>] {
+export function useCommand<TCommand extends Command, TCommandContent>(commandType: Constructor<TCommand>, initialValues?: TCommandContent): [TCommand, SetCommandValues<TCommandContent>, ClearCommandValues] {
     const instance = new commandType();
     const [command, setCommand] = useState<TCommand>(instance);
     const [hasChanges, setHasChanges] = useState(false);
@@ -33,11 +34,17 @@ export function useCommand<TCommand extends Command, TCommandContent>(commandTyp
 
     const setCommandValues = (values: TCommandContent) => {
         command!.properties.forEach(property => {
-            if (values[property]) {
+            if (values[property] !== undefined && values[property] != null) {
                 command![property] = values[property];
             }
         });
     };
 
-    return [command!, setCommandValues];
+    const clearCommandValues = () => {
+        command!.properties.forEach(property => {
+            command![property] = undefined;
+        });
+    };
+
+    return [command!, setCommandValues, clearCommandValues];
 }
