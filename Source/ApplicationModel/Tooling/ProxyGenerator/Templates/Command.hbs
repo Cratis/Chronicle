@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/cratis-applications-frontend/commands';
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 {{#Imports}}
 import { {{Type}} } from '{{Module}}';
@@ -80,7 +80,7 @@ export class {{Name}} extends Command<I{{Name}}> implements I{{Name}} {
     {{/if}}
     {{/Properties}}
 
-    static use(initialValues?: I{{Name}}): [{{Name}}, SetCommandValues<I{{Name}}>] {
+    static use(initialValues?: I{{Name}}): [{{Name}}, SetCommandValues<I{{Name}}>, ClearCommandValues] {
         return useCommand<{{Name}}, I{{Name}}>({{Name}}, initialValues);
     }
 }
