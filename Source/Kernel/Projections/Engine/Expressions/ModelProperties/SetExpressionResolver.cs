@@ -10,7 +10,7 @@ using NJsonSchema;
 namespace Aksio.Cratis.Events.Projections.Expressions.ModelProperties;
 
 /// <summary>
-/// Represents a <see cref="IModelPropertyExpressionResolver"/> for adding value on a model with the value for a property on the content of an <see cref="AppendedEvent"/>.
+/// Represents a <see cref="IModelPropertyExpressionResolver"/> for setting a property on a model with the value for a property based event value expressions.
 /// </summary>
 public class SetExpressionResolver : IModelPropertyExpressionResolver
 {
