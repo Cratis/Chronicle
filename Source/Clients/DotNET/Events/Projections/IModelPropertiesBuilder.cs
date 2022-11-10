@@ -81,6 +81,14 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     TBuilder Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
 
     /// <summary>
+    /// Start building the add child operation to a target property holding an collection of a specific child model type.
+    /// </summary>
+    /// <param name="targetProperty">The collection property that will receive the child.</param>
+    /// <typeparam name="TChildModel">Type of child model.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    IAddChildBuilder<TChildModel, TEvent, TBuilder> AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty);
+
+    /// <summary>
     /// Start building the set operation to a target property on the model.
     /// </summary>
     /// <typeparam name="TProperty">Type of the property.</typeparam>
