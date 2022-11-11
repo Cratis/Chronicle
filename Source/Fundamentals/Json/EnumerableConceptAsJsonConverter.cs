@@ -15,6 +15,9 @@ public class EnumerableConceptAsJsonConverter<TConcept> : JsonConverter<IEnumera
 {
     readonly ConceptAsJsonConverter<TConcept> _conceptAsJsonConverter;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EnumerableConceptAsJsonConverter{TConcept}"/>.
+    /// </summary>
     public EnumerableConceptAsJsonConverter()
     {
         _conceptAsJsonConverter = new();

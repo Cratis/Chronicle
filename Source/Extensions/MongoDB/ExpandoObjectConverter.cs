@@ -90,7 +90,6 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
-        BsonValue result;
         if (schemaProperty.Type == JsonObjectType.Array && value is IEnumerable enumerable)
         {
             var items = new List<BsonValue>();
@@ -99,14 +98,14 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 items.Add(ConvertToBsonValue(item, schemaProperty.Item.Reference ?? schemaProperty.Item));
             }
             return new BsonArray(items);
-        } else if (_typeFormats.IsKnown(schemaProperty.Format))
+        }
+
+        if (_typeFormats.IsKnown(schemaProperty.Format))
         {
             return ConvertToBsonValueBasedOnSchemaType(value, schemaProperty);
         }
-        else
-        {
-            return value.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
-        }
+
+        return value.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
     }
 
     object? ConvertFromBsonValue(BsonValue bsonValue, JsonSchemaProperty schemaProperty)

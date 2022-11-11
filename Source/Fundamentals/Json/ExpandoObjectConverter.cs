@@ -104,14 +104,13 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             }
             return new JsonArray(items.ToArray());
         }
-        else if (_typeFormats.IsKnown(schemaProperty.Format))
+
+        if (_typeFormats.IsKnown(schemaProperty.Format))
         {
             return ConvertToJsonValueBasedOnSchemaType(value, schemaProperty);
         }
-        else
-        {
-            return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
-        }
+
+        return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
     }
 
     object? ConvertFromJsonNode(JsonNode jsonNode, JsonSchemaProperty schemaProperty)
