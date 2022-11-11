@@ -141,8 +141,8 @@ public class Projection : Grain, IProjection
                             break;
 
                         case ChildAdded childAdded:
-                            var items = state.EnsureCollection<ExpandoObject>(childAdded.ChildrenProperty, key.ArrayIndexers);
-                            items.Add(childAdded.Child.AsExpandoObject());
+                            var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                            items.Add(childAdded.Child);
                             break;
                     }
                 }
