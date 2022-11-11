@@ -66,7 +66,7 @@ public static class CollectionExtensions
     {
         if (identityProperty.IsRoot)
         {
-            return items.Any(_ => _.Equals(key));
+            return items.Any(_ => _!.Equals(key));
         }
 
         if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);
