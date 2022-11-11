@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Projections;
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of parent builder.</typeparam>
 public class FromBuilder<TModel, TEvent, TParentBuilder> : ModelPropertiesBuilder<TModel, TEvent, IFromBuilder<TModel, TEvent>, TParentBuilder>, IFromBuilder<TModel, TEvent>
-    where TParentBuilder: class
+    where TParentBuilder : class
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FromBuilder{TModel, TEvent, TParentBuilder}"/>.

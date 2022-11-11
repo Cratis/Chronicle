@@ -15,9 +15,17 @@ using Humanizer;
 
 namespace Aksio.Cratis.Events.Projections;
 
+/// <summary>
+/// Represents a base projection builder.
+/// </summary>
+/// <typeparam name="TModel">Type of model to build for.</typeparam>
+/// <typeparam name="TBuilder">Type of actual builder.</typeparam>
 public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TBuilder>
     where TBuilder : class
 {
+#pragma warning disable CA1051 // Visible instance fields
+#pragma warning disable SA1600 // Elements should be documented
+#pragma warning disable SA1629, CA1002, MA0016 // Return abstract
     protected readonly IEventTypes _eventTypes;
     protected readonly IJsonSchemaGenerator _schemaGenerator;
     protected readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -28,6 +36,9 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected EventType? _removedWithEvent;
     protected string _modelName;
+#pragma warning restore CA1629, CA1002, MA0016 // Return abstract
+#pragma warning restore CA1600 // Elements should be documented
+#pragma warning restore CA1051 // Visible instance fields
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionBuilder{TModel, TBuilder}"/> class.

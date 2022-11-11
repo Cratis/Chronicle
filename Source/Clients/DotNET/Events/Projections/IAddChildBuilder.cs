@@ -24,7 +24,7 @@ public interface IAddChildBuilder<TChildModel, TEvent, TParentBuilder>
     /// <summary>
     /// Describe an adding of a child from an object already on the event.
     /// </summary>
-    /// <param name="propertyWithChild"></param>
-    /// <returns>Parent builder for continuation</returns>
+    /// <param name="propertyWithChild">The property that holds object on the event.</param>
+    /// <returns>Parent builder for continuation.</returns>
     TParentBuilder FromObject(Expression<Func<TEvent, IEnumerable<TChildModel>>> propertyWithChild);
 }
