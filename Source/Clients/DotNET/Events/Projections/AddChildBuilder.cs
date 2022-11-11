@@ -43,6 +43,8 @@ public class AddChildBuilder<TParentModel, TChildModel, TEvent, TParentBuilder> 
         {
             foreach (var property in typeof(TChildModel).GetProperties())
             {
+                var propertyPath = new PropertyPath(property.Name);
+                _.Set(propertyPath).To(propertyPath);
             }
         });
 
