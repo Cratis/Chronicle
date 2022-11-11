@@ -11,8 +11,8 @@ public class RemovalAlreadyDefined : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="RemovalAlreadyDefined"/> class.
     /// </summary>
-    /// <param name="identifier">The <see cref="ProjectionId"/>.</param>
-    public RemovalAlreadyDefined(ProjectionId identifier) : base($"Removal already defined for projection '{identifier}'. You can only define one event type to be the removal event type.")
+    /// <param name="type">The type of projection.</param>
+    public RemovalAlreadyDefined(Type type) : base($"Removal already defined for projection '{type.FullName}'. You can only define one event type to be the removal event type.")
     {
     }
 }

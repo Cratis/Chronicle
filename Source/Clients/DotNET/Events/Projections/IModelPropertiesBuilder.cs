@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections;
 
@@ -87,6 +88,13 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <typeparam name="TChildModel">Type of child model.</typeparam>
     /// <returns>Builder continuation.</returns>
     IAddChildBuilder<TChildModel, TEvent, TBuilder> AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty);
+
+    /// <summary>
+    /// Start building the set operation to a target property on the model.
+    /// </summary>
+    /// <param name="propertyPath">Model property path for defining the target property.</param>
+    /// <returns>The <see cref="ISetBuilder{TModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    ISetBuilder<TModel, TEvent, TBuilder> Set(PropertyPath propertyPath);
 
     /// <summary>
     /// Start building the set operation to a target property on the model.
