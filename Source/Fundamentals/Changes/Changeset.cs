@@ -23,7 +23,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     public TTarget InitialState { get; }
 
     /// <inheritdoc/>
-    public TTarget CurrentState { get; private set; }
+    public TTarget CurrentState { get; private set; }
 
     /// <inheritdoc/>
     public IEnumerable<Change> Changes => _changes;
@@ -95,13 +95,24 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
         where TChild : new()
     {
         var workingState = CurrentState.Clone()!;
-        var items = workingState.EnsureCollection<TTarget, TChild>(childrenProperty, arrayIndexers);
+        var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
 
         if (!items.Contains(identifiedByProperty, key))
         {
-            var item = new TChild();
-            identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
-            ((IList<TChild>)items).Add(item);
+            object item;
+
+            // If the identified property is root, we want to add the item directly. That means
+            // the object is identified by itself.
+            if (identifiedByProperty.IsRoot)
+            {
+                item = key;
+            }
+            else
+            {
+                item = new TChild();
+                identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
+            }
+            items.Add(item);
             SetProperties(workingState, propertyMappers, arrayIndexers);
             Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
         }
