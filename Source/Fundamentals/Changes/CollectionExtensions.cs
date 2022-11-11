@@ -64,6 +64,11 @@ public static class CollectionExtensions
     /// <returns>True if there is an item, false if not.</returns>
     public static bool Contains<TChild>(this IEnumerable<TChild> items, PropertyPath identityProperty, object key)
     {
+        if (identityProperty.IsRoot)
+        {
+            return items.Any(_ => _.Equals(key));
+        }
+
         if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);
         return items.Any(_ => identityProperty.GetValue(identityProperty, ArrayIndexers.NoIndexers)!.Equals(key));
     }
