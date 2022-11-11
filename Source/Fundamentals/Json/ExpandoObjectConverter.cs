@@ -95,7 +95,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
-        if (schemaProperty.Type == JsonObjectType.Array && value is IEnumerable enumerable)
+        if (schemaProperty.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
         {
             var items = new List<JsonNode?>();
             foreach (var item in enumerable)
