@@ -57,7 +57,10 @@ public class ProjectionFactory : IProjectionFactory
         ProjectionPath path,
         bool hasParent)
     {
-        var actualIdentifiedByProperty = identifiedByProperty.IsRoot ? new PropertyPath("id") : identifiedByProperty;
+        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
+        var model = new Model(projectionDefinition.Model.Name, modelSchema);
+        var hasIdProperty = modelSchema.GetFlattenedProperties().Any(_ => _.Name == "id");
+        var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                 name,
@@ -68,8 +71,6 @@ public class ProjectionFactory : IProjectionFactory
                 true));
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
-        var model = new Model(projectionDefinition.Model.Name, modelSchema);
 
         var projection = new Projection(
             projectionDefinition.Identifier,
