@@ -86,7 +86,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return expandoObject;
     }
 
-    JsonNode? ConvertToJsonNode(object? value, JsonSchemaProperty schemaProperty)
+    JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
         if (value is ExpandoObject expando)
         {
@@ -95,26 +95,23 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
-        JsonNode? result;
-        if (_typeFormats.IsKnown(schemaProperty.Format))
-        {
-            result = ConvertToJsonValueBasedOnSchemaType(value, schemaProperty);
-        }
-        else
-        {
-            result = ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
-        }
-
-        if (result == null && value is IEnumerable enumerable)
+        if (schemaProperty.Type == JsonObjectType.Array && value is IEnumerable enumerable)
         {
             var items = new List<JsonNode?>();
             foreach (var item in enumerable)
             {
-                items.Add(ConvertToJsonNode(item, schemaProperty));
+                items.Add(ConvertToJsonNode(item, schemaProperty.Item.Reference ?? schemaProperty.Item));
             }
             return new JsonArray(items.ToArray());
         }
-        return result;
+        else if (_typeFormats.IsKnown(schemaProperty.Format))
+        {
+            return ConvertToJsonValueBasedOnSchemaType(value, schemaProperty);
+        }
+        else
+        {
+            return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
+        }
     }
 
     object? ConvertFromJsonNode(JsonNode jsonNode, JsonSchemaProperty schemaProperty)
@@ -224,13 +221,13 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return null;
     }
 
-    object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchemaProperty schemaProperty)
+    object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchema schemaProperty)
     {
         var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
         return jsonNode.AsValue().ToTargetTypeValue(targetType);
     }
 
-    JsonValue? ConvertToJsonValueBasedOnSchemaType(object? input, JsonSchemaProperty schemaProperty)
+    JsonValue? ConvertToJsonValueBasedOnSchemaType(object? input, JsonSchema schemaProperty)
     {
         if (input is null)
         {
@@ -242,7 +239,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return input.ToJsonValue();
     }
 
-    JsonNode? ConvertToJsonNodeFromUnknownFormat(object? value, JsonSchemaProperty schemaProperty)
+    JsonNode? ConvertToJsonNodeFromUnknownFormat(object? value, JsonSchema schemaProperty)
     {
         if (value is null)
         {
