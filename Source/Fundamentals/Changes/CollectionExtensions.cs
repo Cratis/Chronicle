@@ -20,7 +20,15 @@ public static class CollectionExtensions
     /// <param name="identityProperty"><see cref="PropertyPath"/> holding identity on each item.</param>
     /// <param name="key">The key value to check for.</param>
     /// <returns>The item or default if not found.</returns>
-    public static TTarget? FindByKey<TTarget>(this IEnumerable<TTarget> items, PropertyPath identityProperty, object key) => items.FirstOrDefault(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)?.Equals(key) ?? false);
+    public static TTarget? FindByKey<TTarget>(this IEnumerable<TTarget> items, PropertyPath identityProperty, object key)
+    {
+        if (identityProperty.IsRoot)
+        {
+            return items.FirstOrDefault(_ => _!.Equals(key));
+        }
+
+        return items.FirstOrDefault(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)?.Equals(key) ?? false);
+    }
 
     /// <summary>
     /// Ensures that a collection exists for a specific <see cref="PropertyPath"/>.
@@ -70,6 +78,6 @@ public static class CollectionExtensions
         }
 
         if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);
-        return items.Any(_ => identityProperty.GetValue(identityProperty, ArrayIndexers.NoIndexers)!.Equals(key));
+        return items.Any(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)!.Equals(key));
     }
 }
