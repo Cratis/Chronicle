@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Events.Projections;
 /// <typeparam name="TEvent">Event to build for.</typeparam>
 /// <typeparam name="TParentBuilder">Type of parent builder.</typeparam>
 public class JoinBuilder<TModel, TEvent, TParentBuilder> : ModelPropertiesBuilder<TModel, TEvent, IJoinBuilder<TModel, TEvent>, TParentBuilder>, IJoinBuilder<TModel, TEvent>
-    where TParentBuilder: class
+    where TParentBuilder : class
 {
     PropertyPath? _on;
 

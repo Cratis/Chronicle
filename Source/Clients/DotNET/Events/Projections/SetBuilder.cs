@@ -17,8 +17,14 @@ namespace Aksio.Cratis.Events.Projections;
 /// <typeparam name="TParentBuilder">Type of the parent builder.</typeparam>
 public class SetBuilder<TModel, TEvent, TParentBuilder> : ISetBuilder<TModel, TEvent, TParentBuilder>
 {
+#pragma warning disable CA1051 // Visible instance fields
+#pragma warning disable SA1600 // Elements should be documented
+#pragma warning disable SA1629, CA1002, MA0016 // Return abstract
     protected readonly TParentBuilder _parent;
     protected IEventValueExpression? _expression;
+#pragma warning restore CA1629, CA1002, MA0016 // Return abstract
+#pragma warning restore CA1600 // Elements should be documented
+#pragma warning restore CA1051 // Visible instance fields
     readonly bool _forceEventProperty;
 
     /// <inheritdoc/>

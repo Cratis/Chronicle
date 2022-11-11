@@ -51,7 +51,7 @@ public class AddBuilder<TModel, TEvent, TProperty, TParentBuilder> : IAddBuilder
 
     void ThrowIfMissingAddWithExpression()
     {
-        if( string.IsNullOrEmpty(_expression) )
+        if (string.IsNullOrEmpty(_expression))
         {
             throw new MissingAddWithExpression(typeof(TModel), TargetProperty);
         }
