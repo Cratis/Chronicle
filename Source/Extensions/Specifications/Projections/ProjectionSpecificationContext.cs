@@ -68,10 +68,11 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 
         var typeFormats = new TypeFormats();
         var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
+
         var factory = new ProjectionFactory(
-            new ModelPropertyExpressionResolvers(
-                eventValueProviderExpressionResolvers),
+            new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers),
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
+            new ExpandoObjectConverter(typeFormats),
             new EventSequenceStorageProviderForSpecifications(_eventLog));
         _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
