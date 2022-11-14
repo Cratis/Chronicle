@@ -13,7 +13,7 @@ public class when_asking_if_public_event_type_is_accepted_and_it_is_registered_a
         projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
         {
                 new EventTypeWithKeyResolver(event_type, KeyResolvers.FromEventSourceId)
-        });
+        }, new[] { event_type });
     }
 
     void Because() => result = projection.Accepts(new EventType(event_type.Id, event_type.Generation, true));

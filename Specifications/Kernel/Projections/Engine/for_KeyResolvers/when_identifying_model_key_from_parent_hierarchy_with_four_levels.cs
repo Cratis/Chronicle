@@ -48,7 +48,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     {
         var projection = new Mock<IProjection>();
         projection.SetupGet(_ => _.EventTypes).Returns(new [] { eventType });
-        projection.SetupGet(_ => _.ExclusiveEventTypes).Returns(new[] { eventType });
+        projection.SetupGet(_ => _.OwnEventTypes).Returns(new[] { eventType });
         projection.SetupGet(_ => _.Path).Returns(childrenProperty);
         projection.SetupGet(_ => _.ChildrenPropertyPath).Returns(childrenProperty);
 
