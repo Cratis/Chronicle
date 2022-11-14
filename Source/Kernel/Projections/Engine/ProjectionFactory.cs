@@ -21,6 +21,7 @@ public class ProjectionFactory : IProjectionFactory
 {
     readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
     readonly IKeyExpressionResolvers _keyExpressionResolvers;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IEventSequenceStorageProvider _eventProvider;
 
     /// <summary>
@@ -28,14 +29,17 @@ public class ProjectionFactory : IProjectionFactory
     /// </summary>
     /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for providing events from the event store.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
         IKeyExpressionResolvers keyExpressionResolvers,
+        IExpandoObjectConverter expandoObjectConverter,
         IEventSequenceStorageProvider eventProvider)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;
+        _expandoObjectConverter = expandoObjectConverter;
         _eventProvider = eventProvider;
     }
 
@@ -72,9 +76,19 @@ public class ProjectionFactory : IProjectionFactory
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
 
+        ExpandoObject initialState;
+        if (projectionDefinition.InitialModelState is not null)
+        {
+            initialState = _expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+        }
+        else
+        {
+            initialState = new ExpandoObject();
+        }
+
         var projection = new Projection(
             projectionDefinition.Identifier,
-            projectionDefinition.InitialModelState?.AsExpandoObject() ?? new ExpandoObject(),
+            initialState,
             name,
             path,
             childrenAccessorProperty,
