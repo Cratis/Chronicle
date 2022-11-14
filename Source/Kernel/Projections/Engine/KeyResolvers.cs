@@ -71,10 +71,19 @@ public static class KeyResolvers
                 var key = await keyResolver(eventProvider, @event);
                 arrayIndexers.Add(new(projection.ChildrenPropertyPath, identifiedByProperty, key.Value));
                 var parentProjection = projection.Parent!;
-                var parentEventTypeIds = parentProjection.ExclusiveEventTypes.Select(_ => _.Id).ToArray();
+                var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
                 if (parentEventTypeIds.Length > 0)
                 {
-                    var parentEvent = await eventProvider.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.Value.ToString()!, parentEventTypeIds);
+                    AppendedEvent parentEvent;
+                    if (parentEventTypeIds.Any(_ => _ == @event.Metadata.Type.Id))
+                    {
+                        parentEvent = @event;
+                    }
+                    else
+                    {
+                        parentEvent = await eventProvider.GetLastInstanceOfAny(EventSequenceId.Log, parentKey.Value.ToString()!, parentEventTypeIds);
+                    }
+
                     var eventType = parentProjection.EventTypes.First(_ => _.Id == parentEvent.Metadata.Type.Id);
                     var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
                     var resolvedParentKey = await keyResolverForEventType(eventProvider, parentEvent);
