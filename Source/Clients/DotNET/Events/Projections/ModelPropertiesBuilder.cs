@@ -125,10 +125,16 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     }
 
     /// <inheritdoc/>
-    public IAddChildBuilder<TChildModel, TEvent, TBuilder> AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty)
+    public TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IAddChildBuilder<TChildModel, TEvent>> builderCallback)
     {
-        IAddChildBuilder<TChildModel, TEvent, TBuilder> builder = null!;
-        _projectionBuilder.Children(targetProperty, childrenBuilder => builder = new AddChildBuilder<TModel, TChildModel, TEvent, TBuilder>(childrenBuilder, (this as TBuilder)!));
-        return builder!;
+        _projectionBuilder.Children(targetProperty, childrenBuilder =>
+        {
+            childrenBuilder.From<TEvent>(fromBuilder =>
+            {
+                var builder = new AddChildBuilder<TModel, TChildModel, TEvent>(childrenBuilder, fromBuilder);
+                builderCallback(builder);
+            });
+        });
+        return (this as TBuilder)!;
     }
 }
