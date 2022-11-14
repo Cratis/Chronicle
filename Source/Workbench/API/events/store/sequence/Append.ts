@@ -2,7 +2,7 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues } from '@aksio/cratis-applications-frontend/commands';
+import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/cratis-applications-frontend/commands';
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
@@ -111,7 +111,7 @@ export class Append extends Command<IAppend> implements IAppend {
         this.propertyChanged('eventGeneration');
     }
 
-    static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>] {
+    static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>, ClearCommandValues] {
         return useCommand<Append, IAppend>(Append, initialValues);
     }
 }

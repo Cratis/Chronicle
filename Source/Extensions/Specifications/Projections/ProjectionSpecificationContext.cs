@@ -26,18 +26,7 @@ namespace Aksio.Cratis.Specifications.Integration;
 /// <typeparam name="TModel">Type of target model the projection is for.</typeparam>
 public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 {
-    internal readonly EventLogForSpecifications _eventLog = new();
-    readonly JsonSerializerOptions _serializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters =
-                {
-                    new ConceptAsJsonConverterFactory(),
-                    new DateOnlyJsonConverter(),
-                    new TimeOnlyJsonConverter(),
-                    new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory()
-                }
-    };
+    internal readonly EventLogForSpecifications _eventLog;
 
     /// <inheritdoc/>
     public IEventLog EventLog => _eventLog;
@@ -62,11 +51,14 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()));
 
+        var typeFormats = new TypeFormats();
+        var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
+        _eventLog = new(expandoObjectConverter, schemaGenerator);
+
         var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, new JsonSerializerOptions());
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 
-        var typeFormats = new TypeFormats();
         var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
 
         var factory = new ProjectionFactory(
@@ -112,8 +104,8 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         }
 
         var result = await _sink.FindOrDefault(new(eventSourceId, ArrayIndexers.NoIndexers));
-        var json = JsonSerializer.Serialize(result, _serializerOptions);
-        return new(JsonSerializer.Deserialize<TModel>(json, _serializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
+        var json = JsonSerializer.Serialize(result, Globals.JsonSerializerOptions);
+        return new(JsonSerializer.Deserialize<TModel>(json, Globals.JsonSerializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }
 
     /// <summary>
