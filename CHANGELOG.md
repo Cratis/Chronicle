@@ -1,3 +1,10 @@
+# [v6.17.2] - 2022-11-14 [PR: #601](https://github.com/aksio-insurtech/Cratis/pull/601)
+
+### Fixed
+
+- Ignoring load failures related to project references assemblies. These assemblies will then not be part of type discovery.
+
+
 # [v6.17.1] - 2022-11-14 [PR: #600](https://github.com/aksio-insurtech/Cratis/pull/600)
 
 ### Fixed
