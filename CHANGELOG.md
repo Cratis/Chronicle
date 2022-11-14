@@ -1,3 +1,10 @@
+# [v6.17.1] - 2022-11-14 [PR: #600](https://github.com/aksio-insurtech/Cratis/pull/600)
+
+### Fixed
+
+- Changing event log implementation used in specifications so that it serializes the incoming event as the regular production one. The result is correct casing and types.
+
+
 # [v6.17.0] - 2022-11-10 [PR: #598](https://github.com/aksio-insurtech/Cratis/pull/598)
 
 ### Added
