@@ -105,7 +105,19 @@ public class Types : ITypes
         var dependencyModel = DependencyContext.Load(entryAssembly);
         var projectReferencedAssemblies = dependencyModel.RuntimeLibraries
                             .Where(_ => _.Type.Equals("project"))
-                            .Select(_ => Assembly.Load(_.Name))
+                            .Select(_ =>
+                            {
+                                try
+                                {
+                                    return Assembly.Load(_.Name);
+                                }
+                                catch
+                                {
+                                    return null!;
+                                }
+                            })
+                            .Where(_ => _ is not null)
+                            .Distinct()
                             .ToArray();
         _assemblies.AddRange(projectReferencedAssemblies);
         ProjectReferencedAssemblies = projectReferencedAssemblies;
