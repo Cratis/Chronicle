@@ -4,6 +4,7 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 
@@ -16,7 +17,7 @@ namespace Aksio.Cratis.Events.Projections;
 /// <typeparam name="TChildModel">Child model type.</typeparam>
 public class ChildrenBuilder<TParentModel, TChildModel> : ProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>, IChildrenBuilder<TParentModel, TChildModel>
 {
-    string _identifiedBy = string.Empty;
+    PropertyPath _identifiedBy = PropertyPath.NotSet;
 
     /// <summary>
     /// /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
