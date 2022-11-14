@@ -44,7 +44,11 @@ public class SetBuilder<TModel, TEvent, TParentBuilder> : ISetBuilder<TModel, TE
     }
 
     /// <inheritdoc/>
-    public TParentBuilder To(PropertyPath propertyPath) => throw new NotImplementedException();
+    public TParentBuilder To(PropertyPath propertyPath)
+    {
+        _expression = new EventContentPropertyExpression(propertyPath);
+        return _parent;
+    }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventSourceId()
