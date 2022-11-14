@@ -160,12 +160,15 @@ public class ProjectionFactory : IProjectionFactory
             eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
             projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
         }
+        var distinctOwnEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).Select(_ => _.EventType).ToArray();
 
         foreach (var child in childProjections)
         {
-            eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
+            var childTypes = child.EventTypesWithKeyResolver.Where(_ => !eventsForProjection.Any(e => e.EventType == _.EventType));
+            eventsForProjection.AddRange(childTypes);
         }
-        projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType).ToArray());
+        var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();
+        projection.SetEventTypesWithKeyResolvers(distinctEventTypes, distinctOwnEventTypes);
     }
 
     void SetParentOnAllChildProjections(Projection projection, IProjection[] childProjections)

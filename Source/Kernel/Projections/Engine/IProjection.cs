@@ -70,7 +70,7 @@ public interface IProjection
     /// <summary>
     /// Gets the <see cref="EventType">event types</see> that are exclusive to this projection and not including any of the child projections.
     /// </summary>
-    IEnumerable<EventType> ExclusiveEventTypes { get; }
+    IEnumerable<EventType> OwnEventTypes { get; }
 
     /// <summary>
     /// Gets the <see cref="EventTypeWithKeyResolver"/> collection.
@@ -120,7 +120,8 @@ public interface IProjection
     /// Set event types with key resolvers for the projection.
     /// </summary>
     /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver"/>.</param>
-    void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver);
+    /// <param name="ownEventTypes">Collection of <see cref="EventType"/> that is only for this projection without not any children.</param>
+    void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver, IEnumerable<EventType> ownEventTypes);
 
     /// <summary>
     /// Set the parent <see cref="IProjection"/>.
