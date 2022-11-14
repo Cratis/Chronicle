@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Cratis.Dynamic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Specifications;
 
@@ -15,12 +17,27 @@ namespace Aksio.Cratis.Specifications;
 public class EventSequenceForSpecifications
 {
     readonly List<AppendedEventForSpecifications> _appendedEvents = new();
+    readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly IJsonSchemaGenerator _schemaGenerator;
     EventSequenceNumber _sequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
     /// Gets the appended events.
     /// </summary>
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _appendedEvents;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventSequenceForSpecifications"/> class.
+    /// </summary>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/>.</param>
+    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/>.</param>
+    public EventSequenceForSpecifications(
+        IExpandoObjectConverter expandoObjectConverter,
+        IJsonSchemaGenerator schemaGenerator)
+    {
+        _expandoObjectConverter = expandoObjectConverter;
+        _schemaGenerator = schemaGenerator;
+    }
 
     /// <summary>
     /// Append event to sequence.
@@ -30,6 +47,9 @@ public class EventSequenceForSpecifications
     /// <returns>Awaitable task.</returns>
     public Task Append(EventSourceId eventSourceId, object @event)
     {
+        var serialized = JsonSerializer.Serialize(@event, Globals.JsonSerializerOptions)!;
+        var schema = _schemaGenerator.Generate(@event.GetType());
+        var eventAsExpando = _expandoObjectConverter.ToExpandoObject((JsonNode.Parse(serialized) as JsonObject)!, schema);
         var eventTypeAttribute = @event.GetType().GetCustomAttribute<EventTypeAttribute>();
         _appendedEvents.Add(new(
             new(_sequenceNumber, eventTypeAttribute!.Type),
@@ -42,7 +62,7 @@ public class EventSequenceForSpecifications
                 CorrelationId.New(),
                 CausationId.System,
                 CausedBy.System),
-            @event.AsExpandoObject(true),
+            eventAsExpando,
             @event));
         _sequenceNumber++;
 
