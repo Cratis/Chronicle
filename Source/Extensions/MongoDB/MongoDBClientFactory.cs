@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 
@@ -28,7 +29,7 @@ public class MongoDBClientFactory : IMongoDBClientFactory
         settings.ClusterConfigurator = builder =>
         {
             builder
-                .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName))
+                .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson()))
                 .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message))
                 .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
         };

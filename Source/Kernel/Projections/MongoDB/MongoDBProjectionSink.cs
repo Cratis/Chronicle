@@ -236,11 +236,11 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                         if (updateBuilder is not null)
                         {
-                            updateBuilder = updateBuilder.AddToSet(property, document);
+                            updateBuilder = updateBuilder.Push(property, document);
                         }
                         else
                         {
-                            updateBuilder = updateDefinitionBuilder.AddToSet(property, document);
+                            updateBuilder = updateDefinitionBuilder.Push(property, document);
                         }
 
                         hasChanges = true;

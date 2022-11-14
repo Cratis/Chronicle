@@ -96,26 +96,43 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     {
         var workingState = CurrentState.Clone()!;
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
+        object? item = null;
 
-        if (!items.Contains(identifiedByProperty, key))
+        if (identifiedByProperty.IsSet)
         {
-            object item;
+            if (!items.Contains(identifiedByProperty, key))
+            {
+                // If the identified property is root, we want to add the item directly. That means
+                // the object is identified by itself.
+                if (identifiedByProperty.IsRoot)
+                {
+                    item = key;
+                }
+                else
+                {
+                    // TODO: Should support non ref/class type objects as children.
+                    item = new TChild();
+                    identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
+                }
+            }
+        }
+        else
+        {
+            // TODO: Should support non ref/class type objects as children.
+            item = new TChild();
+            arrayIndexers = new ArrayIndexers(new[]
+            {
+                arrayIndexers.All.First() with { Identifier = items.Count }
+            });
+        }
 
-            // If the identified property is root, we want to add the item directly. That means
-            // the object is identified by itself.
-            if (identifiedByProperty.IsRoot)
-            {
-                item = key;
-            }
-            else
-            {
-                item = new TChild();
-                identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
-            }
+        if (item is not null)
+        {
             items.Add(item);
             SetProperties(workingState, propertyMappers, arrayIndexers);
             Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!));
         }
+
         CurrentState = workingState;
     }
 

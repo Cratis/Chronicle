@@ -115,7 +115,8 @@ public static class ProjectionExtensions
                 {
                     var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
                     var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
-                    if (!items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
+                    if (!identifiedByProperty.IsSet ||
+                        !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
                     {
                         _.Changeset.AddChild<ExpandoObject>(childrenProperty, identifiedByProperty, childrenPropertyIndexer.Identifier, propertyMappers, _.Key.ArrayIndexers);
                         return;
