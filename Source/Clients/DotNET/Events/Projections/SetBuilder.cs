@@ -112,7 +112,12 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : SetBuilder<
             actualValue = Convert.ToInt32(value);
         }
 
-        _expression = new ValueExpression(actualValue?.ToString() ?? string.Empty);
+        var invariantString = string.Empty;
+        if (actualValue is not null)
+        {
+            invariantString = FormattableString.Invariant($"{actualValue}");
+        }
+        _expression = new ValueExpression(invariantString);
         return _parent;
     }
 
