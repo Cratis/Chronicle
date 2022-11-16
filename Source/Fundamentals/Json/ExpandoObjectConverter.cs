@@ -141,6 +141,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 schemaProperty.Reference.Type :
                 schemaProperty.Type;
 
+        if (type.HasFlag(JsonObjectType.Null))
+        {
+            type ^= JsonObjectType.Null;
+        }
+
         switch (type)
         {
             case JsonObjectType.String:
@@ -248,6 +253,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                 schemaProperty.Reference.Type :
                 schemaProperty.Type;
+
+        if (type.HasFlag(JsonObjectType.Null))
+        {
+            type ^= JsonObjectType.Null;
+        }
 
         switch (type)
         {
