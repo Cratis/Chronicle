@@ -24,10 +24,7 @@ public static class EventValueProviders
     /// <returns>A new <see cref="ValueProvider{T}"/>.</returns>
     public static ValueProvider<AppendedEvent> EventContent(PropertyPath sourceProperty)
     {
-        return (AppendedEvent @event) =>
-        {
-            return sourceProperty.GetValue(@event.Content, ArrayIndexers.NoIndexers)!;
-        };
+        return (AppendedEvent @event) => sourceProperty.GetValue(@event.Content, ArrayIndexers.NoIndexers)!;
     }
 
     /// <summary>
