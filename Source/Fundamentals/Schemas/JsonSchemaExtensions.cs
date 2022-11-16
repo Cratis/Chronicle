@@ -154,12 +154,17 @@ public static class JsonSchemaExtensions
                     schemaProperty.Reference.Type :
                     schemaProperty.Type;
 
+        if (type.HasFlag(JsonObjectType.Null))
+        {
+            type ^= JsonObjectType.Null;
+        }
+
         return type switch
         {
             JsonObjectType.String => typeof(string),
             JsonObjectType.Boolean => typeof(bool),
             JsonObjectType.Integer => typeof(int),
-            JsonObjectType.Null => typeof(double),
+            JsonObjectType.Number => typeof(double),
             _ => null
         };
     }

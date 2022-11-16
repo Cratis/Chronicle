@@ -206,6 +206,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 schemaProperty.Reference.Type :
                 schemaProperty.Type;
 
+        if (type.HasFlag(JsonObjectType.Null))
+        {
+            type ^= JsonObjectType.Null;
+        }
+
         switch (type)
         {
             case JsonObjectType.String:
