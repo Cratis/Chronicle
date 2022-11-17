@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Reflection;
 
@@ -101,7 +102,7 @@ public static class TypeConversion
 
         if (val is not null && val.GetType() != type && !IsGuidFromString(type, val))
         {
-            val = System.Convert.ChangeType(val, type, null);
+            val = System.Convert.ChangeType(val, type, CultureInfo.InvariantCulture);
         }
         return val!;
     }
