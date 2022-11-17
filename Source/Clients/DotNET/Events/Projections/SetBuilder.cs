@@ -122,7 +122,15 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : SetBuilder<
 
         if (actualValue.GetType().IsEnum)
         {
-            actualValue = Convert.ToInt32(value);
+            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
+            if (underlyingType == typeof(int))
+            {
+                actualValue = Convert.ChangeType(actualValue, underlyingType);
+            }
+            else
+            {
+                actualValue = actualValue.ToString()!;
+            }
         }
 
         var invariantString = FormattableString.Invariant($"{actualValue}");
