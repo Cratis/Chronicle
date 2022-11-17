@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Text.Json;
 
 namespace Aksio.Cratis.Json;
@@ -23,11 +24,11 @@ public static class JsonElementExtensions
         {
             var valueAsString = element.GetString();
             if ((valueAsString?.Contains('+') ?? false) &&
-                DateTimeOffset.TryParse(valueAsString, out var dateTimeOffsetValue))
+                DateTimeOffset.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeOffsetValue))
             {
                 value = dateTimeOffsetValue;
             }
-            else if (DateTime.TryParse(valueAsString, out var dateTimeValue))
+            else if (DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
             {
                 value = dateTimeValue;
             }
