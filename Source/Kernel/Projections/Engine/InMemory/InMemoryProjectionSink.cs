@@ -49,17 +49,12 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         var collection = Collection;
         var keyValue = GetActualKeyValue(key);
 
-        ExpandoObject modelInstance;
         if (collection.ContainsKey(keyValue))
         {
-            modelInstance = collection[keyValue];
-        }
-        else
-        {
-            modelInstance = new ExpandoObject();
+            return Task.FromResult<ExpandoObject?>(collection[keyValue]);
         }
 
-        return Task.FromResult<ExpandoObject?>(modelInstance);
+        return Task.FromResult<ExpandoObject?>(null);
     }
 
     /// <inheritdoc/>
