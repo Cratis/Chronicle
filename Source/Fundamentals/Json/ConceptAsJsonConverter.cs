@@ -18,6 +18,7 @@ public class ConceptAsJsonConverter<T> : JsonConverter<T>
     {
         object? value = null;
         var conceptValueType = typeof(T).GetConceptValueType();
+
         switch (reader.TokenType)
         {
             case JsonTokenType.True:
@@ -70,10 +71,18 @@ public class ConceptAsJsonConverter<T> : JsonConverter<T>
                 {
                     value = reader.GetDecimal();
                 }
+                else if (conceptValueType.IsEnum)
+                {
+                    value = Enum.Parse(conceptValueType, reader.GetInt32().ToString());
+                }
                 break;
 
             default:
                 value = reader.GetString();
+                if (conceptValueType.IsEnum)
+                {
+                    value = Enum.Parse(conceptValueType, (value as string)!);
+                }
                 break;
         }
 
