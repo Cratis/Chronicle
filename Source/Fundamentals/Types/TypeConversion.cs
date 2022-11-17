@@ -63,9 +63,9 @@ public static class TypeConversion
             {
                 val = value;
             }
-            else if (DateTime.TryParse(value.ToString(), out var dateTimeValue))
+            else if (DateTime.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
             {
-                val = dateTimeValue.ToUniversalTime();
+                val = dateTimeValue;
             }
             else
             {
@@ -78,7 +78,7 @@ public static class TypeConversion
             {
                 val = value;
             }
-            else if (DateOnly.TryParse(value.ToString(), out var dateOnlyValue))
+            else if (DateOnly.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOnlyValue))
             {
                 val = dateOnlyValue;
             }
@@ -93,7 +93,7 @@ public static class TypeConversion
             {
                 val = value;
             }
-            else if (TimeOnly.TryParse(value.ToString(), out var timeOnlyValue))
+            else if (TimeOnly.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeOnlyValue))
             {
                 val = timeOnlyValue;
             }
@@ -108,7 +108,7 @@ public static class TypeConversion
             {
                 val = value;
             }
-            else if (DateTimeOffset.TryParse(value.ToString(), out var dateTimeOffsetValue))
+            else if (DateTimeOffset.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeOffsetValue))
             {
                 val = dateTimeOffsetValue;
             }
