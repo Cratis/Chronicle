@@ -5,11 +5,11 @@ using Aksio.Cratis.Specifications.Integration;
 
 namespace Aksio.Cratis.Events.Projections.Scenarios.when_projecting_properties;
 
-public class with_set_to_value_operations : ProjectionSpecificationFor<Model>
+public class with_initial_values_and_no_operations : ProjectionSpecificationFor<Model>
 {
     string model_id;
     ProjectionResult<Model> result;
-    protected override IProjectionFor<Model> CreateProjection() => new SetValuesProjection();
+    protected override IProjectionFor<Model> CreateProjection() => new ProjectionWithInitialValues();
 
     async Task Because()
     {

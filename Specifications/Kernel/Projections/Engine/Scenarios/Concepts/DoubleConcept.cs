@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Concepts;
 
-namespace Aksio.Cratis.Events.Projections.Scenarios.when_projecting_properties;
+namespace Aksio.Cratis.Events.Projections.Scenarios.Concepts;
 
 public record DoubleConcept(double Value): ConceptAs<double>(Value)
 {

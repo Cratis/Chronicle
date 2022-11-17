@@ -8,7 +8,7 @@ public class SetPropertiesProjection : IProjectionFor<Model>
     public ProjectionId Identifier => "152b1348-e612-4165-bc49-fcaba94e8183";
 
     public void Define(IProjectionBuilderFor<Model> builder) => builder
-        .From<Event>(_ => _
+        .From<EventWithPropertiesForAllSupportedTypes>(_ => _
             .Set(m => m.StringValue).To(e => e.StringValue)
             .Set(m => m.BoolValue).To(e => e.BoolValue)
             .Set(m => m.IntValue).To(e => e.IntValue)
