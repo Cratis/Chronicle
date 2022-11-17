@@ -11,6 +11,11 @@ public class ValueExpression : IEventValueExpression
     readonly string _value;
 
     /// <summary>
+    /// Represents a null value.
+    /// </summary>
+    public static ValueExpression Null = new("null");
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ValueExpression"/> class.
     /// </summary>
     /// <param name="value">The value to set.</param>

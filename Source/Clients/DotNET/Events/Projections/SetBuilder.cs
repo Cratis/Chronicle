@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Events.Projections.Expressions;
 using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
@@ -106,17 +107,25 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : SetBuilder<
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
     {
+        if (value is null)
+        {
+            _expression = ValueExpression.Null;
+            return _parent;
+        }
+
         object actualValue = value!;
-        if (value?.GetType().IsEnum ?? false)
+
+        if (actualValue.IsConcept())
+        {
+            actualValue = actualValue.GetConceptValue();
+        }
+
+        if (actualValue.GetType().IsEnum)
         {
             actualValue = Convert.ToInt32(value);
         }
 
-        var invariantString = string.Empty;
-        if (actualValue is not null)
-        {
-            invariantString = FormattableString.Invariant($"{actualValue}");
-        }
+        var invariantString = FormattableString.Invariant($"{actualValue}");
         _expression = new ValueExpression(invariantString);
         return _parent;
     }
