@@ -55,7 +55,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         _eventLog = new(expandoObjectConverter, schemaGenerator);
 
-        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, new JsonSerializerOptions());
+        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, Globals.JsonSerializerOptions);
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 
