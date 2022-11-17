@@ -20,6 +20,17 @@ public static class TypeConversion
     /// <returns>Converted instance.</returns>
     public static object Convert(Type type, object value)
     {
+        if( value is null )
+        {
+            return value!;
+        }
+
+        var valueType = value.GetType();
+        if (valueType == type)
+        {
+            return value;
+        }
+
         var val = new object();
 
         if (value.IsConcept())
@@ -29,17 +40,17 @@ public static class TypeConversion
 
         if (type.IsGuid())
         {
-            if (value.GetType().IsGuid())
+            if (valueType.IsGuid())
             {
                 val = value;
             }
-            else if (value.GetType().IsString())
+            else if (valueType.IsString())
             {
                 val = Guid.Parse(value.ToString()!);
             }
             else
             {
-                val = value.GetType() == typeof(byte[]) ? new Guid((value as byte[])!) : (object)Guid.Empty;
+                val = valueType == typeof(byte[]) ? new Guid((value as byte[])!) : (object)Guid.Empty;
             }
         }
         else if (type.IsString())
@@ -48,7 +59,18 @@ public static class TypeConversion
         }
         else if (type.IsDate())
         {
-            val = value ?? default(DateTime);
+            if (value is DateTime)
+            {
+                val = value;
+            }
+            else if (DateTime.TryParse(value.ToString(), out var dateTimeValue))
+            {
+                val = dateTimeValue.ToUniversalTime();
+            }
+            else
+            {
+                val = default(DateTime);
+            }
         }
         else if (type.IsDateOnly())
         {
