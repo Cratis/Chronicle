@@ -3,6 +3,7 @@
 
 using System.Net;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
+using Aksio.Cratis.Server;
 using Orleans.Configuration;
 
 namespace Orleans.Hosting;
@@ -23,6 +24,8 @@ public static class ClusterConfigurationExtensions
         {
             var clusterConfig = _.GetClusterConfig();
 
+            var logger = _.BuildServiceProvider().GetService<ILogger<Startup>>();
+
             builder
                 .Configure<ClusterOptions>(options =>
                 {
@@ -32,6 +35,8 @@ public static class ClusterConfigurationExtensions
 
             if (!string.IsNullOrEmpty(clusterConfig.AdvertisedIP))
             {
+                logger?.UsingAdvertisedIP(clusterConfig.AdvertisedIP);
+
                 builder.ConfigureEndpoints(
                     advertisedIP: IPAddress.Parse(clusterConfig.AdvertisedIP),
                     siloPort: clusterConfig.SiloPort,
@@ -40,6 +45,15 @@ public static class ClusterConfigurationExtensions
             }
             else
             {
+                if (clusterConfig.SiloHostName is not null)
+                {
+                    logger?.UsingSiloHostName(clusterConfig.SiloHostName);
+                }
+                else
+                {
+                    logger?.UsingResolvedHostName(Dns.GetHostName());
+                }
+
                 builder.ConfigureEndpoints(
                     hostname: !string.IsNullOrEmpty(clusterConfig.SiloHostName) ? clusterConfig.SiloHostName : Dns.GetHostName(),
                     siloPort: clusterConfig.SiloPort,
@@ -50,16 +64,19 @@ public static class ClusterConfigurationExtensions
             switch (clusterConfig.Type)
             {
                 case ClusterTypes.Local:
+                    logger?.UsingLocalHostClustering();
                     builder.UseLocalhostClustering();
                     break;
 
                 case ClusterTypes.Static:
+                    logger?.UsingStaticHostClustering();
                     var staticClusterOptions = clusterConfig.GetStaticClusterOptions();
                     builder.UseDevelopmentClustering(new IPEndPoint(IPAddress.Parse(staticClusterOptions.PrimarySiloIP), staticClusterOptions.PrimarySiloPort));
                     break;
 
                 case ClusterTypes.AdoNet:
                     {
+                        logger?.UsingAdoNetClustering();
                         var adoNetOptions = clusterConfig.GetAdoNetClusterOptions();
                         builder.UseAdoNetClustering(options =>
                         {
@@ -71,6 +88,7 @@ public static class ClusterConfigurationExtensions
 
                 case ClusterTypes.AzureStorage:
                     {
+                        logger?.UsingAzureStorageClustering();
                         var azureOptions = clusterConfig.GetAzureStorageClusterOptions();
                         builder.UseAzureStorageClustering(options =>
                         {
