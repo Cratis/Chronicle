@@ -1,3 +1,10 @@
+# [v6.17.3] - 2022-11-18 [PR: #604](https://github.com/aksio-insurtech/Cratis/pull/604)
+
+### Fixed
+
+- Adding a log message to see why the cluster client is not able to connect to Cratis Kernel.
+
+
 # [v6.17.2] - 2022-11-14 [PR: #601](https://github.com/aksio-insurtech/Cratis/pull/601)
 
 ### Fixed
