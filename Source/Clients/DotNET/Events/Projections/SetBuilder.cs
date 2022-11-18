@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Linq.Expressions;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Events.Projections.Expressions;
@@ -133,7 +134,15 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : SetBuilder<
             }
         }
 
-        var invariantString = FormattableString.Invariant($"{actualValue}");
+        var invariantString = actualValue switch
+        {
+            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
+            _ => FormattableString.Invariant($"{actualValue}")
+        };
+
         _expression = new ValueExpression(invariantString);
         return _parent;
     }
