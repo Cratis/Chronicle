@@ -65,7 +65,7 @@ public static class TypeConversion
             }
             else if (DateTime.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
             {
-                val = dateTimeValue;
+                val = dateTimeValue.ToUniversalTime();
             }
             else
             {
