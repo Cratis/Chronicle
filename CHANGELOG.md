@@ -1,3 +1,10 @@
+# [v6.17.4] - 2022-11-18 [PR: #605](https://github.com/aksio-insurtech/Cratis/pull/605)
+
+### Fixed
+
+- Fixing Dockerfile for the development MongoDB image and adding a pipeline to build and deploy it to Docker Hub. (#603)
+
+
 # [v6.17.3] - 2022-11-18 [PR: #604](https://github.com/aksio-insurtech/Cratis/pull/604)
 
 ### Fixed
