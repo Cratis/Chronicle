@@ -140,8 +140,9 @@ public class ClientBuilder : IClientBuilder
             var orleansClient = orleansBuilder.Build();
 
             logger?.ConnectingToKernel();
-            orleansClient.Connect(async (_) =>
+            orleansClient.Connect(async (exception) =>
             {
+                logger?.ProblemsConnectingToSilo(exception.Message);
                 await Task.Delay(1000);
                 return true;
             }).Wait();
