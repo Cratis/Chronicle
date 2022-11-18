@@ -28,6 +28,6 @@ public static partial class ClientBuilderLogMessages
     [LoggerMessage(5, LogLevel.Information, "Connected to Kernel")]
     internal static partial void ConnectedToKernel(this ILogger logger);
 
-    [LoggerMessage(6, LogLevel.Information, "Problems connecting to Kernel : {Message}' will retry in 1 second.")]
-    internal static partial void ProblemsConnectingToSilo(this ILogger logger, string message);
+    [LoggerMessage(6, LogLevel.Information, "Problems connecting to Kernel : '{Message}' - inner message '{InnerMessage}' will retry in 1 second.")]
+    internal static partial void ProblemsConnectingToSilo(this ILogger logger, string message, string innerMessage);
 }
