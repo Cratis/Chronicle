@@ -30,6 +30,8 @@ public record EventWithPropertiesForAllSupportedTypes(
     TimeOnlyConcept TimeOnlyConceptValue,
     DateTimeOffsetConcept DateTimeOffsetConceptValue)
 {
+    static Random random = new();
+
     public static EventWithPropertiesForAllSupportedTypes CreateWithKnownValues() => new(
             KnownValues.StringValue,
             KnownValues.BoolValue,
@@ -53,4 +55,28 @@ public record EventWithPropertiesForAllSupportedTypes(
             KnownValues.DateOnlyConceptValue,
             KnownValues.TimeOnlyConceptValue,
             KnownValues.DateTimeOffsetConceptValue);
+
+    public static EventWithPropertiesForAllSupportedTypes CreateWithRandomValues() => new(
+        random.NextDouble().ToString(),
+        (random.Next() % 1) == 0,
+        random.Next(),
+        random.NextSingle(),
+        random.NextDouble(),
+        (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
+        Guid.NewGuid(),
+        DateTime.UtcNow.AddDays(random.Next(60)),
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))),
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)),
+        random.NextDouble().ToString(),
+        (random.Next() % 1) == 0,
+        random.Next(),
+        random.NextSingle(),
+        random.NextDouble(),
+        (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
+        Guid.NewGuid(),
+        DateTime.UtcNow.AddDays(random.Next(60)),
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))),
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)));
 }

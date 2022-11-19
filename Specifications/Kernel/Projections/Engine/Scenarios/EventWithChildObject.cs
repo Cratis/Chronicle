@@ -6,5 +6,5 @@ namespace Aksio.Cratis.Events.Projections.Scenarios;
 [EventType("6ac8fdc7-ddc7-451b-8a7c-f36bd1e18a7b")]
 public record EventWithChildObject(Model Child)
 {
-    public static EventWithChildObject Create() => new(Model.CreateWithKnownValues());
+    public static EventWithChildObject Create() => new(Model.CreateWithRandomValues());
 }

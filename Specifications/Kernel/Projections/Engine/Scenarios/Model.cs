@@ -30,6 +30,8 @@ public record Model(
     DateTimeOffsetConcept DateTimeOffsetConceptValue,
     DateTimeOffset LastUpdated)
 {
+    static Random random = new();
+
     public static Model CreateWithKnownValues() => new(
             KnownValues.StringValue,
             KnownValues.BoolValue,
@@ -54,4 +56,29 @@ public record Model(
             KnownValues.TimeOnlyConceptValue,
             KnownValues.DateTimeOffsetConceptValue,
             DateTimeOffset.UtcNow);
+
+    public static Model CreateWithRandomValues() => new(
+        random.NextDouble().ToString(),
+        (random.Next() % 1) == 0,
+        random.Next(),
+        random.NextSingle(),
+        random.NextDouble(),
+        (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
+        Guid.NewGuid(),
+        DateTime.UtcNow.AddDays(random.Next(60)),
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))),
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)),
+        random.NextDouble().ToString(),
+        (random.Next() % 1) == 0,
+        random.Next(),
+        random.NextSingle(),
+        random.NextDouble(),
+        (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
+        Guid.NewGuid(),
+        DateTime.UtcNow.AddDays(random.Next(60)),
+        DateOnly.FromDateTime(DateTime.UtcNow.AddDays(random.Next(60))),
+        TimeOnly.FromDateTime(DateTime.UtcNow.AddHours(random.Next(48))),
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)),
+        DateTimeOffset.UtcNow.AddDays(random.Next(60)));
 }
