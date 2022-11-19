@@ -70,7 +70,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         }
 
         var keyValue = GetActualKeyValue(key);
-        collection[keyValue] = ApplyActualChanges(changeset.Changes, state);
+        collection[keyValue] = ApplyActualChanges(key, changeset.Changes, state);
 
         return Task.CompletedTask;
     }
@@ -118,23 +118,27 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         return key.Value;
     }
 
-    ExpandoObject ApplyActualChanges(IEnumerable<Change> changes, ExpandoObject state)
+    ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
     {
         foreach (var change in changes)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject>:
-                case ChildAdded:
                     state = state.MergeWith((change.State as ExpandoObject)!);
                     break;
 
+                case ChildAdded childAdded:
+                    var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    collection.Add(childAdded.State);
+                    break;
+
                 case Joined joined:
-                    state = ApplyActualChanges(joined.Changes, state);
+                    state = ApplyActualChanges(key, joined.Changes, state);
                     break;
 
                 case ResolvedJoin resolvedJoin:
-                    state = ApplyActualChanges(resolvedJoin.Changes, state);
+                    state = ApplyActualChanges(key, resolvedJoin.Changes, state);
                     break;
             }
         }
