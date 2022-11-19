@@ -8,6 +8,8 @@
 [![NPM](https://img.shields.io/npm/v/@aksio/cratis-applications-frontend?label=@aksio/cratis-applications-frontend&logo=npm)](https://www.npmjs.com/package/@aksio/cratis-applications-frontend)
 [![Docker](https://img.shields.io/docker/v/aksioinsurtech/cratis?label=Cratis%20Kernel&logo=docker&sort=semver)](https://hub.docker.com/r/aksioinsurtech/cratis)
 
+![Alt](https://repobeats.axiom.co/api/embed/51aa0aa357e84296b1d66b50d7143c917fee9471.svg "Repobeats analytics image")
+
 ## Introduction
 
 Cratis is an Event Sourcing platform built with ease of use, productivity, compliance and maintainability in mind.
