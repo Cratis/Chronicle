@@ -28,4 +28,30 @@ public record Model(
     DateOnlyConcept DateOnlyConceptValue,
     TimeOnlyConcept TimeOnlyConceptValue,
     DateTimeOffsetConcept DateTimeOffsetConceptValue,
-    DateTimeOffset LastUpdated);
+    DateTimeOffset LastUpdated)
+{
+    public static Model CreateWithKnownValues() => new(
+            KnownValues.StringValue,
+            KnownValues.BoolValue,
+            KnownValues.IntValue,
+            KnownValues.FloatValue,
+            KnownValues.DoubleValue,
+            KnownValues.EnumValue,
+            KnownValues.GuidValue,
+            KnownValues.DateTimeValue,
+            KnownValues.DateOnlyValue,
+            KnownValues.TimeOnlyValue,
+            KnownValues.DateTimeOffsetValue,
+            KnownValues.StringConceptValue,
+            KnownValues.BoolConceptValue,
+            KnownValues.IntConceptValue,
+            KnownValues.FloatConceptValue,
+            KnownValues.DoubleConceptValue,
+            KnownValues.EnumConceptValue,
+            KnownValues.GuidConceptValue,
+            KnownValues.DateTimeConceptValue,
+            KnownValues.DateOnlyConceptValue,
+            KnownValues.TimeOnlyConceptValue,
+            KnownValues.DateTimeOffsetConceptValue,
+            DateTimeOffset.UtcNow);
+}
