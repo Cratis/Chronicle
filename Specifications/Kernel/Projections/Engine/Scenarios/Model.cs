@@ -61,7 +61,7 @@ public record Model(
     public static Model CreateWithRandomValues() => new(
         random.NextDouble().ToString(),
         (random.Next() % 1) == 0,
-        random.Next(),
+        random.Next(5000),
         random.NextSingle(),
         random.NextDouble(),
         (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
@@ -72,7 +72,7 @@ public record Model(
         DateTimeOffset.UtcNow.AddDays(random.Next(60)),
         random.NextDouble().ToString(),
         (random.Next() % 1) == 0,
-        random.Next(),
+        random.Next(5000),
         random.NextSingle(),
         random.NextDouble(),
         (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
