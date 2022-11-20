@@ -133,7 +133,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             return key.Value.GetConceptValue();
         }
 
-        if (!key.GetType().IsAPrimitiveType())
+        if (!key.Value.GetType().IsAPrimitiveType())
         {
             return key.Value.AsExpandoObject(true);
         }
