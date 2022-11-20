@@ -5,6 +5,7 @@ using Aksio.Cratis.Events.Projections.Scenarios.Concepts;
 
 namespace Aksio.Cratis.Events.Projections.Scenarios;
 
+
 public record Model(
     string StringValue,
     bool BoolValue,

@@ -25,17 +25,17 @@ public static class TypeConversion
             return value!;
         }
 
-        var valueType = value.GetType();
-        if (valueType == type)
-        {
-            return value;
-        }
-
         var val = new object();
 
         if (value.IsConcept())
         {
             value = value.GetConceptValue();
+        }
+
+        var valueType = value.GetType();
+        if (valueType == type)
+        {
+            return value;
         }
 
         if (type.IsGuid())

@@ -5,6 +5,8 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Json;
+using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 
@@ -19,6 +21,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
     readonly Model _model;
     readonly ITypeFormats _typeFormats;
+    readonly IObjectsComparer _comparer;
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -37,10 +40,15 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// </summary>
     /// <param name="model">The target <see cref="Model"/>.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-    public InMemoryProjectionSink(Model model, ITypeFormats typeFormats)
+    /// <param name="comparer"><see cref="IObjectsComparer"/> used for complex comparisons of objects.</param>
+    public InMemoryProjectionSink(
+        Model model,
+        ITypeFormats typeFormats,
+        IObjectsComparer comparer)
     {
         _model = model;
         _typeFormats = typeFormats;
+        _comparer = comparer;
     }
 
     /// <inheritdoc/>
@@ -48,6 +56,11 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     {
         var collection = Collection;
         var keyValue = GetActualKeyValue(key);
+
+        if (keyValue is ExpandoObject)
+        {
+            return Task.FromResult<ExpandoObject?>(collection.SingleOrDefault(kvp => _comparer.Equals(kvp.Key, keyValue, out _)).Value);
+        }
 
         if (collection.ContainsKey(keyValue))
         {
@@ -104,6 +117,11 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 
     object GetActualKeyValue(Key key)
     {
+        if (key.Value is ExpandoObject)
+        {
+            return key.Value;
+        }
+
         var targetType = _model.Schema.GetTargetTypeForPropertyPath("id", _typeFormats);
         if (targetType is not null)
         {
@@ -113,6 +131,11 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         if (key.Value.IsConcept())
         {
             return key.Value.GetConceptValue();
+        }
+
+        if (!key.GetType().IsAPrimitiveType())
+        {
+            return key.Value.AsExpandoObject(true);
         }
 
         return key.Value;
