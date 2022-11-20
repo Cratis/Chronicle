@@ -59,7 +59,7 @@ public record EventWithPropertiesForAllSupportedTypes(
     public static EventWithPropertiesForAllSupportedTypes CreateWithRandomValues() => new(
         random.NextDouble().ToString(),
         (random.Next() % 1) == 0,
-        random.Next(),
+        random.Next(5000),
         random.NextSingle(),
         random.NextDouble(),
         (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
@@ -70,7 +70,7 @@ public record EventWithPropertiesForAllSupportedTypes(
         DateTimeOffset.UtcNow.AddDays(random.Next(60)),
         random.NextDouble().ToString(),
         (random.Next() % 1) == 0,
-        random.Next(),
+        random.Next(5000),
         random.NextSingle(),
         random.NextDouble(),
         (EnumWithValues)random.Next((int)EnumWithValues.ThirdValue),
