@@ -1,3 +1,10 @@
+# [v6.17.6] - 2022-11-26 [PR: #614](https://github.com/aksio-insurtech/Cratis/pull/614)
+
+### Fixed
+
+- Adding trace log messages to the `QueryActionFilter`.
+
+
 # [v6.17.4] - 2022-11-18 [PR: #605](https://github.com/aksio-insurtech/Cratis/pull/605)
 
 ### Fixed
