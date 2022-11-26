@@ -8,7 +8,7 @@ public static partial class StartupLogMessages
     [LoggerMessage(0, LogLevel.Information, "Kernel is configured with advertised IP: '{AdvertisedIP}'")]
     internal static partial void UsingAdvertisedIP(this ILogger<Startup> logger, string advertisedIP);
 
-    [LoggerMessage(1, LogLevel.Information, "Kernel is configured without an advertised IP and will use the host name 'SiloHostName' which resolves to IP '{ResolvedIP}'")]
+    [LoggerMessage(1, LogLevel.Information, "Kernel is configured without an advertised IP and will use the host name '{SiloHostName}'")]
     internal static partial void UsingSiloHostName(this ILogger<Startup> logger, string siloHostName);
 
     [LoggerMessage(2, LogLevel.Information, "Kernel is configured without an advertised IP and without a silo host name, using DNS resolved hostname: '{ResolvedHostName}'")]
