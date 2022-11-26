@@ -4,6 +4,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Aksio.Cratis.Applications.Queries;
@@ -14,21 +15,26 @@ namespace Aksio.Cratis.Applications.Queries;
 public class QueryActionFilter : IAsyncActionFilter
 {
     readonly JsonOptions _options;
+    readonly ILogger<QueryActionFilter> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueryActionFilter"/> class.
     /// </summary>
     /// <param name="options"><see cref="JsonOptions"/>.</param>
-    public QueryActionFilter(IOptions<JsonOptions> options)
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    public QueryActionFilter(
+        IOptions<JsonOptions> options,
+        ILogger<QueryActionFilter> logger)
     {
         _options = options.Value;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         if (context.HttpContext.Request.Method == HttpMethod.Get.Method
-            && context.ActionDescriptor is ControllerActionDescriptor)
+            && context.ActionDescriptor is ControllerActionDescriptor controllerActionDescriptor)
         {
             var result = await next();
             if (result.Result is ObjectResult objectResult)
@@ -37,16 +43,23 @@ public class QueryActionFilter : IAsyncActionFilter
                 {
                     case IClientObservable clientObservable:
                         {
+                            _logger.ClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
                             if (context.HttpContext.WebSockets.IsWebSocketRequest)
                             {
+                                _logger.RequestIsWebSocket();
                                 await clientObservable.HandleConnection(context, _options);
                                 result.Result = null;
+                            }
+                            else
+                            {
+                                _logger.RequestIsHttp();
                             }
                         }
                         break;
 
                     default:
                         {
+                            _logger.NonClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
                             result.Result = new ObjectResult(new QueryResult(objectResult.Value!, true));
                         }
                         break;
