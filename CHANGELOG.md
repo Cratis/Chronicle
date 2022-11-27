@@ -1,3 +1,44 @@
+# [v6.17.7] - 2022-11-27 [PR: #616](https://github.com/aksio-insurtech/Cratis/pull/616)
+
+## Summary
+
+In the ASP.NET Core 6 code there is a middleware called WebSocketMiddleware. The WebSocketManager
+that we ask for .IsWebSocketRequest forwards this call to it.
+This property calls internally a method called CheckSupportedWebSocketRequest which will check
+the following Http Headers for valid values:
+Upgrade with value Upgrade
+Connection with value websocket
+
+If they are correct, it will consider it an upgrade of the protocol and will then validate and use
+the values from the Web Socket specific headers:
+Sec-WebSocket-Protocol
+Sec-WebSocket-Extensions
+Sec-WebSocket-Version
+Sec-WebSocket-Key
+
+When running in an environment with multiple reverse proxies you can end up with the proxy adding
+to the values if the values are already there, forming a collection of values as comma separated
+values in the HTTP header.
+
+The validation code in ASP.NET validates that the version is supported and that the key is valid.
+Throughout the validation code in ASP.NET it recognizes the fact that it could hold multiple values
+and loops through the values, except for the key - which it just does .ToString() on, which then
+gives you the comma separated string.
+
+The key is expected to be a base64 encoded byte array of 16 bytes, and obviously this would not
+then be valid and we're not allowed to upgrade the connection.
+
+The purpose of the key coming from the client is to use it and combine with a server key and send
+back on the response to form a valid connection.
+
+This version contains a workaround for this that assumes that the last key is the one from the client
+and strips away any other keys and uses it as a single key instead.
+
+### Fixed
+
+- Workaround implemented for environments running with multiple reverse proxies that appends a new value for **Sec-WebSocket-Key** HTTP header for each hop when doing a WebSocket connection upgrade. This was not supported by ASP.NET, we take the last key and assume it is the client key.
+
+
 # [v6.17.6] - 2022-11-26 [PR: #614](https://github.com/aksio-insurtech/Cratis/pull/614)
 
 ### Fixed
