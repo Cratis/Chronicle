@@ -1,3 +1,10 @@
+# [v6.17.8] - 2022-11-27 [PR: #617](https://github.com/aksio-insurtech/Cratis/pull/617)
+
+### Fixed
+
+- Missing XML comments.
+
+
 # [v6.17.7] - 2022-11-27 [PR: #616](https://github.com/aksio-insurtech/Cratis/pull/616)
 
 ## Summary
