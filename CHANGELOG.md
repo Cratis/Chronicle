@@ -1,3 +1,10 @@
+# [v6.17.9] - 2022-12-5 [PR: #618](https://github.com/aksio-insurtech/Cratis/pull/618)
+
+### Fixed
+
+- Adding assembly resolvers when using types in any of the discovered types that comes from unloaded assemblies.
+
+
 # [v6.17.8] - 2022-11-27 [PR: #617](https://github.com/aksio-insurtech/Cratis/pull/617)
 
 ### Fixed
