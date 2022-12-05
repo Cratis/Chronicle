@@ -25,6 +25,10 @@ export class CloseDebitAccount extends Command<ICloseDebitAccount> implements IC
 
     private _accountId!: string;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
             'accountId',

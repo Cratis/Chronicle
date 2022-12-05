@@ -66,7 +66,7 @@ public class SourceGenerator : ISourceGenerator
 
                 var publicInstanceMethods = type.GetPublicInstanceMethodsFrom();
 
-                OutputCommands(type, publicInstanceMethods, baseApiRoute, rootNamespace!, outputFolder, useRouteAsPath);
+                OutputCommands(context, type, publicInstanceMethods, baseApiRoute, rootNamespace!, outputFolder, useRouteAsPath);
                 OutputQueries(context, type, publicInstanceMethods, baseApiRoute, rootNamespace!, outputFolder, useRouteAsPath);
             }
             catch (Exception ex)
@@ -76,7 +76,7 @@ public class SourceGenerator : ISourceGenerator
         }
     }
 
-    static void OutputCommands(ITypeSymbol type, IEnumerable<IMethodSymbol> methods, string baseApiRoute, string rootNamespace, string outputFolder, bool useRouteAsPath)
+    static void OutputCommands(GeneratorExecutionContext context, ITypeSymbol type, IEnumerable<IMethodSymbol> methods, string baseApiRoute, string rootNamespace, string outputFolder, bool useRouteAsPath)
     {
         var targetFolder = GetTargetFolder(type, rootNamespace, outputFolder, useRouteAsPath, baseApiRoute);
         foreach (var commandMethod in methods.Where(_ => _.GetAttributes().Any(_ => _.IsHttpPostAttribute())))
@@ -119,8 +119,28 @@ public class SourceGenerator : ISourceGenerator
             }
 
             var requestArguments = GetRequestArgumentsFrom(commandMethod, ref route, importStatements);
+            var modelDescriptor = GetModelDescriptorFor(
+                context,
+                commandMethod,
+                type,
+                commandMethod.ReturnType,
+                baseApiRoute,
+                rootNamespace,
+                outputFolder,
+                useRouteAsPath,
+                targetFile);
 
-            var commandDescriptor = new CommandDescriptor(route, typeName, properties, importStatements, requestArguments);
+            modelDescriptor.Imports.ForEach(_ => importStatements.Add(_));
+
+            var commandDescriptor = new CommandDescriptor(
+                route,
+                typeName,
+                properties,
+                importStatements,
+                requestArguments,
+                modelDescriptor != ModelDescriptor.Empty,
+                modelDescriptor);
+
             var renderedTemplate = TemplateTypes.Command(commandDescriptor);
             if (renderedTemplate != default)
             {
@@ -136,50 +156,35 @@ public class SourceGenerator : ISourceGenerator
         {
             var modelType = queryMethod.ReturnType;
 
-            if (modelType is INamedTypeSymbol modelTypeAsNamedType)
+            var targetFile = Path.Combine(targetFolder, $"{queryMethod.Name}.ts");
+            var modelDescriptor = GetModelDescriptorFor(
+                context,
+                queryMethod,
+                type,
+                modelType,
+                baseApiRoute,
+                rootNamespace,
+                outputFolder,
+                useRouteAsPath,
+                targetFile);
+            if (modelDescriptor != ModelDescriptor.Empty)
             {
-                if (modelType.ToString() == typeof(Task).FullName)
-                {
-                    continue;
-                }
-
-                if (modelTypeAsNamedType.ConstructedFrom.ToString().StartsWith(typeof(Task).FullName) && modelTypeAsNamedType.IsGenericType)
-                {
-                    modelTypeAsNamedType = (modelTypeAsNamedType.TypeArguments[0] as INamedTypeSymbol)!;
-                }
                 var route = GetRoute(baseApiRoute, queryMethod);
                 var importStatements = new HashSet<ImportStatement>();
-
-                var actualType = modelTypeAsNamedType;
-                var isEnumerable = false;
-                if (actualType.IsObservableClient())
-                {
-                    actualType = (actualType.TypeArguments[0] as INamedTypeSymbol)!;
-                }
-
-                if (actualType.IsEnumerable())
-                {
-                    if (!actualType.IsGenericType)
-                    {
-                        context.ReportDiagnostic(Diagnostics.UnableToResolveModelType($"{type.ToDisplayString()}:{queryMethod.Name}"));
-                        return;
-                    }
-
-                    actualType = (actualType.TypeArguments[0] as INamedTypeSymbol)!;
-                    isEnumerable = true;
-                }
-
-                var targetFile = Path.Combine(targetFolder, $"{queryMethod.Name}.ts");
-                OutputType(actualType, rootNamespace, outputFolder, targetFile, importStatements, useRouteAsPath, baseApiRoute);
-
                 var queryArguments = GetRequestArgumentsFrom(queryMethod, ref route, importStatements);
 
-                var typeScriptType = actualType.GetTypeScriptType(out _);
-                var knownType = actualType.IsKnownType();
-                var typeName = knownType ? typeScriptType.Type : actualType.Name;
-                var constructor = knownType ? typeScriptType.Constructor : actualType.Name;
-                var queryDescriptor = new QueryDescriptor(route, queryMethod.Name, typeName, constructor, isEnumerable, importStatements, queryArguments);
-                var renderedTemplate = modelTypeAsNamedType.IsObservableClient() ?
+                modelDescriptor.Imports.ForEach(_ => importStatements.Add(_));
+
+                var queryDescriptor = new QueryDescriptor(
+                    route,
+                    queryMethod.Name,
+                    modelDescriptor.Name,
+                    modelDescriptor.Constructor,
+                    modelDescriptor.IsEnumerable,
+                    modelDescriptor.Imports,
+                    queryArguments);
+
+                var renderedTemplate = modelDescriptor.IsObservable ?
                     TemplateTypes.ObservableQuery(queryDescriptor) :
                     TemplateTypes.Query(queryDescriptor);
                 if (renderedTemplate != default)
@@ -188,6 +193,62 @@ public class SourceGenerator : ISourceGenerator
                 }
             }
         }
+    }
+
+    static ModelDescriptor GetModelDescriptorFor(
+        GeneratorExecutionContext context,
+        IMethodSymbol method,
+        ITypeSymbol parentType,
+        ITypeSymbol modelType,
+        string baseApiRoute,
+        string rootNamespace,
+        string outputFolder,
+        bool useRouteAsPath,
+        string parentFile)
+    {
+        if (modelType is INamedTypeSymbol modelTypeAsNamedType)
+        {
+            if (modelType.ToString() == typeof(Task).FullName)
+            {
+                return ModelDescriptor.Empty;
+            }
+
+            if (modelTypeAsNamedType.ConstructedFrom.ToString().StartsWith(typeof(Task).FullName) && modelTypeAsNamedType.IsGenericType)
+            {
+                modelTypeAsNamedType = (modelTypeAsNamedType.TypeArguments[0] as INamedTypeSymbol)!;
+            }
+            var importStatements = new HashSet<ImportStatement>();
+            var actualType = modelTypeAsNamedType;
+            var isEnumerable = false;
+            var observable = actualType.IsObservableClient();
+            if (observable)
+            {
+                actualType = (actualType.TypeArguments[0] as INamedTypeSymbol)!;
+            }
+
+            if (actualType.IsEnumerable())
+            {
+                if (!actualType.IsGenericType)
+                {
+                    context.ReportDiagnostic(Diagnostics.UnableToResolveModelType($"{parentType.ToDisplayString()}:{method.Name}"));
+                    return ModelDescriptor.Empty;
+                }
+
+                actualType = (actualType.TypeArguments[0] as INamedTypeSymbol)!;
+                isEnumerable = true;
+            }
+
+            OutputType(actualType, rootNamespace, outputFolder, parentFile, importStatements, useRouteAsPath, baseApiRoute);
+
+            var typeScriptType = actualType.GetTypeScriptType(out _);
+            var knownType = actualType.IsKnownType();
+            var typeName = knownType ? typeScriptType.Type : actualType.Name;
+            var constructor = knownType ? typeScriptType.Constructor : actualType.Name;
+
+            return new(typeName, constructor, isEnumerable, observable, importStatements);
+        }
+
+        return ModelDescriptor.Empty;
     }
 
     static List<RequestArgumentDescriptor> GetRequestArgumentsFrom(IMethodSymbol queryMethod, ref string route, HashSet<ImportStatement> importStatements)

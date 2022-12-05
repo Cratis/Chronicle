@@ -29,7 +29,11 @@ export class {{Name}}Validator extends CommandValidator {
     };
 }
 
+{{#if HasResponse }}
+export class {{Name}} extends Command<I{{Name}}, {{ResponseType.Name}}> implements I{{Name}} {
+{{else}}
 export class {{Name}} extends Command<I{{Name}}> implements I{{Name}} {
+{{/if}}
     readonly route: string = '{{{Route}}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new {{Name}}Validator();
@@ -41,6 +45,16 @@ export class {{Name}} extends Command<I{{Name}}> implements I{{Name}} {
     private _{{camelcase Name}}!: {{Type}};
     {{/if}}
     {{/Properties}}
+
+{{#if HasResponse }}
+    constructor() {
+        super({{ResponseType.Constructor}}, {{lowercase ResponseType.IsEnumerable}});
+    }
+{{else}}
+    constructor() {
+        super(Object, false);
+    }
+{{/if}}
 
     get requestArguments(): string[] {
         return [

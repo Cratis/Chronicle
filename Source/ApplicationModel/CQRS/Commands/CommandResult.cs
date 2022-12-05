@@ -49,4 +49,9 @@ public class CommandResult
     /// Gets the stack trace if there was an exception.
     /// </summary>
     public string ExceptionStackTrace { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Optional response object. Controller actions representing a command can optionally return a response as any type, this is where it would be.
+    /// </summary>
+    public object? Response { get; init; }
 }

@@ -28,9 +28,11 @@ public class CommandActionFilter : IAsyncActionFilter
     {
         var exceptionMessages = new List<string>();
         var exceptionStackTrace = string.Empty;
+        ActionExecutedContext? result = null;
+        object? response = null;
         if (context.ModelState.IsValid)
         {
-            var result = await next();
+            result = await next();
 
             if (result.Exception is not null)
             {
@@ -43,15 +45,21 @@ public class CommandActionFilter : IAsyncActionFilter
                 }
                 while (exception is not null);
             }
+
+            if (result.Result is ObjectResult objectResult)
+            {
+                response = objectResult.Value;
+            }
         }
-        if (context.HttpContext.Request.Method == HttpMethod.Post.Method)
+        if (context.HttpContext.Request.Method == HttpMethod.Post.Method && result is not null)
         {
             var commandResult = new CommandResult
             {
                 CorrelationId = _executionContextManager.Current.CorrelationId,
                 ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key }))),
                 ExceptionMessages = exceptionMessages.ToArray(),
-                ExceptionStackTrace = exceptionStackTrace
+                ExceptionStackTrace = exceptionStackTrace,
+                Response = response
             };
 
             if (!commandResult.IsAuthorized)
@@ -63,7 +71,7 @@ public class CommandActionFilter : IAsyncActionFilter
                 context.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
             }
 
-            context.Result = new ObjectResult(commandResult);
+            result.Result = new ObjectResult(commandResult);
         }
     }
 }
