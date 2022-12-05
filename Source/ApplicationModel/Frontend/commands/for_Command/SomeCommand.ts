@@ -14,6 +14,10 @@ export class SomeCommand extends Command<ISomeCommand> implements ISomeCommand {
     route = '';
     routeTemplate!: Handlebars.TemplateDelegate;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [];
     }
