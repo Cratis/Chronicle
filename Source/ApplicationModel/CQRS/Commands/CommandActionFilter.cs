@@ -28,6 +28,7 @@ public class CommandActionFilter : IAsyncActionFilter
     {
         var exceptionMessages = new List<string>();
         var exceptionStackTrace = string.Empty;
+        object? response = null;
         if (context.ModelState.IsValid)
         {
             var result = await next();
@@ -43,6 +44,11 @@ public class CommandActionFilter : IAsyncActionFilter
                 }
                 while (exception is not null);
             }
+
+            if (result.Result is ObjectResult objectResult)
+            {
+                response = objectResult.Value;
+            }
         }
         if (context.HttpContext.Request.Method == HttpMethod.Post.Method)
         {
@@ -51,7 +57,8 @@ public class CommandActionFilter : IAsyncActionFilter
                 CorrelationId = _executionContextManager.Current.CorrelationId,
                 ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key }))),
                 ExceptionMessages = exceptionMessages.ToArray(),
-                ExceptionStackTrace = exceptionStackTrace
+                ExceptionStackTrace = exceptionStackTrace,
+                Response = response
             };
 
             if (!commandResult.IsAuthorized)
