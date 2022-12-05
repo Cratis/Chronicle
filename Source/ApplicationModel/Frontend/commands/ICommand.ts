@@ -12,7 +12,7 @@ export type PropertyChanged = (property: string) => void;
 /**
  * Defines the base of a command.
  */
-export interface ICommand<TCommandContent = {}> {
+export interface ICommand<TCommandContent = {}, TCommandResponse = {}> {
     /**
      * Gets the route information for the command.
      */
@@ -23,7 +23,7 @@ export interface ICommand<TCommandContent = {}> {
      * @param [args] Optional arguments for the command route - depends on whether or not the command needs arguments.
      * @returns {CommandResult} for the execution.
      */
-    execute(): Promise<CommandResult>;
+    execute(): Promise<CommandResult<TCommandResponse>>;
 
     /**
      * Set the initial values for the command. This is used for tracking if there are changes to a command or not.

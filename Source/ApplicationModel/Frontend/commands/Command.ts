@@ -4,6 +4,7 @@
 import { ICommand, PropertyChanged } from './ICommand';
 import { CommandResult } from "./CommandResult";
 import { CommandValidator } from './CommandValidator';
+import { Constructor } from '@aksio/cratis-fundamentals';
 
 
 type Callback = {
@@ -14,7 +15,7 @@ type Callback = {
 /**
  * Represents an implementation of {@link ICommand} that works with HTTP fetch.
  */
-export abstract class Command<TCommandContent = {}> implements ICommand<TCommandContent> {
+export abstract class Command<TCommandContent = {}, TCommandResponse = {}> implements ICommand<TCommandContent, TCommandResponse> {
     abstract readonly route: string;
     abstract readonly routeTemplate: Handlebars.TemplateDelegate;
     abstract readonly validation: CommandValidator;
@@ -25,8 +26,11 @@ export abstract class Command<TCommandContent = {}> implements ICommand<TCommand
     private _hasChanges = false;
     private _callbacks: Callback[] = [];
 
+    constructor(readonly _responseType: Constructor = Object, readonly _isResponseTypeEnumerable: boolean) {
+    }
+
     /** @inheritdoc */
-    async execute(): Promise<CommandResult> {
+    async execute(): Promise<CommandResult<TCommandResponse>> {
         let actualRoute = this.route;
         const payload = {};
 
@@ -50,9 +54,9 @@ export abstract class Command<TCommandContent = {}> implements ICommand<TCommand
 
         try {
             const result = await response.json();
-            return new CommandResult(result);
+            return new CommandResult(result, this._responseType, this._isResponseTypeEnumerable);
         } catch (ex) {
-            return CommandResult.empty;
+            return CommandResult.empty as CommandResult<TCommandResponse>;
         }
     }
 

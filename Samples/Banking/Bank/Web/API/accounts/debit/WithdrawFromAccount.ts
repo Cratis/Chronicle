@@ -28,6 +28,10 @@ export class WithdrawFromAccount extends Command<IWithdrawFromAccount> implement
     private _accountId!: string;
     private _amount!: number;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
             'accountId',
