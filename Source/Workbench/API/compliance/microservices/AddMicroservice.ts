@@ -28,6 +28,10 @@ export class AddMicroservice extends Command<IAddMicroservice> implements IAddMi
     private _microserviceId!: string;
     private _name!: string;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
         ];

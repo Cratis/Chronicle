@@ -40,6 +40,10 @@ export class Append extends Command<IAppend> implements IAppend {
     private _eventTypeId!: string;
     private _eventGeneration!: number;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
             'eventSequenceId',

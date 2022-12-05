@@ -25,6 +25,10 @@ export class DeletePIIForPerson extends Command<IDeletePIIForPerson> implements 
 
     private _personId!: string;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
         ];
