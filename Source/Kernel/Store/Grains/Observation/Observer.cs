@@ -101,6 +101,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
+        // Unsubscribe Stream
+        // Unregister Reminders
         return Task.CompletedTask;
     }
 
