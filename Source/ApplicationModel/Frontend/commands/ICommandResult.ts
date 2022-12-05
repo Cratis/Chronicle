@@ -7,7 +7,7 @@ import { ValidationError } from '../validation/ValidationError';
 /**
  * Defines the result from executing commands.
  */
- export interface ICommandResult {
+ export interface ICommandResult<TResponse = {}> {
     /**
      * Gets the correlation identifier associated with the executed command.
      */
@@ -48,4 +48,8 @@ import { ValidationError } from '../validation/ValidationError';
       */
      readonly exceptionStackTrace: string;
 
+    /**
+     * Gets the response from the command, if any.
+     */
+     readonly response?: TResponse;
 }
