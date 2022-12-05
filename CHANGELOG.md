@@ -1,3 +1,15 @@
+# [v6.18.0] - 2022-12-5 [PR: #620](https://github.com/aksio-insurtech/Cratis/pull/620)
+
+### Added
+
+- Support for returning a response object as part of a command. POST controller actions can simply just return anything now and this will now become serialized as part of the `CommandResult` and proxy generator generates a type safe version of this with serialization information on it. (#499)
+
+### Fixed
+
+- Command result is now alway included, even when it is a HTTP 200. (#359)
+
+
+
 # [v6.17.9] - 2022-12-5 [PR: #618](https://github.com/aksio-insurtech/Cratis/pull/618)
 
 ### Fixed
