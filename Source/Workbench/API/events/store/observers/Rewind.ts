@@ -31,6 +31,10 @@ export class Rewind extends Command<IRewind> implements IRewind {
     private _microserviceId!: string;
     private _tenantId!: string;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
             'observerId',

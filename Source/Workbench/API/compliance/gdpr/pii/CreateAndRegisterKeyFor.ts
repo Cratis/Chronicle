@@ -25,6 +25,10 @@ export class CreateAndRegisterKeyFor extends Command<ICreateAndRegisterKeyFor> i
 
     private _identifier!: string;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
         ];
