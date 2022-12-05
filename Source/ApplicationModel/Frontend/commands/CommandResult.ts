@@ -4,11 +4,12 @@
 import { Guid } from '@aksio/cratis-fundamentals';
 import { ICommandResult } from './ICommandResult';
 import { ValidationError } from '../validation/ValidationError';
+import { Constructor, JsonSerializer } from '@aksio/cratis-fundamentals';
 
 /**
  * Represents the result from executing a {@link ICommand}.
  */
-export class CommandResult implements ICommandResult {
+export class CommandResult<TResponse = {}> implements ICommandResult<TResponse> {
 
     static empty: CommandResult = new CommandResult({
         correlationId: Guid.empty.toString(),
@@ -18,9 +19,9 @@ export class CommandResult implements ICommandResult {
         hasExceptions: false,
         validationErrors: [],
         exceptionMessages: [],
-        exceptionStackTrace: ''
-    });
-
+        exceptionStackTrace: '',
+        response: null
+    }, Object, false);
 
     /** @inheritdoc */
     readonly correlationId: Guid;
@@ -46,11 +47,16 @@ export class CommandResult implements ICommandResult {
     /** @inheritdoc */
     readonly exceptionStackTrace: string;
 
+    /** @inheritdoc */
+    readonly response?: TResponse;
+
     /**
      * Creates an instance of command result.
      * @param {*} result The JSON/any representation of the command result;
+     * @param {Constructor} responseInstanceType The {@see Constructor} that represents the type of response, if any. Defaults to {@see Object}.
+     * @param {boolean} isResponseTypeEnumerable Whether or not the response type is an enumerable or not.
      */
-    constructor(result: any) {
+    constructor(result: any, responseInstanceType: Constructor = Object, isResponseTypeEnumerable: boolean) {
         this.correlationId = Guid.parse(result.correlationId);
         this.isSuccess = result.isSuccess;
         this.isAuthorized = result.isAuthorized;
@@ -59,5 +65,13 @@ export class CommandResult implements ICommandResult {
         this.validationErrors = result.validationErrors.map(_ => new ValidationError(_.message, _.memberNames));
         this.exceptionMessages = result.exceptionMessages;
         this.exceptionStackTrace = result.exceptionStackTrace;
+
+        if (result.response) {
+            if (isResponseTypeEnumerable) {
+                this.response = JsonSerializer.deserializeArrayFromInstance(responseInstanceType, result.response) as any;
+            } else {
+                this.response = JsonSerializer.deserializeFromInstance(responseInstanceType, result.response) as any;
+            }
+        }
     }
 }
