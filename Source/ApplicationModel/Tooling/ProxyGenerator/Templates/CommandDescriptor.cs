@@ -11,4 +11,13 @@ namespace Aksio.Cratis.Applications.ProxyGenerator.Templates;
 /// <param name="Properties">Properties on the command.</param>
 /// <param name="Imports">Additional import statements.</param>
 /// <param name="Arguments">Arguments for the request - typically in the route or query string.</param>
-public record CommandDescriptor(string Route, string Name, IEnumerable<PropertyDescriptor> Properties, IEnumerable<ImportStatement> Imports, IEnumerable<RequestArgumentDescriptor> Arguments);
+/// <param name="HasResponse">Whether or not there is a response from the command.</param>
+/// <param name="ResponseType">The details about the response type.</param>
+public record CommandDescriptor(
+    string Route,
+    string Name,
+    IEnumerable<PropertyDescriptor> Properties,
+    IEnumerable<ImportStatement> Imports,
+    IEnumerable<RequestArgumentDescriptor> Arguments,
+    bool HasResponse,
+    ModelDescriptor ResponseType);
