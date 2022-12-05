@@ -117,6 +117,13 @@ const result = await command.execute();
 The result object contains information about whether or not it was successful and any errors that might have occurred, be it
 authorization, validation, business rules.
 
+## Response
+
+The controller action that represents the command can also return a response.
+On the `CommandResult` you will find the response. The proxy generator will make this
+type-safe and the internal serializer will make sure to get the JSON output into the
+correct type.
+
 ## Data binding and initial values
 
 The command holds properties that is the payload of what you want to have happen.
