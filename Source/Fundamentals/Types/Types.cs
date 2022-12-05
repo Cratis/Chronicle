@@ -105,17 +105,7 @@ public class Types : ITypes
         var dependencyModel = DependencyContext.Load(entryAssembly);
         var projectReferencedAssemblies = dependencyModel.RuntimeLibraries
                             .Where(_ => _.Type.Equals("project"))
-                            .Select(_ =>
-                            {
-                                try
-                                {
-                                    return Assembly.Load(_.Name);
-                                }
-                                catch
-                                {
-                                    return null!;
-                                }
-                            })
+                            .Select(_ => ResolveAssembly(_.Name))
                             .Where(_ => _ is not null)
                             .Distinct()
                             .ToArray();
@@ -126,21 +116,13 @@ public class Types : ITypes
                             .Where(_ => _.RuntimeAssemblyGroups.Count > 0 &&
                                         (_assemblyPrefixesToInclude.Any(asm => _.Name.StartsWith(asm)) ||
                                         !_assemblyPrefixesToExclude.Any(asm => _.Name.StartsWith(asm))))
-                            .Select(_ =>
-                            {
-                                try
-                                {
-                                    return Assembly.Load(_.Name);
-                                }
-                                catch
-                                {
-                                    return null!;
-                                }
-                            })
+                            .Select(_ => ResolveAssembly(_.Name))
                             .Where(_ => _ is not null)
                             .Distinct()
                             .ToArray();
         _assemblies.AddRange(assemblies.Where(_ => !projectReferencedAssemblies.Any(p => p == _)).Select(_ => _));
+
+        AppDomain.CurrentDomain.AssemblyResolve += (s, e) => ResolveAssemblyFromFile(e.Name);
 
         var types = new List<Type>();
         foreach (var assembly in _assemblies)
@@ -148,5 +130,37 @@ public class Types : ITypes
             types.AddRange(assembly.DefinedTypes);
         }
         return types;
+    }
+
+    Assembly ResolveAssembly(string name)
+    {
+        try
+        {
+            return Assembly.Load(name);
+        }
+        catch
+        {
+            return null!;
+        }
+    }
+
+    Assembly ResolveAssemblyFromFile(string name)
+    {
+        try
+        {
+            var assemblyName = new AssemblyName(name);
+            var file = $"{assemblyName.Name}.dll";
+            var path = Path.Join(AppDomain.CurrentDomain.BaseDirectory, file);
+            if (File.Exists(path))
+            {
+                return Assembly.LoadFile(path);
+            }
+
+            return null!;
+        }
+        catch
+        {
+            return null!;
+        }
     }
 }
