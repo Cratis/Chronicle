@@ -29,6 +29,10 @@ export class OpenCreditAccount extends Command<IOpenCreditAccount> implements IO
     private _accountId!: string;
     private _details!: AccountDetails;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
         ];

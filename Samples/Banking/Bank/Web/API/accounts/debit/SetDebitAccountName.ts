@@ -28,6 +28,10 @@ export class SetDebitAccountName extends Command<ISetDebitAccountName> implement
     private _accountId!: string;
     private _name!: string;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
             'accountId',
