@@ -34,11 +34,17 @@ public class EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverter<T, TEl
 
         if (reader.TokenType == JsonTokenType.StartArray)
         {
-            var elementType = typeof(TElement);
-
             while (reader.Read())
             {
-                if (reader.TokenType == JsonTokenType.StartObject)
+                if (reader.TokenType == JsonTokenType.String)
+                {
+                    var value = ReadValue(ref reader, options);
+                    if (value is not null)
+                    {
+                        values.Add(value);
+                    }
+                }
+                else if (reader.TokenType == JsonTokenType.StartObject)
                 {
                     reader.Read();
                     if (reader.TokenType == JsonTokenType.PropertyName)
@@ -47,18 +53,10 @@ public class EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverter<T, TEl
                         if (propertyName == "_id")
                         {
                             reader.Read();
-
-                            if (elementType.IsConcept())
+                            var value = ReadValue(ref reader, options);
+                            if (value is not null)
                             {
-                                var conceptInstance = _conceptAsJsonConverter.Read(ref reader, elementType, options);
-                                if (conceptInstance is not null)
-                                {
-                                    values.Add(conceptInstance);
-                                }
-                            }
-                            else
-                            {
-                                values.Add((TElement)TypeConversion.Convert(elementType, reader.GetString()!));
+                                values.Add(value);
                             }
                         }
                     }
@@ -72,5 +70,24 @@ public class EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverter<T, TEl
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
+    }
+
+    TElement ReadValue(ref Utf8JsonReader reader, JsonSerializerOptions options)
+    {
+        var elementType = typeof(TElement);
+        if (elementType.IsConcept())
+        {
+            var conceptInstance = _conceptAsJsonConverter.Read(ref reader, elementType, options);
+            if (conceptInstance is not null)
+            {
+                return conceptInstance;
+            }
+        }
+        else
+        {
+            return (TElement)TypeConversion.Convert(elementType, reader.GetString()!);
+        }
+
+        return default!;
     }
 }
