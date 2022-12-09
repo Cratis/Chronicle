@@ -28,6 +28,10 @@ export class DepositToAccount extends Command<IDepositToAccount> implements IDep
     private _accountId!: string;
     private _amount!: number;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
             'accountId',

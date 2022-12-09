@@ -4,12 +4,19 @@
 
 import { field } from '@aksio/cratis-fundamentals';
 
+import { AccountDetails } from './AccountDetails';
 
-export class Owner {
-
-    @field(String)
-    firstName!: string;
+export class UltimateResult {
 
     @field(String)
-    lastName!: string;
+    something!: string;
+
+    @field(Number)
+    blah!: number;
+
+    @field(String)
+    theId!: string;
+
+    @field(AccountDetails)
+    details!: AccountDetails;
 }

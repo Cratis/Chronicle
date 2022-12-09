@@ -29,6 +29,10 @@ export class OpenDebitAccount extends Command<IOpenDebitAccount> implements IOpe
     private _accountId!: string;
     private _details!: AccountDetails;
 
+    constructor() {
+        super(Object, false);
+    }
+
     get requestArguments(): string[] {
         return [
         ];
