@@ -1,3 +1,10 @@
+# [v6.18.1] - 2022-12-9 [PR: #627](https://github.com/aksio-insurtech/Cratis/pull/627)
+
+### Fixed
+
+- Making the enumerable Concept JSON converter actually work as promised and be able to deserialize a JSON array of concepts.
+
+
 # [v6.18.0] - 2022-12-5 [PR: #620](https://github.com/aksio-insurtech/Cratis/pull/620)
 
 ### Added
