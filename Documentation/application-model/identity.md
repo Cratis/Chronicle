@@ -10,8 +10,8 @@ The values provided by the provider are values that are typically application sp
 This is optimized for working with Microsoft Azure well known HTTP headers passed on by the different app services, such as Azure ContainerApps or WebApps.
 The following headers are required for it to be able to resolve:
 
-| Header | Description |
-| ------ | ----------- |
+| Header | Description |
+| ------ | ----------- |
 | x-ms-client-principal | The token holding all the details, base64 encoded JWT token |
 | x-ms-client-principal-id | The unique identifier from the identity provider for the identity |
 | x-ms-client-principal-name | The name of the identity, typically resolved from claims within the token |
