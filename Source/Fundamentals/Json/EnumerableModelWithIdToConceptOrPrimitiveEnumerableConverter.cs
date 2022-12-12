@@ -36,6 +36,11 @@ public class EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverter<T, TEl
         {
             while (reader.Read())
             {
+                if (reader.TokenType == JsonTokenType.EndArray)
+                {
+                    break;
+                }
+
                 if (reader.TokenType == JsonTokenType.String)
                 {
                     var value = ReadValue(ref reader, options);
