@@ -1,3 +1,9 @@
+# [v6.19.0] - 2022-12-12 [PR: #630](https://github.com/aksio-insurtech/Cratis/pull/631)
+
+### Added
+
+- Adding support for providing identity details based on HTTP headers coming in. (#621)
+
 # [v6.18.2] - 2022-12-12 [PR: #630](https://github.com/aksio-insurtech/Cratis/pull/630)
 
 ### Fixed
