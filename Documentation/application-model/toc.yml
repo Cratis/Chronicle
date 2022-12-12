@@ -6,5 +6,7 @@
   href: mongodb.md
 - name: CQRS
   href: cqrs/toc.yml
+- name: Identity
+  href: identity.md
 - name: Frontend
   href: frontend/toc.yml
