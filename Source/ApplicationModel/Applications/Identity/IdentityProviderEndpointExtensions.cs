@@ -27,6 +27,7 @@ public static class IdentityProviderEndpointExtensions
     /// <param name="endpoints">Endpoints to extend.</param>
     /// <param name="app"><see cref="IApplicationBuilder"/> adding to.</param>
     /// <returns>Continuation.</returns>
+    /// <exception cref="MultipleIdentityDetailsProvidersFound">Thrown if multiple identity details providers are found.</exception>
     public static IEndpointRouteBuilder MapIdentityProvider(this IEndpointRouteBuilder endpoints, IApplicationBuilder app)
     {
         var serializerOptions = app.ApplicationServices.GetService<JsonSerializerOptions>()!;
@@ -57,12 +58,10 @@ public static class IdentityProviderEndpointExtensions
                     {
                         foreach (var claim in claimsAsArray.Cast<JsonObject>())
                         {
-                            if (claim.TryGetPropertyValue("typ", out var type))
+                            if (claim.TryGetPropertyValue("typ", out var type) &&
+                                claim.TryGetPropertyValue("val", out var value))
                             {
-                                if (claim.TryGetPropertyValue("val", out var value))
-                                {
-                                    claims.Add(new KeyValuePair<string, string>(type!.ToString(), value!.ToString()));
-                                }
+                                claims.Add(new KeyValuePair<string, string>(type!.ToString(), value!.ToString()));
                             }
                         }
 
