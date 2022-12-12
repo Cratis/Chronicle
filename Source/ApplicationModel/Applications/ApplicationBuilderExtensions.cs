@@ -35,7 +35,11 @@ public static class ApplicationBuilderExtensions
         app.PerformBootProcedures();
         app.UseDefaultLogging();
         app.UseCratis();
-        app.UseEndpoints(endpoints => endpoints.MapControllers());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+            endpoints.MapIdentityProvider(app);
+        });
         app.RunAsSinglePageApplication();
 
         return app;
