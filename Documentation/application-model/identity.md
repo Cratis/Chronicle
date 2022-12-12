@@ -32,7 +32,7 @@ public class IdentityDetailsProvider : IProvideIdentityDetails
         return Task.FromResult(result);
     }
 }
-´´´
+```
 
 > Note: Dependency inversion works for this, so your provider can take any dependencies it wants on its constructor.
 
