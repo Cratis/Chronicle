@@ -1,3 +1,10 @@
+# [v6.18.2] - 2022-12-12 [PR: #630](https://github.com/aksio-insurtech/Cratis/pull/630)
+
+### Fixed
+
+- JSON Converter for dealing with enumerable of objects with Id or concepts now stops at the end of the array, not trying to consume the rest of the JSON.
+
+
 # [v6.18.1] - 2022-12-9 [PR: #627](https://github.com/aksio-insurtech/Cratis/pull/627)
 
 ### Fixed
