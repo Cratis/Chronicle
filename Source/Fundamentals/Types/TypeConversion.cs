@@ -20,7 +20,7 @@ public static class TypeConversion
     /// <returns>Converted instance.</returns>
     public static object Convert(Type type, object value)
     {
-        if( value is null )
+        if (value is null)
         {
             return value!;
         }
