@@ -8,12 +8,12 @@ namespace Aksio.Cratis.Events.Projections.Expressions;
 /// </summary>
 public class ValueExpression : IEventValueExpression
 {
-    readonly string _value;
-
     /// <summary>
     /// Represents a null value.
     /// </summary>
-    public static ValueExpression Null = new("null");
+    public static readonly ValueExpression Null = new("null");
+
+    readonly string _value;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ValueExpression"/> class.

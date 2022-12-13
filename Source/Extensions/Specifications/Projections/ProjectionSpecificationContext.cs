@@ -92,7 +92,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     /// <param name="modelId">Optional model identifier. Use this if the projection has a key definition other than event source id.</param>
     /// <returns>Instance of the model.</returns>
     /// <remarks>
-    /// The reason the event source identifier has to be there is that the event store does not support querying into
+    /// The reason the event source identifier has to be there is that the event store does not support querying into.
     /// </remarks>
     public async Task<ProjectionResult<TModel>> GetById(EventSourceId eventSourceId, object? modelId = null)
     {
