@@ -69,11 +69,12 @@ public static class TypeConversion
             {
                 hasDate = true;
 
-                if (valueAsString.Contains("+") && DateTime.TryParse(valueAsString, out var dateTimeValue))
+                if (valueAsString.Contains('+') && DateTime.TryParse(valueAsString, out var dateTimeValue))
                 {
                     val = dateTimeValue;
                     hasDate = true;
-                } else if (valueAsString.EndsWith("Z") && DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var dateTimeValueUniversal))
+                }
+                else if (valueAsString.EndsWith('Z') && DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var dateTimeValueUniversal))
                 {
                     val = dateTimeValueUniversal;
                     hasDate = true;
