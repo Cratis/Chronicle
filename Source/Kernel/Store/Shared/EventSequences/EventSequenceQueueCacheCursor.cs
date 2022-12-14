@@ -14,6 +14,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly IStreamIdentity _streamIdentity;
+    readonly IEventSequenceStorageProvider _storageProvider;
     IEventCursor _actualCursor;
     EventSequenceNumber _lastProvidedSequenceNumber = EventSequenceNumber.First;
 
@@ -32,7 +33,8 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     {
         _executionContextManager = executionContextManager;
         _streamIdentity = streamIdentity;
-        _actualCursor = storageProvider.GetFromSequenceNumber(cursorStart).GetAwaiter().GetResult();
+        _storageProvider = storageProvider;
+        _actualCursor = storageProvider.GetFromSequenceNumber(streamIdentity.Guid, cursorStart).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
@@ -81,7 +83,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
         _actualCursor.Dispose();
-        _actualCursor = _cache.GetFrom((ulong)_lastProvidedSequenceNumber);
+        _actualCursor = _storageProvider.GetFromSequenceNumber(_streamIdentity.Guid, (ulong)_lastProvidedSequenceNumber).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>

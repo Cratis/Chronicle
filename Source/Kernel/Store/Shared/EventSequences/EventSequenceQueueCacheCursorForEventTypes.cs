@@ -19,12 +19,14 @@ public class EventSequenceQueueCacheCursorForEventTypes : EventSequenceQueueCach
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="cursorStart">The start of the cursor.</param>
     /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
+    /// <param name="storageProvider"><see cref="IEventSequenceStorageProvider"/> to ue for getting events from sequence.</param>
     /// <param name="eventTypes">Collection of <see cref="EventType">Event types</see> to filter the cursor with - default all.</param>
     public EventSequenceQueueCacheCursorForEventTypes(
         IExecutionContextManager executionContextManager,
         EventSequenceNumber cursorStart,
         IStreamIdentity streamIdentity,
-        IEnumerable<EventType> eventTypes) : base(executionContextManager, cursorStart, streamIdentity)
+        IEventSequenceStorageProvider storageProvider,
+        IEnumerable<EventType> eventTypes) : base(executionContextManager, cursorStart, streamIdentity, storageProvider)
     {
         _eventTypes = eventTypes;
     }
