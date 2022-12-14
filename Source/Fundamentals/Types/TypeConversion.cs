@@ -69,7 +69,7 @@ public static class TypeConversion
             {
                 hasDate = true;
 
-                if (valueAsString.Contains('+') && DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeValue))
+                if (valueAsString.Contains('+') && DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTimeValue))
                 {
                     val = dateTimeValue;
                     hasDate = true;
