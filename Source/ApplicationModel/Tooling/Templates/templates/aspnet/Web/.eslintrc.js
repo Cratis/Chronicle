@@ -43,7 +43,7 @@ module.exports = {
         '@typescript-eslint/ban-types': 0,
         '@typescript-eslint/no-var-requires': 0,
         // eslint-plugin-jsdoc
-        'jsdoc/check-alignment': 'error'
+        //'jsdoc/check-alignment': 'error'
     },
     overrides: [
         {
