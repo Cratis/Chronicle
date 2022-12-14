@@ -12,7 +12,7 @@ public class when_creating_instance_of_datetime_concept_with_value_as_string_loc
 
     void Establish()
     {
-        Console.WriteLine($"CUlture: {CultureInfo.CurrentCulture}");
+        Console.WriteLine($"CUlture: '{CultureInfo.CurrentCulture.ThreeLetterISOLanguageName}'");
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         now = "2022-12-14T09:45:46.4595800+01:00";
     }
