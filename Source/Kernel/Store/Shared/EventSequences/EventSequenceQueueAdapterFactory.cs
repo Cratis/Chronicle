@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Events.Store.EventSequences.Caching;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
@@ -26,16 +25,14 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
     /// <param name="eventLogStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
-    /// <param name="caches">Global <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequences> eventLogsProvider,
-        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider,
-        IEventSequenceCaches caches)
+        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-        _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider, caches);
+        _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider);
         _name = name;
         _eventLogsProvider = eventLogsProvider;
     }
@@ -52,8 +49,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
             name,
             serviceProvider.GetService<IExecutionContextManager>()!,
             serviceProvider.GetService<ProviderFor<IEventSequences>>()!,
-            serviceProvider.GetService<ProviderFor<IEventSequenceStorageProvider>>()!,
-            serviceProvider.GetService<IEventSequenceCaches>()!);
+            serviceProvider.GetService<ProviderFor<IEventSequenceStorageProvider>>()!);
     }
 
     /// <inheritdoc/>
