@@ -11,43 +11,8 @@ namespace Aksio.Cratis.Events.Projections;
 /// </summary>
 /// <typeparam name="TParentModel">Parent model type.</typeparam>
 /// <typeparam name="TChildModel">Child model type.</typeparam>
-public interface IChildrenBuilder<TParentModel, TChildModel>
+public interface IChildrenBuilder<TParentModel, TChildModel> : IProjectionBuilder<TChildModel, IChildrenBuilder<TParentModel, TChildModel>>
 {
-    /// <summary>
-    /// Sets the initial values to use for a new model instance.
-    /// </summary>
-    /// <param name="initialValueProviderCallback">Callback for building.</param>
-    /// <returns>Builder continuation.</returns>
-    /// <remarks>
-    /// If one does not provide initial values, the projection engine will leave properties
-    /// out that hasn't been met by an event projection expression. This will effectively render
-    /// the properties null and might not be desirable when reading instances of the models.
-    /// </remarks>
-    IChildrenBuilder<TParentModel, TChildModel> WithInitialValues(Func<TChildModel> initialValueProviderCallback);
-
-    /// <summary>
-    /// Start building the from expressions for a specific event type.
-    /// </summary>
-    /// <param name="builderCallback">Callback for building.</param>
-    /// <typeparam name="TEvent">Type of event.</typeparam>
-    /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> From<TEvent>(Action<IFromBuilder<TChildModel, TEvent>> builderCallback);
-
-    /// <summary>
-    /// Start building a join expressions for a specific event type.
-    /// </summary>
-    /// <param name="builderCallback">Callback for building.</param>
-    /// <typeparam name="TEvent">Type of event.</typeparam>
-    /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> Join<TEvent>(Action<IJoinBuilder<TChildModel, TEvent>> builderCallback);
-
-    /// <summary>
-    /// Start building property expressions that applies for every events being projected from.
-    /// </summary>
-    /// <param name="builderCallback">Callback for building.</param>
-    /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> FromEvery(Action<IFromEveryBuilder<TChildModel>> builderCallback);
-
     /// <summary>
     /// Sets the property that identifies the child model in the collection within the parent.
     /// </summary>
@@ -55,22 +20,6 @@ public interface IChildrenBuilder<TParentModel, TChildModel>
     /// <typeparam name="TProperty">Type of property.</typeparam>
     /// <returns>Builder continuation.</returns>
     IChildrenBuilder<TParentModel, TChildModel> IdentifiedBy<TProperty>(Expression<Func<TChildModel, TProperty>> propertyExpression);
-
-    /// <summary>
-    /// Defines what event removes a child. This is optional, your system can chose to not support removal.
-    /// </summary>
-    /// <typeparam name="TEvent">Type of event.</typeparam>
-    /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> RemovedWith<TEvent>();
-
-    /// <summary>
-    /// Start building the children projection for a specific child model.
-    /// </summary>
-    /// <param name="targetProperty">Expression for expressing the target property.</param>
-    /// <param name="builderCallback">Builder callback.</param>
-    /// <typeparam name="TNestedChildModel">Type of nested child model.</typeparam>
-    /// <returns>Builder continuation.</returns>
-    IChildrenBuilder<TParentModel, TChildModel> Children<TNestedChildModel>(Expression<Func<TChildModel, IEnumerable<TNestedChildModel>>> targetProperty, Action<IChildrenBuilder<TChildModel, TNestedChildModel>> builderCallback);
 
     /// <summary>
     /// Build the <see cref="ChildrenDefinition"/>.

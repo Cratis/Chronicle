@@ -90,9 +90,19 @@ public class PropertyPath
     }
 
     /// <summary>
+    /// Represents the not set value.
+    /// </summary>
+    public const string NotSetValue = "*NotSet*";
+
+    /// <summary>
     /// Represents the root path.
     /// </summary>
     public static readonly PropertyPath Root = new(string.Empty);
+
+    /// <summary>
+    /// Get the value that identifies a <see cref="PropertyPath"/> that is not set.
+    /// </summary>
+    public static readonly PropertyPath NotSet = NotSetValue;
 
     static Regex? _arrayIndexRegex;
     readonly IPropertyPathSegment[] _segments = Array.Empty<IPropertyPathSegment>();
@@ -116,6 +126,11 @@ public class PropertyPath
     /// Gets whether or not this is the root path.
     /// </summary>
     public bool IsRoot => Path?.Length == 0;
+
+    /// <summary>
+    /// Gets whether or not the value is set.
+    /// </summary>
+    public bool IsSet => Path?.Equals(NotSetValue) == false;
 
     static Regex ArrayIndexRegex => _arrayIndexRegex ??= new("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 

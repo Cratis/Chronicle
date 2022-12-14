@@ -81,7 +81,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return expandoObject;
     }
 
-    BsonValue ConvertToBsonValue(object? value, JsonSchemaProperty schemaProperty)
+    BsonValue ConvertToBsonValue(object? value, JsonSchema schemaProperty)
     {
         if (value is ExpandoObject expando)
         {
@@ -90,26 +90,22 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
-        BsonValue result;
-        if (_typeFormats.IsKnown(schemaProperty.Format))
-        {
-            result = ConvertToBsonValueBasedOnSchemaType(value, schemaProperty);
-        }
-        else
-        {
-            result = value.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
-        }
-
-        if (result == BsonNull.Value && value is IEnumerable enumerable)
+        if (schemaProperty.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
         {
             var items = new List<BsonValue>();
             foreach (var item in enumerable)
             {
-                items.Add(ConvertToBsonValue(item, schemaProperty));
+                items.Add(ConvertToBsonValue(item, schemaProperty.Item.Reference ?? schemaProperty.Item));
             }
             return new BsonArray(items);
         }
-        return result;
+
+        if (_typeFormats.IsKnown(schemaProperty.Format))
+        {
+            return ConvertToBsonValueBasedOnSchemaType(value, schemaProperty);
+        }
+
+        return value.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
     }
 
     object? ConvertFromBsonValue(BsonValue bsonValue, JsonSchemaProperty schemaProperty)
@@ -210,6 +206,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 schemaProperty.Reference.Type :
                 schemaProperty.Type;
 
+        if (type.HasFlag(JsonObjectType.Null))
+        {
+            type ^= JsonObjectType.Null;
+        }
+
         switch (type)
         {
             case JsonObjectType.String:
@@ -230,7 +231,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return null!;
     }
 
-    BsonValue ConvertToBsonValueBasedOnSchemaType(object? input, JsonSchemaProperty schemaProperty)
+    BsonValue ConvertToBsonValueBasedOnSchemaType(object? input, JsonSchema schemaProperty)
     {
         var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
         return input.ToBsonValue(targetType);

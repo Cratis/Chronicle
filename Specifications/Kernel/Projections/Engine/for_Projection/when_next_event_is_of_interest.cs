@@ -27,7 +27,7 @@ public class when_next_event_is_of_interest : given.a_projection
         projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
         {
                 new EventTypeWithKeyResolver(event_b, KeyResolvers.FromEventSourceId)
-        });
+        }, new[] { event_b });
 
         dynamic state = initial_state = new();
         state.Integer = 42;

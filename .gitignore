@@ -240,7 +240,6 @@ node_modules/
 typings/
 *.d.ts
 !*.scss.d.ts
-yarn.lock
 
 # Visual Studio 6 build log
 *.plg
@@ -281,7 +280,6 @@ __pycache__/
 # tools/**
 # !tools/packages.config
 
-yarn.lock
 package-json.lock
 package-lock.json
 dist

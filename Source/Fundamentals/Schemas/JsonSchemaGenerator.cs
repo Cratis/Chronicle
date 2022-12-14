@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Strings;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
@@ -43,5 +44,33 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     }
 
     /// <inheritdoc/>
-    public JsonSchema Generate(Type type) => _generator.Generate(type);
+    public JsonSchema Generate(Type type)
+    {
+        var schema = _generator.Generate(type);
+
+        // Note: NJsonSchema will ignore the camel case instruction when a complex type with properties implements IEnumerable
+        // All the properties within it will then just be as original.
+        ForceSchemaToBeCamelCase(schema);
+        return schema;
+    }
+
+    void ForceSchemaToBeCamelCase(JsonSchema schema)
+    {
+        var properties = schema.Properties.ToDictionary(kvp => kvp.Key.ToCamelCase(), kvp => kvp.Value);
+        schema.Properties.Clear();
+        foreach (var kvp in properties)
+        {
+            schema.Properties.Add(kvp);
+        }
+
+        foreach (var allOfSchema in schema.AllOf)
+        {
+            ForceSchemaToBeCamelCase(allOfSchema);
+        }
+
+        if (schema.HasReference)
+        {
+            ForceSchemaToBeCamelCase(schema.Reference);
+        }
+    }
 }

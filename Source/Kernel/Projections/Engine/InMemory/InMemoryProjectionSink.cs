@@ -5,6 +5,8 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Json;
+using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 
@@ -19,6 +21,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
     readonly Model _model;
     readonly ITypeFormats _typeFormats;
+    readonly IObjectsComparer _comparer;
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -37,10 +40,15 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// </summary>
     /// <param name="model">The target <see cref="Model"/>.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-    public InMemoryProjectionSink(Model model, ITypeFormats typeFormats)
+    /// <param name="comparer"><see cref="IObjectsComparer"/> used for complex comparisons of objects.</param>
+    public InMemoryProjectionSink(
+        Model model,
+        ITypeFormats typeFormats,
+        IObjectsComparer comparer)
     {
         _model = model;
         _typeFormats = typeFormats;
+        _comparer = comparer;
     }
 
     /// <inheritdoc/>
@@ -49,17 +57,17 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         var collection = Collection;
         var keyValue = GetActualKeyValue(key);
 
-        ExpandoObject modelInstance;
-        if (collection.ContainsKey(keyValue))
+        if (keyValue is ExpandoObject)
         {
-            modelInstance = collection[keyValue];
-        }
-        else
-        {
-            modelInstance = new ExpandoObject();
+            return Task.FromResult<ExpandoObject?>(collection.SingleOrDefault(kvp => _comparer.Equals(kvp.Key, keyValue, out _)).Value);
         }
 
-        return Task.FromResult<ExpandoObject?>(modelInstance);
+        if (collection.ContainsKey(keyValue))
+        {
+            return Task.FromResult<ExpandoObject?>(collection[keyValue]);
+        }
+
+        return Task.FromResult<ExpandoObject?>(null);
     }
 
     /// <inheritdoc/>
@@ -75,7 +83,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
         }
 
         var keyValue = GetActualKeyValue(key);
-        collection[keyValue] = ApplyActualChanges(changeset.Changes, state);
+        collection[keyValue] = ApplyActualChanges(key, changeset.Changes, state);
 
         return Task.CompletedTask;
     }
@@ -109,6 +117,11 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
 
     object GetActualKeyValue(Key key)
     {
+        if (key.Value is ExpandoObject)
+        {
+            return key.Value;
+        }
+
         var targetType = _model.Schema.GetTargetTypeForPropertyPath("id", _typeFormats);
         if (targetType is not null)
         {
@@ -120,26 +133,35 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             return key.Value.GetConceptValue();
         }
 
+        if (!key.Value.GetType().IsAPrimitiveType())
+        {
+            return key.Value.AsExpandoObject(true);
+        }
+
         return key.Value;
     }
 
-    ExpandoObject ApplyActualChanges(IEnumerable<Change> changes, ExpandoObject state)
+    ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
     {
         foreach (var change in changes)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject>:
-                case ChildAdded:
                     state = state.MergeWith((change.State as ExpandoObject)!);
                     break;
 
+                case ChildAdded childAdded:
+                    var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    collection.Add(childAdded.State);
+                    break;
+
                 case Joined joined:
-                    state = ApplyActualChanges(joined.Changes, state);
+                    state = ApplyActualChanges(key, joined.Changes, state);
                     break;
 
                 case ResolvedJoin resolvedJoin:
-                    state = ApplyActualChanges(resolvedJoin.Changes, state);
+                    state = ApplyActualChanges(key, resolvedJoin.Changes, state);
                     break;
             }
         }

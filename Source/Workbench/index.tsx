@@ -17,5 +17,6 @@ ReactDOM.render(
             <App />
         </BrowserRouter>
     </ModalProvider>,
+
     document.getElementById('root')
 );

@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Events.Projections;
 
@@ -79,6 +80,22 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
     /// <param name="modelPropertyAccessor">Model property accessor for defining the target property.</param>
     /// <returns>Builder continuation.</returns>
     TBuilder Count<TProperty>(Expression<Func<TModel, TProperty>> modelPropertyAccessor);
+
+    /// <summary>
+    /// Start building the add child operation to a target property holding an collection of a specific child model type.
+    /// </summary>
+    /// <param name="targetProperty">The collection property that will receive the child.</param>
+    /// <param name="builderCallback">Builder callback for building the composite key.</param>
+    /// <typeparam name="TChildModel">Type of child model.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    TBuilder AddChild<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IAddChildBuilder<TChildModel, TEvent>> builderCallback);
+
+    /// <summary>
+    /// Start building the set operation to a target property on the model.
+    /// </summary>
+    /// <param name="propertyPath">Model property path for defining the target property.</param>
+    /// <returns>The <see cref="ISetBuilder{TModel, TEvent, TProperty, TBuilder}"/> to continue building on.</returns>
+    ISetBuilder<TModel, TEvent, TBuilder> Set(PropertyPath propertyPath);
 
     /// <summary>
     /// Start building the set operation to a target property on the model.

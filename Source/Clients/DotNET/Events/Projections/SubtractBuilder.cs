@@ -44,6 +44,16 @@ public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISubtr
     /// <inheritdoc/>
     public string Build()
     {
+        ThrowIfMissingSubtractWithExpression();
+
         return _expression;
+    }
+
+    void ThrowIfMissingSubtractWithExpression()
+    {
+        if (string.IsNullOrEmpty(_expression))
+        {
+            throw new MissingSubtractWithExpression(typeof(TModel), TargetProperty);
+        }
     }
 }
