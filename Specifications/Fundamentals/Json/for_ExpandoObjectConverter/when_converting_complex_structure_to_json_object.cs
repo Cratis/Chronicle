@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Globalization;
 using System.Text.Json.Nodes;
 
 namespace Aksio.Cratis.Json.for_ExpandoObjectConverter;
@@ -55,7 +56,7 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
     [Fact] void should_set_top_level_double_value_to_hold_correct_value() => result["doubleValue"].GetValue<double>().ShouldEqual((double)source_dynamic.doubleValue);
     [Fact] void should_set_top_level_enum_value_to_hold_correct_value() => result["enumValue"].GetValue<int>().ShouldEqual((int)source_dynamic.enumValue);
     [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => result["guidValue"].GetValue<Guid>().ShouldEqual(Guid.Parse((string)source_dynamic.guidValue));
-    [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => result["dateTimeValue"].GetValue<DateTime>().ShouldEqual(DateTime.Parse((string)source_dynamic.dateTimeValue));
+    [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => result["dateTimeValue"].GetValue<DateTime>().ShouldEqual(DateTime.Parse((string)source_dynamic.dateTimeValue, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
     [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => result["dateTimeOffsetValue"].GetValue<DateTimeOffset>().ShouldEqual(DateTimeOffset.Parse((string)source_dynamic.dateTimeOffsetValue));
     [Fact] void should_set_top_level_date_only_value_to_hold_correct_value() => result["dateOnlyValue"].GetValue<DateOnly>().ShouldEqual(DateOnly.Parse((string)source_dynamic.dateOnlyValue));
     [Fact] void should_set_top_level_time_only_value_to_hold_correct_value() => result["timeOnlyValue"].GetValue<TimeOnly>().ShouldEqual(TimeOnly.FromDateTime(DateTime.Parse((string)source_dynamic.timeOnlyValue)));

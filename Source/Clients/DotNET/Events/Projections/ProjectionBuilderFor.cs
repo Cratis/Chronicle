@@ -1,14 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Models;
-using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Strings;
@@ -20,21 +17,12 @@ namespace Aksio.Cratis.Events.Projections;
 /// /// Represents an implementation of <see cref="IProjectionBuilderFor{TModel}"/>.
 /// </summary>
 /// <typeparam name="TModel">Type of model.</typeparam>
-public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
+public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectionBuilderFor<TModel>>, IProjectionBuilderFor<TModel>
 {
     readonly ProjectionId _identifier;
-    readonly IEventTypes _eventTypes;
-    readonly IJsonSchemaGenerator _schemaGenerator;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
-    readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
-    readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
-    AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>(), false);
     bool _isRewindable = true;
-    string _modelName;
+
     string? _name;
-    JsonObject _initialState = (JsonObject)JsonNode.Parse("{}")!;
-    EventType? _removedWithEvent;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
@@ -48,11 +36,9 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions)
+        : base(eventTypes, schemaGenerator, jsonSerializerOptions)
     {
         _identifier = identifier;
-        _eventTypes = eventTypes;
-        _schemaGenerator = schemaGenerator;
-        _jsonSerializerOptions = jsonSerializerOptions;
         if (typeof(TModel).HasAttribute<ModelNameAttribute>())
         {
             _modelName = typeof(TModel).GetCustomAttribute<ModelNameAttribute>(false)!.Name;
@@ -85,67 +71,6 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
     }
 
     /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> WithInitialModelState(Func<TModel> initialModelStateProviderCallback)
-    {
-        var instance = initialModelStateProviderCallback();
-        _initialState = JsonObject.Create(JsonSerializer.SerializeToDocument(instance, typeof(TModel), _jsonSerializerOptions).RootElement)!;
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> From<TEvent>(Action<IFromBuilder<TModel, TEvent>> builderCallback)
-    {
-        var builder = new FromBuilder<TModel, TEvent>();
-        builderCallback(builder);
-        var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        _fromDefinitions[eventType] = builder.Build();
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> Join<TEvent>(Action<IJoinBuilder<TModel, TEvent>> builderCallback)
-    {
-        var builder = new JoinBuilder<TModel, TEvent>();
-        builderCallback(builder);
-        var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        _joinDefinitions[eventType] = builder.Build();
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> FromEvery(Action<IFromEveryBuilder<TModel>> builderCallback)
-    {
-        var builder = new FromEveryBuilder<TModel>();
-        builderCallback(builder);
-        var allDefinition = builder.Build();
-        _allDefinition = new AllDefinition(
-            new Dictionary<PropertyPath, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
-            allDefinition.IncludeChildren);
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> RemovedWith<TEvent>()
-    {
-        if (_removedWithEvent != default)
-        {
-            throw new RemovalAlreadyDefined(_identifier);
-        }
-
-        _removedWithEvent = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IProjectionBuilderFor<TModel> Children<TChildModel>(Expression<Func<TModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TModel, TChildModel>> builderCallback)
-    {
-        var builder = new ChildrenBuilder<TModel, TChildModel>(_eventTypes, _schemaGenerator, _jsonSerializerOptions);
-        builderCallback(builder);
-        _childrenDefinitions[targetProperty.GetPropertyPath()] = builder.Build();
-        return this;
-    }
-
-    /// <inheritdoc/>
     public ProjectionDefinition Build()
     {
         var modelType = typeof(TModel);
@@ -160,7 +85,7 @@ public class ProjectionBuilderFor<TModel> : IProjectionBuilderFor<TModel>
             _name ?? modelType.FullName ?? "[N/A]",
             new ModelDefinition(_modelName, modelSchema.ToJson()),
             _isRewindable,
-            _initialState,
+            _initialValues,
             _fromDefinitions,
             _joinDefinitions,
             _childrenDefinitions,

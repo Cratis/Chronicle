@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Projections.Expressions.EventValues;
 /// </summary>
 public class ValueExpressionResolver : IEventValueProviderExpressionResolver
 {
-    static readonly Regex _regularExpression = new("\\$value\\((?<value>[\\w ._\\*\\+\\-]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    static readonly Regex _regularExpression = new("\\$value\\((?<value>[\\w ._/:\\*\\+\\-]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
 
     /// <inheritdoc/>
     public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;

@@ -15,7 +15,7 @@ public class when_getting_key_resolver_for_event_type : given.a_projection
         projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
         {
                 new EventTypeWithKeyResolver(event_type, expected)
-        });
+        }, new[] { event_type });
     }
 
     void Because() => result = projection.GetKeyResolverFor(event_type);

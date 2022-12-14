@@ -176,14 +176,28 @@ public static class ExpandoObjectExtensions
                             collection = ((IEnumerable)currentTarget[segment.Value]).OfType<ExpandoObject>().ToList();
                         }
 
-                        var element = collection
+                        IDictionary<string, object>? element = null;
+
+                        if (!indexer.IdentifierProperty.IsSet &&
+                            indexer.Identifier is int index &&
+                            collection.Count() > index)
+                        {
+                            element = collection.ToArray()[index]!;
+                        }
+                        else
+                        {
+                            element = collection
                             .Cast<IDictionary<string, object>>()
                             .SingleOrDefault(item => item.ContainsKey(indexer.IdentifierProperty.Path) && item[indexer.IdentifierProperty.Path].Equals(indexer.Identifier));
+                        }
 
                         if (element == default)
                         {
                             element = new ExpandoObject()!;
-                            element[indexer.IdentifierProperty.Path] = indexer.Identifier;
+                            if (indexer.IdentifierProperty.IsSet)
+                            {
+                                element[indexer.IdentifierProperty.Path] = indexer.Identifier;
+                            }
                             currentTarget[segment.Value] = collection.Append((element as ExpandoObject)!).ToList();
                         }
                         currentTarget = (element as ExpandoObject)!;

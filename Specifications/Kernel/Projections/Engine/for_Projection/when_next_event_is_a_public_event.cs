@@ -21,7 +21,7 @@ public class when_next_event_is_a_public_event : given.a_projection
         projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
         {
                 new EventTypeWithKeyResolver(public_event_type, KeyResolvers.FromEventSourceId)
-        });
+        }, new[] {public_event_type });
 
         public_event = new(
             new(0, public_event_type),

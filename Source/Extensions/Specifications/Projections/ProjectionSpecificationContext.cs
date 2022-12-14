@@ -55,22 +55,23 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         _eventLog = new(expandoObjectConverter, schemaGenerator);
 
-        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, new JsonSerializerOptions());
+        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, Globals.JsonSerializerOptions);
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 
         var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
+
         var factory = new ProjectionFactory(
-            new ModelPropertyExpressionResolvers(
-                eventValueProviderExpressionResolvers),
+            new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers),
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
+            new ExpandoObjectConverter(typeFormats),
             new EventSequenceStorageProviderForSpecifications(_eventLog));
         _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
         var objectsComparer = new ObjectsComparer();
 
         _eventSequenceStorageProvider = new EventSequenceStorageProviderForSpecifications(_eventLog);
-        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats);
+        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats, objectsComparer);
         _pipeline = new ProjectionPipeline(
             _projection,
             _eventSequenceStorageProvider,
@@ -88,10 +89,15 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     /// Get a specific instance from the projection.
     /// </summary>
     /// <param name="eventSourceId">The identifier.</param>
+    /// <param name="modelId">Optional model identifier. Use this if the projection has a key definition other than event source id.</param>
     /// <returns>Instance of the model.</returns>
-    public async Task<ProjectionResult<TModel>> GetById(EventSourceId eventSourceId)
+    /// <remarks>
+    /// The reason the event source identifier has to be there is that the event store does not support querying into.
+    /// </remarks>
+    public async Task<ProjectionResult<TModel>> GetById(EventSourceId eventSourceId, object? modelId = null)
     {
         var projectedEventsCount = 0;
+        modelId ??= eventSourceId;
         var cursor = await _eventSequenceStorageProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
@@ -102,7 +108,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             }
         }
 
-        var result = await _sink.FindOrDefault(new(eventSourceId, ArrayIndexers.NoIndexers));
+        var result = await _sink.FindOrDefault(new(modelId, ArrayIndexers.NoIndexers));
         var json = JsonSerializer.Serialize(result, Globals.JsonSerializerOptions);
         return new(JsonSerializer.Deserialize<TModel>(json, Globals.JsonSerializerOptions)!, Array.Empty<PropertyPath>(), projectedEventsCount);
     }

@@ -58,6 +58,7 @@
         "camelcase",
         "changesets",
         "Cratis",
+        "datetime",
         "decryptor",
         "deref",
         "downcaster",

@@ -45,7 +45,7 @@ public class Projection : IProjection
     public IEnumerable<EventType> EventTypes { get; private set; } = Array.Empty<EventType>();
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> ExclusiveEventTypes { get; private set; } = Array.Empty<EventType>();
+    public IEnumerable<EventType> OwnEventTypes { get; private set; } = Array.Empty<EventType>();
 
     /// <inheritdoc/>
     public IEnumerable<IProjection> ChildProjections { get; }
@@ -116,7 +116,7 @@ public class Projection : IProjection
     }
 
     /// <inheritdoc/>
-    public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver)
+    public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver, IEnumerable<EventType> ownEventTypes)
     {
         EventTypesWithKeyResolver = eventTypesWithKeyResolver;
         EventTypes = eventTypesWithKeyResolver.Select(_ => new EventType(_.EventType.Id, _.EventType.Generation)).ToArray();
@@ -124,8 +124,7 @@ public class Projection : IProjection
             _ => new EventType(_.EventType.Id, _.EventType.Generation),
             _ => _.KeyResolver);
 
-        var childEventTypes = ChildProjections.SelectMany(p => p.EventTypes);
-        ExclusiveEventTypes = EventTypes.Where(_ => !childEventTypes.Any(et => et == _)).ToArray();
+        OwnEventTypes = ownEventTypes;
     }
 
     /// <inheritdoc/>

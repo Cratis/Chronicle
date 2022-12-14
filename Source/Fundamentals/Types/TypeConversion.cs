@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Reflection;
 
@@ -19,6 +20,11 @@ public static class TypeConversion
     /// <returns>Converted instance.</returns>
     public static object Convert(Type type, object value)
     {
+        if (value is null)
+        {
+            return value!;
+        }
+
         var val = new object();
 
         if (value.IsConcept())
@@ -26,19 +32,25 @@ public static class TypeConversion
             value = value.GetConceptValue();
         }
 
+        var valueType = value.GetType();
+        if (valueType == type)
+        {
+            return value;
+        }
+
         if (type.IsGuid())
         {
-            if (value.GetType().IsGuid())
+            if (valueType.IsGuid())
             {
                 val = value;
             }
-            else if (value.GetType().IsString())
+            else if (valueType.IsString())
             {
                 val = Guid.Parse(value.ToString()!);
             }
             else
             {
-                val = value.GetType() == typeof(byte[]) ? new Guid((value as byte[])!) : (object)Guid.Empty;
+                val = valueType == typeof(byte[]) ? new Guid((value as byte[])!) : (object)Guid.Empty;
             }
         }
         else if (type.IsString())
@@ -47,7 +59,36 @@ public static class TypeConversion
         }
         else if (type.IsDate())
         {
-            val = value ?? default(DateTime);
+            var hasDate = false;
+
+            if (value is DateTime)
+            {
+                val = value;
+            }
+            else if (value is string valueAsString)
+            {
+                hasDate = true;
+
+                if (valueAsString.Contains('+') && DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTimeValue))
+                {
+                    val = dateTimeValue;
+                    hasDate = true;
+                }
+                else if (valueAsString.EndsWith('Z') && DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var dateTimeValueUniversal))
+                {
+                    val = dateTimeValueUniversal;
+                    hasDate = true;
+                }
+                else if (DateTime.TryParse(valueAsString, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dateTimeValueNoInfo))
+                {
+                    val = dateTimeValueNoInfo;
+                    hasDate = true;
+                }
+            }
+            if (!hasDate)
+            {
+                val = default(DateTime);
+            }
         }
         else if (type.IsDateOnly())
         {
@@ -55,7 +96,7 @@ public static class TypeConversion
             {
                 val = value;
             }
-            else if (DateOnly.TryParse(value.ToString(), out var dateOnlyValue))
+            else if (DateOnly.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOnlyValue))
             {
                 val = dateOnlyValue;
             }
@@ -70,7 +111,7 @@ public static class TypeConversion
             {
                 val = value;
             }
-            else if (TimeOnly.TryParse(value.ToString(), out var timeOnlyValue))
+            else if (TimeOnly.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var timeOnlyValue))
             {
                 val = timeOnlyValue;
             }
@@ -85,7 +126,7 @@ public static class TypeConversion
             {
                 val = value;
             }
-            else if (DateTimeOffset.TryParse(value.ToString(), out var dateTimeOffsetValue))
+            else if (DateTimeOffset.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeOffsetValue))
             {
                 val = dateTimeOffsetValue;
             }
@@ -101,7 +142,7 @@ public static class TypeConversion
 
         if (val is not null && val.GetType() != type && !IsGuidFromString(type, val))
         {
-            val = System.Convert.ChangeType(val, type, null);
+            val = System.Convert.ChangeType(val, type, CultureInfo.InvariantCulture);
         }
         return val!;
     }

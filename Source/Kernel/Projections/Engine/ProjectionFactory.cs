@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Expressions;
 using Aksio.Cratis.Events.Projections.Expressions.Keys;
@@ -21,6 +20,7 @@ public class ProjectionFactory : IProjectionFactory
 {
     readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
     readonly IKeyExpressionResolvers _keyExpressionResolvers;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IEventSequenceStorageProvider _eventProvider;
 
     /// <summary>
@@ -28,14 +28,17 @@ public class ProjectionFactory : IProjectionFactory
     /// </summary>
     /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for providing events from the event store.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
         IKeyExpressionResolvers keyExpressionResolvers,
+        IExpandoObjectConverter expandoObjectConverter,
         IEventSequenceStorageProvider eventProvider)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;
+        _expandoObjectConverter = expandoObjectConverter;
         _eventProvider = eventProvider;
     }
 
@@ -57,7 +60,10 @@ public class ProjectionFactory : IProjectionFactory
         ProjectionPath path,
         bool hasParent)
     {
-        var actualIdentifiedByProperty = identifiedByProperty.IsRoot ? new PropertyPath("id") : identifiedByProperty;
+        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
+        var model = new Model(projectionDefinition.Model.Name, modelSchema);
+        var hasIdProperty = modelSchema.GetFlattenedProperties().Any(_ => _.Name == "id");
+        var actualIdentifiedByProperty = identifiedByProperty.IsRoot && hasIdProperty ? new PropertyPath("id") : identifiedByProperty;
 
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp => await CreateProjectionFrom(
                 name,
@@ -68,12 +74,20 @@ public class ProjectionFactory : IProjectionFactory
                 true));
 
         var childProjections = await Task.WhenAll(childProjectionTasks.ToArray());
-        var modelSchema = await JsonSchema.FromJsonAsync(projectionDefinition.Model.Schema);
-        var model = new Model(projectionDefinition.Model.Name, modelSchema);
+
+        ExpandoObject initialState;
+        if (projectionDefinition.InitialModelState is not null)
+        {
+            initialState = _expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, modelSchema);
+        }
+        else
+        {
+            initialState = new ExpandoObject();
+        }
 
         var projection = new Projection(
             projectionDefinition.Identifier,
-            projectionDefinition.InitialModelState?.AsExpandoObject() ?? new ExpandoObject(),
+            initialState,
             name,
             path,
             childrenAccessorProperty,
@@ -159,12 +173,15 @@ public class ProjectionFactory : IProjectionFactory
             eventsForProjection.Add(new EventTypeWithKeyResolver(projectionDefinition.RemovedWith.Event, KeyResolvers.FromEventSourceId));
             projection.Event.RemovedWith(projectionDefinition.RemovedWith.Event);
         }
+        var distinctOwnEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).Select(_ => _.EventType).ToArray();
 
         foreach (var child in childProjections)
         {
-            eventsForProjection.AddRange(child.EventTypesWithKeyResolver);
+            var childTypes = child.EventTypesWithKeyResolver.Where(_ => !eventsForProjection.Any(e => e.EventType == _.EventType));
+            eventsForProjection.AddRange(childTypes);
         }
-        projection.SetEventTypesWithKeyResolvers(eventsForProjection.DistinctBy(_ => _.EventType).ToArray());
+        var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();
+        projection.SetEventTypesWithKeyResolvers(distinctEventTypes, distinctOwnEventTypes);
     }
 
     void SetParentOnAllChildProjections(Projection projection, IProjection[] childProjections)

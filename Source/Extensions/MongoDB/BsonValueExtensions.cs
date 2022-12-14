@@ -187,7 +187,7 @@ public static class BsonValueExtensions
     /// <param name="value">Value to convert from.</param>
     /// <param name="schemaProperty"><see cref="JsonSchemaProperty"/> with type info.</param>
     /// <returns>Converted value.</returns>
-    public static BsonValue ToBsonValueBasedOnSchemaPropertyType(this object? value, JsonSchemaProperty schemaProperty)
+    public static BsonValue ToBsonValueBasedOnSchemaPropertyType(this object? value, JsonSchema schemaProperty)
     {
         if (value is null)
         {
@@ -197,6 +197,11 @@ public static class BsonValueExtensions
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                     schemaProperty.Reference.Type :
                     schemaProperty.Type;
+
+        if (type.HasFlag(JsonObjectType.Null))
+        {
+            type ^= JsonObjectType.Null;
+        }
 
         switch (type)
         {
