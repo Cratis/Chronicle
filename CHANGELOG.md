@@ -1,3 +1,64 @@
+# [v6.20.0] - 2022-12-14 [PR: #594](https://github.com/aksio-insurtech/Cratis/pull/594)
+
+### Added
+
+- `ProjectionSpecificationContext` now supports getting instances of models based on composite keys.
+- Support for `.AddChild()` directly on an event. (#591)
+
+You can add objects that does not have a property that identifies them:
+
+```csharp
+public class MyProjection : IProjectionFor<Something>
+{
+    public ProjectionId Identifier => "d661904f-15e0-4a96-a0cc-c7389635e4cd";
+
+    public void Define(IProjectionBuilderFor<DebitAccountLatestTransactions> builder) => builder
+         .From<SomeEvent>(_ => _
+             .Set(m => m.SomeProperty).To(e => e.SomeProperty)
+             .AddChild(m => m.Children, c => c
+                 .FromObject(e => e.Child));
+}
+```
+
+Or you can add objects that are uniquely identifable from a key:
+
+```csharp
+public class MyProjection : IProjectionFor<Something>
+{
+    public ProjectionId Identifier => "d661904f-15e0-4a96-a0cc-c7389635e4cd";
+
+    public void Define(IProjectionBuilderFor<DebitAccountLatestTransactions> builder) => builder
+         .From<SomeEvent>(_ => _
+             .Set(m => m.SomeProperty).To(e => e.SomeProperty)
+             .AddChild(m => m.Children, c => c
+                 .IdentifiedBy(m => m.Id)
+                 .UsingKey(e => e.Id)
+                 .FromObject(e => e.Child));
+}
+```
+
+
+### Fixed
+
+- Fixing array handling to adher to the schema and not the incoming type in `ExpandoObjectConverter` for JSON.
+- Fixing array handling to adher to the schema and not the incoming type in `ExpandoObjectConverter` for BSON.
+- Fixing the support for root properties that indicate that the identified by property should be the object itself.
+- Fixing schemas to be forced to camel case properties. NJsonSchema failed this with complex types with properties on them that implemented IEnumerable.
+- Fixing deserialization of enumerable of `ConceptAs` types. Most circumstances was caught by the `ConceptAsJsonConverter` directly as the serializer recognized the item type. But for `RulesFor` with collections of concept types, this didn't not work.
+- Fixed initial state for projection to be adhering to the schema, yielding correct types within the engine.
+- Fixed a regression related to adding children that are not uniquely identifiable.
+- Fixed MongoDB projection sink to use `$push` when adding the arrays. `$addToSet` checks for uniqueness and treats the document being added as a value type. This made it impossible to add "keyless" children that had same values to an array.
+- Fixing so that `.ToValue()` supports concept values.
+- Fixing `.ToString()` when creating value expression to be invariant in culture.
+- FIxing problems related to knowing which type to convert to due to types having the `JsonObjectType.Null` flag set.
+- Fixing fall back type conversion used in projections and other places to be culture invariant.
+- Fixing `.ToValue()` expression parser to support characters typically involved in date & time values.
+- Fixing `ConceptAs` JSON converter to support enum types.
+- Fixing `TypeConverter` to parse `DateTime` correclty based on the format if represented as string.
+- Fixing value expressions representing date and time types to convert to ISO 8601 strings with invariant culture.
+
+
+
 # [v6.19.0] - 2022-12-12 [PR: #630](https://github.com/aksio-insurtech/Cratis/pull/631)
 
 ### Added
