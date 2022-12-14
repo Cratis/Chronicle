@@ -6,11 +6,11 @@ namespace Aksio.Cratis.Concepts.for_ConceptFactory;
 public class when_creating_instance_of_datetime_concept_with_value_as_string_without_any_timezone_info : Specification
 {
     DateTimeConcept result;
-    string now;
+    string expected;
 
-    void Establish() => now = "2022-12-14T09:45:46";
+    void Establish() => expected = "2022-12-14T09:45:46";
 
-    void Because() => result = ConceptFactory.CreateConceptInstance(typeof(DateTimeConcept), now) as DateTimeConcept;
+    void Because() => result = ConceptFactory.CreateConceptInstance(typeof(DateTimeConcept), expected) as DateTimeConcept;
 
-    [Fact] void should_be_the_value_of_the_datetime() => result.Value.ToString("yyyy-MM-ddTHH:mm:ss").ShouldEqual(now);
+    [Fact] void should_be_the_value_of_the_datetime() => result.Value.ToString("yyyy-MM-ddTHH:mm:ss").ShouldEqual(expected);
 }
