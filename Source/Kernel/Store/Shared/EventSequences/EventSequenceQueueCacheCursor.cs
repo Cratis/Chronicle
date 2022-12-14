@@ -23,14 +23,16 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="cursorStart">The start of the cursor.</param>
     /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
+    /// <param name="storageProvider"><see cref="IEventSequenceStorageProvider"/> to ue for getting events from sequence.</param>
     public EventSequenceQueueCacheCursor(
         IExecutionContextManager executionContextManager,
         EventSequenceNumber cursorStart,
-        IStreamIdentity streamIdentity)
+        IStreamIdentity streamIdentity,
+        IEventSequenceStorageProvider storageProvider)
     {
         _executionContextManager = executionContextManager;
         _streamIdentity = streamIdentity;
-        _actualCursor = _cache.GetFrom(cursorStart);
+        _actualCursor = storageProvider.GetFromSequenceNumber(cursorStart).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
