@@ -19,7 +19,6 @@ module.exports = {
     plugins: [
         '@typescript-eslint',
         'header',
-        'jsdoc',
         'no-null',
         'import'
     ],
@@ -54,10 +53,7 @@ module.exports = {
                 ' Copyright (c) Aksio Insurtech. All rights reserved.',
                 ' Licensed under the MIT license. See LICENSE file in the project root for full license information.'
             ]
-        ],
-
-        // eslint-plugin-jsdoc
-        'jsdoc/check-alignment': 'error'
+        ]
     },
     overrides: [
         {
