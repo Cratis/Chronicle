@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.EventSequences.Caching;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Execution;
 using Orleans.Streams;
@@ -14,8 +13,8 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly IEventSequenceCache _cache;
     readonly IStreamIdentity _streamIdentity;
+    readonly IEventSequenceStorageProvider _storageProvider;
     IEventCursor _actualCursor;
     EventSequenceNumber _lastProvidedSequenceNumber = EventSequenceNumber.First;
 
@@ -23,19 +22,19 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    /// <param name="cache"><see cref="IEventSequenceCache"/>.</param>
     /// <param name="cursorStart">The start of the cursor.</param>
     /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
+    /// <param name="storageProvider"><see cref="IEventSequenceStorageProvider"/> to ue for getting events from sequence.</param>
     public EventSequenceQueueCacheCursor(
         IExecutionContextManager executionContextManager,
-        IEventSequenceCache cache,
         EventSequenceNumber cursorStart,
-        IStreamIdentity streamIdentity)
+        IStreamIdentity streamIdentity,
+        IEventSequenceStorageProvider storageProvider)
     {
         _executionContextManager = executionContextManager;
-        _cache = cache;
         _streamIdentity = streamIdentity;
-        _actualCursor = _cache.GetFrom(cursorStart);
+        _storageProvider = storageProvider;
+        _actualCursor = storageProvider.GetFromSequenceNumber(streamIdentity.Guid, cursorStart).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
@@ -84,7 +83,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
         _actualCursor.Dispose();
-        _actualCursor = _cache.GetFrom((ulong)_lastProvidedSequenceNumber);
+        _actualCursor = _storageProvider.GetFromSequenceNumber(_streamIdentity.Guid, (ulong)_lastProvidedSequenceNumber).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
