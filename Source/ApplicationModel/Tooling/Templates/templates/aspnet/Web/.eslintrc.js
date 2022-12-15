@@ -15,7 +15,6 @@ module.exports = {
     ],
     plugins: [
         '@typescript-eslint',
-        'jsdoc',
         'no-null',
         'import'
     ],
@@ -41,9 +40,7 @@ module.exports = {
         '@typescript-eslint/no-non-null-assertion': 0,
         '@typescript-eslint/no-empty-function': 0,
         '@typescript-eslint/ban-types': 0,
-        '@typescript-eslint/no-var-requires': 0,
-        // eslint-plugin-jsdoc
-        //'jsdoc/check-alignment': 'error'
+        '@typescript-eslint/no-var-requires': 0
     },
     overrides: [
         {
