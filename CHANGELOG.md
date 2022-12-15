@@ -1,3 +1,25 @@
+# [v6.21.0] - 2022-12-15 [PR: #633](https://github.com/aksio-insurtech/Cratis/pull/633)
+
+### Added
+
+- `.UseAksio()` for `IHostBuilder` now supports an optional `Action<MvcOptions>` parameter.
+
+```csharp
+         Host.CreateDefaultBuilder(args)
+            .UseAksio(
+                microserviceId: "097398ed-d43b-4499-bcf8-f5403a7fec4d",
+                mvcOptionsDelegate: (options) =>
+                {
+                    // Manipulate options / call extension methods - which is of type MvcOptions
+                })
+```
+
+### Fixed
+
+- Removes faulty cache mechanism for the event store.
+- Allowing missing event schemas when connecting one microservice Outbox to the Inbox of another. It now copies the missing event schema from source to destination. It does require the schema to be there for serialization purposes and later for schema validation and migrations.
+
+
 # [v6.20.0] - 2022-12-14 [PR: #594](https://github.com/aksio-insurtech/Cratis/pull/594)
 
 ### Added
