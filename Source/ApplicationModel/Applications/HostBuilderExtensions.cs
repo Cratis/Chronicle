@@ -11,6 +11,7 @@ using Aksio.Cratis.Json;
 using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,11 +29,13 @@ public static class HostBuilderExtensions
     /// <param name="builder"><see cref="IHostBuilder"/> to extend.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> for the running process.</param>
+    /// <param name="mvcOptionsDelegate">Optional delegate if one wants to configure MVC specifics, since this configured MVC automatically.</param>
     /// <returns><see cref="IHostBuilder"/> for building continuation.</returns>
     public static IHostBuilder UseAksio(
         this IHostBuilder builder,
         Action<IClientBuilder>? configureDelegate = default,
-        MicroserviceId? microserviceId = default)
+        MicroserviceId? microserviceId = default,
+        Action<MvcOptions>? mvcOptionsDelegate = default)
     {
         var loggerFactory = builder.UseDefaultLogging();
         var logger = loggerFactory.CreateLogger("Aksio setup");
@@ -103,7 +106,14 @@ public static class HostBuilderExtensions
                 // Todo: Temporarily adding this, due to a bug in .NET 6 (https://www.ingebrigtsen.info/2021/09/29/autofac-asp-net-core-6-hot-reload-debug-crash/) :
                 .AddRazorPages();
 
-                _.AddMvc();
+                if (mvcOptionsDelegate is not null)
+                {
+                    _.AddMvc(mvcOptionsDelegate);
+                }
+                else
+                {
+                    _.AddMvc();
+                }
             })
             .UseDefaultDependencyInversion(Internals.Types);
 
