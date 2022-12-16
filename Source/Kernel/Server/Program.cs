@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Hosting;
@@ -14,6 +15,12 @@ public static class Program
     public static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
+
+        // Force invariant culture for the Kernel
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
         return CreateHostBuilder(args).RunConsoleAsync();
     }

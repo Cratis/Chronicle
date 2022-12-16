@@ -51,6 +51,7 @@ public class QueryActionFilter : IAsyncActionFilter
                 if (result.Exception is not null)
                 {
                     var exception = result.Exception;
+                    exceptionStackTrace = exception.StackTrace;
 
                     do
                     {
@@ -60,7 +61,6 @@ public class QueryActionFilter : IAsyncActionFilter
                     while (exception is not null);
 
                     result.Exception = null!;
-                    exceptionStackTrace = exception?.StackTrace ?? string.Empty;
                 }
 
                 if (result.Result is ObjectResult objectResult)
@@ -69,7 +69,7 @@ public class QueryActionFilter : IAsyncActionFilter
                 }
             }
 
-            if (result?.Result is ObjectResult or && or?.Value is IClientObservable clientObservable)
+            if (result?.Result is ObjectResult or && or.Value is IClientObservable clientObservable)
             {
                 _logger.ClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
                 HandleWebSocketHeadersForMultipleProxies(context.HttpContext);
@@ -91,7 +91,7 @@ public class QueryActionFilter : IAsyncActionFilter
                 {
                     ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key.ToCamelCase() }))),
                     ExceptionMessages = exceptionMessages.ToArray(),
-                    ExceptionStackTrace = exceptionStackTrace,
+                    ExceptionStackTrace = exceptionStackTrace ?? string.Empty,
                     Data = response!
                 };
 
