@@ -41,6 +41,7 @@ public class CommandActionFilter : IAsyncActionFilter
                 if (result.Exception is not null)
                 {
                     var exception = result.Exception;
+                    exceptionStackTrace = exception.StackTrace;
 
                     do
                     {
@@ -50,7 +51,6 @@ public class CommandActionFilter : IAsyncActionFilter
                     while (exception is not null);
 
                     result.Exception = null!;
-                    exceptionStackTrace = exception?.StackTrace ?? string.Empty;
                 }
 
                 if (result.Result is ObjectResult objectResult)
@@ -64,7 +64,7 @@ public class CommandActionFilter : IAsyncActionFilter
                 CorrelationId = _executionContextManager.Current.CorrelationId,
                 ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key.ToCamelCase() }))),
                 ExceptionMessages = exceptionMessages.ToArray(),
-                ExceptionStackTrace = exceptionStackTrace,
+                ExceptionStackTrace = exceptionStackTrace ?? string.Empty,
                 Response = response
             };
 
