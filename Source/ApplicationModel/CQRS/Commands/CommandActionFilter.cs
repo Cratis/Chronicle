@@ -46,6 +46,7 @@ public class CommandActionFilter : IAsyncActionFilter
                 }
                 while (exception is not null);
 
+                result.Exception = null!;
                 exceptionStackTrace = exception?.StackTrace ?? string.Empty;
             }
 
