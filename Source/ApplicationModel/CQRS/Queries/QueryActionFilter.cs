@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Applications.Validation;
+using Aksio.Cratis.Strings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -35,15 +36,17 @@ public class QueryActionFilter : IAsyncActionFilter
     /// <inheritdoc/>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        if (context.HttpContext.Request.Method == HttpMethod.Get.Method
-            && context.ActionDescriptor is ControllerActionDescriptor controllerActionDescriptor)
+        if (context.HttpContext.Request.Method == HttpMethod.Get.Method &&
+            context.ActionDescriptor is ControllerActionDescriptor controllerActionDescriptor)
         {
+            var exceptionMessages = new List<string>();
+            var exceptionStackTrace = string.Empty;
+            object? response = null;
+            ActionExecutedContext? result = null;
+
             if (context.ModelState.IsValid)
             {
-                var exceptionMessages = new List<string>();
-                var exceptionStackTrace = string.Empty;
-                object? response = null;
-                var result = await next();
+                result = await next();
 
                 if (result.Exception is not null)
                 {
@@ -64,47 +67,56 @@ public class QueryActionFilter : IAsyncActionFilter
                 {
                     response = objectResult.Value;
                 }
+            }
 
-                if (result.Result is ObjectResult or && or?.Value is IClientObservable clientObservable)
+            if (result?.Result is ObjectResult or && or?.Value is IClientObservable clientObservable)
+            {
+                _logger.ClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
+                HandleWebSocketHeadersForMultipleProxies(context.HttpContext);
+                if (context.HttpContext.WebSockets.IsWebSocketRequest)
                 {
-                    _logger.ClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
-                    HandleWebSocketHeadersForMultipleProxies(context.HttpContext);
-                    if (context.HttpContext.WebSockets.IsWebSocketRequest)
-                    {
-                        _logger.RequestIsWebSocket();
-                        await clientObservable.HandleConnection(context, _options);
-                        result.Result = null;
-                    }
-                    else
-                    {
-                        _logger.RequestIsHttp();
-                    }
+                    _logger.RequestIsWebSocket();
+                    await clientObservable.HandleConnection(context, _options);
+                    result.Result = null;
                 }
                 else
                 {
-                    _logger.NonClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
-                    var queryResult = new QueryResult
-                    {
-                        ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key }))),
-                        ExceptionMessages = exceptionMessages.ToArray(),
-                        ExceptionStackTrace = exceptionStackTrace,
-                        Data = response!
-                    };
+                    _logger.RequestIsHttp();
+                }
+            }
+            else
+            {
+                _logger.NonClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
+                var queryResult = new QueryResult
+                {
+                    ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key.ToCamelCase() }))),
+                    ExceptionMessages = exceptionMessages.ToArray(),
+                    ExceptionStackTrace = exceptionStackTrace,
+                    Data = response!
+                };
 
-                    if (!queryResult.IsAuthorized)
-                    {
-                        context.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.rfc-editor.org/rfc/rfc9110.html#name-401-unauthorized
-                    }
-                    else if (!queryResult.IsValid)
-                    {
-                        context.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.rfc-editor.org/rfc/rfc9110.html#name-409-conflict
-                    }
-                    else if (queryResult.HasExceptions)
-                    {
-                        context.HttpContext.Response.StatusCode = 500;  // Internal Server error: https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error
-                    }
+                if (!queryResult.IsAuthorized)
+                {
+                    context.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.rfc-editor.org/rfc/rfc9110.html#name-401-unauthorized
+                }
+                else if (!queryResult.IsValid)
+                {
+                    context.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.rfc-editor.org/rfc/rfc9110.html#name-409-conflict
+                }
+                else if (queryResult.HasExceptions)
+                {
+                    context.HttpContext.Response.StatusCode = 500;  // Internal Server error: https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error
+                }
 
-                    result.Result = new ObjectResult(queryResult);
+                var actualResult = new ObjectResult(queryResult);
+
+                if (result is not null)
+                {
+                    result.Result = actualResult;
+                }
+                else
+                {
+                    context.Result = actualResult;
                 }
             }
         }

@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Applications.Validation;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Strings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -27,40 +28,41 @@ public class CommandActionFilter : IAsyncActionFilter
     /// <inheritdoc/>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var exceptionMessages = new List<string>();
-        var exceptionStackTrace = string.Empty;
-        ActionExecutedContext? result = null;
-        object? response = null;
-        if (context.ModelState.IsValid)
+        if (context.HttpContext.Request.Method == HttpMethod.Post.Method)
         {
-            result = await next();
-
-            if (result.Exception is not null)
+            var exceptionMessages = new List<string>();
+            var exceptionStackTrace = string.Empty;
+            ActionExecutedContext? result = null;
+            object? response = null;
+            if (context.ModelState.IsValid)
             {
-                var exception = result.Exception;
+                result = await next();
 
-                do
+                if (result.Exception is not null)
                 {
-                    exceptionMessages.Add(exception.Message);
-                    exception = exception.InnerException;
+                    var exception = result.Exception;
+
+                    do
+                    {
+                        exceptionMessages.Add(exception.Message);
+                        exception = exception.InnerException;
+                    }
+                    while (exception is not null);
+
+                    result.Exception = null!;
+                    exceptionStackTrace = exception?.StackTrace ?? string.Empty;
                 }
-                while (exception is not null);
 
-                result.Exception = null!;
-                exceptionStackTrace = exception?.StackTrace ?? string.Empty;
+                if (result.Result is ObjectResult objectResult)
+                {
+                    response = objectResult.Value;
+                }
             }
 
-            if (result.Result is ObjectResult objectResult)
-            {
-                response = objectResult.Value;
-            }
-        }
-        if (context.HttpContext.Request.Method == HttpMethod.Post.Method && result is not null)
-        {
             var commandResult = new CommandResult
             {
                 CorrelationId = _executionContextManager.Current.CorrelationId,
-                ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key }))),
+                ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key.ToCamelCase() }))),
                 ExceptionMessages = exceptionMessages.ToArray(),
                 ExceptionStackTrace = exceptionStackTrace,
                 Response = response
@@ -79,7 +81,20 @@ public class CommandActionFilter : IAsyncActionFilter
                 context.HttpContext.Response.StatusCode = 500;  // Internal Server error: https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error
             }
 
-            result.Result = new ObjectResult(commandResult);
+            var actualResult = new ObjectResult(commandResult);
+
+            if (result is not null)
+            {
+                result.Result = actualResult;
+            }
+            else
+            {
+                context.Result = actualResult;
+            }
+        }
+        else
+        {
+            await next();
         }
     }
 }
