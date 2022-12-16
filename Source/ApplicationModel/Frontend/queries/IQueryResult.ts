@@ -46,4 +46,9 @@ export interface IQueryResult<TDataType> {
      * Gets the stack trace if there was an exception.
      */
     readonly exceptionStackTrace: string;
+
+    /**
+     * Gets whether or not the query has data.
+     */
+    readonly hasData: boolean;
 }

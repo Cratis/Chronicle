@@ -47,6 +47,22 @@ export class QueryResultWithState<TDataType> implements IQueryResult<TDataType> 
         readonly isPerforming: boolean) {
     }
 
+    /** @inheritdoc */
+    get hasData(): boolean {
+        const data = this.data as any;
+        if (data) {
+            if (data.constructor && data.constructor === Array) {
+                if (data.length || 0 > 0) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Create a new {@link QueryResultWithState<TDataType>} from {@link QueryResult<TDataType>}.
      * @param queryResult The original query result.
