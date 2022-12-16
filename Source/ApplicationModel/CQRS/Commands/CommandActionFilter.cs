@@ -68,11 +68,15 @@ public class CommandActionFilter : IAsyncActionFilter
 
             if (!commandResult.IsAuthorized)
             {
-                context.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
+                context.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.rfc-editor.org/rfc/rfc9110.html#name-401-unauthorized
             }
             else if (!commandResult.IsValid)
             {
-                context.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.10
+                context.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.rfc-editor.org/rfc/rfc9110.html#name-409-conflict
+            }
+            else if (commandResult.HasExceptions)
+            {
+                context.HttpContext.Response.StatusCode = 500;  // Internal Server error: https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error
             }
 
             result.Result = new ObjectResult(commandResult);
