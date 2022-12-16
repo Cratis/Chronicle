@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Applications.Validation;
 using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Applications.Commands;
@@ -38,12 +39,12 @@ public class CommandResult
     /// <summary>
     /// Gets any validation errors. If this collection is empty, there are errors.
     /// </summary>
-    public IEnumerable<ValidationError> ValidationErrors { get; init; } = Array.Empty<ValidationError>();
+    public IEnumerable<ValidationError> ValidationErrors { get; init; } = Enumerable.Empty<ValidationError>();
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
-    public IEnumerable<string> ExceptionMessages { get; init; } = Array.Empty<string>();
+    public IEnumerable<string> ExceptionMessages { get; init; } = Enumerable.Empty<string>();
 
     /// <summary>
     /// Gets the stack trace if there was an exception.
