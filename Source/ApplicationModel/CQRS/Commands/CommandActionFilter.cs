@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Applications.Validation;
 using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -44,6 +45,8 @@ public class CommandActionFilter : IAsyncActionFilter
                     exception = exception.InnerException;
                 }
                 while (exception is not null);
+
+                exceptionStackTrace = exception?.StackTrace ?? string.Empty;
             }
 
             if (result.Result is ObjectResult objectResult)
