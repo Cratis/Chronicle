@@ -44,7 +44,10 @@ public class ClientObservable<T> : IClientObservable, IAsyncEnumerable<T>
         using var webSocket = await context.HttpContext.WebSockets.AcceptWebSocketAsync();
         var subscription = _subject.Subscribe(_ =>
         {
-            var queryResult = new QueryResult(_!, true);
+            var queryResult = new QueryResult
+            {
+                Data = _!
+            };
             var json = JsonSerializer.Serialize(queryResult, jsonOptions.JsonSerializerOptions);
             var message = Encoding.UTF8.GetBytes(json);
 

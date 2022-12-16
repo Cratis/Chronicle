@@ -22,7 +22,7 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
      * @param modelType Type of model, if an enumerable, this is the instance type.
      * @param enumerable Whether or not it is an enumerable.
      */
-     constructor(readonly modelType: Constructor, readonly enumerable: boolean) {
+    constructor(readonly modelType: Constructor, readonly enumerable: boolean) {
     }
 
     /** @inheritdoc */
@@ -31,7 +31,7 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
 
         if (!ValidateRequestArguments(this.constructor.name, this.requestArguments, args)) {
             return new Promise<QueryResult<TDataType>>((resolve) => {
-                resolve(new QueryResult(this.defaultValue, true));
+                resolve({ ...QueryResult.noSuccess, ...{ data: this.defaultValue } } as QueryResult<TDataType>);
             });
         }
 
@@ -44,6 +44,11 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
             }
         });
 
-        return await QueryResult.fromResponse<TDataType>(response,this.modelType, this.enumerable);
+        try {
+            const result = await response.json();
+            return new QueryResult(result, this.modelType, this.enumerable);
+        } catch (ex) {
+            return QueryResult.noSuccess as any;
+        }
     }
 }
