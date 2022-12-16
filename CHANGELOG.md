@@ -1,3 +1,14 @@
+# [v6.21.1] - 2022-12-16 [PR: #639](https://github.com/aksio-insurtech/Cratis/pull/639)
+
+### Fixed
+
+- Honoring the actual type of the query argument when generating proxies. (#636)
+- Forcing invariant culture for Kernel. (#611)
+- Returning proper query result structure with all details which then automatically fixed #637
+- Returning correct command result even if exceptions happen in controller action.
+- Making member names camel cased in validation result. (#593)
+
+
 # [v6.21.0] - 2022-12-15 [PR: #633](https://github.com/aksio-insurtech/Cratis/pull/633)
 
 ### Added
