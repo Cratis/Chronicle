@@ -19,7 +19,7 @@ export class NullObservableQueryConnection<TDataType> implements IObservableQuer
 
     /** @inheritdoc */
     connect(dataReceived: DataReceived<TDataType>) {
-        dataReceived(new QueryResult(this.defaultValue, true));
+        dataReceived(QueryResult.empty(this.defaultValue));
     }
 
     /** @inheritdoc */

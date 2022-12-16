@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Constructor, JsonSerializer } from '@aksio/cratis-fundamentals';
+import { ValidationError } from '../validation/ValidationError';
+import { IQueryResult } from './IQueryResult';
 
 type QueryResultFromServer<TDataType> = {
     data: TDataType;
@@ -12,33 +14,84 @@ type QueryResultFromServer<TDataType> = {
  * Represents the result from executing a {@link IQueryFor}.
  * @template TDataType The data type.
  */
-export class QueryResult<TDataType> {
+export class QueryResult<TDataType = {}> implements IQueryResult<TDataType> {
+
+    static empty<TDataType>(defaultValue: TDataType): QueryResult<TDataType> {
+        return new QueryResult({
+            data: defaultValue,
+            isSuccess: true,
+            isAuthorized: true,
+            isValid: true,
+            hasExceptions: false,
+            validationErrors: [],
+            exceptionMessages: [],
+            exceptionStackTrace: '',
+        }, Object, false);
+    }
+
+    static noSuccess: QueryResult = new QueryResult({
+        data: {},
+        isSuccess: false,
+        isAuthorized: true,
+        isValid: true,
+        hasExceptions: false,
+        validationErrors: [],
+        exceptionMessages: [],
+        exceptionStackTrace: '',
+    }, Object, false);
+
     /**
      * Creates an instance of query result.
-     * @param {TDataType} data The items returned, if any - can be empty.
-     * @param {boolean} isSuccess Whether or not the query was successful.
+     * @param {*} result The raw result from the backend.
+     * @param {Constructor} instanceType The type of instance to deserialize.
+     * @param {boolean} enumerable Whether or not the result is supposed be an enumerable or not.
      */
-    constructor(readonly data: TDataType, readonly isSuccess: boolean) {
-    }
+    constructor(result: any, instanceType: Constructor, enumerable: boolean) {
+        this.isSuccess = result.isSuccess;
+        this.isAuthorized = result.isAuthorized;
+        this.isValid = result.isValid;
+        this.hasExceptions = result.hasExceptions;
+        this.validationErrors = result.validationErrors.map(_ => new ValidationError(_.message, _.memberNames));
+        this.exceptionMessages = result.exceptionMessages;
+        this.exceptionStackTrace = result.exceptionStackTrace;
 
-    /**
-     * Create a {@link QueryResult} from a {@link Response}.
-     * @template TModel Type of model to create for.
-     * @param {Response} [response] Response to create from.
-     * @returns A new {@link QueryResult}.
-     */
-    static async fromResponse<TModel>(response: Response, instanceType: Constructor, enumerable: boolean): Promise<QueryResult<TModel>> {
-        const jsonResponse = await response.json() as QueryResultFromServer<TModel>;
+        if (result.data) {
+            let data: any = result.data;
+            if (enumerable) {
+                data = JsonSerializer.deserializeArrayFromInstance(instanceType, data);
+            } else {
+                data = JsonSerializer.deserializeFromInstance(instanceType, data);
+            }
 
-        let data: any = jsonResponse.data;
-        if (enumerable) {
-            data = JsonSerializer.deserializeArrayFromInstance(instanceType, data);
+            this.data = data;
         } else {
-            data = JsonSerializer.deserializeFromInstance(instanceType, data);
+            this.data = null as any;
         }
-
-        return new QueryResult(data, jsonResponse.isSuccess && response.ok);
     }
+
+    /** @inheritdoc */
+    readonly data: TDataType;
+
+    /** @inheritdoc */
+    readonly isSuccess: boolean;
+
+    /** @inheritdoc */
+    readonly isAuthorized: boolean;
+
+    /** @inheritdoc */
+    readonly isValid: boolean;
+
+    /** @inheritdoc */
+    readonly hasExceptions: boolean;
+
+    /** @inheritdoc */
+    readonly validationErrors: ValidationError[];
+
+    /** @inheritdoc */
+    readonly exceptionMessages: string[];
+
+    /** @inheritdoc */
+    readonly exceptionStackTrace: string;
 
     /**
      * Gets whether or not the query has data.

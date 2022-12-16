@@ -22,10 +22,10 @@ export type PerformQuery<TArguments = {}> = (args?: TArguments) => Promise<void>
  */
 export function useQuery<TDataType, TQuery extends IQueryFor<TDataType>, TArguments = {}>(query: Constructor<TQuery>, args?: TArguments): [QueryResultWithState<TDataType>, PerformQuery<TArguments>] {
     const queryInstance = new query() as TQuery;
-    const [result, setResult] = useState<QueryResultWithState<TDataType>>(new QueryResultWithState(queryInstance.defaultValue, true, true));
+    const [result, setResult] = useState<QueryResultWithState<TDataType>>(QueryResultWithState.empty(queryInstance.defaultValue));
     const queryExecutor = (async (args?: TArguments) => {
-        const response = await queryInstance.perform(args as any);
-        setResult(new QueryResultWithState(response.data, response.isSuccess, false));
+        const queryResult = await queryInstance.perform(args as any);
+        setResult(QueryResultWithState.fromQueryResult(queryResult, false));
     });
 
     useEffect(() => {
@@ -33,7 +33,8 @@ export function useQuery<TDataType, TQuery extends IQueryFor<TDataType>, TArgume
     }, []);
 
     return [result, async (args?: TArguments) => {
-        setResult(new QueryResultWithState(result.data, result.isSuccess, true));
+        const queryResult = await queryInstance.perform(args as any);
+        setResult(QueryResultWithState.fromQueryResult(queryResult, true));
         await queryExecutor(args);
     }];
 }
