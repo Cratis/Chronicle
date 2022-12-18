@@ -1,3 +1,11 @@
+# [v6.21.2] - 2022-12-18 [PR: #641](https://github.com/aksio-insurtech/Cratis/pull/641)
+
+### Fixed
+
+- Cache cursor was not using correct event store API and was relying on in-memory filtering and a faulty next logic for the cursor.
+- Client deserialization of arrays in `ObservableQueryFor` will now not try to deserialize if the data coming back is not an array.
+
+
 # [v6.21.1] - 2022-12-16 [PR: #639](https://github.com/aksio-insurtech/Cratis/pull/639)
 
 ### Fixed
