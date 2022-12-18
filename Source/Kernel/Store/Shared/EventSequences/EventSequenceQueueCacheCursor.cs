@@ -14,7 +14,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly IStreamIdentity _streamIdentity;
-    readonly IEventSequenceStorageProvider _storageProvider;
+    protected readonly IEventSequenceStorageProvider _storageProvider;
     IEventCursor _actualCursor;
     EventSequenceNumber _lastProvidedSequenceNumber = EventSequenceNumber.First;
 
@@ -34,7 +34,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         _executionContextManager = executionContextManager;
         _streamIdentity = streamIdentity;
         _storageProvider = storageProvider;
-        _actualCursor = storageProvider.GetFromSequenceNumber(streamIdentity.Guid, cursorStart).GetAwaiter().GetResult();
+        _actualCursor = GetActualEventCursor(_streamIdentity.Guid, cursorStart).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
@@ -48,7 +48,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 
         var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
 
-        var events = Filter(_actualCursor.Current);
+        var events = _actualCursor.Current;
         if (!events.Any())
         {
             return null!;
@@ -83,7 +83,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
         _actualCursor.Dispose();
-        _actualCursor = _storageProvider.GetFromSequenceNumber(_streamIdentity.Guid, (ulong)_lastProvidedSequenceNumber).GetAwaiter().GetResult();
+        _actualCursor = GetActualEventCursor(_streamIdentity.Guid, (ulong)_lastProvidedSequenceNumber).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
@@ -94,9 +94,10 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     }
 
     /// <summary>
-    /// Filter incoming events.
+    /// Get the actual event cursor.
     /// </summary>
-    /// <param name="events">Events to filter.</param>
-    /// <returns>Filtered events.</returns>
-    protected virtual IEnumerable<AppendedEvent> Filter(IEnumerable<AppendedEvent> events) => events;
+    /// <param name="sequenceId">The event sequence to get for.</param>
+    /// <param name="sequenceNumber">The start </param>
+    /// <returns>Actual event cursor.</returns>
+    protected virtual Task<IEventCursor> GetActualEventCursor(EventSequenceId sequenceId, EventSequenceNumber sequenceNumber) => null!;
 }
