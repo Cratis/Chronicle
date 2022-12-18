@@ -44,12 +44,18 @@ export abstract class ObservableQueryFor<TDataType, TArguments = {}> implements 
         const subscriber = new ObservableQuerySubscription(connection);
         connection.connect(data => {
             const result: any = data;
-            if( this.enumerable) {
-                result.data = JsonSerializer.deserializeArrayFromInstance(this.modelType, result.data);
-            } else {
-                result.data = JsonSerializer.deserializeFromInstance(this.modelType, result.data);
+            try {
+                if (this.enumerable) {
+                    if (Array.isArray(result.data)) {
+                        result.data = JsonSerializer.deserializeArrayFromInstance(this.modelType, result.data);
+                    }
+                } else {
+                    result.data = JsonSerializer.deserializeFromInstance(this.modelType, result.data);
+                }
+                callback(result);
+            } catch (ex) {
+                console.log(ex);
             }
-            callback(result);
         });
         return subscriber;
     }

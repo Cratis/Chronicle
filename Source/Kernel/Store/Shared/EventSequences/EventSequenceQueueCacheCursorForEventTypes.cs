@@ -32,5 +32,6 @@ public class EventSequenceQueueCacheCursorForEventTypes : EventSequenceQueueCach
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<AppendedEvent> Filter(IEnumerable<AppendedEvent> events) => events.Where(_ => _eventTypes.Any(et => et.Id == _.Metadata.Type.Id)).ToArray();
+    protected override Task<IEventCursor> GetActualEventCursor(EventSequenceId sequenceId, EventSequenceNumber sequenceNumber) =>
+        _storageProvider.GetFromSequenceNumber(sequenceId, sequenceNumber, eventTypes: _eventTypes);
 }
