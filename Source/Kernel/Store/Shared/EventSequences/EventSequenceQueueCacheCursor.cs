@@ -12,11 +12,17 @@ namespace Aksio.Cratis.Events.Store.EventSequences;
 /// </summary>
 public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly IStreamIdentity _streamIdentity;
+#pragma warning disable SA1202, CA1051
+    /// <summary>
+    /// Gets the <see cref="IEventSequenceStorageProvider"/>.
+    /// </summary>
     protected readonly IEventSequenceStorageProvider _storageProvider;
-    IEventCursor _actualCursor;
+    readonly IExecutionContextManager _executionContextManager;
+    readonly EventSequenceNumber _cursorStart;
+    readonly IStreamIdentity _streamIdentity;
+    IEventCursor? _actualCursor;
     EventSequenceNumber _lastProvidedSequenceNumber = EventSequenceNumber.First;
+    bool _firstRun;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
@@ -32,9 +38,10 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         IEventSequenceStorageProvider storageProvider)
     {
         _executionContextManager = executionContextManager;
+        _cursorStart = cursorStart;
         _streamIdentity = streamIdentity;
         _storageProvider = storageProvider;
-        _actualCursor = GetActualEventCursor(_streamIdentity.Guid, cursorStart).GetAwaiter().GetResult();
+        _firstRun = true;
     }
 
     /// <inheritdoc/>
@@ -69,7 +76,11 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     }
 
     /// <inheritdoc/>
-    public bool MoveNext() => _actualCursor.MoveNext().GetAwaiter().GetResult();
+    public bool MoveNext()
+    {
+        InitializeCursorOnFirstRun();
+        return _actualCursor?.MoveNext().GetAwaiter().GetResult() ?? false;
+    }
 
     /// <inheritdoc/>
     public void RecordDeliveryFailure()
@@ -82,22 +93,32 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
         _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
 
-        _actualCursor.Dispose();
+        _actualCursor?.Dispose();
         _actualCursor = GetActualEventCursor(_streamIdentity.Guid, (ulong)_lastProvidedSequenceNumber).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        _actualCursor.Dispose();
+        _actualCursor?.Dispose();
         _actualCursor = null!;
+    }
+
+    void InitializeCursorOnFirstRun()
+    {
+        if (_firstRun)
+        {
+            _actualCursor = GetActualEventCursor(_streamIdentity.Guid, _cursorStart).GetAwaiter().GetResult();
+            _firstRun = false;
+        }
     }
 
     /// <summary>
     /// Get the actual event cursor.
     /// </summary>
     /// <param name="sequenceId">The event sequence to get for.</param>
-    /// <param name="sequenceNumber">The start </param>
+    /// <param name="sequenceNumber">The start sequence number.</param>
     /// <returns>Actual event cursor.</returns>
-    protected virtual Task<IEventCursor> GetActualEventCursor(EventSequenceId sequenceId, EventSequenceNumber sequenceNumber) => null!;
+    protected virtual Task<IEventCursor> GetActualEventCursor(EventSequenceId sequenceId, EventSequenceNumber sequenceNumber) =>
+        _storageProvider.GetFromSequenceNumber(sequenceId, sequenceNumber);
 }
