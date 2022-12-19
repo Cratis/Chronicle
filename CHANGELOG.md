@@ -1,3 +1,10 @@
+# [v6.21.3] - 2022-12-19 [PR: #642](https://github.com/aksio-insurtech/Cratis/pull/642)
+
+### Fixed
+
+- The `EnumerableConceptAsJsonConverterFactory`  recognized any type with generics and the first generic argument as concept to be valid. This fails with something like anonymous types, which have their properties represented as generic arguments. If the first property then was a concept, this was picked up. This fixes that by making sure it is an enumerable.
+
+
 # [v6.21.2] - 2022-12-18 [PR: #641](https://github.com/aksio-insurtech/Cratis/pull/641)
 
 ### Fixed
