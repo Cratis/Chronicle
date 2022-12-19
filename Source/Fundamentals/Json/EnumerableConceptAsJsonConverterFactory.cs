@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Aksio.Cratis.Concepts;
+using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Json;
 
@@ -13,10 +14,8 @@ namespace Aksio.Cratis.Json;
 public class EnumerableConceptAsJsonConverterFactory : JsonConverterFactory
 {
     /// <inheritdoc/>
-    public override bool CanConvert(Type typeToConvert)
-    {
-        return typeToConvert.IsGenericType && typeToConvert.GetGenericArguments()[0].IsConcept();
-    }
+    public override bool CanConvert(Type typeToConvert) =>
+        typeToConvert.IsEnumerable() && typeToConvert.IsGenericType && typeToConvert.GetGenericArguments()[0].IsConcept();
 
     /// <inheritdoc/>
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
