@@ -23,6 +23,19 @@ export class QueryResultWithState<TDataType> implements IQueryResult<TDataType> 
             false);
     }
 
+    static initial<TDataType>(defaultValue: TDataType): QueryResultWithState<TDataType> {
+        return new QueryResultWithState(
+            defaultValue,
+            true,
+            true,
+            true,
+            [],
+            false,
+            [],
+            '',
+            true);
+    }
+
     /**
      * Initializes an instance of {@link QueryResultWithState<TDataType>}.
      * @param {TDataType} data The items returned, if any - can be empty.
