@@ -22,7 +22,7 @@ export type PerformQuery<TArguments = {}> = (args?: TArguments) => Promise<void>
  */
 export function useQuery<TDataType, TQuery extends IQueryFor<TDataType>, TArguments = {}>(query: Constructor<TQuery>, args?: TArguments): [QueryResultWithState<TDataType>, PerformQuery<TArguments>] {
     const queryInstance = new query() as TQuery;
-    const [result, setResult] = useState<QueryResultWithState<TDataType>>(QueryResultWithState.empty(queryInstance.defaultValue));
+    const [result, setResult] = useState<QueryResultWithState<TDataType>>(QueryResultWithState.initial(queryInstance.defaultValue));
     const queryExecutor = (async (args?: TArguments) => {
         const queryResult = await queryInstance.perform(args as any);
         setResult(QueryResultWithState.fromQueryResult(queryResult, false));
