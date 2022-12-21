@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Events.Store;
 public static class WellKnownProviders
 {
     /// <summary>
+    /// The name of the stream provider used for observer handlers.
+    /// </summary>
+    public const string ObserverHandlersStreamProvider = "observer-handlers";
+
+    /// <summary>
     /// The name of the stream provider.
     /// </summary>
     public const string EventSequenceStreamProvider = "event-sequence";

@@ -122,33 +122,28 @@ public class ClientBuilder : IClientBuilder
             _ != typeof(ICanProvideComplianceMetadataForProperty) &&
             _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
 
-        services.AddSingleton(sp =>
-        {
-            logger?.ConfiguringKernelConnection();
-            var orleansBuilder = new SiloHostBuilder()
-                .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
-                .UseExecutionContext()
-                .UseConnectionIdFromConnectionContextForOutgoingCalls()
-                .ConfigureServices(services => services
-                    .AddSingleton<IConnectionManager>(connectionManager)
-                    .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-                    .AddSingleton<IRequestContextManager, RequestContextManager>()
-                    .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
+        logger?.ConfiguringKernelConnection();
+        var orleansBuilder = new SiloHostBuilder()
+            .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
+            .UseExecutionContext()
+            .UseConnectionIdFromConnectionContextForOutgoingCalls()
+            .ConfigureServices(services => services
+                .AddSingleton<IConnectionManager>(connectionManager)
+                .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
+                .AddSingleton<IRequestContextManager, RequestContextManager>()
+                .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
 
-            var orleansClient = orleansBuilder.Build();
+        var orleansClient = orleansBuilder.Build();
 
-            logger?.ConnectingToKernel();
-            orleansClient.StartAsync().Wait();
-            logger?.ConnectedToKernel();
+        logger?.ConnectingToKernel();
+        orleansClient.StartAsync().Wait();
+        logger?.ConnectedToKernel();
 
-            var client = orleansClient.Services.GetRequiredService<IClusterClient>();
-
+        var client = orleansClient.Services.GetRequiredService<IClusterClient>();
+        services.AddSingleton(client);
 #pragma warning disable CA2008
-            client
-                .GetGrain<IConnectedClients>(Guid.Empty)
-                .GetLastConnectedClientConnectionId().ContinueWith(_ => ConnectionManager.InternalConnectionId = _.Result);
-
-            return orleansClient;
-        });
+        client
+            .GetGrain<IConnectedClients>(Guid.Empty)
+            .GetLastConnectedClientConnectionId().ContinueWith(_ => ConnectionManager.InternalConnectionId = _.Result);
     }
 }

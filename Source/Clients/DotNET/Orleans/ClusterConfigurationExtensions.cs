@@ -4,6 +4,7 @@
 using System.Net;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.Orleans.Configuration;
+using Aksio.Cratis.Network;
 using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Hosting;
@@ -36,7 +37,12 @@ public static class ClusterConfigurationExtensions
         {
             case ClusterTypes.Local:
                 logger?.UsingLocalHostClustering();
-                builder.UseLocalhostClustering();
+
+                var siloPort = IpUtilities.GetAvailablePort(11112, 12000) ?? 0;
+                var gatewayPort = IpUtilities.GetAvailablePort(30001, 31000) ?? 0;
+
+                builder.ConfigureEndpoints(advertisedIP: IPAddress.Parse("127.0.0.1"), siloPort, gatewayPort, listenOnAnyHostAddress: true);
+                builder.UseDevelopmentClustering(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 11111));
                 break;
 
             case ClusterTypes.Static:
