@@ -1,3 +1,10 @@
+# [v6.21.5] - 2022-12-21 [PR: #647](https://github.com/aksio-insurtech/Cratis/pull/647)
+
+### Fixed
+
+- Setting `isPerforming` on query result when using React hook for queries to `true` for the initial state.
+
+
 # [v6.21.4] - 2022-12-21 [PR: #646](https://github.com/aksio-insurtech/Cratis/pull/646)
 
 ### Fixed
