@@ -3,7 +3,7 @@
 
 using System.Net.NetworkInformation;
 
-namespace Client;
+namespace Aksio.Cratis.Network;
 
 /// <summary>
 /// Represents helper methods for working with the IP stack.
