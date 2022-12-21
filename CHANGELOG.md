@@ -1,3 +1,11 @@
+# [v6.21.4] - 2022-12-21 [PR: #646](https://github.com/aksio-insurtech/Cratis/pull/646)
+
+### Fixed
+
+- Fixing queries not to execute twice when explicitly executing them via the React hook. (#644)
+- Fixing so that we allow arguments in queries that hold 0 for number or false for booleans. (#645)
+
+
 # [v6.21.3] - 2022-12-19 [PR: #642](https://github.com/aksio-insurtech/Cratis/pull/642)
 
 ### Fixed
