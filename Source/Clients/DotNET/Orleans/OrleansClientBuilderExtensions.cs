@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Extensions.Orleans.Execution;
+using Orleans.Hosting;
 
 namespace Orleans;
 
@@ -15,7 +16,7 @@ public static class OrleansClientBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="IClientBuilder"/> to use it for.</param>
     /// <returns><see cref="IClientBuilder"/> for builder continuation.</returns>
-    public static IClientBuilder UseExecutionContext(this IClientBuilder builder)
+    public static ISiloHostBuilder UseExecutionContext(this ISiloHostBuilder builder)
     {
         builder.AddOutgoingGrainCallFilter<ExecutionContextOutgoingCallFilter>();
         return builder;

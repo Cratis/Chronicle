@@ -62,20 +62,21 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public async Task RegisterAndObserveAll()
     {
-        var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
+        // var streamProvider = _clusterClient.GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
+        // foreach (var handler in _observerHandlers)
+        // {
+        //     var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.ConnectionId);
+        //     var subscription = await stream.SubscribeAsync(async (@event, _) =>
+        //     {
+        //         _executionContextManager.Establish(@event.Context.TenantId, @event.Context.CorrelationId);
+        //         await handler.OnNext(@event);
+        //     });
 
-        foreach (var handler in _observerHandlers)
-        {
-            var stream = streamProvider.GetStream<AppendedEvent>(handler.ObserverId, _connectionManager.ConnectionId);
-            var subscription = await stream.SubscribeAsync(async (@event, _) =>
-            {
-                _executionContextManager.Establish(@event.Context.TenantId, @event.Context.CorrelationId);
-                await handler.OnNext(@event);
-            });
+        //     var observers = _clusterClient.GetGrain<Store.Grains.Observation.IClientObservers>(Guid.Empty);
+        //     var eventTypes = handler.EventTypes.ToArray();
+        //     await observers.Subscribe(handler.Name, handler.ObserverId, handler.EventSequenceId, eventTypes);
+        // }
 
-            var observers = _clusterClient.GetGrain<Store.Grains.Observation.IClientObservers>(Guid.Empty);
-            var eventTypes = handler.EventTypes.ToArray();
-            await observers.Subscribe(handler.Name, handler.ObserverId, handler.EventSequenceId, eventTypes);
-        }
+        await Task.CompletedTask;
     }
 }

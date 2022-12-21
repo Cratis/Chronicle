@@ -17,8 +17,8 @@ public static class ClientBuilderExtensions
     /// <summary>
     /// Add the event log stream.
     /// </summary>
-    /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
-    /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
+    /// <param name="builder"><see cref="ISiloHostBuilder"/> to add to.</param>
+    /// <returns><see cref="ISiloHostBuilder"/> for continuation.</returns>
     public static IClientBuilder AddEventSequenceStream(this IClientBuilder builder)
     {
         builder.AddPersistentStreams(
@@ -31,9 +31,9 @@ public static class ClientBuilderExtensions
     /// <summary>
     /// Sets up a outgoing call filter that adds the connection identifier from the connection context to every call.
     /// </summary>
-    /// <param name="builder"><see cref="IClientBuilder"/> to add to.</param>
-    /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
-    public static IClientBuilder UseConnectionIdFromConnectionContextForOutgoingCalls(this IClientBuilder builder)
+    /// <param name="builder"><see cref="ISiloHostBuilder"/> to add to.</param>
+    /// <returns><see cref="ISiloHostBuilder"/> for continuation.</returns>
+    public static ISiloHostBuilder UseConnectionIdFromConnectionContextForOutgoingCalls(this ISiloHostBuilder builder)
     {
         return builder
                 .AddOutgoingGrainCallFilter<ConnectionIdOutgoingCallFilter>()

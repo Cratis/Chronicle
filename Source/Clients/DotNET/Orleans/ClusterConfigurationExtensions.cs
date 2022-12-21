@@ -23,7 +23,7 @@ public static class ClusterConfigurationExtensions
     /// <param name="microserviceId"><see cref="MicroserviceId"/> identifying the microservice.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <returns>Builder for continuation.</returns>
-    public static IClientBuilder UseCluster(this IClientBuilder builder, Cluster clusterConfig, MicroserviceId microserviceId, ILogger? logger)
+    public static ISiloHostBuilder UseCluster(this ISiloHostBuilder builder, Cluster clusterConfig, MicroserviceId microserviceId, ILogger? logger)
     {
         builder
             .Configure<ClusterOptions>(options =>
@@ -49,7 +49,8 @@ public static class ClusterConfigurationExtensions
                         var ipAddress = hostEntry.AddressList.FirstOrDefault();
                         return new IPEndPoint(ipAddress!, _.Port);
                     }).ToArray();
-                    builder.UseStaticClustering(endPoints);
+
+                    // builder.UseStaticClustering(endPoints);
                 }
                 break;
 

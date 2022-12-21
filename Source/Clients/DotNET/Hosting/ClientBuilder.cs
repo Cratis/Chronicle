@@ -125,10 +125,8 @@ public class ClientBuilder : IClientBuilder
         services.AddSingleton(sp =>
         {
             logger?.ConfiguringKernelConnection();
-            var orleansBuilder = new OrleansClientBuilder()
+            var orleansBuilder = new SiloHostBuilder()
                 .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
-                .AddEventSequenceStream()
-                .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider)
                 .UseExecutionContext()
                 .UseConnectionIdFromConnectionContextForOutgoingCalls()
                 .ConfigureServices(services => services
@@ -140,16 +138,13 @@ public class ClientBuilder : IClientBuilder
             var orleansClient = orleansBuilder.Build();
 
             logger?.ConnectingToKernel();
-            orleansClient.Connect(async (exception) =>
-            {
-                logger?.ProblemsConnectingToSilo(exception.Message, exception.InnerException?.Message ?? "<no more details>");
-                await Task.Delay(1000);
-                return true;
-            }).Wait();
+            orleansClient.StartAsync().Wait();
             logger?.ConnectedToKernel();
 
+            var client = orleansClient.Services.GetRequiredService<IClusterClient>();
+
 #pragma warning disable CA2008
-            orleansClient
+            client
                 .GetGrain<IConnectedClients>(Guid.Empty)
                 .GetLastConnectedClientConnectionId().ContinueWith(_ => ConnectionManager.InternalConnectionId = _.Result);
 
