@@ -33,8 +33,7 @@ export function useQuery<TDataType, TQuery extends IQueryFor<TDataType>, TArgume
     }, []);
 
     return [result, async (args?: TArguments) => {
-        const queryResult = await queryInstance.perform(args as any);
-        setResult(QueryResultWithState.fromQueryResult(queryResult, true));
-        await queryExecutor(args);
+        setResult(QueryResultWithState.fromQueryResult(result, true));
+        queryExecutor(args);
     }];
 }
