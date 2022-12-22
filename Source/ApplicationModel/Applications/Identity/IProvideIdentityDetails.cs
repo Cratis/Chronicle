@@ -16,5 +16,5 @@ public interface IProvideIdentityDetails
     /// <remarks>
     /// The result of this will end up being serialized as JSON.
     /// </remarks>
-    Task<object> Provide(IdentityProviderContext context);
+    Task<IdentityDetails> Provide(IdentityProviderContext context);
 }
