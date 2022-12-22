@@ -40,7 +40,7 @@ public class IdentityDetailsProvider : IProvideIdentityDetails
 The `IdentityProviderContext` holds the following properties:
 
 | Property | Description |
-| -------- | ----------- |
+| -------- | ----------- |
 | Id | The identity identifier specific from from the identity provider |
 | Name | The name of the identity |
 | Token | Parsed JWT token represented as a `JsonObject`|
@@ -49,7 +49,7 @@ The `IdentityProviderContext` holds the following properties:
 The code then returns an `IdentityDetails` which holds the following properties:
 
 | Property | Description |
-| -------- | ----------- |
+| -------- | ----------- |
 | IsUserAuthorized | Whether or not the user is authorized into your application or not |
 | Details | The actual details in the form of an object, letting you create your own structure |
 
