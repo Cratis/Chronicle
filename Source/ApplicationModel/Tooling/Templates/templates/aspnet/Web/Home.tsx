@@ -6,10 +6,10 @@ import { default as styles } from './Home.module.scss';
 
 export const Home = () => {
     return (
-        <div style={{margin: '1rem'}} className={styles.home}>
+        <div style={{ margin: '1rem' }} className={styles.home}>
             <h1>Congratulations on your new microservice! 🍾 🎂 </h1>
-            This microservice comes with a default Aksio setup.<br/>
-            <br/>
+            This microservice comes with a default Aksio setup.<br />
+            <br />
             <h2>Projects</h2>
             <ul>
                 <li>Concepts - used for holding reusable domain concepts.</li>
