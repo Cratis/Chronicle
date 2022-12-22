@@ -46,7 +46,7 @@ The `IdentityProviderContext` holds the following properties:
 | Token | Parsed JWT token represented as a `JsonObject`|
 | Claims | Collection of `KeyValuePair<string, string>` of the claims found in the token |
 
-The code then returns an `IdentityDetails` which holds the following properties:
+The code then returns `IdentityDetails` which holds the following properties:
 
 | Property | Description |
 | -------- | ----------- |
