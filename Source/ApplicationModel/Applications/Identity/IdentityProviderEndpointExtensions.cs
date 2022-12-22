@@ -67,8 +67,16 @@ public static class IdentityProviderEndpointExtensions
 
                         var context = new IdentityProviderContext(identityId, identityName, tokenAsJson, claims);
                         var result = await provider.Provide(context);
-                        response.StatusCode = 200;
-                        await response.WriteAsJsonAsync<object>(result, serializerOptions);
+
+                        if (result.IsUserAuthorized)
+                        {
+                            response.StatusCode = 200;
+                        }
+                        else
+                        {
+                            response.StatusCode = 403;
+                        }
+                        await response.WriteAsJsonAsync(result.Details, serializerOptions);
                     }
                 }
             });
