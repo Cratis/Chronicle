@@ -53,6 +53,8 @@ The code then returns an `IdentityDetails` which holds the following properties:
 | IsUserAuthorized | Whether or not the user is authorized into your application or not |
 | Details | The actual details in the form of an object, letting you create your own structure |
 
+If the `IsUserAuthorized` property is set to false the return from this will be an HTTP 403. While if it is authorized, a regular HTTP 200.
+
 > Note: Dependency inversion works for this, so your provider can take any dependencies it wants on its constructor.
 
 Your provider will be exposed on a well known route: `/.aksio/me`.
