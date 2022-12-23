@@ -13,7 +13,7 @@ The goal of the modal dialog encapsulation is:
 
 For the modals to work, it needs a provider typically added at the top level of your application.
 
-```tsx
+```typescript
 import { ModalProvider } from '@aksio/cratis-mui';
 
 ReactDOM.render(
@@ -52,7 +52,7 @@ component.
 For simple confirmation dialogs where one wants to ask a question and let the user confirm
 by clicking ok/cancel or yes/no is a very common scenario in applications.
 
-```tsx
+```typescript
 import { useModal, ModalButtons, ModalResult } from '@aksio/cratis-mui';
 
 export const Transfer = () => {
@@ -88,7 +88,7 @@ Instead of passing a string to the `useModal` hook for the content, you can pass
 
 Lets say you have a modal for editing a bank accounts details:
 
-```tsx
+```typescript
 import { IModalProps } from '@aksio/cratis-mui';
 
 export interface EditAccountInput {
@@ -125,7 +125,7 @@ export const EditAccountDetails =  (props: IModalProps<EditAccountInput, EditAcc
 > to give the callback that is called when the dialog is about to close. This is typically where you can
 > return the state from the dialog.
 
-```tsx
+```typescript
 import { useModal, ModalButtons, ModalResult } from '@aksio/cratis-mui';
 import { EditAccountDetails } from './EditAccountDetails';
 
@@ -174,7 +174,7 @@ export const BankAccounts = () => {
 
 If you don't need any input, the component can just pass `{}` to the first generic argument:
 
-```tsx
+```typescript
 import { IModalProps } from '@aksio/cratis-mui';
 
 export interface CreateAccountOutput {

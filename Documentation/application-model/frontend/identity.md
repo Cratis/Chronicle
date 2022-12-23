@@ -11,7 +11,7 @@ To use this, the Cratis application model provides a React context and a hook to
 
 At the top level of your application, typically in your `App.tsx` file you would add the provider by doing the following:
 
-```tsx
+```typescript
 import { IdentityProvider } from '@aksio/cratis-applications-frontend/identity';
 
 export const App = () => {
@@ -25,7 +25,7 @@ export const App = () => {
 
 Anywhere within your application you can then access the identity by adding using the `useIdentity()` hook:
 
-```tsx
+```typescript
 import { useIdentity } from '@aksio/cratis-applications-frontend/identity';
 
 export const Home = () => {
@@ -43,7 +43,7 @@ returned to the ingress middleware.
 By default, if not specified, the type of the details is `any`. You can change this by passing it a generic argument with
 the exact shape of what's expected:
 
-```tsx
+```typescript
 import { useIdentity } from '@aksio/cratis-applications-frontend/identity';
 
 type Identity = {
