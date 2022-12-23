@@ -3,13 +3,18 @@
 
 import { Link } from '@fluentui/react';
 import { default as styles } from './Home.module.scss';
+import { useIdentity } from '@aksio/cratis-applications-frontend/identity';
+import { Identity } from './Identity';
 
 export const Home = () => {
+    const identity = useIdentity<Identity>();
+
     return (
         <div style={{ margin: '1rem' }} className={styles.home}>
             <h1>Congratulations on your new microservice! 🍾 🎂 </h1>
             This microservice comes with a default Aksio setup.<br />
             <br />
+            <h3>User: {identity.details.firstName} {identity.details.lastName}</h3>
             <h2>Projects</h2>
             <ul>
                 <li>Concepts - used for holding reusable domain concepts.</li>
