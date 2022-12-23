@@ -15,7 +15,7 @@ in the frontend. The proxies generated can be imported directly into your code.
 
 From a React component you can now use the static `use()` method:
 
-```tsx
+```typescript
 export const MyComponent = () => {
     const [accounts, queryAccounts] = AllAccounts.use();
 
@@ -78,7 +78,7 @@ public IEnumerable<DebitAccount> StartingWith([FromQuery] string? filter)
 The `filter` parameter will be part of the generated proxy, since it has the `[FromQuery]`
 attribute on it. Using the proxy requires you to now specify the parameter as well:
 
-```tsx
+```typescript
 export const MyComponent = () => {
     const [accounts, queryAccounts] = StartingWith.use({ filter: '' });
 
