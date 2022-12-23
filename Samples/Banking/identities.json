@@ -1,0 +1,22 @@
+[
+    {
+        "id": "1",
+        "name": "Someone",
+        "claims": [
+            {
+                "typ": "pid",
+                "val": "12345678901"
+            }
+        ]
+    },
+    {
+        "id": "2",
+        "name": "Someone else",
+        "claims": [
+            {
+                "typ": "pid",
+                "val": "12345678901"
+            }
+        ]
+    }
+]
