@@ -7,22 +7,25 @@ import { Navigation } from './Navigation';
 import { Home } from './Home';
 import { DebitAccounts } from './Accounts/Debit/DebitAccounts';
 import { AccountHolders } from './AccountHolders/AccountHolders';
+import { IdentityProvider } from '@aksio/cratis-applications-frontend/identity';
 
 export const App = () => {
     return (
-        <Router>
-            <div className={styles.appContainer}>
-                <div className={styles.navigationBar}>
-                    <Navigation />
+        <IdentityProvider>
+            <Router>
+                <div className={styles.appContainer}>
+                    <div className={styles.navigationBar}>
+                        <Navigation />
+                    </div>
+                    <div style={{ width: '100%' }}>
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/accounts/debit" element={<DebitAccounts />} />
+                            <Route path="/integration" element={<AccountHolders />} />
+                        </Routes>
+                    </div>
                 </div>
-                <div style={{ width: '100%' }}>
-                    <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/accounts/debit" element={<DebitAccounts />} />
-                        <Route path="/integration" element={<AccountHolders />} />
-                    </Routes>
-                </div>
-            </div>
-        </Router>
+            </Router>
+        </IdentityProvider>
     );
 };
