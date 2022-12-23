@@ -1,3 +1,10 @@
+# [v6.22.0] - 2022-12-23 [PR: #650](https://github.com/aksio-insurtech/Cratis/pull/650)
+
+### Added
+
+- Added frontend support for identity that works in conjunction with the result from the [Aksio ingress middleware](https://github.com/aksio-insurtech/IngressMiddleware).
+
+
 # [v6.21.5] - 2022-12-21 [PR: #647](https://github.com/aksio-insurtech/Cratis/pull/647)
 
 ### Fixed
