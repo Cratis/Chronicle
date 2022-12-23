@@ -2,15 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Applications.Identity;
-using Aksio.Cratis.Execution;
 
 namespace Sample;
 
 public class IdentityDetailsProvider : IProvideIdentityDetails
 {
-    public Task<object> Provide(IdentityProviderContext context)
+    public Task<IdentityDetails> Provide(IdentityProviderContext context)
     {
-        object result = new { Value = "Forty two", Tenant = TenantId.Development };
+        var result = new IdentityDetails(true, new { FirstName = "Jane", LastName = "Doe" });
         return Task.FromResult(result);
     }
 }

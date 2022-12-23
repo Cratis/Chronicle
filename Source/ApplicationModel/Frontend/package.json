@@ -28,6 +28,9 @@
         "./dialogs": {
             "default": "./dist/dialogs/index.js"
         },
+        "./identity": {
+            "default": "./dist/identity/index.js"
+        },
         "./validation": {
             "default": "./dist/validation/index.js"
         }
