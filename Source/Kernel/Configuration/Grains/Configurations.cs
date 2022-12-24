@@ -7,7 +7,7 @@ using Orleans;
 namespace Aksio.Cratis.Configuration.Grains;
 
 /// <summary>
-/// Defines a system for working with configurations.
+/// Represents an implementation of <see cref="IConfigurations"/>.
 /// </summary>
 public class Configurations : Grain, IConfigurations
 {
