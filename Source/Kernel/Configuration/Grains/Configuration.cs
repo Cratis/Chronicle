@@ -28,7 +28,6 @@ public class Configuration : Grain, IConfiguration
     /// <inheritdoc/>
     public Task<IEnumerable<TenantId>> GetTenants() => Task.FromResult(_kernelConfiguration.Tenants.GetTenantIds());
 
-
     /// <inheritdoc/>
     public Task<StorageForMicroservice> GetStorage() => Task.FromResult(_kernelConfiguration.Storage.Microservices.Get(_executionContextManager.Current.MicroserviceId));
 }
