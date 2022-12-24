@@ -10,7 +10,7 @@ public class ConfigurationForTenant : Dictionary<string, string>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationForTenant"/> class.
-    /// /// </summary>
+    /// </summary>
     /// <param name="dictionary">Dictionary to initialize it from.</param>
     public ConfigurationForTenant(IDictionary<string, string> dictionary) : base(dictionary)
     {

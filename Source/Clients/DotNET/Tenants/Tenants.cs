@@ -14,6 +14,10 @@ public class Tenants : ITenants
 {
     readonly IClusterClient _clusterClient;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Tenants"/> class.
+    /// </summary>
+    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
     public Tenants(IClusterClient clusterClient)
     {
         _clusterClient = clusterClient;
