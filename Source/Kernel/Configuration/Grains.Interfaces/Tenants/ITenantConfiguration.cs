@@ -4,7 +4,7 @@
 using Aksio.Cratis.Concepts.Configuration.Tenants;
 using Orleans;
 
-namespace Aksio.Cratis.Concepts.Grains.Tenants;
+namespace Aksio.Cratis.Configuration.Grains.Tenants;
 
 /// <summary>
 /// Defines a system for working with configuration for a specific tenant.
