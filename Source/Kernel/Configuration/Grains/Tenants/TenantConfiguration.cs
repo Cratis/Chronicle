@@ -5,7 +5,7 @@ using Aksio.Cratis.Concepts.Configuration.Tenants;
 using Orleans;
 using Orleans.Providers;
 
-namespace Aksio.Cratis.Concepts.Grains.Tenants;
+namespace Aksio.Cratis.Configuration.Grains.Tenants;
 
 /// <summary>
 /// Represents an implementation of <see cref="ITenantConfiguration"/>.
