@@ -99,5 +99,13 @@ public class ExecutionContextManager : IExecutionContextManager
     }
 
     /// <inheritdoc/>
+    public ExecutionContextScope ForTenant(TenantId tenantId, CorrelationId? correlationId = default)
+    {
+        var scope = new ExecutionContextScope(tenantId, correlationId ?? CorrelationId.New(), () => Establish(GlobalMicroserviceId));
+        Establish(scope.TenantId, scope.CorrelationId);
+        return scope;
+    }
+
+    /// <inheritdoc/>
     public void Set(ExecutionContext context) => _currentExecutionContext.Value = context;
 }
