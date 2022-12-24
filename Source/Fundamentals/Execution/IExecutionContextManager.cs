@@ -35,6 +35,14 @@ public interface IExecutionContextManager
     ExecutionContext Establish(TenantId tenantId, CorrelationId correlationId, MicroserviceId? microserviceId = default);
 
     /// <summary>
+    /// Creates a temporary and disposable <see cref="ExecutionContextScope"/> for a specific tenant.
+    /// </summary>
+    /// <param name="tenantId"><see cref="TenantId"/> to create for.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> to create for.</param>
+    /// <returns>A new <see cref="ExecutionContextScope"/>.</returns>
+    ExecutionContextScope ForTenant(TenantId tenantId, CorrelationId? correlationId = default);
+
+    /// <summary>
     /// Set a <see cref="ExecutionContext"/> for current call path.
     /// </summary>
     /// <param name="context"><see cref="ExecutionContext"/> to set.</param>
