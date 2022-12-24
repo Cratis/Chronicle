@@ -94,8 +94,8 @@ public static class MongoDBReadModels
 
     static async Task ConfigureReadModels(IServiceProvider serviceProvider)
     {
-        var configurations = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfigurations>(Guid.Empty);
-        var storage = await configurations.GetStorage();
+        var configuration = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfiguration>(Guid.Empty);
+        var storage = await configuration.GetStorage();
         var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
 
         foreach (var (tenant, config) in storage.Tenants)
