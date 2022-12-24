@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Events.Store.Grains.Connections;
 using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Execution;
@@ -18,7 +17,7 @@ public class two_tenants_and_two_event_types : GrainSpecification<ClientObserver
 
     protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IRequestContextManager> request_context_manager;
-    protected Tenants tenants;
+    protected Aksio.Cratis.Configuration.Tenants tenants;
     protected ExecutionContext execution_context;
     protected string connection_id;
     protected ObserverId observer_id = "a3535b94-e414-4c19-a2ce-b570fa9c913e";
