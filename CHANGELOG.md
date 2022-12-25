@@ -1,3 +1,17 @@
+# [v6.23.0] - 2022-12-25 [PR: #651](https://github.com/aksio-insurtech/Cratis/pull/651)
+
+### Added
+
+- Added a new method on `ExecutionContextManager` called `.ForTenant()` that establishes a temporary disposable execution context scope. It still leverages the same underlying mechanism but automatically resets back to an execution context without tenant set once out of scope.
+- Added a `ITenants` in the .NET Client that can be used to get all configured tenants.
+- Added  a `ITenantConfiguration` for getting configured key/value pairs associated with a tenant.
+- Added a REST API for the Kernel (`/api/configuration/tenants`) that allows for working with the configuration of tenants.
+
+### Fixed
+
+- Removing hard-coded Development tenant value for integration adapters.
+
+
 # [v6.22.0] - 2022-12-23 [PR: #650](https://github.com/aksio-insurtech/Cratis/pull/650)
 
 ### Added
