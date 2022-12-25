@@ -26,6 +26,6 @@ public class adding_from_properties : ProjectionSpecificationFor<Model>
     }
 
     [Fact] void should_result_in_correct_integer_value() => result.Model.IntValue.ShouldEqual(first_event_appended.IntValue + second_event_appended.IntValue);
-    [Fact] void should_result_in_correct_float_value() => result.Model.FloatValue.ShouldEqual(first_event_appended.FloatValue + second_event_appended.FloatValue);
+    [Fact] void should_result_in_correct_float_value() => Math.Round(result.Model.FloatValue, 3).ShouldEqual(Math.Round(first_event_appended.FloatValue + second_event_appended.FloatValue, 3));
     [Fact] void should_result_in_correct_double_value() => result.Model.DoubleValue.ShouldEqual(first_event_appended.DoubleValue + second_event_appended.DoubleValue);
 }
