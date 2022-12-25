@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Events.Store.MongoDB.Tenants;
 public class TenantConfigurationStorageProvider : IGrainStorage
 {
     readonly IClusterDatabase _database;
-    IMongoCollection<MongoDBTenantConfigurationState> Collection => _database.GetCollection<MongoDBTenantConfigurationState>();
+    IMongoCollection<MongoDBTenantConfigurationState> Collection => _database.GetCollection<MongoDBTenantConfigurationState>(CollectionNames.TenantConfiguration);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantConfigurationStorageProvider"/> class.
