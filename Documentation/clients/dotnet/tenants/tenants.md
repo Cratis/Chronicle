@@ -10,7 +10,7 @@ about tenancy and making this completely transparent. The code can be written as
 single tenant environment.
 
 However, there needs to be something that governs which tenant we are currently working on.
-Setting the current tenant is accomplished by working with the [execution context](../../Fundamentals/execution-context.md).
+Setting the current tenant is accomplished by working with the [execution context](../../../Fundamentals/execution-context.md).
 
 ## All tenants
 
