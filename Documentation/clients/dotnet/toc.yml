@@ -4,3 +4,5 @@
   href: events/observers.md
 - name: Integration
   href: integration/integration.md
+- name: Tenants
+  href: tenants/tenants.md

@@ -33,7 +33,7 @@ public static class ExecutionContextAppBuilderExtensions
             }
 
             var executionContextManager = app.ApplicationServices.GetService(typeof(IExecutionContextManager)) as IExecutionContextManager;
-            executionContextManager!.Establish(tenantId, Guid.NewGuid().ToString());
+            executionContextManager!.Establish(tenantId, CorrelationId.New());
             await next.Invoke().ConfigureAwait(false);
         });
 
