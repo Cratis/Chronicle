@@ -4,7 +4,10 @@
 import { QueryResult } from '../../QueryResult';
 
 describe("when asking has data and it is defined instance", () => {
-    const queryResult = new QueryResult<any>({}, true);
+    const queryResult = new QueryResult<any>({
+        validationErrors: [],
+        data: {}
+    }, Object, false);
 
     it('should considered to have data', () => queryResult.hasData.should.be.true);
 });

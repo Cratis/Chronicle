@@ -4,7 +4,10 @@
 import { QueryResult } from '../../QueryResult';
 
 describe("when asking has data and it is undefined", () => {
-    const queryResult = new QueryResult<any>(undefined, true);
+    const queryResult = new QueryResult<any>({
+        validationErrors: [],
+        data:undefined
+    }, Object, true);
 
     it('should considered to not having data', () => queryResult.hasData.should.be.false);
 });
