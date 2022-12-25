@@ -48,5 +48,14 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState) => Task.CompletedTask;
+    public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    {
+        var tenantId = (TenantId)grainReference.GetPrimaryKey();
+        var state = (grainState.State as TenantConfigurationState)!;
+        var mongoDBState = new MongoDBTenantConfigurationState(tenantId, state.Select(_ => new MongoDBTenantConfigurationKeyValuePair(_.Key, _.Value)));
+        await Collection.ReplaceOneAsync(
+            _ => _.Id == tenantId,
+            mongoDBState,
+            new ReplaceOptions { IsUpsert = true });
+    }
 }
