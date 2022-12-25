@@ -13,5 +13,12 @@ namespace Aksio.Cratis.Configuration.Grains.Tenants;
 public class TenantConfiguration : Grain<TenantConfigurationState>, ITenantConfiguration
 {
     /// <inheritdoc/>
+    public async Task Set(string key, string value)
+    {
+        State[key] = value;
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
     public Task<TenantConfigurationState> All() => Task.FromResult(State);
 }
