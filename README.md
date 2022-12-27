@@ -13,6 +13,8 @@
 [![Publish](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/publish.yml)
 [![Documentation Site](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml/badge.svg)](https://github.com/aksio-insurtech/Cratis/actions/workflows/pages.yml)
 
+## Statistics
+
 ![Alt](https://repobeats.axiom.co/api/embed/51aa0aa357e84296b1d66b50d7143c917fee9471.svg "Repobeats analytics image")
 
 ## Introduction
