@@ -4,3 +4,5 @@
   href: clients/dotnet/toc.yml
 - name: ASP.NET Client
   href: clients/aspnetcore/toc.yml
+- name: Fundamentals
+  href: fundamentals/toc.yml
