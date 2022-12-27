@@ -276,6 +276,10 @@ public class MyConfig
 
 Using the configuration object depends on the lifecycle of the type that needs it. Internally it leverages the [execution context](./execution-context.md)
 to resolve to the current tenant.
+
+> Note: Cratis will use the search paths and look for a file that matches the tenantId + filename of the config.
+> As an example for the default development tenant: `config/3352d47d-c154-4457-b3fb-8a2efb725113/myconfig.json`.
+
 If the type is typically a transient type and has a short lifecycle bound to something like a web request (e.g. API Controller), you
 can simply take a dependency to your configuration object directly:
 
