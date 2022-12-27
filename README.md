@@ -1,6 +1,6 @@
 # Aksio Cratis
 
-## Packages
+## Packages / Deployables
 
 [![Nuget](https://img.shields.io/nuget/v/Aksio.Cratis?logo=nuget)](http://nuget.org/packages/aksio.cratis)
 [![NPM](https://img.shields.io/npm/v/@aksio/cratis-applications-frontend?label=@aksio/cratis-applications-frontend&logo=npm)](https://www.npmjs.com/package/@aksio/cratis-applications-frontend)
