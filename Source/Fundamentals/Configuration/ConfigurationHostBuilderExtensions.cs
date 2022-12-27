@@ -1,14 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -78,85 +75,7 @@ public static class ConfigurationHostBuilderExtensions
         }
         var allSearchPaths = allSearchSubPaths.Select(_ => Path.Combine(Directory.GetCurrentDirectory(), baseRelativePath, _)).Distinct().ToArray();
 
-        foreach (var configurationObjectType in types.All.Where(_ => _.HasAttribute<ConfigurationAttribute>()))
-        {
-            var attribute = configurationObjectType.GetCustomAttribute<ConfigurationAttribute>()!;
-
-            var fileName = attribute.NameSet ? attribute.Name : configurationObjectType.Name.ToLowerInvariant();
-            fileName = Path.HasExtension(fileName) ? fileName : $"{fileName}.json";
-
-            var configurationBuilder = new ConfigurationBuilder();
-
-            foreach (var searchPath in allSearchPaths)
-            {
-                logger?.AddingConfigurationFile(configurationObjectType, fileName, searchPath);
-                var actualFile = Path.Combine(searchPath, fileName);
-                configurationBuilder.AddJsonFile(actualFile, true);
-            }
-
-            var configuration = configurationBuilder.Build();
-            var configurationObject = Activator.CreateInstance(configurationObjectType)!;
-            ResolveConfigurationValues(configuration, configurationObjectType, configurationObject);
-
-            if (configuration.Providers.Any(_ => _.GetChildKeys(Array.Empty<string>(), null!).Any()))
-            {
-                configuration.Bind(configurationObject);
-
-                if (configurationObject is IPerformPostBindOperations postPerformer)
-                {
-                    postPerformer.Perform();
-                }
-
-                services.AddSingleton(configurationObjectType, configurationObject);
-
-                services.AddChildConfigurationObjects(configurationObjectType, configurationObject);
-
-                var optionsType = typeof(IOptions<>).MakeGenericType(configurationObjectType);
-                var optionsWrapperType = typeof(OptionsWrapper<>).MakeGenericType(configurationObjectType);
-                var optionsWrapperInstance = Activator.CreateInstance(optionsWrapperType, new[] { configurationObject });
-
-                services.AddSingleton(optionsType, optionsWrapperInstance!);
-            }
-        }
-
-        return services;
-    }
-
-    static void ResolveConfigurationValues(IConfiguration configuration, Type configurationObjectType, object configurationObject)
-    {
-        foreach (var property in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.CanWrite))
-        {
-            object? propertyValue = null;
-
-            if (property.HasAttribute<ConfigurationValueResolverAttribute>())
-            {
-                var resolverAttribute = property.GetCustomAttribute<ConfigurationValueResolverAttribute>()!;
-                var resolver = (Activator.CreateInstance(resolverAttribute.ResolverType) as IConfigurationValueResolver)!;
-                propertyValue = resolver.Resolve(configuration);
-                property.SetValue(configurationObject, propertyValue);
-            }
-            else if (property.GetIndexParameters().Length == 0)
-            {
-                propertyValue = property.GetValue(configurationObject)!;
-            }
-
-            if (propertyValue is not null &&
-                !property.PropertyType.IsAPrimitiveType() &&
-                !property.PropertyType.IsEnumerable())
-            {
-                ResolveConfigurationValues(configuration.GetSection(property.Name), property.PropertyType, propertyValue);
-            }
-        }
-    }
-
-    static IServiceCollection AddChildConfigurationObjects(this IServiceCollection services, Type configurationObjectType, object configurationObject)
-    {
-        foreach (var childProperty in configurationObjectType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(_ => _.PropertyType.HasAttribute<ConfigurationAttribute>()))
-        {
-            var childConfigurationObject = childProperty.GetValue(configurationObject)!;
-            services.AddSingleton(childProperty.PropertyType, childConfigurationObject);
-            services.AddChildConfigurationObjects(childProperty.PropertyType, childConfigurationObject);
-        }
+        ConfigurationObjects.DiscoverAndAddAllConfigurationObjects(services, types, allSearchPaths, logger);
 
         return services;
     }

@@ -256,3 +256,61 @@ public class KernelConfiguration : IPerformPostBindOperations
     }
 }
 ```
+
+## Multi tenant configuration
+
+Some configuration objects are per tenant. You can easily specify this and Cratis will by convention look for a configuration file
+that sits in a folder with the name matching the tenant identifier and then the configuration file. Simply use the `perTenant`property
+on the `[Configuration]` attribute:
+
+```csharp
+using Aksio.Configuration;
+
+[Configuration(perTenant:true)]
+public class MyConfig
+{
+    public string SomeString { get; init; } = "Default Value"
+    public int SomeInteger { get; init; } = 43;
+}
+```
+
+Using the configuration object depends on the lifecycle of the type that needs it. Internally it leverages the [execution context](./execution-context.md)
+to resolve to the current tenant.
+
+> Note: Cratis will use the search paths and look for a file that matches the tenantId + filename of the config.
+> As an example for the default development tenant: `config/3352d47d-c154-4457-b3fb-8a2efb725113/myconfig.json`.
+
+If the type is typically a transient type and has a short lifecycle bound to something like a web request (e.g. API Controller), you
+can simply take a dependency to your configuration object directly:
+
+```csharp
+public class MyController : Controller
+{
+    readonly MyConfig _config;
+
+    public MyController(MyConfig config)
+    {
+        _config = config;
+    }
+}
+```
+
+While if your type has a longer lifecycle, for instance a **singleton** you should use the `ProviderFor<>` utility:
+
+```csharp
+public class MyLongLivingType
+{
+    readonly ProviderFor<MyConfig> _configProvider;
+
+    public MyLongLivingType(ProviderFor<MyConfig> configProvider)
+    {
+        _configProvider = configProvider;
+    }
+
+    public void DoThings()
+    {
+        // Resolve the config object in the current execution context
+        var config = _configProvider();
+    }
+}
+```
