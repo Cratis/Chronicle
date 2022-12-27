@@ -21,6 +21,11 @@ public sealed class ConfigurationAttribute : Attribute
     public bool Optional { get; }
 
     /// <summary>
+    /// Gets a value indicating if the configuration is per tenant or not.
+    /// </summary>
+    public bool PerTenant { get; }
+
+    /// <summary>
     /// Check whether or not the Name is set.
     /// </summary>
     public bool NameSet => !string.IsNullOrEmpty(Name);
@@ -30,9 +35,11 @@ public sealed class ConfigurationAttribute : Attribute
     /// </summary>
     /// <param name="name">Optional name of the configuration.</param>
     /// <param name="optional">Whether or not the file is optional - default = false.</param>
-    public ConfigurationAttribute(string name = "", bool optional = false)
+    /// <param name="perTenant">Whether or not the configuration is per tenant - default = false.</param>
+    public ConfigurationAttribute(string name = "", bool optional = false, bool perTenant = false)
     {
         Name = name;
         Optional = optional;
+        PerTenant = perTenant;
     }
 }
