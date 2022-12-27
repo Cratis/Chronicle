@@ -1,3 +1,11 @@
+# [v6.24.0] - 2022-12-27 [PR: #653](https://github.com/aksio-insurtech/Cratis/pull/653)
+
+> WARNING: Version 6.23.0 introduced a configuration system for tenants. This was a completely wrong design and put the responsibility in the wrong place. It has thus been removed.
+
+### Added
+
+- Support for multi tenant configuration objects using the `[Configuration]` attribute. Added a `PerTenant` property. Configuration system leverages this and provides a per tenant configuration instance by convention.
+
 # [v6.23.0] - 2022-12-25 [PR: #651](https://github.com/aksio-insurtech/Cratis/pull/651)
 
 ### Added
