@@ -16,5 +16,5 @@ public class Tenant
     /// <summary>
     /// Gets the configuration key/value pairs associated with the tenant.
     /// </summary>
-    public Dictionary<string, string> Configuration { get; init; } = new();
+    public IDictionary<string, string> Configuration { get; init; } = new Dictionary<string, string>();
 }
