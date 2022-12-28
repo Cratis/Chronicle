@@ -147,5 +147,5 @@ In the tenant object you can add a `configuration` object holding key / value pa
 }
 ```
 
-> Note: Any key/value pairs in the `cratis.json` has precedence over anything configured in the Kernel using the API.
+> Note: Any key/value pairs in the `cratis.json` takes precedence over anything configured in the Kernel using the API.
 > At startup the Kernel will take values in `cratis.json` and import these into the Kernel.
