@@ -27,6 +27,7 @@ public class BootProcedure : IPerformBootProcedure
         _configuration = configuration;
     }
 
+    /// <inheritdoc/>
     public void Perform()
     {
         foreach (var (tenantId, tenant) in _configuration.Tenants)
