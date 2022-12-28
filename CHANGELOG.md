@@ -1,3 +1,12 @@
+# [v6.25.0] - 2022-12-28 [PR: #655](https://github.com/aksio-insurtech/Cratis/pull/655)
+
+### Added
+
+- Bringing back `TenantConfiguration` that was considered a wrong design. Turns out it was fine for a specific purpose; associating key / value pairs with a tenant for simple configuration values.
+- Support for key / value configuration per tenant in the `cratis.json` file - specifically aimed towards local development and team work and the ability to check in configuration into a repository.
+
+
+
 # [v6.24.0] - 2022-12-27 [PR: #653](https://github.com/aksio-insurtech/Cratis/pull/653)
 
 > WARNING: Version 6.23.0 introduced a configuration system for tenants. This was a completely wrong design and put the responsibility in the wrong place. It has thus been removed.
