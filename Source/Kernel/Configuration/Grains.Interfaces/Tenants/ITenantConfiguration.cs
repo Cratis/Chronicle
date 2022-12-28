@@ -19,6 +19,13 @@ public interface ITenantConfiguration : IGrainWithGuidKey
     Task Set(string key, string value);
 
     /// <summary>
+    /// Set a collection of configuration key / value pairs.
+    /// </summary>
+    /// <param name="collection">Dictionary with key/value pairs.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Set(IDictionary<string, string> collection);
+
+    /// <summary>
     /// Gets all the configuration for the tenant.
     /// </summary>
     /// <returns><see cref="TenantConfigurationState"/>.</returns>

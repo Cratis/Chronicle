@@ -20,5 +20,15 @@ public class TenantConfiguration : Grain<TenantConfigurationState>, ITenantConfi
     }
 
     /// <inheritdoc/>
+    public async Task Set(IDictionary<string, string> collection)
+    {
+        foreach (var (key, value) in collection)
+        {
+            State[key] = value;
+        }
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
     public Task<TenantConfigurationState> All() => Task.FromResult(State);
 }
