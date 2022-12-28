@@ -1,3 +1,10 @@
+# [v6.25.1] - 2022-12-28 [PR: #656](https://github.com/aksio-insurtech/Cratis/pull/656)
+
+### Fixed
+
+- Bug with projections having children - it was assumed the child projection had a key resolver for the parent event, which in most cases it does not.
+
+
 # [v6.25.0] - 2022-12-28 [PR: #655](https://github.com/aksio-insurtech/Cratis/pull/655)
 
 ### Added
