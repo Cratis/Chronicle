@@ -119,7 +119,7 @@ public class MyController : Controller
 The configuration is encapsulated in a type called `ConfigurationForTenant` which implements a `IDictionary<string, string>`.
 This allows you to then access the values directly.
 
-To set a value you can use the Kernel API with the route '/api/configuration/tenants/{tenantId}'.
+To set a value you can use the Kernel API with the route `/api/configuration/tenants/{tenantId}`.
 Below is a sample using **curl** to set a key/value pair running locally:
 
 ```shell
