@@ -110,6 +110,13 @@ public interface IProjection
     bool Accepts(EventType eventType);
 
     /// <summary>
+    /// Get whether or not there is a key resolver for a specific <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="eventType"><see cref="EventType"/> to check.</param>
+    /// <returns>True if there is, false if not.</returns>
+    bool HasKeyResolverFor(EventType eventType);
+
+    /// <summary>
     /// Get the <see cref="ValueProvider{Event}"/> associated with a given <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to get for.</param>

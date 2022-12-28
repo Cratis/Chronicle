@@ -107,6 +107,9 @@ public class Projection : IProjection
     public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.Keys.Any(_ => _.Id == eventType.Id);
 
     /// <inheritdoc/>
+    public bool HasKeyResolverFor(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(new(eventType.Id, eventType.Generation));
+
+    /// <inheritdoc/>
     public KeyResolver GetKeyResolverFor(EventType eventType)
     {
         // We only care about the actual event type identifier and generation, any other properties should be the default

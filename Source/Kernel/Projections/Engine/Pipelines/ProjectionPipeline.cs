@@ -125,9 +125,16 @@ public class ProjectionPipeline : IProjectionPipeline
         }
         foreach (var child in projection.ChildProjections)
         {
-            var keyResolver = child.GetKeyResolverFor(context.Event.Metadata.Type);
-            var key = await keyResolver(_eventProvider, context.Event);
-            await HandleEventFor(child, context with { Key = key });
+            if (child.HasKeyResolverFor(context.Event.Metadata.Type))
+            {
+                var keyResolver = child.GetKeyResolverFor(context.Event.Metadata.Type);
+                var key = await keyResolver(_eventProvider, context.Event);
+                await HandleEventFor(child, context with { Key = key });
+            }
+            else
+            {
+                await HandleEventFor(child, context);
+            }
         }
     }
 }
