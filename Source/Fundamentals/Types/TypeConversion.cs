@@ -142,7 +142,14 @@ public static class TypeConversion
 
         if (val is not null && val.GetType() != type && !IsGuidFromString(type, val))
         {
-            val = System.Convert.ChangeType(val, type, CultureInfo.InvariantCulture);
+            if (type == typeof(string))
+            {
+                val = val.ToString();
+            }
+            else
+            {
+                val = System.Convert.ChangeType(val, type, CultureInfo.InvariantCulture);
+            }
         }
         return val!;
     }
