@@ -12,4 +12,9 @@ public class Tenant
     /// Gets the name of the tenant.
     /// </summary>
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the configuration key/value pairs associated with the tenant.
+    /// </summary>
+    public IDictionary<string, string> Configuration { get; init; } = new Dictionary<string, string>();
 }
