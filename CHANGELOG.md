@@ -1,3 +1,10 @@
+# [v6.25.2] - 2022-12-28 [PR: #657](https://github.com/aksio-insurtech/Cratis/pull/657)
+
+### Fixed
+
+- Fixing `TypeConversion` to handle Guid -> string. It revertet to `Convert.ChangeType()` for this scenario, which is wrong.
+
+
 # [v6.25.1] - 2022-12-28 [PR: #656](https://github.com/aksio-insurtech/Cratis/pull/656)
 
 ### Fixed
