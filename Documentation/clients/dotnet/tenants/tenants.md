@@ -76,8 +76,8 @@ public class MyController : Controller
 
 ## Configuration values
 
-For each tenant, you can associate configuration values. These are stored as simple key / value pairs for every tenant
-within the Kernel.
+For each tenant, you can associate global configuration values. These are stored as simple key / value pairs for every tenant
+within the Kernel. The key / value pairs are global across all microservices.
 
 You can retrieve values by using the `ITenantConfiguration` interface and the `GetAllFor()` method to get all the
 key / value pairs for a specific tenant:
