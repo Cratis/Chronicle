@@ -151,7 +151,10 @@ public static class JsonSchemaExtensions
         }
 
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                    schemaProperty.Reference.Type :
+                    schemaProperty.Reference?.Type ??
+                        (schemaProperty.HasOneOfSchemaReference ?
+                            schemaProperty.OneOf.First().Reference.Type :
+                            JsonObjectType.None) :
                     schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Null))
