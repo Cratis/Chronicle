@@ -41,16 +41,16 @@ public class EventValueProviderExpressionResolvers : IEventValueProviderExpressi
     public ValueProvider<AppendedEvent> Resolve(JsonSchemaProperty targetSchemaProperty, string expression)
     {
         var resolver = Array.Find(_resolvers, _ => _.CanResolve(expression));
-        ThrowIfUnsupportedEventValueExpression(expression, resolver);
+        ThrowIfUnsupportedEventValueExpression(targetSchemaProperty, expression, resolver);
 
         return (e) => Convert(targetSchemaProperty, resolver!.Resolve(expression)(e));
     }
 
-    void ThrowIfUnsupportedEventValueExpression(string expression, IEventValueProviderExpressionResolver? resolver)
+    void ThrowIfUnsupportedEventValueExpression(JsonSchemaProperty targetSchemaProperty, string expression, IEventValueProviderExpressionResolver? resolver)
     {
         if (resolver == default)
         {
-            throw new UnsupportedEventValueExpression(expression);
+            throw new UnsupportedEventValueExpression(targetSchemaProperty, expression);
         }
     }
 
