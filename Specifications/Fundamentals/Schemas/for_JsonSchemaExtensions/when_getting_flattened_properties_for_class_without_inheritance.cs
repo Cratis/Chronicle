@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using NJsonSchema;
-using NJsonSchema.Generation;
 
 namespace Aksio.Cratis.Schemas.for_JsonSchemaExtensions;
 
-public class when_getting_flattened_properties_for_class_without_inheritance : Specification
+public class when_getting_flattened_properties_for_class_without_inheritance : given.a_json_schema_generator
 {
     record SimpleType(int SomeInteger, string SomeString);
 
@@ -14,12 +13,7 @@ public class when_getting_flattened_properties_for_class_without_inheritance : S
 
     IEnumerable<JsonSchemaProperty> result;
 
-    void Establish()
-    {
-        var settings = new JsonSchemaGeneratorSettings();
-        var generator = new NJsonSchema.Generation.JsonSchemaGenerator(settings);
-        schema = generator.Generate(typeof(SimpleType));
-    }
+    void Establish() => schema = generator.Generate(typeof(SimpleType));
 
     void Because() => result = schema.GetFlattenedProperties();
 
