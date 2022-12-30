@@ -1,3 +1,12 @@
+# [v6.25.3] - 2022-12-30 [PR: #659](https://github.com/aksio-insurtech/Cratis/pull/659)
+
+### Fixed
+
+- Supporting `OneOf` representation of enums when retrieving target type.
+- Allowing references for properties, making enums be represented more cohesively in Json schema generation with references.
+- Support for enums with values represented as strings when converting from JSON to ExpandoObject internally.
+
+
 # [v6.25.2] - 2022-12-28 [PR: #657](https://github.com/aksio-insurtech/Cratis/pull/657)
 
 ### Fixed
