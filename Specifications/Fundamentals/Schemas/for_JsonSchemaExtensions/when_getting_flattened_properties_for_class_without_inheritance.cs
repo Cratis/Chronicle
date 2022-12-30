@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Strings;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Schemas.for_JsonSchemaExtensions;
@@ -17,5 +18,5 @@ public class when_getting_flattened_properties_for_class_without_inheritance : g
 
     void Because() => result = schema.GetFlattenedProperties();
 
-    [Fact] void should_get_the_properties_on_the_type() => result.Select(_ => _.Name).ShouldContainOnly(nameof(SimpleType.SomeInteger), nameof(SimpleType.SomeString));
+    [Fact] void should_get_the_properties_on_the_type() => result.Select(_ => _.Name).ShouldContainOnly(nameof(SimpleType.SomeInteger).ToCamelCase(), nameof(SimpleType.SomeString).ToCamelCase());
 }
