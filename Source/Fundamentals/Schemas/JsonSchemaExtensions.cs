@@ -157,11 +157,6 @@ public static class JsonSchemaExtensions
                             JsonObjectType.None) :
                     schemaProperty.Type;
 
-        if (type == JsonObjectType.None)
-        {
-            throw new UnableToResolveTypeFromSchemaProperty(schemaProperty);
-        }
-
         if (type.HasFlag(JsonObjectType.Null))
         {
             type ^= JsonObjectType.Null;
