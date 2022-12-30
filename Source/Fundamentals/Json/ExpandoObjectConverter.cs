@@ -158,6 +158,14 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 return value.GetValue<bool>();
 
             case JsonObjectType.Integer:
+                var genericArguments = value.GetType().GetGenericArguments();
+                if (genericArguments.Length == 1 &&
+                    genericArguments[0] == typeof(string) &&
+                    schemaProperty.Reference?.IsEnumeration == true)
+                {
+                    var index = schemaProperty.Reference.EnumerationNames.IndexOf(value.GetValue<string>());
+                    return TypeConversion.Convert(typeof(int), schemaProperty.Reference.Enumeration.ToArray()[index]);
+                }
                 return value.GetValue<int>();
 
             case JsonObjectType.Number:
