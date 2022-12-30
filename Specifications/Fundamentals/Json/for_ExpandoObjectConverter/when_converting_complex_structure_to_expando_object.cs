@@ -36,6 +36,7 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
             ["floatValue"] = 42.42,
             ["doubleValue"] = 42.42,
             ["enumValue"] = 2,
+            ["enumAsStringValue"] = "Second",
             ["guidValue"] = "251b9fbe-83d4-4306-9a5d-9d0e7d4dd456",
             ["dateTimeValue"] = DateTime.Parse("2022-10-31T14:51:32.8450000Z"),
             ["dateTimeOffsetValue"] = DateTime.Parse("2022-10-31T14:51:32.8450000Z"),
@@ -54,8 +55,10 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_set_top_level_float_value_to_hold_correct_value() => ((float)result.floatValue).ShouldEqual((float)source["floatValue"].GetValue<double>());
     [Fact] void should_set_top_level_double_value_to_be_of_float_type() => ((object)result.doubleValue).ShouldBeOfExactType<double>();
     [Fact] void should_set_top_level_double_value_to_hold_correct_value() => ((double)result.doubleValue).ShouldEqual(source["doubleValue"].GetValue<double>());
-    [Fact] void should_set_top_level_enum_value_to_be_of_float_type() => ((object)result.enumValue).ShouldBeOfExactType<int>();
+    [Fact] void should_set_top_level_enum_value_to_be_of_int_type() => ((object)result.enumValue).ShouldBeOfExactType<int>();
     [Fact] void should_set_top_level_enum_value_to_hold_correct_value() => ((int)result.enumValue).ShouldEqual(source["enumValue"].GetValue<int>());
+    [Fact] void should_set_top_level_enum_as_string_value_to_be_of_int_type() => ((object)result.enumValue).ShouldBeOfExactType<int>();
+    [Fact] void should_set_top_level_enum_as_string_value_to_hold_correct_value() => ((int)result.enumValue).ShouldEqual((int)AnEnumAsStringValue.Second);
     [Fact] void should_set_top_level_guid_value_to_be_of_guid_type() => ((object)result.guidValue).ShouldBeOfExactType<Guid>();
     [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => ((Guid)result.guidValue).ShouldEqual(Guid.Parse(source["guidValue"].GetValue<string>()));
     [Fact] void should_set_top_level_date_time_value_to_be_of_date_time_type() => ((object)result.dateTimeValue).ShouldBeOfExactType<DateTime>();

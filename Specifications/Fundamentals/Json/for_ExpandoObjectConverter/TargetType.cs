@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.Serialization;
+
 namespace Aksio.Cratis.Json.for_ExpandoObjectConverter;
 
 public enum AnEnumValue
@@ -9,11 +11,21 @@ public enum AnEnumValue
     Second = 2
 }
 
+public enum AnEnumAsStringValue
+{
+    [EnumMember(Value = "First")]
+    First = 1,
+
+    [EnumMember(Value = "Second")]
+    Second = 2,
+}
+
 public record TargetType(
     int IntValue,
     float FloatValue,
     double DoubleValue,
     AnEnumValue EnumValue,
+    AnEnumAsStringValue EnumAsStringValue,
     Guid GuidValue,
     DateTime DateTimeValue,
     DateTimeOffset DateTimeOffsetValue,
