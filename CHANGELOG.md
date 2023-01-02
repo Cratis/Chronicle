@@ -1,3 +1,10 @@
+# [v6.25.5] - 2023-1-2 [PR: #662](https://github.com/aksio-insurtech/Cratis/pull/662)
+
+### Fixed
+
+- Fixing a bug in the command template so that enumerable properties actually now gets rendered correctly as JS arrays.
+
+
 # [v6.25.4] - 2023-1-2 [PR: #660](https://github.com/aksio-insurtech/Cratis/pull/660)
 
 ### Fixed
