@@ -146,9 +146,18 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             type ^= JsonObjectType.Null;
         }
 
+        var genericArguments = value.GetType().GetGenericArguments();
+
         switch (type)
         {
             case JsonObjectType.String:
+                if (genericArguments.Length == 1 &&
+                    genericArguments[0] == typeof(int) &&
+                    schemaProperty.Reference?.IsEnumeration == true)
+                {
+                    return value.GetValue<int>();
+                }
+
                 var valueAsString = value.GetValue<string>();
                 return schemaProperty.Format == "guid" ?
                         Guid.Parse(valueAsString) :
@@ -158,7 +167,6 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
                 return value.GetValue<bool>();
 
             case JsonObjectType.Integer:
-                var genericArguments = value.GetType().GetGenericArguments();
                 if (genericArguments.Length == 1 &&
                     genericArguments[0] == typeof(string) &&
                     schemaProperty.Reference?.IsEnumeration == true)
