@@ -1,3 +1,10 @@
+# [v6.25.4] - 2023-1-2 [PR: #660](https://github.com/aksio-insurtech/Cratis/pull/660)
+
+### Fixed
+
+- When using Newtonsofts `[JsonConverter(typeof(StringEnumConverter))]`, NJsonSchema would by default treat it as a string value. Changed this behavior and it will now always treat it as an integer.
+
+
 # [v6.25.3] - 2022-12-30 [PR: #659](https://github.com/aksio-insurtech/Cratis/pull/659)
 
 ### Fixed
