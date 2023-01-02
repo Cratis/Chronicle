@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Aksio.Cratis.Json.for_ExpandoObjectConverter;
 
@@ -11,8 +13,24 @@ public enum AnEnumValue
     Second = 2
 }
 
-public enum AnEnumAsStringValue
+public enum AnEnumWithStringValues
 {
+    [EnumMember(Value = "Undefined")]
+    Undefined = 0,
+
+    [EnumMember(Value = "First")]
+    First = 1,
+
+    [EnumMember(Value = "Second")]
+    Second = 2,
+}
+
+[JsonConverter(typeof(StringEnumConverter))]
+public enum AnEnumWithStringValuesAndJsonConverter
+{
+    [EnumMember(Value = "Undefined")]
+    Undefined = 0,
+
     [EnumMember(Value = "First")]
     First = 1,
 
@@ -25,7 +43,9 @@ public record TargetType(
     float FloatValue,
     double DoubleValue,
     AnEnumValue EnumValue,
-    AnEnumAsStringValue EnumAsStringValue,
+    AnEnumWithStringValues EnumAsStringValueRepresentedAsInt,
+    AnEnumWithStringValues EnumAsStringValue,
+    AnEnumWithStringValuesAndJsonConverter EnumAsStringValueWithJsonConverter,
     Guid GuidValue,
     DateTime DateTimeValue,
     DateTimeOffset DateTimeOffsetValue,
