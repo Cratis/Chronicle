@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Concepts;
 using Namotion.Reflection;
+using Newtonsoft.Json;
 using NJsonSchema.Generation;
 
 namespace Aksio.Cratis.Schemas;
@@ -12,6 +13,9 @@ namespace Aksio.Cratis.Schemas;
 /// </summary>
 public class ReflectionService : DefaultReflectionService
 {
+    /// <inheritdoc/>
+    public override bool IsStringEnum(ContextualType contextualType, JsonSerializerSettings serializerSettings) => false;
+
     /// <inheritdoc/>
     public override JsonTypeDescription GetDescription(ContextualType contextualType, ReferenceTypeNullHandling defaultReferenceTypeNullHandling, JsonSchemaGeneratorSettings settings)
     {
