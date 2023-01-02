@@ -13,7 +13,7 @@ const routeTemplate = Handlebars.compile('{{{Route}}}');
 
 export interface I{{Name}} {
     {{#Properties}}
-    {{#if Enumerable}}
+    {{#if IsEnumerable}}
     {{camelcase Name}}?: {{Type}}[];
     {{else}}
     {{camelcase Name}}?: {{Type}};
@@ -39,7 +39,7 @@ export class {{Name}} extends Command<I{{Name}}> implements I{{Name}} {
     readonly validation: CommandValidator = new {{Name}}Validator();
 
     {{#Properties}}
-    {{#if Enumerable}}
+    {{#if IsEnumerable}}
     private _{{camelcase Name}}!: {{Type}}[];
     {{else}}
     private _{{camelcase Name}}!: {{Type}};
@@ -73,7 +73,7 @@ export class {{Name}} extends Command<I{{Name}}> implements I{{Name}} {
     }
 
     {{#Properties}}
-    {{#if Enumerable}}
+    {{#if IsEnumerable}}
     get {{camelcase Name}}(): {{Type}}[] {
         return this._{{camelcase Name}};
     }
