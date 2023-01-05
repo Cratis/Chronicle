@@ -6,14 +6,14 @@ import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/c
 import { ProjectionCollection } from './ProjectionCollection';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/projections/{{projectionId}}/collections?microserviceId={{microserviceId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{microserviceId}/projections/{{projectionId}}/collections?microserviceId={{microserviceId}}');
 
 export interface CollectionsArguments {
     microserviceId: string;
     projectionId: string;
 }
 export class Collections extends QueryFor<ProjectionCollection[], CollectionsArguments> {
-    readonly route: string = '/api/events/store/projections/{{projectionId}}/collections?microserviceId={{microserviceId}}';
+    readonly route: string = '/api/events/store/{microserviceId}/projections/{{projectionId}}/collections?microserviceId={{microserviceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ProjectionCollection[] = [];
 

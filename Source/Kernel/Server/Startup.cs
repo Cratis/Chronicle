@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Extensions.Orleans.Execution;
 
 #pragma warning disable SA1600
 

@@ -3,31 +3,57 @@
 
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Grains;
 using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
+using Orleans;
 
 namespace Aksio.Cratis.Events.Projections.Api;
 
 /// <summary>
 /// Represents the API for projections.
 /// </summary>
-[Route("/api/events/store/projections")]
+[Route("/api/events/store/{microserviceId}/projections")]
 public class Projections : Controller
 {
+    readonly IGrainFactory _grainFactory;
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
+    /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
     /// <param name="projectionDefinitionsProvider">Provider for <see cref="IProjectionDefinitions"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public Projections(
+        IGrainFactory grainFactory,
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
         IExecutionContextManager executionContextManager)
     {
+        _grainFactory = grainFactory;
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
         _executionContextManager = executionContextManager;
+    }
+
+    /// <summary>
+    /// Register projections with pipelines.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
+    /// <param name="payload">The registrations.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost]
+    public async Task RegisterProjections(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromBody] RegisterProjections payload)
+    {
+        _executionContextManager.Establish(microserviceId);
+
+        var projections = _grainFactory.GetGrain<IProjections>(microserviceId.Value);
+        foreach (var registration in payload.Projections)
+        {
+            await projections.Register(registration.Projection, registration.Pipeline);
+        }
     }
 
     /// <summary>
@@ -36,7 +62,7 @@ public class Projections : Controller
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get projections for.</param>
     /// <returns><see cref="Projection"/> containing all projections.</returns>
     [HttpGet]
-    public async Task<IEnumerable<Projection>> AllProjections([FromQuery] MicroserviceId microserviceId)
+    public async Task<IEnumerable<Projection>> AllProjections([FromRoute] MicroserviceId microserviceId)
     {
         _executionContextManager.Establish(microserviceId);
 

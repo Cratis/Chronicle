@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../Engine/Engine.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../../../ApplicationModel/CQRS.MongoDB/CQRS.MongoDB.csproj"/>
     </ItemGroup>
 
