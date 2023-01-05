@@ -15,7 +15,7 @@ public interface IConfiguration : IGrainWithGuidKey
     /// Get all the configuration tenants.
     /// </summary>
     /// <returns>Collection of <see cref="TenantId"/>.</returns>
-    Task<IEnumerable<TenantId>> GetTenants();
+    Task<IEnumerable<TenantInfo>> GetTenants();
 
     /// <summary>
     /// Gets the <see cref="Storage"/> configuration.

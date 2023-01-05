@@ -26,7 +26,7 @@ public class Configuration : Grain, IConfiguration
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<TenantId>> GetTenants() => Task.FromResult(_kernelConfiguration.Tenants.GetTenantIds());
+    public Task<IEnumerable<TenantInfo>> GetTenants() => Task.FromResult(_kernelConfiguration.Tenants.Select(_ => new TenantInfo(_.Key, _.Value.Name)).ToArray().AsEnumerable());
 
     /// <inheritdoc/>
     public Task<StorageForMicroservice> GetStorage() => Task.FromResult(_kernelConfiguration.Storage.Microservices.Get(_executionContextManager.Current.MicroserviceId));

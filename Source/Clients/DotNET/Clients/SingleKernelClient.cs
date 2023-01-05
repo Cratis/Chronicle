@@ -6,6 +6,7 @@ using System.Text.Json;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Queries;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Aksio.Cratis.Clients;
 
@@ -54,5 +55,22 @@ public class SingleKernelClient : IClient
     }
 
     /// <inheritdoc/>
-    public Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null) => throw new NotImplementedException();
+    public async Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null)
+    {
+        var client = _clientFactory.CreateClient();
+        client.BaseAddress = _options.Endpoint;
+        HttpResponseMessage response;
+
+        if (queryString is not null)
+        {
+            var uri = QueryHelpers.AddQueryString(route, queryString!);
+            response = await client.GetAsync(uri);
+        }
+        else
+        {
+            response = await client.GetAsync(route);
+        }
+        var result = await response.Content.ReadFromJsonAsync<QueryResult>(_jsonSerializerOptions);
+        return result!;
+    }
 }
