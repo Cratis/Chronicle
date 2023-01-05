@@ -5,6 +5,7 @@ using System.Net.WebSockets;
 using System.Reactive.Subjects;
 using System.Text;
 using System.Text.Json;
+using Aksio.Cratis.Queries;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 

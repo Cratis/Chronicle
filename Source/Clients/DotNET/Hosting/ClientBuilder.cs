@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Collections;
 using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Connections;
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Events.Projections;
@@ -82,6 +82,7 @@ public class ClientBuilder : IClientBuilder
 
         logger?.ConfiguringServices();
         services
+            .AddCratisClient()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
             .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()

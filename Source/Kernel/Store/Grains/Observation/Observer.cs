@@ -41,7 +41,6 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     TenantId _sourceTenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
-    IStreamProvider? _observerStreamProvider;
 
     bool HasSubscribedObserver => State.CurrentNamespace != ObserverNamespace.NotSet;
     IEventSequenceStorageProvider EventSequenceStorageProvider
@@ -82,8 +81,6 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _tenantId = key.TenantId;
         _sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
         _sourceTenantId = key.SourceTenantId ?? _tenantId;
-
-        _observerStreamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
 
         _logger.Activating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
@@ -139,25 +136,26 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
-            var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
-            await stream.OnNextAsync(@event);
+            throw new NotImplementedException();
+            // var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
+            // await stream.OnNextAsync(@event);
 
-            State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-            await WriteStateAsync();
+            // State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+            // await WriteStateAsync();
 
-            if (setLastHandled)
-            {
-                State.LastHandled = @event.Metadata.SequenceNumber;
-            }
+            // if (setLastHandled)
+            // {
+            //     State.LastHandled = @event.Metadata.SequenceNumber;
+            // }
 
-            var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
+            // var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
 
-            if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
-            {
-                State.RunningState = ObserverRunningState.Active;
-                _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-            }
-            await WriteStateAsync();
+            // if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
+            // {
+            //     State.RunningState = ObserverRunningState.Active;
+            //     _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+            // }
+            // await WriteStateAsync();
         }
         catch (Exception ex)
         {

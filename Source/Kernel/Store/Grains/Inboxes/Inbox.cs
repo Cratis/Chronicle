@@ -53,7 +53,7 @@ public class Inbox : Grain, IInbox
     }
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public override Task OnActivateAsync()
     {
         _microserviceId = this.GetPrimaryKey(out var keyAsString);
         _key = InboxKey.Parse(keyAsString);
@@ -75,12 +75,13 @@ public class Inbox : Grain, IInbox
                 _key.TenantId));
 
         var observerNamespace = new ObserverNamespace($"{_microserviceId}+${keyAsString}");
-        var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
-        var stream = streamProvider.GetStream<AppendedEvent>(_microserviceId, observerNamespace);
-        await stream.SubscribeAsync(HandleEvent);
+        throw new NotImplementedException();
+        // var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
+        // var stream = streamProvider.GetStream<AppendedEvent>(_microserviceId, observerNamespace);
+        // await stream.SubscribeAsync(HandleEvent);
 
-        await _observer.SetMetadata($"Inbox for ${_microserviceId}, Outbox from ${_key.MicroserviceId} for Tenant ${_key.TenantId}", ObserverType.Inbox);
-        await _observer.Subscribe(Array.Empty<EventType>(), observerNamespace);
+        // await _observer.SetMetadata($"Inbox for ${_microserviceId}, Outbox from ${_key.MicroserviceId} for Tenant ${_key.TenantId}", ObserverType.Inbox);
+        // await _observer.Subscribe(Array.Empty<EventType>(), observerNamespace);
     }
 
     /// <inheritdoc/>

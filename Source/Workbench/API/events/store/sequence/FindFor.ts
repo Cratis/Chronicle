@@ -6,7 +6,7 @@ import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/c
 import { AppendedEvent } from './AppendedEvent';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{microserviceId}/{tenantId}/sequence/{{eventSequenceId}}/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
 
 export interface FindForArguments {
     eventSequenceId: string;
@@ -14,7 +14,7 @@ export interface FindForArguments {
     tenantId: string;
 }
 export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
-    readonly route: string = '/api/events/store/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
+    readonly route: string = '/api/events/store/{microserviceId}/{tenantId}/sequence/{{eventSequenceId}}/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEvent[] = [];
 

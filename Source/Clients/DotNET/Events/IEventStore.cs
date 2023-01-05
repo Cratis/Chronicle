@@ -11,10 +11,10 @@ public interface IEventStore
     /// <summary>
     /// Gets the default event log.
     /// </summary>
-    IEventSequence EventLog { get; }
+    IEventLog EventLog { get; }
 
     /// <summary>
     /// Gets the event outbox.
     /// </summary>
-    IEventSequence Outbox { get; }
+    IEventOutbox Outbox { get; }
 }

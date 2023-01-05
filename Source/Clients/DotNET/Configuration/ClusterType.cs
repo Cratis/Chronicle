@@ -8,8 +8,18 @@ namespace Aksio.Cratis.Configuration;
 /// </summary>
 public enum ClusterType
 {
+    /// <summary>
+    /// Single cluster mode, typically used in a local development scenario.
+    /// </summary>
     Single = 1,
+
+    /// <summary>
+    /// Static cluster mode with a static well known collection of Kernel instances.
+    /// </summary>
     Static = 2,
+
+    /// <summary>
+    /// Azure Storage based cluster mode that is based upon the Orleans registered instances.
+    /// </summary>
     AzureStorage = 3
 }
-

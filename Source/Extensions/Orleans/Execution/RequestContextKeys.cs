@@ -35,9 +35,4 @@ public static class RequestContextKeys
     /// The caused by identifier key.
     /// </summary>
     public const string CausedBy = "CausedBy";
-
-    /// <summary>
-    /// The unique connection id from a client.
-    /// </summary>
-    public const string ConnectionId = "ConnectionId";
 }

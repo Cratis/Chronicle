@@ -84,7 +84,7 @@ public class Projection : Grain, IProjection
 
         _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
 
-        var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
+        var streamProvider = GetStreamProvider("Blah");
         var stream = streamProvider.GetStream<AppendedEvent>(_projectionId, key);
         await stream.SubscribeAsync(HandleEvent);
 
