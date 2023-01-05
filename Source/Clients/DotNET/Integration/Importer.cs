@@ -13,21 +13,21 @@ public class Importer : IImporter
 {
     readonly IObjectsComparer _objectsComparer;
     readonly IAdapters _adapters;
-    readonly IEventLog _eventLog;
-    readonly IEventOutbox _eventOutbox;
+    readonly IEventSequence _eventLog;
+    readonly IEventSequence _eventOutbox;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Importer"/> class.
     /// </summary>
     /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventLog"><see cref="IEventLog"/> for appending events.</param>
-    /// <param name="eventOutbox"><see cref="IEventOutbox"/> for appending public events.</param>
+    /// <param name="eventLog"><see cref="IEventSequence"/> for appending events.</param>
+    /// <param name="eventOutbox"><see cref="IEventSequence"/> for appending public events.</param>
     public Importer(
         IAdapters adapters,
         IObjectsComparer objectsComparer,
-        IEventLog eventLog,
-        IEventOutbox eventOutbox)
+        IEventSequence eventLog,
+        IEventSequence eventOutbox)
     {
         _objectsComparer = objectsComparer;
         _adapters = adapters;

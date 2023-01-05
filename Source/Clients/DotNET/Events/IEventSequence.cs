@@ -4,9 +4,9 @@
 namespace Aksio.Cratis.Events;
 
 /// <summary>
-/// Defines the client event log.
+/// Defines the client event sequence.
 /// </summary>
-public interface IEventLog
+public interface IEventSequence
 {
     /// <summary>
     /// Append a single event to the event store.
