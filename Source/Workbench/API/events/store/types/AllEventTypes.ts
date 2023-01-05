@@ -6,13 +6,13 @@ import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/c
 import { EventTypeInformation } from './EventTypeInformation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/types?microserviceId={{microserviceId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/types');
 
 export interface AllEventTypesArguments {
     microserviceId: string;
 }
 export class AllEventTypes extends QueryFor<EventTypeInformation[], AllEventTypesArguments> {
-    readonly route: string = '/api/events/store/types?microserviceId={{microserviceId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/types';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventTypeInformation[] = [];
 
