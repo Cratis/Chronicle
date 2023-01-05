@@ -46,7 +46,10 @@ public class OutboxProjectionsRegistrar : IOutboxProjectionsRegistrar
     /// <inheritdoc/>
     public Task DiscoverAndRegisterAll()
     {
-        throw new NotImplementedException();
+        // TODO:
+
+        return Task.CompletedTask;
+
         // _executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
         // var projections = _clusterClient.GetGrain<Projections.Grains.IProjections>(ExecutionContextManager.GlobalMicroserviceId);
         // foreach (var outboxProjectionsDefinition in _outboxProjectionsDefinitions)

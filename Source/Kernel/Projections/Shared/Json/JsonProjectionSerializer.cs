@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
@@ -38,8 +39,8 @@ public class JsonProjectionSerializer : IJsonProjectionSerializer
     }
 
     /// <inheritdoc/>
-    public string Serialize(ProjectionDefinition definition) => JsonSerializer.Serialize(definition, _serializerOptions);
+    public JsonNode Serialize(ProjectionDefinition definition) => JsonSerializer.SerializeToNode(definition, _serializerOptions)!;
 
     /// <inheritdoc/>
-    public ProjectionDefinition Deserialize(string json) => JsonSerializer.Deserialize<ProjectionDefinition>(json, _serializerOptions)!;
+    public ProjectionDefinition Deserialize(JsonNode json) => json.Deserialize<ProjectionDefinition>(_serializerOptions)!;
 }
