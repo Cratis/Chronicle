@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Execution;
-using Orleans;
 
 namespace Aksio.Cratis.Events;
 
@@ -12,37 +11,37 @@ namespace Aksio.Cratis.Events;
 /// </summary>
 public class EventStore : IEventStore
 {
-    readonly IClusterClient _clusterClient;
+    /// <inheritdoc/>
+    public IEventSequence EventLog { get; }
 
     /// <inheritdoc/>
-    public IEventLog EventLog { get; }
-
-    /// <inheritdoc/>
-    public IEventOutbox Outbox { get; }
+    public IEventSequence Outbox { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
     /// </summary>
-    /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
-    /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with execution context.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/> in the system.</param>
+    /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
+    /// <param name="connectionFactory"><see cref="IConnectionFactory"/> for connecting to kernel.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with execution context.</param>
     public EventStore(
+        IEventTypes eventTypes,
         IEventSerializer serializer,
-        IClusterClient clusterClient,
-        IExecutionContextManager executionContextManager,
-        IEventTypes eventTypes)
+        IConnectionFactory connectionFactory,
+        IExecutionContextManager executionContextManager)
     {
-        _clusterClient = clusterClient;
+        EventLog = new EventSequence(
+            Store.EventSequenceId.Log,
+            eventTypes,
+            serializer,
+            connectionFactory,
+            executionContextManager);
 
-        var eventLog = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
-            EventSequenceId.Log,
-            keyExtension: executionContextManager.Current.ToMicroserviceAndTenant());
-        EventLog = new EventLog(eventTypes, serializer, eventLog);
-
-        var eventOutbox = _clusterClient.GetGrain<Store.Grains.IEventSequence>(
-            EventSequenceId.Outbox,
-            keyExtension: executionContextManager.Current.ToMicroserviceAndTenant());
-        Outbox = new EventOutbox(eventTypes, serializer, eventOutbox);
+        Outbox = new EventSequence(
+            Store.EventSequenceId.Outbox,
+            eventTypes,
+            serializer,
+            connectionFactory,
+            executionContextManager);
     }
 }
