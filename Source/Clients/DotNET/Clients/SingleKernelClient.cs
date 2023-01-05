@@ -10,7 +10,7 @@ using Aksio.Cratis.Queries;
 namespace Aksio.Cratis.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClient"/> for
+/// Represents an implementation of <see cref="IClient"/> for a single instance.
 /// </summary>
 public class SingleKernelClient : IClient
 {
