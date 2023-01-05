@@ -50,6 +50,6 @@ public class Observers : IObservers
     /// <inheritdoc/>
     public Task RegisterAndObserveAll()
     {
-        throw new NotImplementedException();
+        return Task.CompletedTask;
     }
 }

@@ -80,25 +80,16 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     /// <inheritdoc/>
     public async Task DiscoverAndRegisterAll()
     {
-        await RegisterProjectionsForMicroservice(ExecutionContextManager.GlobalMicroserviceId);
-    }
+        var registrations = _projections.Select(projection => new ProjectionRegistration(projection, new(
+            projection.Identifier,
+            new[]
+            {
+                new ProjectionSinkDefinition(
+                    "12358239-a120-4392-96d4-2b48271b904c",
+                    WellKnownProjectionSinkTypes.MongoDB)
+            })));
 
-    Task RegisterProjectionsForMicroservice(MicroserviceId microserviceId)
-    {
-        _executionContextManager.Establish(microserviceId);
-        throw new NotImplementedException();
-        // var projections = _clusterClient.GetGrain<Grains.IProjections>(microserviceId);
-        // foreach (var projectionDefinition in _projections)
-        // {
-        //     var pipelineDefinition = new ProjectionPipelineDefinition(
-        //         projectionDefinition.Identifier,
-        //         new[]
-        //         {
-        //                 new ProjectionSinkDefinition(
-        //                     "12358239-a120-4392-96d4-2b48271b904c",
-        //                     WellKnownProjectionSinkTypes.MongoDB)
-        //         });
-        //     await projections.Register(projectionDefinition, pipelineDefinition);
-        // }
+        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections";
+        await _client.PerformCommand(route, new RegisterProjections(registrations));
     }
 }
