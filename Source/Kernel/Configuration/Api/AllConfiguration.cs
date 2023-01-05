@@ -3,7 +3,6 @@
 
 using Microsoft.AspNetCore.Mvc;
 using ApiMicroservice = Aksio.Cratis.Configuration.Api.Microservice;
-using ApiTenant = Aksio.Cratis.Configuration.Api.Tenant;
 
 namespace Aksio.Cratis.Configuration.Api;
 
@@ -27,14 +26,7 @@ public class AllConfiguration : Controller
     /// <summary>
     /// Returns all the tenants configured in the kernel.
     /// </summary>
-    /// <returns>Collection of <see cref="Configuration.Tenant"/>.</returns>
-    [HttpGet("tenants")]
-    public IEnumerable<ApiTenant> Tenants() => _configuration.Tenants.Select(kvp => new ApiTenant(kvp.Key, kvp.Value.Name));
-
-    /// <summary>
-    /// Returns all the tenants configured in the kernel.
-    /// </summary>
-    /// <returns>Collection of <see cref="Configuration.Tenant"/>.</returns>
+    /// <returns>Collection of <see cref="ApiMicroservice"/>.</returns>
     [HttpGet("microservices")]
     public IEnumerable<ApiMicroservice> Microservices() => _configuration.Microservices.Select(kvp => new ApiMicroservice(kvp.Key, kvp.Value.Name));
 }

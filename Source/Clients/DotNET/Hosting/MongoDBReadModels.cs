@@ -8,6 +8,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Strings;
+using Aksio.Cratis.Tenants;
 using Aksio.Cratis.Types;
 using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
@@ -88,9 +89,13 @@ public static class MongoDBReadModels
         }
     }
 
-    static Task ConfigureReadModels(IServiceProvider serviceProvider)
+    static async Task ConfigureReadModels(IServiceProvider serviceProvider)
     {
-        throw new NotImplementedException();
+        var tenants = await serviceProvider.GetService<ITenants>()!.All();
+        foreach (var tenant in tenants)
+        {
+            Console.WriteLine(tenant);
+        }
 
         // var configuration = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfiguration>(Guid.Empty);
         // var storage = await configuration.GetStorage();

@@ -3,6 +3,6 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Configuration.Api;
+namespace Aksio.Cratis.Configuration;
 
-public record Tenant(TenantId Id, string Name);
+public record TenantInfo(TenantId Id, string Name);
