@@ -81,9 +81,7 @@ public class ClientBuilder : IClientBuilder
         }
 
         logger?.ConfiguringServices();
-        var connectionManager = new ConnectionManager();
         services
-            .AddSingleton<IConnectionManager>(connectionManager)
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
             .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()

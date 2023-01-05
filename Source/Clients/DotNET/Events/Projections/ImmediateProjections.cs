@@ -59,14 +59,15 @@ public class ImmediateProjections : IImmediateProjections
     }
 
     /// <inheritdoc/>
-    public async Task<TModel> GetInstanceById<TModel>(ModelKey modelKey)
+    public Task<TModel> GetInstanceById<TModel>(ModelKey modelKey)
     {
         HandleProjectionTypeCache<TModel>();
+        throw new NotImplementedException();
 
-        var key = new ImmediateProjectionKey(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId, EventSequenceId.Log, modelKey);
-        var projection = _clusterClient.GetGrain<IImmediateProjection>(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier, key);
-        var result = await projection.GetModelInstance(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition!);
-        return result.Model.Deserialize<TModel>(_jsonSerializerOptions)!;
+        // var key = new ImmediateProjectionKey(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId, EventSequenceId.Log, modelKey);
+        // var projection = _clusterClient.GetGrain<IImmediateProjection>(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier, key);
+        // var result = await projection.GetModelInstance(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition!);
+        // return result.Model.Deserialize<TModel>(_jsonSerializerOptions)!;
     }
 
     void HandleProjectionTypeCache<TModel>()

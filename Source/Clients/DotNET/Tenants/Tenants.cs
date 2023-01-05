@@ -11,17 +11,13 @@ namespace Aksio.Cratis.Tenants;
 /// </summary>
 public class Tenants : ITenants
 {
-    readonly IClusterClient _clusterClient;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Tenants"/> class.
     /// </summary>
-    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
-    public Tenants(IClusterClient clusterClient)
+    public Tenants()
     {
-        _clusterClient = clusterClient;
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<TenantId>> All() => _clusterClient.GetGrain<IConfiguration>(Guid.Empty).GetTenants();
+    public Task<IEnumerable<TenantId>> All() => throw new NotImplementedException();
 }
