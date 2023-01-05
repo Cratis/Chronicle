@@ -4,12 +4,12 @@
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Queries;
 
-namespace Aksio.Cratis.Connections;
+namespace Aksio.Cratis.Clients;
 
 /// <summary>
 /// Represents a connection.
 /// </summary>
-public interface IConnection
+public interface IClient
 {
     /// <summary>
     /// Perform a command.

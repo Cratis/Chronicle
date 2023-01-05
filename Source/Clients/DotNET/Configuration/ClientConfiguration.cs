@@ -18,5 +18,9 @@ public class ClientConfiguration
     /// Gets all the servers that make up the cluster to connect to.
     /// </summary>
     public object Options { get; init; } = new SingleKernelOptions();
-}
 
+    /// <summary>
+    /// Gets the callback Uri the kernel will call back to the client on.
+    /// </summary>
+    public Uri CallbackUri { get; init; } = new Uri("http://localhost:5000");
+}
