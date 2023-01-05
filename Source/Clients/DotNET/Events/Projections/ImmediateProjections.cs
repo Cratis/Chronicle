@@ -3,11 +3,9 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
-using Orleans;
 
 namespace Aksio.Cratis.Events.Projections;
 
@@ -28,7 +26,6 @@ public class ImmediateProjections : IImmediateProjections
     readonly IJsonSchemaGenerator _schemaGenerator;
     readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IClusterClient _clusterClient;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
@@ -38,7 +35,6 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="clusterClient"><see cref="IClusterClient"/> for working with Orleans.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         ITypes types,
@@ -46,7 +42,6 @@ public class ImmediateProjections : IImmediateProjections
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
-        IClusterClient clusterClient,
         IExecutionContextManager executionContextManager)
     {
         _types = types;
@@ -54,7 +49,6 @@ public class ImmediateProjections : IImmediateProjections
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _clusterClient = clusterClient;
         _executionContextManager = executionContextManager;
     }
 

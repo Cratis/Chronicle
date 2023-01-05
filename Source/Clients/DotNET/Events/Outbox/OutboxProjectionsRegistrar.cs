@@ -2,13 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Outbox;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
-using Orleans;
 
 namespace Aksio.Cratis.Events.Outbox;
 
@@ -17,7 +14,6 @@ namespace Aksio.Cratis.Events.Outbox;
 /// </summary>
 public class OutboxProjectionsRegistrar : IOutboxProjectionsRegistrar
 {
-    readonly IClusterClient _clusterClient;
     readonly IExecutionContextManager _executionContextManager;
     readonly IInstancesOf<IOutboxProjections> _outboxProjections;
     readonly IEnumerable<OutboxProjectionsDefinition> _outboxProjectionsDefinitions;
@@ -25,21 +21,18 @@ public class OutboxProjectionsRegistrar : IOutboxProjectionsRegistrar
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxProjectionsRegistrar"/> class.
     /// </summary>
-    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for projections.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="outboxProjections">All instances of <see cref="IOutboxProjections"/>.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public OutboxProjectionsRegistrar(
-        IClusterClient clusterClient,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
         IExecutionContextManager executionContextManager,
         IInstancesOf<IOutboxProjections> outboxProjections,
         JsonSerializerOptions jsonSerializerOptions)
     {
-        _clusterClient = clusterClient;
         _executionContextManager = executionContextManager;
         _outboxProjections = outboxProjections;
         _outboxProjectionsDefinitions = _outboxProjections.Select(projections =>

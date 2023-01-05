@@ -3,13 +3,11 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
-using Orleans;
 
 namespace Aksio.Cratis.Events.Projections;
 
@@ -30,33 +28,25 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     }
 
     readonly IEnumerable<ProjectionDefinition> _projections;
-    readonly IClusterClient _clusterClient;
     readonly IExecutionContextManager _executionContextManager;
-    readonly Microservices _microservices;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-    /// <param name="microservices">Configured microservices.</param>
     public ProjectionsRegistrar(
-        IClusterClient clusterClient,
         IExecutionContextManager executionContextManager,
         IEventTypes eventTypes,
         ITypes types,
         IJsonSchemaGenerator schemaGenerator,
-        JsonSerializerOptions jsonSerializerOptions,
-        Microservices microservices)
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator, jsonSerializerOptions);
-        _clusterClient = clusterClient;
         _executionContextManager = executionContextManager;
-        _microservices = microservices;
     }
 
     /// <summary>
