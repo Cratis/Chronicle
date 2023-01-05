@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Reflection;
@@ -28,17 +29,20 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     }
 
     readonly IEnumerable<ProjectionDefinition> _projections;
+    readonly IClient _client;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
+    /// <param name="client">The Cratis <see cref="IClient"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionsRegistrar(
+        IClient client,
         IExecutionContextManager executionContextManager,
         IEventTypes eventTypes,
         ITypes types,
@@ -46,6 +50,7 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
         JsonSerializerOptions jsonSerializerOptions)
     {
         _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator, jsonSerializerOptions);
+        _client = client;
         _executionContextManager = executionContextManager;
     }
 
@@ -80,8 +85,8 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
 
     Task RegisterProjectionsForMicroservice(MicroserviceId microserviceId)
     {
+        _executionContextManager.Establish(microserviceId);
         throw new NotImplementedException();
-        // _executionContextManager.Establish(microserviceId);
         // var projections = _clusterClient.GetGrain<Grains.IProjections>(microserviceId);
         // foreach (var projectionDefinition in _projections)
         // {

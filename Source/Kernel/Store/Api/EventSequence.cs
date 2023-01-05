@@ -45,7 +45,7 @@ public class EventSequence : Controller
     /// <param name="tenantId">The tenant to append to.</param>
     /// <param name="eventToAppend">The payload with the details about the event to append.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost()]
+    [HttpPost]
     public async Task Append(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] EventSequenceId eventSequenceId,

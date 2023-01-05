@@ -5,13 +5,14 @@ using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Schemas.Api;
 
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>
-[Route("/api/events/store/types")]
+[Route("/api/events/store/{microserviceId}/types")]
 public class EventTypes : Controller
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
@@ -31,12 +32,30 @@ public class EventTypes : Controller
     }
 
     /// <summary>
+    /// Register schemas.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
+    /// <param name="payload">The payload.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task Register(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromBody] RegisterEventTypes payload)
+    {
+        _executionContextManager.Establish(microserviceId);
+        foreach (var eventType in payload.Types)
+        {
+            var schema = await JsonSchema.FromJsonAsync(eventType.Schema.ToJsonString());
+            await _schemaStoreProvider().Register(eventType.Type, eventType.FriendlyName, schema);
+        }
+    }
+
+    /// <summary>
     /// Gets all event types.
     /// </summary>
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get event types for.</param>
     /// <returns>Collection of event types.</returns>
     [HttpGet]
-    public async Task<IEnumerable<EventTypeInformation>> AllEventTypes([FromQuery] MicroserviceId microserviceId)
+    public async Task<IEnumerable<EventTypeInformation>> AllEventTypes([FromRoute] MicroserviceId microserviceId)
     {
         _executionContextManager.Establish(microserviceId);
 

@@ -4,12 +4,7 @@
 namespace Aksio.Cratis.Events.Schemas;
 
 /// <summary>
-/// Defines a system for working with event schemas from the client perspective.
+/// Payload for registering multiple event types
 /// </summary>
-public interface ISchemas
-{
-    /// <summary>
-    /// Registers schemas for all event types.
-    /// </summary>
-    void RegisterAll();
-}
+/// <param name="Types">Collection of <see cref="EventTypeRegistration"/>.</param>
+public record RegisterEventTypes(IEnumerable<EventTypeRegistration> Types);

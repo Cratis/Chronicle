@@ -12,6 +12,11 @@ namespace Aksio.Cratis.Commands;
 public class CommandResult
 {
     /// <summary>
+    /// Represents a successful command result.
+    /// </summary>
+    public static readonly CommandResult Success = new();
+
+    /// <summary>
     /// Gets the <see cref="CorrelationId"/> associated with the command.
     /// </summary>
     public CorrelationId CorrelationId { get; init; } = new(Guid.Empty.ToString());

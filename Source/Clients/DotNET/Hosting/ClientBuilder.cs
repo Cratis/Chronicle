@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Collections;
 using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Events.Projections;
@@ -71,12 +71,14 @@ public class ClientBuilder : IClientBuilder
         }
 
         services
+            .AddHttpClient()
             .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
             .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
 
         if (_inKernel)
         {
+            services.AddCratisInsideSiloClient();
             return;
         }
 
@@ -95,7 +97,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
-            .AddSingleton<ISchemas, Events.Schemas.Schemas>()
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IHostedService, ObserversService>()

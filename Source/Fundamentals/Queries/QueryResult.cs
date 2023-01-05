@@ -11,6 +11,11 @@ namespace Aksio.Cratis.Queries;
 public class QueryResult
 {
     /// <summary>
+    /// Represents a successful command result.
+    /// </summary>
+    public static readonly QueryResult Success = new();
+
+    /// <summary>
     /// The data returned.
     /// </summary>
     public object Data { get; set; } = null!;
