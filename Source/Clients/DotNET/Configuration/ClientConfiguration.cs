@@ -12,7 +12,7 @@ public class ClientConfiguration
     /// <summary>
     /// Gets the <see cref="ClusterType"/>.
     /// </summary>
-    public ClusterType ClusterType { get; init; } = ClusterType.Static;
+    public ClusterType ClusterType { get; init; } = ClusterType.Single;
 
     /// <summary>
     /// Gets all the servers that make up the cluster to connect to.

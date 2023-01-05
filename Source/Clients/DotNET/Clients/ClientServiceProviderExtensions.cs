@@ -34,4 +34,15 @@ public static class ClientServiceProviderExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Adds a inside silo Kernel client.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddCratisInsideSiloClient(this IServiceCollection services)
+    {
+        services.AddSingleton<IClient, InsideSiloClient>();
+        return services;
+    }
 }
