@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Store.Grains;
 using Aksio.Cratis.Execution;
@@ -16,7 +14,7 @@ namespace Aksio.Cratis.Events.Store.Api;
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
-[Route("/api/events/store/sequence")]
+[Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
 public class EventSequence : Controller
 {
     readonly IGrainFactory _grainFactory;
@@ -42,32 +40,23 @@ public class EventSequence : Controller
     /// <summary>
     /// Appends an event to the event log.
     /// </summary>
-    /// <param name="eventSequenceId">The event sequence to append to.</param>
     /// <param name="microserviceId">The microservice to append for.</param>
-    /// <param name="tenantId">The tenant to append for.</param>
-    /// <param name="eventSourceId">EventSource to append for.</param>
-    /// <param name="eventTypeId">Type of event to append.</param>
-    /// <param name="eventGeneration">Generation of the event to append.</param>
+    /// <param name="eventSequenceId">The event sequence to append to.</param>
+    /// <param name="tenantId">The tenant to append to.</param>
+    /// <param name="eventToAppend">The payload with the details about the event to append.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{eventSequenceId}/{microserviceId}/{tenantId}/{eventSourceId}/{eventTypeId}/{eventGeneration}")]
+    [HttpPost()]
     public async Task Append(
-        [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] TenantId tenantId,
-        [FromRoute] EventSourceId eventSourceId,
-        [FromRoute] EventTypeId eventTypeId,
-        [FromRoute] EventGeneration eventGeneration)
+        [FromBody] AppendEvent eventToAppend)
     {
-        var jsonDocument = await JsonDocument.ParseAsync(Request.Body);
-        var content = JsonObject.Create(jsonDocument.RootElement);
         var eventLog = _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
-
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-
         await eventLog.Append(
-            eventSourceId,
-            new EventType(eventTypeId, eventGeneration),
-            content!);
+            eventToAppend.EventSourceId,
+            eventToAppend.EventType,
+            eventToAppend.Content);
     }
 
     /// <summary>
@@ -91,34 +80,5 @@ public class EventSequence : Controller
             result.AddRange(cursor.Current);
         }
         return result;
-    }
-
-    /// <summary>
-    /// Count number of events in an event sequence. PS: Not implemented yet.
-    /// </summary>
-    /// <returns>Will always return 0 right now.</returns>
-    [HttpGet("{eventSequenceId}/count")]
-    public Task<long> Count() => Task.FromResult(0L);
-
-    /// <summary>
-    /// Get a histogram of a specific event sequence. PS: Not implemented yet.
-    /// </summary>
-    /// <param name="eventSequenceId">Event sequence to get for.</param>
-    /// <returns>A collection of <see cref="EventHistogramEntry"/>.</returns>
-    [HttpGet("histogram")]
-    public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] EventSequenceId eventSequenceId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
-
-    /// <summary>
-    /// Find events for a specific event source id. PS: Not implemented yet.
-    /// </summary>
-    /// <param name="eventSequenceId">Event sequence to find events in.</param>
-    /// <param name="eventSourceId">Event source to get for.</param>
-    /// <returns>A collection of <see cref="AppendedEvent"/>. Always empty right now.</returns>
-    [HttpGet("{eventSequenceId}/{eventSourceId}")]
-    public Task<IEnumerable<AppendedEvent>> FindForEventSourceId(
-        [FromRoute] EventSequenceId eventSequenceId,
-        [FromRoute] EventSourceId eventSourceId)
-    {
-        return Task.FromResult(Array.Empty<AppendedEvent>().AsEnumerable());
     }
 }
