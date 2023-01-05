@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Store.Observation.Api;
 /// <summary>
 /// Represents the API for working with observers.
 /// </summary>
-[Route("/api/events/store/observers")]
+[Route("/api/events/store/{microserviceId}/{tenantId}/observers")]
 public class Observers : Controller
 {
     readonly IObserversState _observersState;
@@ -38,15 +38,15 @@ public class Observers : Controller
     /// <summary>
     /// Rewind a specific observer for a microservice and tenant.
     /// </summary>
-    /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observer is for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observer is for.</param>
+    /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{observerId}/rewind")]
     public async Task Rewind(
-        [FromRoute] ObserverId observerId,
-        [FromQuery] MicroserviceId microserviceId,
-        [FromQuery] TenantId tenantId)
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] ObserverId observerId)
     {
         var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.Rewind();
@@ -60,8 +60,8 @@ public class Observers : Controller
     /// <returns>Client observable of a collection of <see cref="ObserverState"/>.</returns>
     [HttpGet]
     public Task<ClientObservable<IEnumerable<ObserverState>>> AllObservers(
-        [FromQuery] MicroserviceId microserviceId,
-        [FromQuery] TenantId tenantId)
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId)
     {
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
 
