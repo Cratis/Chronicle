@@ -6,7 +6,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
-using Orleans;
 
 namespace Aksio.Cratis.Integration;
 

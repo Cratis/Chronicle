@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans;
 
 namespace Aksio.Cratis.Compliance.GDPR;
 
@@ -11,7 +10,7 @@ namespace Aksio.Cratis.Compliance.GDPR;
 public class PIIManager : IPIIManager
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="IClusterClient"/> class.
+    /// Initializes a new instance of the <see cref="PIIManager"/> class.
     /// </summary>
     public PIIManager()
     {
