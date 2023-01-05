@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Json;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
@@ -31,6 +32,7 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     readonly IEnumerable<ProjectionDefinition> _projections;
     readonly IClient _client;
     readonly IExecutionContextManager _executionContextManager;
+    readonly IJsonProjectionSerializer _projectionSerializer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -40,6 +42,7 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
+    /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionsRegistrar(
         IClient client,
@@ -47,11 +50,13 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
         IEventTypes eventTypes,
         ITypes types,
         IJsonSchemaGenerator schemaGenerator,
+        IJsonProjectionSerializer projectionSerializer,
         JsonSerializerOptions jsonSerializerOptions)
     {
         _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator, jsonSerializerOptions);
         _client = client;
         _executionContextManager = executionContextManager;
+        _projectionSerializer = projectionSerializer;
     }
 
     /// <summary>
@@ -80,14 +85,22 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
     /// <inheritdoc/>
     public async Task DiscoverAndRegisterAll()
     {
-        var registrations = _projections.Select(projection => new ProjectionRegistration(projection, new(
-            projection.Identifier,
-            new[]
-            {
-                new ProjectionSinkDefinition(
-                    "12358239-a120-4392-96d4-2b48271b904c",
-                    WellKnownProjectionSinkTypes.MongoDB)
-            })));
+        var registrations = _projections.Select(projection =>
+        {
+            var serializedPipeline = JsonSerializer.SerializeToNode(
+                new ProjectionPipelineDefinition(
+                    projection.Identifier,
+                    new[]
+                    {
+                        new ProjectionSinkDefinition(
+                                "12358239-a120-4392-96d4-2b48271b904c",
+                                WellKnownProjectionSinkTypes.MongoDB)
+                    }))!;
+
+            return new ProjectionRegistration(
+                _projectionSerializer.Serialize(projection),
+                serializedPipeline);
+        });
 
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections";
         await _client.PerformCommand(route, new RegisterProjections(registrations));

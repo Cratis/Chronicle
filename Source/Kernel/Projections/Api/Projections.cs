@@ -1,9 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Grains;
+using Aksio.Cratis.Events.Projections.Json;
 using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
@@ -18,6 +20,8 @@ public class Projections : Controller
 {
     readonly IGrainFactory _grainFactory;
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
+    readonly IJsonProjectionSerializer _projectionSerializer;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
@@ -25,14 +29,20 @@ public class Projections : Controller
     /// </summary>
     /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
     /// <param name="projectionDefinitionsProvider">Provider for <see cref="IProjectionDefinitions"/>.</param>
+    /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for deserializing projections.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public Projections(
         IGrainFactory grainFactory,
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
+        IJsonProjectionSerializer projectionSerializer,
+        JsonSerializerOptions jsonSerializerOptions,
         IExecutionContextManager executionContextManager)
     {
         _grainFactory = grainFactory;
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
+        _projectionSerializer = projectionSerializer;
+        _jsonSerializerOptions = jsonSerializerOptions;
         _executionContextManager = executionContextManager;
     }
 
@@ -52,7 +62,9 @@ public class Projections : Controller
         var projections = _grainFactory.GetGrain<IProjections>(microserviceId.Value);
         foreach (var registration in payload.Projections)
         {
-            await projections.Register(registration.Projection, registration.Pipeline);
+            await projections.Register(
+                _projectionSerializer.Deserialize(registration.Projection),
+                registration.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!);
         }
     }
 

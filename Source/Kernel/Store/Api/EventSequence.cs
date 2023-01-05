@@ -66,7 +66,7 @@ public class EventSequence : Controller
     /// <param name="microserviceId">Microservice to get for.</param>
     /// <param name="tenantId">Tenant to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    [HttpGet("{eventSequenceId}")]
+    [HttpGet]
     public async Task<IEnumerable<AppendedEvent>> FindFor(
         [FromRoute] EventSequenceId eventSequenceId,
         [FromQuery] MicroserviceId microserviceId,

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Json;
 using Aksio.Cratis.Execution;
@@ -41,7 +42,7 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
         {
             _.Remove("_id");
             var definitionAsJson = _.ToJson();
-            return _projectionSerializer.Deserialize(definitionAsJson);
+            return _projectionSerializer.Deserialize(JsonNode.Parse(definitionAsJson)!);
         }).ToArray();
     }
 
@@ -49,13 +50,13 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
     public async Task Save(ProjectionDefinition definition)
     {
         var json = _projectionSerializer.Serialize(definition);
-        var document = BsonDocument.Parse(json);
+        var document = BsonDocument.Parse(json.ToJsonString());
         var id = new BsonBinaryData(definition.Identifier.Value, GuidRepresentation.Standard);
         document["_id"] = id;
 
         await Collection.ReplaceOneAsync(
             filter: new BsonDocument("_id", id),
-            options: new ReplaceOptions { IsUpsert = true },
-            replacement: document);
+            replacement: document,
+            options: new ReplaceOptions { IsUpsert = true });
     }
 }

@@ -24,6 +24,7 @@ public static class ClientServiceProviderExtensions
             var configuration = _.GetService<ClientConfiguration>()!;
             var httpClientFactory = _.GetService<IHttpClientFactory>()!;
             var serializerOptions = _.GetService<JsonSerializerOptions>()!;
+            serializerOptions = new JsonSerializerOptions(serializerOptions);
 
             return configuration.ClusterType switch
             {

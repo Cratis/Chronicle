@@ -6,7 +6,7 @@ using Aksio.Cratis.Events.Projections.Definitions;
 namespace Aksio.Cratis.Events.Projections.Json;
 
 /// <summary>
-/// Defines a parser for JSON definition of a <see cref="IProjection"/>.
+/// Defines a parser for JSON definition of a projection pipeline.
 /// </summary>
 public interface IJsonProjectionPipelineSerializer
 {
