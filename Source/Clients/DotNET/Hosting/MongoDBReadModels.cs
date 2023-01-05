@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Configuration.Grains;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
