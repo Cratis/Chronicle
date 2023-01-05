@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
-using Orleans;
 
 namespace Aksio.Cratis.Tenants;
 
@@ -11,22 +10,16 @@ namespace Aksio.Cratis.Tenants;
 /// </summary>
 public class TenantConfiguration : ITenantConfiguration
 {
-    readonly IClusterClient _clusterClient;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantConfiguration"/> class.
     /// </summary>
-    /// <param name="clusterClient">The Orleans <see cref="IClusterClient"/>.</param>
-    public TenantConfiguration(IClusterClient clusterClient)
+    public TenantConfiguration()
     {
-        _clusterClient = clusterClient;
     }
 
     /// <inheritdoc/>
-    public async Task<ConfigurationForTenant> GetAllFor(TenantId tenantId)
+    public Task<ConfigurationForTenant> GetAllFor(TenantId tenantId)
     {
-        var grain = _clusterClient.GetGrain<Configuration.Grains.Tenants.ITenantConfiguration>(tenantId);
-        var config = await grain.All();
-        return new(config);
+        throw new NotImplementedException();
     }
 }

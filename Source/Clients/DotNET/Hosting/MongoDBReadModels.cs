@@ -91,19 +91,21 @@ public static class MongoDBReadModels
         }
     }
 
-    static async Task ConfigureReadModels(IServiceProvider serviceProvider)
+    static Task ConfigureReadModels(IServiceProvider serviceProvider)
     {
-        var configuration = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfiguration>(Guid.Empty);
-        var storage = await configuration.GetStorage();
-        var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
+        throw new NotImplementedException();
 
-        foreach (var (tenant, config) in storage.Tenants)
-        {
-            var storageType = config.Get(WellKnownStorageTypes.ReadModels);
-            var url = new MongoUrl(storageType.ConnectionDetails.ToString()!);
-            var client = clientFactory.Create(url);
-            _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
-        }
+        // var configuration = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfiguration>(Guid.Empty);
+        // var storage = await configuration.GetStorage();
+        // var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
+
+        // foreach (var (tenant, config) in storage.Tenants)
+        // {
+        //     var storageType = config.Get(WellKnownStorageTypes.ReadModels);
+        //     var url = new MongoUrl(storageType.ConnectionDetails.ToString()!);
+        //     var client = clientFactory.Create(url);
+        //     _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
+        // }
     }
 
     static IEnumerable<Type> GetMongoCollections(ITypes types) => types.All.SelectMany(_ => _

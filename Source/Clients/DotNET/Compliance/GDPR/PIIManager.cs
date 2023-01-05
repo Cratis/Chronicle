@@ -10,20 +10,16 @@ namespace Aksio.Cratis.Compliance.GDPR;
 /// </summary>
 public class PIIManager : IPIIManager
 {
-    readonly IClusterClient _clusterClient;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="IClusterClient"/> class.
     /// </summary>
-    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
-    public PIIManager(IClusterClient clusterClient)
+    public PIIManager()
     {
-        _clusterClient = clusterClient;
     }
 
     /// <inheritdoc/>
-    public Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier) => _clusterClient.GetGrain<Grains.IPIIManager>(Guid.Empty).CreateAndRegisterKeyFor(identifier);
+    public Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier) => _clusterClient.GetGrain<Grains.IPIIManager>(Guid.Empty).DeleteEncryptionKeyFor(identifier);
+    public Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier) => throw new NotImplementedException();
 }

@@ -41,13 +41,15 @@ public class Schemas : ISchemas
     /// <inheritdoc/>
     public void RegisterAll()
     {
-        var schemaStore = _clusterClient.GetGrain<Grains.ISchemaStore>(Guid.Empty);
-        foreach (var schemaDefinition in _definitions)
-        {
-            schemaStore.Register(
-                schemaDefinition.Type,
-                schemaDefinition.FriendlyName,
-                schemaDefinition.Schema.ToJson());
-        }
+        throw new NotImplementedException();
+
+        // var schemaStore = _clusterClient.GetGrain<Grains.ISchemaStore>(Guid.Empty);
+        // foreach (var schemaDefinition in _definitions)
+        // {
+        //     schemaStore.Register(
+        //         schemaDefinition.Type,
+        //         schemaDefinition.FriendlyName,
+        //         schemaDefinition.Schema.ToJson());
+        // }
     }
 }

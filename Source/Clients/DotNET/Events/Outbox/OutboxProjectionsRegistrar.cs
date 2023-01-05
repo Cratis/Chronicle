@@ -51,25 +51,25 @@ public class OutboxProjectionsRegistrar : IOutboxProjectionsRegistrar
     }
 
     /// <inheritdoc/>
-    public async Task DiscoverAndRegisterAll()
+    public Task DiscoverAndRegisterAll()
     {
-        _executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
-
-        var projections = _clusterClient.GetGrain<Projections.Grains.IProjections>(ExecutionContextManager.GlobalMicroserviceId);
-        foreach (var outboxProjectionsDefinition in _outboxProjectionsDefinitions)
-        {
-            foreach (var (_, projectionDefinition) in outboxProjectionsDefinition.TargetEventTypeProjections)
-            {
-                var pipelineDefinition = new ProjectionPipelineDefinition(
-                    projectionDefinition.Identifier,
-                    new[]
-                    {
-                        new ProjectionSinkDefinition(
-                            "06ec7e41-4424-4eb3-8dd0-defb45bc055e",
-                            WellKnownProjectionSinkTypes.Outbox)
-                    });
-                await projections.Register(projectionDefinition, pipelineDefinition);
-            }
-        }
+        throw new NotImplementedException();
+        // _executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
+        // var projections = _clusterClient.GetGrain<Projections.Grains.IProjections>(ExecutionContextManager.GlobalMicroserviceId);
+        // foreach (var outboxProjectionsDefinition in _outboxProjectionsDefinitions)
+        // {
+        //     foreach (var (_, projectionDefinition) in outboxProjectionsDefinition.TargetEventTypeProjections)
+        //     {
+        //         var pipelineDefinition = new ProjectionPipelineDefinition(
+        //             projectionDefinition.Identifier,
+        //             new[]
+        //             {
+        //                 new ProjectionSinkDefinition(
+        //                     "06ec7e41-4424-4eb3-8dd0-defb45bc055e",
+        //                     WellKnownProjectionSinkTypes.Outbox)
+        //             });
+        //         await projections.Register(projectionDefinition, pipelineDefinition);
+        //     }
+        // }
     }
 }
