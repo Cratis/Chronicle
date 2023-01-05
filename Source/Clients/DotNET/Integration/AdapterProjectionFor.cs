@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Projections.Grains;
 using Aksio.Cratis.Execution;
 using Orleans;
 

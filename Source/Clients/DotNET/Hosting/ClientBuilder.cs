@@ -8,21 +8,14 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Schemas;
-using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.Grains.Connections;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
-using Aksio.Cratis.Extensions.Orleans.Configuration;
-using Aksio.Cratis.Extensions.Orleans.Execution;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Orleans;
-using Orleans.Hosting;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
-using OrleansClientBuilder = Orleans.ClientBuilder;
 
 namespace Aksio.Cratis.Hosting;
 
@@ -108,8 +101,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IHostedService, ObserversService>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
-            .AddSingleton<IRequestContextManager, RequestContextManager>();
+            .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>();
 
         types.AllObservers().ForEach(_ => services.AddTransient(_));
 
@@ -121,39 +113,5 @@ public class ClientBuilder : IClientBuilder
         types.All.Where(_ =>
             _ != typeof(ICanProvideComplianceMetadataForProperty) &&
             _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
-
-        services.AddSingleton(sp =>
-        {
-            logger?.ConfiguringKernelConnection();
-            var orleansBuilder = new OrleansClientBuilder()
-                .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
-                .AddEventSequenceStream()
-                .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider)
-                .UseExecutionContext()
-                .UseConnectionIdFromConnectionContextForOutgoingCalls()
-                .ConfigureServices(services => services
-                    .AddSingleton<IConnectionManager>(connectionManager)
-                    .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-                    .AddSingleton<IRequestContextManager, RequestContextManager>()
-                    .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
-
-            var orleansClient = orleansBuilder.Build();
-
-            logger?.ConnectingToKernel();
-            orleansClient.Connect(async (exception) =>
-            {
-                logger?.ProblemsConnectingToSilo(exception.Message, exception.InnerException?.Message ?? "<no more details>");
-                await Task.Delay(1000);
-                return true;
-            }).Wait();
-            logger?.ConnectedToKernel();
-
-#pragma warning disable CA2008
-            orleansClient
-                .GetGrain<IConnectedClients>(Guid.Empty)
-                .GetLastConnectedClientConnectionId().ContinueWith(_ => ConnectionManager.InternalConnectionId = _.Result);
-
-            return orleansClient;
-        });
     }
 }
