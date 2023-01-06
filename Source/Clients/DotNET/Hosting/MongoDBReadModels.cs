@@ -3,8 +3,11 @@
 
 using System.Collections.Concurrent;
 using System.Reflection;
+using Aksio.Cratis.Configuration;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Microservices;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Strings;
@@ -91,23 +94,15 @@ public static class MongoDBReadModels
 
     static async Task ConfigureReadModels(IServiceProvider serviceProvider)
     {
-        var tenants = await serviceProvider.GetService<ITenants>()!.All();
-        foreach (var tenant in tenants)
+        var storage = await serviceProvider.GetService<IMicroserviceConfiguration>()!.Storage();
+        var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
+        foreach (var (tenant, config) in storage.Tenants)
         {
-            Console.WriteLine(tenant);
+            var storageType = config.Get(WellKnownStorageTypes.ReadModels);
+            var url = new MongoUrl(storageType.ConnectionDetails.ToString()!);
+            var client = clientFactory.Create(url);
+            _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
         }
-
-        // var configuration = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfiguration>(Guid.Empty);
-        // var storage = await configuration.GetStorage();
-        // var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
-
-        // foreach (var (tenant, config) in storage.Tenants)
-        // {
-        //     var storageType = config.Get(WellKnownStorageTypes.ReadModels);
-        //     var url = new MongoUrl(storageType.ConnectionDetails.ToString()!);
-        //     var client = clientFactory.Create(url);
-        //     _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
-        // }
     }
 
     static IEnumerable<Type> GetMongoCollections(ITypes types) => types.All.SelectMany(_ => _
