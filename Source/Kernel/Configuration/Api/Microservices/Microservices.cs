@@ -17,16 +17,22 @@ public class Microservices : Controller
 {
     readonly KernelConfiguration _configuration;
     readonly IGrainFactory _grainFactory;
+    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Microservices"/> class.
     /// </summary>
     /// <param name="configuration">The <see cref="KernelConfiguration"/>.</param>
     /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
-    public Microservices(KernelConfiguration configuration, IGrainFactory grainFactory)
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    public Microservices(
+        KernelConfiguration configuration,
+        IGrainFactory grainFactory,
+        IExecutionContextManager executionContextManager)
     {
         _configuration = configuration;
         _grainFactory = grainFactory;
+        _executionContextManager = executionContextManager;
     }
 
     /// <summary>
@@ -40,11 +46,12 @@ public class Microservices : Controller
     /// Get storage configuration for a specific microservice.
     /// </summary>
     /// <param name="microserviceId"></param>
-    /// <returns></returns>
+    /// <returns>The <see cref="StorageForMicroservice"/>.</returns>
     [HttpGet("{microserviceId}/storage")]
-    public Task<StorageForMicroservice> storageForMicroservice([FromRoute] MicroserviceId microserviceId)
+    public async Task<StorageForMicroservice> StorageConfigurationForMicroservice([FromRoute] MicroserviceId microserviceId)
     {
+        _executionContextManager.Establish(microserviceId);
         var grain = _grainFactory.GetGrain<IConfiguration>(Guid.Empty);
-        return grain.GetStorage();
+        return await grain.GetStorage();
     }
 }

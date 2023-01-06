@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { PotentialMoneyLaundryCase } from './PotentialMoneyLaundryCase';
+import { PotentialMoneyLaundryCase } from './../../../../../Web/API/accounts/debit/moneylaundry/PotentialMoneyLaundryCase';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/debit/moneylaundry');
