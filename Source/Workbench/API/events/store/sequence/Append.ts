@@ -4,8 +4,7 @@
 
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/cratis-applications-frontend/commands';
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
-import { EventType } from './EventType';
-import { JsonObject } from './JsonObject';
+import { EventType } from '../sequence/EventType';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}');
@@ -16,7 +15,7 @@ export interface IAppend {
     tenantId?: string;
     eventSourceId?: string;
     eventType?: EventType;
-    content?: JsonObject[];
+    content?: any;
 }
 
 export class AppendValidator extends CommandValidator {
@@ -40,7 +39,7 @@ export class Append extends Command<IAppend> implements IAppend {
     private _tenantId!: string;
     private _eventSourceId!: string;
     private _eventType!: EventType;
-    private _content!: JsonObject[];
+    private _content!: any;
 
     constructor() {
         super(Object, false);
@@ -105,11 +104,11 @@ export class Append extends Command<IAppend> implements IAppend {
         this._eventType = value;
         this.propertyChanged('eventType');
     }
-    get content(): JsonObject[] {
+    get content(): any {
         return this._content;
     }
 
-    set content(value: JsonObject[]) {
+    set content(value: any) {
         this._content = value;
         this.propertyChanged('content');
     }

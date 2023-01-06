@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { AppendedEvent } from './AppendedEvent';
+import { AppendedEvent } from '../sequence/AppendedEvent';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{microserviceId}/{tenantId}/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
