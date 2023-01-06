@@ -317,7 +317,7 @@ public class SourceGenerator : ISourceGenerator
         var relativeImport = new Uri(parentFile).MakeRelativeUri(new Uri(targetFile));
         var relativeImportAsString = relativeImport.ToString();
 
-        if (string.IsNullOrEmpty(relativeImport.ToString()))
+        if (string.IsNullOrEmpty(relativeImportAsString))
         {
             context.ReportDiagnostic(Diagnostics.ReturnTypeWouldOverwriteParentType(type.ToDisplayString(), parentFile));
             return;
