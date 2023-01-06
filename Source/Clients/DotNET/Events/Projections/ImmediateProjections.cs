@@ -2,7 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Events.Projections.Json;
+using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
@@ -18,6 +22,7 @@ public class ImmediateProjections : IImmediateProjections
     {
         public static TProjection? Instance;
         public static ProjectionDefinition? Definition;
+        public static JsonNode? DefinitionAsJson;
     }
 
     readonly ITypes _types;
@@ -26,6 +31,8 @@ public class ImmediateProjections : IImmediateProjections
     readonly IJsonSchemaGenerator _schemaGenerator;
     readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly IJsonProjectionSerializer _projectionSerializer;
+    readonly IClient _client;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
@@ -35,6 +42,8 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="projectionSerializer">The <see cref="IJsonProjectionSerializer"/> for serializing projection definitions.</param>
+    /// <param name="client">The <see cref="IClient"/> for connecting to the kernel.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         ITypes types,
@@ -42,6 +51,8 @@ public class ImmediateProjections : IImmediateProjections
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
+        IJsonProjectionSerializer projectionSerializer,
+        IClient client,
         IExecutionContextManager executionContextManager)
     {
         _types = types;
@@ -49,19 +60,46 @@ public class ImmediateProjections : IImmediateProjections
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _projectionSerializer = projectionSerializer;
+        _client = client;
         _executionContextManager = executionContextManager;
     }
 
+
     /// <inheritdoc/>
-    public Task<TModel> GetInstanceById<TModel>(ModelKey modelKey)
+    public Task<JsonNode> GetInstanceById(ModelKey modelKey, ProjectionDefinition projectionDefinition)
+    {
+        var projectionDefinitionAsJson = _projectionSerializer.Serialize(projectionDefinition);
+        return GetInstanceById(projectionDefinition.Identifier, modelKey, projectionDefinitionAsJson);
+    }
+
+    /// <inheritdoc/>
+    public async Task<TModel> GetInstanceById<TModel>(ModelKey modelKey)
     {
         HandleProjectionTypeCache<TModel>();
-        throw new NotImplementedException();
 
-        // var key = new ImmediateProjectionKey(_executionContextManager.Current.MicroserviceId, _executionContextManager.Current.TenantId, EventSequenceId.Log, modelKey);
-        // var projection = _clusterClient.GetGrain<IImmediateProjection>(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier, key);
-        // var result = await projection.GetModelInstance(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition!);
-        // return result.Model.Deserialize<TModel>(_jsonSerializerOptions)!;
+        var node = await GetInstanceById(
+            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier,
+            modelKey,
+            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.DefinitionAsJson!);
+
+        return node.Deserialize<TModel>(_jsonSerializerOptions)!;
+    }
+
+    async Task<JsonNode> GetInstanceById(ProjectionId identifier, ModelKey modelKey, JsonNode projectionDefinition)
+    {
+        var immediateProjection = new ImmediateProjection(
+            identifier,
+            EventSequenceId.Log,
+            modelKey,
+            projectionDefinition);
+
+        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
+
+        var result = await _client.PerformCommand(route, immediateProjection);
+        var element = (JsonElement)result.Response!;
+        var actualResult = element.Deserialize<ImmediateProjectionResult>(_jsonSerializerOptions)!;
+        return actualResult.Model;
     }
 
     void HandleProjectionTypeCache<TModel>()
@@ -83,6 +121,7 @@ public class ImmediateProjections : IImmediateProjections
 
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Define(builder);
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition = builder.Build();
+            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.DefinitionAsJson = _projectionSerializer.Serialize(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition);
         }
     }
 }
