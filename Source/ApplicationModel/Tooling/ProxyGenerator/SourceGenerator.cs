@@ -87,6 +87,7 @@ public class SourceGenerator : ISourceGenerator
 
             var typeName = commandMethod.Name;
             var targetFile = Path.Combine(targetFolder, $"{typeName}.ts");
+            targetFile = Path.GetFullPath(targetFile);
 
             foreach (var parameter in commandMethod.Parameters)
             {
@@ -108,6 +109,7 @@ public class SourceGenerator : ISourceGenerator
                 {
                     var publicProperties = parameter.Type.GetPublicPropertiesFrom();
                     properties.AddRange(GetPropertyDescriptorsAndOutputComplexTypes(
+                        context,
                         rootNamespace,
                         outputFolder,
                         useRouteAsPath,
@@ -157,6 +159,7 @@ public class SourceGenerator : ISourceGenerator
             var modelType = queryMethod.ReturnType;
 
             var targetFile = Path.Combine(targetFolder, $"{queryMethod.Name}.ts");
+            targetFile = Path.GetFullPath(targetFile);
             var modelDescriptor = GetModelDescriptorFor(
                 context,
                 queryMethod,
@@ -238,7 +241,7 @@ public class SourceGenerator : ISourceGenerator
                 isEnumerable = true;
             }
 
-            OutputType(actualType, rootNamespace, outputFolder, parentFile, importStatements, useRouteAsPath, baseApiRoute);
+            OutputType(context, actualType, rootNamespace, outputFolder, parentFile, importStatements, useRouteAsPath, baseApiRoute);
 
             var typeScriptType = actualType.GetTypeScriptType(out _);
             var knownType = actualType.IsKnownType();
@@ -297,7 +300,15 @@ public class SourceGenerator : ISourceGenerator
         return queryArguments;
     }
 
-    static void OutputType(ITypeSymbol type, string rootNamespace, string outputFolder, string parentFile, HashSet<ImportStatement> parentImportStatements, bool useRouteAsPath, string baseApiRoute)
+    static void OutputType(
+        GeneratorExecutionContext context,
+        ITypeSymbol type,
+        string rootNamespace,
+        string outputFolder,
+        string parentFile,
+        HashSet<ImportStatement> parentImportStatements,
+        bool useRouteAsPath,
+        string baseApiRoute)
     {
         if (type.IsKnownType()) return;
 
@@ -305,6 +316,13 @@ public class SourceGenerator : ISourceGenerator
         var targetFile = Path.Combine(targetFolder, $"{type.Name}.ts");
         var relativeImport = new Uri(parentFile).MakeRelativeUri(new Uri(targetFile));
         var relativeImportAsString = relativeImport.ToString();
+
+        if (string.IsNullOrEmpty(relativeImport.ToString()))
+        {
+            context.ReportDiagnostic(Diagnostics.ReturnTypeWouldOverwriteParentType(type.ToDisplayString(), parentFile));
+            return;
+        }
+
         var importPath = Path.Combine(
             Path.GetDirectoryName(relativeImportAsString),
             Path.GetFileNameWithoutExtension(relativeImportAsString));
@@ -323,6 +341,7 @@ public class SourceGenerator : ISourceGenerator
 
         var typeImportStatements = new HashSet<ImportStatement>();
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(
+            context,
             rootNamespace,
             outputFolder,
             useRouteAsPath,
@@ -372,7 +391,15 @@ public class SourceGenerator : ISourceGenerator
         }
     }
 
-    static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsAndOutputComplexTypes(string rootNamespace, string outputFolder, bool useRouteAsPath, string baseApiRoute, string targetFile, IEnumerable<IPropertySymbol> properties, HashSet<ImportStatement> typeImportStatements)
+    static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsAndOutputComplexTypes(
+        GeneratorExecutionContext context,
+        string rootNamespace,
+        string outputFolder,
+        bool useRouteAsPath,
+        string baseApiRoute,
+        string targetFile,
+        IEnumerable<IPropertySymbol> properties,
+        HashSet<ImportStatement> typeImportStatements)
     {
         var propertyDescriptors = new List<PropertyDescriptor>();
 
@@ -422,12 +449,12 @@ public class SourceGenerator : ISourceGenerator
 
                     foreach (var derivedType in _derivedTypes.ToArray().Where(_ => _.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, actualType))))
                     {
-                        OutputType(derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                        OutputType(context, derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
                         derivatives.Add(derivedType.Name);
                     }
                 }
 
-                OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                OutputType(context, actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
                 propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable, hasDerivatives, derivatives));
             }
             else

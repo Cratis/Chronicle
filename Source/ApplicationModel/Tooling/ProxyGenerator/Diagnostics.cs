@@ -52,4 +52,17 @@ public static class Diagnostics
             "Stack:\n{1}"),
         default,
         messageArgs: new object[] { exception.Message, exception.StackTrace });
+
+    /// <summary>
+    /// The <see cref="Diagnostic"/> to report when the output path is missing.
+    /// </summary>
+    public static readonly Func<string, string, Diagnostic> ReturnTypeWouldOverwriteParentType = (string typeName, string parentFile) => Diagnostic.Create(
+        new DiagnosticDescriptor(
+            "AKSIO0004",
+            "The return type has a name that matches its method, this would overwrite a conflict when writing the generated return type",
+            $"The type '{typeName}' would overwrite '{parentFile}'. This could be because the name of your command / query is the same.",
+            "Generation",
+            DiagnosticSeverity.Error,
+            true),
+        default);
 }
