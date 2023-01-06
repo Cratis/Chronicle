@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
-import { ObserverState } from './ObserverState';
+import { ObserverState } from '../observers/ObserverState';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/observers');

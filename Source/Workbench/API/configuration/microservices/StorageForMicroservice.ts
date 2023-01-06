@@ -2,31 +2,16 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { StorageForMicroservice } from './StorageForMicroservice';
-import Handlebars from 'handlebars';
+import { field } from '@aksio/cratis-fundamentals';
 
-const routeTemplate = Handlebars.compile('/api/configuration/microservices/{{microserviceId}}/storage');
+import { StorageTypes } from './StorageTypes';
+import { StorageForTenants } from './StorageForTenants';
 
-export interface storageForMicroserviceArguments {
-    microserviceId: string;
-}
-export class storageForMicroservice extends QueryFor<StorageForMicroservice, storageForMicroserviceArguments> {
-    readonly route: string = '/api/configuration/microservices/{{microserviceId}}/storage';
-    readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: StorageForMicroservice = {} as any;
+export class StorageForMicroservice {
 
-    constructor() {
-        super(StorageForMicroservice, false);
-    }
+    @field(StorageTypes, true)
+    shared!: StorageTypes[];
 
-    get requestArguments(): string[] {
-        return [
-            'microserviceId',
-        ];
-    }
-
-    static use(args?: storageForMicroserviceArguments): [QueryResultWithState<StorageForMicroservice>, PerformQuery<storageForMicroserviceArguments>] {
-        return useQuery<StorageForMicroservice, storageForMicroservice, storageForMicroserviceArguments>(storageForMicroservice, args);
-    }
+    @field(StorageForTenants, true)
+    tenants!: StorageForTenants[];
 }

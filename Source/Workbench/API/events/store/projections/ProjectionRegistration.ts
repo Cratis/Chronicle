@@ -4,14 +4,12 @@
 
 import { field } from '@aksio/cratis-fundamentals';
 
-import { ProjectionDefinition } from './ProjectionDefinition';
-import { ProjectionPipelineDefinition } from './ProjectionPipelineDefinition';
 
 export class ProjectionRegistration {
 
-    @field(ProjectionDefinition)
-    projection!: ProjectionDefinition;
+    @field(Object)
+    projection!: any;
 
-    @field(ProjectionPipelineDefinition)
-    pipeline!: ProjectionPipelineDefinition;
+    @field(Object)
+    pipeline!: any;
 }
