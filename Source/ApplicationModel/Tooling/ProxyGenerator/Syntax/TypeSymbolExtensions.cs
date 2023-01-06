@@ -16,6 +16,11 @@ public static class TypeSymbolExtensions
     /// </summary>
     public static readonly TargetType AnyType = new("any", "Object");
 
+    /// <summary>
+    /// Gets the definition of any type that is a final one.
+    /// </summary>
+    public static readonly TargetType AnyTypeFinal = new("any", "Object", Final: true);
+
     static readonly Dictionary<string, TargetType> _primitiveTypeMap = new()
     {
         { typeof(bool).FullName!, new("boolean", "Boolean") },
@@ -34,8 +39,11 @@ public static class TypeSymbolExtensions
         { typeof(Guid).FullName!, new("string", "String") },
         { "System.DateOnly", new("Date", "Date") },
         { "System.TimeOnly", new("Date", "Date") },
-        { "System.Text.Json.Nodes", new("any", "Object") },
-        { "System.Text.Json.JsonDocument", new("any", "Object") }
+        { "System.Text.Json.Nodes", AnyTypeFinal },
+        { "System.Text.Json.Nodes.JsonNode", AnyTypeFinal },
+        { "System.Text.Json.Nodes.JsonObject", AnyTypeFinal },
+        { "System.Text.Json.Nodes.JsonArray", AnyTypeFinal },
+        { "System.Text.Json.JsonDocument", AnyTypeFinal }
     };
 
     /// <summary>
