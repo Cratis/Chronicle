@@ -69,6 +69,30 @@ public class Projections : Controller
     }
 
     /// <summary>
+    /// Perform an immediate projection.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to perform for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> to perform for.</param>
+    /// <param name="immediateProjection">The details about the <see cref="ImmediateProjection"/>.</param>
+    /// <returns><see cref="ImmediateProjectionResult"/>.</returns>
+    [HttpPost("immediate/{tenantId}")]
+    public async Task<ImmediateProjectionResult> Immediate(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromBody] ImmediateProjection immediateProjection)
+    {
+        var key = new ImmediateProjectionKey(
+            microserviceId,
+            tenantId,
+            immediateProjection.EventSequenceId,
+            immediateProjection.ModelKey);
+
+        var projectionDefinition = _projectionSerializer.Deserialize(immediateProjection.Projection);
+         var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        return await projection.GetModelInstance(projectionDefinition);
+    }
+
+    /// <summary>
     /// Gets all projections.
     /// </summary>
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get projections for.</param>
