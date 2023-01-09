@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
@@ -12,7 +11,7 @@ namespace Aksio.Cratis.Events.Store.Grains.Connections;
 /// </summary>
 public class ConnectedClients : Grain, IConnectedClients
 {
-    readonly ConcurrentDictionary<string, List<IConnectedClientObserver>> _observers = new();
+    readonly Dictionary<string, List<IConnectedClientObserver>> _observers = new();
     readonly ILogger<ConnectedClients> _logger;
     string _lastConnectedClient = string.Empty;
 
