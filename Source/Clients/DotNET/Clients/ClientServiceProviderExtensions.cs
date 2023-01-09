@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients;
 
@@ -16,21 +17,35 @@ public static class ClientServiceProviderExtensions
     /// Add the Cratis Kernel client.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisClient(this IServiceCollection services)
+    public static IServiceCollection AddCratisClient(this IServiceCollection services, ILogger logger)
     {
         services.AddSingleton<IClient>(_ =>
         {
-            var configuration = _.GetService<ClientConfiguration>()!;
-            var httpClientFactory = _.GetService<IHttpClientFactory>()!;
-            var serializerOptions = _.GetService<JsonSerializerOptions>()!;
+            var configuration = _.GetRequiredService<ClientConfiguration>();
+            var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
+            var serializerOptions = _.GetRequiredService<JsonSerializerOptions>();
             serializerOptions = new JsonSerializerOptions(serializerOptions);
+            var singleKernelClientLogger = _.GetRequiredService<ILogger<SingleKernelClient>>();
+            var webSocketConnectionLogger = _.GetRequiredService<ILogger<WebSocketConnection>>();
 
-            return configuration.ClusterType switch
+            var client = configuration.ClusterType switch
             {
-                ClusterType.Single => new SingleKernelClient(httpClientFactory, configuration.GetSingleKernelOptions(), serializerOptions),
+                ClusterType.Single => new SingleKernelClient(
+                    httpClientFactory,
+                    configuration.GetSingleKernelOptions(),
+                    serializerOptions,
+                    singleKernelClientLogger,
+                    webSocketConnectionLogger),
                 _ => throw new UnknownClusterType()
             };
+
+            logger.ConnectingToKernel();
+            client.Connect().Wait();
+            logger.ConnectedToKernel();
+
+            return client;
         });
 
         return services;

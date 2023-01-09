@@ -7,17 +7,21 @@ using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Queries;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClient"/> for a single instance.
 /// </summary>
-public class SingleKernelClient : IClient
+public class SingleKernelClient : IClient, IDisposable
 {
     readonly IHttpClientFactory _clientFactory;
     readonly SingleKernelOptions _options;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly ILogger<SingleKernelClient> _logger;
+    readonly ILogger<WebSocketConnection> _webSocketConnectionLogger;
+    IWebSocketConnection? _connection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
@@ -25,19 +29,41 @@ public class SingleKernelClient : IClient
     /// <param name="httpClientFactory">An <see cref="IHttpClientFactory"/> to create clients from.</param>
     /// <param name="options">The <see cref="SingleKernelOptions"/> to use for connecting.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="webSocketConnectionLogger"><see cref="ILogger"/> for passing to the <see cref="WebSocketConnection"/>.</param>
     public SingleKernelClient(
         IHttpClientFactory httpClientFactory,
         SingleKernelOptions options,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<SingleKernelClient> logger,
+        ILogger<WebSocketConnection> webSocketConnectionLogger)
     {
         _clientFactory = httpClientFactory;
         _options = options;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _logger = logger;
+        _webSocketConnectionLogger = webSocketConnectionLogger;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
+    /// <inheritdoc/>
+    public async Task Connect()
+    {
+        _logger.Connecting(_options.Endpoint.ToString());
+        _connection = new WebSocketConnection(_options.Endpoint, _webSocketConnectionLogger);
+        await _connection.Connect();
     }
 
     /// <inheritdoc/>
     public async Task<CommandResult> PerformCommand(string route, object? command = null)
     {
+        _logger.PerformingCommand(_options.Endpoint.ToString(), route);
+
         var client = _clientFactory.CreateClient();
         client.BaseAddress = _options.Endpoint;
         HttpResponseMessage response;
@@ -57,6 +83,8 @@ public class SingleKernelClient : IClient
     /// <inheritdoc/>
     public async Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null)
     {
+        _logger.PerformingQuery(_options.Endpoint.ToString(), route);
+
         var client = _clientFactory.CreateClient();
         client.BaseAddress = _options.Endpoint;
         HttpResponseMessage response;

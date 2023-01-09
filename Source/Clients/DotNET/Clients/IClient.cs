@@ -12,6 +12,12 @@ namespace Aksio.Cratis.Clients;
 public interface IClient
 {
     /// <summary>
+    /// Connect to the kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Connect();
+
+    /// <summary>
     /// Perform a command.
     /// </summary>
     /// <param name="route">Route of the command.</param>

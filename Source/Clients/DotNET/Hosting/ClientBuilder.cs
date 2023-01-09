@@ -62,8 +62,8 @@ public class ClientBuilder : IClientBuilder
         ITypes? types = default,
         ILoggerFactory? loggerFactory = default)
     {
-        var logger = loggerFactory?.CreateLogger<ClientBuilder>();
-        logger?.Configuring();
+        var logger = loggerFactory?.CreateLogger<ClientBuilder>()!;
+        logger.Configuring();
 
         if (types == default)
         {
@@ -82,9 +82,9 @@ public class ClientBuilder : IClientBuilder
             return;
         }
 
-        logger?.ConfiguringServices();
+        logger.ConfiguringServices();
         services
-            .AddCratisClient()
+            .AddCratisClient(logger)
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
             .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()

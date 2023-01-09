@@ -12,6 +12,9 @@ namespace Aksio.Cratis.Clients;
 public class InsideSiloClient : IClient
 {
     /// <inheritdoc/>
+    public Task Connect() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task<CommandResult> PerformCommand(string route, object? command = null) => Task.FromResult(CommandResult.Success);
 
     /// <inheritdoc/>
