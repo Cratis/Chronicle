@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
+using System.Text.Json;
+using Aksio.Cratis.Events.Store.Grains.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -14,30 +17,52 @@ namespace Aksio.Cratis.Events.Store.Api;
 public class ConnectedClients : Controller
 {
     readonly ILogger<ConnectedClients> _logger;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ConnectedClients(ILogger<ConnectedClients> logger)
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for deserialization.</param>
+    public ConnectedClients(ILogger<ConnectedClients> logger, JsonSerializerOptions jsonSerializerOptions)
     {
         _logger = logger;
+        _jsonSerializerOptions = jsonSerializerOptions;
     }
+
+    /// <summary>
+    /// A ping endpoint for clients to see if Kernel is available.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    [HttpGet("ping")]
+    public Task Ping() => Task.CompletedTask;
 
     /// <summary>
     /// Accepts client connections over Web Sockets.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     [HttpGet]
-    public async Task Get()
+    public async Task Connect()
     {
         if (HttpContext.WebSockets.IsWebSocketRequest)
         {
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-            _logger.ClientConnected();
-
             var isConnected = true;
+
+
+            var buffer = new byte[1024 * 4];
+            var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            var clientInformation = JsonSerializer.Deserialize<ClientInformation>(json, _jsonSerializerOptions)!;
+            _logger.ClientConnected(clientInformation.ClientVersion, clientInformation.MicroserviceId, clientInformation.ConnectionId);
+
+            await webSocket.SendAsync(new ArraySegment<byte>(
+                Encoding.UTF8.GetBytes("kernel-connected")),
+                System.Net.WebSockets.WebSocketMessageType.Text,
+                true,
+                CancellationToken.None);
+
             var lastMessageReceived = DateTimeOffset.UtcNow;
             using var timer = new Timer(
                 callback: _ =>
@@ -52,14 +77,19 @@ public class ConnectedClients : Controller
                 dueTime: 0,
                 period: 1000);
 
-            var buffer = new byte[1024 * 4];
-            var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
             while (!result.CloseStatus.HasValue && isConnected)
             {
                 try
                 {
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                    await webSocket.SendAsync(new ArraySegment<byte>(
+                        Encoding.UTF8.GetBytes("pong")),
+                        System.Net.WebSockets.WebSocketMessageType.Text,
+                        true,
+                        CancellationToken.None);
+
+                    lastMessageReceived = DateTimeOffset.UtcNow;
                 }
                 catch
                 {
@@ -67,7 +97,7 @@ public class ConnectedClients : Controller
                 }
             }
 
-            _logger.ClientDisconnected();
+            _logger.ClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
 
             if (result.CloseStatus is not null)
             {

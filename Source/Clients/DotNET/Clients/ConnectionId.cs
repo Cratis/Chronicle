@@ -16,4 +16,10 @@ public record ConnectionId(Guid Value) : ConceptAs<Guid>(Value)
     /// </summary>
     /// <returns>A new <see cref="ConnectionId"/>.</returns>
     public static ConnectionId New() => new(Guid.NewGuid());
+
+    /// <summary>
+    /// Implicitly convert from <see cref="ConnectionId"/> to <see cref="string"/>.
+    /// </summary>
+    /// <param name="value"><see cref="ConnectionId"/> to convert from.</param>
+    public static implicit operator string(ConnectionId value) => value.ToString();
 }

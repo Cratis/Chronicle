@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Cratis.Commands;
@@ -22,6 +23,9 @@ public class SingleKernelClient : IClient, IDisposable
     readonly ILogger<SingleKernelClient> _logger;
     readonly ILogger<WebSocketConnection> _webSocketConnectionLogger;
     IWebSocketConnection? _connection;
+
+    /// <inheritdoc/>
+    public bool IsConnected { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
@@ -55,14 +59,34 @@ public class SingleKernelClient : IClient, IDisposable
     public async Task Connect()
     {
         _logger.Connecting(_options.Endpoint.ToString());
-        _connection = new WebSocketConnection(_options.Endpoint, _webSocketConnectionLogger);
+
+        for (; ; )
+        {
+            var client = _clientFactory.CreateClient();
+            client.BaseAddress = _options.Endpoint;
+            try
+            {
+                var response = await client.GetAsync("/api/clients/ping");
+                break;
+            }
+            catch
+            {
+            }
+            _logger.KernelUnavailable();
+            await Task.Delay(2000);
+        }
+
+        _connection = new WebSocketConnection(_options.Endpoint, _jsonSerializerOptions, _webSocketConnectionLogger);
         await _connection.Connect();
+
+        IsConnected = true;
     }
 
     /// <inheritdoc/>
     public async Task<CommandResult> PerformCommand(string route, object? command = null)
     {
         _logger.PerformingCommand(_options.Endpoint.ToString(), route);
+        ThrowIfClientIsDisconnected();
 
         var client = _clientFactory.CreateClient();
         client.BaseAddress = _options.Endpoint;
@@ -84,6 +108,7 @@ public class SingleKernelClient : IClient, IDisposable
     public async Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null)
     {
         _logger.PerformingQuery(_options.Endpoint.ToString(), route);
+        ThrowIfClientIsDisconnected();
 
         var client = _clientFactory.CreateClient();
         client.BaseAddress = _options.Endpoint;
@@ -100,5 +125,13 @@ public class SingleKernelClient : IClient, IDisposable
         }
         var result = await response.Content.ReadFromJsonAsync<QueryResult>(_jsonSerializerOptions);
         return result!;
+    }
+
+    void ThrowIfClientIsDisconnected()
+    {
+        if (!IsConnected)
+        {
+            throw new DisconnectedClient();
+        }
     }
 }

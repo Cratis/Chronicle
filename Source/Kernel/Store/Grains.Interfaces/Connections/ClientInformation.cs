@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
+using Semver;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Events.Store.Grains.Connections;
 
 /// <summary>
 /// Represents the information sent to the Kernel when connecting.

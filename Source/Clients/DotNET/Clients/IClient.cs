@@ -12,6 +12,11 @@ namespace Aksio.Cratis.Clients;
 public interface IClient
 {
     /// <summary>
+    /// Gets whether or not the client is connected.
+    /// </summary>
+    bool IsConnected { get; }
+
+    /// <summary>
     /// Connect to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>

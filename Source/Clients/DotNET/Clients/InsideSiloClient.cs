@@ -12,6 +12,9 @@ namespace Aksio.Cratis.Clients;
 public class InsideSiloClient : IClient
 {
     /// <inheritdoc/>
+    public bool IsConnected => false;
+
+    /// <inheritdoc/>
     public Task Connect() => Task.CompletedTask;
 
     /// <inheritdoc/>
