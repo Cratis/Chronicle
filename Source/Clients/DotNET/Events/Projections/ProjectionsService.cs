@@ -22,9 +22,10 @@ public class ProjectionsService : IHostedService
     }
 
     /// <inheritdoc/>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        await _projectionsRegistrar.DiscoverAndRegisterAll();
+        // await _projectionsRegistrar.DiscoverAndRegisterAll();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
