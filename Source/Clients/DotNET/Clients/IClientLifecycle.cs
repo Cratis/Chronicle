@@ -4,18 +4,19 @@
 namespace Aksio.Cratis.Clients;
 
 /// <summary>
-/// Defines a connection using Web Sockets.
+/// Defines a system for the lifecycle of the client.
 /// </summary>
-public interface IWebSocketConnection : IDisposable
+public interface IClientLifecycle
 {
     /// <summary>
-    /// Gets whether or not the client is connected.
-    /// </summary>
-    bool IsConnected { get; }
-
-    /// <summary>
-    /// Connect to the kernel web socket API.
+    /// Called when the client gets connected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task Connect();
+    Task Connected();
+
+    /// <summary>
+    /// Called when the client is disconnected to the kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Disconnected();
 }

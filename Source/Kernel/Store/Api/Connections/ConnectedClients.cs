@@ -94,6 +94,11 @@ public class ConnectedClients : Controller
                 try
                 {
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    var command = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    if (command == "disconnect")
+                    {
+                        isConnected = false;
+                    }
 
                     await webSocket.SendAsync(new ArraySegment<byte>(
                         Encoding.UTF8.GetBytes("pong")),

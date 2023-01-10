@@ -14,9 +14,9 @@ using Aksio.Cratis.Types;
 namespace Aksio.Cratis.Events.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionsRegistrar"/>.
+/// Represents an implementation of <see cref="IParticipateInClientLifecycle"/> for handling registrations of projections with the Kernel.
 /// </summary>
-public class ProjectionsRegistrar : IProjectionsRegistrar
+public class ProjectionsRegistrar : IParticipateInClientLifecycle
 {
     static class ProjectionDefinitionCreator<TModel>
     {
@@ -83,7 +83,7 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
                 }).ToArray();
 
     /// <inheritdoc/>
-    public async Task DiscoverAndRegisterAll()
+    public async Task Connected()
     {
         var registrations = _projections.Select(projection =>
         {
@@ -105,4 +105,7 @@ public class ProjectionsRegistrar : IProjectionsRegistrar
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections";
         await _client.PerformCommand(route, new RegisterProjections(registrations));
     }
+
+    /// <inheritdoc/>
+    public Task Disconnected() => Task.CompletedTask;
 }

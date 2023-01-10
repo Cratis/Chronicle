@@ -6,8 +6,6 @@ using System.Text.Json;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Queries;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 
@@ -22,12 +20,13 @@ public class SingleKernelClient : IClient, IDisposable
     readonly SingleKernelOptions _options;
     readonly Uri _clientEndpoint;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly IClientLifecycle _clientLifecycle;
     readonly ILogger<SingleKernelClient> _logger;
     readonly ILogger<WebSocketConnection> _webSocketConnectionLogger;
     IWebSocketConnection? _connection;
 
     /// <inheritdoc/>
-    public bool IsConnected { get; private set; }
+    public bool IsConnected => _connection?.IsConnected ?? false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
@@ -35,6 +34,7 @@ public class SingleKernelClient : IClient, IDisposable
     /// <param name="httpClientFactory">An <see cref="IHttpClientFactory"/> to create clients from.</param>
     /// <param name="options">The <see cref="SingleKernelOptions"/> to use for connecting.</param>
     /// <param name="clientEndpoint">The client endpoint.</param>
+    /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="webSocketConnectionLogger"><see cref="ILogger"/> for passing to the <see cref="WebSocketConnection"/>.</param>
@@ -42,6 +42,7 @@ public class SingleKernelClient : IClient, IDisposable
         IHttpClientFactory httpClientFactory,
         SingleKernelOptions options,
         Uri clientEndpoint,
+        IClientLifecycle clientLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<SingleKernelClient> logger,
         ILogger<WebSocketConnection> webSocketConnectionLogger)
@@ -50,6 +51,7 @@ public class SingleKernelClient : IClient, IDisposable
         _options = options;
         _clientEndpoint = clientEndpoint;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _clientLifecycle = clientLifecycle;
         _logger = logger;
         _webSocketConnectionLogger = webSocketConnectionLogger;
     }
@@ -81,10 +83,13 @@ public class SingleKernelClient : IClient, IDisposable
             await Task.Delay(2000);
         }
 
-        _connection = new WebSocketConnection(_options.Endpoint, _clientEndpoint, _jsonSerializerOptions, _webSocketConnectionLogger);
+        _connection = new WebSocketConnection(
+            _options.Endpoint,
+            _clientEndpoint,
+            _clientLifecycle,
+            _jsonSerializerOptions,
+            _webSocketConnectionLogger);
         await _connection.Connect();
-
-        IsConnected = true;
     }
 
     /// <inheritdoc/>

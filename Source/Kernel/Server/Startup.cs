@@ -14,10 +14,5 @@ public class Startup
     {
         app.UseRouting();
         app.UseAksio();
-
-        // TODO: This needs to be improved.
-        // In a regular client, this is hooked up with a hosted service, that is too early within the kernel
-        app.ApplicationServices.GetService<IProjectionsRegistrar>()!.DiscoverAndRegisterAll().Wait();
-        app.ApplicationServices.GetService<IObservers>()!.RegisterAndObserveAll().Wait();
     }
 }

@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Events.Schemas;
 /// <summary>
 /// Represents an implementation of <see cref="IPerformBootProcedure"/> for registering event schemas.
 /// </summary>
-public class SchemasBootProcedure : IPerformBootProcedure
+public class SchemasBootProcedure : IParticipateInClientLifecycle
 {
     readonly IEnumerable<EventTypeRegistration> _definitions;
     readonly IClient _client;
@@ -42,9 +42,12 @@ public class SchemasBootProcedure : IPerformBootProcedure
     }
 
     /// <inheritdoc/>
-    public void Perform()
+    public async Task Connected()
     {
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/types";
-        _client.PerformCommand(route, new RegisterEventTypes(_definitions));
+        await _client.PerformCommand(route, new RegisterEventTypes(_definitions));
     }
+
+    /// <inheritdoc/>
+    public Task Disconnected() => Task.CompletedTask;
 }
