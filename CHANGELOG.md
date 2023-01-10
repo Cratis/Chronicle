@@ -1,3 +1,34 @@
+# [v7.0.0] - 2023-1-10 [PR: #672](https://github.com/aksio-insurtech/Cratis/pull/672)
+
+## Summary
+
+A missing consideration in the `ObserverStorageProvider` for observer key was causing Inbox observers for different microservices to reuse its state. Causing strange behavior.
+
+This version is therefor a major release, since it actually is not backwards compatible with the stored observers state for inboxes.
+
+To remedy this, you can change the existing observer in the `observers collection` with the `observerId: 85dc950d-1900-4407-a484-ec1e83da16c6`. In the `_id` field you can append the microserviceId you believe is correct (if you only have one, this should be easy).
+The expected format is: 
+
+`<guid> : <guid> : <guid>`
+
+Where the Guid represent:
+
+`<event sequence id> : <observer id> : <source microservice id>`.
+
+Since the two first segments are known it will become:
+
+`ae99de1e-b19f-4a33-a5c4-3908508ce59f : 85dc950d-1900-4407-a484-ec1e83da16c6 : <source microservice id>`
+
+Concrete example:
+
+`ae99de1e-b19f-4a33-a5c4-3908508ce59f : 85dc950d-1900-4407-a484-ec1e83da16c6 : 51f25e1d-b897-4476-a48d-ce9de38c7589`
+
+
+### Changed
+
+- Changed the key for Inbox observers to include source microservice id.
+
+
 # [v6.25.5] - 2023-1-2 [PR: #662](https://github.com/aksio-insurtech/Cratis/pull/662)
 
 ### Fixed
