@@ -33,7 +33,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
         _logger.ClientConnected(microserviceId, connectionId);
-        State.Clients.Add(new ConnectedClient(connectionId, clientUri.ToString(), version));
+        State.Clients.Add(new ConnectedClient(connectionId, clientUri.ToString(), version, DateTimeOffset.UtcNow));
 
         await WriteStateAsync();
     }
@@ -48,6 +48,19 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         if (client is not null)
         {
             State.Clients.Remove(client);
+        }
+
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task OnClientPing(ConnectionId connectionId)
+    {
+        var client = State.Clients.Find(_ => _.ConnectionId == connectionId);
+        if (client is not null)
+        {
+            State.Clients.Remove(client);
+            State.Clients.Add(client with { LastSeen = DateTimeOffset.UtcNow });
         }
 
         await WriteStateAsync();
