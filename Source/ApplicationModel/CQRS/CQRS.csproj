@@ -14,5 +14,6 @@
 
     <ItemGroup>
         <PackageReference Include="System.Reactive" Version="$(SystemReactive)" />
+        <PackageReference Include="FluentValidation" Version="$(FluentValidation)" />
     </ItemGroup>
 </Project>
