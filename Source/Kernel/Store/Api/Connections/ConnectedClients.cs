@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.Json;
+using Aksio.Cratis.Events.Store.Connections;
 using Aksio.Cratis.Events.Store.Grains.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,8 +19,8 @@ namespace Aksio.Cratis.Events.Store.Api;
 public class ConnectedClients : Controller
 {
     readonly ILogger<ConnectedClients> _logger;
+    readonly IGrainFactory _grainFactory;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IConnectedClients _connectedClients;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
@@ -33,8 +34,8 @@ public class ConnectedClients : Controller
         ILogger<ConnectedClients> logger)
     {
         _logger = logger;
+        _grainFactory = grainFactory;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _connectedClients = grainFactory.GetGrain<IConnectedClients>(Guid.Empty);
     }
 
     /// <summary>
@@ -62,7 +63,11 @@ public class ConnectedClients : Controller
             var clientInformation = JsonSerializer.Deserialize<ClientInformation>(json, _jsonSerializerOptions)!;
             _logger.ClientConnected(clientInformation.ClientVersion, clientInformation.MicroserviceId, clientInformation.ConnectionId);
 
-            await _connectedClients.OnClientConnected(clientInformation);
+            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(clientInformation.MicroserviceId);
+            await connectedClients.OnClientConnected(
+                clientInformation.ConnectionId,
+                new Uri(clientInformation.AdvertisedUri),
+                clientInformation.ClientVersion);
 
             await webSocket.SendAsync(new ArraySegment<byte>(
                 Encoding.UTF8.GetBytes("kernel-connected")),
@@ -104,7 +109,7 @@ public class ConnectedClients : Controller
                 }
             }
 
-            await _connectedClients.OnClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
+            await connectedClients.OnClientDisconnected(clientInformation.ConnectionId);
             _logger.ClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
 
             if (result.CloseStatus is not null)

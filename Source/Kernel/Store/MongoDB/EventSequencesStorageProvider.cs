@@ -15,12 +15,10 @@ namespace Aksio.Cratis.Events.Store.MongoDB;
 /// </summary>
 public class EventSequencesStorageProvider : IGrainStorage
 {
-    const string CollectionName = "event-sequences";
-
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
-    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(CollectionName);
+    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(CollectionNames.EventSequences);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
@@ -34,10 +32,7 @@ public class EventSequencesStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
-    {
-        return Task.CompletedTask;
-    }
+    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)

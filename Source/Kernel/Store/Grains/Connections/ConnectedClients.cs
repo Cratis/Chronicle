@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Store.Connections;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -10,9 +11,8 @@ namespace Aksio.Cratis.Events.Store.Grains.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
-public class ConnectedClients : Grain, IConnectedClients
+public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 {
-    readonly Dictionary<MicroserviceId, IList<ClientInformation>> _connectionsPerMicroservice = new();
     readonly ILogger<ConnectedClients> _logger;
 
     /// <summary>
@@ -25,35 +25,31 @@ public class ConnectedClients : Grain, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public Task OnClientConnected(ClientInformation clientInformation)
+    public override Task OnActivateAsync() => base.OnActivateAsync();
+
+    /// <inheritdoc/>
+    public async Task OnClientConnected(ConnectionId connectionId, Uri clientUri, string version)
     {
-        _logger.ClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
+        var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
-        if (!_connectionsPerMicroservice.ContainsKey(clientInformation.MicroserviceId))
-        {
-            _connectionsPerMicroservice[clientInformation.MicroserviceId] = new List<ClientInformation>();
-        }
-        _connectionsPerMicroservice[clientInformation.MicroserviceId].Add(clientInformation);
+        _logger.ClientConnected(microserviceId, connectionId);
+        State.Clients.Add(new ConnectedClient(connectionId, clientUri.ToString(), version));
 
-        return Task.CompletedTask;
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
-    public Task OnClientDisconnected(
-        MicroserviceId microserviceId,
-        ConnectionId connectionId)
+    public async Task OnClientDisconnected(ConnectionId connectionId)
     {
+        var microserviceId = (MicroserviceId)this.GetPrimaryKey();
         _logger.ClientDisconnected(microserviceId, connectionId);
 
-        if (_connectionsPerMicroservice.ContainsKey(microserviceId))
+        var client = State.Clients.Find(_ => _.ConnectionId == connectionId);
+        if (client is not null)
         {
-            var clientConnection = _connectionsPerMicroservice[microserviceId].FirstOrDefault(_ => _.ConnectionId == connectionId);
-            if (clientConnection is not null)
-            {
-                _connectionsPerMicroservice[microserviceId].Remove(clientConnection);
-            }
+            State.Clients.Remove(client);
         }
 
-        return Task.CompletedTask;
+        await WriteStateAsync();
     }
 }

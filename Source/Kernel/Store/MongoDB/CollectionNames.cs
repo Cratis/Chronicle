@@ -18,11 +18,6 @@ internal static class CollectionNames
     internal const string Observers = "observers";
 
     /// <summary>
-    /// The collection that holds <see cref="ClientObserversState"/>.
-    /// </summary>
-    internal const string ClientObservers = "client-observers";
-
-    /// <summary>
     /// The collection that holds <see cref="ReminderEntry"/>.
     /// </summary>
     internal const string Reminders = "reminders";
@@ -31,4 +26,14 @@ internal static class CollectionNames
     /// The collection that holds <see cref="TenantConfigurationState"/>.
     /// </summary>
     internal const string TenantConfiguration = "tenants-configuration";
+
+    /// <summary>
+    /// The collection that holds event sequences.
+    /// </summary>
+    internal const string EventSequences = "event-sequences";
+
+    /// <summary>
+    /// The collection that holds connected clients state.
+    /// </summary>
+    internal const string ConnectedClients = "connected-clients";
 }
