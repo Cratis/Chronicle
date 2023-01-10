@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
@@ -11,9 +12,8 @@ namespace Aksio.Cratis.Events.Store.Grains.Connections;
 /// </summary>
 public class ConnectedClients : Grain, IConnectedClients
 {
-    readonly Dictionary<string, List<IConnectedClientObserver>> _observers = new();
+    readonly Dictionary<MicroserviceId, IList<ClientInformation>> _connectionsPerMicroservice = new();
     readonly ILogger<ConnectedClients> _logger;
-    string _lastConnectedClient = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
@@ -25,53 +25,35 @@ public class ConnectedClients : Grain, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public Task OnClientConnected(string connectionId)
+    public Task OnClientConnected(ClientInformation clientInformation)
     {
-        _lastConnectedClient = connectionId;
-        _logger.ClientConnected(connectionId);
-        _observers[connectionId] = new List<IConnectedClientObserver>();
+        _logger.ClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
+
+        if (!_connectionsPerMicroservice.ContainsKey(clientInformation.MicroserviceId))
+        {
+            _connectionsPerMicroservice[clientInformation.MicroserviceId] = new List<ClientInformation>();
+        }
+        _connectionsPerMicroservice[clientInformation.MicroserviceId].Add(clientInformation);
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task OnClientDisconnected(string connectionId)
+    public Task OnClientDisconnected(
+        MicroserviceId microserviceId,
+        ConnectionId connectionId)
     {
-        _logger.ClientDisconnected(connectionId);
-        if (_observers.TryGetValue(connectionId, out var observers))
+        _logger.ClientDisconnected(microserviceId, connectionId);
+
+        if (_connectionsPerMicroservice.ContainsKey(microserviceId))
         {
-            foreach (var observer in observers)
+            var clientConnection = _connectionsPerMicroservice[microserviceId].FirstOrDefault(_ => _.ConnectionId == connectionId);
+            if (clientConnection is not null)
             {
-                observer.Disconnected(connectionId);
+                _connectionsPerMicroservice[microserviceId].Remove(clientConnection);
             }
         }
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task SubscribeOnDisconnected(string connectionId, IConnectedClientObserver observer)
-    {
-        if (_observers.TryGetValue(connectionId, out var observers))
-        {
-            observers.Add(observer);
-        }
 
         return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task UnsubscribeOnDisconnected(string connectionId, IConnectedClientObserver observer)
-    {
-        if (_observers.TryGetValue(connectionId, out var observers))
-        {
-            observers.Remove(observer);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task<string> GetLastConnectedClientConnectionId()
-    {
-        return Task.FromResult(_lastConnectedClient);
     }
 }

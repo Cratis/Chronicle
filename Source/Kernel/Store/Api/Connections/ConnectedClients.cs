@@ -62,6 +62,8 @@ public class ConnectedClients : Controller
             var clientInformation = JsonSerializer.Deserialize<ClientInformation>(json, _jsonSerializerOptions)!;
             _logger.ClientConnected(clientInformation.ClientVersion, clientInformation.MicroserviceId, clientInformation.ConnectionId);
 
+            await _connectedClients.OnClientConnected(clientInformation);
+
             await webSocket.SendAsync(new ArraySegment<byte>(
                 Encoding.UTF8.GetBytes("kernel-connected")),
                 System.Net.WebSockets.WebSocketMessageType.Text,
@@ -102,6 +104,7 @@ public class ConnectedClients : Controller
                 }
             }
 
+            await _connectedClients.OnClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
             _logger.ClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
 
             if (result.CloseStatus is not null)
