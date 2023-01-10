@@ -3,8 +3,10 @@
 
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events.Store.Connections;
 using Aksio.Cratis.Events.Store.EventSequences;
 using Aksio.Cratis.Events.Store.MongoDB;
+using Aksio.Cratis.Events.Store.MongoDB.ConnectedClients;
 using Aksio.Cratis.Events.Store.MongoDB.Observation;
 using Aksio.Cratis.Events.Store.MongoDB.Tenants;
 using Aksio.Cratis.Events.Store.Observation;
@@ -27,13 +29,12 @@ public static class SiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
     public static ISiloBuilder AddEventSequenceStream(this ISiloBuilder builder)
     {
-        builder.AddMemoryGrainStorage("PubSubStore");
         builder.ConfigureServices(services =>
         {
-            services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<EventSequencesStorageProvider>()!);
-            services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ObserverStorageProvider>()!);
-            services.AddSingletonNamedService<IGrainStorage>(ClientObserversState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<ClientObserversStorageProvider>()!);
-            services.AddSingletonNamedService<IGrainStorage>(TenantConfigurationState.StorageProvider, (serviceProvider, _) => serviceProvider.GetService<TenantConfigurationStorageProvider>()!);
+            services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<EventSequencesStorageProvider>());
+            services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ObserverStorageProvider>());
+            services.AddSingletonNamedService<IGrainStorage>(TenantConfigurationState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
+            services.AddSingletonNamedService<IGrainStorage>(ConnectedClientsState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>());
         });
 
         builder.AddPersistentStreams(

@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Events.Store.Grains.Connections;
+namespace Aksio.Cratis.Events.Store.Connections;
 
 /// <summary>
 /// Represents the information sent to the Kernel when connecting.
