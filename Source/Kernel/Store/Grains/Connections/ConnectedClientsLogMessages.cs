@@ -10,9 +10,9 @@ namespace Aksio.Cratis.Events.Store.Grains.Connections;
 /// </summary>
 public static partial class ConnectedClientsLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Connected client with connection identifier '{ConnectionId}'.")]
-    internal static partial void ClientConnected(this ILogger logger, string connectionId);
+    [LoggerMessage(0, LogLevel.Information, "Connected client for microservice '{MicroserviceId}' with connection identifier '{ConnectionId}'.")]
+    internal static partial void ClientConnected(this ILogger logger, string microserviceId, string connectionId);
 
-    [LoggerMessage(1, LogLevel.Information, "Disconnected client with connection identifier '{ConnectionId}'.")]
-    internal static partial void ClientDisconnected(this ILogger logger, string connectionId);
+    [LoggerMessage(1, LogLevel.Information, "Disconnected client for microservice '{MicroserviceId}' with connection identifier '{ConnectionId}'.")]
+    internal static partial void ClientDisconnected(this ILogger logger, string microserviceId, string connectionId);
 }
