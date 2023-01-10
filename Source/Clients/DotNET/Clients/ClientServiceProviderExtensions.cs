@@ -3,6 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -29,12 +31,22 @@ public static class ClientServiceProviderExtensions
             serializerOptions = new JsonSerializerOptions(serializerOptions);
             var singleKernelClientLogger = _.GetRequiredService<ILogger<SingleKernelClient>>();
             var webSocketConnectionLogger = _.GetRequiredService<ILogger<WebSocketConnection>>();
+            var server = _.GetRequiredService<IServer>();
+            var addresses = server.Features.Get<IServerAddressesFeature>();
+
+            var options = configuration.GetSingleKernelOptions();
+            if (options.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
+            {
+                throw new UnableToResolveClientUri();
+            }
+            var clientEndpoint = options.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First());
 
             var client = configuration.ClusterType switch
             {
                 ClusterType.Single => new SingleKernelClient(
                     httpClientFactory,
-                    configuration.GetSingleKernelOptions(),
+                    options,
+                    clientEndpoint,
                     serializerOptions,
                     singleKernelClientLogger,
                     webSocketConnectionLogger),
