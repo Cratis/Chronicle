@@ -33,6 +33,7 @@ public static class ClientServiceProviderExtensions
             var webSocketConnectionLogger = _.GetRequiredService<ILogger<WebSocketConnection>>();
             var server = _.GetRequiredService<IServer>();
             var addresses = server.Features.Get<IServerAddressesFeature>();
+            var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
 
             var options = configuration.GetSingleKernelOptions();
             if (options.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
@@ -47,6 +48,7 @@ public static class ClientServiceProviderExtensions
                     httpClientFactory,
                     options,
                     clientEndpoint,
+                    clientLifecycle,
                     serializerOptions,
                     singleKernelClientLogger,
                     webSocketConnectionLogger),

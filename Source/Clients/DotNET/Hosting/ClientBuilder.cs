@@ -87,7 +87,7 @@ public class ClientBuilder : IClientBuilder
             .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()
             .AddSingleton(types)
-            .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
+            .AddSingleton<IClientLifecycle, ClientLifecycle>()
             .AddSingleton<IObservers, Observers>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()

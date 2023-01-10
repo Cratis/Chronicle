@@ -5,12 +5,14 @@ using Aksio.Cratis.Events.Store.Connections;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Providers;
 
 namespace Aksio.Cratis.Events.Store.Grains.Connections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
+[StorageProvider(ProviderName = ConnectedClientsState.StorageProvider)]
 public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 {
     readonly ILogger<ConnectedClients> _logger;

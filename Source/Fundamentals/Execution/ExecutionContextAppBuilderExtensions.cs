@@ -34,7 +34,18 @@ public static class ExecutionContextAppBuilderExtensions
 
             var executionContextManager = app.ApplicationServices.GetService(typeof(IExecutionContextManager)) as IExecutionContextManager;
             executionContextManager!.Establish(tenantId, CorrelationId.New());
-            await next.Invoke().ConfigureAwait(false);
+
+            try
+            {
+                await next.Invoke();
+            }
+            catch (InvalidOperationException)
+            {
+                // TODO: We're catching this exception to avoid WebSockets that are terminated. It tries to continue on middlewares
+                // and one of these is doing modifications on headers and we get 'Headers are read-only, response has already started'.
+                // The reason fir this is that the original request that was upgraded to WebSockets continues when the controller action
+                // is done.
+            }
         });
 
         return app;
