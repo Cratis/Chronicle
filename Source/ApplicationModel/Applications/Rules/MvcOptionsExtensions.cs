@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Applications;
+using Aksio.Cratis.Applications.Commands;
 using Aksio.Cratis.Applications.Rules;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,7 @@ public static class MvcOptionsExtensions
     public static MvcOptions AddRules(this MvcOptions options)
     {
         options.ModelValidatorProviders.Add(new RulesModelValidatorProvider(Internals.ServiceProvider!));
+        options.ModelValidatorProviders.Add(new CommandModelValidatorProvider(Internals.ServiceProvider!));
         return options;
     }
 }
