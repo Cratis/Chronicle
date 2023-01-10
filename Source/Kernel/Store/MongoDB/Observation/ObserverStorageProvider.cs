@@ -77,6 +77,6 @@ public class ObserverStorageProvider : IGrainStorage
     }
 
     string GetKeyFrom(ObserverKey key, ObserverId observerId) => key.SourceMicroserviceId is not null ?
-        $"{key.EventSequenceId} : {observerId} - {key.SourceMicroserviceId}" :
+        $"{key.EventSequenceId} : {observerId} : {key.SourceMicroserviceId}" :
         $"{key.EventSequenceId} : {observerId}";
 }
