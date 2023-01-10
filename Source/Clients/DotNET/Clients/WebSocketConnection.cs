@@ -15,6 +15,7 @@ namespace Aksio.Cratis.Clients;
 public class WebSocketConnection : IWebSocketConnection
 {
     readonly Uri _url;
+    readonly Uri _clientEndpoint;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<WebSocketConnection> _logger;
     readonly string _version;
@@ -25,10 +26,12 @@ public class WebSocketConnection : IWebSocketConnection
     /// Initializes a new instance of the <see cref="WebSocketConnection"/> class.
     /// </summary>
     /// <param name="endpoint">The endpoint the Kernel is on.</param>
+    /// <param name="clientEndpoint">The endpoint the Client is on.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public WebSocketConnection(
         Uri endpoint,
+        Uri clientEndpoint,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<WebSocketConnection> logger)
     {
@@ -39,6 +42,7 @@ public class WebSocketConnection : IWebSocketConnection
         var endpointAsString = endpoint.ToString();
         endpointAsString = endpointAsString.Replace(endpoint.Scheme, scheme);
         _url = new Uri(new Uri(endpointAsString), "/api/clients");
+        _clientEndpoint = clientEndpoint;
         _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
     }
@@ -46,7 +50,6 @@ public class WebSocketConnection : IWebSocketConnection
     /// <inheritdoc/>
     public async Task Connect()
     {
-
         _logger.Connecting(_url);
         _webSocketClient = new WebsocketClient(_url)
         {
@@ -87,7 +90,7 @@ public class WebSocketConnection : IWebSocketConnection
 
     void SendConnect()
     {
-        var info = new ClientInformation(ExecutionContextManager.GlobalMicroserviceId, ConnectionId.New(), _version);
+        var info = new ClientInformation(ExecutionContextManager.GlobalMicroserviceId, ConnectionId.New(), _version, _clientEndpoint.ToString());
         var serialized = JsonSerializer.Serialize(info, _jsonSerializerOptions);
         _logger.SendingClientInformation(info.ClientVersion, info.MicroserviceId, info.ConnectionId);
         _webSocketClient?.Send(serialized);

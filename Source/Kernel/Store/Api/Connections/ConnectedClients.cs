@@ -7,6 +7,7 @@ using Aksio.Cratis.Events.Store.Grains.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Orleans;
 
 namespace Aksio.Cratis.Events.Store.Api;
 
@@ -18,16 +19,22 @@ public class ConnectedClients : Controller
 {
     readonly ILogger<ConnectedClients> _logger;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly IConnectedClients _connectedClients;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with Orleans grains.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for deserialization.</param>
-    public ConnectedClients(ILogger<ConnectedClients> logger, JsonSerializerOptions jsonSerializerOptions)
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    public ConnectedClients(
+        IGrainFactory grainFactory,
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<ConnectedClients> logger)
     {
         _logger = logger;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _connectedClients = grainFactory.GetGrain<IConnectedClients>(Guid.Empty);
     }
 
     /// <summary>
@@ -49,8 +56,6 @@ public class ConnectedClients : Controller
             using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
             var isConnected = true;
-
-
             var buffer = new byte[1024 * 4];
             var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
