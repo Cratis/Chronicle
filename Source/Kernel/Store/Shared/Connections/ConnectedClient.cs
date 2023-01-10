@@ -9,4 +9,5 @@ namespace Aksio.Cratis.Events.Store.Connections;
 /// <param name="ConnectionId">The unique connection id.</param>
 /// <param name="ClientUri">The uri of the client.</param>
 /// <param name="Version">Version of the client.</param>
-public record ConnectedClient(ConnectionId ConnectionId, string ClientUri, string Version);
+/// <param name="LastSeen">The date and time the client was last seen.</param>
+public record ConnectedClient(ConnectionId ConnectionId, string ClientUri, string Version, DateTimeOffset LastSeen);

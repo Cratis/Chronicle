@@ -26,4 +26,11 @@ public interface IConnectedClients : IGrainWithGuidKey
     /// <param name="connectionId">The connection identifier.</param>
     /// <returns>Awaitable task.</returns>
     Task OnClientDisconnected(ConnectionId connectionId);
+
+    /// <summary>
+    /// Register that the client was seen.
+    /// </summary>
+    /// <param name="connectionId">The connection identifier.</param>
+    /// <returns>Awaitable task.</returns>
+    Task OnClientPing(ConnectionId connectionId);
 }
