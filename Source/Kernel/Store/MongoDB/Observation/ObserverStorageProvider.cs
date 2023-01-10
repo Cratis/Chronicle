@@ -43,9 +43,10 @@ public class ObserverStorageProvider : IGrainStorage
         var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString);
         var eventSequenceId = observerKey.EventSequenceId;
+
         _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
-        var key = GetKeyFrom(eventSequenceId, observerId);
+        var key = GetKeyFrom(observerKey, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
         grainState.State = await cursor.FirstOrDefaultAsync() ?? new ObserverState
         {
@@ -67,7 +68,7 @@ public class ObserverStorageProvider : IGrainStorage
         _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var observerState = grainState.State as ObserverState;
-        var key = GetKeyFrom(eventSequenceId, observerId);
+        var key = GetKeyFrom(observerKey, observerId);
 
         await Collection.ReplaceOneAsync(
             _ => _.Id == key,
@@ -75,5 +76,7 @@ public class ObserverStorageProvider : IGrainStorage
             new ReplaceOptions { IsUpsert = true });
     }
 
-    string GetKeyFrom(EventSequenceId eventSequenceId, ObserverId observerId) => $"{eventSequenceId} : {observerId}";
+    string GetKeyFrom(ObserverKey key, ObserverId observerId) => key.SourceMicroserviceId is not null ?
+        $"{key.EventSequenceId} : {observerId} : {key.SourceMicroserviceId}" :
+        $"{key.EventSequenceId} : {observerId}";
 }
