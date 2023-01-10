@@ -7,13 +7,11 @@ using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
 
@@ -90,16 +88,12 @@ public class ClientBuilder : IClientBuilder
             .AddTransient<IEventStore, EventStore>()
             .AddSingleton(types)
             .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
-            .AddProjections()
-            .AddOutboxProjections()
-            .AddIntegration()
             .AddSingleton<IObservers, Observers>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
-            .AddSingleton<IHostedService, ObserversService>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
             .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>();
 
