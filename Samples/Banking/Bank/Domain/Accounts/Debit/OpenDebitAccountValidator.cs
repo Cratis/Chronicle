@@ -3,7 +3,6 @@
 
 namespace Domain.Accounts.Debit;
 
-
 public class OpenDebitAccountValidator : CommandValidator<OpenDebitAccount>
 {
     public OpenDebitAccountValidator()
