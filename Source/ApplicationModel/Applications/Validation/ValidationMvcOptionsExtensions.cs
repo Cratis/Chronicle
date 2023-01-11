@@ -21,7 +21,7 @@ public static class ValidationMvcOptionsExtensions
     /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
     public static MvcOptions AddValidation(this MvcOptions options, ITypes types)
     {
-        options.ModelValidatorProviders.Add(new FluentValidationValidatorProvider(types, Internals.ServiceProvider!));
+        options.ModelValidatorProviders.Add(new DiscoverableModelValidatorProvider(types, Internals.ServiceProvider!));
         return options;
     }
 }
