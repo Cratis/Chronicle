@@ -54,12 +54,26 @@ public class OpenDebitAccountValidator : CommandValidator<OpenDebitAccount>
 }
 ```
 
+### Query Validator
+
+**Watch this space; MORE TO COME**
+
+> Note: Since queries are not represented using objects today, FluentValidation does not make sense.
+> However, we have an [issue](https://github.com/aksio-insurtech/Cratis/issues/670) for making it possible to represent input to a query as an object.
+> Until then you can use attribute based validation or make your query parameters a concept and use the concept validator approach.
+> You could also implement validators using the `DiscoverableValidator<>`.
+
 ### Concept Validator
 
 When one is using [domain concepts](../fundamentals/concepts.md), you have the opportunity to create a validator for
 the concept that will automatically be used as part of the ASP.NET Core validation pipeline.
 
-Say you have a concept as follows
+The benefit of this approach is that you can reuse validation rules and they will automatically implicitly be hooked
+up, leading to not have to remember to explicitly add every rule for reused concepts.
+
+The tradeoff of this is obviously that your rules are scattered around.
+
+Say you have a concept as follows:
 
 ```csharp
 public record AccountName(string Value) : ConceptAs<string>(Value);
