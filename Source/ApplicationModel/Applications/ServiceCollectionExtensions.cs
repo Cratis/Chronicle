@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
 
         var controllerBuilder = services
             .AddControllers(_ => _
+                .AddValidation(types)
                 .AddRules()
                 .AddCQRS())
             .AddJsonOptions(_ =>

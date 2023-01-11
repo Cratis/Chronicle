@@ -3,12 +3,12 @@
 
 using Aksio.Cratis.Applications.Validation;
 
-namespace Aksio.Cratis.Applications.Commands;
+namespace Aksio.Cratis.Applications.Validation;
 
 /// <summary>
-/// Represents the base type for a validator of commands.
+/// Represents the base type for a validator of query.
 /// </summary>
-/// <typeparam name="T">Type of command.</typeparam>
-public class CommandValidator<T> : DiscoverableValidator<T>
+/// <typeparam name="T">Type of query.</typeparam>
+public class ConceptValidator<T> : DiscoverableValidator<T>
 {
 }
