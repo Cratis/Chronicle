@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { DebitAccountLatestTransactions } from './DebitAccountLatestTransactions';
+import { DebitAccountLatestTransactions } from './../../../../Web/API/accounts/debit/DebitAccountLatestTransactions';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/debit/latest-transactions/{{accountId}}');
