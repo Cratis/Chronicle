@@ -12,27 +12,31 @@ namespace Aksio.Cratis.Applications.Validation;
 /// <summary>
 /// Represents a <see cref="IModelValidatorProvider"/> for <see cref="DiscoverableValidator{T}"/>.
 /// </summary>
-public class DiscoverableValidatorProvider : IModelValidatorProvider
+public class DiscoverableModelValidatorProvider : IModelValidatorProvider
 {
     readonly IServiceProvider _serviceProvider;
     readonly IDictionary<Type, Type> _validatorTypesByModelType;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DiscoverableValidatorProvider"/> class.
+    /// Initializes a new instance of the <see cref="DiscoverableModelValidatorProvider"/> class.
     /// </summary>
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of the validators.</param>
-    public DiscoverableValidatorProvider(ITypes types, IServiceProvider serviceProvider)
+    public DiscoverableModelValidatorProvider(ITypes types, IServiceProvider serviceProvider)
     {
-        _validatorTypesByModelType = types.FindMultiple(typeof(DiscoverableValidator<>)).ToDictionary(_ =>
-        {
-            var current = _.BaseType!;
-            while (!current.IsDerivedFromOpenGeneric(typeof(DiscoverableValidator<>)))
-            {
-                current = current.BaseType!;
-            }
-            return current.GetGenericArguments()[0];
-        }, _ => _);
+        _validatorTypesByModelType = types
+            .FindMultiple(typeof(DiscoverableValidator<>))
+            .ToDictionary(
+                _ =>
+                {
+                    var current = _.BaseType!;
+                    while (!current.IsDerivedFromOpenGeneric(typeof(DiscoverableValidator<>)))
+                    {
+                        current = current.BaseType!;
+                    }
+                    return current.GetGenericArguments()[0];
+                },
+                _ => _);
         _serviceProvider = serviceProvider;
     }
 
@@ -42,7 +46,7 @@ public class DiscoverableValidatorProvider : IModelValidatorProvider
         if (_validatorTypesByModelType.ContainsKey(context.ModelMetadata.ModelType))
         {
             var validator = (_serviceProvider.GetRequiredService(_validatorTypesByModelType[context.ModelMetadata.ModelType]) as IValidator)!;
-            var modelValidator = new FluentValidationModelValidator(validator);
+            var modelValidator = new DiscoverableModelValidator(validator);
             context.Results.Add(new ValidatorItem
             {
                 IsReusable = false,
