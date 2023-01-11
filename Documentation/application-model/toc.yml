@@ -6,7 +6,13 @@
   href: mongodb.md
 - name: CQRS
   href: cqrs/toc.yml
+- name: Validation
+  href: validation.md
+- name: Rules
+  href: rules.md
 - name: Identity
   href: identity.md
+- name: Frontend
+  href: frontend/toc.yml
 - name: Frontend
   href: frontend/toc.yml
