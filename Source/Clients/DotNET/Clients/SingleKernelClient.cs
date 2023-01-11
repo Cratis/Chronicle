@@ -5,9 +5,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Queries;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Websocket.Client;
 
 namespace Aksio.Cratis.Clients;
 
@@ -17,6 +19,7 @@ namespace Aksio.Cratis.Clients;
 public class SingleKernelClient : IClient, IDisposable
 {
     readonly IHttpClientFactory _clientFactory;
+    readonly IExecutionContextManager _executionContextManager;
     readonly SingleKernelOptions _options;
     readonly Uri _clientEndpoint;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -32,6 +35,7 @@ public class SingleKernelClient : IClient, IDisposable
     /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
     /// </summary>
     /// <param name="httpClientFactory">An <see cref="IHttpClientFactory"/> to create clients from.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="options">The <see cref="SingleKernelOptions"/> to use for connecting.</param>
     /// <param name="clientEndpoint">The client endpoint.</param>
     /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
@@ -40,6 +44,7 @@ public class SingleKernelClient : IClient, IDisposable
     /// <param name="webSocketConnectionLogger"><see cref="ILogger"/> for passing to the <see cref="WebSocketConnection"/>.</param>
     public SingleKernelClient(
         IHttpClientFactory httpClientFactory,
+        IExecutionContextManager executionContextManager,
         SingleKernelOptions options,
         Uri clientEndpoint,
         IClientLifecycle clientLifecycle,
@@ -48,6 +53,7 @@ public class SingleKernelClient : IClient, IDisposable
         ILogger<WebSocketConnection> webSocketConnectionLogger)
     {
         _clientFactory = httpClientFactory;
+        _executionContextManager = executionContextManager;
         _options = options;
         _clientEndpoint = clientEndpoint;
         _jsonSerializerOptions = jsonSerializerOptions;
@@ -83,8 +89,11 @@ public class SingleKernelClient : IClient, IDisposable
             await Task.Delay(2000);
         }
 
+        var endpoint = new Uri(_options.Endpoint, "/api/clients").ToWebSocketEndpoint();
+        var websocketClient = new WebsocketClient(endpoint);
         _connection = new WebSocketConnection(
-            _options.Endpoint,
+            websocketClient,
+            _executionContextManager,
             _clientEndpoint,
             _clientLifecycle,
             _jsonSerializerOptions,

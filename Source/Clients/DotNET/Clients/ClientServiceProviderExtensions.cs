@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +35,7 @@ public static class ClientServiceProviderExtensions
             var server = _.GetRequiredService<IServer>();
             var addresses = server.Features.Get<IServerAddressesFeature>();
             var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
+            var executionContextManager = _.GetRequiredService<IExecutionContextManager>();
 
             var options = configuration.GetSingleKernelOptions();
             if (options.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
@@ -46,6 +48,7 @@ public static class ClientServiceProviderExtensions
             {
                 ClusterType.Single => new SingleKernelClient(
                     httpClientFactory,
+                    executionContextManager,
                     options,
                     clientEndpoint,
                     clientLifecycle,

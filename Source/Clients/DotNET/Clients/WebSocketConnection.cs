@@ -14,13 +14,13 @@ namespace Aksio.Cratis.Clients;
 /// </summary>
 public class WebSocketConnection : IWebSocketConnection
 {
-    readonly Uri _url;
-    readonly Uri _clientEndpoint;
     readonly IClientLifecycle _clientLifecycle;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<WebSocketConnection> _logger;
     readonly string _version;
-    WebsocketClient? _webSocketClient;
+    readonly IWebsocketClient _webSocketClient;
+    readonly IExecutionContextManager _executionContextManager;
+    readonly Uri _clientEndpoint;
     Timer? _timer;
 
     /// <inheritdoc/>
@@ -29,13 +29,15 @@ public class WebSocketConnection : IWebSocketConnection
     /// <summary>
     /// Initializes a new instance of the <see cref="WebSocketConnection"/> class.
     /// </summary>
-    /// <param name="endpoint">The endpoint the Kernel is on.</param>
+    /// <param name="websocketClient">The <see cref="IWebsocketClient"/> to use..</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="clientEndpoint">The endpoint the Client is on.</param>
     /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public WebSocketConnection(
-        Uri endpoint,
+        IWebsocketClient websocketClient,
+        IExecutionContextManager executionContextManager,
         Uri clientEndpoint,
         IClientLifecycle clientLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
@@ -44,10 +46,8 @@ public class WebSocketConnection : IWebSocketConnection
         var attribute = typeof(WebSocketConnection).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         _version = attribute?.InformationalVersion ?? "1.0.0";
 
-        var scheme = endpoint.Scheme == "http" ? "ws" : "wss";
-        var endpointAsString = endpoint.ToString();
-        endpointAsString = endpointAsString.Replace(endpoint.Scheme, scheme);
-        _url = new Uri(new Uri(endpointAsString), "/api/clients");
+        _webSocketClient = websocketClient;
+        _executionContextManager = executionContextManager;
         _clientEndpoint = clientEndpoint;
         _clientLifecycle = clientLifecycle;
         _jsonSerializerOptions = jsonSerializerOptions;
@@ -59,12 +59,10 @@ public class WebSocketConnection : IWebSocketConnection
     {
         var tcs = new TaskCompletionSource<bool>();
         var firstConnectHappened = false;
-        _logger.Connecting(_url);
-        _webSocketClient = new WebsocketClient(_url)
-        {
-            ReconnectTimeout = TimeSpan.FromSeconds(5),
-            ErrorReconnectTimeout = TimeSpan.FromSeconds(5)
-        };
+        _logger.Connecting(_webSocketClient.Url);
+
+        _webSocketClient.ReconnectTimeout = TimeSpan.FromSeconds(5);
+        _webSocketClient.ErrorReconnectTimeout = TimeSpan.FromSeconds(5);
         _webSocketClient.ReconnectionHappened.Subscribe(info =>
         {
             _logger.Reconnected();
@@ -107,7 +105,7 @@ public class WebSocketConnection : IWebSocketConnection
 
     void SendConnect()
     {
-        var info = new ClientInformation(ExecutionContextManager.GlobalMicroserviceId, ConnectionId.New(), _version, _clientEndpoint.ToString());
+        var info = new ClientInformation(_executionContextManager.Current.MicroserviceId, ConnectionId.New(), _version, _clientEndpoint.ToString());
         var serialized = JsonSerializer.Serialize(info, _jsonSerializerOptions);
         _logger.SendingClientInformation(info.ClientVersion, info.MicroserviceId, info.ConnectionId);
         _webSocketClient?.Send(serialized);
