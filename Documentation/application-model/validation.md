@@ -41,6 +41,8 @@ public record OpenDebitAccount(
 A validator for this could then be as follows:
 
 ```csharp
+using Aksio.Cratis.Applications.Commands;
+
 public class OpenDebitAccountValidator : CommandValidator<OpenDebitAccount>
 {
     public OpenDebitAccountValidator()
@@ -66,6 +68,8 @@ public record AccountName(string Value) : ConceptAs<string>(Value);
 By inheriting the `ConceptValidator<>` type you can create rules for the concept:
 
 ```csharp
+using Aksio.Cratis.Applications.Validation;
+
 public class AccountNameValidator : ConceptValidator<AccountName>
 {
     public AccountNameValidator()
