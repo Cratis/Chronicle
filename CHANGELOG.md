@@ -1,3 +1,10 @@
+# [v7.1.0] - 2023-1-11 [PR: #673](https://github.com/aksio-insurtech/Cratis/pull/673)
+
+### Added
+
+- Added support for Command, Query and Concept validators (#671).
+
+
 # [v7.0.0] - 2023-1-10 [PR: #672](https://github.com/aksio-insurtech/Cratis/pull/672)
 
 ## Summary
