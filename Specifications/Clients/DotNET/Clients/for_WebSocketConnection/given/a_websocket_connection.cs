@@ -20,13 +20,12 @@ public class a_websocket_connection : Specification
     protected MicroserviceId microservice_id;
     protected List<string> messages;
     protected ExecutionContext execution_context;
-    protected ReplaySubject<ResponseMessage> received;
-    protected ReplaySubject<ReconnectionInfo> reconnection;
-    protected ReplaySubject<DisconnectionInfo> disconnection;
+    protected Subject<ResponseMessage> received;
+    protected Subject<ReconnectionInfo> reconnection;
+    protected Subject<DisconnectionInfo> disconnection;
 
     void Establish()
     {
-
         microservice_id = Guid.NewGuid();
         execution_context_manager = new();
         execution_context = new ExecutionContext(microservice_id, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System);
