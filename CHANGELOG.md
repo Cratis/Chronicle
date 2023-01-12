@@ -1,3 +1,11 @@
+# [v7.2.0] - 2023-1-12 [PR: #674](https://github.com/aksio-insurtech/Cratis/pull/674)
+
+### Added
+
+- Support for `ValidFrom` for integration adapters as an optional parameter to the `AppendEvent` method.
+
+
+
 # [v7.1.0] - 2023-1-11 [PR: #673](https://github.com/aksio-insurtech/Cratis/pull/673)
 
 ### Added
