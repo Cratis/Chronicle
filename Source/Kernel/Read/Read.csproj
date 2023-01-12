@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Read</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Read</RootNamespace>
+    </PropertyGroup>
+</Project>

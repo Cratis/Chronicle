@@ -3,10 +3,10 @@
 
 using System.Linq.Expressions;
 using System.Text.Json;
-using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Shared.Projections.Definitions;
 
 namespace Aksio.Cratis.Events.Projections;
 

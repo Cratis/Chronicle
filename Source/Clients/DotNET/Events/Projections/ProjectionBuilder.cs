@@ -5,11 +5,12 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Shared.Projections.Definitions;
 using Aksio.Cratis.Strings;
 using Humanizer;
 

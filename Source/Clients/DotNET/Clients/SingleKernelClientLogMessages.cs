@@ -16,7 +16,6 @@ public static partial class SingleKernelClientLogMessages
     [LoggerMessage(2, LogLevel.Trace, "Performing command '{Route}' on Kernel @ '{Endpoint}'")]
     public static partial void PerformingCommand(this ILogger<SingleKernelClient> logger, string endpoint, string route);
 
-
     [LoggerMessage(3, LogLevel.Trace, "Performing query '{Route}' on Kernel @ '{Endpoint}'")]
     public static partial void PerformingQuery(this ILogger<SingleKernelClient> logger, string endpoint, string route);
 }

@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Shared.EventSequences;
 
 namespace Aksio.Cratis.Events;
 

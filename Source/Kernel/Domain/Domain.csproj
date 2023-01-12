@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Domain</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Domain</RootNamespace>
+    </PropertyGroup>
+
+    <Import Project="../ProxyGeneration.props"/>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Common/Common.csproj"/>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../Engines/Engines.csproj"/>
+        <ProjectReference Include="../Events/Events.csproj"/>
+        <ProjectReference Include="../Shared/Shared.csproj"/>
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj"/>
+    </ItemGroup>
+
+</Project>
