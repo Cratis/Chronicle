@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Shared.Events;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;

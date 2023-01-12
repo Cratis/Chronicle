@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Reactions</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Reactions</RootNamespace>
+    </PropertyGroup>
+</Project>

@@ -3,11 +3,12 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.Shared.Schemas;
 using Aksio.Cratis.Strings;
 using Humanizer;
 

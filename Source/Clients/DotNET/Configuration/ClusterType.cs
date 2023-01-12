@@ -3,6 +3,8 @@
 
 namespace Aksio.Cratis.Configuration;
 
+#pragma warning disable CA1720 // Allow single, which is also a typename
+
 /// <summary>
 /// Represents types of clusters the client supports.
 /// </summary>

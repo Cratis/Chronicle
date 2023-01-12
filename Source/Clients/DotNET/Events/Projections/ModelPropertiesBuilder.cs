@@ -4,9 +4,9 @@
 using System.Linq.Expressions;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Events.Projections.Expressions;
-using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Shared.Events;
 
 namespace Aksio.Cratis.Events.Projections;
 

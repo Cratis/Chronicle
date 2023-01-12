@@ -26,4 +26,3 @@ public class AzureStorageClusterOptions
     /// </summary>
     public string TableName { get; init; } = DEFAULT_TABLE_NAME;
 }
-

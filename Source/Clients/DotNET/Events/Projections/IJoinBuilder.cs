@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Events.Projections.Definitions;
+using Aksio.Cratis.Shared.Projections.Definitions;
 
 namespace Aksio.Cratis.Events.Projections;
 

@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.Shared.Projections.Definitions;
 
 namespace Aksio.Cratis.Integration;
 

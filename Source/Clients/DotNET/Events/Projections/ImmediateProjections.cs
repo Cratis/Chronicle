@@ -4,11 +4,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Projections.Json;
-using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.Shared.Projections.Json;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Events.Projections;
