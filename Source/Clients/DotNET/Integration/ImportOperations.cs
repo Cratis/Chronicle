@@ -77,11 +77,11 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
 
         foreach (var @event in context.Events)
         {
-            await _eventLog.Append(eventSourceId!, @event);
+            await _eventLog.Append(eventSourceId!, @event.Event, @event.ValidFrom);
 
-            if (@event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false)
+            if (@event.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false)
             {
-                await _eventOutbox.Append(eventSourceId!, @event);
+                await _eventOutbox.Append(eventSourceId!, @event.Event, @event.ValidFrom);
             }
         }
     }
