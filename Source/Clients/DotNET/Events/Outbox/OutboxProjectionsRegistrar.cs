@@ -19,7 +19,6 @@ namespace Aksio.Cratis.Events.Outbox;
 public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
 {
     readonly IClient _client;
-    readonly IExecutionContextManager _executionContextManager;
     readonly IInstancesOf<IOutboxProjections> _outboxProjections;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly IEnumerable<OutboxProjectionsDefinition> _outboxProjectionsDefinitions;
@@ -30,7 +29,6 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="client">The Cratis <see cref="IClient"/>.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for projections.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="outboxProjections">All instances of <see cref="IOutboxProjections"/>.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
@@ -38,13 +36,11 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
         IClient client,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
-        IExecutionContextManager executionContextManager,
         IInstancesOf<IOutboxProjections> outboxProjections,
         IJsonProjectionSerializer projectionSerializer,
         JsonSerializerOptions jsonSerializerOptions)
     {
         _client = client;
-        _executionContextManager = executionContextManager;
         _outboxProjections = outboxProjections;
         _projectionSerializer = projectionSerializer;
         _outboxProjectionsDefinitions = _outboxProjections.Select(projections =>
@@ -58,8 +54,6 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// <inheritdoc/>
     public async Task Connected()
     {
-        _executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
-
         var registrations = _outboxProjectionsDefinitions.SelectMany(_ => _.TargetEventTypeProjections.Values).Select(projection =>
         {
             var serializedPipeline = JsonSerializer.SerializeToNode(
@@ -75,7 +69,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
             return new ProjectionRegistration(
                 _projectionSerializer.Serialize(projection),
                 serializedPipeline);
-        });
+        }).ToArray();
 
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections";
         await _client.PerformCommand(route, new RegisterProjections(registrations));
