@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Kernel.Grains.Interfaces</AssemblyName>
         <RootNamespace>Aksio.Cratis.Kernel.Grains</RootNamespace>
+        <NoWarn>$(NoWarn);ORL1001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
