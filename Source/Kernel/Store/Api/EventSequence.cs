@@ -52,6 +52,7 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] AppendEvent eventToAppend)
     {
+        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
         var eventLog = _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
         await eventLog.Append(
             eventToAppend.EventSourceId,
