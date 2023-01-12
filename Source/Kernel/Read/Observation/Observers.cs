@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Applications.Queries;
-using Aksio.Cratis.Events.Store.Grains.Observation;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 

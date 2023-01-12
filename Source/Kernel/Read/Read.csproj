@@ -1,6 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Read</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Read</RootNamespace>
+        <AssemblyName>Aksio.Cratis.Kernel.Read</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Read</RootNamespace>
     </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Common/Common.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
+        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
+        <ProjectReference Include="../../ApplicationModel/CQRS/CQRS.csproj"/>
+        <ProjectReference Include="../../ApplicationModel/CQRS.MongoDB/CQRS.MongoDB.csproj"/>
+    </ItemGroup>
 </Project>
