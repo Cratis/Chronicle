@@ -15,6 +15,8 @@ public class all_dependencies_for<TEvent> : Specification
     protected Mock<IEventLog> event_log;
     protected Mock<IEventOutbox> event_outbox;
 
+    protected virtual DateTimeOffset? valid_from_to_append_with { get; }
+
     void Establish()
     {
         adapter = new();
@@ -25,6 +27,7 @@ public class all_dependencies_for<TEvent> : Specification
 
         adapter.SetupGet(_ => _.KeyResolver).Returns((ExternalModel _) => new EventSourceId(key));
         adapter.Setup(_ => _.DefineImport(IsAny<IImportBuilderFor<Model, ExternalModel>>()))
-            .Callback((IImportBuilderFor<Model, ExternalModel> builder) => builder.WithProperties(_ => _.SomeInteger, _ => _.SomeString).AppendEvent<Model, ExternalModel, TEvent>());
+            .Callback((IImportBuilderFor<Model, ExternalModel> builder)
+                => builder.WithProperties(_ => _.SomeInteger, _ => _.SomeString).AppendEvent<Model, ExternalModel, TEvent>(valid_from_to_append_with));
     }
 }
