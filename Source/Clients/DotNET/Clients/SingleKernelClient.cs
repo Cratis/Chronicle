@@ -7,6 +7,7 @@ using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Queries;
+using Aksio.Cratis.Timers;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Websocket.Client;
@@ -19,6 +20,7 @@ namespace Aksio.Cratis.Clients;
 public class SingleKernelClient : IClient, IDisposable
 {
     readonly IHttpClientFactory _clientFactory;
+    readonly ITimerFactory _timerFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly SingleKernelOptions _options;
     readonly Uri _clientEndpoint;
@@ -26,6 +28,7 @@ public class SingleKernelClient : IClient, IDisposable
     readonly IClientLifecycle _clientLifecycle;
     readonly ILogger<SingleKernelClient> _logger;
     readonly ILogger<WebSocketConnection> _webSocketConnectionLogger;
+    private WebsocketClient? _websocketClient;
     IWebSocketConnection? _connection;
 
     /// <inheritdoc/>
@@ -35,6 +38,7 @@ public class SingleKernelClient : IClient, IDisposable
     /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
     /// </summary>
     /// <param name="httpClientFactory">An <see cref="IHttpClientFactory"/> to create clients from.</param>
+    /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="options">The <see cref="SingleKernelOptions"/> to use for connecting.</param>
     /// <param name="clientEndpoint">The client endpoint.</param>
@@ -44,6 +48,7 @@ public class SingleKernelClient : IClient, IDisposable
     /// <param name="webSocketConnectionLogger"><see cref="ILogger"/> for passing to the <see cref="WebSocketConnection"/>.</param>
     public SingleKernelClient(
         IHttpClientFactory httpClientFactory,
+        ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
         SingleKernelOptions options,
         Uri clientEndpoint,
@@ -53,6 +58,7 @@ public class SingleKernelClient : IClient, IDisposable
         ILogger<WebSocketConnection> webSocketConnectionLogger)
     {
         _clientFactory = httpClientFactory;
+        _timerFactory = timerFactory;
         _executionContextManager = executionContextManager;
         _options = options;
         _clientEndpoint = clientEndpoint;
@@ -66,6 +72,7 @@ public class SingleKernelClient : IClient, IDisposable
     public void Dispose()
     {
         _connection?.Dispose();
+        _websocketClient?.Dispose();
     }
 
     /// <inheritdoc/>
@@ -90,9 +97,10 @@ public class SingleKernelClient : IClient, IDisposable
         }
 
         var endpoint = new Uri(_options.Endpoint, "/api/clients").ToWebSocketEndpoint();
-        var websocketClient = new WebsocketClient(endpoint);
+        _websocketClient = new WebsocketClient(endpoint);
         _connection = new WebSocketConnection(
-            websocketClient,
+            _websocketClient,
+            _timerFactory,
             _executionContextManager,
             _clientEndpoint,
             _clientLifecycle,
