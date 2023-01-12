@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Compliance.Events.Microservices;
+namespace Aksio.Cratis.Kernel.Compliance.Microservices;
 
 [EventType("431919dd-a0b0-4360-9299-31eed7dc811e")]
 public record MicroserviceAdded(string Name);

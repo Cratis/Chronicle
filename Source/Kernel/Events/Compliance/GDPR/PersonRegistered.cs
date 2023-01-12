@@ -4,7 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Concepts.Compliance.PersonalInformation;
 
-namespace Aksio.Cratis.Compliance.Events;
+namespace Aksio.Cratis.Kernel.Compliance.GDPR.Events;
 
 [EventType("12b88453-12c9-4f99-a60c-abb21282aede")]
 public record PersonRegistered(FirstName FirstName, LastName LastName, SocialSecurityNumber SocialSecurityNumber);

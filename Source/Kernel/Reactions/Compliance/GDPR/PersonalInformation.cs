@@ -1,14 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance.Events;
-using Aksio.Cratis.Compliance.GDPR;
-using Aksio.Cratis.Events.Observation;
-using Aksio.Cratis.Events.Store;
-
 #pragma warning disable IDE0060
 
-namespace Aksio.Cratis.Compliance.Reactions.GDPR;
+using Aksio.Cratis.Compliance.GDPR;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Events.Observation;
+using Aksio.Cratis.Kernel.Compliance.GDPR.Events;
+
+namespace Aksio.Cratis.Kernel.Reactions.Compliance.GDPR;
 
 /// <summary>
 /// Represents an observer for personal information.
