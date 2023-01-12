@@ -4,6 +4,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Timers;
 using Microsoft.Extensions.Logging;
 using Websocket.Client;
 
@@ -14,14 +15,26 @@ namespace Aksio.Cratis.Clients;
 /// </summary>
 public class WebSocketConnection : IWebSocketConnection
 {
+    /// <summary>
+    /// The timeout during connection.
+    /// </summary>
+    public const int ConnectTimeout = 1000;
+
+    /// <summary>
+    /// The ping interval.
+    /// </summary>
+    public const int PingInterval = 1000;
+
     readonly IClientLifecycle _clientLifecycle;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<WebSocketConnection> _logger;
     readonly string _version;
     readonly IWebsocketClient _webSocketClient;
+    readonly ITimerFactory _timerFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly Uri _clientEndpoint;
-    Timer? _timer;
+    bool _isDisposing;
+    ITimer? _timer;
 
     /// <inheritdoc/>
     public bool IsConnected { get; private set; }
@@ -30,6 +43,7 @@ public class WebSocketConnection : IWebSocketConnection
     /// Initializes a new instance of the <see cref="WebSocketConnection"/> class.
     /// </summary>
     /// <param name="websocketClient">The <see cref="IWebsocketClient"/> to use..</param>
+    /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="clientEndpoint">The endpoint the Client is on.</param>
     /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
@@ -37,6 +51,7 @@ public class WebSocketConnection : IWebSocketConnection
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public WebSocketConnection(
         IWebsocketClient websocketClient,
+        ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
         Uri clientEndpoint,
         IClientLifecycle clientLifecycle,
@@ -47,6 +62,7 @@ public class WebSocketConnection : IWebSocketConnection
         _version = attribute?.InformationalVersion ?? "1.0.0";
 
         _webSocketClient = websocketClient;
+        _timerFactory = timerFactory;
         _executionContextManager = executionContextManager;
         _clientEndpoint = clientEndpoint;
         _clientLifecycle = clientLifecycle;
@@ -83,24 +99,28 @@ public class WebSocketConnection : IWebSocketConnection
         SendConnect();
         firstConnectHappened = true;
 
-        var timedOut = false;
-        var timeoutTimer = new Timer(_ => timedOut = true, null, 1000, 100000);
-        await tcs.Task;
+        var timeoutTimer = _timerFactory.Create(_ => tcs.SetCanceled(), ConnectTimeout, Timeout.Infinite);
 
-        timeoutTimer.Dispose();
-
-        if (timedOut)
+        try
+        {
+            await tcs.Task;
+        }
+        catch
         {
             throw new ConnectionTimedOut();
+        }
+        finally
+        {
+            timeoutTimer.Dispose();
         }
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        SendDisconnect();
-        _webSocketClient?.Dispose();
+        _isDisposing = true;
         _timer?.Dispose();
+        SendDisconnect();
     }
 
     void SendConnect()
@@ -113,7 +133,13 @@ public class WebSocketConnection : IWebSocketConnection
 
     void SendDisconnect() => _webSocketClient?.Send("disconnect");
 
-    void SendPing() => _webSocketClient?.Send("ping");
+    void SendPing()
+    {
+        if (!_isDisposing)
+        {
+            _webSocketClient?.Send("ping");
+        }
+    }
 
     async Task MessageReceived(ResponseMessage _, TaskCompletionSource<bool> connectedCompletionSource)
     {
@@ -133,11 +159,10 @@ public class WebSocketConnection : IWebSocketConnection
                 _timer = null;
             }
 
-            _timer = new Timer(
+            _timer = _timerFactory.Create(
                 callback: _ => SendPing(),
-                state: null,
                 dueTime: 0,
-                period: 1000);
+                period: PingInterval);
         }
     }
 }
