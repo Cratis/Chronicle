@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance.Events;
 using Aksio.Cratis.Compliance.GDPR;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Compliance.GDPR.Events;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Domain.Compliance.GDPR;

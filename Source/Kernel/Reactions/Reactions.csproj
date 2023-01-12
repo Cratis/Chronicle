@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Reactions</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Reactions</RootNamespace>
+        <AssemblyName>Aksio.Cratis.Kernel.Reactions</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Reactions</RootNamespace>
     </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Common/Common.csproj"/>
+        <ProjectReference Include="../Events/Events.csproj"/>
+        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
+    </ItemGroup>
 </Project>
