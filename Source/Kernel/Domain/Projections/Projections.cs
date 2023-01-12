@@ -6,9 +6,9 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.Projections;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Projections.Definitions;
-using Aksio.Cratis.Shared.Projections.Json;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Projections.Json;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 

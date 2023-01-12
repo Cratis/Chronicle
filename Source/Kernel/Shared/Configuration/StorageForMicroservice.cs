@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Shared.Configuration;
+namespace Aksio.Cratis.Configuration;
 
 /// <summary>
 /// Represents all storage configurations for all <see cref="MicroserviceId">microservices</see> in the system.

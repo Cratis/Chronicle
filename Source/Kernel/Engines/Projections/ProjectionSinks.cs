@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.Projections;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;

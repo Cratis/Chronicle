@@ -3,9 +3,9 @@
 
 #nullable disable
 
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Observation;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 

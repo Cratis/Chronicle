@@ -1,15 +1,16 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Store.Connections;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Grains.Connections;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.ConnectedClients;
+namespace Aksio.Cratis.Kernel.MongoDB.ConnectedClients;
 
 public record MongoDBConnectedClientState(MicroserviceId Id, IEnumerable<ConnectedClient> Clients);
 

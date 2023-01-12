@@ -3,11 +3,11 @@
 
 using System.Reactive.Subjects;
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Observation;
+namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObserversState"/> for MongoDB.

@@ -6,9 +6,8 @@ using System.Text.Json;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Projections.Definitions;
-using Aksio.Cratis.Shared.Schemas;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Strings;
 using Humanizer;
 

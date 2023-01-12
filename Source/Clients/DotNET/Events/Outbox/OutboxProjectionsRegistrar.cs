@@ -6,10 +6,10 @@ using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Projections.Definitions;
-using Aksio.Cratis.Shared.Projections.Json;
-using Aksio.Cratis.Shared.Projections.Outbox;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Projections.Json;
+using Aksio.Cratis.Projections.Outbox;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Events.Outbox;

@@ -4,7 +4,7 @@
 using System.Text;
 using System.Text.Json;
 using Aksio.Cratis.Kernel.Grains.Connections;
-using Aksio.Cratis.Shared.Connections;
+using Aksio.Cratis.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;

@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Shared.Configuration;
 
 namespace Aksio.Cratis.Kernel.Configuration;
 

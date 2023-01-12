@@ -4,8 +4,8 @@
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;

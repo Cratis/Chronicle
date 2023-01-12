@@ -1,10 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
 /// Holds log messages for <see cref="MongoDBEventSequences"/>.

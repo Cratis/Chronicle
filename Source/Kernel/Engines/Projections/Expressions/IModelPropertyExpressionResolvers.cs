@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions;

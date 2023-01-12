@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 

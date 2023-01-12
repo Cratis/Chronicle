@@ -9,8 +9,8 @@ using Aksio.Cratis.Models;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Strings;
 using Humanizer;
 

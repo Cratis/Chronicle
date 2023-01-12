@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Shared.Events;
+namespace Aksio.Cratis.Events;
 
 /// <summary>
 /// Represents an event that has been appended to an event log.

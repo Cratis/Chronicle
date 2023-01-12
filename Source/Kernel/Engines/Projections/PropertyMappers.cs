@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 

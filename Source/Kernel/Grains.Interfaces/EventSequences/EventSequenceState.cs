@@ -3,7 +3,7 @@
 
 #nullable disable
 
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 

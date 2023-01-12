@@ -4,14 +4,16 @@
 using System.Dynamic;
 using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequences"/> for MongoDB.

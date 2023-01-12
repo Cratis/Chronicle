@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Tenants;
+namespace Aksio.Cratis.Kernel.MongoDB.Tenants;
 
 /// <summary>
 /// Represents the tenant configuration state stored in the database.

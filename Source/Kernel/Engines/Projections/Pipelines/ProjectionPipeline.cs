@@ -7,8 +7,8 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.Logging;
 

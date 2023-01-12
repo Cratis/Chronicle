@@ -3,8 +3,8 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Projections;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 

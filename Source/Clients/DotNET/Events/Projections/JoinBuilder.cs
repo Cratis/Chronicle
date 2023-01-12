@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.Projections.Definitions;
 
 namespace Aksio.Cratis.Events.Projections;
 

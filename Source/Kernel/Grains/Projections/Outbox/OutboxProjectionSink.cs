@@ -9,10 +9,10 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Objects;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Schemas;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Schemas;
 using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;

@@ -3,7 +3,7 @@
 
 #nullable disable
 
-namespace Aksio.Cratis.Shared.Observation;
+namespace Aksio.Cratis.Observation;
 
 /// <summary>
 /// Represents a fully qualified identifier of an observer.

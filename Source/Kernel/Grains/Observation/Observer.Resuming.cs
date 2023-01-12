@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;

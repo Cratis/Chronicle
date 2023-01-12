@@ -5,9 +5,9 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
 using Orleans;
 

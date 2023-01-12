@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 
-namespace Aksio.Cratis.Shared.Observation;
+namespace Aksio.Cratis.Observation;
 
 /// <summary>
 /// Represents a key for a partitioned observer.

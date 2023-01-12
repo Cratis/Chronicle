@@ -5,9 +5,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Shared.Projections.Json;
+namespace Aksio.Cratis.Projections.Json;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJsonProjectionSerializer"/>.

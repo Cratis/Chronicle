@@ -1,12 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Configuration;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Kernel.Configuration;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventStoreDatabase"/>.

@@ -1,11 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Projections.Json;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.MongoDB;
+using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Projections.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
 

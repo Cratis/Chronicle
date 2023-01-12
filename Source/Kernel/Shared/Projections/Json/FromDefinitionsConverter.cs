@@ -4,10 +4,10 @@
 using System.Text.Json.Serialization;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Shared.Projections.Json;
+namespace Aksio.Cratis.Projections.Json;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter"/> that can convert to a dictionary of <see cref="PropertyPath"/> and <see cref="FromDefinition"/>.

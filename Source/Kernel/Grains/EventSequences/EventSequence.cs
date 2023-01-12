@@ -9,9 +9,9 @@ using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Schemas;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Schemas;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
@@ -25,7 +25,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 [StorageProvider(ProviderName = EventSequenceState.StorageProvider)]
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
-    readonly ProviderFor<Shared.Schemas.ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> _schemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IJsonComplianceManager> _jsonComplianceManagerProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
@@ -37,13 +37,13 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
-    /// <param name="schemaStoreProvider">Provider for <see cref="Shared.Schemas.ISchemaStore"/> for event schemas.</param>
+    /// <param name="schemaStoreProvider">Provider for <see cref="Aksio.Cratis.Schemas.ISchemaStore"/> for event schemas.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
-        ProviderFor<Shared.Schemas.ISchemaStore> schemaStoreProvider,
+        ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> schemaStoreProvider,
         IExecutionContextManager executionContextManager,
         ProviderFor<IJsonComplianceManager> jsonComplianceManagerProvider,
         IExpandoObjectConverter expandoObjectConverter,

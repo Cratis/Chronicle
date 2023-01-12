@@ -7,10 +7,10 @@ using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Projections.Definitions;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;

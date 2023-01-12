@@ -4,8 +4,8 @@
 using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Schemas;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Schemas;
 using Microsoft.AspNetCore.Mvc;
 using NJsonSchema;
 
@@ -17,16 +17,16 @@ namespace Aksio.Cratis.Kernel.Domain.Projections;
 [Route("/api/events/store/{microserviceId}/types")]
 public class EventTypes : Controller
 {
-    readonly ProviderFor<Shared.Schemas.ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> _schemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
     /// </summary>
-    /// <param name="schemaStoreProvider">Underlying <see cref="Shared.Schemas.ISchemaStore"/>.</param>
+    /// <param name="schemaStoreProvider">Underlying <see cref="Aksio.Cratis.Schemas.ISchemaStore"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventTypes(
-        ProviderFor<Shared.Schemas.ISchemaStore> schemaStoreProvider,
+        ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> schemaStoreProvider,
         IExecutionContextManager executionContextManager)
     {
         _schemaStoreProvider = schemaStoreProvider;

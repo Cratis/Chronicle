@@ -4,7 +4,7 @@
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.Configuration;
-using Aksio.Cratis.Shared.Configuration;
+using Aksio.Cratis.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 using ApiMicroservice = Aksio.Cratis.Kernel.Domain.Configuration.Microservices.Microservice;

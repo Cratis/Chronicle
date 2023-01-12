@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Shared.EventSequences;
+namespace Aksio.Cratis.EventSequences;
 
 /// <summary>
 /// Defines the system for working with event sequences.

@@ -3,9 +3,9 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Shared.Projections.Definitions;
+namespace Aksio.Cratis.Projections.Definitions;
 
 /// <summary>
 /// Represents the definition of a children projection.
