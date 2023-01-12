@@ -1,19 +1,19 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Compliance.MongoDB;
-using Aksio.Cratis.Events.Projections.Changes;
-using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.MongoDB;
-using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Events.Schemas.MongoDB;
-using Aksio.Cratis.Events.Store;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
-using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Extensions.Autofac;
 using Autofac;
+using Aksio.Cratis.Kernel.Engines.Compliance;
+using Aksio.Cratis.Kernel.Engines.Projections.Changes;
+using Aksio.Cratis.Kernel.Grains.Schemas;
+using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.Observation;
 
 namespace Aksio.Cratis.Server;
 
