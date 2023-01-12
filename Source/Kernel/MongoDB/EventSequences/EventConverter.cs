@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.Engines.Compliance;
+using Aksio.Cratis.Schemas;
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEventConverter"/>.

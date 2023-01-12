@@ -4,9 +4,9 @@
 #nullable disable
 #pragma warning disable CA1819 // Allow arrays on properties
 
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Shared.Observation;
+namespace Aksio.Cratis.Observation;
 
 /// <summary>
 /// Represents the state used for failed observers.

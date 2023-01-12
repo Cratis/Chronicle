@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.MongoDB;
+using Aksio.Cratis.Schemas;
 using MongoDB.Driver;
 using NJsonSchema;
 

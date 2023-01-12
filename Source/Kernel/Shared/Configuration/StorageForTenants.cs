@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Shared.Configuration;
+namespace Aksio.Cratis.Configuration;
 
 /// <summary>
 /// Represents all storage configuration for a tenant within a microservice.

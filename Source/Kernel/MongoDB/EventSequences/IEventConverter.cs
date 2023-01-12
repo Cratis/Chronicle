@@ -1,7 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+using Aksio.Cratis.Events;
+
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
 /// Defines a system that is capable of converting between <see cref="Event"/> and <see cref="AppendedEvent"/>.

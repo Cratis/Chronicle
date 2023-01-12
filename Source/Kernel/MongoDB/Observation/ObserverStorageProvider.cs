@@ -2,14 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Observation;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Observation;
+namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.

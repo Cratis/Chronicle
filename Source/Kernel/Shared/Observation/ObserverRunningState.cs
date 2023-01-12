@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Shared.Observation;
+namespace Aksio.Cratis.Observation;
 
 /// <summary>
 /// Defines the status of an observer.

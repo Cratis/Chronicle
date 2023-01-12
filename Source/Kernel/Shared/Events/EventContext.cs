@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Shared.Events;
+namespace Aksio.Cratis.Events;
 
 /// <summary>
 /// Represents the context in which an event exists - typically what it was appended with.

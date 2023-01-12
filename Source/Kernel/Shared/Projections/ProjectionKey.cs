@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.EventSequences;
 
-namespace Aksio.Cratis.Shared.Projections;
+namespace Aksio.Cratis.Projections;
 
 /// <summary>
 /// Represents the compound key for a projection.

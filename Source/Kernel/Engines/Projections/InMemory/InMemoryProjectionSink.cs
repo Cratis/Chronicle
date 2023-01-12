@@ -7,8 +7,8 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Projections;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.InMemory;

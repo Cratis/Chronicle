@@ -5,10 +5,10 @@ using System.Text.Json;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Guids;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Projections.Definitions;
-using Aksio.Cratis.Shared.Projections.Outbox;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Projections.Outbox;
 
 namespace Aksio.Cratis.Events.Outbox;
 

@@ -5,7 +5,7 @@ using System.Collections;
 using System.Dynamic;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Types;
 using NJsonSchema;
 

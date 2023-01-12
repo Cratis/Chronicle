@@ -5,8 +5,8 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Projections;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 

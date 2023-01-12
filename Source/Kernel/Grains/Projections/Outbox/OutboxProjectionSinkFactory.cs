@@ -4,8 +4,8 @@
 using System.Text.Json;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Projections;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Projections;
 using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;

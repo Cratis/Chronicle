@@ -3,12 +3,13 @@
 
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling event sequence state storage.

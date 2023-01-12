@@ -3,11 +3,11 @@
 
 #nullable disable
 
-using Aksio.Cratis.Events.Store.Observation;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Observation;
+namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
 /// <summary>
 /// Represents the class map for <see cref="ObserverState"/>.

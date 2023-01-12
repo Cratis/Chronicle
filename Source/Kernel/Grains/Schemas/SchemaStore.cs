@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 using NJsonSchema;
 using Orleans;
 
@@ -14,13 +14,13 @@ namespace Aksio.Cratis.Kernel.Grains.Schemas;
 /// </summary>
 public class SchemaStore : Grain, ISchemaStore
 {
-    readonly ProviderFor<Shared.Schemas.ISchemaStore> _underlyingSchemaStore;
+    readonly ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> _underlyingSchemaStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SchemaStore"/> class.
     /// </summary>
-    /// <param name="underlyingSchemaStore"><see cref="Shared.Schemas.ISchemaStore"/> underlying schema store.</param>
-    public SchemaStore(ProviderFor<Shared.Schemas.ISchemaStore> underlyingSchemaStore)
+    /// <param name="underlyingSchemaStore"><see cref="Aksio.Cratis.Schemas.ISchemaStore"/> underlying schema store.</param>
+    public SchemaStore(ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> underlyingSchemaStore)
     {
         _underlyingSchemaStore = underlyingSchemaStore;
     }

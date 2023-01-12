@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Shared.Projections.Outbox;
+using Aksio.Cratis.Projections.Outbox;
 
 namespace Aksio.Cratis.Events.Outbox;
 

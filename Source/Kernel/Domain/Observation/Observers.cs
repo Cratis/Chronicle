@@ -3,8 +3,8 @@
 
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Shared.EventSequences;
-using Aksio.Cratis.Shared.Observation;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 

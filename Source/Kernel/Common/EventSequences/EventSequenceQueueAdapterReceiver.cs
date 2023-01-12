@@ -3,7 +3,7 @@
 
 using System.Collections.Concurrent;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.EventSequences;

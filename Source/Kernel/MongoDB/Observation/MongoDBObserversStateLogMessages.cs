@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Observation;
+namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
 /// <summary>
 /// Holds the log messages for <see cref="MongoDBObserversState"/>.

@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Shared.Projections.Definitions;
+namespace Aksio.Cratis.Projections.Definitions;
 
 /// <summary>
 /// Represents the definition for join with a specific event.

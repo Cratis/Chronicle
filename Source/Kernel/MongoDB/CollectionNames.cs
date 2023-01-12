@@ -1,11 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Events.Store.Observation;
+using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Orleans;
 
-namespace Aksio.Cratis.Events.Store.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB;
 
 /// <summary>
 /// Internal class for holding all collection names.

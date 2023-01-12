@@ -12,7 +12,7 @@ using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Serialization;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Reminders;
+namespace Aksio.Cratis.Kernel.MongoDB.Reminders;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReminderTable"/>.

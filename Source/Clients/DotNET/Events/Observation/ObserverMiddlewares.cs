@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Shared.Events;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Events.Observation;

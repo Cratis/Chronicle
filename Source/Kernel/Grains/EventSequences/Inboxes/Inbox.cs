@@ -7,13 +7,13 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.Schemas;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.EventSequences;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Streams;
-using Aksio.Cratis.Shared.Observation;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.Schemas;
+using Aksio.Cratis.Observation;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 
@@ -22,28 +22,28 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// </summary>
 public class Inbox : Grain, IInbox
 {
-    readonly Shared.Schemas.ISchemaStore _schemaStore;
-    readonly ProviderFor<Shared.Schemas.ISchemaStore> _sourceSchemaStoreProvider;
+    readonly Aksio.Cratis.Schemas.ISchemaStore _schemaStore;
+    readonly ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> _sourceSchemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly ILogger<Inbox> _logger;
     IObserver? _observer;
     IEventSequence? _inboxEventSequence;
     MicroserviceId? _microserviceId;
-    Shared.Schemas.ISchemaStore? _sourceSchemaStore;
+    Aksio.Cratis.Schemas.ISchemaStore? _sourceSchemaStore;
     InboxKey? _key;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Inbox"/> class.
     /// </summary>
-    /// <param name="schemaStore"><see cref="Shared.Schemas.ISchemaStore"/> for event schemas.</param>
-    /// <param name="sourceSchemaStoreProvider">Provider for <see cref="Shared.Schemas.ISchemaStore"/> for getting schema stores for other microservices.</param>
+    /// <param name="schemaStore"><see cref="Aksio.Cratis.Schemas.ISchemaStore"/> for event schemas.</param>
+    /// <param name="sourceSchemaStoreProvider">Provider for <see cref="Aksio.Cratis.Schemas.ISchemaStore"/> for getting schema stores for other microservices.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger">Logger for logging.</param>
     public Inbox(
-        Shared.Schemas.ISchemaStore schemaStore,
-        ProviderFor<Shared.Schemas.ISchemaStore> sourceSchemaStoreProvider,
+        Aksio.Cratis.Schemas.ISchemaStore schemaStore,
+        ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> sourceSchemaStoreProvider,
         IExecutionContextManager executionContextManager,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<Inbox> logger)

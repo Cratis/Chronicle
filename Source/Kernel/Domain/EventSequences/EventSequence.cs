@@ -4,8 +4,8 @@
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 

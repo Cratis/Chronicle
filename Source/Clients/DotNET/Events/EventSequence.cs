@@ -3,8 +3,8 @@
 
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Events;
 

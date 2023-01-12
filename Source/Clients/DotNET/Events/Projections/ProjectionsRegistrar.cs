@@ -7,9 +7,9 @@ using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Shared.Projections;
-using Aksio.Cratis.Shared.Projections.Definitions;
-using Aksio.Cratis.Shared.Projections.Json;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Events.Projections;

@@ -3,13 +3,14 @@
 
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
-namespace Aksio.Cratis.Events.Store.MongoDB.Tenants;
+namespace Aksio.Cratis.Kernel.MongoDB.Tenants;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling tenant configuration data.

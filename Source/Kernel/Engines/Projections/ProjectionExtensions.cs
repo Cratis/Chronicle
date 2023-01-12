@@ -7,8 +7,8 @@ using System.Reactive.Subjects;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Shared.Events;
-using Aksio.Cratis.Shared.EventSequences;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 
