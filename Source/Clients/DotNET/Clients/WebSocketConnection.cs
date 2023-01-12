@@ -35,6 +35,7 @@ public class WebSocketConnection : IWebSocketConnection
     readonly Uri _clientEndpoint;
     bool _isDisposing;
     ITimer? _timer;
+    TaskCompletionSource<bool>? _connectedCompletionSource;
 
     /// <inheritdoc/>
     public bool IsConnected { get; private set; }
@@ -73,7 +74,6 @@ public class WebSocketConnection : IWebSocketConnection
     /// <inheritdoc/>
     public async Task Connect()
     {
-        var tcs = new TaskCompletionSource<bool>();
         var firstConnectHappened = false;
         _logger.Connecting(_webSocketClient.Url);
 
@@ -93,17 +93,20 @@ public class WebSocketConnection : IWebSocketConnection
             IsConnected = false;
             await _clientLifecycle.Disconnected();
         });
-        _webSocketClient.MessageReceived.Subscribe(async _ => await MessageReceived(_, tcs));
+        _webSocketClient.MessageReceived.Subscribe(async _ => await MessageReceived(_));
         await _webSocketClient.Start();
 
         SendConnect();
         firstConnectHappened = true;
 
-        var timeoutTimer = _timerFactory.Create(_ => tcs.SetCanceled(), ConnectTimeout, Timeout.Infinite);
+        var timeoutTimer = _timerFactory.Create(_ => _connectedCompletionSource?.SetCanceled(), ConnectTimeout, Timeout.Infinite);
 
         try
         {
-            await tcs.Task;
+            if (_connectedCompletionSource is not null)
+            {
+                await _connectedCompletionSource.Task;
+            }
         }
         catch
         {
@@ -125,6 +128,7 @@ public class WebSocketConnection : IWebSocketConnection
 
     void SendConnect()
     {
+        _connectedCompletionSource = new TaskCompletionSource<bool>();
         var info = new ClientInformation(_executionContextManager.Current.MicroserviceId, ConnectionId.New(), _version, _clientEndpoint.ToString());
         var serialized = JsonSerializer.Serialize(info, _jsonSerializerOptions);
         _logger.SendingClientInformation(info.ClientVersion, info.MicroserviceId, info.ConnectionId);
@@ -141,12 +145,12 @@ public class WebSocketConnection : IWebSocketConnection
         }
     }
 
-    async Task MessageReceived(ResponseMessage _, TaskCompletionSource<bool> connectedCompletionSource)
+    async Task MessageReceived(ResponseMessage _)
     {
         if (_.Text == "kernel-connected")
         {
             _logger.Connected();
-            connectedCompletionSource.SetResult(true);
+            _connectedCompletionSource?.SetResult(true);
 
             IsConnected = true;
             await _clientLifecycle.Connected();
