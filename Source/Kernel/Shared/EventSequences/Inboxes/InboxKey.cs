@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Events.Store.Inboxes;
+namespace Aksio.Cratis.EventSequences.Inboxes;
 
 /// <summary>
 /// Represents a key for an inbox.

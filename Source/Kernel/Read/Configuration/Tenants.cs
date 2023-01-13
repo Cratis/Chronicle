@@ -6,7 +6,7 @@ using Aksio.Cratis.Kernel.Grains.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 
-namespace Aksio.Cratis.Configuration.Api.Tenants;
+namespace Aksio.Cratis.Kernel.Read.Configuration.Tenants;
 
 /// <summary>
 /// Represents the API for working with tenants.
