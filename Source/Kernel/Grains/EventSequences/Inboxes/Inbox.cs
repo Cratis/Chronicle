@@ -1,19 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Events.Store.Inboxes;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Grains.Schemas;
-using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.EventSequences;
-using Microsoft.Extensions.Logging;
-using Orleans;
-using Orleans.Streams;
-using Aksio.Cratis.Observation;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Schemas;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.EventSequences.Inboxes;
+using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Observation;
+using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 
@@ -22,92 +15,24 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// </summary>
 public class Inbox : Grain, IInbox
 {
-    readonly Aksio.Cratis.Schemas.ISchemaStore _schemaStore;
-    readonly ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> _sourceSchemaStoreProvider;
-    readonly IExecutionContextManager _executionContextManager;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ILogger<Inbox> _logger;
-    IObserver? _observer;
-    IEventSequence? _inboxEventSequence;
-    MicroserviceId? _microserviceId;
-    Aksio.Cratis.Schemas.ISchemaStore? _sourceSchemaStore;
-    InboxKey? _key;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Inbox"/> class.
-    /// </summary>
-    /// <param name="schemaStore"><see cref="Aksio.Cratis.Schemas.ISchemaStore"/> for event schemas.</param>
-    /// <param name="sourceSchemaStoreProvider">Provider for <see cref="Aksio.Cratis.Schemas.ISchemaStore"/> for getting schema stores for other microservices.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
-    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public Inbox(
-        Aksio.Cratis.Schemas.ISchemaStore schemaStore,
-        ProviderFor<Aksio.Cratis.Schemas.ISchemaStore> sourceSchemaStoreProvider,
-        IExecutionContextManager executionContextManager,
-        IExpandoObjectConverter expandoObjectConverter,
-        ILogger<Inbox> logger)
-    {
-        _schemaStore = schemaStore;
-        _sourceSchemaStoreProvider = sourceSchemaStoreProvider;
-        _executionContextManager = executionContextManager;
-        _expandoObjectConverter = expandoObjectConverter;
-        _logger = logger;
-    }
-
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override async Task OnActivateAsync()
     {
-        _microserviceId = this.GetPrimaryKey(out var keyAsString);
-        _key = InboxKey.Parse(keyAsString);
+        var microserviceId = this.GetPrimaryKey(out var keyAsString);
+        var key = InboxKey.Parse(keyAsString);
 
-        _inboxEventSequence = GrainFactory.GetGrain<IEventSequence>(
-            EventSequenceId.Inbox,
-            keyExtension: new MicroserviceAndTenant(_microserviceId, _key.TenantId));
-
-        _executionContextManager.Establish(_key.MicroserviceId);
-        _sourceSchemaStore = _sourceSchemaStoreProvider();
-
-        _observer = GrainFactory.GetGrain<IObserver>(
-            _microserviceId,
+        var observer = GrainFactory.GetGrain<IObserver>(
+            microserviceId,
             new ObserverKey(
-                _microserviceId,
-                _key.TenantId,
+                microserviceId,
+                key.TenantId,
                 EventSequenceId.Outbox,
-                _key.MicroserviceId,
-                _key.TenantId));
+                key.MicroserviceId,
+                key.TenantId));
 
-        throw new NotImplementedException();
-        // var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
-        // var stream = streamProvider.GetStream<AppendedEvent>(_microserviceId, observerNamespace);
-        // await stream.SubscribeAsync(HandleEvent);
-
-        // await _observer.SetMetadata($"Inbox for ${_microserviceId}, Outbox from ${_key.MicroserviceId} for Tenant ${_key.TenantId}", ObserverType.Inbox);
-        // await _observer.Subscribe(Array.Empty<EventType>(), observerNamespace);
+        await observer.Subscribe<IInboxObserverSubscriber>(Enumerable.Empty<EventType>());
     }
 
     /// <inheritdoc/>
     public Task Start() => Task.CompletedTask;
-
-    async Task HandleEvent(AppendedEvent @event, StreamSequenceToken token)
-    {
-        _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId);
-
-        EventSchema eventSchema;
-
-        if (!await _schemaStore.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation) && _sourceSchemaStore is not null)
-        {
-            eventSchema = await _sourceSchemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
-            await _schemaStore.Register(eventSchema.Type, eventSchema.Schema.GetDisplayName(), eventSchema.Schema);
-        }
-        else
-        {
-            eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
-        }
-
-        _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);
-
-        var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
-        await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, content!);
-    }
 }

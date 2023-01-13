@@ -29,7 +29,6 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     EngineProjection? _projection;
     IProjectionPipeline? _pipeline;
 
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
     /// </summary>
