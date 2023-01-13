@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;

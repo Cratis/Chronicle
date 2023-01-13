@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Compliance.MongoDB;
-using Aksio.Cratis.Events.Projections.MongoDB;
+using Aksio.Cratis.Projections.MongoDB;
 using Aksio.Cratis.Events.Schemas.MongoDB;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.Kernel.MongoDB.Observation;

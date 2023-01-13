@@ -3,10 +3,11 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Changes;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 
-namespace Aksio.Cratis.Events.Projections.MongoDB;
+namespace Aksio.Cratis.Projections.MongoDB;
 
 /// <summary>
 /// Represents a <see cref="IChangesetStorage"/> for storing changesets in MongoDB.

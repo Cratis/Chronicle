@@ -9,7 +9,7 @@ using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 
-namespace Aksio.Cratis.Events.Projections.MongoDB;
+namespace Aksio.Cratis.Projections.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSinkFactory"/>.

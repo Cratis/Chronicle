@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Events;

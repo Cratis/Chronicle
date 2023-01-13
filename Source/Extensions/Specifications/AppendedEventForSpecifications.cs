@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Specifications;
 

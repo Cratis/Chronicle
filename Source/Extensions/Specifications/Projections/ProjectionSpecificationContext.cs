@@ -5,18 +5,19 @@ using System.Text.Json;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Projections.Changes;
-using Aksio.Cratis.Events.Projections.Expressions;
-using Aksio.Cratis.Events.Projections.Expressions.EventValues;
-using Aksio.Cratis.Events.Projections.Expressions.Keys;
-using Aksio.Cratis.Events.Projections.InMemory;
-using Aksio.Cratis.Events.Projections.Pipelines;
-using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Kernel.Engines.Projections.Changes;
+using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
+using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
+using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
+using Aksio.Cratis.Kernel.Engines.Projections.InMemory;
+using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Specifications.Types;
+using Aksio.Cratis.Kernel.Engines.Projections;
 
 namespace Aksio.Cratis.Specifications.Integration;
 
