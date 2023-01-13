@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using System.Reflection;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;
