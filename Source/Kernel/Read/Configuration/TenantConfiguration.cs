@@ -26,17 +26,14 @@ public class TenantConfiguration : Controller
     }
 
     /// <summary>
-    /// Set a key/value pair configuration for a specific tenant.
+    /// Returns all the configuration key/value pairs associated with a specific tenant.
     /// </summary>
-    /// <param name="tenantId"><see cref="TenantId"/> for the tenant to set for.</param>
-    /// <param name="keyValuePair">The key value pair to set.</param>
-    /// <returns>Awaitable task.</returns>
-    [HttpPost]
-    public async Task SetConfigurationValueForTenant(
-        [FromRoute] TenantId tenantId,
-        [FromBody] KeyValuePair<string, string> keyValuePair)
+    /// <param name="tenantId"><see cref="TenantId"/> for the tenant to get for.</param>
+    /// <returns><see cref="IDictionary{TKey, TValue}"/> with all the key/value pairs.</returns>
+    [HttpGet]
+    public async Task<IDictionary<string, string>> AllConfigurationValuesForTenant([FromRoute] TenantId tenantId)
     {
         var tenantConfiguration = _grainFactory.GetGrain<ITenantConfiguration>(tenantId);
-        await tenantConfiguration.Set(keyValuePair.Key, keyValuePair.Value);
+        return await tenantConfiguration.All();
     }
 }
