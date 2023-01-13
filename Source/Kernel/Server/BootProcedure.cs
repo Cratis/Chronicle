@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Boot;
-using Aksio.Cratis.Events.Store.Inboxes;
+using Aksio.Cratis.EventSequences.Inboxes;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
