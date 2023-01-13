@@ -183,6 +183,7 @@ public class AccountHolderDetailsAdapter : AdapterFor<AccountHolder, KontoEier>
 ```
 
 > Note: the AppendEvent() methods also supports an optional `ValidFrom` that can be associated with the event.
+> THere is also an overload with a callback to provide the valid from value based on the `ImportContext`.
 
 For filtering for changes using the `.WithProperties()` with nested properties in complex structures.
 The system will automatically recurse within any nested property as long as you filter the top level property.
