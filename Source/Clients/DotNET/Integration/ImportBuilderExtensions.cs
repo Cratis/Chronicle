@@ -144,7 +144,7 @@ public static class ImportBuilderExtensions
     /// <returns>Observable for chaining.</returns>
     public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(
         this IObservable<ImportContext<TModel, TExternalModel>> context,
-        Func<ImportContext<TModel, TExternalModel>, DateTimeOffset> validFromCallback)
+        Func<ImportContext<TModel, TExternalModel>, DateTimeOffset?> validFromCallback)
     {
         context.Subscribe(_ =>
         {
@@ -229,7 +229,7 @@ public static class ImportBuilderExtensions
     public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(
         this IObservable<ImportContext<TModel, TExternalModel>> context,
         Func<ImportContext<TModel, TExternalModel>, TEvent> creationCallback,
-        Func<ImportContext<TModel, TExternalModel>, DateTimeOffset> validFromCallback)
+        Func<ImportContext<TModel, TExternalModel>, DateTimeOffset?> validFromCallback)
     {
         context.Subscribe(_ => _.Events.Add(creationCallback(_)!, validFromCallback(_)));
         return context;
