@@ -11,5 +11,5 @@ public class when_connecting_successfully : given.a_responding_kernel
     [Fact] void should_send_correct_microservice_id_on_connect() => client_information[0].MicroserviceId.ShouldEqual(microservice_id);
     [Fact] void should_send_correct_endpoint_on_connect() => client_information[0].AdvertisedUri.ShouldEqual(endpoint.ToString());
     [Fact] void should_send_first_ping() => messages.Last().ShouldEqual("ping");
-    [Fact] void should_notify_about_connect() => client_lifecycle.Verify(_ => _.Disconnected(), Once);
+    [Fact] void should_notify_about_connect() => client_lifecycle.Verify(_ => _.Connected(), Once);
 }
