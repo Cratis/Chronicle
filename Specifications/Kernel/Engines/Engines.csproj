@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Engines.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Engines</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Kernel/Engines/Engines.csproj"/>
+        <ProjectReference Include="../../../Source/Extensions/Specifications/Specifications.csproj"/>
+    </ItemGroup>
+
+</Project>

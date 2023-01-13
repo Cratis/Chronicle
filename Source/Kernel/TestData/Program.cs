@@ -4,7 +4,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Events.Store;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;

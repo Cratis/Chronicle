@@ -4,6 +4,9 @@
 global using Aksio.Cratis.Common;
 global using Aksio.Cratis.Common.Grains;
 global using Aksio.Cratis.Specifications.Types;
+global using Aksio.Cratis.Events;
+global using Aksio.Cratis.Projections;
+global using Aksio.Cratis.Observation;
 global using Aksio.Specifications;
 global using ExecutionContext = Aksio.Cratis.Execution.ExecutionContext;
 global using Moq;
