@@ -3,7 +3,7 @@
 
 using System.Reflection;
 
-namespace Aksio.Cratis.Kernel.Engines.Compliance.GDPR.for_PIIMetadataProvider.when_providing_for_property;
+namespace Aksio.Cratis.Compliance.GDPR.for_PIIMetadataProvider.when_providing_for_property;
 
 public class and_there_is_no_metadata : given.a_provider
 {

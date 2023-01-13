@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Projections.Grains;
 using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Applications.Rules.for_Rules.when_projecting_to_rule;
