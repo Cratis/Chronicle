@@ -36,4 +36,11 @@ public interface IProjection : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Rewind();
+
+    /// <summary>
+    /// Subscribe to changes in projection or pipeline definition changes.
+    /// </summary>
+    /// <param name="subscriber"><see cref="IProjectionDefinitionObserver"/> to subscribe.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeToDefinitionChanges(IProjectionDefinitionObserver subscriber);
 }
