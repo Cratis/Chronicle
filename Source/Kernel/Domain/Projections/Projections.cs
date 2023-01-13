@@ -11,6 +11,7 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
+using ImmediateProjectionResult = Aksio.Cratis.Kernel.Grains.Projections.ImmediateProjectionResult;
 
 namespace Aksio.Cratis.Kernel.Domain.Projections;
 

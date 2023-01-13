@@ -46,7 +46,7 @@ public class BootProcedure : IPerformBootProcedure
         foreach (var (microserviceId, microservice) in _configuration.Microservices)
         {
             _executionContextManager.Establish(microserviceId);
-            var schemaStore = _serviceProvider.GetService<Aksio.Cratis.Schemas.ISchemaStore>()!;
+            var schemaStore = _serviceProvider.GetService<Schemas.ISchemaStore>()!;
             schemaStore.Populate().Wait();
 
             var projections = _grainFactory.GetGrain<IProjections>((MicroserviceId)microserviceId);

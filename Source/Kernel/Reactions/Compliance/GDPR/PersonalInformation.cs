@@ -5,8 +5,8 @@
 
 using Aksio.Cratis.Compliance.GDPR;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Events.Observation;
 using Aksio.Cratis.Kernel.Compliance.GDPR.Events;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Reactions.Compliance.GDPR;
 

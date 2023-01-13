@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Compliance.GDPR;
-using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Compliance.GDPR.Events;
 using Microsoft.AspNetCore.Mvc;
 
