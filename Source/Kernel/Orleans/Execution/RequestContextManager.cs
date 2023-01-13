@@ -4,7 +4,7 @@
 using Aksio.Cratis.Execution;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Extensions.Orleans.Execution;
+namespace Aksio.Cratis.Kernel.Orleans.Execution;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRequestContextManager"/>.

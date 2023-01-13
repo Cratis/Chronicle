@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Extensions.Orleans.Configuration;
+using Aksio.Cratis.Kernel.Orleans.Configuration;
 
 namespace Aksio.Cratis.Kernel.Configuration;
 

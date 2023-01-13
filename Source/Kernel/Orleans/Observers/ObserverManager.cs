@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Extensions.Orleans.Observers;
+namespace Aksio.Cratis.Kernel.Orleans.Observers;
 
 /// <summary>
 /// Represents a system that maintains a collection of observers.
