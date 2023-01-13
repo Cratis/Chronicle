@@ -32,5 +32,5 @@ public class EventLogForSpecifications : IEventLog
     }
 
     /// <inheritdoc/>
-    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null) => _sequence.Append(eventSourceId, @event);
+    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null) => _sequence.Append(eventSourceId, @event, validFrom);
 }
