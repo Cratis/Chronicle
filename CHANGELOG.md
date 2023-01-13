@@ -1,3 +1,11 @@
+# [v7.3.2] - 2023-1-13 [PR: #678](https://github.com/aksio-insurtech/Cratis/pull/678)
+
+### Fixed
+
+- Helpers for Tests/Specifications now includes the `ValidFrom` value added during `Append`.
+
+
+
 # [v7.3.1] - 2023-1-13 [PR: #676](https://github.com/aksio-insurtech/Cratis/pull/676)
 
 ### Fixed
