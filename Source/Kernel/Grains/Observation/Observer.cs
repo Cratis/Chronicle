@@ -3,11 +3,10 @@
 
 using System.Dynamic;
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -44,8 +43,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     TenantId _sourceTenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
+    Type _subscriberType;
 
-    bool HasSubscribedObserver => State.CurrentNamespace != ObserverNamespace.NotSet;
     IEventSequenceStorageProvider EventSequenceStorageProvider
     {
         get
@@ -70,6 +69,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
         _logger = logger;
+        _subscriberType = typeof(IObserverSubscriber);
     }
 
     /// <inheritdoc/>
@@ -123,7 +123,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     {
         try
         {
-            if (!HasSubscribedObserver)
+            if (State.IsDisconnected)
             {
                 return;
             }
@@ -139,26 +139,26 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return;
             }
 
-            throw new NotImplementedException();
-            // var stream = _observerStreamProvider!.GetStream<AppendedEvent>(_observerId, State.CurrentNamespace);
-            // await stream.OnNextAsync(@event);
+            var key = new ObserverSubscriberKey(_microserviceId, _tenantId, _eventSequenceId, @event.Context.EventSourceId, _sourceMicroserviceId, _sourceTenantId);
+            var subscriber = (GrainFactory.GetGrain(_subscriberType, _observerId, key) as IObserverSubscriber)!;
+            await subscriber.OnNext(@event);
 
-            // State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-            // await WriteStateAsync();
+            State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+            await WriteStateAsync();
 
-            // if (setLastHandled)
-            // {
-            //     State.LastHandled = @event.Metadata.SequenceNumber;
-            // }
+            if (setLastHandled)
+            {
+                State.LastHandled = @event.Metadata.SequenceNumber;
+            }
 
-            // var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
+            var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
 
-            // if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
-            // {
-            //     State.RunningState = ObserverRunningState.Active;
-            //     _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-            // }
-            // await WriteStateAsync();
+            if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
+            {
+                State.RunningState = ObserverRunningState.Active;
+                _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+            }
+            await WriteStateAsync();
         }
         catch (Exception ex)
         {

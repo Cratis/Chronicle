@@ -77,7 +77,6 @@ public class Inbox : Grain, IInbox
                 _key.MicroserviceId,
                 _key.TenantId));
 
-        var observerNamespace = new ObserverNamespace($"{_microserviceId}+${keyAsString}");
         throw new NotImplementedException();
         // var streamProvider = GetStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider);
         // var stream = streamProvider.GetStream<AppendedEvent>(_microserviceId, observerNamespace);

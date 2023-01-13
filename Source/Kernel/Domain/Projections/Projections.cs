@@ -65,6 +65,7 @@ public class Projections : Controller
         var projections = _grainFactory.GetGrain<IProjections>(microserviceId.Value);
         foreach (var registration in payload.Projections)
         {
+            var pipeline = registration.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions);
             await projections.Register(
                 _projectionSerializer.Deserialize(registration.Projection),
                 registration.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!);

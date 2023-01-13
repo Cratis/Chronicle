@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.EventSequences;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
@@ -15,7 +15,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task TryResumePartition(EventSourceId eventSourceId)
     {
-        if (!HasSubscribedObserver || !State.IsPartitionFailed(eventSourceId))
+        if (State.IsDisconnected || !State.IsPartitionFailed(eventSourceId))
         {
             return;
         }

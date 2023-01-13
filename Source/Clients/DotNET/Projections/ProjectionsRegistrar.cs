@@ -4,13 +4,13 @@
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Clients;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
-using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Projections;
 
@@ -34,6 +34,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     readonly IClient _client;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonProjectionSerializer _projectionSerializer;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -58,6 +59,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         _client = client;
         _executionContextManager = executionContextManager;
         _projectionSerializer = projectionSerializer;
+        _jsonSerializerOptions = jsonSerializerOptions;
     }
 
     /// <summary>
@@ -88,16 +90,15 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     {
         var registrations = _projections.Select(projection =>
         {
-            var serializedPipeline = JsonSerializer.SerializeToNode(
-                new ProjectionPipelineDefinition(
-                    projection.Identifier,
-                    new[]
-                    {
-                        new ProjectionSinkDefinition(
-                                "12358239-a120-4392-96d4-2b48271b904c",
-                                WellKnownProjectionSinkTypes.MongoDB)
-                    }))!;
-
+            var pipeline = new ProjectionPipelineDefinition(
+                projection.Identifier,
+                new[]
+                {
+                    new ProjectionSinkDefinition(
+                            "12358239-a120-4392-96d4-2b48271b904c",
+                            WellKnownProjectionSinkTypes.MongoDB)
+                });
+            var serializedPipeline = JsonSerializer.SerializeToNode(pipeline, _jsonSerializerOptions)!;
             return new ProjectionRegistration(
                 _projectionSerializer.Serialize(projection),
                 serializedPipeline);

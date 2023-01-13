@@ -22,6 +22,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     readonly IClient _client;
     readonly IInstancesOf<IOutboxProjections> _outboxProjections;
     readonly IJsonProjectionSerializer _projectionSerializer;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IEnumerable<OutboxProjectionsDefinition> _outboxProjectionsDefinitions;
 
     /// <summary>
@@ -44,6 +45,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
         _client = client;
         _outboxProjections = outboxProjections;
         _projectionSerializer = projectionSerializer;
+        _jsonSerializerOptions = jsonSerializerOptions;
         _outboxProjectionsDefinitions = _outboxProjections.Select(projections =>
         {
             var builder = new OutboxProjectionsBuilder(eventTypes, jsonSchemaGenerator, projections.Identifier, jsonSerializerOptions);
@@ -57,15 +59,15 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     {
         var registrations = _outboxProjectionsDefinitions.SelectMany(_ => _.TargetEventTypeProjections.Values).Select(projection =>
         {
-            var serializedPipeline = JsonSerializer.SerializeToNode(
-                new ProjectionPipelineDefinition(
-                    projection.Identifier,
-                    new[]
-                    {
-                        new ProjectionSinkDefinition(
-                                "06ec7e41-4424-4eb3-8dd0-defb45bc055e",
-                                WellKnownProjectionSinkTypes.Outbox)
-                    }))!;
+            var pipeline = new ProjectionPipelineDefinition(
+                projection.Identifier,
+                new[]
+                {
+                    new ProjectionSinkDefinition(
+                        "06ec7e41-4424-4eb3-8dd0-defb45bc055e",
+                        WellKnownProjectionSinkTypes.Outbox)
+                });
+            var serializedPipeline = JsonSerializer.SerializeToNode(pipeline, _jsonSerializerOptions)!;
 
             return new ProjectionRegistration(
                 _projectionSerializer.Serialize(projection),
