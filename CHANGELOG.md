@@ -1,3 +1,10 @@
+# [v7.3.1] - 2023-1-13 [PR: #676](https://github.com/aksio-insurtech/Cratis/pull/676)
+
+### Fixed
+
+- `ValidFrom` in callbacks when used in `AppendEvent` with integration adapters are now nullable, as it should be.
+
+
 # [v7.3.0] - 2023-1-13 [PR: #675](https://github.com/aksio-insurtech/Cratis/pull/675)
 
 ### Added
