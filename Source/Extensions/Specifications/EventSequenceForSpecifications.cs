@@ -44,8 +44,9 @@ public class EventSequenceForSpecifications
     /// </summary>
     /// <param name="eventSourceId">The event source to append for.</param>
     /// <param name="event">Event to append.</param>
+    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable task.</returns>
-    public Task Append(EventSourceId eventSourceId, object @event)
+    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default)
     {
         var serialized = JsonSerializer.Serialize(@event, Globals.JsonSerializerOptions)!;
         var schema = _schemaGenerator.Generate(@event.GetType());
@@ -57,7 +58,7 @@ public class EventSequenceForSpecifications
                 eventSourceId,
                 _sequenceNumber,
                 DateTimeOffset.UtcNow,
-                DateTimeOffset.MinValue,
+                validFrom ?? DateTimeOffset.MinValue,
                 TenantId.Development,
                 CorrelationId.New(),
                 CausationId.System,
