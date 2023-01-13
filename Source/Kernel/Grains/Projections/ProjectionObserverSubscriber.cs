@@ -57,6 +57,8 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
         var key = ObserverSubscriberKey.Parse(keyAsString);
         var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
         await projection.SubscribeToDefinitionChanges(this);
+
+        await HandleDefinitionsAndInstances();
     }
 
     /// <inheritdoc/>
