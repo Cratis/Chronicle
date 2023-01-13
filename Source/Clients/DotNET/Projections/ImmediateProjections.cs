@@ -4,13 +4,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
+using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
-using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Projections;
 
@@ -66,28 +66,37 @@ public class ImmediateProjections : IImmediateProjections
         _executionContextManager = executionContextManager;
     }
 
-
     /// <inheritdoc/>
-    public Task<JsonNode> GetInstanceById(ModelKey modelKey, ProjectionDefinition projectionDefinition)
+    public Task<ImmediateProjectionResult> GetInstanceById(ModelKey modelKey, ProjectionDefinition projectionDefinition)
     {
         var projectionDefinitionAsJson = _projectionSerializer.Serialize(projectionDefinition);
         return GetInstanceById(projectionDefinition.Identifier, modelKey, projectionDefinitionAsJson);
     }
 
     /// <inheritdoc/>
-    public async Task<TModel> GetInstanceById<TModel>(ModelKey modelKey)
+    public async Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey, ProjectionDefinition? projectionDefinition = null)
     {
-        HandleProjectionTypeCache<TModel>();
+        ImmediateProjectionResult result;
+        if (projectionDefinition is null)
+        {
+            HandleProjectionTypeCache<TModel>();
 
-        var node = await GetInstanceById(
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier,
-            modelKey,
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.DefinitionAsJson!);
+            result = await GetInstanceById(
+                ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier,
+                modelKey,
+                ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.DefinitionAsJson!);
+        }
+        else
+        {
+            var projectionDefinitionAsJson = _projectionSerializer.Serialize(projectionDefinition);
+            result = await GetInstanceById(projectionDefinition.Identifier, modelKey, projectionDefinitionAsJson);
+        }
 
-        return node.Deserialize<TModel>(_jsonSerializerOptions)!;
+        var model = result.Model.Deserialize<TModel>(_jsonSerializerOptions)!;
+        return new(model, result.AffectedProperties, result.ProjectedEventsCount);
     }
 
-    async Task<JsonNode> GetInstanceById(ProjectionId identifier, ModelKey modelKey, JsonNode projectionDefinition)
+    async Task<ImmediateProjectionResult> GetInstanceById(ProjectionId identifier, ModelKey modelKey, JsonNode projectionDefinition)
     {
         var immediateProjection = new ImmediateProjection(
             identifier,
@@ -99,8 +108,7 @@ public class ImmediateProjections : IImmediateProjections
 
         var result = await _client.PerformCommand(route, immediateProjection);
         var element = (JsonElement)result.Response!;
-        var actualResult = element.Deserialize<ImmediateProjectionResult>(_jsonSerializerOptions)!;
-        return actualResult.Model;
+        return element.Deserialize<ImmediateProjectionResult>(_jsonSerializerOptions)!;
     }
 
     void HandleProjectionTypeCache<TModel>()

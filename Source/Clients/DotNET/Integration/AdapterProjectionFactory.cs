@@ -16,26 +16,26 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
 {
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
+    readonly IImmediateProjections _immediateProjections;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdapterProjectionFactory"/> class.
     /// </summary>
     /// <param name="eventTypes">The <see cref="IEventTypes"/> to use.</param>
     /// <param name="schemaGenerator">The <see cref="IJsonSchemaGenerator"/> for generating schemas.</param>
+    /// <param name="immediateProjections">The <see cref="IImmediateProjections"/> to perform projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public AdapterProjectionFactory(
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
-        JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager)
+        IImmediateProjections immediateProjections,
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
+        _immediateProjections = immediateProjections;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
@@ -44,6 +44,6 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
         var projectionBuilder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, _eventTypes, _schemaGenerator, _jsonSerializerOptions);
         adapter.DefineModel(projectionBuilder);
         var projectionDefinition = projectionBuilder.Build();
-        return Task.FromResult<IAdapterProjectionFor<TModel>>(new AdapterProjectionFor<TModel>(projectionDefinition, _jsonSerializerOptions, _executionContextManager));
+        return Task.FromResult<IAdapterProjectionFor<TModel>>(new AdapterProjectionFor<TModel>(projectionDefinition, _immediateProjections));
     }
 }
