@@ -11,7 +11,7 @@ using Aksio.Cratis.Projections.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Events.Projections.MongoDB;
+namespace Aksio.Cratis.Projections.MongoDB;
 
 /// <summary>
 /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.
