@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Domain.Connections;
+namespace Aksio.Cratis.Kernel.Domain.Clients;
 
 public static partial class ConnectedClientsLogMessages
 {

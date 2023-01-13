@@ -3,7 +3,7 @@
 
 using Orleans;
 
-namespace Aksio.Cratis.Kernel.Grains.Connections;
+namespace Aksio.Cratis.Kernel.Grains.Clients;
 
 /// <summary>
 /// Defines an observer for a specific connected client in <see cref="IConnectedClients"/>.

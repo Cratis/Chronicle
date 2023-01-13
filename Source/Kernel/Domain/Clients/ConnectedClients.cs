@@ -3,14 +3,14 @@
 
 using System.Text;
 using System.Text.Json;
-using Aksio.Cratis.Kernel.Grains.Connections;
-using Aksio.Cratis.Connections;
+using Aksio.Cratis.Clients;
+using Aksio.Cratis.Kernel.Grains.Clients;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
-namespace Aksio.Cratis.Kernel.Domain.Connections;
+namespace Aksio.Cratis.Kernel.Domain.Clients;
 
 /// <summary>
 /// Represents the endpoint for clients to connect to.

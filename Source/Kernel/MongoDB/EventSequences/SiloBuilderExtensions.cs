@@ -3,12 +3,12 @@
 
 using Aksio.Cratis;
 using Aksio.Cratis.Kernel.MongoDB;
-using Aksio.Cratis.Kernel.MongoDB.ConnectedClients;
+using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Tenants;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
-using Aksio.Cratis.Kernel.Grains.Connections;
+using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Microsoft.Extensions.DependencyInjection;

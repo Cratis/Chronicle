@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Connections;
+using Aksio.Cratis.Clients;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
 
-namespace Aksio.Cratis.Kernel.Grains.Connections;
+namespace Aksio.Cratis.Kernel.Grains.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
