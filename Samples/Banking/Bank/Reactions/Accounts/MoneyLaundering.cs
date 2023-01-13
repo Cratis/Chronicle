@@ -22,7 +22,7 @@ public class MoneyLaundering
     public async Task AccountOpened(DebitAccountOpened @event, EventContext context)
     {
         var count = await _immediateProjections.GetInstanceById<AccountsCounter>(context.EventSourceId);
-        if (count.Count > 42)
+        if (count.Model.Count > 42)
         {
             await _eventLog.Append(Guid.Empty.ToString(), new PossibleMoneyLaunderingDetected(@event.Owner, context.EventSourceId, DateOnly.FromDateTime(context.Occurred.Date)));
         }

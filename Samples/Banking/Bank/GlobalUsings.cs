@@ -10,6 +10,7 @@ global using Aksio.Cratis.Applications.Rules;
 global using Aksio.Cratis.Concepts;
 global using Aksio.Cratis.Events;
 global using Aksio.Cratis.EventSequences;
+global using Aksio.Cratis.EventSequences.Outbox;
 global using Aksio.Cratis.Observation;
 global using Aksio.Cratis.Projections;
 global using Aksio.Cratis.Integration;
