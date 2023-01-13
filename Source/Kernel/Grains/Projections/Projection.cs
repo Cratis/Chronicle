@@ -19,6 +19,8 @@ using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Orleans;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
+using Aksio.Cratis.Kernel.Orleans.Observers;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 
@@ -34,6 +36,7 @@ public class Projection : Grain, IProjection
     readonly IObjectsComparer _objectsComparer;
     readonly IEventSequenceStorageProvider _eventProvider;
     readonly IExecutionContextManager _executionContextManager;
+    readonly ObserverManager<IProjectionDefinitionObserver> _definitionObservers;
     EngineProjection? _projection;
     IProjectionPipeline? _pipeline;
     IObserver? _observer;
@@ -53,6 +56,7 @@ public class Projection : Grain, IProjection
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
+    /// <param name="logger">Logger for logging.</param>
     public Projection(
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
         ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitionsProvider,
@@ -60,7 +64,8 @@ public class Projection : Grain, IProjection
         IProjectionPipelineFactory projectionPipelineFactory,
         IObjectsComparer objectsComparer,
         IEventSequenceStorageProvider eventProvider,
-        IExecutionContextManager executionContextManager)
+        IExecutionContextManager executionContextManager,
+        ILogger<Projection> logger)
     {
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
         _projectionPipelineDefinitionsProvider = projectionPipelineDefinitionsProvider;
@@ -70,6 +75,7 @@ public class Projection : Grain, IProjection
         _eventProvider = eventProvider;
         _executionContextManager = executionContextManager;
         _projectionId = ProjectionId.NotSet;
+        _definitionObservers = new(TimeSpan.FromMinutes(1), logger, "ProjectionDefinitionObservers");
     }
 
     /// <inheritdoc/>
@@ -92,6 +98,13 @@ public class Projection : Grain, IProjection
     }
 
     /// <inheritdoc/>
+    public Task SubscribeToDefinitionChanges(IProjectionDefinitionObserver subscriber)
+    {
+        _definitionObservers.Subscribe(subscriber, subscriber);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public async Task RefreshDefinition()
     {
         // TODO: This is a temporary work-around till we fix #264 & #265
@@ -101,6 +114,7 @@ public class Projection : Grain, IProjection
         _pipelineDefinition = await _projectionPipelineDefinitionsProvider().GetFor(_projectionId);
         _projection = await _projectionFactory.CreateFrom(_definition);
         _pipeline = _projectionPipelineFactory.CreateFrom(_projection, _pipelineDefinition);
+        _definitionObservers.Notify(_ => _.OnDefinitionsChanged());
     }
 
     /// <inheritdoc/>
@@ -173,4 +187,5 @@ public class Projection : Grain, IProjection
             await HandleEventFor(child, context);
         }
     }
+
 }
