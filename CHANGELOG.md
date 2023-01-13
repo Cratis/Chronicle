@@ -1,3 +1,10 @@
+# [v7.3.0] - 2023-1-13 [PR: #675](https://github.com/aksio-insurtech/Cratis/pull/675)
+
+### Added
+
+- Added a way to provide `ValidFrom` when describing events to append for integrations from a callback.
+
+
 # [v7.2.0] - 2023-1-12 [PR: #674](https://github.com/aksio-insurtech/Cratis/pull/674)
 
 ### Added
