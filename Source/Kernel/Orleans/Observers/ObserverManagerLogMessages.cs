@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Extensions.Orleans.Observers;
+namespace Aksio.Cratis.Kernel.Orleans.Observers;
 
 /// <summary>
 /// Holds log messages for <see cref="ObserverManager{T}"/>.

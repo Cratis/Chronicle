@@ -4,7 +4,7 @@
 using Aksio.Cratis.Configuration;
 using Microsoft.Extensions.Configuration;
 
-namespace Aksio.Cratis.Extensions.Orleans.Configuration;
+namespace Aksio.Cratis.Kernel.Orleans.Configuration;
 
 /// <summary>
 /// Represents a <see cref="IConfigurationValueResolver"/> for resolving options on <see cref="Telemetry"/>.

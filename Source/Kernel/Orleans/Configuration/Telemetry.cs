@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Configuration;
 
-namespace Aksio.Cratis.Extensions.Orleans.Configuration;
+namespace Aksio.Cratis.Kernel.Orleans.Configuration;
 
 /// <summary>
 /// Represents the telemetry configuration.

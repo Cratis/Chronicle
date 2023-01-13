@@ -5,7 +5,7 @@ using Aksio.Cratis.Execution;
 using Orleans;
 using Orleans.Runtime;
 
-namespace Aksio.Cratis.Extensions.Orleans.Execution;
+namespace Aksio.Cratis.Kernel.Orleans.Execution;
 
 /// <summary>
 /// Represents an Orleans <see cref="IIncomingGrainCallFilter">grain call filter</see> that establishes
