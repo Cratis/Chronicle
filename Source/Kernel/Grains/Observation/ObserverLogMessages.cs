@@ -10,8 +10,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public static partial class ObserverLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Subscribing observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
-    internal static partial void Subscribing(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
+    [LoggerMessage(0, LogLevel.Information, "Subscribing observer {ObserverId} with subscriber type {SubscriberType} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
+    internal static partial void Subscribing(this ILogger logger, Guid observerId, Type subscriberType, Guid microserviceId, Guid eventSequenceId, Guid tenantId);
 
     [LoggerMessage(1, LogLevel.Information, "Unsubscribing observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Unsubscribing(this ILogger logger, Guid observerId, Guid microserviceId, Guid eventSequenceId, Guid tenantId);

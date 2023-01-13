@@ -65,11 +65,6 @@ public class ObserverState
     public ObserverRunningState RunningState { get; set; } = ObserverRunningState.New;
 
     /// <summary>
-    /// The current namespace we want to target stream to.
-    /// </summary>
-    public ObserverNamespace CurrentNamespace { get; set; } = ObserverNamespace.NotSet;
-
-    /// <summary>
     /// Gets or sets the failed partitions for the observer.
     /// </summary>
     public IEnumerable<FailedObserverPartition> FailedPartitions
@@ -142,6 +137,11 @@ public class ObserverState
             StartedRecoveryAt = DateTimeOffset.UtcNow
         });
     }
+
+    /// <summary>
+    /// Gets whether or not the observer is in disconnected state. Meaning that there is no subscriber to it.
+    /// </summary>
+    public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
 
     /// <summary>
     /// Check whether or not a partition is being recovered.

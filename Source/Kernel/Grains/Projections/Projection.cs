@@ -18,7 +18,6 @@ using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Orleans;
-using Orleans.Streams;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
@@ -88,12 +87,8 @@ public class Projection : Grain, IProjection
 
         _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
 
-        var streamProvider = GetStreamProvider("Blah");
-        var stream = streamProvider.GetStream<AppendedEvent>(_projectionId, key);
-        await stream.SubscribeAsync(HandleEvent);
-
         await _observer.SetMetadata(_definition!.Name.Value, ObserverType.Projection);
-        await _observer.Subscribe(_projection!.EventTypes, key.ToString());
+        await _observer.Subscribe<IProjectionObserverSubscriber>(_projection!.EventTypes);
     }
 
     /// <inheritdoc/>
@@ -165,8 +160,6 @@ public class Projection : Grain, IProjection
         _observer?.Rewind();
         return Task.CompletedTask;
     }
-
-    Task HandleEvent(AppendedEvent @event, StreamSequenceToken token) => _pipeline?.Handle(@event) ?? Task.CompletedTask;
 
     async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
     {

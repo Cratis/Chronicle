@@ -30,6 +30,8 @@ public static class SiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
     public static ISiloBuilder AddEventSequenceStream(this ISiloBuilder builder)
     {
+        // TODO: Store Grain state in Mongo
+        builder.AddMemoryGrainStorage("PubSubStore");
         builder.ConfigureServices(services =>
         {
             services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<EventSequencesStorageProvider>());

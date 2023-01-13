@@ -12,11 +12,13 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public partial class Observer
 {
     /// <inheritdoc/>
-    public async Task Subscribe(IEnumerable<EventType> eventTypes, ObserverNamespace observerNamespace)
-    {
-        _logger.Subscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+    public Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes) where TObserverSubscriber : IObserverSubscriber
+        => Subscribe(typeof(TObserverSubscriber), eventTypes);
 
-        State.CurrentNamespace = observerNamespace;
+    async Task Subscribe(Type subscriberType, IEnumerable<EventType> eventTypes)
+    {
+        _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
+        _subscriberType = subscriberType;
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
@@ -68,7 +70,6 @@ public partial class Observer
     public async Task Unsubscribe()
     {
         _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        State.CurrentNamespace = ObserverNamespace.NotSet;
         State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
         await UnsubscribeStream();
@@ -79,7 +80,7 @@ public partial class Observer
         if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
             State.IsRecoveringPartition(@event.Context.EventSourceId) ||
             State.RunningState == ObserverRunningState.Replaying ||
-            !HasSubscribedObserver)
+            State.IsDisconnected)
         {
             return Task.CompletedTask;
         }
