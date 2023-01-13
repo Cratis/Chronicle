@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
+using Aksio.Cratis.Clients;
 
-namespace Aksio.Cratis.Kernel.Grains.Connections;
+namespace Aksio.Cratis.Kernel.Grains.Clients;
 
 #pragma warning disable CA1002 // Allow list
 

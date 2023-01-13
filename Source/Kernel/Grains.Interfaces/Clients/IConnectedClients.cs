@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Connections;
+using Aksio.Cratis.Clients;
 using Orleans;
 
-namespace Aksio.Cratis.Kernel.Grains.Connections;
+namespace Aksio.Cratis.Kernel.Grains.Clients;
 
 /// <summary>
 /// Defines a system for tracking connected observers.
