@@ -40,7 +40,7 @@ public interface IProjection : IGrainWithGuidCompoundKey
     /// <summary>
     /// Subscribe to changes in projection or pipeline definition changes.
     /// </summary>
-    /// <param name="subscriber"><see cref="IProjectionDefinitionObserver"/> to subscribe.</param>
+    /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
     /// <returns>Awaitable task.</returns>
-    Task SubscribeToDefinitionChanges(IProjectionDefinitionObserver subscriber);
+    Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
 }

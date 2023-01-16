@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Clients;
 public interface IWebSocketConnection : IDisposable
 {
     /// <summary>
+    /// Gets the unique <see cref="ConnectionId"/> for the client.
+    /// </summary>
+    ConnectionId ConnectionId { get; }
+
+    /// <summary>
     /// Gets whether or not the client is connected.
     /// </summary>
     bool IsConnected { get; }

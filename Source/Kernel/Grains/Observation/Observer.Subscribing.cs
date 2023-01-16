@@ -73,6 +73,11 @@ public partial class Observer
         State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
         await UnsubscribeStream();
+
+        if (_recoverReminder is not null)
+        {
+            await UnregisterReminder(_recoverReminder);
+        }
     }
 
     Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event)

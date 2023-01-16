@@ -15,6 +15,9 @@ public class InsideSiloClient : IClient
     public bool IsConnected => false;
 
     /// <inheritdoc/>
+    public ConnectionId ConnectionId => throw new NotImplementedException();
+
+    /// <inheritdoc/>
     public Task Connect() => Task.CompletedTask;
 
     /// <inheritdoc/>

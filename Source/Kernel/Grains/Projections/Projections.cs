@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Microsoft.Extensions.Logging;
@@ -73,34 +73,40 @@ public class Projections : Grain, IProjections
     }
 
     /// <inheritdoc/>
-    public async Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition)
+    public async Task Register(IEnumerable<ProjectionAndPipeline> registrations)
     {
-        _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
-        var projectionDefinitions = _projectionDefinitions();
-        var projectionPipelineDefinitions = _projectionPipelineDefinitions();
-
-        var isNew = !await projectionDefinitions.HasFor(projectionDefinition.Identifier);
-        var hasChanged = await projectionDefinitions.HasChanged(projectionDefinition);
-
-        if (hasChanged || isNew)
+        foreach (var registration in registrations)
         {
-            await projectionDefinitions.Register(projectionDefinition);
-            await projectionPipelineDefinitions.Register(pipelineDefinition);
+            var projectionDefinition = registration.Projection;
+            var pipelineDefinition = registration.Pipeline;
 
-            foreach (var tenant in _tenants.GetTenantIds())
+            _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
+            var projectionDefinitions = _projectionDefinitions();
+            var projectionPipelineDefinitions = _projectionPipelineDefinitions();
+
+            var isNew = !await projectionDefinitions.HasFor(projectionDefinition.Identifier);
+            var hasChanged = await projectionDefinitions.HasChanged(projectionDefinition);
+
+            if (hasChanged || isNew)
             {
-                var key = new ProjectionKey(_microserviceId, tenant, EventSequenceId.Log);
-                var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
-                await projection.Ensure();
-                await projection.RefreshDefinition();
-                if (isNew)
+                await projectionDefinitions.Register(projectionDefinition);
+                await projectionPipelineDefinitions.Register(pipelineDefinition);
+
+                foreach (var tenant in _tenants.GetTenantIds())
                 {
-                    _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
-                }
-                else
-                {
-                    _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-                    await projection.Rewind();
+                    var key = new ProjectionKey(_microserviceId, tenant, EventSequenceId.Log);
+                    var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
+                    await projection.Ensure();
+                    await projection.RefreshDefinition();
+                    if (isNew)
+                    {
+                        _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
+                    }
+                    else
+                    {
+                        _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
+                        await projection.Rewind();
+                    }
                 }
             }
         }

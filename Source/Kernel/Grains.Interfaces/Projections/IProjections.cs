@@ -20,12 +20,11 @@ public interface IProjections : IGrainWithGuidKey
     /// <summary>
     /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.
     /// </summary>
-    /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> to register.</param>
-    /// <param name="pipelineDefinition">The <see cref="ProjectionPipelineDefinition"/> for the projection.</param>
+    /// <param name="registrations">A collection of <see cref="ProjectionAndPipeline"/>.</param>
     /// <returns>Async task.</returns>
     /// <remarks>
-    /// If the projection is already in the system, it will look for changes in the definition differences
+    /// If any of the projections are already in the system, it will look for changes in the definition
     /// and possibly rewind the projection.
     /// </remarks>
-    Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
+    Task Register(IEnumerable<ProjectionAndPipeline> registrations);
 }

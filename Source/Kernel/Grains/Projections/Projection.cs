@@ -36,7 +36,7 @@ public class Projection : Grain, IProjection
     readonly IObjectsComparer _objectsComparer;
     readonly IEventSequenceStorageProvider _eventProvider;
     readonly IExecutionContextManager _executionContextManager;
-    readonly ObserverManager<IProjectionDefinitionObserver> _definitionObservers;
+    readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
     EngineProjection? _projection;
     IProjectionPipeline? _pipeline;
     IObserver? _observer;
@@ -98,7 +98,7 @@ public class Projection : Grain, IProjection
     }
 
     /// <inheritdoc/>
-    public Task SubscribeToDefinitionChanges(IProjectionDefinitionObserver subscriber)
+    public Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber)
     {
         _definitionObservers.Subscribe(subscriber, subscriber);
         return Task.CompletedTask;
@@ -114,7 +114,7 @@ public class Projection : Grain, IProjection
         _pipelineDefinition = await _projectionPipelineDefinitionsProvider().GetFor(_projectionId);
         _projection = await _projectionFactory.CreateFrom(_definition);
         _pipeline = _projectionPipelineFactory.CreateFrom(_projection, _pipelineDefinition);
-        _definitionObservers.Notify(_ => _.OnDefinitionsChanged());
+        _definitionObservers.Notify(_ => _.OnProjectionDefinitionsChanged());
     }
 
     /// <inheritdoc/>

@@ -38,6 +38,9 @@ public class WebSocketConnection : IWebSocketConnection
     TaskCompletionSource<bool>? _connectedCompletionSource;
 
     /// <inheritdoc/>
+    public ConnectionId ConnectionId { get; private set; } = ConnectionId.NotSet;
+
+    /// <inheritdoc/>
     public bool IsConnected { get; private set; }
 
     /// <summary>
@@ -129,7 +132,8 @@ public class WebSocketConnection : IWebSocketConnection
     void SendConnect()
     {
         _connectedCompletionSource = new TaskCompletionSource<bool>();
-        var info = new ClientInformation(_executionContextManager.Current.MicroserviceId, ConnectionId.New(), _version, _clientEndpoint.ToString());
+        ConnectionId = ConnectionId.New();
+        var info = new ClientInformation(_executionContextManager.Current.MicroserviceId, ConnectionId, _version, _clientEndpoint.ToString());
         var serialized = JsonSerializer.Serialize(info, _jsonSerializerOptions);
         _logger.SendingClientInformation(info.ClientVersion, info.MicroserviceId, info.ConnectionId);
         _webSocketClient?.Send(serialized);

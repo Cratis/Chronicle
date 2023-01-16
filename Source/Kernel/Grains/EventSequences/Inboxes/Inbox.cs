@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 public class Inbox : Grain, IInbox
 {
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public async Task Start()
     {
         var microserviceId = this.GetPrimaryKey(out var keyAsString);
         var key = InboxKey.Parse(keyAsString);
@@ -30,9 +30,7 @@ public class Inbox : Grain, IInbox
                 key.MicroserviceId,
                 key.TenantId));
 
+        await observer.SetMetadata($"Inbox for ${microserviceId}, Outbox from ${key.MicroserviceId} for Tenant ${key.TenantId}", ObserverType.Inbox);
         await observer.Subscribe<IInboxObserverSubscriber>(Enumerable.Empty<EventType>());
     }
-
-    /// <inheritdoc/>
-    public Task Start() => Task.CompletedTask;
 }

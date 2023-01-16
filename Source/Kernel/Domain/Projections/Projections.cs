@@ -63,13 +63,13 @@ public class Projections : Controller
         _executionContextManager.Establish(microserviceId);
 
         var projections = _grainFactory.GetGrain<IProjections>(microserviceId.Value);
-        foreach (var registration in payload.Projections)
-        {
-            var pipeline = registration.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions);
-            await projections.Register(
-                _projectionSerializer.Deserialize(registration.Projection),
-                registration.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!);
-        }
+        var projectionsAndPipelines = payload.Projections.Select(_ =>
+            new ProjectionAndPipeline(
+                _projectionSerializer.Deserialize(_.Projection),
+                _.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!
+            )).ToArray();
+
+        await projections.Register(projectionsAndPipelines);
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ public class Projections : Controller
             immediateProjection.ModelKey);
 
         var projectionDefinition = _projectionSerializer.Deserialize(immediateProjection.Projection);
-         var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
+        var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
         return await projection.GetModelInstance(projectionDefinition);
     }
 
