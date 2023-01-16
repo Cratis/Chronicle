@@ -18,6 +18,8 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
     readonly ObserverManager<INotifyClientObserverDisconnected> _clientObserverDisconnectedObservers;
     readonly ILogger<ClientObserver> _logger;
+    ObserverId? _observerId;
+    ObserverKey? _observerKey;
 
     public ClientObserver(ILogger<ClientObserver> logger)
     {
@@ -26,13 +28,20 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     }
 
     /// <inheritdoc/>
+    public override Task OnActivateAsync()
+    {
+        _observerId = this.GetPrimaryKey(out var keyAsString);
+        _observerKey = ObserverKey.Parse(keyAsString);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public async Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventType> eventTypes)
     {
-        var id = this.GetPrimaryKey(out var keyAsString);
-        var key = ObserverKey.Parse(keyAsString);
-        _logger.Starting(key.MicroserviceId, id, key.EventSequenceId, key.TenantId);
-        var observer = GrainFactory.GetGrain<IObserver>(id, key);
-        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(key.MicroserviceId);
+        _logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
+        var observer = GrainFactory.GetGrain<IObserver>(_observerId!, _observerKey!);
+        var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
         await connectedClients.SubscribeDisconnected(this);
         await observer.SetMetadata(name, ObserverType.Client);
         await observer.Subscribe<IClientObserverSubscriber>(eventTypes);
@@ -41,6 +50,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     /// <inheritdoc/>
     public void OnClientDisconnected(ConnectedClient client)
     {
+        _logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         _clientObserverDisconnectedObservers.Notify(_ => _.OnClientObserverDisconnected(client));
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverKey.Parse(keyAsString);
