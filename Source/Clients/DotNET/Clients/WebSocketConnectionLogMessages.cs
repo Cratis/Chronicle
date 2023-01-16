@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients;
 
-public static partial class WebSocketConnectionLogMessages
+internal static partial class WebSocketConnectionLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Connecting to Kernel over WebSockets @ '{Url}'")]
     internal static partial void Connecting(this ILogger<WebSocketConnection> logger, Uri url);

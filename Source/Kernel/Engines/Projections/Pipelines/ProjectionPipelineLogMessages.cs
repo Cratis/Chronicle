@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 /// <summary>
 /// Holds log messages for <see cref="ProjectionPipeline"/>.
 /// </summary>
-public static partial class ProjectionPipelineLogMessages
+internal static partial class ProjectionPipelineLogMessages
 {
     [LoggerMessage(0, LogLevel.Debug, "Handling event with sequence number {SequenceNumber}")]
     internal static partial void HandlingEvent(this ILogger<ProjectionPipeline> logger, ulong sequenceNumber);

@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 /// <summary>
 /// Holds the log messages for <see cref="MongoDBObserversState"/>.
 /// </summary>
-public static partial class MongoDBObserversStateLogMessages
+internal static partial class MongoDBObserversStateLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Lost watch connection")]
     internal static partial void WatchConnectionLost(this ILogger<MongoDBObserversState> logger, Exception exception);

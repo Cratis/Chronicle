@@ -8,7 +8,7 @@ namespace Microsoft.Extensions.Hosting;
 /// <summary>
 /// Holds the log messages for HostBuilderExtensions.
 /// </summary>
-public static partial class HostBuilderExtensionsLogMessages
+internal static partial class HostBuilderExtensionsLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Setting up Aksio defaults")]
     internal static partial void SettingUpDefaults(this ILogger logger);

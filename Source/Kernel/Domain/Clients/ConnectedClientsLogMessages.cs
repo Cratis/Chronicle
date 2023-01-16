@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Domain.Clients;
 
-public static partial class ConnectedClientsLogMessages
+internal static partial class ConnectedClientsLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Client (v{Version}) for microservice '{MicroserviceId}' connected with connection identifier '{ConnectionId}'")]
     internal static partial void ClientConnected(this ILogger<ConnectedClients> logger, string version, string microserviceId, string connectionId);

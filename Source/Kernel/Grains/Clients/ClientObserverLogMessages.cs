@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 
-public static partial class ClientObserverLogMessages
+internal static partial class ClientObserverLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Starting client observer {observerId} for microservice {microserviceId} on sequence {eventSequenceId} for tenant {tenantId}")]
     internal static partial void Starting(this ILogger<ClientObserver> logger, MicroserviceId microserviceId, ObserverId observerId, EventSequenceId eventSequenceId, TenantId tenantId);

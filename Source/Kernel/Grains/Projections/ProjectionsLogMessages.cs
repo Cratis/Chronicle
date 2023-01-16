@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Holds log messages for <see cref="Projections"/>.
 /// </summary>
-public static partial class ProjectionsLogMessages
+internal static partial class ProjectionsLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Registering projection '{Name} ({Identifier})'")]
     internal static partial void Registering(this ILogger<Projections> logger, ProjectionId identifier, ProjectionName name);

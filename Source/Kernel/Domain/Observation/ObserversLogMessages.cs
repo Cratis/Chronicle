@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Domain.Observation;
 
-public static partial class ObserversLogMessages
+internal static partial class ObserversLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Registering observers")]
     internal static partial void RegisterObservers(this ILogger<Observers> logger);
