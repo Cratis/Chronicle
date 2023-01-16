@@ -201,7 +201,6 @@ public class SingleKernelClient : IClient, IDisposable
         }
     }
 
-
     void ThrowIfClientIsDisconnected()
     {
         if (!IsConnected)
