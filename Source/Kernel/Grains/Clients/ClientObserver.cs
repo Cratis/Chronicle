@@ -17,11 +17,12 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
     readonly ObserverManager<INotifyClientObserverDisconnected> _clientObserverDisconnectedObservers;
-    private ConnectionId _connectionId = ConnectionId.NotSet;
+    readonly ILogger<ClientObserver> _logger;
 
     public ClientObserver(ILogger<ClientObserver> logger)
     {
         _clientObserverDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientObserverDisconnectedObservers");
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -29,9 +30,9 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     {
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverKey.Parse(keyAsString);
+        _logger.Starting(key.MicroserviceId, id, key.EventSequenceId, key.TenantId);
         var observer = GrainFactory.GetGrain<IObserver>(id, key);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(key.MicroserviceId);
-        _connectionId = connectionId;
         await connectedClients.SubscribeDisconnected(this);
         await observer.SetMetadata(name, ObserverType.Client);
         await observer.Subscribe<IClientObserverSubscriber>(eventTypes);
