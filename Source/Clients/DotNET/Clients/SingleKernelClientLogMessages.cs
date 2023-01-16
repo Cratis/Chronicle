@@ -20,11 +20,20 @@ public static partial class SingleKernelClientLogMessages
     internal static partial void PerformingQuery(this ILogger<SingleKernelClient> logger, string endpoint, string route);
 
     [LoggerMessage(4, LogLevel.Trace, "Result of performing command '{Route}' - Success: '{Success}'")]
-    internal static  partial void CommandResult(this ILogger<SingleKernelClient> logger, string route, bool success);
+    internal static partial void CommandResult(this ILogger<SingleKernelClient> logger, string route, bool success);
 
-    [LoggerMessage(4, LogLevel.Trace, "Result of performing command '{Route}' - Exceptions: '{Exceptions}'")]
-    internal static  partial void CommandResultExceptions(this ILogger<SingleKernelClient> logger, string route, IEnumerable<string> exceptions);
+    [LoggerMessage(5, LogLevel.Trace, "Result of performing command '{Route}' - Exceptions: '{Exceptions}'")]
+    internal static partial void CommandResultExceptions(this ILogger<SingleKernelClient> logger, string route, IEnumerable<string> exceptions);
 
-    [LoggerMessage(5, LogLevel.Trace, "Result of performing command '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
-    internal static  partial void CommandResultValidationError(this ILogger<SingleKernelClient> logger, string route, string members, string message);
+    [LoggerMessage(6, LogLevel.Trace, "Result of performing command '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
+    internal static partial void CommandResultValidationError(this ILogger<SingleKernelClient> logger, string route, string members, string message);
+
+    [LoggerMessage(7, LogLevel.Trace, "Result of performing query '{Route}' - Success: '{Success}'")]
+    internal static partial void QueryResult(this ILogger<SingleKernelClient> logger, string route, bool success);
+
+    [LoggerMessage(8, LogLevel.Trace, "Result of performing query '{Route}' - Exceptions: '{Exceptions}'")]
+    internal static partial void QueryResultExceptions(this ILogger<SingleKernelClient> logger, string route, IEnumerable<string> exceptions);
+
+    [LoggerMessage(9, LogLevel.Trace, "Result of performing query '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
+    internal static partial void QueryResultValidationError(this ILogger<SingleKernelClient> logger, string route, string members, string message);
 }
