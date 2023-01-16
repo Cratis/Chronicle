@@ -3,8 +3,10 @@
 
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Observation;
+using Microsoft.Extensions.Logging;
 using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
@@ -15,8 +17,16 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 public class ClientObserverSubscriber : Grain, IClientObserverSubscriber, INotifyClientObserverDisconnected
 {
     readonly List<ConnectedClient> _clients = new();
-
+    readonly ILogger<ClientObserverSubscriber> _logger;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
+    ObserverId _observerId = ObserverId.Unspecified;
+    TenantId _tenantId = TenantId.NotSet;
+    EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
+
+    public ClientObserverSubscriber(ILogger<ClientObserverSubscriber> logger)
+    {
+        _logger = logger;
+    }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync()
@@ -24,6 +34,9 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber, INotif
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
         _microserviceId = key.MicroserviceId;
+        _observerId = id;
+        _tenantId = key.TenantId;
+        _eventSequenceId = key.EventSequenceId;
 
         var clientObserver = GrainFactory.GetGrain<IClientObserver>(id, new ObserverKey(
             key.MicroserviceId,
@@ -55,6 +68,14 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber, INotif
             var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
             _clients.AddRange(await connectedClients.GetAllConnectedClients());
         }
+
+        _logger.EventReceived(
+            _observerId,
+            _microserviceId,
+            _tenantId,
+            @event.Metadata.Type.Id,
+            _eventSequenceId,
+            @event.Context.SequenceNumber);
 
         // Call client
     }

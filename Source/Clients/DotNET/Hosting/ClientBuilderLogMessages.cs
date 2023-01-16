@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Hosting;
 /// <summary>
 /// Holds log messages for <see cref="ClientBuilder"/>.
 /// </summary>
-public static partial class ClientBuilderLogMessages
+internal static partial class ClientBuilderLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Configuring Cratis client")]
     internal static partial void Configuring(this ILogger logger);

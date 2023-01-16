@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Hosting;
 /// <summary>
 /// Holds the log messages for <see cref="MongoDBReadModels"/>.
 /// </summary>
-public static partial class MongoDBReadModelsLogMessages
+internal static partial class MongoDBReadModelsLogMessages
 {
     [LoggerMessage(0, LogLevel.Debug, "Adding binding for IMongoCollection<{Type}> using collection {CollectionName}")]
     internal static partial void AddingMongoDBCollectionBinding(this ILogger logger, Type type, string collectionName);

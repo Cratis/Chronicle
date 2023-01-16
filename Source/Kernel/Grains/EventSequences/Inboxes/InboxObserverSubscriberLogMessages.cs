@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// <summary>
 /// Holds log messages for <see cref="Inbox"/>.
 /// </summary>
-public static partial class InboxObserverSubscriberLogMessages
+internal static partial class InboxObserverSubscriberLogMessages
 {
     [LoggerMessage(0, LogLevel.Debug, "Forwarding event ({EventName}-{EventTypeId}) with sequence number from origin {SequenceNumber} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
     internal static partial void ForwardingEvent(this ILogger<InboxObserverSubscriber> logger, TenantId tenantId, MicroserviceId microserviceId, EventTypeId eventTypeId, string eventName, EventSequenceNumber sequenceNumber);

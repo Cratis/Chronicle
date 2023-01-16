@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// <summary>
 /// Holds log messages for <see cref="EventSequence"/>.
 /// </summary>
-public static partial class EventSequenceLogMessages
+internal static partial class EventSequenceLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Appending '{EventName}-{EventType}' for EventSource {EventSource} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for microservice {MicroserviceId} on tenant {TenantId}")]
     internal static partial void Appending(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventType eventType, string eventName, EventSourceId eventSource, ulong sequenceNumber);

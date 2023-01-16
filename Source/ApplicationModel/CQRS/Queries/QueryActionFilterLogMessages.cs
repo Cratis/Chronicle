@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Applications.Queries;
 /// <summary>
 /// Log messages for <see cref="QueryActionFilter"/>.
 /// </summary>
-public static partial class QueryActionFilterLogMessages
+internal static partial class QueryActionFilterLogMessages
 {
     [LoggerMessage(0, LogLevel.Trace, "Controller {Controller} with action {Action} returns a client observable")]
     internal static partial void ClientObservableReturnValue(this ILogger<QueryActionFilter> logger, string controller, string action);

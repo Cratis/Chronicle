@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Server;
 /// <summary>
 /// Log messages for Startup.
 /// </summary>
-public static partial class StartupLogMessages
+internal static partial class StartupLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Kernel is configured with advertised IP: '{AdvertisedIP}'")]
     internal static partial void UsingAdvertisedIP(this ILogger<Startup> logger, string advertisedIP);

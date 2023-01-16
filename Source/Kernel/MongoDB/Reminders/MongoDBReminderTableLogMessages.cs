@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Reminders;
 /// <summary>
 /// Holds log messages for <see cref="MongoDBReminderTable"/>.
 /// </summary>
-public static partial class MongoDBReminderTableLogMessages
+internal static partial class MongoDBReminderTableLogMessages
 {
     [LoggerMessage(0, LogLevel.Trace, "Upserting reminder with key '{Key}'")]
     internal static partial void Upserting(this ILogger<MongoDBReminderTable> logger, string key);

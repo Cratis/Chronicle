@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections;
 /// <summary>
 /// Holds log messages for <see cref="Projection"/>.
 /// </summary>
-public static partial class ProjectionLogMessages
+internal static partial class ProjectionLogMessages
 {
     [LoggerMessage(0, LogLevel.Debug, "Running projection pipeline with identifier '{Identifier}' - name '{Name}'")]
     internal static partial void Running(this ILogger<Projection> logger, ProjectionId identifier, ProjectionName name);

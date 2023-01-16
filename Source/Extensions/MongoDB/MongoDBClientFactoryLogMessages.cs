@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Extensions.MongoDB;
 /// <summary>
 /// Holds all log messages for <see cref="MongoDBClientFactory"/>.
 /// </summary>
-public static partial class MongoDBClientFactoryLogMessages
+internal static partial class MongoDBClientFactoryLogMessages
 {
     [LoggerMessage(0, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' started. Details : {Command}")]
     internal static partial void CommandStarted(this ILogger<MongoDBClientFactory> logger, int requestId, string commandName, string command);

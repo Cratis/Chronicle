@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Orleans.Observers;
 /// <summary>
 /// Holds log messages for <see cref="ObserverManager{T}"/>.
 /// </summary>
-public static partial class ObserverManagerLogMessages
+internal static partial class ObserverManagerLogMessages
 {
     [LoggerMessage(0, LogLevel.Debug, "{Prefix}: Updating entry for {Address}/{Observer}. {Count} total subscribers.")]
     internal static partial void UpdatingEntry(this ILogger logger, string prefix, object address, object observer, int count);

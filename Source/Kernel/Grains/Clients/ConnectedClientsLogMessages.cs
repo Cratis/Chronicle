@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 /// <summary>
 /// Holds log messages for <see cref="ConnectedClients"/>.
 /// </summary>
-public static partial class ConnectedClientsLogMessages
+internal static partial class ConnectedClientsLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Connected client for microservice '{MicroserviceId}' with connection identifier '{ConnectionId}'.")]
     internal static partial void ClientConnected(this ILogger<ConnectedClients> logger, string microserviceId, string connectionId);
