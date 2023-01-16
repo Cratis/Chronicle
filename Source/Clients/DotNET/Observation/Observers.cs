@@ -73,12 +73,12 @@ public class Observers : IParticipateInClientLifecycle
 
         var microserviceId = _executionContextManager.Current.MicroserviceId;
         var route = $"/api/events/store/{microserviceId}/observers/register/{_client.ConnectionId}";
-        var registrations = new ObserversRegistration(_observerHandlers.Select(_ => new ClientObserverRegistration(
+        var registrations = _observerHandlers.Select(_ => new ClientObserverRegistration(
             _.ObserverId,
             _.Name,
             _.EventSequenceId,
             _.EventTypes
-        )));
+        ));
         await _client.PerformCommand(route, registrations);
     }
 
