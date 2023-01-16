@@ -158,7 +158,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
             var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
 
-            if (State.NextEventSequenceNumber == nextSequenceNumber + 1)
+            if (State.NextEventSequenceNumber == nextSequenceNumber + 1 && State.RunningState != ObserverRunningState.Active)
             {
                 State.RunningState = ObserverRunningState.Active;
                 _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
