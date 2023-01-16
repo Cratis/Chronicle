@@ -11,14 +11,14 @@ namespace Aksio.Cratis.Extensions.MongoDB;
 public static partial class MongoDBClientFactoryLogMessages
 {
     [LoggerMessage(0, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' started. Details : {Command}")]
-    public static partial void CommandStarted(this ILogger logger, int requestId, string commandName, string command);
+    internal static partial void CommandStarted(this ILogger<MongoDBClientFactory> logger, int requestId, string commandName, string command);
 
     [LoggerMessage(1, LogLevel.Error, "Command ({RequestId}) '{CommandName}' failed with '{failure}'")]
-    public static partial void CommandFailed(this ILogger logger, int requestId, string commandName, string failure);
+    internal static partial void CommandFailed(this ILogger<MongoDBClientFactory> logger, int requestId, string commandName, string failure);
 
     [LoggerMessage(2, LogLevel.Trace, "Command ({RequestId}) '{CommandName}' succeeded.")]
-    public static partial void CommandSucceeded(this ILogger logger, int requestId, string commandName);
+    internal static partial void CommandSucceeded(this ILogger<MongoDBClientFactory> logger, int requestId, string commandName);
 
     [LoggerMessage(3, LogLevel.Trace, "Creating MongoClient for connecting to '{Address}'")]
-    public static partial void CreateClient(this ILogger logger, string address);
+    internal static partial void CreateClient(this ILogger<MongoDBClientFactory> logger, string address);
 }

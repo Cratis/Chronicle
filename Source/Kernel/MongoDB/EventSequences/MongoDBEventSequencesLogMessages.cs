@@ -13,8 +13,8 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 public static partial class MongoDBEventSequencesLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Appending event with '{SequenceNumber}' as sequence number for sequence '{EventSequenceId}' in microservice '{MicroserviceId}' for tenant '{TenantId}'")]
-    internal static partial void Appending(this ILogger logger, ulong sequenceNumber, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId);
+    internal static partial void Appending(this ILogger<MongoDBEventSequences> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId);
 
     [LoggerMessage(1, LogLevel.Error, "Problem appending event with '{SequenceNumber}' as sequence number for sequence '{EventSequenceId}' in microservice '{MicroserviceId}' for tenant '{TenantId}'")]
-    internal static partial void AppendFailure(this ILogger logger, ulong sequenceNumber, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, Exception exception);
+    internal static partial void AppendFailure(this ILogger<MongoDBEventSequences> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, Exception exception);
 }
