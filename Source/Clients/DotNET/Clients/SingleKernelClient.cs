@@ -131,6 +131,23 @@ public class SingleKernelClient : IClient, IDisposable
             response = await client.PostAsync(route, null);
         }
         var result = await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions);
+        _logger.CommandResult(route, result?.IsSuccess ?? false);
+        if (result?.IsSuccess == false)
+        {
+            if (result.HasExceptions)
+            {
+                _logger.CommandResultExceptions(route, result.ExceptionMessages);
+            }
+
+            if (!result.IsValid)
+            {
+                foreach (var validationError in result.ValidationErrors)
+                {
+                    _logger.CommandResultValidationError(route, string.Join(',', validationError.MemberNames), validationError.Message);
+                }
+            }
+        }
+
         return result!;
     }
 
