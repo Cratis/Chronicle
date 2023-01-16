@@ -88,7 +88,6 @@ public class ClientBuilder : IClientBuilder
             .AddTransient<IEventStore, EventStore>()
             .AddSingleton(types)
             .AddSingleton<IClientLifecycle, ClientLifecycle>()
-            .AddSingleton<IObservers, Observers>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()

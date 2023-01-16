@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Clients;
 public record ConnectionId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
+    /// Represents a connection identifier that has not been set.
+    /// </summary>
+    public static readonly ConnectionId NotSet = new(Guid.Empty);
+
+    /// <summary>
     /// Create a new unique <see cref="ConnectionId"/>.
     /// </summary>
     /// <returns>A new <see cref="ConnectionId"/>.</returns>

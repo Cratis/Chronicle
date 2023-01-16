@@ -97,13 +97,18 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     }
 
     /// <inheritdoc/>
-    public override Task OnDeactivateAsync()
+    public override async Task OnDeactivateAsync()
     {
         _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
-        // Unsubscribe Stream
-        // Unregister Reminders
-        return Task.CompletedTask;
+        State.RunningState = ObserverRunningState.Disconnected;
+        await WriteStateAsync();
+        await UnsubscribeStream();
+
+        if (_recoverReminder is not null)
+        {
+            await UnregisterReminder(_recoverReminder);
+        }
     }
 
     /// <inheritdoc/>

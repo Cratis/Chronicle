@@ -17,7 +17,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionObserverSubscriber"/>.
 /// </summary>
-public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber, IProjectionDefinitionObserver
+public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
     readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitionsProvider;
@@ -55,13 +55,13 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
         var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
-        await projection.SubscribeToDefinitionChanges(this);
+        await projection.SubscribeDefinitionsChanged(this);
 
         await HandleDefinitionsAndInstances();
     }
 
     /// <inheritdoc/>
-    public void OnDefinitionsChanged()
+    public void OnProjectionDefinitionsChanged()
     {
         Task.Run(HandleDefinitionsAndInstances);
     }

@@ -33,4 +33,38 @@ public interface IConnectedClients : IGrainWithGuidKey
     /// <param name="connectionId">The connection identifier.</param>
     /// <returns>Awaitable task.</returns>
     Task OnClientPing(ConnectionId connectionId);
+
+    /// <summary>
+    /// Subscribe to when a client is disconnected.
+    /// </summary>
+    /// <param name="subscriber">Subscriber to notify.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeDisconnected(INotifyClientDisconnected subscriber);
+
+    /// <summary>
+    /// Unsubscribe to when a client is disconnected.
+    /// </summary>
+    /// <param name="subscriber">Subscriber to notify.</param>
+    /// <returns>Awaitable task.</returns>
+    Task UnsubscribeDisconnected(INotifyClientDisconnected subscriber);
+
+    /// <summary>
+    /// Check whether or not a client by its <see cref="ConnectionId"/> is connected.
+    /// </summary>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> to check.</param>
+    /// <returns>True if connected, false if not.</returns>
+    Task<bool> IsConnected(ConnectionId connectionId);
+
+    /// <summary>
+    /// Gets the <see cref="ConnectedClient"/> from the <see cref="ConnectionId"/>.
+    /// </summary>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to get for.</param>
+    /// <returns>The <see cref="ConnectedClient"/> associated with the <see cref="ConnectionId"/>.</returns>
+    Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId);
+
+    /// <summary>
+    /// Gets all the connected clients.
+    /// </summary>
+    /// <returns>A collection of <see cref="ConnectedClient"/>.</returns>
+    Task<IEnumerable<ConnectedClient>> GetAllConnectedClients();
 }

@@ -34,6 +34,9 @@ public class SingleKernelClient : IClient, IDisposable
     /// <inheritdoc/>
     public bool IsConnected => _connection?.IsConnected ?? false;
 
+    /// <inheritdoc/>
+    public ConnectionId ConnectionId => _connection?.ConnectionId ?? ConnectionId.NotSet;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
     /// </summary>

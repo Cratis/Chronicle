@@ -10,4 +10,4 @@ namespace Aksio.Cratis.Clients;
 /// <param name="ClientUri">The uri of the client.</param>
 /// <param name="Version">Version of the client.</param>
 /// <param name="LastSeen">The date and time the client was last seen.</param>
-public record ConnectedClient(ConnectionId ConnectionId, string ClientUri, string Version, DateTimeOffset LastSeen);
+public record ConnectedClient(ConnectionId ConnectionId, Uri ClientUri, string Version, DateTimeOffset LastSeen);

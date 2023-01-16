@@ -1,8 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Clients;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Orleans.Observers;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
@@ -16,6 +17,7 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 {
     readonly ILogger<ConnectedClients> _logger;
+    readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
@@ -24,10 +26,8 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     public ConnectedClients(ILogger<ConnectedClients> logger)
     {
         _logger = logger;
+        _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientDisconnectedObservers");
     }
-
-    /// <inheritdoc/>
-    public override Task OnActivateAsync() => base.OnActivateAsync();
 
     /// <inheritdoc/>
     public async Task OnClientConnected(ConnectionId connectionId, Uri clientUri, string version)
@@ -35,7 +35,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
         _logger.ClientConnected(microserviceId, connectionId);
-        State.Clients.Add(new ConnectedClient(connectionId, clientUri.ToString(), version, DateTimeOffset.UtcNow));
+        State.Clients.Add(new ConnectedClient(connectionId, clientUri, version, DateTimeOffset.UtcNow));
 
         await WriteStateAsync();
     }
@@ -50,9 +50,10 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         if (client is not null)
         {
             State.Clients.Remove(client);
-        }
 
-        await WriteStateAsync();
+            await WriteStateAsync();
+            _clientDisconnectedObservers.Notify(_ => _.OnClientDisconnected(client));
+        }
     }
 
     /// <inheritdoc/>
@@ -67,4 +68,27 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 
         await WriteStateAsync();
     }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(State.Clients.AsEnumerable());
+
+    /// <inheritdoc/>
+    public Task SubscribeDisconnected(INotifyClientDisconnected subscriber)
+    {
+        _clientDisconnectedObservers.Subscribe(subscriber, subscriber);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task UnsubscribeDisconnected(INotifyClientDisconnected subscriber)
+    {
+        _clientDisconnectedObservers.Unsubscribe(subscriber);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(State.Clients.Any(_ => _.ConnectionId == connectionId));
+
+    /// <inheritdoc/>
+    public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(State.Clients.First(_ => _.ConnectionId == connectionId));
 }

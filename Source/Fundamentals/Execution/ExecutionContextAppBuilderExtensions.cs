@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder;
 
@@ -23,6 +24,8 @@ public static class ExecutionContextAppBuilderExtensions
     /// </remarks>
     public static IApplicationBuilder UseExecutionContext(this IApplicationBuilder app)
     {
+        var executionContextManager = app.ApplicationServices.GetRequiredService<IExecutionContextManager>();
+        executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
         app.Use(async (context, next) =>
         {
             var tenantId = TenantId.Development;
@@ -31,9 +34,7 @@ public static class ExecutionContextAppBuilderExtensions
             {
                 tenantId = context.Request.Headers[TenantIdHeader][0];
             }
-
-            var executionContextManager = app.ApplicationServices.GetService(typeof(IExecutionContextManager)) as IExecutionContextManager;
-            executionContextManager!.Establish(tenantId, CorrelationId.New());
+            executionContextManager.Establish(tenantId, CorrelationId.New());
 
             try
             {
