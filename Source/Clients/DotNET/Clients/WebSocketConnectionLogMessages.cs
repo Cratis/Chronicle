@@ -8,17 +8,17 @@ namespace Aksio.Cratis.Clients;
 public static partial class WebSocketConnectionLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Connecting to Kernel over WebSockets @ '{Url}'")]
-    public static partial void Connecting(this ILogger<WebSocketConnection> logger, Uri url);
+    internal static partial void Connecting(this ILogger<WebSocketConnection> logger, Uri url);
 
     [LoggerMessage(1, LogLevel.Information, "Kernel responded with connected")]
-    public static partial void Connected(this ILogger<WebSocketConnection> logger);
+    internal static partial void Connected(this ILogger<WebSocketConnection> logger);
 
     [LoggerMessage(2, LogLevel.Information, "Kernel reconnected")]
-    public static partial void Reconnected(this ILogger<WebSocketConnection> logger);
+    internal static partial void Reconnected(this ILogger<WebSocketConnection> logger);
 
     [LoggerMessage(3, LogLevel.Information, "Kernel disconnected")]
-    public static partial void Disconnected(this ILogger<WebSocketConnection> logger);
+    internal static partial void Disconnected(this ILogger<WebSocketConnection> logger);
 
     [LoggerMessage(4, LogLevel.Information, "Send client information (Client version: '{ClientVersion}', MicroserviceId: '{MicroserviceId}', ConnectionId: '{ConnectionId}'")]
-    public static partial void SendingClientInformation(this ILogger<WebSocketConnection> logger, string clientVersion, string microserviceId, string connectionId);
+    internal static partial void SendingClientInformation(this ILogger<WebSocketConnection> logger, string clientVersion, string microserviceId, string connectionId);
 }

@@ -12,11 +12,11 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 public static partial class ProjectionsLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Registering projection '{Name} ({Identifier})'")]
-    internal static partial void Registering(this ILogger logger, ProjectionId identifier, ProjectionName name);
+    internal static partial void Registering(this ILogger<Projections> logger, ProjectionId identifier, ProjectionName name);
 
     [LoggerMessage(1, LogLevel.Information, "Projection '{Name} ({Identifier})' is a new projection")]
-    internal static partial void ProjectionIsNew(this ILogger logger, ProjectionId identifier, ProjectionName name);
+    internal static partial void ProjectionIsNew(this ILogger<Projections> logger, ProjectionId identifier, ProjectionName name);
 
     [LoggerMessage(2, LogLevel.Information, "Registering projection '{Name} ({Identifier})' has changed its definition")]
-    internal static partial void ProjectionHasChanged(this ILogger logger, ProjectionId identifier, ProjectionName name);
+    internal static partial void ProjectionHasChanged(this ILogger<Projections> logger, ProjectionId identifier, ProjectionName name);
 }
