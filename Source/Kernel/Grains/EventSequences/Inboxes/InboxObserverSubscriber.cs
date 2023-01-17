@@ -18,12 +18,12 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 /// </summary>
 public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
 {
-    readonly ISchemaStore _schemaStore;
-    readonly ProviderFor<ISchemaStore> _sourceSchemaStoreProvider;
+    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly ILogger<InboxObserverSubscriber> _logger;
     IEventSequence? _inboxEventSequence;
+    ISchemaStore? _schemaStore;
     ISchemaStore? _sourceSchemaStore;
     MicroserviceId? _microserviceId;
     ObserverSubscriberKey? _key;
@@ -31,20 +31,17 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
     /// <summary>
     /// Initializes a new instance of the <see cref="InboxObserverSubscriber"/> class.
     /// </summary>
-    /// <param name="schemaStore"><see cref="ISchemaStore"/> for event schemas.</param>
-    /// <param name="sourceSchemaStoreProvider">Provider for <see cref="ISchemaStore"/> for getting schema stores for other microservices.</param>
+    /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for getting schema stores for other microservices.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger">Logger for logging.</param>
     public InboxObserverSubscriber(
-        ISchemaStore schemaStore,
-        ProviderFor<ISchemaStore> sourceSchemaStoreProvider,
+        ProviderFor<ISchemaStore> schemaStoreProvider,
         IExecutionContextManager executionContextManager,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<InboxObserverSubscriber> logger)
     {
-        _schemaStore = schemaStore;
-        _sourceSchemaStoreProvider = sourceSchemaStoreProvider;
+        _schemaStoreProvider = schemaStoreProvider;
         _executionContextManager = executionContextManager;
         _expandoObjectConverter = expandoObjectConverter;
         _logger = logger;
@@ -60,8 +57,11 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
             EventSequenceId.Inbox,
             keyExtension: new MicroserviceAndTenant(_microserviceId, _key.TenantId));
 
+        _executionContextManager.Establish(_microserviceId);
+        _schemaStore = _schemaStoreProvider();
+
         _executionContextManager.Establish(_key.MicroserviceId);
-        _sourceSchemaStore = _sourceSchemaStoreProvider();
+        _sourceSchemaStore = _schemaStoreProvider();
 
         return Task.CompletedTask;
     }
@@ -73,14 +73,14 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
 
         EventSchema eventSchema;
 
-        if (!await _schemaStore.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation) && _sourceSchemaStore is not null)
+        if (!await _schemaStore!.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation))
         {
-            eventSchema = await _sourceSchemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+            eventSchema = await _sourceSchemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
             await _schemaStore.Register(eventSchema.Type, eventSchema.Schema.GetDisplayName(), eventSchema.Schema);
         }
         else
         {
-            eventSchema = await _schemaStore.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+            eventSchema = await _schemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
         }
 
         _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);
