@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Clients;
 /// <summary>
 /// Extension methods for configuring the Cratis Kernel.
 /// </summary>
-public static class ClientServiceProviderExtensions
+public static class ClientServiceCollectionExtensions
 {
     /// <summary>
     /// Add the Cratis Kernel client.

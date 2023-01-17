@@ -16,14 +16,16 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 /// </summary>
 public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
-    readonly ObserverManager<INotifyClientObserverDisconnected> _clientObserverDisconnectedObservers;
     readonly ILogger<ClientObserver> _logger;
     ObserverId? _observerId;
     ObserverKey? _observerKey;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClientObserver"/> class.
+    /// </summary>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObserver(ILogger<ClientObserver> logger)
     {
-        _clientObserverDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientObserverDisconnectedObservers");
         _logger = logger;
     }
 
@@ -51,17 +53,9 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     public void OnClientDisconnected(ConnectedClient client)
     {
         _logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
-        _clientObserverDisconnectedObservers.Notify(_ => _.OnClientObserverDisconnected(client));
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverKey.Parse(keyAsString);
         var observer = GrainFactory.GetGrain<IObserver>(id, key);
         observer.Unsubscribe();
-    }
-
-    /// <inheritdoc/>
-    public Task SubscribeDisconnected(INotifyClientObserverDisconnected subscriber)
-    {
-        _clientObserverDisconnectedObservers.Subscribe(subscriber, subscriber);
-        return Task.CompletedTask;
     }
 }

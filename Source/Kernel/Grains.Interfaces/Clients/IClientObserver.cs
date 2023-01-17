@@ -21,11 +21,4 @@ public interface IClientObserver : IGrainWithGuidCompoundKey
     /// <param name="eventTypes">The <see cref="EventType">event types</see> the observer is expecting.</param>
     /// <returns>Awaitable task.</returns>
     Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventType> eventTypes);
-
-    /// <summary>
-    /// Subscribe to when the client observer is disconnected.
-    /// </summary>
-    /// <param name="subscriber"><see cref="INotifyClientObserverDisconnected"/> as subscriber.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SubscribeDisconnected(INotifyClientObserverDisconnected subscriber);
 }
