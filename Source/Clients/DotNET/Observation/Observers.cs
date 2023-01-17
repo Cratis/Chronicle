@@ -13,12 +13,15 @@ namespace Aksio.Cratis.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="Observers"/>.
 /// </summary>
-public class Observers : IParticipateInClientLifecycle
+[Singleton]
+public class Observers : IObservers, IParticipateInClientLifecycle
 {
-    readonly IEnumerable<ObserverHandler> _observerHandlers;
     readonly IExecutionContextManager _executionContextManager;
     readonly IClient _client;
     readonly ILogger<Observers> _logger;
+
+    /// <inheritdoc/>
+    public IEnumerable<ObserverHandler> Handlers { get; }
 
     /// <summary>
     /// Initializes a new instance of <see cref="Observers"/>.
@@ -41,7 +44,7 @@ public class Observers : IParticipateInClientLifecycle
         IClient client,
         ILogger<Observers> logger)
     {
-        _observerHandlers = types.AllObservers()
+        Handlers = types.AllObservers()
                             .Select(_ =>
                             {
                                 var observer = _.GetCustomAttribute<ObserverAttribute>()!;
@@ -63,7 +66,7 @@ public class Observers : IParticipateInClientLifecycle
     {
         _logger.RegisterObservers();
 
-        foreach (var observerHandler in _observerHandlers)
+        foreach (var observerHandler in Handlers)
         {
             _logger.RegisterObserver(
                 observerHandler.ObserverId,
@@ -73,7 +76,7 @@ public class Observers : IParticipateInClientLifecycle
 
         var microserviceId = _executionContextManager.Current.MicroserviceId;
         var route = $"/api/events/store/{microserviceId}/observers/register/{_client.ConnectionId}";
-        var registrations = _observerHandlers.Select(_ => new ClientObserverRegistration(
+        var registrations = Handlers.Select(_ => new ClientObserverRegistration(
             _.ObserverId,
             _.Name,
             _.EventSequenceId,

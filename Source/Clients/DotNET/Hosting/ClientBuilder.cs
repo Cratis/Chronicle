@@ -94,9 +94,8 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>();
-
-        types.AllObservers().ForEach(_ => services.AddTransient(_));
+            .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
+            .AddObservers(types);
 
         logger?.ConfiguringCompliance();
 
