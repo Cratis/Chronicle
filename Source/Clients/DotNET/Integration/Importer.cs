@@ -13,8 +13,8 @@ public class Importer : IImporter
 {
     readonly IObjectsComparer _objectsComparer;
     readonly IAdapters _adapters;
-    readonly IEventSequence _eventLog;
-    readonly IEventSequence _eventOutbox;
+    readonly IEventLog _eventLog;
+    readonly IEventOutbox _eventOutbox;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Importer"/> class.
@@ -26,8 +26,8 @@ public class Importer : IImporter
     public Importer(
         IAdapters adapters,
         IObjectsComparer objectsComparer,
-        IEventSequence eventLog,
-        IEventSequence eventOutbox)
+        IEventLog eventLog,
+        IEventOutbox eventOutbox)
     {
         _objectsComparer = objectsComparer;
         _adapters = adapters;
