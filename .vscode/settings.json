@@ -61,6 +61,7 @@
         "datetime",
         "decryptor",
         "deref",
+        "discoverability",
         "downcaster",
         "echarts",
         "encryptor",
