@@ -56,8 +56,8 @@ public record ObserverSubscriberKey(
         TenantId? sourceTenantId = null;
         if (elements.Length > 4)
         {
-            sourceMicroserviceId = (MicroserviceId)elements[3];
-            sourceTenantId = (TenantId)elements[4];
+            sourceMicroserviceId = (MicroserviceId)elements[4];
+            sourceTenantId = (TenantId)elements[5];
         }
         return new(microserviceId, tenantId, eventSequenceId, eventSourceId, sourceMicroserviceId, sourceTenantId);
     }
