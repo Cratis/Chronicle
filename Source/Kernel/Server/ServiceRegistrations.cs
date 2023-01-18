@@ -14,7 +14,7 @@ using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 
-namespace Aksio.Cratis.Server;
+namespace Aksio.Cratis.Kernel.Server;
 
 /// <summary>
 /// Represents an Autofac <see cref="Module"/> for configuring service registrations for the server.

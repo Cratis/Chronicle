@@ -3,7 +3,7 @@
 
 #pragma warning disable SA1600
 
-namespace Aksio.Cratis.Server;
+namespace Aksio.Cratis.Kernel.Server;
 
 public class Startup
 {

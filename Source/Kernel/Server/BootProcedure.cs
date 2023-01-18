@@ -9,7 +9,7 @@ using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.Projections;
 using Orleans;
 
-namespace Aksio.Cratis.Server;
+namespace Aksio.Cratis.Kernel.Server;
 
 /// <summary>
 /// Represents a <see cref="IPerformBootProcedure"/> for the event store.
