@@ -11,7 +11,10 @@ namespace Microsoft.AspNetCore.Builder;
 /// </summary>
 public static class ExecutionContextAppBuilderExtensions
 {
-    const string TenantIdHeader = "Tenant-ID";
+    /// <summary>
+    /// The name of the HTTP header for identifying the tenant.
+    /// </summary>
+    public const string TenantIdHeader = "Tenant-ID";
 
     /// <summary>
     /// Use execution context for an application.
