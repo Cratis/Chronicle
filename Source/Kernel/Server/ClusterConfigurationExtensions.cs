@@ -3,7 +3,7 @@
 
 using System.Net;
 using Aksio.Cratis.Kernel.Orleans.Configuration;
-using Aksio.Cratis.Server;
+using Aksio.Cratis.Kernel.Server;
 using Orleans.Configuration;
 
 namespace Orleans.Hosting;
