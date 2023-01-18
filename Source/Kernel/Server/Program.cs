@@ -3,12 +3,13 @@
 
 using System.Globalization;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Orleans.Serialization;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
 
 #pragma warning disable SA1600
-namespace Aksio.Cratis.Server;
+namespace Aksio.Cratis.Kernel.Server;
 
 public static class Program
 {
@@ -30,6 +31,7 @@ public static class Program
             .UseAksio(_ => _.InKernel(), microserviceId: MicroserviceId.Kernel)
             .UseOrleans(_ => _
                 .UseCluster()
+                .ConfigureSerialization()
                 .UseTelemetry()
                 .UseDashboard(options =>
                 {
