@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Observation;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
@@ -46,6 +47,9 @@ public static class ServiceCollectionExtensions
         {
             controllerBuilder.PartManager.ApplicationParts.Add(new AssemblyPart(controllerAssembly));
         }
+
+        // TODO: Fix this, we're adding the ClientObservers controller assembly from the .NET Client. Should be fixed when we fix #682
+        controllerBuilder.PartManager.ApplicationParts.Add(new AssemblyPart(typeof(ClientObservers).Assembly));
 
         return services;
     }
