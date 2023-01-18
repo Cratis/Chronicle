@@ -167,6 +167,16 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         }
         catch (Exception ex)
         {
+            _logger.PartitionFailed(
+                @event.Context.EventSourceId,
+                @event.Context.SequenceNumber,
+                _observerId,
+                _eventSequenceId,
+                _microserviceId,
+                _tenantId,
+                _sourceMicroserviceId,
+                _sourceTenantId);
+
             State.FailPartition(
                 @event.Context.EventSourceId,
                 @event.Metadata.SequenceNumber,
