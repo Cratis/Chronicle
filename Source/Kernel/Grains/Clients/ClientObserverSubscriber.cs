@@ -8,6 +8,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Observation;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
@@ -67,6 +68,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
         client.BaseAddress = clients.First().ClientUri;
 
         var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
+        client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
         await client.PostAsync($"/.aksio/observers/{_observerId}", jsonContent);
     }
 }
