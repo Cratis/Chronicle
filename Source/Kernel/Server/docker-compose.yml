@@ -1,0 +1,14 @@
+version: '3.1'
+services:
+  seq:
+    image: datalust/seq:latest
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - 5341:80
+
+  mongo:
+    image: aksioinsurtech/mongodb
+    ports:
+      - 27017:27017
+
