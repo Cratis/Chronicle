@@ -60,7 +60,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
         _executionContextManager.Establish(_microserviceId);
         _schemaStore = _schemaStoreProvider();
 
-        _executionContextManager.Establish(_key.MicroserviceId);
+        _executionContextManager.Establish(_key.SourceMicroserviceId!);
         _sourceSchemaStore = _schemaStoreProvider();
 
         return Task.CompletedTask;
