@@ -13,10 +13,10 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// </summary>
 internal static partial class EventSequenceLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Appending '{EventName}-{EventType}' for EventSource {EventSource} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for microservice {MicroserviceId} on tenant {TenantId}")]
+    [LoggerMessage(0, LogLevel.Debug, "Appending '{EventName}-{EventType}' for EventSource {EventSource} with sequence number {SequenceNumber} to event sequence '{EventSequenceId} for microservice {MicroserviceId} on tenant {TenantId}")]
     internal static partial void Appending(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventType eventType, string eventName, EventSourceId eventSource, ulong sequenceNumber);
 
-    [LoggerMessage(1, LogLevel.Information, "Compensatin event @ {SequenceNumber} in event sequence {EventSequenceId} - event type '{EventType}' for microservice '{MicroserviceId}' on tenant {TenantId}")]
+    [LoggerMessage(1, LogLevel.Debug, "Compensating event @ {SequenceNumber} in event sequence {EventSequenceId} - event type '{EventType}' for microservice '{MicroserviceId}' on tenant {TenantId}")]
     internal static partial void Compensating(this ILogger<EventSequence> logger, MicroserviceId microserviceId, TenantId tenantId, EventType eventType, EventSequenceId eventSequenceId, ulong sequenceNumber);
 
     [LoggerMessage(2, LogLevel.Critical, "Failed appending event type '{EventType}' at sequence {SequenceNumber} for event source {EventSourceId} to stream {StreamId} for microservice '{MicroserviceId}' on tenant {TenantId}")]
