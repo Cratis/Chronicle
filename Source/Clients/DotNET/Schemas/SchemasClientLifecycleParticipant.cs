@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Schemas;
 /// <summary>
 /// Represents an implementation of <see cref="IPerformBootProcedure"/> for registering event schemas.
 /// </summary>
-public class SchemasBootProcedure : IParticipateInClientLifecycle
+public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
 {
     readonly IEnumerable<EventTypeRegistration> _definitions;
     readonly IClient _client;
@@ -24,7 +24,7 @@ public class SchemasBootProcedure : IParticipateInClientLifecycle
     /// <param name="client"></param>
     /// <param name="eventTypes"><see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for event types.</param>
-    public SchemasBootProcedure(
+    public SchemasClientLifecycleParticipant(
         IClient client,
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator)
