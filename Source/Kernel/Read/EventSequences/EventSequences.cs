@@ -4,7 +4,7 @@
 using Aksio.Cratis.EventSequences;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Aksio.Cratis.Kernel.Domain.EventSequences;
+namespace Aksio.Cratis.Kernel.Read.EventSequences;
 
 /// <summary>
 /// Represents the API for working with event logs.
