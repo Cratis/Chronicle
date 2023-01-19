@@ -14,6 +14,12 @@ public class ClientLifecycle : IClientLifecycle
 {
     readonly IInstancesOf<IParticipateInClientLifecycle> _participants;
 
+    /// <inheritdoc/>
+    public bool IsConnected { get; private set; }
+
+    /// <inheritdoc/>
+    public ConnectionId ConnectionId { get; private set; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientLifecycle"/>.
     /// </summary>
@@ -21,11 +27,21 @@ public class ClientLifecycle : IClientLifecycle
     public ClientLifecycle(IInstancesOf<IParticipateInClientLifecycle> participants)
     {
         _participants = participants;
+        ConnectionId = ConnectionId.New();
     }
 
     /// <inheritdoc/>
-    public Task Connected() => Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.Connected()));
+    public async Task Connected()
+    {
+        await Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.Connected()));
+        IsConnected = true;
+    }
 
     /// <inheritdoc/>
-    public Task Disconnected() => Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.Disconnected()));
+    public async Task Disconnected()
+    {
+        await Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.Disconnected()));
+        IsConnected = false;
+        ConnectionId = ConnectionId.New();
+    }
 }
