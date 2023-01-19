@@ -55,7 +55,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     }
 
     /// <inheritdoc/>
-    public async Task Connected()
+    public async Task ClientConnected()
     {
         var registrations = _outboxProjectionsDefinitions.SelectMany(_ => _.TargetEventTypeProjections.Values).Select(projection =>
         {
@@ -79,5 +79,5 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     }
 
     /// <inheritdoc/>
-    public Task Disconnected() => Task.CompletedTask;
+    public Task ClientDisconnected() => Task.CompletedTask;
 }

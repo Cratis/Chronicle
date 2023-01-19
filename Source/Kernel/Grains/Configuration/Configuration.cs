@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Configuration;
 using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Configuration;
@@ -28,7 +28,7 @@ public class Configuration : Grain, IConfiguration
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<TenantInfo>> GetTenants() => Task.FromResult(_kernelConfiguration.Tenants.Select(_ => new TenantInfo(_.Key, _.Value.Name)));
+    public Task<IEnumerable<TenantInfo>> GetTenants() => Task.FromResult(_kernelConfiguration.Tenants.Select(_ => new TenantInfo(_.Key, _.Value.Name)).ToArray().AsEnumerable());
 
     /// <inheritdoc/>
     public Task<StorageForMicroservice> GetStorage() => Task.FromResult(_kernelConfiguration.Storage.Microservices.Get(_executionContextManager.Current.MicroserviceId));
