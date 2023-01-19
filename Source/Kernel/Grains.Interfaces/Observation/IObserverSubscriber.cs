@@ -16,5 +16,5 @@ public interface IObserverSubscriber : IGrainWithGuidCompoundKey
     /// </summary>
     /// <param name="event">The actual <see cref="AppendedEvent"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnNext(AppendedEvent @event);
+    Task<ObserverSubscriberResult> OnNext(AppendedEvent @event);
 }

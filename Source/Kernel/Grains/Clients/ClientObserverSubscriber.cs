@@ -4,9 +4,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Aksio.Cratis.Commands;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
@@ -52,7 +54,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task OnNext(AppendedEvent @event)
+    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
     {
         _logger.EventReceived(
             _observerId,
@@ -73,13 +75,22 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
             client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
             var response = await client.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
+            var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
+            var state = ObserverSubscriberState.Ok;
+
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 await ConnectedClients.OnClientDisconnected(first.ConnectionId);
+                state = ObserverSubscriberState.Disconnected;
             }
-            else if (response.StatusCode != HttpStatusCode.OK)
+            else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
             {
+                state = ObserverSubscriberState.Error;
             }
+
+            return new ObserverSubscriberResult(state, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
         }
+
+        return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);
     }
 }

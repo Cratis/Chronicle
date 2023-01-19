@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
@@ -67,25 +68,33 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task OnNext(AppendedEvent @event)
+    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
     {
-        _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId);
-
-        EventSchema eventSchema;
-
-        if (!await _schemaStore!.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation))
+        try
         {
-            eventSchema = await _sourceSchemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
-            await _schemaStore.Register(eventSchema.Type, eventSchema.Schema.GetDisplayName(), eventSchema.Schema);
+            _executionContextManager.Establish(_key!.TenantId, @event.Context.CorrelationId, _microserviceId);
+
+            EventSchema eventSchema;
+
+            if (!await _schemaStore!.HasFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation))
+            {
+                eventSchema = await _sourceSchemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+                await _schemaStore.Register(eventSchema.Type, eventSchema.Schema.GetDisplayName(), eventSchema.Schema);
+            }
+            else
+            {
+                eventSchema = await _schemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+            }
+
+            _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);
+
+            var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
+            await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, content!);
+            return ObserverSubscriberResult.Ok;
         }
-        else
+        catch (Exception ex)
         {
-            eventSchema = await _schemaStore!.GetFor(@event.Metadata.Type.Id, @event.Metadata.Type.Generation);
+            return new(ObserverSubscriberState.Error, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
-
-        _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);
-
-        var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
-        await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, content!);
     }
 }
