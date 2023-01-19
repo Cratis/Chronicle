@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Observation;
 /// Represents an implementation of <see cref="Observers"/>.
 /// </summary>
 [Singleton]
-public class Observers : IObservers, IParticipateInClientLifecycle
+public class Observers : IObservers
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly IClient _client;
@@ -62,7 +62,7 @@ public class Observers : IObservers, IParticipateInClientLifecycle
     }
 
     /// <inheritdoc/>
-    public async Task Connected()
+    public async Task Initialize()
     {
         _logger.RegisterObservers();
 
@@ -84,7 +84,4 @@ public class Observers : IObservers, IParticipateInClientLifecycle
         ));
         await _client.PerformCommand(route, registrations);
     }
-
-    /// <inheritdoc/>
-    public Task Disconnected() => Task.CompletedTask;
 }

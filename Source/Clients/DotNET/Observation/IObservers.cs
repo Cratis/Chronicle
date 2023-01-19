@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Observation;
 public interface IObservers
 {
     /// <summary>
+    /// Initialize the observers system.
+    /// </summary>
+    Task Initialize();
+
+    /// <summary>
     /// Get all the handlers registered.
     /// </summary>
     IEnumerable<ObserverHandler> Handlers { get; }

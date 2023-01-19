@@ -33,6 +33,7 @@ public class Tenants : Controller
     public async Task<IEnumerable<TenantInfo>> AllTenants()
     {
         var configuration = _grainFactory.GetGrain<IConfiguration>(Guid.Empty);
-        return await configuration.GetTenants();
+        var tenants =  (await configuration.GetTenants()).ToArray();
+        return tenants;
     }
 }
