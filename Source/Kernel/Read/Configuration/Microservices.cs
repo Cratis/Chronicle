@@ -7,9 +7,9 @@ using Aksio.Cratis.Kernel.Grains.Configuration;
 using Aksio.Cratis.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
-using ApiMicroservice = Aksio.Cratis.Kernel.Domain.Configuration.Microservices.Microservice;
+using ApiMicroservice = Aksio.Cratis.Kernel.Read.Configuration.Microservices.Microservice;
 
-namespace Aksio.Cratis.Kernel.Domain.Configuration.Microservices;
+namespace Aksio.Cratis.Kernel.Read.Configuration.Microservices;
 
 /// <summary>
 /// Represents the API for working with the configuration of the kernel.
