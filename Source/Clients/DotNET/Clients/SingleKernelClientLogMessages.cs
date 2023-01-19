@@ -10,7 +10,7 @@ internal static partial class SingleKernelClientLogMessages
     [LoggerMessage(0, LogLevel.Trace, "Connecting to Cratis Kernel @ '{Endpoint}'")]
     internal static partial void Connecting(this ILogger<SingleKernelClient> logger, string endpoint);
 
-    [LoggerMessage(1, LogLevel.Trace, "Kernel unavailable. Retrying.")]
+    [LoggerMessage(1, LogLevel.Information, "Cratis Kernel unavailable. Retrying.")]
     internal static partial void KernelUnavailable(this ILogger<SingleKernelClient> logger);
 
     [LoggerMessage(2, LogLevel.Trace, "Performing command '{Route}' on Kernel @ '{Endpoint}'")]
@@ -36,4 +36,10 @@ internal static partial class SingleKernelClientLogMessages
 
     [LoggerMessage(9, LogLevel.Trace, "Result of performing query '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
     internal static partial void QueryResultValidationError(this ILogger<SingleKernelClient> logger, string route, string members, string message);
+
+    [LoggerMessage(10, LogLevel.Information, "Kernel disconnected. Retrying to connect.")]
+    internal static partial void KernelDisconnected(this ILogger<SingleKernelClient> logger);
+
+    [LoggerMessage(11, LogLevel.Information, "Connected to Cratis Kernel")]
+    internal static partial void KernelConnected(this ILogger<SingleKernelClient> logger);
 }
