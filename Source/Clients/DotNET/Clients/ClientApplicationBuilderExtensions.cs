@@ -17,10 +17,7 @@ public static class ClientApplicationBuilderExtensions
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder AddCratisClient(this IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapGet("/.cratis/client/ping", ctx => Task.CompletedTask);
-        });
+        app.UseEndpoints(endpoints => endpoints.MapGet("/.cratis/client/ping", ctx => Task.CompletedTask));
 
         return app;
     }
