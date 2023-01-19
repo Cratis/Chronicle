@@ -74,6 +74,7 @@ public class SingleKernelClient : IClient, IDisposable
     public void Dispose()
     {
         _timer?.Dispose();
+        _timer = null;
     }
 
     /// <inheritdoc/>
@@ -82,6 +83,9 @@ public class SingleKernelClient : IClient, IDisposable
         _ = Task.Run(async () =>
         {
             _logger.Connecting(_options.Endpoint.ToString());
+
+            _timer?.Dispose();
+            _timer = null;
 
             var attribute = typeof(SingleKernelClient).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             var version = attribute?.InformationalVersion ?? "1.0.0";
@@ -104,10 +108,10 @@ public class SingleKernelClient : IClient, IDisposable
                 await Task.Delay(2000);
             }
 
-            await _clientLifecycle.Connected();
             _connectCompletion.SetResult(true);
+            await _clientLifecycle.Connected();
 
-            _timer = _timerFactory.Create(async _ => await Ping(), 0, 1000);
+            _timer = _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
         });
 
         return Task.CompletedTask;
@@ -170,15 +174,26 @@ public class SingleKernelClient : IClient, IDisposable
 
     async Task Ping()
     {
+        var failed = false;
         try
         {
             var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/ping/{ConnectionId}");
-            Console.WriteLine("Hello");
+            if (!result.IsSuccess)
+            {
+                failed = true;
+            }
         }
         catch
         {
+            failed = true;
+        }
+
+        if (failed)
+        {
+            _logger.KernelDisconnected();
             await _clientLifecycle.Disconnected();
-            _connectCompletion.SetCanceled();
+
+            _connectCompletion.TrySetCanceled();
             _connectCompletion = new();
             await Connect();
         }

@@ -61,7 +61,6 @@ public static class ClientServiceCollectionExtensions
 
             logger.ConnectingToKernel();
             client.Connect().Wait();
-            logger.ConnectedToKernel();
 
             return client;
         });
