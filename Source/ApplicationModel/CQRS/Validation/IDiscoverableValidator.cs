@@ -4,9 +4,13 @@
 namespace Aksio.Cratis.Applications.Validation;
 
 /// <summary>
-/// Represents a base validator that can be discovered and automatically hooked up.
+/// Defines a discoverable validator that can be discovered and automatically hooked up.
 /// </summary>
 /// <typeparam name="T">Type of object the validator is for.</typeparam>
-public class DiscoverableValidator<T> : BaseValidator<T>, IDiscoverableValidator<T>
+/// <remarks>
+/// The type needs to in addition implement fluent validation AbstractValidator or something that
+/// implements it.
+/// </remarks>
+public interface IDiscoverableValidator<T>
 {
 }
