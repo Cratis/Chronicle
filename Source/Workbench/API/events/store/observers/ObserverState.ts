@@ -39,9 +39,6 @@ export class ObserverState {
     @field(Number)
     runningState!: ObserverRunningState;
 
-    @field(String)
-    currentNamespace!: string;
-
     @field(FailedObserverPartition, true)
     failedPartitions!: FailedObserverPartition[];
 
@@ -53,4 +50,7 @@ export class ObserverState {
 
     @field(Boolean)
     isRecoveringAnyPartition!: boolean;
+
+    @field(Boolean)
+    isDisconnected!: boolean;
 }
