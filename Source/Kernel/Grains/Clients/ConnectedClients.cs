@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Orleans.Observers;
@@ -16,17 +17,27 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 [StorageProvider(ProviderName = ConnectedClientsState.StorageProvider)]
 public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 {
+    readonly IHttpClientFactory _httpClientFactory;
     readonly ILogger<ConnectedClients> _logger;
     readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
+    /// <param name="httpClientFactory"></param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ConnectedClients(ILogger<ConnectedClients> logger)
+    public ConnectedClients(IHttpClientFactory httpClientFactory, ILogger<ConnectedClients> logger)
     {
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
         _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientDisconnectedObservers");
+    }
+
+    /// <inheritdoc/>
+    public override Task OnActivateAsync()
+    {
+        RegisterTimer(PingClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -91,4 +102,25 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 
     /// <inheritdoc/>
     public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(State.Clients.First(_ => _.ConnectionId == connectionId));
+
+    async Task PingClients(object _)
+    {
+        foreach (var connectedClient in State.Clients.ToArray())
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = connectedClient.ClientUri;
+            try
+            {
+                var response = await client.GetAsync("/.cratis/client/ping");
+                if (response.StatusCode != HttpStatusCode.OK)
+                {
+                    await OnClientDisconnected(connectedClient.ConnectionId);
+                }
+            }
+            catch
+            {
+                await OnClientDisconnected(connectedClient.ConnectionId);
+            }
+        }
+    }
 }

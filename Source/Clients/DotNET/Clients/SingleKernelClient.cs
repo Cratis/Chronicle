@@ -1,7 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
@@ -83,14 +85,20 @@ public class SingleKernelClient : IClient, IDisposable
     {
         _logger.Connecting(_options.Endpoint.ToString());
 
+        var attribute = typeof(SingleKernelClient).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        var version = attribute?.InformationalVersion ?? "1.0.0";
+        var info = new ClientInformation(_executionContextManager.Current.MicroserviceId, ConnectionId, version, _clientEndpoint.ToString());
+
         for (; ; )
         {
-            var client = _clientFactory.CreateClient();
-            client.BaseAddress = _options.Endpoint;
+
             try
             {
-                var response = await client.GetAsync("/api/clients/ping");
-                break;
+                var result = await PerformCommand("/api/clients", info);
+                if (result.IsSuccess)
+                {
+                    break;
+                }
             }
             catch
             {

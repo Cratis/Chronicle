@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Observation;
 /// <summary>
 /// Represents a controller for receiving events from the kernel.
 /// </summary>
-[Route("/.aksio/observers")]
+[Route("/.cratis/observers")]
 public class ClientObservers : Controller
 {
     readonly IObservers _observers;
