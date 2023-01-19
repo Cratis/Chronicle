@@ -4,6 +4,12 @@
         <RootNamespace>Aksio.Cratis.Kernel.Read</RootNamespace>
     </PropertyGroup>
 
+    <Import Project="../ProxyGeneration.props"/>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="../Common/Common.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
