@@ -8,8 +8,6 @@ namespace Aksio.Cratis.Clients;
 /// <summary>
 /// Represents the information sent to the Kernel when connecting.
 /// </summary>
-/// <param name="MicroserviceId"><see cref="MicroserviceId"/> for the current microservice the client is for.</param>
-/// <param name="ConnectionId">The unique identifier of the connection.</param>
 /// <param name="ClientVersion">The version of the client.</param>
 /// <param name="AdvertisedUri">The URI that the client is advertised with.</param>
-public record ClientInformation(MicroserviceId MicroserviceId, ConnectionId ConnectionId, string ClientVersion, string AdvertisedUri);
+public record ClientInformation(string ClientVersion, string AdvertisedUri);

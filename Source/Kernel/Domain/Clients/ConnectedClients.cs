@@ -4,6 +4,7 @@
 using System.Text;
 using System.Text.Json;
 using Aksio.Cratis.Clients;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,7 @@ namespace Aksio.Cratis.Kernel.Domain.Clients;
 /// <summary>
 /// Represents the endpoint for clients to connect to.
 /// </summary>
-[Route("/api/clients")]
+[Route("/api/clients/{microserviceId}")]
 public class ConnectedClients : Controller
 {
     readonly ILogger<ConnectedClients> _logger;
@@ -41,90 +42,97 @@ public class ConnectedClients : Controller
     /// <summary>
     /// A ping endpoint for clients to see if Kernel is available.
     /// </summary>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> that is connecting.</param>
+    /// <param name="connectionId">The unique identifier of the connection that is pinging.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpGet("ping")]
-    public Task Ping() => Task.CompletedTask;
+    [HttpGet("ping/{connectionId}")]
+    public async Task Ping(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] ConnectionId connectionId)
+    {
+        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+        await connectedClients.OnClientPing(connectionId);
+    }
 
     /// <summary>
     /// Accepts client connections over Web Sockets.
     /// </summary>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> that is connecting.</param>
+    /// <param name="connectionId">The unique identifier of the connection.</param>
+    /// <param name="clientInformation"><see cref="ClientInformation"/> to connect with.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpGet]
-    public async Task Connect()
+    [HttpPost]
+    public async Task Connect(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] ConnectionId connectionId,
+        [FromBody] ClientInformation clientInformation)
     {
-        if (HttpContext.WebSockets.IsWebSocketRequest)
-        {
-            using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+        _logger.ClientConnected(clientInformation.ClientVersion, microserviceId, connectionId);
 
-            var isConnected = true;
-            var buffer = new byte[1024 * 4];
-            var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-            var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            var clientInformation = JsonSerializer.Deserialize<ClientInformation>(json, _jsonSerializerOptions)!;
-            _logger.ClientConnected(clientInformation.ClientVersion, clientInformation.MicroserviceId, clientInformation.ConnectionId);
+        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+        await connectedClients.OnClientConnected(
+            connectionId,
+            new Uri(clientInformation.AdvertisedUri),
+            clientInformation.ClientVersion);
 
-            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(clientInformation.MicroserviceId);
-            await connectedClients.OnClientConnected(
-                clientInformation.ConnectionId,
-                new Uri(clientInformation.AdvertisedUri),
-                clientInformation.ClientVersion);
 
-            await webSocket.SendAsync(new ArraySegment<byte>(
-                Encoding.UTF8.GetBytes("kernel-connected")),
-                System.Net.WebSockets.WebSocketMessageType.Text,
-                true,
-                CancellationToken.None);
 
-            var lastMessageReceived = DateTimeOffset.UtcNow;
-            using var timer = new Timer(
-                callback: _ =>
-                {
-                    var period = DateTimeOffset.UtcNow - lastMessageReceived;
-                    if (period.TotalSeconds > 2)
-                    {
-                        isConnected = false;
-                    }
-                },
-                state: null,
-                dueTime: 0,
-                period: 1000);
+        //     await webSocket.SendAsync(new ArraySegment<byte>(
+        //         Encoding.UTF8.GetBytes("kernel-connected")),
+        //         System.Net.WebSockets.WebSocketMessageType.Text,
+        //         true,
+        //         CancellationToken.None);
 
-            while (!result.CloseStatus.HasValue && isConnected)
-            {
-                try
-                {
-                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                    var command = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    if (command == "disconnect")
-                    {
-                        isConnected = false;
-                    }
+        //     var lastMessageReceived = DateTimeOffset.UtcNow;
+        //     using var timer = new Timer(
+        //         callback: _ =>
+        //         {
+        //             var period = DateTimeOffset.UtcNow - lastMessageReceived;
+        //             if (period.TotalSeconds > 2)
+        //             {
+        //                 isConnected = false;
+        //             }
+        //         },
+        //         state: null,
+        //         dueTime: 0,
+        //         period: 1000);
 
-                    await webSocket.SendAsync(new ArraySegment<byte>(
-                        Encoding.UTF8.GetBytes("pong")),
-                        System.Net.WebSockets.WebSocketMessageType.Text,
-                        true,
-                        CancellationToken.None);
+        //     while (!result.CloseStatus.HasValue && isConnected)
+        //     {
+        //         try
+        //         {
+        //             result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+        //             var command = Encoding.UTF8.GetString(buffer, 0, result.Count);
+        //             if (command == "disconnect")
+        //             {
+        //                 isConnected = false;
+        //             }
 
-                    lastMessageReceived = DateTimeOffset.UtcNow;
-                }
-                catch
-                {
-                    isConnected = false;
-                }
-            }
+        //             await webSocket.SendAsync(new ArraySegment<byte>(
+        //                 Encoding.UTF8.GetBytes("pong")),
+        //                 System.Net.WebSockets.WebSocketMessageType.Text,
+        //                 true,
+        //                 CancellationToken.None);
 
-            await connectedClients.OnClientDisconnected(clientInformation.ConnectionId);
-            _logger.ClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
+        //             lastMessageReceived = DateTimeOffset.UtcNow;
+        //         }
+        //         catch
+        //         {
+        //             isConnected = false;
+        //         }
+        //     }
 
-            if (result.CloseStatus is not null)
-            {
-                await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-            }
-        }
-        else
-        {
-            HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-        }
+        //     await connectedClients.OnClientDisconnected(clientInformation.ConnectionId);
+        //     _logger.ClientDisconnected(clientInformation.MicroserviceId, clientInformation.ConnectionId);
+
+        //     if (result.CloseStatus is not null)
+        //     {
+        //         await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+        //     }
+        // }
+        // else
+        // {
+        //     HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+        // }
     }
 }

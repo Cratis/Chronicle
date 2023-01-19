@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
@@ -19,7 +19,6 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 /// </summary>
 public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 {
-    readonly List<ConnectedClient> _clients = new();
     readonly ILogger<ClientObserverSubscriber> _logger;
     readonly IHttpClientFactory _httpClientFactory;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -64,11 +63,23 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             @event.Context.SequenceNumber);
 
         var clients = await ConnectedClients.GetAllConnectedClients();
-        var client = _httpClientFactory.CreateClient();
-        client.BaseAddress = clients.First().ClientUri;
+        var first = clients.FirstOrDefault();
 
-        var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
-        client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
-        await client.PostAsync($"/.aksio/observers/{_observerId}", jsonContent);
+        if (first is not null)
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = first.ClientUri;
+
+            var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
+            client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
+            var response = await client.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                await ConnectedClients.OnClientDisconnected(first.ConnectionId);
+            }
+            else if (response.StatusCode != HttpStatusCode.OK)
+            {
+            }
+        }
     }
 }
