@@ -34,14 +34,14 @@ public class ClientLifecycle : IClientLifecycle
     public async Task Connected()
     {
         IsConnected = true;
-        await Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.Connected()));
+        await Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.ClientConnected()));
     }
 
     /// <inheritdoc/>
     public async Task Disconnected()
     {
         IsConnected = false;
-        await Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.Disconnected()));
+        await Parallel.ForEachAsync(_participants, (participant, _) => new ValueTask(participant.ClientDisconnected()));
         ConnectionId = ConnectionId.New();
     }
 }

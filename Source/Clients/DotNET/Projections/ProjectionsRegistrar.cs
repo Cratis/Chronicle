@@ -86,7 +86,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
                 }).ToArray();
 
     /// <inheritdoc/>
-    public async Task Connected()
+    public async Task ClientConnected()
     {
         var registrations = _projections.Select(projection =>
         {
@@ -109,5 +109,5 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     }
 
     /// <inheritdoc/>
-    public Task Disconnected() => Task.CompletedTask;
+    public Task ClientDisconnected() => Task.CompletedTask;
 }
