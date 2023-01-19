@@ -70,7 +70,7 @@ public class ProjectionDefinitions : IProjectionDefinitions
         }
         var incoming = _projectionSerializer.Serialize(projectionDefinition);
         var existing = _projectionSerializer.Serialize(_definitions[projectionDefinition.Identifier]);
-        return incoming != existing;
+        return incoming.ToString().Equals(existing);
     }
 
     async Task PopulateIfMissing(ProjectionId projectionId)
