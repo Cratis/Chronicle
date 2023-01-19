@@ -56,6 +56,7 @@ public static class WebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
         app.UseExecutionContext();
+        app.AddCratisClient();
         app.ApplicationServices.GetRequiredService<IClient>();
         return app;
     }

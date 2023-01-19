@@ -6,7 +6,7 @@ using Aksio.Cratis.Clients;
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
-/// Represents a <see cref="IParticipateInClientLifecycle"/> for handling <see cref="IAdapters"/>.
+/// Represents a <see cref="IParticipateInClientLifecycle"/> for handling <see cref="IObservers"/>.
 /// </summary>
 public class ObserversClientLifecycleParticipant : IParticipateInClientLifecycle
 {
