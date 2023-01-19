@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
@@ -67,7 +68,23 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public Task OnNext(AppendedEvent @event) => _pipeline?.Handle(@event) ?? Task.CompletedTask;
+    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
+    {
+        if (_pipeline is null)
+        {
+            return ObserverSubscriberResult.Disconnected;
+        }
+
+        try
+        {
+            await _pipeline.Handle(@event);
+            return ObserverSubscriberResult.Ok;
+        }
+        catch (Exception ex)
+        {
+            return new(ObserverSubscriberState.Error, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+        }
+    }
 
     async Task HandleDefinitionsAndInstances()
     {

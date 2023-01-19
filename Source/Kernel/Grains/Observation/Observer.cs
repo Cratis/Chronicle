@@ -126,6 +126,9 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
     async Task HandleEventForPartitionedObserver(AppendedEvent @event, bool setLastHandled = false)
     {
+        var failed = false;
+        var exceptionMessages = Enumerable.Empty<string>();
+        var exceptionStackTrace = string.Empty;
         try
         {
             if (State.IsDisconnected)
@@ -146,26 +149,46 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
             var key = new ObserverSubscriberKey(_microserviceId, _tenantId, _eventSequenceId, @event.Context.EventSourceId, _sourceMicroserviceId, _sourceTenantId);
             var subscriber = (GrainFactory.GetGrain(_subscriberType, _observerId, key) as IObserverSubscriber)!;
-            await subscriber.OnNext(@event);
-
-            State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-            await WriteStateAsync();
-
-            if (setLastHandled)
+            var result = await subscriber.OnNext(@event);
+            if (result.State == ObserverSubscriberState.Error)
             {
-                State.LastHandled = @event.Metadata.SequenceNumber;
+                failed = true;
+                exceptionMessages = result.ExceptionMessages;
+                exceptionStackTrace = result.ExceptionStackTrace;
             }
-
-            var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
-
-            if (State.NextEventSequenceNumber == nextSequenceNumber + 1 && State.RunningState != ObserverRunningState.Active)
+            else if (result.State == ObserverSubscriberState.Disconnected)
             {
-                State.RunningState = ObserverRunningState.Active;
-                _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+                await Unsubscribe();
+                return;
             }
-            await WriteStateAsync();
+            else
+            {
+                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+                await WriteStateAsync();
+
+                if (setLastHandled)
+                {
+                    State.LastHandled = @event.Metadata.SequenceNumber;
+                }
+
+                var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
+
+                if (State.NextEventSequenceNumber == nextSequenceNumber + 1 && State.RunningState != ObserverRunningState.Active)
+                {
+                    State.RunningState = ObserverRunningState.Active;
+                    _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+                }
+                await WriteStateAsync();
+            }
         }
         catch (Exception ex)
+        {
+            failed = true;
+            exceptionMessages = ex.GetAllMessages().ToArray();
+            exceptionStackTrace = ex.StackTrace ?? string.Empty;
+        }
+
+        if (failed)
         {
             _logger.PartitionFailed(
                 @event.Context.EventSourceId,
@@ -180,8 +203,8 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             State.FailPartition(
                 @event.Context.EventSourceId,
                 @event.Metadata.SequenceNumber,
-                GetMessagesFromException(ex),
-                ex.StackTrace ?? string.Empty);
+                exceptionMessages.ToArray(),
+                exceptionStackTrace);
 
             await WriteStateAsync();
             await HandleReminderRegistration();
@@ -225,19 +248,5 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             await _streamSubscription.UnsubscribeAsync();
             _streamSubscription = null;
         }
-    }
-
-    string[] GetMessagesFromException(Exception ex)
-    {
-        var messages = new List<string>
-                {
-                    ex.Message
-                };
-        while (ex.InnerException != null)
-        {
-            messages.Insert(0, ex.InnerException.Message);
-            ex = ex.InnerException;
-        }
-        return messages.ToArray();
     }
 }
