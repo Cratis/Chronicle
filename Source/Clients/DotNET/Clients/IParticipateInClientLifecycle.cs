@@ -12,11 +12,11 @@ public interface IParticipateInClientLifecycle
     /// Called when the client gets connected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task Connected();
+    Task ClientConnected();
 
     /// <summary>
     /// Called when the client is disconnected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task Disconnected();
+    Task ClientDisconnected();
 }

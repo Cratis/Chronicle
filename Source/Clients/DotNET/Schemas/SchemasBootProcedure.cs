@@ -42,12 +42,12 @@ public class SchemasBootProcedure : IParticipateInClientLifecycle
     }
 
     /// <inheritdoc/>
-    public async Task Connected()
+    public async Task ClientConnected()
     {
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/types";
         await _client.PerformCommand(route, new RegisterEventTypes(_definitions));
     }
 
     /// <inheritdoc/>
-    public Task Disconnected() => Task.CompletedTask;
+    public Task ClientDisconnected() => Task.CompletedTask;
 }
