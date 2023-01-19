@@ -24,13 +24,26 @@ public class DiscoverableModelValidatorProvider : IModelValidatorProvider
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of the validators.</param>
     public DiscoverableModelValidatorProvider(ITypes types, IServiceProvider serviceProvider)
     {
-        _validatorTypesByModelType = types
-            .FindMultiple(typeof(DiscoverableValidator<>))
+        var candidates = types.FindMultiple(typeof(IDiscoverableValidator<>));
+        var invalidValidators = candidates.Where(_ =>
+        {
+            var interfaces = _.GetInterfaces();
+            var validatorType = interfaces.Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IDiscoverableValidator<>));
+            var modelType = validatorType.GetGenericArguments()[0];
+            return !_.IsAssignableTo(typeof(AbstractValidator<>).MakeGenericType(modelType));
+        }).ToArray();
+
+        if (invalidValidators.Length > 0)
+        {
+            throw new DiscoverableValidatorMustImplementAbstractValidator(invalidValidators[0]);
+        }
+
+        _validatorTypesByModelType = candidates
             .ToDictionary(
                 _ =>
                 {
                     var current = _.BaseType!;
-                    while (!current.IsDerivedFromOpenGeneric(typeof(DiscoverableValidator<>)))
+                    while (!current.IsDerivedFromOpenGeneric(typeof(AbstractValidator<>)))
                     {
                         current = current.BaseType!;
                     }
