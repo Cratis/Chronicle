@@ -9,6 +9,7 @@ using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Queries;
 using Aksio.Cratis.Timers;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 
@@ -133,8 +134,7 @@ public class SingleKernelClient : IClient, IDisposable
         await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(10));
         ThrowIfClientIsDisconnected();
 
-        var client = _clientFactory.CreateClient();
-        client.BaseAddress = _options.Endpoint;
+        var client = CreateHttpClient();
         HttpResponseMessage response;
 
         if (queryString is not null)
@@ -154,8 +154,7 @@ public class SingleKernelClient : IClient, IDisposable
 
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null)
     {
-        var client = _clientFactory.CreateClient();
-        client.BaseAddress = _options.Endpoint;
+        var client = CreateHttpClient();
         HttpResponseMessage response;
 
         if (command is not null)
@@ -170,6 +169,14 @@ public class SingleKernelClient : IClient, IDisposable
         LogCommandResult(route, result);
 
         return result!;
+    }
+
+    HttpClient CreateHttpClient()
+    {
+        var client = _clientFactory.CreateClient();
+        client.BaseAddress = _options.Endpoint;
+        client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _executionContextManager.Current.TenantId.ToString());
+        return client;
     }
 
     async Task Ping()
