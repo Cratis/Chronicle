@@ -3,6 +3,6 @@
 
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Kernel.Domain.Configuration.Microservices;
+namespace Aksio.Cratis.Kernel.Read.Configuration.Microservices;
 
 public record Microservice(MicroserviceId Id, string Name);
