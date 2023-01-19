@@ -9,6 +9,16 @@ namespace Aksio.Cratis.Clients;
 public interface IClientLifecycle
 {
     /// <summary>
+    /// Gets whether or not the client is connected.
+    /// </summary>
+    bool IsConnected { get; }
+
+    /// <summary>
+    /// Gets the current connection identifier.
+    /// </summary>
+    ConnectionId ConnectionId { get; }
+
+    /// <summary>
     /// Called when the client gets connected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>

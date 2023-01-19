@@ -32,7 +32,6 @@ public static class ClientServiceCollectionExtensions
             var serializerOptions = _.GetRequiredService<JsonSerializerOptions>();
             serializerOptions = new JsonSerializerOptions(serializerOptions);
             var singleKernelClientLogger = _.GetRequiredService<ILogger<SingleKernelClient>>();
-            var webSocketConnectionLogger = _.GetRequiredService<ILogger<WebSocketConnection>>();
             var server = _.GetRequiredService<IServer>();
             var addresses = server.Features.Get<IServerAddressesFeature>();
             var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
@@ -56,8 +55,7 @@ public static class ClientServiceCollectionExtensions
                     clientEndpoint,
                     clientLifecycle,
                     serializerOptions,
-                    singleKernelClientLogger,
-                    webSocketConnectionLogger),
+                    singleKernelClientLogger),
                 _ => throw new UnknownClusterType()
             };
 
