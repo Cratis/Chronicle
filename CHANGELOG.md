@@ -1,3 +1,11 @@
+# [v7.4.0] - 2023-1-19 [PR: #689](https://github.com/aksio-insurtech/Cratis/pull/689)
+
+### Added
+
+- Added `RuleForConcept` in the `BaseValidator` type to be able to hook up validation that is for an actual concept and not the primitive it is encapsulating.
+- Extracting out discoverability of validators into `IDiscoverableValidator`. This can now be used indepdendently, allowing you to work directly with `AbstractValidator` for instance and still be discovered at runtime.
+
+
 # [v7.3.2] - 2023-1-13 [PR: #678](https://github.com/aksio-insurtech/Cratis/pull/678)
 
 ### Fixed
