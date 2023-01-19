@@ -7,7 +7,7 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 
-namespace Aksio.Cratis.Kernel.Domain.Observation;
+namespace Aksio.Cratis.Kernel.Read.Observation;
 
 /// <summary>
 /// Represents the API for working with observers.
