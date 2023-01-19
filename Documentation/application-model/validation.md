@@ -25,6 +25,24 @@ to inject localized strings or similar you won't be able to get to it.
 Another alternative approach to validation is to use [FluentValidation](https://docs.fluentvalidation.net).
 Cratis comes with this all setup and automatically hooks up different types of validators for specific purposes.
 
+### Base Validator
+
+The formalized validator types (`CommandValidator`, `QueryValidator` and `ConceptValidator`) all derive from a
+type called `BaseValidator`. This base type provides methods for defining validation rules for known `ConceptAs<>`
+primitives and will unwrap the inner `Value` property automatically, providing you a clean way of validating the
+concepts inner primitive type without considering the `Value` property.
+
+However, if you're hooking up validators for the actual concept, you need to use the method `RuleForConcept()`
+to work directly with the concept. The `IRuilBuilderInitial` type returned would then be for the actual concept and
+not its primitive type its encapsulating.
+
+### Discoverable validators
+
+Validators can be automatically discovered. This done through the discovery of anything that implements the marker
+interface `IDiscoverableValidator<>`. The formalized types for Commands, Queries and Concepts all implement this.
+There is also a base type that can be used, which inherits from `BaseValidator` to give you the additional functionality
+it provides. All you need to do is inherit from `DiscoverableValidator<>`.
+
 ### Command Validator
 
 To write command validators, all you need to do is implement the `CommandValidator<>` class and create
