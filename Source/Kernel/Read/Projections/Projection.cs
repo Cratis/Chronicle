@@ -3,6 +3,6 @@
 
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Domain.Projections;
+namespace Aksio.Cratis.Kernel.Read.Projections;
 
 public record Projection(ProjectionId Id, ProjectionName Name, ModelName ModelName);
