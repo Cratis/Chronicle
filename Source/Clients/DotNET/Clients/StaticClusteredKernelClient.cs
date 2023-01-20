@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Net;
 using Aksio.Cratis.Tasks;
 using Aksio.Cratis.Timers;
 using Microsoft.Extensions.Logging;
@@ -11,18 +12,17 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClient"/> for a single instance.
+/// Represents a <see cref="IClient"/> for a clustered Kernel.
 /// </summary>
-public class SingleKernelClient : RestKernelClient
+public abstract class StaticClusteredKernelClient : ClusteredKernelClient
 {
-    readonly IHttpClientFactory _httpClientFactory;
-    readonly SingleKernelOptions _options;
+    readonly StaticClusterOptions _options;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
+    /// Initializes a new instance of the <see cref="ClusteredKernelClient"/> class.
     /// </summary>
-    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
-    /// <param name="options">The <see cref="SingleKernelOptions"/> with specific configuration.</param>
+    /// <param name="httpClientFactory">The <see cref="ILoadBalancedHttpClientFactory"/> to use.</param>
+    /// <param name="options">The <see cref="StaticClusterOptions"/> configuration.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
@@ -30,9 +30,9 @@ public class SingleKernelClient : RestKernelClient
     /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public SingleKernelClient(
-        IHttpClientFactory httpClientFactory,
-        SingleKernelOptions options,
+    protected StaticClusteredKernelClient(
+        ILoadBalancedHttpClientFactory httpClientFactory,
+        StaticClusterOptions options,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
@@ -40,6 +40,7 @@ public class SingleKernelClient : RestKernelClient
         IClientLifecycle clientLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<RestKernelClient> logger) : base(
+            httpClientFactory,
             taskFactory,
             timerFactory,
             executionContextManager,
@@ -47,16 +48,9 @@ public class SingleKernelClient : RestKernelClient
             clientLifecycle,
             jsonSerializerOptions,
             logger)
-
     {
-        _httpClientFactory = httpClientFactory;
         _options = options;
     }
 
-    protected override HttpClient CreateHttpClient()
-    {
-        var client = _httpClientFactory.CreateClient();
-        client.BaseAddress = _options.Endpoint;
-        return client;
-    }
+    protected override IEnumerable<Uri> Endpoints => _options.Endpoints;
 }

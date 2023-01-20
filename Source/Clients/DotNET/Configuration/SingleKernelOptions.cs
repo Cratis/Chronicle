@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Configuration;
 public class SingleKernelOptions
 {
     /// <summary>
-    /// Gets the endpoint
+    /// Gets the endpoint.
     /// </summary>
     public Uri Endpoint { get; init; } = new Uri("http://localhost:8080");
 }
