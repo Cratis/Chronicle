@@ -15,6 +15,7 @@ public static class SerializationConfigurationExtensions
     /// Configure serialization for Orleans.
     /// </summary>
     /// <param name="siloBuilder"><see cref="ISiloBuilder"/> to configure for.</param>
+    /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder ConfigureSerialization(this ISiloBuilder siloBuilder)
     {
         siloBuilder.Configure<SerializationProviderOptions>(options => options.SerializationProviders.Add(typeof(ExpandoObjectSerializer)));
