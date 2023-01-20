@@ -8,6 +8,8 @@ namespace Aksio.Cratis.Configuration;
 /// </summary>
 public class StaticClusterOptions
 {
+    /// <summary>
+    /// Gets the static endpoints for the kernel.
+    /// </summary>
     public IEnumerable<Uri> Endpoints { get; init; } = Enumerable.Empty<Uri>();
 }
-

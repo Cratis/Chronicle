@@ -6,6 +6,7 @@ using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Queries;
+using Aksio.Cratis.Tasks;
 using Aksio.Cratis.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -16,13 +17,25 @@ namespace Aksio.Cratis.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IClient"/> for usage inside a silo.
 /// </summary>
-public class InsideSiloClient : IClient
+public class InsideKernelClient : IClient
 {
     readonly SingleKernelClient _innerClient;
 
-    public InsideSiloClient(
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InsideKernelClient"/> class.
+    /// </summary>
+    /// <param name="server"></param>
+    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
+    /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
+    /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    public InsideKernelClient(
         IServer server,
         IHttpClientFactory httpClientFactory,
+        ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
         IClientLifecycle clientLifecycle,
@@ -37,9 +50,10 @@ public class InsideSiloClient : IClient
         };
         _innerClient = new(
             httpClientFactory,
+            options,
+            taskFactory,
             timerFactory,
             executionContextManager,
-            options,
             endpoint,
             clientLifecycle,
             jsonSerializerOptions,
