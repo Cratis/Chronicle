@@ -1,3 +1,10 @@
+# [v7.4.1] - 2023-1-20 [PR: #693](https://github.com/aksio-insurtech/Cratis/pull/693)
+
+### Fixed
+
+- Nested members in validation errors are now also camel cased.
+
+
 # [v7.4.0] - 2023-1-19 [PR: #689](https://github.com/aksio-insurtech/Cratis/pull/689)
 
 ### Added
