@@ -17,7 +17,6 @@
         <ProjectReference Include="../Events/Events.csproj"/>
         <ProjectReference Include="../Shared/Shared.csproj"/>
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj"/>
-        <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj"/>
     </ItemGroup>
 
 </Project>
