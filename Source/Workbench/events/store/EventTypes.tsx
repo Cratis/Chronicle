@@ -16,8 +16,8 @@ import {
 import { default as styles } from './EventTypes.module.scss';
 import { useState, useEffect } from 'react';
 import { EventTypeSchema } from './EventTypeSchema';
-import { Microservices } from 'API/configuration/Microservices';
-import { Microservice } from 'API/configuration/Microservice';
+import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
+import { Microservice } from 'API/configuration/microservices/Microservice';
 import { AllEventTypes, AllEventTypesArguments } from 'API/events/store/types/AllEventTypes';
 import { GenerationSchemasForType } from 'API/events/store/types/GenerationSchemasForType';
 
@@ -61,7 +61,7 @@ const eventSchemaColumns: IColumn[] = [
 const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
 
 export const EventTypes = () => {
-    const [microservices] = Microservices.use();
+    const [microservices] = AllMicroservices.use();
     const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
     const [eventType, setEventType] = useState();
 

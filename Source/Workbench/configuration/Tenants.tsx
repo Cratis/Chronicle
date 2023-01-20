@@ -3,7 +3,7 @@
 
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 import { IColumn } from '@fluentui/react';
-import {Tenants as AllTenants } from 'API/configuration/Tenants';
+import { AllTenants } from 'API/configuration/tenants/AllTenants';
 
 const columns: IColumn[] = [
     {

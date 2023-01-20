@@ -53,4 +53,12 @@ public class EventSequence : Controller
         }
         return result;
     }
+
+    /// <summary>
+    /// Get a histogram of a specific event sequence. PS: Not implemented yet.
+    /// </summary>
+    /// <param name="eventSequenceId">Event sequence to get for.</param>
+    /// <returns>A collection of <see cref="EventHistogramEntry"/>.</returns>
+    [HttpGet("histogram")]
+    public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] EventSequenceId eventSequenceId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 }
