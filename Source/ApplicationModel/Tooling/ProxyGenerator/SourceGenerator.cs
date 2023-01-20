@@ -15,6 +15,11 @@ namespace Aksio.Cratis.Applications.ProxyGenerator;
 [Generator]
 public class SourceGenerator : ISourceGenerator
 {
+    static readonly string[] _allowedCompilerErrors = new[]
+    {
+        "CS8795"
+    };
+
     static readonly Regex _routeRegex = new(@"(\{[\w]*\})", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
     static readonly Dictionary<string, int> _fileHashes = new();
     static readonly List<ITypeSymbol> _derivedTypes = new();
@@ -28,7 +33,7 @@ public class SourceGenerator : ISourceGenerator
     /// <inheritdoc/>
     public void Execute(GeneratorExecutionContext context)
     {
-        if (context.Compilation.GetDiagnostics().Any(_ => _.Severity == DiagnosticSeverity.Error)) return;
+        if (context.Compilation.GetDiagnostics().Any(_ => _.Severity == DiagnosticSeverity.Error && !_allowedCompilerErrors.Any(e => _.Id == e))) return;
 
         var receiver = context.SyntaxReceiver as SyntaxReceiver;
         context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.rootnamespace", out var rootNamespace);
