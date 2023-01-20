@@ -20,7 +20,11 @@ public class ClientConfiguration
     public object Options { get; init; } = new SingleKernelOptions();
 
     /// <summary>
-    /// Gets the callback Uri the kernel will call back to the client on.
+    /// Gets the advertised client endpoint.
     /// </summary>
-    public Uri CallbackUri { get; init; } = new Uri("http://localhost:5000");
+    /// <remarks>
+    /// If this endpoint is not explicitly configured, it will attempt to resolve it based on the ASP.NET Core configuration and
+    /// current running solution.
+    /// </remarks>
+    public Uri? AdvertisedClientEndpoint { get; init; }
 }

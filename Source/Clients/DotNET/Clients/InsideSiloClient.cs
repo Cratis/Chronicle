@@ -33,8 +33,7 @@ public class InsideSiloClient : IClient
         var endpoint = new Uri(addresses!.Addresses.First());
         var options = new SingleKernelOptions
         {
-            Endpoint = endpoint,
-            AdvertisedClientEndpoint = endpoint
+            Endpoint = endpoint
         };
         _innerClient = new(
             httpClientFactory,
