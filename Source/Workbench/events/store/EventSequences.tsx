@@ -253,6 +253,7 @@ export const EventSequences = () => {
         dismissPanel();
     };
 
+    console.log(selectedEvent?.content);
 
     return (
         <>

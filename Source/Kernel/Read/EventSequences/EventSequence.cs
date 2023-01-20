@@ -6,8 +6,18 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Nodes;
+using System.Text.Json;
 
 namespace Aksio.Cratis.Kernel.Read.EventSequences;
+
+/// <summary>
+/// Represents an event that has been appended to an event log with the content as JSON.
+/// </summary>
+/// <param name="Metadata">The <see cref="EventMetadata"/>.</param>
+/// <param name="Context">The <see cref="EventContext"/>.</param>
+/// <param name="Content">The content in the form of an <see cref="JsonObject"/>.</param>
+public record AppendedEventWithJsonAsContent(EventMetadata Metadata, EventContext Context, JsonNode Content);
 
 /// <summary>
 /// Represents the API for working with the event log.
@@ -16,18 +26,22 @@ namespace Aksio.Cratis.Kernel.Read.EventSequences;
 public class EventSequence : Controller
 {
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="eventSequenceStorageProviderProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventSequence(
         ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
+        JsonSerializerOptions jsonSerializerOptions,
         IExecutionContextManager executionContextManager)
     {
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
+        _jsonSerializerOptions = jsonSerializerOptions;
         _executionContextManager = executionContextManager;
     }
 
@@ -39,17 +53,21 @@ public class EventSequence : Controller
     /// <param name="tenantId">Tenant to get for.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
-    public async Task<IEnumerable<AppendedEvent>> FindFor(
+    public async Task<IEnumerable<AppendedEventWithJsonAsContent>> FindFor(
         [FromRoute] EventSequenceId eventSequenceId,
         [FromQuery] MicroserviceId microserviceId,
         [FromQuery] TenantId tenantId)
     {
-        var result = new List<AppendedEvent>();
+        var result = new List<AppendedEventWithJsonAsContent>();
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
         var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First);
         while (await cursor.MoveNext())
         {
-            result.AddRange(cursor.Current);
+            result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
+                _.Metadata,
+                _.Context,
+                JsonSerializer.SerializeToNode(_.Content, _jsonSerializerOptions)!
+            )));
         }
         return result;
     }
