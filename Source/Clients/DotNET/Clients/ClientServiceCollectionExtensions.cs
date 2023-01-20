@@ -39,11 +39,11 @@ public static class ClientServiceCollectionExtensions
             var timerFactory = _.GetRequiredService<ITimerFactory>();
 
             var options = configuration.GetSingleKernelOptions();
-            if (options.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
+            if (configuration.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
             {
                 throw new UnableToResolveClientUri();
             }
-            var clientEndpoint = options.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First());
+            var clientEndpoint = configuration.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First());
 
             var client = configuration.ClusterType switch
             {
