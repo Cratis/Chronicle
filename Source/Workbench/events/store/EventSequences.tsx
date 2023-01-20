@@ -29,11 +29,11 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
 import { AppendedEvent } from 'API/events/store/sequence/AppendedEvent';
 import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
-import { EventType } from 'API/events/store/types/EventType';
-import { Microservice } from 'API/configuration/Microservice';
-import { Microservices } from 'API/configuration/Microservices';
-import { Tenant } from 'API/configuration/Tenant';
-import { Tenants } from 'API/configuration/Tenants';
+import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
+import { Microservice } from 'API/configuration/microservices/Microservice';
+import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
+import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
+import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { useEffect } from 'react';
 
 function pivotItemHeaderRenderer(
@@ -56,12 +56,12 @@ const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 
 
 export const EventSequences = () => {
     const [eventSequences] = AllEventSequences.use();
-    const [microservices] = Microservices.use();
-    const [tenants] = Tenants.use();
+    const [microservices] = AllMicroservices.use();
+    const [tenants] = AllTenants.use();
 
     const [selectedEventSequence, setSelectedEventSequence] = useState<EventSequenceInformation>();
     const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
-    const [selectedTenant, setSelectedTenant] = useState<Tenant>();
+    const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
 
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
@@ -78,7 +78,7 @@ export const EventSequences = () => {
     const [events, refreshEvents] = FindFor.use(getFindForArguments());
 
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
-    const [selectedEventType, setSelectedEventType] = useState<EventType | undefined>(undefined);
+    const [selectedEventType, setSelectedEventType] = useState<EventTypeInformation| undefined>(undefined);
 
     const [eventTypes, refreshEventTypes] = AllEventTypes.use({
         microserviceId: selectedMicroservice?.id || undefined!,

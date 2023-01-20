@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useEffect, useMemo } from 'react';
-import { Microservices } from 'API/configuration/Microservices';
-import { Microservice } from 'API/configuration/Microservice';
+import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
+import { Microservice } from 'API/configuration/microservices/Microservice';
 import { AllObservers } from 'API/events/store/observers/AllObservers';
-import { Tenants } from 'API/configuration/Tenants';
-import { Tenant } from 'API/configuration/Tenant';
+import { AllTenants } from 'API/configuration/tenants/AllTenants';
+import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllObserversArguments } from 'API/events/store/observers/AllObservers';
 import {
     CommandBar,
@@ -90,11 +90,11 @@ const columns: IColumn[] = [
 ];
 
 export const Observers = () => {
-    const [microservices] = Microservices.use();
-    const [tenants] = Tenants.use();
+    const [microservices] = AllMicroservices.use();
+    const [tenants] = AllTenants.use();
 
     const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
-    const [selectedTenant, setSelectedTenant] = useState<Tenant>();
+    const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
 
     const [selectedObserver, setSelectedObserver] = useState<ObserverState>();
 

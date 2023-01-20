@@ -3,7 +3,7 @@
 
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 import { IColumn } from '@fluentui/react';
-import { AllMicroservices } from 'API/configuration/Microservices/AllMicroservices';
+import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
 
 const columns: IColumn[] = [
     {
