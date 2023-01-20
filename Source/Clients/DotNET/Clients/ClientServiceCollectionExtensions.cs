@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Tasks;
 using Aksio.Cratis.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -25,7 +26,7 @@ public static class ClientServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCratisClient(this IServiceCollection services, ILogger logger)
     {
-        services.AddSingleton<IClient>(_ =>
+        services.AddSingleton((Func<IServiceProvider, IClient>)(_ =>
         {
             var configuration = _.GetRequiredService<ClientConfiguration>();
             var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
@@ -36,6 +37,7 @@ public static class ClientServiceCollectionExtensions
             var addresses = server.Features.Get<IServerAddressesFeature>();
             var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
             var executionContextManager = _.GetRequiredService<IExecutionContextManager>();
+            var taskFactory = _.GetRequiredService<ITaskFactory>();
             var timerFactory = _.GetRequiredService<ITimerFactory>();
 
             var options = configuration.GetSingleKernelOptions();
@@ -49,21 +51,24 @@ public static class ClientServiceCollectionExtensions
             {
                 ClusterType.Single => new SingleKernelClient(
                     httpClientFactory,
+                    options,
+                    taskFactory,
                     timerFactory,
                     executionContextManager,
-                    options,
                     clientEndpoint,
                     clientLifecycle,
                     serializerOptions,
                     logger),
                 _ => throw new UnknownClusterType()
             };
-
             logger.ConnectingToKernel();
+
+            LogClientType(configuration, logger);
+
             client.Connect().Wait();
 
             return client;
-        });
+        }));
 
         return services;
     }
@@ -79,6 +84,7 @@ public static class ClientServiceCollectionExtensions
         {
             var server = _.GetRequiredService<IServer>();
             var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
+            var taskFactory = _.GetRequiredService<ITaskFactory>();
             var timerFactory = _.GetRequiredService<ITimerFactory>();
             var executionContextManager = _.GetRequiredService<IExecutionContextManager>();
             var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
@@ -86,9 +92,10 @@ public static class ClientServiceCollectionExtensions
             serializerOptions = new JsonSerializerOptions(serializerOptions);
             var logger = _.GetRequiredService<ILogger<SingleKernelClient>>();
 
-            var client = new InsideSiloClient(
+            var client = new InsideKernelClient(
                 server,
                 httpClientFactory,
+                taskFactory,
                 timerFactory,
                 executionContextManager,
                 clientLifecycle,
@@ -101,5 +108,15 @@ public static class ClientServiceCollectionExtensions
             return client;
         });
         return services;
+    }
+
+    static void LogClientType(ClientConfiguration configuration, ILogger<SingleKernelClient> logger)
+    {
+        switch (configuration.ClusterType)
+        {
+            case ClusterType.Single: logger.UsingSingleKernelClient(); break;
+            case ClusterType.Static: logger.UsingStaticClusterKernelClient(); break;
+            case ClusterType.AzureStorage: logger.UsingOrleansAzureStorageKernelClient(); break;
+        }
     }
 }
