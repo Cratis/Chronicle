@@ -15,5 +15,6 @@
       <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensions)" />
       <PackageReference Include="Humanizer" Version="$(Humanizer)" />
       <PackageReference Include="automapper" Version="10.1.1" />
+      <PackageReference Include="Azure.Data.Tables" Version="12.7.1"/>
     </ItemGroup>
 </Project>
