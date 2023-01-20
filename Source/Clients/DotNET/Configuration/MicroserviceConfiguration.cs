@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Configuration;
 
 namespace Aksio.Cratis.Configuration;
 

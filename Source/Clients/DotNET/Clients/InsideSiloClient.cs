@@ -1,8 +1,15 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.Commands;
+using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Queries;
+using Aksio.Cratis.Timers;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients;
 
@@ -11,18 +18,47 @@ namespace Aksio.Cratis.Clients;
 /// </summary>
 public class InsideSiloClient : IClient
 {
-    /// <inheritdoc/>
-    public bool IsConnected => false;
+    readonly SingleKernelClient _innerClient;
+
+    public InsideSiloClient(
+        IServer server,
+        IHttpClientFactory httpClientFactory,
+        ITimerFactory timerFactory,
+        IExecutionContextManager executionContextManager,
+        IClientLifecycle clientLifecycle,
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<SingleKernelClient> logger)
+    {
+        var addresses = server.Features.Get<IServerAddressesFeature>();
+        var endpoint = new Uri(addresses!.Addresses.First());
+        var options = new SingleKernelOptions
+        {
+            Endpoint = endpoint,
+            AdvertisedClientEndpoint = endpoint
+        };
+        _innerClient = new(
+            httpClientFactory,
+            timerFactory,
+            executionContextManager,
+            options,
+            endpoint,
+            clientLifecycle,
+            jsonSerializerOptions,
+            logger);
+    }
 
     /// <inheritdoc/>
-    public ConnectionId ConnectionId => throw new NotImplementedException();
+    public bool IsConnected => _innerClient.IsConnected;
 
     /// <inheritdoc/>
-    public Task Connect() => Task.CompletedTask;
+    public ConnectionId ConnectionId => _innerClient.ConnectionId;
 
     /// <inheritdoc/>
-    public Task<CommandResult> PerformCommand(string route, object? command = null) => Task.FromResult(CommandResult.Success);
+    public Task Connect() => _innerClient.Connect();
 
     /// <inheritdoc/>
-    public Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null) => Task.FromResult(QueryResult.Success);
+    public Task<CommandResult> PerformCommand(string route, object? command = null) => _innerClient.PerformCommand(route, command);
+
+    /// <inheritdoc/>
+    public Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null) => _innerClient.PerformQuery(route, queryString);
 }

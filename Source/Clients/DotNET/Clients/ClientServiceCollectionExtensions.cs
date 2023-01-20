@@ -31,7 +31,7 @@ public static class ClientServiceCollectionExtensions
             var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
             var serializerOptions = _.GetRequiredService<JsonSerializerOptions>();
             serializerOptions = new JsonSerializerOptions(serializerOptions);
-            var singleKernelClientLogger = _.GetRequiredService<ILogger<SingleKernelClient>>();
+            var logger = _.GetRequiredService<ILogger<SingleKernelClient>>();
             var server = _.GetRequiredService<IServer>();
             var addresses = server.Features.Get<IServerAddressesFeature>();
             var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
@@ -55,7 +55,7 @@ public static class ClientServiceCollectionExtensions
                     clientEndpoint,
                     clientLifecycle,
                     serializerOptions,
-                    singleKernelClientLogger),
+                    logger),
                 _ => throw new UnknownClusterType()
             };
 
@@ -75,7 +75,31 @@ public static class ClientServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCratisInsideSiloClient(this IServiceCollection services)
     {
-        services.AddSingleton<IClient, InsideSiloClient>();
+        services.AddSingleton<IClient>(_ =>
+        {
+            var server = _.GetRequiredService<IServer>();
+            var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
+            var timerFactory = _.GetRequiredService<ITimerFactory>();
+            var executionContextManager = _.GetRequiredService<IExecutionContextManager>();
+            var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
+            var serializerOptions = _.GetRequiredService<JsonSerializerOptions>();
+            serializerOptions = new JsonSerializerOptions(serializerOptions);
+            var logger = _.GetRequiredService<ILogger<SingleKernelClient>>();
+
+            var client = new InsideSiloClient(
+                server,
+                httpClientFactory,
+                timerFactory,
+                executionContextManager,
+                clientLifecycle,
+                serializerOptions,
+                logger);
+
+            logger.ConnectingToKernel();
+            client.Connect().Wait();
+
+            return client;
+        });
         return services;
     }
 }
