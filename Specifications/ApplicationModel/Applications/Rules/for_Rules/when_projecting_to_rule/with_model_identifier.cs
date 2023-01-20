@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Events.Projections;
 using Aksio.Cratis.Events.Projections.Definitions;
 using Aksio.Cratis.Events.Projections.Grains;
+using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Applications.Rules.for_Rules.when_projecting_to_rule;
@@ -37,7 +38,7 @@ public class with_model_identifier : given.no_rules
                 [nameof(ComplexState.SomeString).ToCamelCase()] = complex_state_some_string
             }
         };
-        projection.Setup(_ => _.GetModelInstance(IsAny<ProjectionDefinition>())).Returns(Task.FromResult(jsonObject));
+        projection.Setup(_ => _.GetModelInstance(IsAny<ProjectionDefinition>())).Returns(Task.FromResult(new ImmediateProjectionResult(jsonObject, Enumerable.Empty<PropertyPath>(), 0)));
 
         cluster_client
             .Setup(_ => _.GetGrain<IImmediateProjection>(IsAny<Guid>(), IsAny<string>(), null))
