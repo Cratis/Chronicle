@@ -1,3 +1,5 @@
+- name: Home
+  homepage: index.html
 - name: Articles
   href: articles/
   homepage: articles/intro.html
