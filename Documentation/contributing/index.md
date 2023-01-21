@@ -2,6 +2,16 @@
 
 Before you start contributing, you should read our guidelines [here](https://github.com/aksio-insurtech/.github/blob/main/contributing.md).
 
+## Development principles
+
+### Don't fall into the "not invented here" pitfall
+
+### Focus on maintainability of the code
+
+### Code should be tested and made testable
+
+### Favor characteristics over principles (CUPID over SOLID)
+
 ## Prerequisites
 
 This repository requires the following:
