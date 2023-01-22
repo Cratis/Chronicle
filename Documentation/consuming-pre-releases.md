@@ -63,6 +63,4 @@ For instance in your `.csproj` file(s):
 
 ## NPM
 
-All Docker container images can be found [here](https://github.com/orgs/aksio-insurtech/packages?ecosystem=npm).
-
 > Note: For the time being we're not producing pre-release NPM packages.
