@@ -87,7 +87,7 @@ public class MySystem : IMySystem
 ### Singleton per Tenant
 
 Similar to `[Singleton]` there is another attribute called `[SingletonPerTenant]`. This makes sure to hold one instance
-per [tenant](../tenancy.md).
+per [tenant](../concepts/tenancy.md).
 
 ```csharp
 using Aksio.Cratis.Execution;
