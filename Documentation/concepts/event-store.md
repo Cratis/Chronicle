@@ -29,3 +29,5 @@ need to do is to not emit a `microserviceId`. This will then default to a micros
 
 Cratis is [multi-tenant](./tenancy.md). Every tenant gets its own event store database per microservice,
 completely segregating the data between the different tenants for each microservice.
+
+You can run Cratis as a single tenant by just configuring one tenant.
