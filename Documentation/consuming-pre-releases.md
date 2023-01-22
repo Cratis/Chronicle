@@ -1,6 +1,6 @@
 # Consuming pre-releases
 
-All PRs will have binary artifacts built for it so that one can test things out before the PR is accepted and merged in.
+All PRs that are marked as **draft** will have binary artifacts built for it so that one can test things out before the PR is accepted and merged in.
 The artifacts are not published to the production sources, as everything is built in debug mode and not considered ready
 for production. We leverage GitHub packages for these builds. You can find all the packages built [here](https://github.com/orgs/aksio-insurtech/packages?repo_name=Cratis).
 
