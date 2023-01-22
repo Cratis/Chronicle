@@ -1,3 +1,7 @@
+- name: Introduction
+  href: index.md
+- name: Using only REST APIs
+  href: rest.md
 - name: Basic
   href: basic.md
 - name: Application Model
