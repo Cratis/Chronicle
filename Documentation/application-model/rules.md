@@ -176,7 +176,7 @@ Having the rules within the class like this can be convenient, but you might fin
 some rules be reusable or even more generic and applicable as abstract concepts.
 Cratis provides a method in the base class called `RuleForState()` that lets you fluently describe rules per projected state property.
 
-> Note: Out of the box Cratis provides some rules, but you can easily [extend it](../../recipes/rules/extending-rules.md).
+> Note: Out of the box Cratis provides some rules, but you can easily [extend it](../recipes/rules/extending-rules.md).
 
 Lets change to using a generic `.Unique()` rule:
 

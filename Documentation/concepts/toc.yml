@@ -1,4 +1,16 @@
 - name: Event
   href: event.md
+- name: Event Type
+  href: event-type.md
 - name: Event Source
   href: event-source.md
+- name: Event Store
+  href: event-store.md
+- name: Event Sequence
+  href: event-sequence.md
+- name: Observer
+  href: observer.md
+- name: Projection
+  href: projection.md
+- name: Tenancy
+  href: tenancy.md
