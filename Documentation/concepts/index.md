@@ -1,6 +1,6 @@
-# Guidance
+# Concepts
 
-This area contains different guidance documents.
+This area contains explanations of the concepts in Cratis.
 
 | Topic | Description |
 | ------- | ----------- |

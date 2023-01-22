@@ -10,7 +10,7 @@
   href: validation.md
 - name: Rules
   href: rules.md
-- name: Frontend
-  href: frontend/toc.yml
 - name: Identity
   href: identity.md
+- name: Frontend
+  href: frontend/toc.yml
