@@ -70,7 +70,7 @@ public class OrleansAzureTableStoreKernelClient : ClusteredKernelClient
             _options.TableName);
 
         var result = client.Query<OrleansSiloInfo>(filter: "Status eq 'Active'");
-        _endpoints = result.Select(_ => new Uri($"{(_options.TLS ? "https" : "http")}://{_.HostName}:{_options.Port}")).ToArray().AsEnumerable();
+        _endpoints = result.Select(_ => new Uri($"{(_options.Secure ? "https" : "http")}://{_.HostName}:{_options.Port}")).ToArray().AsEnumerable();
 
         _clientLogger.UsingEndpoints(string.Join(", ", _endpoints));
     }
