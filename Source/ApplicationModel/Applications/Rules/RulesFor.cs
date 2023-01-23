@@ -44,6 +44,11 @@ public abstract class RulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, I
     /// <inheritdoc/>
     public override ValidationResult Validate(ValidationContext<TCommand> context)
     {
+        if (context.InstanceToValidate is null)
+        {
+            return new ValidationResult();
+        }
+
         var result = base.Validate(context);
 
         var selfContext = context.CloneForChildValidator((TSelf)this, true);

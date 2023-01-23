@@ -95,6 +95,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans", "Specifications\K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Specifications\Kernel\Shared\Shared.csproj", "{E73FAA76-51D9-4193-9A61-1624D16D258A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ApplicationModel", "ApplicationModel", "{D3883B0B-776E-40D7-8E98-002AB1A7E9FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Applications", "Specifications\ApplicationModel\Applications\Applications.csproj", "{197F2075-A7E4-4F84-94CC-56B3C5576338}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

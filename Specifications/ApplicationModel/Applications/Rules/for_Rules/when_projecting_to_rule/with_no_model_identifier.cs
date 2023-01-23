@@ -33,7 +33,7 @@ public class with_no_model_identifier : given.no_rules
                 [nameof(ComplexState.SomeString).ToCamelCase()] = complex_state_some_string
             }
         };
-        projection.Setup(_ => _.GetModelInstance(IsAny<ProjectionDefinition>())).Returns(Task.FromResult(jsonObject));
+        projection.Setup(_ => _.GetModelInstance(IsAny<ProjectionDefinition>())).Returns(Task.FromResult(new ImmediateProjectionResult(jsonObject, Enumerable.Empty<PropertyPath>(), 0)));
 
         cluster_client
             .Setup(_ => _.GetGrain<IImmediateProjection>(IsAny<Guid>(), IsAny<string>(), null))

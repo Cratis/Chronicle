@@ -144,7 +144,7 @@ export class AllAccounts extends QueryFor<DebitAccount> {
 }
 ```
 
-> Note: For observable queries, this is a little bit different, read more about how you do this from [backend](../queries.md) and
+> Note: For observable queries, this is a little bit different, read more about how you do this from [backend](../../cqrs/queries.md) and
 > [frontend](./queries.md).
 
 The return type for the static method called `.use()` representing a React hook is of type `QueryResultWithState<>`.

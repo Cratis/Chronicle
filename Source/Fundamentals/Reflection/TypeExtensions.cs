@@ -16,6 +16,8 @@ public static class TypeExtensions
         typeof(decimal),
         typeof(string),
         typeof(Guid),
+        typeof(DateOnly),
+        typeof(TimeOnly),
         typeof(DateTime),
         typeof(DateTimeOffset),
         typeof(TimeSpan)

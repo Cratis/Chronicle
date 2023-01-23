@@ -137,11 +137,14 @@ public static class ImportBuilderExtensions
     /// Append an event by automatically mapping property names matching from the model onto the event.
     /// </summary>
     /// <param name="context">Observable of the <see cref="ImportContext{TModel, TExternalModel}"/>.</param>
+    /// <param name="validFromCallback">Callback for providing valid from.</param>
     /// <typeparam name="TModel">Type of model.</typeparam>
     /// <typeparam name="TExternalModel">Type of external model.</typeparam>
     /// <typeparam name="TEvent">Type of event to append.</typeparam>
     /// <returns>Observable for chaining.</returns>
-    public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(this IObservable<ImportContext<TModel, TExternalModel>> context)
+    public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(
+        this IObservable<ImportContext<TModel, TExternalModel>> context,
+        Func<ImportContext<TModel, TExternalModel>, DateTimeOffset?> validFromCallback)
     {
         context.Subscribe(_ =>
         {
@@ -150,7 +153,39 @@ public static class ImportBuilderExtensions
                 try
                 {
                     var mapper = ModelToEventMapperFor<TModel, TEvent>.Mapper;
-                    _.Events.Add(mapper.Map<TEvent>(((TModel)change!.State)!)!);
+                    _.Events.Add(mapper.Map<TEvent>(((TModel)change!.State)!)!, validFromCallback(_));
+                }
+                catch (TypeInitializationException ex)
+                {
+                    throw ex.InnerException!;
+                }
+            }
+        });
+
+        return context;
+    }
+
+    /// <summary>
+    /// Append an event by automatically mapping property names matching from the model onto the event.
+    /// </summary>
+    /// <param name="context">Observable of the <see cref="ImportContext{TModel, TExternalModel}"/>.</param>
+    /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <typeparam name="TEvent">Type of event to append.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(
+        this IObservable<ImportContext<TModel, TExternalModel>> context,
+        DateTimeOffset? validFrom = default)
+    {
+        context.Subscribe(_ =>
+        {
+            foreach (var change in _.Changeset.Changes.Where(_ => _ is PropertiesChanged<TModel>).Select(_ => _ as PropertiesChanged<TModel>))
+            {
+                try
+                {
+                    var mapper = ModelToEventMapperFor<TModel, TEvent>.Mapper;
+                    _.Events.Add(mapper.Map<TEvent>(((TModel)change!.State)!)!, validFrom);
                 }
                 catch (TypeInitializationException ex)
                 {
@@ -167,13 +202,36 @@ public static class ImportBuilderExtensions
     /// </summary>
     /// <param name="context">Observable of the <see cref="ImportContext{TModel, TExternalModel}"/>.</param>
     /// <param name="creationCallback">Callback for creating the instance.</param>
+    /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
     /// <typeparam name="TModel">Type of model.</typeparam>
     /// <typeparam name="TExternalModel">Type of external model.</typeparam>
     /// <typeparam name="TEvent">Type of event to append.</typeparam>
     /// <returns>Observable for chaining.</returns>
-    public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(this IObservable<ImportContext<TModel, TExternalModel>> context, Func<ImportContext<TModel, TExternalModel>, TEvent> creationCallback)
+    public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(
+        this IObservable<ImportContext<TModel, TExternalModel>> context,
+        Func<ImportContext<TModel, TExternalModel>, TEvent> creationCallback,
+        DateTimeOffset? validFrom = default)
     {
-        context.Subscribe(_ => _.Events.Add(creationCallback(_)!));
+        context.Subscribe(_ => _.Events.Add(creationCallback(_)!, validFrom));
+        return context;
+    }
+
+    /// <summary>
+    /// Append an event through calling a callback that will be responsible for creating an instance of the event.
+    /// </summary>
+    /// <param name="context">Observable of the <see cref="ImportContext{TModel, TExternalModel}"/>.</param>
+    /// <param name="creationCallback">Callback for creating the instance.</param>
+    /// <param name="validFromCallback">Callback for providing valid from.</param>
+    /// <typeparam name="TModel">Type of model.</typeparam>
+    /// <typeparam name="TExternalModel">Type of external model.</typeparam>
+    /// <typeparam name="TEvent">Type of event to append.</typeparam>
+    /// <returns>Observable for chaining.</returns>
+    public static IObservable<ImportContext<TModel, TExternalModel>> AppendEvent<TModel, TExternalModel, TEvent>(
+        this IObservable<ImportContext<TModel, TExternalModel>> context,
+        Func<ImportContext<TModel, TExternalModel>, TEvent> creationCallback,
+        Func<ImportContext<TModel, TExternalModel>, DateTimeOffset?> validFromCallback)
+    {
+        context.Subscribe(_ => _.Events.Add(creationCallback(_)!, validFromCallback(_)));
         return context;
     }
 
@@ -181,7 +239,7 @@ public static class ImportBuilderExtensions
     /// Checks if the property difference is an exact match or a nested property of any of the propertyPaths.
     /// </summary>
     /// <param name="propertyDifference">The changed property.</param>
-    /// <param name="propertyPaths">The detection paths to check against.</param>
+    /// /// <param name="propertyPaths">The detection paths to check against.</param>
     /// <returns>True if the changed property is an exact match or a child node of the configured property path.</returns>
     static bool PropertyChanged(this PropertyDifference propertyDifference, PropertyPath[] propertyPaths) =>
         propertyPaths.Any(

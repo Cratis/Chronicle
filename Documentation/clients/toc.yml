@@ -1,2 +1,4 @@
 - name: .NET Client
   href: dotnet/toc.yml
+- name: ASP.NET Core
+  href: asp-net-core/toc.yml

@@ -1,6 +1,6 @@
 # Consuming pre-releases
 
-All PRs will have binary artifacts built for it so that one can test things out before the PR is accepted and merged in.
+All PRs that are marked as **draft** will have binary artifacts built for it so that one can test things out before the PR is accepted and merged in.
 The artifacts are not published to the production sources, as everything is built in debug mode and not considered ready
 for production. We leverage GitHub packages for these builds. You can find all the packages built [here](https://github.com/orgs/aksio-insurtech/packages?repo_name=Cratis).
 
@@ -62,7 +62,5 @@ For instance in your `.csproj` file(s):
 > For more details, read the [GitHub documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry#authenticating-to-github-packages).
 
 ## NPM
-
-All Docker container images can be found [here](https://github.com/orgs/aksio-insurtech/packages?ecosystem=npm).
 
 > Note: For the time being we're not producing pre-release NPM packages.
