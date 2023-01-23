@@ -99,6 +99,10 @@ public class Rules : IRules
     public void ProjectTo(IRule rule, object? modelIdentifier = default)
     {
         var projectionDefinition = GetProjectionDefinitionFor(rule);
+        if (projectionDefinition.IsEmpty)
+        {
+            return;
+        }
 
         var key = new ImmediateProjectionKey(
             _executionContext.MicroserviceId,
