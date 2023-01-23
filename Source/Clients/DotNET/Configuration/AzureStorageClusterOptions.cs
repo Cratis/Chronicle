@@ -25,4 +25,14 @@ public class AzureStorageClusterOptions
     /// Gets the table name to use.
     /// </summary>
     public string TableName { get; init; } = DEFAULT_TABLE_NAME;
+
+    /// <summary>
+    /// Gets the port to connect to, defaults to 80.
+    /// </summary>
+    public int Port { get; init; } = 80;
+
+    /// <summary>
+    /// Gets whether or not to use TLS for connecting (https).
+    /// </summary>
+    public bool TLS { get; init; }
 }

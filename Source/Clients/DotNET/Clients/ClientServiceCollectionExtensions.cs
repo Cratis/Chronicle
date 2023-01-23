@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Net;
 using Aksio.Cratis.Tasks;
 using Aksio.Cratis.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -26,12 +27,14 @@ public static class ClientServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCratisClient(this IServiceCollection services, ILogger logger)
     {
-        services.AddSingleton((Func<IServiceProvider, IClient>)(_ =>
+        services.AddSingleton(_ =>
         {
             var configuration = _.GetRequiredService<ClientConfiguration>();
             var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
+            var loadBalancer = _.GetRequiredService<ILoadBalancer>();
             var serializerOptions = _.GetRequiredService<JsonSerializerOptions>();
             serializerOptions = new JsonSerializerOptions(serializerOptions);
+            var orleansAzureTableClientLogger = _.GetRequiredService<ILogger<OrleansAzureTableStoreKernelClient>>();
             var logger = _.GetRequiredService<ILogger<SingleKernelClient>>();
             var server = _.GetRequiredService<IServer>();
             var addresses = server.Features.Get<IServerAddressesFeature>();
@@ -40,18 +43,18 @@ public static class ClientServiceCollectionExtensions
             var taskFactory = _.GetRequiredService<ITaskFactory>();
             var timerFactory = _.GetRequiredService<ITimerFactory>();
 
-            var options = configuration.GetSingleKernelOptions();
+            var loadBalancedHttpClientFactory = loadBalancer.CreateHttpClientFactory(new RoundRobinLoadBalancerStrategy());
             if (configuration.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
             {
                 throw new UnableToResolveClientUri();
             }
             var clientEndpoint = configuration.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First());
 
-            var client = configuration.ClusterType switch
+            IClient client = configuration.Kernel.Type switch
             {
-                ClusterType.Single => new SingleKernelClient(
+                ClusterTypes.Single => new SingleKernelClient(
                     httpClientFactory,
-                    options,
+                    configuration.Kernel.GetSingleKernelOptions(),
                     taskFactory,
                     timerFactory,
                     executionContextManager,
@@ -59,6 +62,30 @@ public static class ClientServiceCollectionExtensions
                     clientLifecycle,
                     serializerOptions,
                     logger),
+
+                ClusterTypes.Static => new StaticClusteredKernelClient(
+                    loadBalancedHttpClientFactory,
+                    configuration.Kernel.GetStaticClusterOptions(),
+                    taskFactory,
+                    timerFactory,
+                    executionContextManager,
+                    clientEndpoint,
+                    clientLifecycle,
+                    serializerOptions,
+                    logger),
+
+                ClusterTypes.AzureStorage => new OrleansAzureTableStoreKernelClient(
+                    loadBalancedHttpClientFactory,
+                    configuration.Kernel.GetAzureStorageClusterOptions(),
+                    taskFactory,
+                    timerFactory,
+                    executionContextManager,
+                    clientEndpoint,
+                    clientLifecycle,
+                    serializerOptions,
+                    orleansAzureTableClientLogger,
+                    logger),
+
                 _ => throw new UnknownClusterType()
             };
             logger.ConnectingToKernel();
@@ -68,7 +95,7 @@ public static class ClientServiceCollectionExtensions
             client.Connect().Wait();
 
             return client;
-        }));
+        });
 
         return services;
     }
@@ -112,11 +139,11 @@ public static class ClientServiceCollectionExtensions
 
     static void LogClientType(ClientConfiguration configuration, ILogger<SingleKernelClient> logger)
     {
-        switch (configuration.ClusterType)
+        switch (configuration.Kernel.Type)
         {
-            case ClusterType.Single: logger.UsingSingleKernelClient(); break;
-            case ClusterType.Static: logger.UsingStaticClusterKernelClient(); break;
-            case ClusterType.AzureStorage: logger.UsingOrleansAzureStorageKernelClient(); break;
+            case ClusterTypes.Single: logger.UsingSingleKernelClient(); break;
+            case ClusterTypes.Static: logger.UsingStaticClusterKernelClient(); break;
+            case ClusterTypes.AzureStorage: logger.UsingOrleansAzureStorageKernelClient(); break;
         }
     }
 }

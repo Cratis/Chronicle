@@ -9,6 +9,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Integration;
+using Aksio.Cratis.Net;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
