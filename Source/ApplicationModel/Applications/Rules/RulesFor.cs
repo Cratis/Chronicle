@@ -27,7 +27,9 @@ public abstract class RulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, I
     /// Define state that will be used by rules.
     /// </summary>
     /// <param name="builder"><see cref="IProjectionBuilderFor{T}"/> for building the state.</param>
-    public virtual void DefineState(IProjectionBuilderFor<TSelf> builder) {}
+    public virtual void DefineState(IProjectionBuilderFor<TSelf> builder)
+    {
+    }
 
     /// <summary>
     /// Defines a validation rule for a specific property on the state.
