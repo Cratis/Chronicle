@@ -7,6 +7,8 @@ public class and_is_already_in_replay : given.an_observer_and_two_event_types
 {
     async Task Establish()
     {
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)50));
+        await observer.Subscribe<ObserverSubscriber>(event_types);
         await observer.Rewind();
     }
 
