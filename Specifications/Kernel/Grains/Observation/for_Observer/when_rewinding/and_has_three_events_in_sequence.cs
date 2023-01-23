@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Execution;
-using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_rewinding;
 
