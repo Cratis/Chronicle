@@ -1,4 +1,9 @@
 <Project>
+    <PropertyGroup>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
+    </PropertyGroup>
+
     <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props"/>
 
     <ItemGroup>

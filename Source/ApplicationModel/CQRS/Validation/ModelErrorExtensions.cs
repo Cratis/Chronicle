@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Strings;
+using Aksio.Cratis.Validation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Aksio.Cratis.Applications.Validation;

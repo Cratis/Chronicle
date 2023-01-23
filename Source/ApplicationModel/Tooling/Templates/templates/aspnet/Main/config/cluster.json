@@ -1,6 +1,6 @@
 {
     "name": "Cratis",
-    "type": "local",
+    "type": "single",
     "advertisedIP": "127.0.0.1",
     "siloPort": 11111,
     "gatewayPort": 30000,

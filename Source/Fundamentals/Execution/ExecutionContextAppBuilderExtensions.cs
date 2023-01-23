@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder;
 
@@ -10,7 +11,10 @@ namespace Microsoft.AspNetCore.Builder;
 /// </summary>
 public static class ExecutionContextAppBuilderExtensions
 {
-    const string TenantIdHeader = "Tenant-ID";
+    /// <summary>
+    /// The name of the HTTP header for identifying the tenant.
+    /// </summary>
+    public const string TenantIdHeader = "Tenant-ID";
 
     /// <summary>
     /// Use execution context for an application.
@@ -23,6 +27,8 @@ public static class ExecutionContextAppBuilderExtensions
     /// </remarks>
     public static IApplicationBuilder UseExecutionContext(this IApplicationBuilder app)
     {
+        var executionContextManager = app.ApplicationServices.GetRequiredService<IExecutionContextManager>();
+        executionContextManager.Establish(ExecutionContextManager.GlobalMicroserviceId);
         app.Use(async (context, next) =>
         {
             var tenantId = TenantId.Development;
@@ -31,10 +37,19 @@ public static class ExecutionContextAppBuilderExtensions
             {
                 tenantId = context.Request.Headers[TenantIdHeader][0];
             }
+            executionContextManager.Establish(tenantId, CorrelationId.New());
 
-            var executionContextManager = app.ApplicationServices.GetService(typeof(IExecutionContextManager)) as IExecutionContextManager;
-            executionContextManager!.Establish(tenantId, CorrelationId.New());
-            await next.Invoke().ConfigureAwait(false);
+            try
+            {
+                await next.Invoke();
+            }
+            catch (InvalidOperationException)
+            {
+                // TODO: We're catching this exception to avoid WebSockets that are terminated. It tries to continue on middlewares
+                // and one of these is doing modifications on headers and we get 'Headers are read-only, response has already started'.
+                // The reason fir this is that the original request that was upgraded to WebSockets continues when the controller action
+                // is done.
+            }
         });
 
         return app;

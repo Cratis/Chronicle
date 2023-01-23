@@ -1,28 +1,19 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Collections;
 using Aksio.Cratis.Compliance;
-using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Events.Observation;
-using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Schemas;
-using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Store.Grains.Connections;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
-using Aksio.Cratis.Extensions.Orleans.Configuration;
-using Aksio.Cratis.Extensions.Orleans.Execution;
+using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Orleans;
-using Orleans.Hosting;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
-using OrleansClientBuilder = Orleans.ClientBuilder;
 
 namespace Aksio.Cratis.Hosting;
 
@@ -31,7 +22,6 @@ namespace Aksio.Cratis.Hosting;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
-    readonly MicroserviceId _microserviceId;
     bool _inKernel;
 
     /// <summary>
@@ -41,7 +31,6 @@ public class ClientBuilder : IClientBuilder
     public ClientBuilder(MicroserviceId microserviceId)
     {
         ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
-        _microserviceId = microserviceId;
     }
 
     /// <summary>
@@ -69,8 +58,8 @@ public class ClientBuilder : IClientBuilder
         ITypes? types = default,
         ILoggerFactory? loggerFactory = default)
     {
-        var logger = loggerFactory?.CreateLogger<ClientBuilder>();
-        logger?.Configuring();
+        var logger = loggerFactory?.CreateLogger<ClientBuilder>()!;
+        logger.Configuring();
 
         if (types == default)
         {
@@ -78,40 +67,33 @@ public class ClientBuilder : IClientBuilder
         }
 
         services
+            .AddHttpClient()
             .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
             .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
 
         if (_inKernel)
         {
+            services.AddCratisInsideSiloClient();
             return;
         }
 
-        logger?.ConfiguringServices();
-        var connectionManager = new ConnectionManager();
+        logger.ConfiguringServices();
         services
-            .AddSingleton<IConnectionManager>(connectionManager)
+            .AddCratisClient()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
             .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()
             .AddSingleton(types)
-            .AddSingleton<IProjectionsRegistrar, ProjectionsRegistrar>()
-            .AddProjections()
-            .AddOutboxProjections()
-            .AddIntegration()
-            .AddSingleton<IObservers, Observers>()
+            .AddSingleton<IClientLifecycle, ClientLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
-            .AddSingleton<ISchemas, Events.Schemas.Schemas>()
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
-            .AddSingleton<IHostedService, ObserversService>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
             .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
-            .AddSingleton<IRequestContextManager, RequestContextManager>();
-
-        types.AllObservers().ForEach(_ => services.AddTransient(_));
+            .AddObservers(types);
 
         logger?.ConfiguringCompliance();
 
@@ -121,39 +103,5 @@ public class ClientBuilder : IClientBuilder
         types.All.Where(_ =>
             _ != typeof(ICanProvideComplianceMetadataForProperty) &&
             _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
-
-        services.AddSingleton(sp =>
-        {
-            logger?.ConfiguringKernelConnection();
-            var orleansBuilder = new OrleansClientBuilder()
-                .UseCluster(services.GetClusterConfig(), _microserviceId, logger)
-                .AddEventSequenceStream()
-                .AddSimpleMessageStreamProvider(WellKnownProviders.ObserverHandlersStreamProvider)
-                .UseExecutionContext()
-                .UseConnectionIdFromConnectionContextForOutgoingCalls()
-                .ConfigureServices(services => services
-                    .AddSingleton<IConnectionManager>(connectionManager)
-                    .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-                    .AddSingleton<IRequestContextManager, RequestContextManager>()
-                    .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>());
-
-            var orleansClient = orleansBuilder.Build();
-
-            logger?.ConnectingToKernel();
-            orleansClient.Connect(async (exception) =>
-            {
-                logger?.ProblemsConnectingToSilo(exception.Message, exception.InnerException?.Message ?? "<no more details>");
-                await Task.Delay(1000);
-                return true;
-            }).Wait();
-            logger?.ConnectedToKernel();
-
-#pragma warning disable CA2008
-            orleansClient
-                .GetGrain<IConnectedClients>(Guid.Empty)
-                .GetLastConnectedClientConnectionId().ContinueWith(_ => ConnectionManager.InternalConnectionId = _.Result);
-
-            return orleansClient;
-        });
     }
 }

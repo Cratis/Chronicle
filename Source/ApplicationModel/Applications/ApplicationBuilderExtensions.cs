@@ -33,8 +33,9 @@ public static class ApplicationBuilderExtensions
         }
 
         app.PerformBootProcedures();
-        app.UseDefaultLogging();
+
         app.UseCratis();
+        app.UseDefaultLogging();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();

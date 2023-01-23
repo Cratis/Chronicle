@@ -3,23 +3,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { AppendedEvent } from './AppendedEvent';
+import { AppendedEventWithJsonAsContent } from '../sequence/AppendedEventWithJsonAsContent';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{microserviceId}/{tenantId}/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
 
 export interface FindForArguments {
     eventSequenceId: string;
     microserviceId: string;
     tenantId: string;
 }
-export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
-    readonly route: string = '/api/events/store/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
+export class FindFor extends QueryFor<AppendedEventWithJsonAsContent[], FindForArguments> {
+    readonly route: string = '/api/events/store/{microserviceId}/{tenantId}/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: AppendedEvent[] = [];
+    readonly defaultValue: AppendedEventWithJsonAsContent[] = [];
 
     constructor() {
-        super(AppendedEvent, true);
+        super(AppendedEventWithJsonAsContent, true);
     }
 
     get requestArguments(): string[] {
@@ -30,7 +30,7 @@ export class FindFor extends QueryFor<AppendedEvent[], FindForArguments> {
         ];
     }
 
-    static use(args?: FindForArguments): [QueryResultWithState<AppendedEvent[]>, PerformQuery<FindForArguments>] {
-        return useQuery<AppendedEvent[], FindFor, FindForArguments>(FindFor, args);
+    static use(args?: FindForArguments): [QueryResultWithState<AppendedEventWithJsonAsContent[]>, PerformQuery<FindForArguments>] {
+        return useQuery<AppendedEventWithJsonAsContent[], FindFor, FindForArguments>(FindFor, args);
     }
 }

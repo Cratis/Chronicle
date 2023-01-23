@@ -1,8 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
-using Orleans;
 
 namespace Aksio.Cratis.Tenants;
 
@@ -11,22 +12,25 @@ namespace Aksio.Cratis.Tenants;
 /// </summary>
 public class TenantConfiguration : ITenantConfiguration
 {
-    readonly IClusterClient _clusterClient;
+    readonly IClient _client;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantConfiguration"/> class.
     /// </summary>
-    /// <param name="clusterClient">The Orleans <see cref="IClusterClient"/>.</param>
-    public TenantConfiguration(IClusterClient clusterClient)
+    /// <param name="client">The Cratis <see cref="IClient"/>.</param>
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
+    public TenantConfiguration(IClient client, JsonSerializerOptions jsonSerializerOptions)
     {
-        _clusterClient = clusterClient;
+        _client = client;
+        _jsonSerializerOptions = jsonSerializerOptions;
     }
 
     /// <inheritdoc/>
     public async Task<ConfigurationForTenant> GetAllFor(TenantId tenantId)
     {
-        var grain = _clusterClient.GetGrain<Configuration.Grains.Tenants.ITenantConfiguration>(tenantId);
-        var config = await grain.All();
-        return new(config);
+        var result = await _client.PerformQuery("/api/configuration/tenants/{tenantId}");
+        var element = (JsonElement)result.Data;
+        return element.Deserialize<ConfigurationForTenant>(_jsonSerializerOptions)!;
     }
 }

@@ -4,8 +4,9 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
-        <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217</NoWarn>
+        <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217;SA1310;CA1707</NoWarn>
 
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <IsPackable>true</IsPackable>
         <Copyright>Copyright Aksio Insurtech</Copyright>
         <Authors>all contributors</Authors>

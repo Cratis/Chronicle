@@ -9,16 +9,15 @@ import {
     SelectionMode,
 } from '@fluentui/react';
 
-import { default as styles } from './EventList.module.scss';
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 import { AppendedEvent } from 'API/events/store/sequence/AppendedEvent';
-import { EventType } from 'API/events/store/types/EventType';
+import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 
 export type EventSelected = (item: any) => void;
 
 export interface EventListProps {
     items: any[];
-    eventTypes: EventType[];
+    eventTypes: EventTypeInformation[];
     onEventSelected?: EventSelected;
 }
 

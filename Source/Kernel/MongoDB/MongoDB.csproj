@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.MongoDB</AssemblyName>
-        <RootNamespace>Aksio.Cratis.MongoDB</RootNamespace>
+        <AssemblyName>Aksio.Cratis.Kernel.MongoDB</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.MongoDB</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Configuration/Shared/Shared.csproj" />
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+        <ProjectReference Include="../Common/Common.csproj" />
+        <ProjectReference Include="../Engines/Engines.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
     </ItemGroup>
 </Project>

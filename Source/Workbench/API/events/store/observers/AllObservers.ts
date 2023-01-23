@@ -3,17 +3,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/cratis-applications-frontend/queries';
-import { ObserverState } from './ObserverState';
+import { ObserverState } from '../observers/ObserverState';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/observers?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/observers');
 
 export interface AllObserversArguments {
     microserviceId: string;
     tenantId: string;
 }
 export class AllObservers extends ObservableQueryFor<ObserverState[], AllObserversArguments> {
-    readonly route: string = '/api/events/store/observers?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/observers';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverState[] = [];
 

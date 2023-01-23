@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Projections.Grains;
+using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Strings;
 
@@ -20,14 +18,10 @@ public class with_model_identifier : given.no_rules
     const string model_identifier = "282c491b-10a9-4ec0-ae23-659c4e6aaf16";
 
     RuleWithState rule;
-    ProjectionId projection_id;
-    ImmediateProjectionKey key;
-    Mock<IImmediateProjection> projection;
 
     void Establish()
     {
         rule = new();
-        projection = new();
         var jsonObject = new JsonObject
         {
             [nameof(RuleWithState.FirstStateValue).ToCamelCase()] = first_state_value,
@@ -38,24 +32,14 @@ public class with_model_identifier : given.no_rules
                 [nameof(ComplexState.SomeString).ToCamelCase()] = complex_state_some_string
             }
         };
-        projection.Setup(_ => _.GetModelInstance(IsAny<ProjectionDefinition>())).Returns(Task.FromResult(new ImmediateProjectionResult(jsonObject, Enumerable.Empty<PropertyPath>(), 0)));
 
-        cluster_client
-            .Setup(_ => _.GetGrain<IImmediateProjection>(IsAny<Guid>(), IsAny<string>(), null))
-            .Returns((Guid id, string keyExtension, string _) =>
-            {
-                projection_id = id;
-                key = ImmediateProjectionKey.Parse(keyExtension);
-
-                return projection.Object;
-            });
+        immediate_projections
+            .Setup(_ => _.GetInstanceById(IsAny<ModelKey>(), IsAny<ProjectionDefinition>()))
+            .Returns(Task.FromResult(new ImmediateProjectionResult(jsonObject, Enumerable.Empty<PropertyPath>(), 0)));
     }
 
     void Because() => rules.ProjectTo(rule, model_identifier);
 
-    [Fact] void should_use_microservice_id_on_key() => key.MicroserviceId.ShouldEqual(execution_context.MicroserviceId);
-    [Fact] void should_use_tenant_id_on_key() => key.TenantId.ShouldEqual(execution_context.TenantId);
-    [Fact] void should_use_model_identifier_on_key() => key.ModelKey.ShouldEqual((ModelKey)model_identifier);
     [Fact] void should_set_first_state_value() => rule.FirstStateValue.ShouldEqual(first_state_value);
     [Fact] void should_set_second_state_value() => rule.SecondStateValue.ShouldEqual(second_state_value);
     [Fact] void should_set_complex_state() => rule.ComplexState.ShouldEqual(new ComplexState(complex_state_some_integer, complex_state_some_string));

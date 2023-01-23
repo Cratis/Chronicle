@@ -14,5 +14,5 @@ public interface ITenants
     /// Gets all the configured tenants from the Kernel.
     /// </summary>
     /// <returns>Collection of <see cref="TenantId"/>.</returns>
-    Task<IEnumerable<TenantId>> All();
+    Task<IEnumerable<Tenant>> All();
 }

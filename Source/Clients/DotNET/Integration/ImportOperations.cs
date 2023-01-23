@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using System.Reflection;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;
@@ -18,8 +19,8 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
 {
     readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
     readonly IObjectsComparer _objectsComparer;
-    readonly IEventLog _eventLog;
-    readonly IEventOutbox _eventOutbox;
+    readonly IEventSequence _eventLog;
+    readonly IEventSequence _eventOutbox;
 
     /// <inheritdoc/>
     public IAdapterFor<TModel, TExternalModel> Adapter { get; }
@@ -37,15 +38,15 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// <param name="adapterProjection">The <see cref="IAdapterProjectionFor{TModel}"/> for the model.</param>
     /// <param name="mapper"><see cref="IMapper"/> to use for mapping between external model and model.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventLog">The <see cref="IEventLog"/> for appending private events.</param>
-    /// <param name="eventOutbox">The <see cref="IEventOutbox"/> for appending public events.</param>
+    /// <param name="eventLog">The <see cref="IEventSequence"/> for appending private events.</param>
+    /// <param name="eventOutbox">The <see cref="IEventSequence"/> for appending public events.</param>
     public ImportOperations(
         IAdapterFor<TModel, TExternalModel> adapter,
         IAdapterProjectionFor<TModel> adapterProjection,
         IMapper mapper,
         IObjectsComparer objectsComparer,
-        IEventLog eventLog,
-        IEventOutbox eventOutbox)
+        IEventSequence eventLog,
+        IEventSequence eventOutbox)
     {
         Adapter = adapter;
         Projection = adapterProjection;

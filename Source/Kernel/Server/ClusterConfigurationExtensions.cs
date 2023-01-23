@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
-using Aksio.Cratis.Extensions.Orleans.Configuration;
-using Aksio.Cratis.Server;
+using Aksio.Cratis.Kernel.Orleans.Configuration;
+using Aksio.Cratis.Kernel.Server;
 using Orleans.Configuration;
 
 namespace Orleans.Hosting;
@@ -63,7 +63,7 @@ public static class ClusterConfigurationExtensions
 
             switch (clusterConfig.Type)
             {
-                case ClusterTypes.Local:
+                case ClusterTypes.Single:
                     logger?.UsingLocalHostClustering();
                     builder.UseLocalhostClustering();
                     break;

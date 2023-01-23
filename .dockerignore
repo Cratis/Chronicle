@@ -10,3 +10,4 @@ dist
 for_*
 Dockerfile
 appsettings.json
+appsettings.Development.json
