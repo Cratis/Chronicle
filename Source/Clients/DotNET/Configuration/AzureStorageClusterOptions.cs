@@ -34,5 +34,5 @@ public class AzureStorageClusterOptions
     /// <summary>
     /// Gets whether or not to use TLS for connecting (https).
     /// </summary>
-    public bool TLS { get; init; }
+    public bool Secure { get; init; }
 }
