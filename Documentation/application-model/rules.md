@@ -1,8 +1,11 @@
 # Rules
 
 When performing operations (referred to as where we do **writes** or perform **commands**),
-one needs to be able to validate the correctness of the input and also that one does not violate
-any domain specific rules associated with the action being performed.
+in addition [validating the correctness of the input](./validation.md) you might have
+domain specific rules associated with the action being performed.
+
+In the pipeline, validation is run before the rules, so that your rules can trust that
+the input has been sanitized.
 
 The domain specific rules tend to rely on state of what has happened in the system and needs
 to do so with a strong consistent guarantee. In an event sourced system the only way this can
@@ -13,6 +16,9 @@ Cratis supports 2 approaches to defining rules:
 
 * Value based rules based on an attribute model.
 * Model based rules based on a fluent interface model.
+
+Depending on state is optional, by not implementing the `DefineState` methods described
+later, you will get a stateless rule.
 
 ## Value based rules
 
@@ -75,6 +81,7 @@ public sealed class AccountMustBeEmptyAttribute : RuleAttribute
 
 > Note: The `DefineState()` is discovered by convention. It looks for a specific signature that is either `public` or `private`,
 > returns `void` and takes one argument of `IProjectionBuilderFor<>` with the rule type as generic argument.
+> If you don't implement the `DefineState()` method, your rules instance becomes stateless.
 > Also note that the state property needs to be a `public` property with a setter.
 
 We can then use this attribute on a controller action:
@@ -141,6 +148,8 @@ public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAc
             .From<DebitAccountOpened>(_ => _.UsingKey(_ => _.Name)));
 }
 ```
+
+> Note: If you don't overrode the `DefineState()` method, your rules instance becomes stateless.
 
 The rules are declared by adding a constructor where one describes rules for properties.
 In addition to simple value rules like `.NotEmpty()` or `.Length()` there is a rule called `.Must()`
