@@ -43,7 +43,8 @@ public class InsideKernelClient : IClient
         ILogger<SingleKernelClient> logger)
     {
         var addresses = server.Features.Get<IServerAddressesFeature>();
-        var endpoint = new Uri(addresses!.Addresses.First());
+        var address = addresses!.Addresses.First().Replace("//*","//localhost");
+        var endpoint = new Uri(address);
         var options = new SingleKernelOptions
         {
             Endpoint = endpoint
