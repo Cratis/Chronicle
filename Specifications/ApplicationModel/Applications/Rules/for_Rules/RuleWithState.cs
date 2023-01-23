@@ -5,7 +5,6 @@ using Aksio.Cratis.Projections;
 
 namespace Aksio.Cratis.Applications.Rules.for_Rules;
 
-
 public class RuleWithState : IRule
 {
     public RuleId Identifier => "06185a2b-b024-4f31-aea9-0f7f11f99299";
@@ -14,7 +13,8 @@ public class RuleWithState : IRule
     public int SecondStateValue { get; set; }
     public ComplexState ComplexState { get; set; }
 
-    public void DefineState(IProjectionBuilderFor<RuleWithState> builder)
-    {
-    }
+    public void DefineState(IProjectionBuilderFor<RuleWithState> builder) => builder
+        .From<SomeEvent>(_ =>
+        {
+        });
 }

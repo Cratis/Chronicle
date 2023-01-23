@@ -5,5 +5,8 @@ using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Integration;
 
-[EventType("ebe9cc8b-a0bd-4357-9aff-2edb545c868d")]
-public record SomeEvent(int SomeInteger, string SomeString);
+[EventType(EventTypeId)]
+public record SomeEvent(int SomeInteger, string SomeString)
+{
+    public const string EventTypeId = "ebe9cc8b-a0bd-4357-9aff-2edb545c868d";
+}
