@@ -26,5 +26,5 @@ public class OrleansSiloInfo : ITableEntity
     /// <summary>
     /// Gets the host name of the silo.
     /// </summary>
-    public string HostName { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
 }
