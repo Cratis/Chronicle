@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Clients;
 /// <summary>
 /// Represents a <see cref="IClient"/> for a clustered Kernel.
 /// </summary>
-public abstract class StaticClusteredKernelClient : ClusteredKernelClient
+public class StaticClusteredKernelClient : ClusteredKernelClient
 {
     readonly StaticClusterOptions _options;
 
@@ -30,7 +30,7 @@ public abstract class StaticClusteredKernelClient : ClusteredKernelClient
     /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    protected StaticClusteredKernelClient(
+    public StaticClusteredKernelClient(
         ILoadBalancedHttpClientFactory httpClientFactory,
         StaticClusterOptions options,
         ITaskFactory taskFactory,

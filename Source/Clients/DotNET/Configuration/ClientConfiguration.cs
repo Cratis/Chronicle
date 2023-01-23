@@ -6,18 +6,13 @@ namespace Aksio.Cratis.Configuration;
 /// <summary>
 /// Represents the client configuration.
 /// </summary>
-[Configuration]
+[Configuration("cratis")]
 public class ClientConfiguration
 {
     /// <summary>
-    /// Gets the <see cref="ClusterType"/>.
+    /// Gets the Kernel connectivity configuration.
     /// </summary>
-    public ClusterType ClusterType { get; init; } = ClusterType.Single;
-
-    /// <summary>
-    /// Gets all the servers that make up the cluster to connect to.
-    /// </summary>
-    public object Options { get; init; } = new SingleKernelOptions();
+    public KernelConnectivity Kernel { get; init; } = new();
 
     /// <summary>
     /// Gets the advertised client endpoint.

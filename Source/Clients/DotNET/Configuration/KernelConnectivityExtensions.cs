@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Configuration;
 /// <summary>
 /// Extension methods for working with the <see cref="ClientConfiguration"/>.
 /// </summary>
-public static class ClientConfigurationExtensions
+public static class KernelConnectivityExtensions
 {
     /// <summary>
     /// Get the <see cref="SingleKernelOptions"/>.
@@ -16,7 +16,7 @@ public static class ClientConfigurationExtensions
     /// <remarks>
     /// If the options is not defined or of the wrong type, the default instance will be returned.
     /// </remarks>
-    public static SingleKernelOptions GetSingleKernelOptions(this ClientConfiguration configuration) => configuration.Options as SingleKernelOptions ?? new SingleKernelOptions();
+    public static SingleKernelOptions GetSingleKernelOptions(this KernelConnectivity configuration) => configuration.Options as SingleKernelOptions ?? new SingleKernelOptions();
 
     /// <summary>
     /// Get the <see cref="StaticClusterOptions"/>.
@@ -26,7 +26,7 @@ public static class ClientConfigurationExtensions
     /// <remarks>
     /// If the options is not defined or of the wrong type, the default instance will be returned.
     /// </remarks>
-    public static StaticClusterOptions GetStaticClusterOptions(this ClientConfiguration configuration) => configuration.Options as StaticClusterOptions ?? new StaticClusterOptions();
+    public static StaticClusterOptions GetStaticClusterOptions(this KernelConnectivity configuration) => configuration.Options as StaticClusterOptions ?? new StaticClusterOptions();
 
     /// <summary>
     /// Get the <see cref="AzureStorageClusterOptions"/>.
@@ -36,6 +36,5 @@ public static class ClientConfigurationExtensions
     /// <remarks>
     /// If the options is not defined or of the wrong type, the default instance will be returned.
     /// </remarks>
-    public static AzureStorageClusterOptions GetAzureStorageClusterOptions(this ClientConfiguration configuration) => configuration.Options as AzureStorageClusterOptions ?? new AzureStorageClusterOptions();
+    public static AzureStorageClusterOptions GetAzureStorageClusterOptions(this KernelConnectivity configuration) => configuration.Options as AzureStorageClusterOptions ?? new AzureStorageClusterOptions();
 }
-
