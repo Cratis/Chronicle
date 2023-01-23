@@ -20,8 +20,8 @@ import {
 } from '@fluentui/react';
 import { Collections } from './Collections';
 import { useEffect } from 'react';
-import { Microservices } from 'API/configuration/Microservices';
-import { Microservice } from 'API/configuration/Microservice';
+import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
+import { Microservice } from 'API/configuration/microservices/Microservice';
 
 const gridStyles: Partial<IDetailsListStyles> = {
     root: {
@@ -74,7 +74,7 @@ const columns: IColumn[] = [
 const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
 
 export const Projections = () => {
-    const [microservices] = Microservices.use();
+    const [microservices] = AllMicroservices.use();
     const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
 
     const getAllProjectionsArguments = () => {

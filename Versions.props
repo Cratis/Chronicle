@@ -17,5 +17,6 @@
         <SystemReactive>5.0.0</SystemReactive>
         <NJsonSchema>10.8.0</NJsonSchema>
         <xunit>2.4.2</xunit>
+        <semver>2.2.0</semver>
     </PropertyGroup>
 </Project>

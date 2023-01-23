@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Schemas;
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
 using Aksio.Cratis.Types;
@@ -56,7 +56,8 @@ public static class WebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
         app.UseExecutionContext();
-        app.ApplicationServices.GetService<ISchemas>()!.RegisterAll();
+        app.AddCratisClient();
+        app.ApplicationServices.GetRequiredService<IClient>();
         return app;
     }
 }

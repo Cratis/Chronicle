@@ -20,7 +20,8 @@ public class Types : ITypes
         "mscorlib",
         "netstandard",
         "WindowsBase",
-        "Namotion"
+        "Namotion",
+        "Semver"
     };
 
     readonly List<string> _assemblyPrefixesToInclude = new()

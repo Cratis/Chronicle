@@ -79,6 +79,16 @@ export class JsonSerializer {
             deserialized[field.name] = value;
         }
 
+        if ((targetType as Constructor) == Object) {
+            const objectFields = Object.keys(instance).filter((value, index, arr) => {
+                return !fields.some(_ => _.name == value);
+            });
+
+            for (const field of objectFields) {
+                deserialized[field] = instance[field];
+            }
+        }
+
         return deserialized;
     }
 

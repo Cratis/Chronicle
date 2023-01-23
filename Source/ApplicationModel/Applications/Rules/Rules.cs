@@ -4,14 +4,12 @@
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Events.Projections;
-using Aksio.Cratis.Events.Projections.Definitions;
-using Aksio.Cratis.Events.Projections.Grains;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Strings;
 using Aksio.Cratis.Types;
-using Orleans;
 
 namespace Aksio.Cratis.Applications.Rules;
 
@@ -28,7 +26,7 @@ public class Rules : IRules
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly JsonSerializerOptions _serializerOptions;
-    readonly IClusterClient _clusterClient;
+    readonly IImmediateProjections _immediateProjections;
 
     static Rules()
     {
@@ -42,15 +40,15 @@ public class Rules : IRules
     /// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> used for generating projection definitions.</param>
     /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
+    /// <param name="immediateProjections"><see cref="IImmediateProjections"/> client.</param>
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-    /// <param name="clusterClient">Orleans <see cref="IClusterClient"/>.</param>
     public Rules(
         ExecutionContext executionContext,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
         JsonSerializerOptions serializerOptions,
-        ITypes types,
-        IClusterClient clusterClient)
+        IImmediateProjections immediateProjections,
+        ITypes types)
     {
         var ruleTypes = types.All.Where(_ =>
             _.BaseType?.IsGenericType == true &&
@@ -63,7 +61,7 @@ public class Rules : IRules
         _eventTypes = eventTypes;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _serializerOptions = serializerOptions;
-        _clusterClient = clusterClient;
+        _immediateProjections = immediateProjections;
     }
 
     /// <inheritdoc/>
@@ -104,14 +102,9 @@ public class Rules : IRules
             return;
         }
 
-        var key = new ImmediateProjectionKey(
-            _executionContext.MicroserviceId,
-            _executionContext.TenantId,
-            Events.Store.EventSequenceId.Log,
-            modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!);
-
-        var projection = _clusterClient.GetGrain<IImmediateProjection>(rule.Identifier.Value, key);
-        var result = projection.GetModelInstance(projectionDefinition).GetAwaiter().GetResult();
+        var result = _immediateProjections.GetInstanceById(
+            modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!,
+            projectionDefinition).GetAwaiter().GetResult();
 
         foreach (var property in rule.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty))
         {

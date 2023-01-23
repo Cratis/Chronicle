@@ -1,10 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Aksio.Cratis.Events</AssemblyName>
-        <RootNamespace>Aksio.Cratis.Events</RootNamespace>
+        <AssemblyName>Aksio.Cratis.Kernel.Events</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Events</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <ProjectReference Include="../Concepts/Concepts.csproj"/>
+        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
     </ItemGroup>
+
 </Project>

@@ -29,7 +29,7 @@ public class IntegrationController : Controller
     {
         foreach (var tenant in await _tenants.All())
         {
-            using var scope = _executionContextManager.ForTenant(tenant);
+            using var scope = _executionContextManager.ForTenant(tenant.Id);
             await _connector.ImportOne("03050712345");
         }
     }

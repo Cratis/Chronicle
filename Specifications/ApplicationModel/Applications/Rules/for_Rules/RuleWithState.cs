@@ -1,10 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events.Projections;
+using Aksio.Cratis.Projections;
 
 namespace Aksio.Cratis.Applications.Rules.for_Rules;
-
 
 public class RuleWithState : IRule
 {
@@ -14,7 +13,8 @@ public class RuleWithState : IRule
     public int SecondStateValue { get; set; }
     public ComplexState ComplexState { get; set; }
 
-    public void DefineState(IProjectionBuilderFor<RuleWithState> builder)
-    {
-    }
+    public void DefineState(IProjectionBuilderFor<RuleWithState> builder) => builder
+        .From<SomeEvent>(_ =>
+        {
+        });
 }

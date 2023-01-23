@@ -2,15 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Boot;
-using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Events.Projections.Grains;
-using Aksio.Cratis.Events.Schemas;
-using Aksio.Cratis.Events.Store.Grains.Inboxes;
-using Aksio.Cratis.Events.Store.Inboxes;
+using Aksio.Cratis.EventSequences.Inboxes;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Configuration;
+using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
+using Aksio.Cratis.Kernel.Grains.Projections;
 using Orleans;
 
-namespace Aksio.Cratis.Server;
+namespace Aksio.Cratis.Kernel.Server;
 
 /// <summary>
 /// Represents a <see cref="IPerformBootProcedure"/> for the event store.
@@ -47,7 +46,7 @@ public class BootProcedure : IPerformBootProcedure
         foreach (var (microserviceId, microservice) in _configuration.Microservices)
         {
             _executionContextManager.Establish(microserviceId);
-            var schemaStore = _serviceProvider.GetService<ISchemaStore>()!;
+            var schemaStore = _serviceProvider.GetService<Schemas.ISchemaStore>()!;
             schemaStore.Populate().Wait();
 
             var projections = _grainFactory.GetGrain<IProjections>((MicroserviceId)microserviceId);

@@ -14,8 +14,8 @@ Based on the public event as defined [here](./creating-a-public-event.md) we can
 create an observer for this:
 
 ```csharp
-using Aksio.Cratis.Events.Store;
-using Aksio.Cratis.Events.Observation;
+using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Observation;
 
 [Observer("292a21dc-71de-4042-a313-4bcd45f6e0cb", inbox: true)]
 public class AccountBalanceObserver

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Common</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Orleans/Orleans.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
+    </ItemGroup>
+</Project>

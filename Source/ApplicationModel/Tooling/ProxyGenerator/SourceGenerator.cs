@@ -15,6 +15,11 @@ namespace Aksio.Cratis.Applications.ProxyGenerator;
 [Generator]
 public class SourceGenerator : ISourceGenerator
 {
+    static readonly string[] _allowedCompilerErrors = new[]
+    {
+        "CS8795"
+    };
+
     static readonly Regex _routeRegex = new(@"(\{[\w]*\})", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
     static readonly Dictionary<string, int> _fileHashes = new();
     static readonly List<ITypeSymbol> _derivedTypes = new();
@@ -28,7 +33,7 @@ public class SourceGenerator : ISourceGenerator
     /// <inheritdoc/>
     public void Execute(GeneratorExecutionContext context)
     {
-        if (context.Compilation.GetDiagnostics().Any(_ => _.Severity == DiagnosticSeverity.Error)) return;
+        if (context.Compilation.GetDiagnostics().Any(_ => _.Severity == DiagnosticSeverity.Error && !_allowedCompilerErrors.Any(e => _.Id == e))) return;
 
         var receiver = context.SyntaxReceiver as SyntaxReceiver;
         context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.rootnamespace", out var rootNamespace);
@@ -87,6 +92,7 @@ public class SourceGenerator : ISourceGenerator
 
             var typeName = commandMethod.Name;
             var targetFile = Path.Combine(targetFolder, $"{typeName}.ts");
+            targetFile = Path.GetFullPath(targetFile);
 
             foreach (var parameter in commandMethod.Parameters)
             {
@@ -108,6 +114,7 @@ public class SourceGenerator : ISourceGenerator
                 {
                     var publicProperties = parameter.Type.GetPublicPropertiesFrom();
                     properties.AddRange(GetPropertyDescriptorsAndOutputComplexTypes(
+                        context,
                         rootNamespace,
                         outputFolder,
                         useRouteAsPath,
@@ -157,6 +164,7 @@ public class SourceGenerator : ISourceGenerator
             var modelType = queryMethod.ReturnType;
 
             var targetFile = Path.Combine(targetFolder, $"{queryMethod.Name}.ts");
+            targetFile = Path.GetFullPath(targetFile);
             var modelDescriptor = GetModelDescriptorFor(
                 context,
                 queryMethod,
@@ -238,7 +246,7 @@ public class SourceGenerator : ISourceGenerator
                 isEnumerable = true;
             }
 
-            OutputType(actualType, rootNamespace, outputFolder, parentFile, importStatements, useRouteAsPath, baseApiRoute);
+            OutputType(context, actualType, rootNamespace, outputFolder, parentFile, importStatements, useRouteAsPath, baseApiRoute);
 
             var typeScriptType = actualType.GetTypeScriptType(out _);
             var knownType = actualType.IsKnownType();
@@ -297,7 +305,15 @@ public class SourceGenerator : ISourceGenerator
         return queryArguments;
     }
 
-    static void OutputType(ITypeSymbol type, string rootNamespace, string outputFolder, string parentFile, HashSet<ImportStatement> parentImportStatements, bool useRouteAsPath, string baseApiRoute)
+    static void OutputType(
+        GeneratorExecutionContext context,
+        ITypeSymbol type,
+        string rootNamespace,
+        string outputFolder,
+        string parentFile,
+        HashSet<ImportStatement> parentImportStatements,
+        bool useRouteAsPath,
+        string baseApiRoute)
     {
         if (type.IsKnownType()) return;
 
@@ -305,6 +321,13 @@ public class SourceGenerator : ISourceGenerator
         var targetFile = Path.Combine(targetFolder, $"{type.Name}.ts");
         var relativeImport = new Uri(parentFile).MakeRelativeUri(new Uri(targetFile));
         var relativeImportAsString = relativeImport.ToString();
+
+        if (string.IsNullOrEmpty(relativeImportAsString))
+        {
+            context.ReportDiagnostic(Diagnostics.ReturnTypeWouldOverwriteParentType(type.ToDisplayString(), parentFile));
+            return;
+        }
+
         var importPath = Path.Combine(
             Path.GetDirectoryName(relativeImportAsString),
             Path.GetFileNameWithoutExtension(relativeImportAsString));
@@ -323,6 +346,7 @@ public class SourceGenerator : ISourceGenerator
 
         var typeImportStatements = new HashSet<ImportStatement>();
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(
+            context,
             rootNamespace,
             outputFolder,
             useRouteAsPath,
@@ -372,7 +396,15 @@ public class SourceGenerator : ISourceGenerator
         }
     }
 
-    static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsAndOutputComplexTypes(string rootNamespace, string outputFolder, bool useRouteAsPath, string baseApiRoute, string targetFile, IEnumerable<IPropertySymbol> properties, HashSet<ImportStatement> typeImportStatements)
+    static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsAndOutputComplexTypes(
+        GeneratorExecutionContext context,
+        string rootNamespace,
+        string outputFolder,
+        bool useRouteAsPath,
+        string baseApiRoute,
+        string targetFile,
+        IEnumerable<IPropertySymbol> properties,
+        HashSet<ImportStatement> typeImportStatements)
     {
         var propertyDescriptors = new List<PropertyDescriptor>();
 
@@ -422,12 +454,12 @@ public class SourceGenerator : ISourceGenerator
 
                     foreach (var derivedType in _derivedTypes.ToArray().Where(_ => _.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, actualType))))
                     {
-                        OutputType(derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                        OutputType(context, derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
                         derivatives.Add(derivedType.Name);
                     }
                 }
 
-                OutputType(actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                OutputType(context, actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
                 propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable, hasDerivatives, derivatives));
             }
             else

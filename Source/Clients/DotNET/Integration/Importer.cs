@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Integration;
 
@@ -21,8 +21,8 @@ public class Importer : IImporter
     /// </summary>
     /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventLog"><see cref="IEventLog"/> for appending events.</param>
-    /// <param name="eventOutbox"><see cref="IEventOutbox"/> for appending public events.</param>
+    /// <param name="eventLog"><see cref="IEventSequence"/> for appending events.</param>
+    /// <param name="eventOutbox"><see cref="IEventSequence"/> for appending public events.</param>
     public Importer(
         IAdapters adapters,
         IObjectsComparer objectsComparer,

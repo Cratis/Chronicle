@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Configuration.Grains;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
@@ -16,7 +15,6 @@ using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
-using Orleans;
 
 namespace Aksio.Cratis.Hosting;
 
@@ -94,10 +92,8 @@ public static class MongoDBReadModels
 
     static async Task ConfigureReadModels(IServiceProvider serviceProvider)
     {
-        var configuration = serviceProvider.GetService<IClusterClient>()!.GetGrain<IConfiguration>(Guid.Empty);
-        var storage = await configuration.GetStorage();
+        var storage = await serviceProvider.GetService<IMicroserviceConfiguration>()!.Storage();
         var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
-
         foreach (var (tenant, config) in storage.Tenants)
         {
             var storageType = config.Get(WellKnownStorageTypes.ReadModels);

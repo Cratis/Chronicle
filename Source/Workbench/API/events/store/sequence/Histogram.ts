@@ -3,16 +3,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { EventHistogramEntry } from './EventHistogramEntry';
+import { EventHistogramEntry } from '../sequence/EventHistogramEntry';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/sequence/histogram');
+const routeTemplate = Handlebars.compile('/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}/histogram');
 
-export interface HistogramArguments {
-    eventSequenceId: string;
-}
-export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArguments> {
-    readonly route: string = '/api/events/store/sequence/histogram';
+export class Histogram extends QueryFor<EventHistogramEntry[]> {
+    readonly route: string = '/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}/histogram';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: EventHistogramEntry[] = [];
 
@@ -22,11 +19,10 @@ export class Histogram extends QueryFor<EventHistogramEntry[], HistogramArgument
 
     get requestArguments(): string[] {
         return [
-            'eventSequenceId',
         ];
     }
 
-    static use(args?: HistogramArguments): [QueryResultWithState<EventHistogramEntry[]>, PerformQuery<HistogramArguments>] {
-        return useQuery<EventHistogramEntry[], Histogram, HistogramArguments>(Histogram, args);
+    static use(): [QueryResultWithState<EventHistogramEntry[]>, PerformQuery] {
+        return useQuery<EventHistogramEntry[], Histogram>(Histogram);
     }
 }

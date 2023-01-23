@@ -31,7 +31,8 @@ public class AccountHolderWithAccountsObserver
     public async Task CreditAccountOpened(CreditAccountOpened @event, EventContext context)
     {
         var customerId = @event.Owner;
-        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(customerId.Value);
+        var projectionResult = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(customerId.Value);
+        var personalInformation = projectionResult.Model;
         var result = await _collection.FindAsync(_ => _.Id == @event.Owner);
         var model = result.FirstOrDefault() ?? new(customerId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>());
         model.Accounts.Add(new CreditAccount(@context.EventSourceId, @event.Name, AccountType.Credit));
@@ -41,7 +42,8 @@ public class AccountHolderWithAccountsObserver
     public async Task DebitAccountOpened(DebitAccountOpened @event, EventContext context)
     {
         var customerId = @event.Owner;
-        var personalInformation = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(customerId.Value);
+        var projectionResult = await _immediateProjections.GetInstanceById<AccountHolderPersonalInformation>(customerId.Value);
+        var personalInformation = projectionResult.Model;
         var result = await _collection.FindAsync(_ => _.Id == @event.Owner);
         var model = result.FirstOrDefault() ?? new(customerId, personalInformation.FirstName, personalInformation.LastName, new Collection<IAccount>());
         model.Accounts.Add(new DebitAccount(@context.EventSourceId, @event.Name, AccountType.Debit));

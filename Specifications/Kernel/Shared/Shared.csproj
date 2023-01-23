@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Shared.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Kernel/Shared/Shared.csproj"/>
+    </ItemGroup>
+
+</Project>

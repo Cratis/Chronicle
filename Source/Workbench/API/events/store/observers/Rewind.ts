@@ -6,30 +6,30 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/observers/{{observerId}}/rewind?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind');
 
 export interface IRewind {
-    observerId?: string;
     microserviceId?: string;
     tenantId?: string;
+    observerId?: string;
 }
 
 export class RewindValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
-        observerId: new Validator(),
         microserviceId: new Validator(),
         tenantId: new Validator(),
+        observerId: new Validator(),
     };
 }
 
 export class Rewind extends Command<IRewind> implements IRewind {
-    readonly route: string = '/api/events/store/observers/{{observerId}}/rewind?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RewindValidator();
 
-    private _observerId!: string;
     private _microserviceId!: string;
     private _tenantId!: string;
+    private _observerId!: string;
 
     constructor() {
         super(Object, false);
@@ -37,28 +37,20 @@ export class Rewind extends Command<IRewind> implements IRewind {
 
     get requestArguments(): string[] {
         return [
-            'observerId',
             'microserviceId',
             'tenantId',
+            'observerId',
         ];
     }
 
     get properties(): string[] {
         return [
-            'observerId',
             'microserviceId',
             'tenantId',
+            'observerId',
         ];
     }
 
-    get observerId(): string {
-        return this._observerId;
-    }
-
-    set observerId(value: string) {
-        this._observerId = value;
-        this.propertyChanged('observerId');
-    }
     get microserviceId(): string {
         return this._microserviceId;
     }
@@ -74,6 +66,14 @@ export class Rewind extends Command<IRewind> implements IRewind {
     set tenantId(value: string) {
         this._tenantId = value;
         this.propertyChanged('tenantId');
+    }
+    get observerId(): string {
+        return this._observerId;
+    }
+
+    set observerId(value: string) {
+        this._observerId = value;
+        this.propertyChanged('observerId');
     }
 
     static use(initialValues?: IRewind): [Rewind, SetCommandValues<IRewind>, ClearCommandValues] {
