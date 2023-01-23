@@ -1,3 +1,42 @@
+# [v8.0.0] - 2023-1-23 [PR: #665](https://github.com/aksio-insurtech/Cratis/pull/665)
+
+## Summary
+
+This is a major release with quite a few changes. Read the changelog carefully for details.
+Primarily this release is about paying back some technical debt and fixing some stability issues in the making.
+Also a focus on fixing APIs that were wrong, namespaces that were wrong and general consolidation of the codebase for increased maintainability.
+
+### Added
+
+- Validation check during proxy generation if return type and query / command name has the same name and in the same namespace / path. Breaks the build.
+- Adding [Seq](https://hub.docker.com/r/datalust/seq) as a Serilog Sink. (#393)
+
+### Changed
+
+- With the introduction of WebSocket as a client, you should consider change set loglevel in `appsettings.json` to `Information` for `Websocket`. Otherwise you'll see the ping/pong going between client and kernel all the time.
+- Changed from using a Orleans client to connect to Kernel to a REST API based approach.
+- Moved `CommandResult` and `QueryResult` into Fundamentals. Namespace has changed.
+- `ITenants` now returns an object called `Tenant` that holds both the Id and the name of the tenant.
+- Namespace `Aksio.Cratis.Events.Store` has been changed to `Aksio.Cratis.Events` for all artifacts, such as `EventContext` ++.
+- Namespace `Aksio.Cratis.Events.Projections` has been changed to `Aksio.Cratis.Projections` for all artifacts, such as `ProjectionId` ++.
+- Namespace `Aksio.Cratis.Events.Observation` has been changed to `Aksio.Cratis.Observation` for all artifacts such as the `[Observer] attribute.
+- Namespace change for all event sequences from `Aksio.Cratis.Events.Store` has been changed to `Aksio.Cratis.EventSequences` for all artifacts, such as `IEventLog` ++.
+- Namespace `Aksio.Cratis.Events.Schemas` has been changed to `Aksio.Cratis.Schemas` for all artifacts, such as `ISchemaStore` ++.
+-`IImmediateProjections` methods now return `ImmediateProjectionResult` instead of the model instance. To access the model you will have to do `.Model` on the result object.
+- `DefineState` method on `RuleFor` is now abstract and required to be implemented. The reason for this is that we now have other mechanisms for validation such as `CommandValidator` which should be used instead of `RuleFor`.
+- REST APIs are more consistent and not just based on route values. (#396)
+- Cluster configuration for a single cluster mode has changed from "local" to "single" to reflect more what it is. This affects any `cratis.json` files and `cluster.json` files.
+
+### Fixed
+
+- Treating `JsonNode`, `JsonObject` and `JsonArray` as any types in the proxy generator.
+- Fixed how we do clients inside the Kernel (#93)
+- When clients reconnect, they are now sending artifacts again. The reconnect could be because the silo went down. It then needs the client artifacts. (#378)
+- Connection Id for clients and connected clients on the Kernel is now consistent. (#218)
+- Fixing comparing of projections to avoid replay every time one starts.
+- Allowing CS8795 in proxy generation as a valid error, as this error comes early but gets resolved typically by the Microsoft Logger code generator for `[LoggerMessage]` based partial methods.
+- Frontend JSON serializer now supports deserializing `any` types by just copying their content. (#533)
+
 # [v7.4.2] - 2023-1-23 [PR: #696](https://github.com/aksio-insurtech/Cratis/pull/696)
 
 ### Fixed
@@ -66,7 +105,7 @@ A missing consideration in the `ObserverStorageProvider` for observer key was ca
 This version is therefor a major release, since it actually is not backwards compatible with the stored observers state for inboxes.
 
 To remedy this, you can change the existing observer in the `observers collection` with the `observerId: 85dc950d-1900-4407-a484-ec1e83da16c6`. In the `_id` field you can append the microserviceId you believe is correct (if you only have one, this should be easy).
-The expected format is: 
+The expected format is:
 
 `<guid> : <guid> : <guid>`
 
