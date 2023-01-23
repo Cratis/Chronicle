@@ -1,15 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans.Streams;
-
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_resuming;
 
 public class and_events_are_in_sequence : given.an_observer_and_two_event_types_and_one_event_in_sequence
 {
-    void Establish()
+    async Task Establish()
     {
         state.FailPartition(event_source_id, EventSequenceNumber.First, Array.Empty<string>(), string.Empty);
+        await observer.Subscribe<ObserverSubscriber>(event_types);
     }
 
     async Task Because()

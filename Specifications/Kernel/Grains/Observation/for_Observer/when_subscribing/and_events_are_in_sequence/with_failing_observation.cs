@@ -7,6 +7,7 @@ public class with_failing_observation : given.an_observer_and_two_event_types_an
 {
     async Task Because()
     {
+        subscriber.Setup(_ => _.OnNext(appended_event)).Callback((AppendedEvent _) => throw new NotImplementedException());
         await observer.Subscribe<ObserverSubscriber>(event_types);
         await observers[0].OnNextAsync(appended_event);
     }
