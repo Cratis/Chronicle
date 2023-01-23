@@ -19,6 +19,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        _subscriberType = null;
         _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
@@ -63,7 +64,6 @@ public partial class Observer
         State.EventTypes = eventTypes;
 
         var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
-
         var nextSequenceNumber = lastSequenceNumber + 1;
         if (State.NextEventSequenceNumber < nextSequenceNumber)
         {
@@ -71,7 +71,8 @@ public partial class Observer
             _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
 
-        if (lastSequenceNumber == EventSequenceNumber.Unavailable || State.NextEventSequenceNumber == nextSequenceNumber)
+        if (lastSequenceNumber == EventSequenceNumber.Unavailable ||
+            State.NextEventSequenceNumber == nextSequenceNumber)
         {
             State.RunningState = ObserverRunningState.Active;
             _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
