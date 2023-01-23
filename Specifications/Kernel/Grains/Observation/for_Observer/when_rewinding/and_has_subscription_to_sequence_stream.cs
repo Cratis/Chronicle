@@ -7,7 +7,7 @@ public class and_has_subscription_to_sequence_stream : given.an_observer_and_two
 {
     async Task Establish()
     {
-        await observer.Subscribe(event_types, observer_namespace);
+        await observer.Subscribe<ObserverSubscriber>(event_types);
 
         state.RunningState = ObserverRunningState.Active;
         state.NextEventSequenceNumber = 1;

@@ -10,11 +10,10 @@ public class and_observer_has_been_put_into_rewind_state : given.an_observer_and
     async Task Establish()
     {
         state.NextEventSequenceNumber = 42;
-        state.CurrentNamespace = ObserverNamespace.NotSet;
         await observer.Rewind();
     }
 
-    async Task Because() => await observer.Subscribe(event_types, Guid.NewGuid().ToString());
+    async Task Because() => await observer.Subscribe<ObserverSubscriber>(event_types);
 
     [Fact] void should_set_state_to_replaying() => state.RunningState.ShouldEqual(ObserverRunningState.Replaying);
     [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());

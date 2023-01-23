@@ -11,11 +11,10 @@ public class and_observer_is_in_interrupted_replay_state : given.an_observer_and
     {
         state.NextEventSequenceNumber = 42;
         state.LastHandled = 43;
-        state.CurrentNamespace = ObserverNamespace.NotSet;
         state.RunningState = ObserverRunningState.Replaying;
     }
 
-    async Task Because() => await observer.Subscribe(event_types, Guid.NewGuid().ToString());
+    async Task Because() => await observer.Subscribe<ObserverSubscriber>(event_types);
 
     [Fact] void should_maintain_state_as_replaying() => state.RunningState.ShouldEqual(ObserverRunningState.Replaying);
     [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());

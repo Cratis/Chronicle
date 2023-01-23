@@ -15,7 +15,7 @@ public class and_has_two_failed_partitions_not_being_recovered : given.an_observ
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)44));
     }
 
-    async Task Because() => await observer.Subscribe(event_types, observer_namespace);
+    async Task Because() => await observer.Subscribe<ObserverSubscriber>(event_types);
 
     [Fact] void should_attempt_recovery_on_first_partition() => state.IsRecoveringPartition(first_partition).ShouldBeTrue();
     [Fact] void should_attempt_recovery_on_second_partition() => state.IsRecoveringPartition(second_partition).ShouldBeTrue();
