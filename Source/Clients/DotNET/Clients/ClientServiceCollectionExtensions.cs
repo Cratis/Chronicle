@@ -48,7 +48,7 @@ public static class ClientServiceCollectionExtensions
             {
                 throw new UnableToResolveClientUri();
             }
-            var clientEndpoint = configuration.Kernel.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First());
+            var clientEndpoint = configuration.Kernel.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First().Replace("//*", "//localhost"));
 
             IClient client = configuration.Kernel.Type switch
             {
