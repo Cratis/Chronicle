@@ -35,7 +35,6 @@ public class an_observer : GrainSpecification<ObserverState>
 
     protected override void OnBeforeGrainActivate()
     {
-        subscriber = new();
         microservice_id = Guid.NewGuid();
         tenant_id = Guid.NewGuid();
         event_sequence_id = EventSequenceId.Log;
@@ -53,6 +52,8 @@ public class an_observer : GrainSpecification<ObserverState>
         subscription_handles = new();
         observers = new();
 
+        subscriber = new();
+        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
         grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), observer_id, IsAny<string>())).Returns(subscriber.Object);
 
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
