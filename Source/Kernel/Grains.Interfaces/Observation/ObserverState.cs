@@ -92,8 +92,20 @@ public class ObserverState
     /// </summary>
     public bool IsRecoveringAnyPartition => _partitionsBeingRecovered.Count > 0;
 
+    /// <summary>
+    /// Gets whether or not the observer is in disconnected state. Meaning that there is no subscriber to it.
+    /// </summary>
+    public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
+
     List<FailedObserverPartition> _failedPartitions = new();
     List<RecoveringFailedObserverPartition> _partitionsBeingRecovered = new();
+
+    /// <summary>
+    /// Check whether or not a partition is being recovered.
+    /// </summary>
+    /// <param name="eventSourceId">Partition to check.</param>
+    /// <returns>True if being recovered, false if not.</returns>
+    public bool IsRecoveringPartition(EventSourceId eventSourceId) => _partitionsBeingRecovered.Any(_ => _.EventSourceId == eventSourceId);
 
     /// <summary>
     /// Fail a partition. If the partition is already failed, it will update it with the details.
@@ -137,18 +149,6 @@ public class ObserverState
             StartedRecoveryAt = DateTimeOffset.UtcNow
         });
     }
-
-    /// <summary>
-    /// Gets whether or not the observer is in disconnected state. Meaning that there is no subscriber to it.
-    /// </summary>
-    public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
-
-    /// <summary>
-    /// Check whether or not a partition is being recovered.
-    /// </summary>
-    /// <param name="eventSourceId">Partition to check.</param>
-    /// <returns>True if being recovered, false if not.</returns>
-    public bool IsRecoveringPartition(EventSourceId eventSourceId) => _partitionsBeingRecovered.Any(_ => _.EventSourceId == eventSourceId);
 
     /// <summary>
     /// Recover a failed partition.

@@ -1,14 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Json;
 using Microsoft.AspNetCore.Mvc;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Read.Projections;
 
@@ -18,31 +15,19 @@ namespace Aksio.Cratis.Kernel.Read.Projections;
 [Route("/api/events/store/{microserviceId}/projections")]
 public class Projections : Controller
 {
-    readonly IGrainFactory _grainFactory;
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
-    readonly IJsonProjectionSerializer _projectionSerializer;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
     /// <param name="projectionDefinitionsProvider">Provider for <see cref="IProjectionDefinitions"/>.</param>
-    /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for deserializing projections.</param>
-    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public Projections(
-        IGrainFactory grainFactory,
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
-        IJsonProjectionSerializer projectionSerializer,
-        JsonSerializerOptions jsonSerializerOptions,
         IExecutionContextManager executionContextManager)
     {
-        _grainFactory = grainFactory;
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
-        _projectionSerializer = projectionSerializer;
-        _jsonSerializerOptions = jsonSerializerOptions;
         _executionContextManager = executionContextManager;
     }
 

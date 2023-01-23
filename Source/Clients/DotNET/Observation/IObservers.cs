@@ -11,10 +11,12 @@ public interface IObservers
     /// <summary>
     /// Initialize the observers system.
     /// </summary>
+    /// <returns>Awaitable task.</returns>
     Task Initialize();
 
     /// <summary>
     /// Get all the handlers registered.
     /// </summary>
-    IEnumerable<ObserverHandler> Handlers { get; }
+    /// <returns>Collection of <see cref="ObserverHandler"/>.</returns>
+    IEnumerable<ObserverHandler> Handlers { get; }
 }

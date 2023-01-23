@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Schemas;
 
 /// <summary>
-/// Payload for registering multiple event types
+/// Payload for registering multiple event types.
 /// </summary>
 /// <param name="Types">Collection of <see cref="EventTypeRegistration"/>.</param>
 public record RegisterEventTypes(IEnumerable<EventTypeRegistration> Types);

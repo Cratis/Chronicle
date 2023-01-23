@@ -26,7 +26,8 @@ public interface IObserver : IGrainWithGuidCompoundKey
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes) where TObserverSubscriber: IObserverSubscriber;
+    Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes)
+        where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
     /// Unsubscribe from the observer.

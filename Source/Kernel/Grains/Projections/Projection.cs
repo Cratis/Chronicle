@@ -7,20 +7,19 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
-using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Orleans.Observers;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
-using Aksio.Cratis.Kernel.Orleans.Observers;
-using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 
@@ -30,19 +29,15 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 public class Projection : Grain, IProjection
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
-    readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitionsProvider;
     readonly IProjectionFactory _projectionFactory;
-    readonly IProjectionPipelineFactory _projectionPipelineFactory;
     readonly IObjectsComparer _objectsComparer;
     readonly IEventSequenceStorageProvider _eventProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
     EngineProjection? _projection;
-    IProjectionPipeline? _pipeline;
     IObserver? _observer;
     ProjectionId _projectionId;
     ProjectionDefinition? _definition;
-    ProjectionPipelineDefinition? _pipelineDefinition;
     TenantId? _tenantId;
     MicroserviceId? _microserviceId;
 
@@ -50,27 +45,21 @@ public class Projection : Grain, IProjection
     /// Initializes a new instance of the <see cref="Projection"/> class.
     /// </summary>
     /// <param name="projectionDefinitionsProvider"><see cref="IProjectionDefinitions"/>.</param>
-    /// <param name="projectionPipelineDefinitionsProvider"><see cref="IProjectionPipelineDefinitions"/> for working with pipelines.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
-    /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating the pipeline for the projection.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public Projection(
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
-        ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitionsProvider,
         IProjectionFactory projectionFactory,
-        IProjectionPipelineFactory projectionPipelineFactory,
         IObjectsComparer objectsComparer,
         IEventSequenceStorageProvider eventProvider,
         IExecutionContextManager executionContextManager,
         ILogger<Projection> logger)
     {
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
-        _projectionPipelineDefinitionsProvider = projectionPipelineDefinitionsProvider;
         _projectionFactory = projectionFactory;
-        _projectionPipelineFactory = projectionPipelineFactory;
         _objectsComparer = objectsComparer;
         _eventProvider = eventProvider;
         _executionContextManager = executionContextManager;
@@ -111,9 +100,7 @@ public class Projection : Grain, IProjection
         _executionContextManager.Establish(_tenantId!, CorrelationId.New(), _microserviceId);
 
         _definition = await _projectionDefinitionsProvider().GetFor(_projectionId);
-        _pipelineDefinition = await _projectionPipelineDefinitionsProvider().GetFor(_projectionId);
         _projection = await _projectionFactory.CreateFrom(_definition);
-        _pipeline = _projectionPipelineFactory.CreateFrom(_projection, _pipelineDefinition);
         _definitionObservers.Notify(_ => _.OnProjectionDefinitionsChanged());
     }
 
@@ -187,5 +174,4 @@ public class Projection : Grain, IProjection
             await HandleEventFor(child, context);
         }
     }
-
 }

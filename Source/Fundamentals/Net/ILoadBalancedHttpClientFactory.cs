@@ -14,6 +14,6 @@ public interface ILoadBalancedHttpClientFactory
     /// <param name="endpoints">A collection of endpoints it selects from.</param>
     /// <param name="name">Optional name associated with the client.</param>
     /// <returns>A <see cref="HttpClient"/> for the endpoint.</returns>
-    /// <remarks>The `BaseAddress` of the client gets the endpoint set</remarks>
+    /// <remarks>The `BaseAddress` of the client gets the endpoint set.</remarks>
     HttpClient Create(IEnumerable<Uri> endpoints, string? name = default);
 }

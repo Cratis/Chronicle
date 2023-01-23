@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Configuration;
 using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Configuration;

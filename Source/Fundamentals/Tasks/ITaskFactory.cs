@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Tasks;
 
 /// <summary>
 /// Defines a factory for tasks.
-/// /// </summary>
+/// </summary>
 public interface ITaskFactory
 {
     /// <summary>

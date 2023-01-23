@@ -4,10 +4,10 @@
 using System.Globalization;
 using System.Linq.Expressions;
 using Aksio.Cratis.Concepts;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Projections.Expressions;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Projections;
 

@@ -80,8 +80,7 @@ public class Observers : IObservers
             _.ObserverId,
             _.Name,
             _.EventSequenceId,
-            _.EventTypes
-        ));
+            _.EventTypes));
         await _client.PerformCommand(route, registrations);
     }
 }

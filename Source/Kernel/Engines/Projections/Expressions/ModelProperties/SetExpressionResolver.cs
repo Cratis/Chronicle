@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Events;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.ModelProperties;

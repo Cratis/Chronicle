@@ -14,10 +14,10 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, IEnumerabl
     /// <summary>
     /// The result that represents a disconnected observer.
     /// </summary>
-    public static readonly ObserverSubscriberResult  Disconnected = new (ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);
+    public static readonly ObserverSubscriberResult Disconnected = new(ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);
 
     /// <summary>
     /// The result that represents a ok observer call.
     /// </summary>
-    public static readonly ObserverSubscriberResult  Ok = new (ObserverSubscriberState.Ok, Enumerable.Empty<string>(), string.Empty);
+    public static readonly ObserverSubscriberResult Ok = new(ObserverSubscriberState.Ok, Enumerable.Empty<string>(), string.Empty);
 }

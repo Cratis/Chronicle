@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Clients;
 
 /// <summary>
-/// Exception that gets thrown when a connection timed out
+/// Exception that gets thrown when a connection timed out.
 /// </summary>
 public class ConnectionTimedOut : Exception
 {

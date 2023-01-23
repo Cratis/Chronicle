@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Projections.Definitions;
 
 namespace Aksio.Cratis.Projections;
 

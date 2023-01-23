@@ -5,14 +5,14 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Properties;
 using Orleans;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
 

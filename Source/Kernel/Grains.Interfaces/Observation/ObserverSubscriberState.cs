@@ -19,7 +19,7 @@ public enum ObserverSubscriberState
     Ok = 1,
 
     /// <summary>
-    /// The observer subscriber is errored
+    /// The observer subscriber is errored.
     /// </summary>
     Error = 2,
 

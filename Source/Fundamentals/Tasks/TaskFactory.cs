@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Tasks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ITaskFactory"/>.
-/// /// </summary>
+/// </summary>
 public class TaskFactory : ITaskFactory
 {
     /// <inheritdoc/>

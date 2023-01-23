@@ -24,7 +24,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
-    /// <param name="httpClientFactory"></param>
+    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connections..</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ConnectedClients(IHttpClientFactory httpClientFactory, ILogger<ConnectedClients> logger)
     {
@@ -57,7 +57,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
         _logger.ClientDisconnected(microserviceId, connectionId);
 
-        var client = State.Clients.Find(_ => _.ConnectionId == connectionId);
+        var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
             State.Clients.Remove(client);
@@ -70,7 +70,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <inheritdoc/>
     public async Task OnClientPing(ConnectionId connectionId)
     {
-        var client = State.Clients.Find(_ => _.ConnectionId == connectionId);
+        var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
             State.Clients.Remove(client);
@@ -103,7 +103,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <inheritdoc/>
     public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(State.Clients.First(_ => _.ConnectionId == connectionId));
 
-    async Task PingClients(object _)
+    async Task PingClients(object state)
     {
         foreach (var connectedClient in State.Clients.ToArray())
         {

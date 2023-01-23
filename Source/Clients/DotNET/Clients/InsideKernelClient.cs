@@ -21,10 +21,16 @@ public class InsideKernelClient : IClient
 {
     readonly SingleKernelClient _innerClient;
 
+    /// <inheritdoc/>
+    public bool IsConnected => _innerClient.IsConnected;
+
+    /// <inheritdoc/>
+    public ConnectionId ConnectionId => _innerClient.ConnectionId;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InsideKernelClient"/> class.
     /// </summary>
-    /// <param name="server"></param>
+    /// <param name="server">The ASP.NET Core <see cref="IServer"/>.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
@@ -43,7 +49,7 @@ public class InsideKernelClient : IClient
         ILogger<SingleKernelClient> logger)
     {
         var addresses = server.Features.Get<IServerAddressesFeature>();
-        var address = addresses!.Addresses.First().Replace("//*","//localhost");
+        var address = addresses!.Addresses.First().Replace("//*", "//localhost");
         var endpoint = new Uri(address);
         var options = new SingleKernelOptions
         {
@@ -60,12 +66,6 @@ public class InsideKernelClient : IClient
             jsonSerializerOptions,
             logger);
     }
-
-    /// <inheritdoc/>
-    public bool IsConnected => _innerClient.IsConnected;
-
-    /// <inheritdoc/>
-    public ConnectionId ConnectionId => _innerClient.ConnectionId;
 
     /// <inheritdoc/>
     public Task Connect() => _innerClient.Connect();

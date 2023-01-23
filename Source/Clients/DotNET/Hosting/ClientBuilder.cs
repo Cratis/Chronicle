@@ -8,8 +8,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
-using Aksio.Cratis.Integration;
-using Aksio.Cratis.Net;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
@@ -24,7 +22,6 @@ namespace Aksio.Cratis.Hosting;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
-    readonly MicroserviceId _microserviceId;
     bool _inKernel;
 
     /// <summary>
@@ -34,7 +31,6 @@ public class ClientBuilder : IClientBuilder
     public ClientBuilder(MicroserviceId microserviceId)
     {
         ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
-        _microserviceId = microserviceId;
     }
 
     /// <summary>
@@ -84,7 +80,7 @@ public class ClientBuilder : IClientBuilder
 
         logger.ConfiguringServices();
         services
-            .AddCratisClient(logger)
+            .AddCratisClient()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
             .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()

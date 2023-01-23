@@ -20,5 +20,5 @@ public class ConnectedClientsState
     /// <summary>
     /// Gets or sets the connected clients.
     /// </summary>
-    public List<ConnectedClient> Clients = new();
+    public IList<ConnectedClient> Clients { get; set; } = new List<ConnectedClient>();
 }

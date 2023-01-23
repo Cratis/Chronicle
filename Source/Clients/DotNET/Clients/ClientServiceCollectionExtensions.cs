@@ -23,9 +23,8 @@ public static class ClientServiceCollectionExtensions
     /// Add the Cratis Kernel client.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisClient(this IServiceCollection services, ILogger logger)
+    public static IServiceCollection AddCratisClient(this IServiceCollection services)
     {
         services.AddSingleton(_ =>
         {

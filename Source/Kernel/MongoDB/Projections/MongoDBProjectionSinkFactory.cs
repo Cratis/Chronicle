@@ -6,7 +6,6 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Projections.MongoDB;

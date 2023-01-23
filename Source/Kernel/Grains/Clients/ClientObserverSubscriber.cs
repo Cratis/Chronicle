@@ -31,6 +31,12 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     IConnectedClients? _connectedClients;
     IConnectedClients ConnectedClients => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
+    /// </summary>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     public ClientObserverSubscriber(
         ILogger<ClientObserverSubscriber> logger,
         IHttpClientFactory httpClientFactory,

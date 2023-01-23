@@ -13,5 +13,5 @@ public interface ILoadBalancer
     /// </summary>
     /// <param name="strategy"><see cref="ILoadBalancerStrategy"/> to use.</param>
     /// <returns>A new <see cref="ILoadBalancedHttpClientFactory"/>.</returns>
-    ILoadBalancedHttpClientFactory  CreateHttpClientFactory(ILoadBalancerStrategy strategy);
+    ILoadBalancedHttpClientFactory CreateHttpClientFactory(ILoadBalancerStrategy strategy);
 }

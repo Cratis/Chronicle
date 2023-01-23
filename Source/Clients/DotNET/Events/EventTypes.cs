@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Events;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Events;
