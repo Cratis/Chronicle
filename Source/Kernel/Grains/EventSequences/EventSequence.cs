@@ -3,12 +3,12 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Cratis.Events;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 using Orleans;

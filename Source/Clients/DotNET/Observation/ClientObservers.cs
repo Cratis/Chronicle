@@ -34,6 +34,7 @@ public class ClientObservers : Controller
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> of the observer it is for.</param>
     /// <param name="event">The <see cref="AppendedEvent"/>.</param>
+    /// <returns>Awaitable task.</returns>
     [HttpPost("{observerId}")]
     public async Task OnNext(
         [FromRoute] ObserverId observerId,

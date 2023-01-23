@@ -21,7 +21,7 @@ public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
     /// <summary>
     /// Initializes a new instance of the <see cref="Schemas"/> class.
     /// </summary>
-    /// <param name="client"></param>
+    /// <param name="client">The Kernel <see cref="IClient"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for event types.</param>
     public SchemasClientLifecycleParticipant(

@@ -11,7 +11,9 @@ public static class ClusterTypes
     /// <summary>
     /// Gets the value representing single cluster mode.
     /// </summary>
+    #pragma warning disable CA1720  // Allow single as name
     public const string Single = "single";
+    #pragma warning restore
 
     /// <summary>
     /// Gets the value representing an unreliable static cluster configuration.

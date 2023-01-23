@@ -47,12 +47,12 @@ public class SingleKernelClient : RestKernelClient
             clientLifecycle,
             jsonSerializerOptions,
             logger)
-
     {
         _httpClientFactory = httpClientFactory;
         _options = options;
     }
 
+    /// <inheritdoc/>
     protected override HttpClient CreateHttpClient()
     {
         var client = _httpClientFactory.CreateClient();

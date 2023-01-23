@@ -26,20 +26,16 @@ public class an_observer : GrainSpecification<ObserverState>
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
-    protected ObserverNamespace observer_namespace;
 
     protected override Grain GetGrainInstance()
     {
         event_sequence_storage_provider = new();
         observer = new Observer(() => event_sequence_storage_provider.Object, Mock.Of<IExecutionContextManager>(), Mock.Of<ILogger<Observer>>());
-        observer_namespace = Guid.NewGuid().ToString();
         return observer;
     }
 
     protected override void OnBeforeGrainActivate()
     {
-        state.CurrentNamespace = observer_namespace;
-
         microservice_id = Guid.NewGuid();
         tenant_id = Guid.NewGuid();
         event_sequence_id = EventSequenceId.Log;

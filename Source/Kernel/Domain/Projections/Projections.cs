@@ -60,8 +60,7 @@ public class Projections : Controller
         var projectionsAndPipelines = payload.Projections.Select(_ =>
             new ProjectionAndPipeline(
                 _projectionSerializer.Deserialize(_.Projection),
-                _.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!
-            )).ToArray();
+                _.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!)).ToArray();
 
         await projections.Register(projectionsAndPipelines);
     }

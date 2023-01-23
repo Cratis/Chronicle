@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Kernel.Engines.Projections.Changes;
-using Aksio.Cratis.Schemas;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;

@@ -3,9 +3,9 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Properties;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 

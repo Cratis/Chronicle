@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -19,22 +18,18 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 public class EventSequence : Controller
 {
     readonly IGrainFactory _grainFactory;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
-    /// <param name="eventSequenceStorageProviderProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventSequence(
         IGrainFactory grainFactory,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
         IExecutionContextManager executionContextManager)
     {
         _grainFactory = grainFactory;
-        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
     }
 

@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.EventTypes;
 
-
 /// <summary>
 /// Represents the API for working with event types.
 /// </summary>

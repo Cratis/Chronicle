@@ -60,6 +60,7 @@ public class OrleansAzureTableStoreKernelClient : ClusteredKernelClient
         timerFactory.Create(_ => RefreshSilos(), 30000, 30000);
     }
 
+    /// <inheritdoc/>
     protected override IEnumerable<Uri> Endpoints => _endpoints;
 
     void RefreshSilos()

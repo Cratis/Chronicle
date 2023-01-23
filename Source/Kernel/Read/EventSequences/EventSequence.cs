@@ -1,23 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json.Nodes;
-using System.Text.Json;
 
 namespace Aksio.Cratis.Kernel.Read.EventSequences;
-
-/// <summary>
-/// Represents an event that has been appended to an event log with the content as JSON.
-/// </summary>
-/// <param name="Metadata">The <see cref="EventMetadata"/>.</param>
-/// <param name="Context">The <see cref="EventContext"/>.</param>
-/// <param name="Content">The content in the form of an <see cref="JsonObject"/>.</param>
-public record AppendedEventWithJsonAsContent(EventMetadata Metadata, EventContext Context, JsonNode Content);
 
 /// <summary>
 /// Represents the API for working with the event log.
@@ -66,8 +57,7 @@ public class EventSequence : Controller
             result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
                 _.Metadata,
                 _.Context,
-                JsonSerializer.SerializeToNode(_.Content, _jsonSerializerOptions)!
-            )));
+                JsonSerializer.SerializeToNode(_.Content, _jsonSerializerOptions)!)));
         }
         return result;
     }
@@ -75,8 +65,7 @@ public class EventSequence : Controller
     /// <summary>
     /// Get a histogram of a specific event sequence. PS: Not implemented yet.
     /// </summary>
-    /// <param name="eventSequenceId">Event sequence to get for.</param>
     /// <returns>A collection of <see cref="EventHistogramEntry"/>.</returns>
     [HttpGet("histogram")]
-    public Task<IEnumerable<EventHistogramEntry>> Histogram([FromRoute] EventSequenceId eventSequenceId) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
+    public Task<IEnumerable<EventHistogramEntry>> Histogram(/*[FromRoute] EventSequenceId eventSequenceId*/) => Task.FromResult(Array.Empty<EventHistogramEntry>().AsEnumerable());
 }

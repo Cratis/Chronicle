@@ -148,6 +148,10 @@ public abstract class RestKernelClient : IClient, IDisposable
         return result!;
     }
 
+    /// <summary>
+    /// Create a <see cref="HttpClient"/>.
+    /// </summary>
+    /// <returns><see cref="HttpClient"/> ready to be used.</returns>
     protected abstract HttpClient CreateHttpClient();
 
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null)

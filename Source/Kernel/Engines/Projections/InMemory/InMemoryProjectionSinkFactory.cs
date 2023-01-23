@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 

@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Projections;
 using Orleans;
 

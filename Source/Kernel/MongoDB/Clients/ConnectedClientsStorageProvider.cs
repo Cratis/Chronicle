@@ -12,8 +12,6 @@ using Orleans.Storage;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Clients;
 
-public record MongoDBConnectedClientState(MicroserviceId Id, IEnumerable<ConnectedClient> Clients);
-
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling connected clients storage.
 /// </summary>

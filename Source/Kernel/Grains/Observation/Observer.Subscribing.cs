@@ -12,8 +12,23 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public partial class Observer
 {
     /// <inheritdoc/>
-    public Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes) where TObserverSubscriber : IObserverSubscriber
+    public Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes)
+        where TObserverSubscriber : IObserverSubscriber
         => Subscribe(typeof(TObserverSubscriber), eventTypes);
+
+    /// <inheritdoc/>
+    public async Task Unsubscribe()
+    {
+        _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+        State.RunningState = ObserverRunningState.Disconnected;
+        await WriteStateAsync();
+        await UnsubscribeStream();
+
+        if (_recoverReminder is not null)
+        {
+            await UnregisterReminder(_recoverReminder);
+        }
+    }
 
     async Task Subscribe(Type subscriberType, IEnumerable<EventType> eventTypes)
     {
@@ -64,20 +79,6 @@ public partial class Observer
 
         await WriteStateAsync();
         await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
-    }
-
-    /// <inheritdoc/>
-    public async Task Unsubscribe()
-    {
-        _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        State.RunningState = ObserverRunningState.Disconnected;
-        await WriteStateAsync();
-        await UnsubscribeStream();
-
-        if (_recoverReminder is not null)
-        {
-            await UnregisterReminder(_recoverReminder);
-        }
     }
 
     Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event)

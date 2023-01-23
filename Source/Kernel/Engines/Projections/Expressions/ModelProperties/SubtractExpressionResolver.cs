@@ -3,9 +3,9 @@
 
 using System.Dynamic;
 using System.Text.RegularExpressions;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Events;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.ModelProperties;

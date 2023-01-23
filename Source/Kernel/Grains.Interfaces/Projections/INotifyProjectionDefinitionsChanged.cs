@@ -13,6 +13,5 @@ public interface INotifyProjectionDefinitionsChanged : IGrainObserver
     /// <summary>
     /// Called when either the projection or the pipeline definition is changed.
     /// </summary>
-    /// <returns>Awaitable task.</returns>
     void OnProjectionDefinitionsChanged();
 }

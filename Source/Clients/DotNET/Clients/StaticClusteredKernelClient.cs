@@ -52,5 +52,6 @@ public class StaticClusteredKernelClient : ClusteredKernelClient
         _options = options;
     }
 
+    /// <inheritdoc/>
     protected override IEnumerable<Uri> Endpoints => _options.Endpoints;
 }

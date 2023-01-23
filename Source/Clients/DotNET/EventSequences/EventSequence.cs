@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.EventSequences;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventSequence"/>,
+/// Represents an implementation of <see cref="IEventSequence"/>.
 /// </summary>
 public class EventSequence : IEventSequence
 {
