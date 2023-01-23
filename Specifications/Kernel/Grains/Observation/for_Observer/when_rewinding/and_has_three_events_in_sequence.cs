@@ -49,7 +49,7 @@ public class and_has_three_events_in_sequence : given.an_observer_and_two_event_
         appended_events = new();
         subscriber.Setup(_ => _.OnNext(
             IsAny<AppendedEvent>())).Returns(
-                (AppendedEvent @event, StreamSequenceToken _) =>
+                (AppendedEvent @event) =>
                 {
                     appended_events.Add(@event);
                     return Task.FromResult(ObserverSubscriberResult.Ok);
