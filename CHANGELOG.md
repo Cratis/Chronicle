@@ -1,3 +1,10 @@
+# [v7.4.2] - 2023-1-23 [PR: #696](https://github.com/aksio-insurtech/Cratis/pull/696)
+
+### Fixed
+
+- Rules can now be stateless by omitting an implementation of `DefineState` - as originally designed.
+
+
 # [v7.4.1] - 2023-1-20 [PR: #693](https://github.com/aksio-insurtech/Cratis/pull/693)
 
 ### Fixed
