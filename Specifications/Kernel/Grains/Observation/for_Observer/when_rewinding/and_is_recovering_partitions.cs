@@ -11,6 +11,8 @@ public class and_is_recovering_partitions : given.an_observer_and_two_event_type
     {
         state.FailPartition("b3cc41d8-2354-4444-9427-c8520d89ae8d", 42, Array.Empty<string>(), string.Empty);
         state.FailPartition(recovering_partition, 43, Array.Empty<string>(), string.Empty);
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)50));
+        await observer.Subscribe<ObserverSubscriber>(event_types);
 
         await observer.TryResumePartition(recovering_partition);
     }

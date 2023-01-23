@@ -18,8 +18,9 @@ public partial class Observer
         State.RunningState = ObserverRunningState.Rewinding;
         State.NextEventSequenceNumber = EventSequenceNumber.First;
 
-        if (State.IsDisconnected)
+        if (State.IsDisconnected || _subscriberType is null)
         {
+            await WriteStateAsync();
             return;
         }
 
@@ -35,7 +36,7 @@ public partial class Observer
             _logger.OffsetIsAtTail(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             State.RunningState = ObserverRunningState.TailOfReplay;
             await WriteStateAsync();
-            await Subscribe(_subscriberType, State.EventTypes);
+            await Subscribe(_subscriberType!, State.EventTypes);
             return;
         }
 
@@ -98,7 +99,7 @@ public partial class Observer
             await UnsubscribeStream();
             if (!State.IsDisconnected)
             {
-                await Subscribe(_subscriberType, State.EventTypes);
+                await Subscribe(_subscriberType!, State.EventTypes);
             }
         }
     }

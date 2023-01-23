@@ -59,7 +59,11 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
             });
     }
 
-    async Task Because() => await observer.ReceiveReminder(Observer.RecoverReminder, new TickStatus());
+    async Task Because()
+    {
+        await observer.Subscribe<ObserverSubscriber>(event_types);
+        await observer.ReceiveReminder(Observer.RecoverReminder, new TickStatus());
+    }
 
     [Fact] void should_forward_first_partition_event_to_first_partition_observer_subscriber() => events_received[first_partition].ShouldEqual(first_partition_appended_event);
     [Fact] void should_forward_second_partition_event_to_second_partition_observer_subscriber() => events_received[second_partition].ShouldEqual(second_partition_appended_event);
