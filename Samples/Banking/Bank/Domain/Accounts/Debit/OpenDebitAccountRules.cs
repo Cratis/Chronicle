@@ -17,8 +17,6 @@ public class OpenDebitAccountRules : RulesFor<OpenDebitAccountRules, OpenDebitAc
         RuleForState(_ => _.Accounts)
             .Unique(_ => _.Details.Name)
             .WithMessage("Account with name already exists");
-
-        RuleFor(_ => _.Details.Name).NotEmpty().WithMessage("You have to specify a name");
     }
 
     public override void DefineState(IProjectionBuilderFor<OpenDebitAccountRules> builder) => builder

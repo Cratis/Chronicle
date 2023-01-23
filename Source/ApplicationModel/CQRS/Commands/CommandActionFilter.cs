@@ -1,10 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Applications.Validation;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Strings;
-using Aksio.Cratis.Validation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -63,7 +62,7 @@ public class CommandActionFilter : IAsyncActionFilter
             var commandResult = new CommandResult
             {
                 CorrelationId = _executionContextManager.Current.CorrelationId,
-                ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => new ValidationError(p.ErrorMessage, new string[] { _.Key.ToCamelCase() }))),
+                ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(e => e.ToValidationError(_.Key))),
                 ExceptionMessages = exceptionMessages.ToArray(),
                 ExceptionStackTrace = exceptionStackTrace ?? string.Empty,
                 Response = response

@@ -8,22 +8,23 @@ namespace Aksio.Cratis.Integration;
 /// <summary>
 /// Represents the translated events from <see cref="AdapterFor{TModel, TExternalModel}"/>.
 /// </summary>
-public class EventsToAppend : IEnumerable, IEnumerable<object>
+public class EventsToAppend : IEnumerable<EventToAppend>
 {
-    readonly List<object> _events = new();
+    readonly List<EventToAppend> _events = new();
 
     /// <summary>
     /// Add an event.
     /// </summary>
-    /// <param name="event">Event to add.</param>
-    public void Add(object @event)
+    /// <param name="event">The actual event to append.</param>
+    /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
+    public void Add(object @event, DateTimeOffset? validFrom = default)
     {
-        _events.Add(@event);
+        _events.Add(new(@event, validFrom));
     }
 
     /// <inheritdoc/>
-    public IEnumerator GetEnumerator() => _events.GetEnumerator();
+    public IEnumerator<EventToAppend> GetEnumerator() => _events.GetEnumerator();
 
     /// <inheritdoc/>
-    IEnumerator<object> IEnumerable<object>.GetEnumerator() => _events.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => _events.GetEnumerator();
 }

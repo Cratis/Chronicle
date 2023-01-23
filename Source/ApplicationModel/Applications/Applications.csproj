@@ -15,7 +15,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="$(AutofacExtensions)" />
-		<PackageReference Include="FluentValidation" Version="11.0.1" />
+		<PackageReference Include="FluentValidation" Version="$(FluentValidation)" />
 		<PackageReference Include="Humanizer" Version="$(Humanizer)" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="$(MicrosoftExtensions)" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensions)" />

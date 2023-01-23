@@ -5,6 +5,7 @@
         <NewtonsoftJson>13.0.1</NewtonsoftJson>
         <Autofac>6.4.0</Autofac>
         <AutofacExtensions>8.0.0</AutofacExtensions>
+        <FluentValidation>11.0.1</FluentValidation>
         <Orleans>3.6.5</Orleans>
         <MongoDB>2.17.1</MongoDB>
         <ServiceModelPrimitives>4.10.0</ServiceModelPrimitives>

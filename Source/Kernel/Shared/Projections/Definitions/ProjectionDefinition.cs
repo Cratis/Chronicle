@@ -30,4 +30,10 @@ public record ProjectionDefinition(
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     AllDefinition All,
-    RemovedWithDefinition? RemovedWith = default);
+    RemovedWithDefinition? RemovedWith = default)
+{
+    /// <summary>
+    /// Checks if the definition is empty or not. Empty meaning that there is no definition.
+    /// </summary>
+    public bool IsEmpty => From.Count == 0 && Children.Count == 0;
+}

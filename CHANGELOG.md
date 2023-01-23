@@ -1,3 +1,93 @@
+# [v7.4.1] - 2023-1-20 [PR: #693](https://github.com/aksio-insurtech/Cratis/pull/693)
+
+### Fixed
+
+- Nested members in validation errors are now also camel cased.
+
+
+# [v7.4.0] - 2023-1-19 [PR: #689](https://github.com/aksio-insurtech/Cratis/pull/689)
+
+### Added
+
+- Added `RuleForConcept` in the `BaseValidator` type to be able to hook up validation that is for an actual concept and not the primitive it is encapsulating.
+- Extracting out discoverability of validators into `IDiscoverableValidator`. This can now be used indepdendently, allowing you to work directly with `AbstractValidator` for instance and still be discovered at runtime.
+
+
+# [v7.3.2] - 2023-1-13 [PR: #678](https://github.com/aksio-insurtech/Cratis/pull/678)
+
+### Fixed
+
+- Helpers for Tests/Specifications now includes the `ValidFrom` value added during `Append`.
+
+
+
+# [v7.3.1] - 2023-1-13 [PR: #676](https://github.com/aksio-insurtech/Cratis/pull/676)
+
+### Fixed
+
+- `ValidFrom` in callbacks when used in `AppendEvent` with integration adapters are now nullable, as it should be.
+
+
+# [v7.3.0] - 2023-1-13 [PR: #675](https://github.com/aksio-insurtech/Cratis/pull/675)
+
+### Added
+
+- Added a way to provide `ValidFrom` when describing events to append for integrations from a callback.
+
+
+# [v7.2.0] - 2023-1-12 [PR: #674](https://github.com/aksio-insurtech/Cratis/pull/674)
+
+### Added
+
+- Support for `ValidFrom` for integration adapters as an optional parameter to the `AppendEvent` method.
+
+
+
+# [v7.1.0] - 2023-1-11 [PR: #673](https://github.com/aksio-insurtech/Cratis/pull/673)
+
+### Added
+
+- Added support for Command, Query and Concept validators (#671).
+
+
+# [v7.0.0] - 2023-1-10 [PR: #672](https://github.com/aksio-insurtech/Cratis/pull/672)
+
+## Summary
+
+A missing consideration in the `ObserverStorageProvider` for observer key was causing Inbox observers for different microservices to reuse its state. Causing strange behavior.
+
+This version is therefor a major release, since it actually is not backwards compatible with the stored observers state for inboxes.
+
+To remedy this, you can change the existing observer in the `observers collection` with the `observerId: 85dc950d-1900-4407-a484-ec1e83da16c6`. In the `_id` field you can append the microserviceId you believe is correct (if you only have one, this should be easy).
+The expected format is: 
+
+`<guid> : <guid> : <guid>`
+
+Where the Guid represent:
+
+`<event sequence id> : <observer id> : <source microservice id>`.
+
+Since the two first segments are known it will become:
+
+`ae99de1e-b19f-4a33-a5c4-3908508ce59f : 85dc950d-1900-4407-a484-ec1e83da16c6 : <source microservice id>`
+
+Concrete example:
+
+`ae99de1e-b19f-4a33-a5c4-3908508ce59f : 85dc950d-1900-4407-a484-ec1e83da16c6 : 51f25e1d-b897-4476-a48d-ce9de38c7589`
+
+
+### Changed
+
+- Changed the key for Inbox observers to include source microservice id.
+
+
+# [v6.25.5] - 2023-1-2 [PR: #662](https://github.com/aksio-insurtech/Cratis/pull/662)
+
+### Fixed
+
+- Fixing a bug in the command template so that enumerable properties actually now gets rendered correctly as JS arrays.
+
+
 # [v6.25.4] - 2023-1-2 [PR: #660](https://github.com/aksio-insurtech/Cratis/pull/660)
 
 ### Fixed

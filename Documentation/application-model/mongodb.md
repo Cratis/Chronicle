@@ -2,13 +2,13 @@
 
 MongoDB is a managed resource. This means that its configuration is managed by Cratis Kernel.
 In addition, MongoDB is also considered a
-[multi-tenant](../tenancy.md). resource which means that there should be one configuration / database
-per [tenant](../tenancy.md).
+[multi-tenant](../concepts/tenancy.md). resource which means that there should be one configuration / database
+per [tenant](../concepts/tenancy.md).
 
 For you as a developer, it has been made very simple by letting you work with the MongoDB C# Driver API only through
 a pre-configured setup for the [IoC Container](./ioc.md).
 
-The configuration of storage is done through the Cratis Kernel, read more [here](../../kernel/storage.md).
+The configuration of storage is done through the Cratis Kernel, read more [here](../kernel/storage.md).
 
 Usage:
 

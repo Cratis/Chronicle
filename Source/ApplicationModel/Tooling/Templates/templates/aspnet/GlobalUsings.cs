@@ -7,6 +7,7 @@ global using Aksio.Cratis.Applications.Commands;
 global using Aksio.Cratis.Applications.Queries;
 global using Aksio.Cratis.Applications.Queries.MongoDB;
 global using Aksio.Cratis.Applications.Rules;
+global using Aksio.Cratis.Applications.Validation;
 global using Aksio.Cratis.Concepts;
 global using Aksio.Cratis.Events;
 global using Aksio.Cratis.Observation;

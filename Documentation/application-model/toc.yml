@@ -1,11 +1,15 @@
+- name: Introduction
+  href: index.md
 - name: Inversion of Control
   href: ioc.md
-- name: Logging
-  href: logging.md
 - name: MongoDB
   href: mongodb.md
 - name: CQRS
   href: cqrs/toc.yml
+- name: Validation
+  href: validation.md
+- name: Rules
+  href: rules.md
 - name: Identity
   href: identity.md
 - name: Frontend

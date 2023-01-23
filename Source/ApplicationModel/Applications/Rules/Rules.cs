@@ -97,6 +97,11 @@ public class Rules : IRules
     public void ProjectTo(IRule rule, object? modelIdentifier = default)
     {
         var projectionDefinition = GetProjectionDefinitionFor(rule);
+        if (projectionDefinition.IsEmpty)
+        {
+            return;
+        }
+
         var result = _immediateProjections.GetInstanceById(
             modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!,
             projectionDefinition).GetAwaiter().GetResult();

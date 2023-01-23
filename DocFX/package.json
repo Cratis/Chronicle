@@ -6,6 +6,7 @@
     "private": true,
     "scripts": {
         "watch": "rm -rf ./_site && rm -rf ./obj && dotnet clean && dotnet restore && concurrently 'yarn serve' 'npm-watch build'",
+        "watch:docs": "rm -rf ./_site && concurrently 'yarn serve' 'npm-watch build'",
         "build": "dotnet msbuild -t:docfx",
         "serve": "yarn http-server ./_site"
     },
@@ -21,7 +22,7 @@
             "ignore": [
                 "_site"
             ],
-            "extensions": "md,yml,cs,ts,tsx",
+            "extensions": "md,yml,cs,ts,tsx,html",
             "quiet": false
         }
     },

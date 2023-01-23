@@ -69,8 +69,6 @@
             "disableGitFeatures": false,
             "disableDefaultFilter": false
         }
-
-
     ],
     "build": {
         "content": [
@@ -101,7 +99,8 @@
         "resource": [
             {
                 "files": [
-                    "images/**"
+                    "images/**",
+                    "index.html"
                 ]
             },
             {
