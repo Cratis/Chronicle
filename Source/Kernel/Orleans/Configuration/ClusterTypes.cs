@@ -9,9 +9,9 @@ namespace Aksio.Cratis.Kernel.Orleans.Configuration;
 public static class ClusterTypes
 {
     /// <summary>
-    /// Gets the value representing local cluster mode.
+    /// Gets the value representing single cluster mode.
     /// </summary>
-    public const string Local = "local";
+    public const string Single = "single";
 
     /// <summary>
     /// Gets the value representing an unreliable static cluster configuration.

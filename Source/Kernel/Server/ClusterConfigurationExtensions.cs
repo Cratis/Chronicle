@@ -63,7 +63,7 @@ public static class ClusterConfigurationExtensions
 
             switch (clusterConfig.Type)
             {
-                case ClusterTypes.Local:
+                case ClusterTypes.Single:
                     logger?.UsingLocalHostClustering();
                     builder.UseLocalhostClustering();
                     break;
