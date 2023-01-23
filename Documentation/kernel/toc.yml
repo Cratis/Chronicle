@@ -1,6 +1,2 @@
-- name: Clustering
-  href: clustering.md
-- name: Storage
-  href: storage.md
-- name: Telemetry
-  href: telemetry.md
+- name: REST API
+  href: api/index.md
