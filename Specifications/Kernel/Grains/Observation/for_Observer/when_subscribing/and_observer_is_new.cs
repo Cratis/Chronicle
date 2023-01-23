@@ -15,7 +15,7 @@ public class and_observer_is_new : given.an_observer_and_two_event_types
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)1));
     }
 
-    async Task Because() => await observer.Subscribe(event_types, Guid.NewGuid().ToString());
+    async Task Because() => await observer.Subscribe<ObserverSubscriber>(event_types);
 
     [Fact] void should_set_state_to_replaying() => state.RunningState.ShouldEqual(ObserverRunningState.CatchingUp);
     [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());

@@ -13,7 +13,5 @@ public class an_observer_with_event_types_and_reminder : for_Observer.given.an_o
     {
         reminder = new();
         reminder_registry.Setup(_ => _.GetReminder(Observer.RecoverReminder)).Returns(Task.FromResult(reminder.Object));
-
-        state.CurrentNamespace = observer_namespace;
     }
 }

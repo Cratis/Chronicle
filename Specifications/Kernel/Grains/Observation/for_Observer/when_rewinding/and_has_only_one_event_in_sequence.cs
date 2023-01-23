@@ -17,7 +17,7 @@ public class and_has_only_one_event_in_sequence : given.an_observer_and_two_even
         event_sequence_storage_provider.Setup(_ => _.GetHeadSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
 
-        await observer.Subscribe(event_types, observer_namespace);
+        await observer.Subscribe<ObserverSubscriber>(event_types);
         state.RunningState = ObserverRunningState.Active;
 
         state.NextEventSequenceNumber = EventSequenceNumber.First;
@@ -33,13 +33,12 @@ public class and_has_only_one_event_in_sequence : given.an_observer_and_two_even
 
         state.LastHandled = EventSequenceNumber.First;
         appended_events = new();
-        observer_stream.Setup(_ => _.OnNextAsync(
-            IsAny<AppendedEvent>(),
-            IsAny<StreamSequenceToken>())).Returns(
-                (AppendedEvent @event, StreamSequenceToken _) =>
+        subscriber.Setup(_ => _.OnNext(
+            IsAny<AppendedEvent>())).Returns(
+                (AppendedEvent @event) =>
                 {
                     appended_events.Add(@event);
-                    return Task.CompletedTask;
+                    return Task.FromResult(ObserverSubscriberResult.Ok);
                 });
     }
 

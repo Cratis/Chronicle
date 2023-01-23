@@ -15,12 +15,11 @@ public class and_observer_is_ahead : given.an_observer_and_two_event_types_and_o
 
     async Task Because()
     {
-        await observer.Subscribe(event_types, observer_namespace);
+        await observer.Subscribe<ObserverSubscriber>(event_types);
         await observers[0].OnNextAsync(appended_event);
     }
 
-    [Fact] void should_not_forward_event_to_observer_stream() => observer_stream.Verify(_ => _.OnNextAsync(appended_event, IsAny<StreamSequenceToken>()), Never());
-    [Fact] void should_set_current_namespace_in_state() => state_on_write.CurrentNamespace.ShouldEqual(observer_namespace);
+    [Fact] void should_not_forward_event_to_observer_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event), Never());
     [Fact] void should_not_change_offset() => state_on_write.NextEventSequenceNumber.Value.ShouldEqual(42U);
     [Fact] void should_not_change_set_last_handled() => state_on_write.LastHandled.Value.ShouldEqual(41U);
 }

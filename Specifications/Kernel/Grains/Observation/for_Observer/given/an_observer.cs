@@ -15,9 +15,7 @@ public class an_observer : GrainSpecification<ObserverState>
     protected Observer observer;
     protected ObserverId observer_id;
     protected Mock<IStreamProvider> sequence_stream_provider;
-    protected Mock<IStreamProvider> observer_stream_provider;
     protected Mock<IAsyncStream<AppendedEvent>> sequence_stream;
-    protected Mock<IAsyncStream<AppendedEvent>> observer_stream;
     protected EventSequenceNumberTokenWithFilter subscribed_token;
     protected List<EventSequenceNumberTokenWithFilter> subscribed_tokens;
     protected List<Mock<StreamSubscriptionHandle<AppendedEvent>>> subscription_handles;
@@ -26,6 +24,7 @@ public class an_observer : GrainSpecification<ObserverState>
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
+    protected Mock<IObserverSubscriber> subscriber;
 
     protected override Grain GetGrainInstance()
     {
@@ -36,6 +35,7 @@ public class an_observer : GrainSpecification<ObserverState>
 
     protected override void OnBeforeGrainActivate()
     {
+        subscriber = new();
         microservice_id = Guid.NewGuid();
         tenant_id = Guid.NewGuid();
         event_sequence_id = EventSequenceId.Log;
@@ -49,15 +49,11 @@ public class an_observer : GrainSpecification<ObserverState>
         sequence_stream = new();
         sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(event_sequence_id.Value, new MicroserviceAndTenant(microservice_id, tenant_id))).Returns(sequence_stream.Object);
 
-        observer_stream_provider = new();
-        stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.ObserverHandlersStreamProvider)).Returns(observer_stream_provider.Object);
-
-        observer_stream = new();
-        observer_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(observer_id, observer_namespace.Value)).Returns(observer_stream.Object);
-
         subscribed_tokens = new();
         subscription_handles = new();
         observers = new();
+
+        grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), observer_id, IsAny<ObserverSubscriberKey>())).Returns(subscriber.Object);
 
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
