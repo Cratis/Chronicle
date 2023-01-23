@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Applications.Rules;
 /// </summary>
 /// <typeparam name="TSelf">The type of itself.</typeparam>
 /// <typeparam name="TCommand">Type of command.</typeparam>
-public abstract class RulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, IRule
+public class RulesFor<TSelf, TCommand> : AbstractValidator<TCommand>, IRule
     where TSelf : RulesFor<TSelf, TCommand>
 {
     readonly InlineValidator<TSelf> _selfValidator = new();
