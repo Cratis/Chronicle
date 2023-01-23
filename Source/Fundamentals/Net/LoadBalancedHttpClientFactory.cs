@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Microsoft.Extensions.Options;
+
 namespace Aksio.Cratis.Net;
 
 /// <summary>
@@ -30,7 +32,7 @@ public class LoadBalancedHttpClientFactory : ILoadBalancedHttpClientFactory
         var endpointsAsArray = endpoints.ToArray();
         var next = _strategy.GetNext(endpointsAsArray.Length);
         var nextEndpoint = endpointsAsArray[next];
-        var client = _httpClientFactory.CreateClient(name);
+        var client = _httpClientFactory.CreateClient(name ?? Options.DefaultName);
         client.BaseAddress = nextEndpoint;
         return client;
     }
