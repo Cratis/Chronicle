@@ -11,22 +11,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
 
-
 public class a_rest_kernel_client : Specification
 {
-    protected static HttpResponseMessage success_message
-    {
-        get
-        {
-            var message = new HttpResponseMessage(HttpStatusCode.OK);
-            message.Content = JsonContent.Create(CommandResult.Success);
-            return message;
-        }
-    }
+    protected string connect_route;
+    protected string ping_route;
 
-    protected static HttpResponseMessage not_found_message => new(HttpStatusCode.NotFound);
-    protected static string connect_route;
-    protected static string ping_route;
+    protected HttpResponseMessage success_message => new(HttpStatusCode.OK)
+    {
+        Content = JsonContent.Create(CommandResult.Success)
+    };
+
+    protected HttpResponseMessage not_found_message => new(HttpStatusCode.NotFound);
     protected Mock<ITaskFactory> task_factory;
     protected Mock<ITimerFactory> timer_factory;
     protected Mock<IExecutionContextManager> execution_context_manager;
@@ -70,7 +65,7 @@ public class a_rest_kernel_client : Specification
                 IsAny<TimerCallback>(),
                 IsAny<int>(),
                 IsAny<int>(),
-                IsAny<object>())).Returns((TimerCallback callback, int due, int period, object? state) =>
+                IsAny<object>())).Returns((TimerCallback callback, int _, int __, object? state) =>
                 {
                     callback(state);
                     return timer.Object;

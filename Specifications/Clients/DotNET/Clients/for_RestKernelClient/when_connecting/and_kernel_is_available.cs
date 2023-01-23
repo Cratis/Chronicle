@@ -7,7 +7,7 @@ public class and_kernel_is_available : given.a_rest_kernel_client
 {
     void Establish()
     {
-        client.http_client.Setup(_ => _.SendAsync(IsAny<HttpRequestMessage>(), CancellationToken.None)).Returns(Task.FromResult(success_message));
+        client.http_client.Setup(_ => _.SendAsync(IsAny<HttpRequestMessage>(), CancellationToken.None)).Returns(() => Task.FromResult(success_message));
     }
 
     async Task Because() => await client.Connect();

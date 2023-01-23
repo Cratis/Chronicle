@@ -9,8 +9,10 @@ public class and_kernel_is_available_on_second_attempt : given.a_rest_kernel_cli
     {
         client.http_client
             .SetupSequence(_ => _.SendAsync(IsAny<HttpRequestMessage>(), CancellationToken.None))
-            .Returns(Task.FromResult(not_found_message))
-            .Returns(Task.FromResult(success_message));
+            .Returns(() => Task.FromResult(not_found_message))
+            .Returns(() => Task.FromResult(success_message))
+            .Returns(() => Task.FromResult(success_message))
+            .Returns(() => Task.FromResult(success_message));
     }
 
     async Task Because() => await client.Connect();
