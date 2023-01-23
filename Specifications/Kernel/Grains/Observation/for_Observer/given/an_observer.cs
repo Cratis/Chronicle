@@ -53,7 +53,7 @@ public class an_observer : GrainSpecification<ObserverState>
         subscription_handles = new();
         observers = new();
 
-        grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), observer_id, IsAny<ObserverSubscriberKey>())).Returns(subscriber.Object);
+        grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), observer_id, IsAny<string>())).Returns(subscriber.Object);
 
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
