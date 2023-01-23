@@ -43,7 +43,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     TenantId _sourceTenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
-    Type _subscriberType;
+    Type? _subscriberType;
 
     IEventSequenceStorageProvider EventSequenceStorageProvider
     {
@@ -69,7 +69,6 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
         _logger = logger;
-        _subscriberType = typeof(IObserverSubscriber);
     }
 
     /// <inheritdoc/>
@@ -148,35 +147,37 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             }
 
             var key = new ObserverSubscriberKey(_microserviceId, _tenantId, _eventSequenceId, @event.Context.EventSourceId, _sourceMicroserviceId, _sourceTenantId);
-            var subscriber = (GrainFactory.GetGrain(_subscriberType, _observerId, key) as IObserverSubscriber)!;
-            var result = await subscriber.OnNext(@event);
-            if (result.State == ObserverSubscriberState.Error)
-            {
-                failed = true;
-                exceptionMessages = result.ExceptionMessages;
-                exceptionStackTrace = result.ExceptionStackTrace;
-            }
-            else if (result.State == ObserverSubscriberState.Disconnected)
-            {
-                await Unsubscribe();
-                return;
-            }
-            State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-            await WriteStateAsync();
 
-            if (setLastHandled)
+            if (_subscriberType is not null)
             {
-                State.LastHandled = @event.Metadata.SequenceNumber;
-            }
+                var subscriber = (GrainFactory.GetGrain(_subscriberType, _observerId, key) as IObserverSubscriber)!;
+                var result = await subscriber.OnNext(@event);
+                if (result.State == ObserverSubscriberState.Error)
+                {
+                    failed = true;
+                    exceptionMessages = result.ExceptionMessages;
+                    exceptionStackTrace = result.ExceptionStackTrace;
+                }
+                else if (result.State == ObserverSubscriberState.Disconnected)
+                {
+                    await Unsubscribe();
+                    return;
+                }
+                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+                if (setLastHandled)
+                {
+                    State.LastHandled = @event.Metadata.SequenceNumber;
+                }
 
-            var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
+                var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
 
-            if (State.NextEventSequenceNumber == nextSequenceNumber + 1 && State.RunningState != ObserverRunningState.Active)
-            {
-                State.RunningState = ObserverRunningState.Active;
-                _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+                if (State.NextEventSequenceNumber == nextSequenceNumber + 1 && State.RunningState != ObserverRunningState.Active)
+                {
+                    State.RunningState = ObserverRunningState.Active;
+                    _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+                }
+                await WriteStateAsync();
             }
-            await WriteStateAsync();
         }
         catch (Exception ex)
         {
