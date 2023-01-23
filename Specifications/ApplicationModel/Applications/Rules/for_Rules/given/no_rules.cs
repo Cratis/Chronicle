@@ -12,6 +12,6 @@ public class no_rules : all_dependencies
         event_types.Object,
         json_schema_generator.Object,
         json_serializer_options,
-        types.Object,
-        cluster_client.Object);
+        immediate_projections.Object,
+        types.Object);
 }
