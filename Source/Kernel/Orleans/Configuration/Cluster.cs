@@ -19,7 +19,7 @@ public class Cluster
     /// <summary>
     /// Gets the type of cluster to use.
     /// </summary>
-    public string Type { get; init; } = ClusterTypes.Local;
+    public string Type { get; init; } = ClusterTypes.Single;
 
     /// <summary>
     /// Gets the host name for the silo. If this is specified, it will not use the AdvertisedIP for the membership table.

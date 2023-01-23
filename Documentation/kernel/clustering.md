@@ -33,7 +33,7 @@ Both the Kernel and the client can be configured with the following:
 ```json
 {
     "name": "Cratis",                   // Name of cluster
-    "type": "local"                     // The type of clustering (local, static, azure-storage, ado-net)
+    "type": "single"                     // The type of clustering (single, static, azure-storage, ado-net)
 }
 ```
 
