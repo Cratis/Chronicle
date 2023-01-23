@@ -108,10 +108,7 @@ public abstract class RestKernelClient : IClient, IDisposable
             _connectCompletion.SetResult(true);
             await _clientLifecycle.Connected();
 
-            if (_timer is null)
-            {
-                _timer = _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
-            }
+            _timer ??= _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
         });
 
         return Task.CompletedTask;
