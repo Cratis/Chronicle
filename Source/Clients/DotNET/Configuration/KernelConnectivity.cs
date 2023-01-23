@@ -18,4 +18,13 @@ public class KernelConnectivity
     /// </summary>
     [ConfigurationValueResolver(typeof(ClusterOptionsValueResolver))]
     public object Options { get; init; } = new SingleKernelOptions();
+
+    /// <summary>
+    /// Gets the advertised client endpoint.
+    /// </summary>
+    /// <remarks>
+    /// If this endpoint is not explicitly configured, it will attempt to resolve it based on the ASP.NET Core configuration and
+    /// current running solution.
+    /// </remarks>
+    public Uri? AdvertisedClientEndpoint { get; init; }
 }

@@ -44,11 +44,11 @@ public static class ClientServiceCollectionExtensions
             var timerFactory = _.GetRequiredService<ITimerFactory>();
 
             var loadBalancedHttpClientFactory = loadBalancer.CreateHttpClientFactory(new RoundRobinLoadBalancerStrategy());
-            if (configuration.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
+            if (configuration.Kernel.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
             {
                 throw new UnableToResolveClientUri();
             }
-            var clientEndpoint = configuration.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First());
+            var clientEndpoint = configuration.Kernel.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First());
 
             IClient client = configuration.Kernel.Type switch
             {
