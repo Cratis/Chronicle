@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Aksio.Cratis.Applications.ModelBinding;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Reflection;
@@ -9,6 +10,7 @@ using Aksio.Cratis.Serialization;
 using Aksio.Cratis.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -29,10 +31,16 @@ public static class ServiceCollectionExtensions
         Globals.Configure(derivedTypes);
 
         var controllerBuilder = services
-            .AddControllers(_ => _
-                .AddValidation(types)
-                .AddRules()
-                .AddCQRS())
+            .AddControllers(options =>
+            {
+                var bodyModelBinderProvider = options.ModelBinderProviders.First(_ => _ is BodyModelBinderProvider) as BodyModelBinderProvider;
+                var complexObjectModelBinderProvider = options.ModelBinderProviders.First(_ => _ is ComplexObjectModelBinderProvider) as ComplexObjectModelBinderProvider;
+                options.ModelBinderProviders.Insert(0, new FromRequestModelBinderProvider(bodyModelBinderProvider!, complexObjectModelBinderProvider!));
+                options
+                    .AddValidation(types)
+                    .AddRules()
+                    .AddCQRS();
+            })
             .AddJsonOptions(_ =>
             {
                 _.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
