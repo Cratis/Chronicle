@@ -4,6 +4,7 @@
 #pragma warning disable CS8019
 
 global using Aksio.Cratis.Applications.Commands;
+global using Aksio.Cratis.Applications.ModelBinding;
 global using Aksio.Cratis.Applications.Queries;
 global using Aksio.Cratis.Applications.Queries.MongoDB;
 global using Aksio.Cratis.Applications.Rules;
