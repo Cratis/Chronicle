@@ -6,21 +6,25 @@ using System.Text.Json;
 
 namespace Aksio.Cratis.Json.for_DateOnlyJsonConverter;
 
-public class when_converting_to_date_only : Specification
+public class when_converting_to_date_only_from_iso_string_from_datetimeoffset : Specification
 {
     DateOnlyJsonConverter converter;
+    DateTimeOffset now;
     DateOnly input;
+    string inputAsISOString;
     DateOnly result;
 
     void Establish()
     {
+        now = DateTimeOffset.Now;
         converter = new();
-        input = DateOnly.FromDateTime(DateTime.UtcNow);
+        input = DateOnly.FromDateTime(now.UtcDateTime);
+        inputAsISOString = now.ToString("O");
     }
 
     void Because()
     {
-        Utf8JsonReader reader = new(Encoding.UTF8.GetBytes($"\"{input:O}\"").AsSpan());
+        Utf8JsonReader reader = new(Encoding.UTF8.GetBytes($"\"{inputAsISOString}\"").AsSpan());
         reader.Read();  // Skip quote
         result = converter.Read(ref reader, typeof(DateOnly), default);
     }
