@@ -14,16 +14,16 @@ public class DateOnlyJsonConverter : JsonConverter<DateOnly>
     /// <inheritdoc/>
     public override DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if(reader.TryGetDateTimeOffset(out var dateTimeOffset))
+        if (reader.TryGetDateTimeOffset(out var dateTimeOffset))
         {
             return DateOnly.FromDateTime(dateTimeOffset.DateTime);
         }
-        
-        if(reader.TryGetDateTime(out var dateTime))
+
+        if (reader.TryGetDateTime(out var dateTime))
         {
             return DateOnly.FromDateTime(dateTime);
         }
-        
+
         var dateFromString = DateTime.Parse(reader.GetString()!);
         return DateOnly.FromDateTime(dateFromString);
     }
