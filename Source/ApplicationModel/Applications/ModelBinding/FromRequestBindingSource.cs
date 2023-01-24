@@ -11,10 +11,18 @@ namespace Aksio.Cratis.Applications.ModelBinding;
 public class FromRequestBindingSource : BindingSource
 {
     /// <summary>
+    /// Gets the <see cref="FromRequestBindingSource"/> singleton instance.
+    /// </summary>
+    public static readonly BindingSource FromRequest = new FromRequestBindingSource();
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="FromRequestBindingSource"/> class.
     /// </summary>
     public FromRequestBindingSource()
         : base("65e9676d-9653-4567-9496-fe209de19589", "FromRequest", true, true)
     {
     }
+
+    /// <inheritdoc/>
+    public override bool CanAcceptDataFrom(BindingSource bindingSource) => bindingSource == Body || bindingSource == this;
 }
