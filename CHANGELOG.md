@@ -13,7 +13,6 @@ Also a focus on fixing APIs that were wrong, namespaces that were wrong and gene
 
 ### Changed
 
-- With the introduction of WebSocket as a client, you should consider change set loglevel in `appsettings.json` to `Information` for `Websocket`. Otherwise you'll see the ping/pong going between client and kernel all the time.
 - Changed from using a Orleans client to connect to Kernel to a REST API based approach.
 - Moved `CommandResult` and `QueryResult` into Fundamentals. Namespace has changed.
 - `ITenants` now returns an object called `Tenant` that holds both the Id and the name of the tenant.
