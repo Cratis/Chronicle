@@ -8,6 +8,8 @@
   href: recipes/toc.yml
 - name: Tutorials
   href: tutorials/toc.yml
+- name: Configuration
+  href: configuration/toc.yml
 - name: Kernel
   href: kernel/toc.yml
 - name: Clients
