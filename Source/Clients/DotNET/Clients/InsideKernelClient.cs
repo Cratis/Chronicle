@@ -5,6 +5,7 @@ using System.Text.Json;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Net;
 using Aksio.Cratis.Queries;
 using Aksio.Cratis.Tasks;
 using Aksio.Cratis.Timers;
@@ -37,6 +38,7 @@ public class InsideKernelClient : IClient
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="singleKernelClientLogger"><see cref="ILogger"/> for single kernel client logging.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public InsideKernelClient(
         IServer server,
@@ -46,11 +48,13 @@ public class InsideKernelClient : IClient
         IExecutionContextManager executionContextManager,
         IClientLifecycle clientLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<SingleKernelClient> logger)
+        ILogger<SingleKernelClient> singleKernelClientLogger,
+        ILogger<InsideKernelClient> logger)
     {
         var addresses = server.Features.Get<IServerAddressesFeature>();
-        var address = addresses!.Addresses.First().Replace("//*", "//localhost");
-        var endpoint = new Uri(address);
+        var endpoint = addresses!.GetFirstAddressAsUri();
+        logger.ConnectingKernel(endpoint);
+
         var options = new SingleKernelOptions
         {
             Endpoint = endpoint
@@ -64,7 +68,7 @@ public class InsideKernelClient : IClient
             endpoint,
             clientLifecycle,
             jsonSerializerOptions,
-            logger);
+            singleKernelClientLogger);
     }
 
     /// <inheritdoc/>
