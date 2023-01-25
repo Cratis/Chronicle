@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ValidationError } from '../validation/ValidationError';
+import { ValidationResult } from '../validation/ValidationResult';
 import { IQueryResult } from './IQueryResult';
 import { QueryResult } from './QueryResult';
 
@@ -42,7 +42,7 @@ export class QueryResultWithState<TDataType> implements IQueryResult<TDataType> 
      * @param {boolean} isSuccess Whether or not the query was successful.
      * @param {boolean} isAuthorized Whether or not the query was authorized.
      * @param {boolean} isValid Whether or not it is valid.
-     * @param {ValidationError[]} validationErrors Any validation errors.
+     * @param {ValidationResult[]} validationErrors Any validation errors.
      * @param {boolean} hasExceptions Whether or not it has exceptions.
      * @param {string[]} exceptionMessages Any exception messages.
      * @param {string} exceptionStackTrace Exception stack trace, if any.
@@ -53,7 +53,7 @@ export class QueryResultWithState<TDataType> implements IQueryResult<TDataType> 
         readonly isSuccess: boolean,
         readonly isAuthorized: boolean,
         readonly isValid: boolean,
-        readonly validationErrors: ValidationError[],
+        readonly validationErrors: ValidationResult[],
         readonly hasExceptions: boolean,
         readonly exceptionMessages: string[],
         readonly exceptionStackTrace: string,

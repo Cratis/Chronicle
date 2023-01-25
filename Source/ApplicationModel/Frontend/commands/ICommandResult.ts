@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Guid } from '@aksio/cratis-fundamentals';
-import { ValidationError } from '../validation/ValidationError';
+import { ValidationResult } from '../validation/ValidationResult';
 
 /**
  * Defines the result from executing commands.
@@ -36,7 +36,7 @@ import { ValidationError } from '../validation/ValidationError';
      /**
       * Gets any validation errors. If this collection is empty, there are errors.
       */
-     readonly validationErrors: ValidationError[];
+     readonly validationErrors: ValidationResult[];
 
      /**
       * Gets any exception messages that might have occurred.
