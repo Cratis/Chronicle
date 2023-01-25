@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ValidationError } from '../validation/ValidationError';
+import { ValidationResult } from '../validation/ValidationResult';
 
 /**
  * Defines the result from executing a query.
@@ -35,7 +35,7 @@ export interface IQueryResult<TDataType> {
     /**
      * Gets any validation errors. If this collection is empty, there are errors.
      */
-    readonly validationErrors: ValidationError[];
+    readonly validationErrors: ValidationResult[];
 
     /**
      * Gets any exception messages that might have occurred.

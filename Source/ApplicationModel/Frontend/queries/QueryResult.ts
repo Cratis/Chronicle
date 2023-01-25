@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Constructor, JsonSerializer } from '@aksio/cratis-fundamentals';
-import { ValidationError } from '../validation/ValidationError';
+import { ValidationResult } from '../validation/ValidationResult';
 import { IQueryResult } from './IQueryResult';
 
 type QueryResultFromServer<TDataType> = {
@@ -51,7 +51,7 @@ export class QueryResult<TDataType = {}> implements IQueryResult<TDataType> {
         this.isAuthorized = result.isAuthorized;
         this.isValid = result.isValid;
         this.hasExceptions = result.hasExceptions;
-        this.validationErrors = result.validationErrors.map(_ => new ValidationError(_.message, _.memberNames));
+        this.validationErrors = result.validationErrors.map(_ => new ValidationResult(_.severity, _.message, _.members, _.state));
         this.exceptionMessages = result.exceptionMessages;
         this.exceptionStackTrace = result.exceptionStackTrace;
 
@@ -85,7 +85,7 @@ export class QueryResult<TDataType = {}> implements IQueryResult<TDataType> {
     readonly hasExceptions: boolean;
 
     /** @inheritdoc */
-    readonly validationErrors: ValidationError[];
+    readonly validationErrors: ValidationResult[];
 
     /** @inheritdoc */
     readonly exceptionMessages: string[];

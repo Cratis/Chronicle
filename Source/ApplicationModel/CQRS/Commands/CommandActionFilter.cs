@@ -62,7 +62,7 @@ public class CommandActionFilter : IAsyncActionFilter
             var commandResult = new CommandResult
             {
                 CorrelationId = _executionContextManager.Current.CorrelationId,
-                ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(e => e.ToValidationError(_.Key))),
+                ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(e => e.ToValidationResult(_.Key))),
                 ExceptionMessages = exceptionMessages.ToArray(),
                 ExceptionStackTrace = exceptionStackTrace ?? string.Empty,
                 Response = response

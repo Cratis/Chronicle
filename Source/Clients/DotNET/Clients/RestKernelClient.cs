@@ -221,7 +221,7 @@ public abstract class RestKernelClient : IClient, IDisposable
             {
                 foreach (var validationError in result.ValidationErrors)
                 {
-                    _logger.CommandResultValidationError(route, string.Join(',', validationError.MemberNames), validationError.Message);
+                    _logger.CommandResultValidationError(route, string.Join(',', validationError.Members), validationError.Message);
                 }
             }
         }
@@ -241,7 +241,7 @@ public abstract class RestKernelClient : IClient, IDisposable
             {
                 foreach (var validationError in result.ValidationErrors)
                 {
-                    _logger.QueryResultValidationError(route, string.Join(',', validationError.MemberNames), validationError.Message);
+                    _logger.QueryResultValidationError(route, string.Join(',', validationError.Members), validationError.Message);
                 }
             }
         }
