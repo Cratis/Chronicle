@@ -34,7 +34,7 @@ public class CommandResult
     /// <summary>
     /// Gets whether or not the command is valid.
     /// </summary>
-    public bool IsValid => !ValidationErrors.Any();
+    public bool IsValid => !ValidationResults.Any();
 
     /// <summary>
     /// Gets whether or not there are any exceptions that occurred.
@@ -42,9 +42,9 @@ public class CommandResult
     public bool HasExceptions => ExceptionMessages.Any();
 
     /// <summary>
-    /// Gets any validation errors. If this collection is empty, there are errors.
+    /// Gets any validation result.
     /// </summary>
-    public IEnumerable<ValidationResult> ValidationErrors { get; init; } = Enumerable.Empty<ValidationResult>();
+    public IEnumerable<ValidationResult> ValidationResults { get; init; } = Enumerable.Empty<ValidationResult>();
 
     /// <summary>
     /// Gets any exception messages that might have occurred.

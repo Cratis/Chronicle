@@ -91,7 +91,7 @@ public class QueryActionFilter : IAsyncActionFilter
                 _logger.NonClientObservableReturnValue(controllerActionDescriptor.ControllerName, controllerActionDescriptor.ActionName);
                 var queryResult = new QueryResult
                 {
-                    ValidationErrors = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => p.ToValidationResult(_.Key.ToCamelCase()))),
+                    ValidationResults = context.ModelState.SelectMany(_ => _.Value!.Errors.Select(p => p.ToValidationResult(_.Key.ToCamelCase()))),
                     ExceptionMessages = exceptionMessages.ToArray(),
                     ExceptionStackTrace = exceptionStackTrace ?? string.Empty,
                     Data = response!

@@ -42,7 +42,7 @@ export class QueryResultWithState<TDataType> implements IQueryResult<TDataType> 
      * @param {boolean} isSuccess Whether or not the query was successful.
      * @param {boolean} isAuthorized Whether or not the query was authorized.
      * @param {boolean} isValid Whether or not it is valid.
-     * @param {ValidationResult[]} validationErrors Any validation errors.
+     * @param {ValidationResult[]} validationResults Any validation errors.
      * @param {boolean} hasExceptions Whether or not it has exceptions.
      * @param {string[]} exceptionMessages Any exception messages.
      * @param {string} exceptionStackTrace Exception stack trace, if any.
@@ -53,7 +53,7 @@ export class QueryResultWithState<TDataType> implements IQueryResult<TDataType> 
         readonly isSuccess: boolean,
         readonly isAuthorized: boolean,
         readonly isValid: boolean,
-        readonly validationErrors: ValidationResult[],
+        readonly validationResults: ValidationResult[],
         readonly hasExceptions: boolean,
         readonly exceptionMessages: string[],
         readonly exceptionStackTrace: string,
@@ -88,7 +88,7 @@ export class QueryResultWithState<TDataType> implements IQueryResult<TDataType> 
             queryResult.isSuccess,
             queryResult.isAuthorized,
             queryResult.isValid,
-            queryResult.validationErrors,
+            queryResult.validationResults,
             queryResult.hasExceptions,
             queryResult.exceptionMessages,
             queryResult.exceptionStackTrace,

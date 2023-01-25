@@ -9,10 +9,15 @@ export enum ValidationResultSeverity {
     /**
      * The validation result is a warning.
      */
-    Warning = 1,
+    Information = 1,
+
+    /**
+     * The validation result is a warning.
+     */
+    Warning = 2,
 
     /**
      * The validation result is an error.
      */
-    Error = 2
+    Error = 3
 }

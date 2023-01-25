@@ -11,10 +11,15 @@ public enum ValidationResultSeverity
     /// <summary>
     /// The validation result is a warning.
     /// </summary>
-    Warning = 1,
+    Information = 1,
+
+    /// <summary>
+    /// The validation result is a warning.
+    /// </summary>
+    Warning = 2,
 
     /// <summary>
     /// The validation result is an error.
     /// </summary>
-    Error = 2
+    Error = 3
 }
