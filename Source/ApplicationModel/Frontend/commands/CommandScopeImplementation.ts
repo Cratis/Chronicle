@@ -4,13 +4,13 @@
 import React from 'react';
 import { ICommand } from './ICommand';
 import { CommandResults } from './CommandResults';
-import { ICommandTracker } from './ICommandTracker';
+import { ICommandScope } from './ICommandScope';
 
 
 /**
- * Represents an implementation of {@link ICommandTracker}.
+ * Represents an implementation of {@link ICommandScope}.
  */
-export class CommandTrackerImplementation implements ICommandTracker {
+export class CommandScopeImplementation implements ICommandScope {
     private _commands: ICommand[] = [];
     private _hasChanges = false;
 
