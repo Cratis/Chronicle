@@ -13,14 +13,14 @@ namespace Aksio.Cratis.Applications.Validation;
 public static class ModelErrorExtensions
 {
     /// <summary>
-    /// Convert a <see cref="ModelError"/> to <see cref="ValidationError"/> for a specific member.
+    /// Convert a <see cref="ModelError"/> to <see cref="ValidationResult"/> for a specific member.
     /// </summary>
     /// <param name="error"><see cref="ModelError"/> to convert.</param>
     /// <param name="member">Member the error is for.</param>
-    /// <returns>A converted <see cref="ValidationError"/>.</returns>
-    public static ValidationError ToValidationError(this ModelError error, string member)
+    /// <returns>A converted <see cref="ValidationResult"/>.</returns>
+    public static ValidationResult ToValidationResult(this ModelError error, string member)
     {
         member = string.Join('.', member.Split('.').Select(_ => _.ToCamelCase()));
-        return new ValidationError(error.ErrorMessage, new string[] { member });
+        return new ValidationResult(ValidationResultSeverity.Error, error.ErrorMessage, new string[] { member }, new object());
     }
 }

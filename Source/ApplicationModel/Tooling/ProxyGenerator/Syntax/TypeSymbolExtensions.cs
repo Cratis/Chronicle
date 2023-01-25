@@ -62,10 +62,26 @@ public static class TypeSymbolExtensions
     /// </summary>
     /// <param name="type"><see cref="ITypeSymbol"/> to get for.</param>
     /// <returns>All properties.</returns>
-    public static IEnumerable<IPropertySymbol> GetPublicPropertiesFrom(this ITypeSymbol type) =>
-         type.GetMembers().Where(_ => !_.IsStatic
+    public static IEnumerable<PropertyOrParameterSymbol> GetPublicPropertiesFrom(this ITypeSymbol type)
+    {
+        var parameters = type
+            .GetMembers()
+            .Where(_ => !_.IsStatic && _ is IMethodSymbol methodSymbol && methodSymbol.MethodKind == MethodKind.Constructor)
+            .Cast<IMethodSymbol>()
+            .SelectMany(_ => _.Parameters
+                .Where(p => !p.Type.Equals(type, SymbolEqualityComparer.Default))
+                .Select(p => new PropertyOrParameterSymbol(p)));
+
+        var properties = type.GetMembers().Where(_ => !_.IsStatic
             && _ is IPropertySymbol propertySymbol
-            && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>();
+            && propertySymbol.DeclaredAccessibility == Accessibility.Public).Cast<IPropertySymbol>().Select(_ => new PropertyOrParameterSymbol(_));
+
+        return parameters
+            .Concat(properties)
+            .OrderByDescending(_ => _.GetAttributes().Count())
+            .GroupBy(_ => _.Name)
+            .Select(_ => _.First());
+    }
 
     /// <summary>
     /// Get the type script type string for a given <see cref="ITypeSymbol"/>.

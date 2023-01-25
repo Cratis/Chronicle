@@ -26,7 +26,7 @@ internal static partial class RestKernelClientLogMessages
     internal static partial void CommandResultExceptions(this ILogger<RestKernelClient> logger, string route, IEnumerable<string> exceptions);
 
     [LoggerMessage(6, LogLevel.Trace, "Result of performing command '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
-    internal static partial void CommandResultValidationError(this ILogger<RestKernelClient> logger, string route, string members, string message);
+    internal static partial void CommandResultValidationResult(this ILogger<RestKernelClient> logger, string route, string members, string message);
 
     [LoggerMessage(7, LogLevel.Trace, "Result of performing query '{Route}' - Success: '{Success}'")]
     internal static partial void QueryResult(this ILogger<RestKernelClient> logger, string route, bool success);
@@ -35,7 +35,7 @@ internal static partial class RestKernelClientLogMessages
     internal static partial void QueryResultExceptions(this ILogger<RestKernelClient> logger, string route, IEnumerable<string> exceptions);
 
     [LoggerMessage(9, LogLevel.Trace, "Result of performing query '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
-    internal static partial void QueryResultValidationError(this ILogger<RestKernelClient> logger, string route, string members, string message);
+    internal static partial void QueryResultValidationResult(this ILogger<RestKernelClient> logger, string route, string members, string message);
 
     [LoggerMessage(10, LogLevel.Information, "Kernel disconnected. Retrying to connect.")]
     internal static partial void KernelDisconnected(this ILogger<RestKernelClient> logger);

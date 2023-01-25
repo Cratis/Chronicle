@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Guid } from '@aksio/cratis-fundamentals';
-import { ValidationError } from '../validation/ValidationError';
+import { ValidationResult } from '../validation/ValidationResult';
 import { Command } from './Command';
 import { CommandResult } from './CommandResult';
 import { ICommandResult } from './ICommandResult';
@@ -38,11 +38,11 @@ export class CommandResults implements ICommandResult {
     }
 
     /** @inheritdoc */
-    get validationErrors(): ValidationError[] {
-        const errors: ValidationError[] = [];
+    get validationResults(): ValidationResult[] {
+        const errors: ValidationResult[] = [];
 
         for (const result of this._commandResultsPerCommand.values()) {
-            result.validationErrors.forEach(_ => errors.push(_));
+            result.validationResults.forEach(_ => errors.push(_));
         }
 
         return errors;

@@ -11,6 +11,9 @@ export class PropertyPath {
     @field(String)
     path!: string;
 
+    @field(String)
+    path!: string;
+
     @field(Object, true, [
     ])
     segments!: IPropertyPathSegment[];

@@ -9,5 +9,5 @@ fi
 cp ./out/$ARCH_FOLDER/*.dll .
 cp ./out/$ARCH_FOLDER/*.json .
 cp ./out/$ARCH_FOLDER/*.so .
-cp ./out/$ARCH_FOLDER/Aksio.Cratis.Server .
+cp ./out/$ARCH_FOLDER/Aksio.Cratis.Kernel.Server .
 rm -rf ./out

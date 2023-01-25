@@ -33,7 +33,7 @@ public class QueryResult
     /// <summary>
     /// Gets whether or not the query is valid.
     /// </summary>
-    public bool IsValid => !ValidationErrors.Any();
+    public bool IsValid => !ValidationResults.Any();
 
     /// <summary>
     /// Gets whether or not there are any exceptions that occurred.
@@ -43,7 +43,7 @@ public class QueryResult
     /// <summary>
     /// Gets any validation errors. If this collection is empty, there are errors.
     /// </summary>
-    public IEnumerable<ValidationError> ValidationErrors { get; init; } = Enumerable.Empty<ValidationError>();
+    public IEnumerable<ValidationResult> ValidationResults { get; init; } = Enumerable.Empty<ValidationResult>();
 
     /// <summary>
     /// Gets any exception messages that might have occurred.

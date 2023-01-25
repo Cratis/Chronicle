@@ -25,7 +25,7 @@ import { AllAccounts } from 'API/accounts/debit/AllAccounts';
 import { StartingWith } from 'API/accounts/debit/StartingWith';
 import { LatestTransactions } from 'API/accounts/debit/LatestTransactions';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
-import { CommandTracker, CommandTrackerContext, useCommandTracker } from '@aksio/cratis-applications-frontend/commands';
+import { CommandScope, CommandScopeContext, useCommandScope } from '@aksio/cratis-applications-frontend/commands';
 import { DebitAccountsList } from './DebitAccountsList';
 import 'reflect-metadata';
 import { AllAccountHoldersWithAccounts } from 'API/accountholders/AllAccountHoldersWithAccounts';
@@ -150,10 +150,10 @@ export const DebitAccounts = () => {
 
     return (
         <>
-            <CommandTracker>
+            <CommandScope>
                 <Stack>
                     <Stack.Item disableShrink>
-                        <CommandTrackerContext.Consumer>
+                        <CommandScopeContext.Consumer>
                             {({ hasChanges, execute, revertChanges }) => {
                                 const actualItems: ICommandBarItemProps[] = [{
                                     key: 'save',
@@ -178,13 +178,13 @@ export const DebitAccounts = () => {
                                     <CommandBar items={actualItems} />
                                 );
                             }}
-                        </CommandTrackerContext.Consumer>
+                        </CommandScopeContext.Consumer>
                     </Stack.Item>
                     <Stack.Item>
                         <DebitAccountsList accounts={accountItems} selection={selection} />
                     </Stack.Item>
                 </Stack>
-            </CommandTracker>
+            </CommandScope>
 
             <CreateAccountDialog {...createAccountDialogProps} />
             <AmountDialog {...depositAmountDialogProps} />

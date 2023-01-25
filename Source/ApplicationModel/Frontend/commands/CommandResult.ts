@@ -3,7 +3,7 @@
 
 import { Guid } from '@aksio/cratis-fundamentals';
 import { ICommandResult } from './ICommandResult';
-import { ValidationError } from '../validation/ValidationError';
+import { ValidationResult } from '../validation/ValidationResult';
 import { Constructor, JsonSerializer } from '@aksio/cratis-fundamentals';
 
 /**
@@ -39,7 +39,7 @@ export class CommandResult<TResponse = {}> implements ICommandResult<TResponse> 
     readonly hasExceptions: boolean;
 
     /** @inheritdoc */
-    readonly validationErrors: ValidationError[];
+    readonly validationResults: ValidationResult[];
 
     /** @inheritdoc */
     readonly exceptionMessages: string[];
@@ -62,7 +62,7 @@ export class CommandResult<TResponse = {}> implements ICommandResult<TResponse> 
         this.isAuthorized = result.isAuthorized;
         this.isValid = result.isValid;
         this.hasExceptions = result.hasExceptions;
-        this.validationErrors = result.validationErrors.map(_ => new ValidationError(_.message, _.memberNames));
+        this.validationResults = result.validationErrors.map(_ => new ValidationResult(_.severity, _.message, _.members, _.state));
         this.exceptionMessages = result.exceptionMessages;
         this.exceptionStackTrace = result.exceptionStackTrace;
 

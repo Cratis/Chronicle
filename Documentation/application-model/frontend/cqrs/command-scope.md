@@ -1,30 +1,30 @@
-# Command Tracker
+# Command Scope
 
 If you want to track commands and create an aggregation of the status of commands at a compositional
-level, the command tracker provides a React context for this.
+level, the command scope provides a React context for this.
 This is typically useful when having something like a top level toolbar with a **Save** button that
 you want to enable or disable depending on whether or not there are changes within any components
 used within it.
 
-Using the toolbar scenario as an example; at the top level we can wrap everything in the `<CommandTracker>`
+Using the toolbar scenario as an example; at the top level we can wrap everything in the `<CommandScope>`
 component. This will establish a React context for this part of the hierarchy and track any commands
 used within any descendants.
 
 ```typescript
-import { CommandTracker } from '@aksio/cratis-applications-frontend/commands';
+import { CommandScope } from '@aksio/cratis-applications-frontend/commands';
 
 export const MyComposition = () => {
     return (
-        <CommandTracker>
+        <CommandScope>
             <Toolbar/>
             <FirstComponent/>
             <SecondComponent/>
-        </CommandTracker>
+        </CommandScope>
     );
 };
 ```
 
-The command tracker will provide a React context that can be consumed.
+The command scope will provide a React context that can be consumed.
 Within this context there are the following that can be used:
 
 | Name | Description |
@@ -33,17 +33,17 @@ Within this context there are the following that can be used:
 | execute | Method for executing all commands within the context |
 | revertChanges | Method for reverting any changes to commands within the context |
 
-To consume the command tracker context you can use the hook that is provided.
+To consume the command scope context you can use the hook that is provided.
 
 ```typescript
-import { useCommandTracker } from '@aksio/cratis-applications-frontend/commands';
+import { useCommandScope } from '@aksio/cratis-applications-frontend/commands';
 
 export const Toolbar = () => {
-    const commandTracker = useCommandTracker();
+    const commandScope = useCommandScope();
 
     return (
         <div>
-            <button disabled={!commandTracker.hasChanges}>Save</button>
+            <button disabled={!commandScope.hasChanges}>Save</button>
         </div>
     );
 };
@@ -53,18 +53,18 @@ The hook is a convenience hook that makes it easier to get the context.
 You can also consume the context directly by using its consumer:
 
 ```typescript
-import { CommandTrackerContext } from '@aksio/cratis-applications-frontend/commands';
+import { CommandScopeContext } from '@aksio/cratis-applications-frontend/commands';
 
 export const Toolbar = () => {
     return (
         <div>
-            <CommandTrackerContext.Consumer>
+            <CommandScopeContext.Consumer>
                 {value => {
                     return (
                         <button disabled={!value.hasChanges}>Save</button>
                     )
                 }}
-            </CommandTrackerContext.Consumer>
+            </CommandScopeContext.Consumer>
         </div>
     );
 };
