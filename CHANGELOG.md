@@ -1,3 +1,10 @@
+# [v8.1.1] - 2023-1-25 [PR: #708](https://github.com/aksio-insurtech/Cratis/pull/708)
+
+### Fixed
+
+- Kernel now starts - which it didn't :(. Fixed a problem with ASP.NET Core reporting `http://+:80` as the server address, which is not a supported format by `Uri`.
+
+
 # [v8.0.0] - 2023-1-23 [PR: #665](https://github.com/aksio-insurtech/Cratis/pull/665)
 
 ## Summary
