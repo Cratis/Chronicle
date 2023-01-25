@@ -79,7 +79,7 @@ public static class TypeSymbolExtensions
         return parameters
             .Concat(properties)
             .OrderByDescending(_ => _.GetAttributes().Count())
-            .GroupBy(_ => _.Name)
+            .GroupBy(_ => _.Name.ToLowerInvariant())
             .Select(_ => _.First());
     }
 
