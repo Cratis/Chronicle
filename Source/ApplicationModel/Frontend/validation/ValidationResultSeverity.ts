@@ -7,6 +7,11 @@
 export enum ValidationResultSeverity {
 
     /**
+     * The validation result is unknown.
+     */
+    Unknown = 0,
+
+    /**
      * The validation result is a warning.
      */
     Information = 1,
