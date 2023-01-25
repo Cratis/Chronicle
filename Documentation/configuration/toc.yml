@@ -1,3 +1,5 @@
+- name: Introduction
+  href: index.md
 - name: Kernel
   href: kernel/toc.yml
 - name: Client
