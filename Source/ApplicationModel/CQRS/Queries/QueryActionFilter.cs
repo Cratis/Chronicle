@@ -4,7 +4,6 @@
 using Aksio.Cratis.Applications.Validation;
 using Aksio.Cratis.Queries;
 using Aksio.Cratis.Strings;
-using Aksio.Cratis.Validation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
