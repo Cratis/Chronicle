@@ -116,7 +116,7 @@ public class SourceGenerator : ISourceGenerator
                     var publicProperties = parameter.Type.GetPublicPropertiesFrom();
                     properties.AddRange(GetPropertyDescriptorsAndOutputComplexTypes(
                         context,
-                        route,
+                        ref route,
                         rootNamespace,
                         outputFolder,
                         useRouteAsPath,
@@ -129,13 +129,13 @@ public class SourceGenerator : ISourceGenerator
                 }
             }
 
-            requestArguments.AddRange(GetRequestArgumentsFrom(commandMethod, route, importStatements));
+            requestArguments.AddRange(GetRequestArgumentsFrom(commandMethod, ref route, importStatements));
             var modelDescriptor = GetModelDescriptorFor(
                 context,
                 commandMethod,
                 type,
                 commandMethod.ReturnType,
-                route,
+                ref route,
                 baseApiRoute,
                 rootNamespace,
                 outputFolder,
@@ -176,7 +176,7 @@ public class SourceGenerator : ISourceGenerator
                 queryMethod,
                 type,
                 modelType,
-                route,
+                ref route,
                 baseApiRoute,
                 rootNamespace,
                 outputFolder,
@@ -185,7 +185,7 @@ public class SourceGenerator : ISourceGenerator
             if (modelDescriptor != ModelDescriptor.Empty)
             {
                 var importStatements = new HashSet<ImportStatement>();
-                var queryArguments = GetRequestArgumentsFrom(queryMethod, route, importStatements);
+                var queryArguments = GetRequestArgumentsFrom(queryMethod, ref route, importStatements);
 
                 modelDescriptor.Imports.ForEach(_ => importStatements.Add(_));
 
@@ -214,7 +214,7 @@ public class SourceGenerator : ISourceGenerator
         IMethodSymbol method,
         ITypeSymbol parentType,
         ITypeSymbol modelType,
-        string route,
+        ref string route,
         string baseApiRoute,
         string rootNamespace,
         string outputFolder,
@@ -256,7 +256,7 @@ public class SourceGenerator : ISourceGenerator
             OutputType(
                 context,
                 actualType,
-                route,
+                ref route,
                 rootNamespace,
                 outputFolder,
                 parentFile,
@@ -275,7 +275,7 @@ public class SourceGenerator : ISourceGenerator
         return ModelDescriptor.Empty;
     }
 
-    static List<RequestArgumentDescriptor> GetRequestArgumentsFrom(IMethodSymbol method, string route, HashSet<ImportStatement> importStatements)
+    static List<RequestArgumentDescriptor> GetRequestArgumentsFrom(IMethodSymbol method, ref string route, HashSet<ImportStatement> importStatements)
     {
         var queryArguments = new List<RequestArgumentDescriptor>();
         if (method.Parameters.Length > 0)
@@ -284,7 +284,7 @@ public class SourceGenerator : ISourceGenerator
             {
                 var argumentDescriptor = GetRequestArgumentFrom(
                     new(parameter),
-                    route,
+                    ref route,
                     out var additionalImportStatements);
 
                 if (argumentDescriptor is not null)
@@ -298,7 +298,7 @@ public class SourceGenerator : ISourceGenerator
         return queryArguments;
     }
 
-    static RequestArgumentDescriptor? GetRequestArgumentFrom(PropertyOrParameterSymbol symbol, string route, out IEnumerable<ImportStatement> importStatements)
+    static RequestArgumentDescriptor? GetRequestArgumentFrom(PropertyOrParameterSymbol symbol, ref string route, out IEnumerable<ImportStatement> importStatements)
     {
         var isArgument = false;
         var attributes = symbol.GetAttributes();
@@ -338,7 +338,7 @@ public class SourceGenerator : ISourceGenerator
     static IEnumerable<RequestArgumentDescriptor> OutputType(
         GeneratorExecutionContext context,
         ITypeSymbol type,
-        string route,
+        ref string route,
         string rootNamespace,
         string outputFolder,
         string parentFile,
@@ -378,7 +378,7 @@ public class SourceGenerator : ISourceGenerator
         var typeImportStatements = new HashSet<ImportStatement>();
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(
             context,
-            route,
+            ref route,
             rootNamespace,
             outputFolder,
             useRouteAsPath,
@@ -433,7 +433,7 @@ public class SourceGenerator : ISourceGenerator
 
     static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsAndOutputComplexTypes(
         GeneratorExecutionContext context,
-        string route,
+        ref string route,
         string rootNamespace,
         string outputFolder,
         bool useRouteAsPath,
@@ -450,7 +450,7 @@ public class SourceGenerator : ISourceGenerator
 
         foreach (var property in properties)
         {
-            var requestArgument = GetRequestArgumentFrom(property, route, out var importStatements);
+            var requestArgument = GetRequestArgumentFrom(property, ref route, out var importStatements);
             if (requestArgument is not null)
             {
                 requestArguments.Add(requestArgument);
@@ -504,7 +504,7 @@ public class SourceGenerator : ISourceGenerator
                         requestArguments.AddRange(OutputType(
                             context,
                             derivedType,
-                            route,
+                            ref route,
                             rootNamespace,
                             outputFolder,
                             targetFile,
@@ -518,7 +518,7 @@ public class SourceGenerator : ISourceGenerator
                 requestArguments.AddRange(OutputType(
                     context,
                     actualType,
-                    route,
+                    ref route,
                     rootNamespace,
                     outputFolder,
                     targetFile,
