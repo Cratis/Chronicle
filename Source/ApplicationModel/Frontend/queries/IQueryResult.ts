@@ -35,7 +35,7 @@ export interface IQueryResult<TDataType> {
     /**
      * Gets any validation errors. If this collection is empty, there are errors.
      */
-    readonly validationErrors: ValidationResult[];
+    readonly validationResults: ValidationResult[];
 
     /**
      * Gets any exception messages that might have occurred.

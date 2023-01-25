@@ -51,7 +51,7 @@ export class QueryResult<TDataType = {}> implements IQueryResult<TDataType> {
         this.isAuthorized = result.isAuthorized;
         this.isValid = result.isValid;
         this.hasExceptions = result.hasExceptions;
-        this.validationErrors = result.validationErrors.map(_ => new ValidationResult(_.severity, _.message, _.members, _.state));
+        this.validationResults = result.validationErrors.map(_ => new ValidationResult(_.severity, _.message, _.members, _.state));
         this.exceptionMessages = result.exceptionMessages;
         this.exceptionStackTrace = result.exceptionStackTrace;
 
@@ -85,7 +85,7 @@ export class QueryResult<TDataType = {}> implements IQueryResult<TDataType> {
     readonly hasExceptions: boolean;
 
     /** @inheritdoc */
-    readonly validationErrors: ValidationResult[];
+    readonly validationResults: ValidationResult[];
 
     /** @inheritdoc */
     readonly exceptionMessages: string[];
