@@ -47,8 +47,8 @@ public static class ClientServiceCollectionExtensions
             {
                 throw new UnableToResolveClientUri();
             }
-            var clientEndpoint = configuration.Kernel.AdvertisedClientEndpoint ?? new Uri(addresses!.Addresses.First().Replace("//*", "//localhost"));
 
+            var clientEndpoint = configuration.Kernel.AdvertisedClientEndpoint ?? addresses!.GetFirstAddressAsUri();
             IClient client = configuration.Kernel.Type switch
             {
                 ClusterTypes.Single => new SingleKernelClient(
@@ -116,7 +116,8 @@ public static class ClientServiceCollectionExtensions
             var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
             var serializerOptions = _.GetRequiredService<JsonSerializerOptions>();
             serializerOptions = new JsonSerializerOptions(serializerOptions);
-            var logger = _.GetRequiredService<ILogger<SingleKernelClient>>();
+            var singleKernelClientLogger = _.GetRequiredService<ILogger<SingleKernelClient>>();
+            var logger = _.GetRequiredService<ILogger<InsideKernelClient>>();
 
             var client = new InsideKernelClient(
                 server,
@@ -126,9 +127,10 @@ public static class ClientServiceCollectionExtensions
                 executionContextManager,
                 clientLifecycle,
                 serializerOptions,
+                singleKernelClientLogger,
                 logger);
 
-            logger.ConnectingToKernel();
+            singleKernelClientLogger.ConnectingToKernel();
             client.Connect().Wait();
 
             return client;
