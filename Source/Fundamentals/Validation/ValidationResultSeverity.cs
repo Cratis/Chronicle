@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Validation;
 public enum ValidationResultSeverity
 {
     /// <summary>
+    /// The validation result is unknown.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
     /// The validation result is a warning.
     /// </summary>
     Information = 1,
