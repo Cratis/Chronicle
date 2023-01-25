@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CommandTrackerImplementation } from '../CommandTrackerImplementation';
+import { CommandScopeImplementation } from '../CommandScopeImplementation';
 
 describe('when there are no commands', () => {
-    const tracker = new CommandTrackerImplementation(() => {});
+    const scope = new CommandScopeImplementation(() => {});
 
-    it('should have no changes', () => tracker.hasChanges.should.be.false);
+    it('should have no changes', () => scope.hasChanges.should.be.false);
 });

@@ -161,7 +161,7 @@ command.name = 'My other account';
 `hasChanges` will now be `true`.
 
 If you have a component that has sub components that all work with different commands,
-there is a way to track the state of `hasChanges` for all these. Read more about the [command tracker](./command-tracker.md) for this.
+there is a way to track the state of `hasChanges` for all these. Read more about the [command scope](./command-scope.md) for this.
 
 ## React
 

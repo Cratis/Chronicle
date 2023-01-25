@@ -94,6 +94,7 @@ public class SourceGenerator : ISourceGenerator
             var targetFile = Path.Combine(targetFolder, $"{typeName}.ts");
             targetFile = Path.GetFullPath(targetFile);
 
+            var requestArguments = new List<RequestArgumentDescriptor>();
             foreach (var parameter in commandMethod.Parameters)
             {
                 var isNullable = parameter.Type.NullableAnnotation == NullableAnnotation.Annotated;
@@ -115,22 +116,26 @@ public class SourceGenerator : ISourceGenerator
                     var publicProperties = parameter.Type.GetPublicPropertiesFrom();
                     properties.AddRange(GetPropertyDescriptorsAndOutputComplexTypes(
                         context,
+                        ref route,
                         rootNamespace,
                         outputFolder,
                         useRouteAsPath,
                         baseApiRoute,
                         targetFile,
                         publicProperties,
-                        importStatements));
+                        importStatements,
+                        out var additionalRequestArguments));
+                    requestArguments.AddRange(additionalRequestArguments);
                 }
             }
 
-            var requestArguments = GetRequestArgumentsFrom(commandMethod, ref route, importStatements);
+            requestArguments.AddRange(GetRequestArgumentsFrom(commandMethod, ref route, importStatements));
             var modelDescriptor = GetModelDescriptorFor(
                 context,
                 commandMethod,
                 type,
                 commandMethod.ReturnType,
+                ref route,
                 baseApiRoute,
                 rootNamespace,
                 outputFolder,
@@ -165,11 +170,13 @@ public class SourceGenerator : ISourceGenerator
 
             var targetFile = Path.Combine(targetFolder, $"{queryMethod.Name}.ts");
             targetFile = Path.GetFullPath(targetFile);
+            var route = GetRoute(baseApiRoute, queryMethod);
             var modelDescriptor = GetModelDescriptorFor(
                 context,
                 queryMethod,
                 type,
                 modelType,
+                ref route,
                 baseApiRoute,
                 rootNamespace,
                 outputFolder,
@@ -177,7 +184,6 @@ public class SourceGenerator : ISourceGenerator
                 targetFile);
             if (modelDescriptor != ModelDescriptor.Empty)
             {
-                var route = GetRoute(baseApiRoute, queryMethod);
                 var importStatements = new HashSet<ImportStatement>();
                 var queryArguments = GetRequestArgumentsFrom(queryMethod, ref route, importStatements);
 
@@ -208,6 +214,7 @@ public class SourceGenerator : ISourceGenerator
         IMethodSymbol method,
         ITypeSymbol parentType,
         ITypeSymbol modelType,
+        ref string route,
         string baseApiRoute,
         string rootNamespace,
         string outputFolder,
@@ -246,7 +253,16 @@ public class SourceGenerator : ISourceGenerator
                 isEnumerable = true;
             }
 
-            OutputType(context, actualType, rootNamespace, outputFolder, parentFile, importStatements, useRouteAsPath, baseApiRoute);
+            OutputType(
+                context,
+                actualType,
+                ref route,
+                rootNamespace,
+                outputFolder,
+                parentFile,
+                importStatements,
+                useRouteAsPath,
+                baseApiRoute);
 
             var typeScriptType = actualType.GetTypeScriptType(out _);
             var knownType = actualType.IsKnownType();
@@ -259,44 +275,21 @@ public class SourceGenerator : ISourceGenerator
         return ModelDescriptor.Empty;
     }
 
-    static List<RequestArgumentDescriptor> GetRequestArgumentsFrom(IMethodSymbol queryMethod, ref string route, HashSet<ImportStatement> importStatements)
+    static List<RequestArgumentDescriptor> GetRequestArgumentsFrom(IMethodSymbol method, ref string route, HashSet<ImportStatement> importStatements)
     {
         var queryArguments = new List<RequestArgumentDescriptor>();
-        if (queryMethod.Parameters.Length > 0)
+        if (method.Parameters.Length > 0)
         {
-            foreach (var parameter in queryMethod.Parameters)
+            foreach (var parameter in method.Parameters)
             {
-                var isArgument = false;
-                var attributes = parameter.GetAttributes();
-                if (attributes.Any(_ => _.IsFromRouteAttribute()))
-                {
-                    route = route.Replace($"{{{parameter.Name}}}", $"{{{{{parameter.Name}}}}}");
-                    isArgument = true;
-                }
-                if (attributes.Any(_ => _.IsFromQueryAttribute()))
-                {
-                    if (!route.Contains('?'))
-                    {
-                        route = $"{route}?";
-                    }
-                    else
-                    {
-                        route = $"{route}&";
-                    }
+                var argumentDescriptor = GetRequestArgumentFrom(
+                    new(parameter),
+                    ref route,
+                    out var additionalImportStatements);
 
-                    var isNullable = parameter.NullableAnnotation == NullableAnnotation.Annotated;
-                    route = $"{route}{parameter.Name}={{{{{parameter.Name}}}}}";
-                    isArgument = true;
-                }
-
-                if (isArgument)
+                if (argumentDescriptor is not null)
                 {
-                    queryArguments.Add(
-                        new(
-                            parameter.Name,
-                            parameter.Type.GetTypeScriptType(out var additionalImportStatements).Type,
-                            parameter.NullableAnnotation == NullableAnnotation.Annotated));
-
+                    queryArguments.Add(argumentDescriptor);
                     additionalImportStatements.ForEach(_ => importStatements.Add(_));
                 }
             }
@@ -305,9 +298,47 @@ public class SourceGenerator : ISourceGenerator
         return queryArguments;
     }
 
-    static void OutputType(
+    static RequestArgumentDescriptor? GetRequestArgumentFrom(PropertyOrParameterSymbol symbol, ref string route, out IEnumerable<ImportStatement> importStatements)
+    {
+        var isArgument = false;
+        var attributes = symbol.GetAttributes();
+        if (attributes.Any(_ => _.IsFromRouteAttribute()))
+        {
+            route = route.Replace($"{{{symbol.Name}}}", $"{{{{{symbol.Name}}}}}");
+            isArgument = true;
+        }
+        if (attributes.Any(_ => _.IsFromQueryAttribute()))
+        {
+            if (!route.Contains('?'))
+            {
+                route = $"{route}?";
+            }
+            else
+            {
+                route = $"{route}&";
+            }
+
+            var isNullable = symbol.NullableAnnotation == NullableAnnotation.Annotated;
+            route = $"{route}{symbol.Name}={{{{{symbol.Name}}}}}";
+            isArgument = true;
+        }
+
+        if (isArgument)
+        {
+            return new RequestArgumentDescriptor(
+                        symbol.Name,
+                        symbol.Type.GetTypeScriptType(out importStatements).Type,
+                        symbol.NullableAnnotation == NullableAnnotation.Annotated);
+        }
+
+        importStatements = Enumerable.Empty<ImportStatement>();
+        return null;
+    }
+
+    static IEnumerable<RequestArgumentDescriptor> OutputType(
         GeneratorExecutionContext context,
         ITypeSymbol type,
+        ref string route,
         string rootNamespace,
         string outputFolder,
         string parentFile,
@@ -315,7 +346,7 @@ public class SourceGenerator : ISourceGenerator
         bool useRouteAsPath,
         string baseApiRoute)
     {
-        if (type.IsKnownType()) return;
+        if (type.IsKnownType()) return Enumerable.Empty<RequestArgumentDescriptor>();
 
         var targetFolder = GetTargetFolder(type, rootNamespace, outputFolder, useRouteAsPath, baseApiRoute);
         var targetFile = Path.Combine(targetFolder, $"{type.Name}.ts");
@@ -325,7 +356,7 @@ public class SourceGenerator : ISourceGenerator
         if (string.IsNullOrEmpty(relativeImportAsString))
         {
             context.ReportDiagnostic(Diagnostics.ReturnTypeWouldOverwriteParentType(type.ToDisplayString(), parentFile));
-            return;
+            return Enumerable.Empty<RequestArgumentDescriptor>();
         }
 
         var importPath = Path.Combine(
@@ -347,13 +378,15 @@ public class SourceGenerator : ISourceGenerator
         var typeImportStatements = new HashSet<ImportStatement>();
         var propertyDescriptors = GetPropertyDescriptorsAndOutputComplexTypes(
             context,
+            ref route,
             rootNamespace,
             outputFolder,
             useRouteAsPath,
             baseApiRoute,
             targetFile,
             properties,
-            typeImportStatements);
+            typeImportStatements,
+            out var additionalRequestArguments);
 
         string renderedTemplate = null!;
 
@@ -394,22 +427,36 @@ public class SourceGenerator : ISourceGenerator
             Directory.CreateDirectory(targetFolder);
             WriteFile(targetFile, renderedTemplate);
         }
+
+        return additionalRequestArguments;
     }
 
     static IEnumerable<PropertyDescriptor> GetPropertyDescriptorsAndOutputComplexTypes(
         GeneratorExecutionContext context,
+        ref string route,
         string rootNamespace,
         string outputFolder,
         bool useRouteAsPath,
         string baseApiRoute,
         string targetFile,
-        IEnumerable<IPropertySymbol> properties,
-        HashSet<ImportStatement> typeImportStatements)
+        IEnumerable<PropertyOrParameterSymbol> properties,
+        HashSet<ImportStatement> typeImportStatements,
+        out IEnumerable<RequestArgumentDescriptor> additionalRequestArguments)
     {
         var propertyDescriptors = new List<PropertyDescriptor>();
 
+        var requestArguments = new List<RequestArgumentDescriptor>();
+        additionalRequestArguments = requestArguments;
+
         foreach (var property in properties)
         {
+            var requestArgument = GetRequestArgumentFrom(property, ref route, out var importStatements);
+            if (requestArgument is not null)
+            {
+                requestArguments.Add(requestArgument);
+                importStatements.ForEach(_ => typeImportStatements.Add(_));
+            }
+
             var propertyType = property.Type;
             var isNullable = false;
             if (property.NullableAnnotation == NullableAnnotation.Annotated && property.Type is INamedTypeSymbol namedTypeSymbol)
@@ -454,12 +501,30 @@ public class SourceGenerator : ISourceGenerator
 
                     foreach (var derivedType in _derivedTypes.ToArray().Where(_ => _.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, actualType))))
                     {
-                        OutputType(context, derivedType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                        requestArguments.AddRange(OutputType(
+                            context,
+                            derivedType,
+                            ref route,
+                            rootNamespace,
+                            outputFolder,
+                            targetFile,
+                            typeImportStatements,
+                            useRouteAsPath,
+                            baseApiRoute));
                         derivatives.Add(derivedType.Name);
                     }
                 }
 
-                OutputType(context, actualType, rootNamespace, outputFolder, targetFile, typeImportStatements, useRouteAsPath, baseApiRoute);
+                requestArguments.AddRange(OutputType(
+                    context,
+                    actualType,
+                    ref route,
+                    rootNamespace,
+                    outputFolder,
+                    targetFile,
+                    typeImportStatements,
+                    useRouteAsPath,
+                    baseApiRoute));
                 propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable, hasDerivatives, derivatives));
             }
             else

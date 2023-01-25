@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import React from 'react';
-import { CommandTrackerContext } from './CommandTracker';
+import { CommandScopeContext } from './CommandScope';
 
-export function useCommandTracker() {
-    return React.useContext(CommandTrackerContext);
+export function useCommandScope() {
+    return React.useContext(CommandScopeContext);
 }

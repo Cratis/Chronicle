@@ -5,7 +5,7 @@ import { Constructor } from '@aksio/cratis-fundamentals';
 import { useState, useEffect, useCallback } from 'react';
 import { Command } from '@aksio/cratis-applications-frontend/commands';
 import React from 'react';
-import { CommandTrackerContext } from './CommandTracker';
+import { CommandScopeContext } from './CommandScope';
 
 export type SetCommandValues<TCommandContent> = (command: TCommandContent) => void;
 export type ClearCommandValues = () => void;
@@ -29,7 +29,7 @@ export function useCommand<TCommand extends Command, TCommandContent>(commandTyp
         instance.onPropertyChanged(propertyChangedCallback, instance);
     }, []);
 
-    const context = React.useContext(CommandTrackerContext);
+    const context = React.useContext(CommandScopeContext);
     context.addCommand?.(command!);
 
     const setCommandValues = (values: TCommandContent) => {

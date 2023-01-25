@@ -53,5 +53,5 @@ We also have a [concepts](./concepts/index.md) section explaining the concepts i
 | ----- | ----------- |
 | [Proxy Generation](./application-model/frontend/cqrs/proxy-generation.md) | How the proxy generator tool can be used. |
 | [Commands](./application-model/frontend/cqrs/commands.md) | How to leverage commands from the frontend. |
-| [Command Tracker](./application-model/frontend/cqrs/command-tracker.md) | How to leverage the command tracker context in React apps. |
+| [Command Scope](./application-model/frontend/cqrs/command-scope.md) | How to leverage the command scope context in React apps. |
 | [Queries](./application-model/frontend/cqrs/queries.md) | How to leverage queries from the frontend. |

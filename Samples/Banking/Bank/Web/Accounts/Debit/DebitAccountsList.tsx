@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CommandTrackerContext, useCommandTracker } from '@aksio/cratis-applications-frontend/commands';
+import { CommandScopeContext, useCommandScope } from '@aksio/cratis-applications-frontend/commands';
 import { DetailsList, IColumn, IObjectWithKey, Selection, TextField } from '@fluentui/react';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
 import { SetDebitAccountName } from 'API/accounts/debit/SetDebitAccountName';
@@ -15,7 +15,7 @@ export interface IDebitAccountsListProps {
 export const DebitAccountsList = (props: IDebitAccountsListProps) => {
     const [setDebitAccountCommands, setSetDebitAccountCommands] = useState<SetDebitAccountName[]>([]);
 
-    const tracker = useCommandTracker();
+    const scope = useCommandScope();
 
     const columns: IColumn[] = [
         {
@@ -53,7 +53,7 @@ export const DebitAccountsList = (props: IDebitAccountsListProps) => {
                 accountId: _.id,
                 name: _.name
             });
-            tracker.addCommand(command);
+            scope.addCommand(command);
             return command;
         }));
     }, [props.accounts]);

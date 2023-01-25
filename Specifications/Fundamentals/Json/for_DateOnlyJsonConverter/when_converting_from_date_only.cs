@@ -31,3 +31,4 @@ public class when_converting_from_date_only : Specification
 
     [Fact] void should_convert_to_correct_date_string() => result.ShouldEqual($"\"{input:O}\"");
 }
+
