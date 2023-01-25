@@ -5,17 +5,16 @@ import { ICommand } from './ICommand';
 import { CommandResults } from './CommandResults';
 
 /**
- * Defines the system for tracking commands.
- *
+ * Defines the system for tracking commands in a scope.
  */
-export interface ICommandTracker {
+export interface ICommandScope {
     /**
      * Gets whether or not there are any changes in the context.
      */
     readonly hasChanges: boolean;
 
     /**
-     * Add a command for tracking in the context.
+     * Add a command for tracking in the scope.
      * @param {ICommand} command Command to add.
      */
     addCommand(command: ICommand): void;
@@ -27,7 +26,7 @@ export interface ICommandTracker {
     execute(): Promise<CommandResults>;
 
     /**
-     * Revert any changes for commands in context.
+     * Revert any changes for commands in scope.
      */
     revertChanges(): void;
 }
