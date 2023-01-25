@@ -12,15 +12,11 @@ export interface ISetConfigurationValueForTenant {
     tenantId?: string;
     key?: string;
     value?: string;
-    key?: string;
-    value?: string;
 }
 
 export class SetConfigurationValueForTenantValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
         tenantId: new Validator(),
-        key: new Validator(),
-        value: new Validator(),
         key: new Validator(),
         value: new Validator(),
     };
@@ -32,8 +28,6 @@ export class SetConfigurationValueForTenant extends Command<ISetConfigurationVal
     readonly validation: CommandValidator = new SetConfigurationValueForTenantValidator();
 
     private _tenantId!: string;
-    private _key!: string;
-    private _value!: string;
     private _key!: string;
     private _value!: string;
 
@@ -52,8 +46,6 @@ export class SetConfigurationValueForTenant extends Command<ISetConfigurationVal
             'tenantId',
             'key',
             'value',
-            'key',
-            'value',
         ];
     }
 
@@ -64,22 +56,6 @@ export class SetConfigurationValueForTenant extends Command<ISetConfigurationVal
     set tenantId(value: string) {
         this._tenantId = value;
         this.propertyChanged('tenantId');
-    }
-    get key(): string {
-        return this._key;
-    }
-
-    set key(value: string) {
-        this._key = value;
-        this.propertyChanged('key');
-    }
-    get value(): string {
-        return this._value;
-    }
-
-    set value(value: string) {
-        this._value = value;
-        this.propertyChanged('value');
     }
     get key(): string {
         return this._key;
