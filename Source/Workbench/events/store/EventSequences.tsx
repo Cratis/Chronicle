@@ -27,7 +27,7 @@ import { EventSequenceInformation } from 'API/events/store/sequences/EventSequen
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 
 import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
-import { AppendedEvent } from 'API/events/store/sequence/AppendedEvent';
+import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 import { Microservice } from 'API/configuration/microservices/Microservice';

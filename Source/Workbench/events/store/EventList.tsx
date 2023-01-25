@@ -10,7 +10,7 @@ import {
 } from '@fluentui/react';
 
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
-import { AppendedEvent } from 'API/events/store/sequence/AppendedEvent';
+import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 
 export type EventSelected = (item: any) => void;
