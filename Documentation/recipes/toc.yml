@@ -1,3 +1,5 @@
+- name: Introduction
+  href: index.md
 - name: Creating an event
   href: creating-an-event.md
 - name: Appending an event to the event log

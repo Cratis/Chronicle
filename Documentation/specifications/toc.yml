@@ -1,3 +1,5 @@
+- name: Introduction
+  href: index.md
 - name: Projections
   href: projections.md
 - name: Adapters
