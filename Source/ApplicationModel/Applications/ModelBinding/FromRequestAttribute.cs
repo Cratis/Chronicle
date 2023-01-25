@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Applications.ModelBinding;
 /// Specifies that a parameter or property should be bound using the request body and allowing to be combined with route and query string using [FromRoute], [FromQuery] inside the object.
 /// </summary>
 [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property)]
-public class FromRequestAttribute : Attribute, IBindingSourceMetadata
+public sealed class FromRequestAttribute : Attribute, IBindingSourceMetadata
 {
     /// <inheritdoc/>
     public BindingSource? BindingSource => new FromRequestBindingSource();

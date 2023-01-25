@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis;
 
 namespace Aksio.Cratis.Applications.ProxyGenerator.Syntax;
 
-
 /// <summary>
 /// Extension methods for working with <see cref="ITypeSymbol"/>.
 /// </summary>
@@ -70,7 +69,7 @@ public static class TypeSymbolExtensions
             .Where(_ => !_.IsStatic && _ is IMethodSymbol methodSymbol && methodSymbol.MethodKind == MethodKind.Constructor)
             .Cast<IMethodSymbol>()
             .SelectMany(_ => _.Parameters
-                .Where(p => !p.Type.Equals(type))
+                .Where(p => !p.Type.Equals(type, SymbolEqualityComparer.Default))
                 .Select(p => new PropertyOrParameterSymbol(p)));
 
         var properties = type.GetMembers().Where(_ => !_.IsStatic
