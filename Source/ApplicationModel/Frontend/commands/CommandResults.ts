@@ -38,11 +38,11 @@ export class CommandResults implements ICommandResult {
     }
 
     /** @inheritdoc */
-    get validationErrors(): ValidationResult[] {
+    get validationResults(): ValidationResult[] {
         const errors: ValidationResult[] = [];
 
         for (const result of this._commandResultsPerCommand.values()) {
-            result.validationErrors.forEach(_ => errors.push(_));
+            result.validationResults.forEach(_ => errors.push(_));
         }
 
         return errors;
