@@ -209,17 +209,28 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         }
     }
 
+    static bool ObserverFilter(IStreamIdentity stream, object filterData, object item)
+    {
+        var appendedEvent = (item as AppendedEvent)!;
+        var eventTypes = (filterData as IEnumerable<EventType>)!;
+        return eventTypes.Any(_ => _.Equals(appendedEvent.Metadata.Type));
+    }
+
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {
         _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
 
+        // Get the next event sequence number for our event types and use as the next event sequence number
         _streamSubscription = await _stream!.SubscribeAsync(
             (@event, _) =>
             {
                 _logger.EventReceived(@event.Metadata.Type.Id, _observerId, _eventSequenceId, _microserviceId, _tenantId);
                 return handler(@event);
             },
-            State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));
+            new EventSequenceNumberToken(State.NextEventSequenceNumber),
+            ObserverFilter,
+            State.EventTypes);
+        //State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));
 
         // Note: Add a warm up event. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.

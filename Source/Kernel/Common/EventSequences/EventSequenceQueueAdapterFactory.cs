@@ -5,6 +5,8 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.EventSequences;
@@ -24,16 +26,27 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="cacheMonitor"></param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
     /// <param name="eventLogStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
+    /// <param name="pooledQueueCacheLogger"></param>
+    /// <param name="evictionStrategyLogger"></param>
     public EventSequenceQueueAdapterFactory(
         string name,
         IExecutionContextManager executionContextManager,
+        ICacheMonitor cacheMonitor,
         ProviderFor<IEventSequences> eventLogsProvider,
-        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider)
+        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider,
+        ILogger<PooledQueueCache> pooledQueueCacheLogger,
+        ILogger<IEvictionStrategy> evictionStrategyLogger)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-        _cache = new EventSequenceQueueAdapterCache(executionContextManager, eventLogStorageProvider);
+        _cache = new EventSequenceQueueAdapterCache(
+            executionContextManager,
+            eventLogStorageProvider,
+            cacheMonitor,
+            pooledQueueCacheLogger,
+            evictionStrategyLogger);
         _name = name;
         _eventLogsProvider = eventLogsProvider;
     }
@@ -48,9 +61,12 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     {
         return new(
             name,
-            serviceProvider.GetService<IExecutionContextManager>()!,
-            serviceProvider.GetService<ProviderFor<IEventSequences>>()!,
-            serviceProvider.GetService<ProviderFor<IEventSequenceStorageProvider>>()!);
+            serviceProvider.GetRequiredService<IExecutionContextManager>(),
+            serviceProvider.GetRequiredService<ICacheMonitor>(),
+            serviceProvider.GetRequiredService<ProviderFor<IEventSequences>>(),
+            serviceProvider.GetRequiredService<ProviderFor<IEventSequenceStorageProvider>>(),
+            serviceProvider.GetRequiredService<ILogger<PooledQueueCache>>(),
+            serviceProvider.GetRequiredService<ILogger<IEvictionStrategy>>());
     }
 
     /// <inheritdoc/>
