@@ -1,3 +1,16 @@
+# [v8.1.2] - 2023-1-27 [PR: #716](https://github.com/aksio-insurtech/Cratis/pull/716)
+
+### Fixed
+
+- QueryResult and CommandResult was wrongly trying to resolve `validationErrors` while it has been renamed to `validationResults`.
+- Supporting clients connecting from outside Docker to Kernel running in Docker by changing their `AdvertisedClientUri` to `host.docker.internal`. (#715)
+- Supporting clients connecting with `https` and developer certificates. (#715)
+- Improving startup time by running Inbox grain setup in parallel, allowing the Kernel to have first priority of becoming responsive. (#710)
+- Run client observer registration in separate task, improving responsiveness for Kernel at startup. (#710)
+- Removing duplicate registrations for connected clients. (#714)
+- Adding log message for when the client is connected to the kernel. (#711)
+
+
 # [v8.1.1] - 2023-1-25 [PR: #708](https://github.com/aksio-insurtech/Cratis/pull/708)
 
 ### Fixed
