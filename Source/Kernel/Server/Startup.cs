@@ -13,7 +13,8 @@ public class Startup
     {
         services.AddHttpClient(ConnectedClients.ConnectedClientsHttpClient).ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (__, ___, ____, _____) => true
+            #pragma warning disable MA0039 // Allowing self-signed certificates for clients connecting to the Kernel
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         });
     }
 

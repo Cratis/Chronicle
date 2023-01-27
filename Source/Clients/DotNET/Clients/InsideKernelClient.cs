@@ -52,7 +52,7 @@ public class InsideKernelClient : IClient
         ILogger<InsideKernelClient> logger)
     {
         var addresses = server.Features.Get<IServerAddressesFeature>();
-        var endpoint = addresses!.GetFirstAddressAsUri(false);
+        var endpoint = addresses!.GetFirstAddressAsUri();
         logger.ConnectingKernel(endpoint);
 
         var options = new SingleKernelOptions
