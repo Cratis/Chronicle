@@ -17,6 +17,8 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 [StorageProvider(ProviderName = ConnectedClientsState.StorageProvider)]
 public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 {
+    public const string ConnectedClientsHttpClient = "connected-clients";
+
     readonly IHttpClientFactory _httpClientFactory;
     readonly ILogger<ConnectedClients> _logger;
     readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers;
@@ -52,10 +54,10 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public async Task OnClientDisconnected(ConnectionId connectionId)
+    public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
-        _logger.ClientDisconnected(microserviceId, connectionId);
+        _logger.ClientDisconnected(microserviceId, connectionId, reason);
 
         var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
@@ -107,19 +109,19 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     {
         foreach (var connectedClient in State.Clients.ToArray())
         {
-            using var client = _httpClientFactory.CreateClient();
+            using var client = _httpClientFactory.CreateClient(ConnectedClientsHttpClient);
             client.BaseAddress = connectedClient.ClientUri;
             try
             {
                 var response = await client.GetAsync("/.cratis/client/ping");
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    await OnClientDisconnected(connectedClient.ConnectionId);
+                    await OnClientDisconnected(connectedClient.ConnectionId, $"Status code was not OK : {response.StatusCode}");
                 }
             }
-            catch
+            catch( Exception ex)
             {
-                await OnClientDisconnected(connectedClient.ConnectionId);
+                await OnClientDisconnected(connectedClient.ConnectionId, ex.Message);
             }
         }
     }

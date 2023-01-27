@@ -24,8 +24,9 @@ public interface IConnectedClients : IGrainWithGuidKey
     /// Report that a client was disconnected.
     /// </summary>
     /// <param name="connectionId">The connection identifier.</param>
+    /// <param name="reason">Reason for disconnected.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnClientDisconnected(ConnectionId connectionId);
+    Task OnClientDisconnected(ConnectionId connectionId, string reason);
 
     /// <summary>
     /// Register that the client was seen.
