@@ -75,7 +75,7 @@ public abstract class RestKernelClient : IClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task Connect()
+    public virtual Task Connect()
     {
         _ = _taskFactory.Run(async () =>
         {
@@ -168,7 +168,9 @@ public abstract class RestKernelClient : IClient, IDisposable
         {
             response = await client.PostAsync(route, null);
         }
-        var result = await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions);
+        var resultAsString = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<CommandResult>(resultAsString, _jsonSerializerOptions);
+        //await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions);
         LogCommandResult(route, result);
 
         return result!;
@@ -183,14 +185,11 @@ public abstract class RestKernelClient : IClient, IDisposable
 
     async Task Ping()
     {
-        var failed = false;
+        bool failed;
         try
         {
             var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/ping/{ConnectionId}");
-            if (!result.IsSuccess)
-            {
-                failed = true;
-            }
+            failed = !result.IsSuccess;
         }
         catch
         {

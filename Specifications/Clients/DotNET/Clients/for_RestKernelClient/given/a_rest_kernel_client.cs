@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Tasks;
@@ -19,6 +20,11 @@ public class a_rest_kernel_client : Specification
     protected HttpResponseMessage success_message => new(HttpStatusCode.OK)
     {
         Content = JsonContent.Create(CommandResult.Success)
+    };
+
+    protected HttpResponseMessage failed_message => new(HttpStatusCode.OK)
+    {
+        Content = JsonContent.Create(new CommandResult { ExceptionMessages = new[] { "Something went wrong" } })
     };
 
     protected HttpResponseMessage not_found_message => new(HttpStatusCode.NotFound);
@@ -77,7 +83,7 @@ public class a_rest_kernel_client : Specification
             execution_context_manager.Object,
             new Uri("https://www.somewhere.com"),
             client_lifecycle.Object,
-            new(),
+            new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase },
             Mock.Of<ILogger<RestKernelClient>>());
     }
 }
