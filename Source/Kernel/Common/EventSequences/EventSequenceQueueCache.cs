@@ -1,9 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Collections;
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Orleans.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers.Streams.Common;
 using Orleans.Streams;
@@ -82,7 +85,13 @@ public class EventSequenceQueueCache : IQueueCache
             return new EmptyEventSequenceQueueCacheCursor();
         }
 
-        return new Cursor(_cache, streamIdentity, token, _eventLogStorageProvider);
+        return new Cursor(
+            _executionContextManager,
+            _cache,
+            streamIdentity,
+            token,
+            _dataAdapter,
+            _eventLogStorageProvider);
 
         /*
         if (token is EventSequenceNumberTokenWithFilter tokenWithFilter)
@@ -120,23 +129,29 @@ public class EventSequenceQueueCache : IQueueCache
 
     class Cursor : IQueueCacheCursor
     {
+        readonly IExecutionContextManager _executionContextManager;
         readonly PooledQueueCache _cache;
         readonly IStreamIdentity _streamIdentity;
         readonly StreamSequenceToken _token;
+        readonly IEventSequenceCacheDataAdapter _dataAdapter;
         readonly ProviderFor<IEventSequenceStorageProvider> _eventLogStorageProvider;
         readonly object _cursor;
         IBatchContainer _current;
 
         public Cursor(
+            IExecutionContextManager executionContextManager,
             PooledQueueCache cache,
             IStreamIdentity streamIdentity,
             StreamSequenceToken token,
+            IEventSequenceCacheDataAdapter dataAdapter,
             ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider)
         {
             _current = null!;
+            _executionContextManager = executionContextManager;
             _cache = cache;
             _streamIdentity = streamIdentity;
             _token = token;
+            _dataAdapter = dataAdapter;
             _eventLogStorageProvider = eventLogStorageProvider;
             _cursor = cache.GetCursor(streamIdentity, token);
         }
@@ -163,18 +178,34 @@ public class EventSequenceQueueCache : IQueueCache
             }
             catch (QueueCacheMissException)
             {
-                var events = _eventLogStorageProvider().GetRange(
+                var microserviceAndTenant = MicroserviceAndTenant.Parse(_streamIdentity.Namespace);
+                _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
+                var eventCursor = _eventLogStorageProvider().GetRange(
                     _streamIdentity.Guid,
                     (ulong)_token.SequenceNumber,
-                    (ulong)_token.SequenceNumber + 1000);
+                    (ulong)_token.SequenceNumber + 1000).GetAwaiter().GetResult();
 
-                var microserviceAndTenant = MicroserviceAndTenant.Parse(_streamIdentity.Namespace);
-                events.Select(_ => new EventSequenceBatchContainer(
-                    new[] { _ },
-                    _streamIdentity.Guid,
-                    microserviceAndTenant.MicroserviceId,
-                    microserviceAndTenant.TenantId,,
-                     ))
+                var events = new List<AppendedEvent>();
+
+                while (eventCursor.MoveNext().GetAwaiter().GetResult())
+                {
+                    events.AddRange(eventCursor.Current);
+                }
+
+                var cachedMessages = events
+                    .Select(_ => new EventSequenceBatchContainer(
+                        new[] { _ },
+                        _streamIdentity.Guid,
+                        microserviceAndTenant.MicroserviceId,
+                        microserviceAndTenant.TenantId,
+                        new Dictionary<string, object>
+                        {
+                            { RequestContextKeys.MicroserviceId, microserviceAndTenant.MicroserviceId },
+                            { RequestContextKeys.TenantId, microserviceAndTenant.TenantId }
+                        }))
+                    .Select(_ => _dataAdapter.GetCachedMessage(_));
+
+                _cache.Add(cachedMessages.ToList(), DateTime.UtcNow);
                 return MoveNext();
             }
 
