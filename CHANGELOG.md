@@ -1,3 +1,11 @@
+# [v8.1.3] - 2023-1-27 [PR: #719](https://github.com/aksio-insurtech/Cratis/pull/719)
+
+### Fixed
+
+- Fixing connected client state. (#718)
+- Changing the dynamics from Client -> Server connectivity, server no longer pings but instead lets the client know if its considering it disconnected through the result.
+
+
 # [v8.1.2] - 2023-1-27 [PR: #716](https://github.com/aksio-insurtech/Cratis/pull/716)
 
 ### Fixed
