@@ -5,7 +5,7 @@ import { QueryResult } from '../../QueryResult';
 
 describe("when asking has data and it is an array with items", () => {
     const queryResult = new QueryResult<any>({
-        validationErrors: [],
+        validationResults: [],
         data: [{}, {}]
     }, Object, true);
 

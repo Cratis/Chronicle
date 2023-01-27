@@ -28,7 +28,6 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
     /** @inheritdoc */
     async perform(args?: TArguments): Promise<QueryResult<TDataType>> {
         let actualRoute = this.route;
-
         if (!ValidateRequestArguments(this.constructor.name, this.requestArguments, args)) {
             return new Promise<QueryResult<TDataType>>((resolve) => {
                 resolve({ ...QueryResult.noSuccess, ...{ data: this.defaultValue } } as QueryResult<TDataType>);
