@@ -17,7 +17,6 @@ public class EventSequenceQueueCache : IQueueCache
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventLogStorageProvider;
-    readonly ICacheMonitor _cacheMonitor;
     readonly PooledQueueCache _cache;
     readonly IEventSequenceCacheDataAdapter _dataAdapter;
     readonly IEvictionStrategy _evictionStrategy;
@@ -41,7 +40,6 @@ public class EventSequenceQueueCache : IQueueCache
     {
         _executionContextManager = executionContextManager;
         _eventLogStorageProvider = eventLogStorageProvider;
-        _cacheMonitor = cacheMonitor;
         _cache = cache;
         _dataAdapter = dataAdapter;
         var timePurgePredicate = new TimePurgePredicate(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30));
@@ -59,6 +57,13 @@ public class EventSequenceQueueCache : IQueueCache
     /// <inheritdoc/>
     public void AddToCache(IList<IBatchContainer> messages)
     {
+        var cachedMessages = messages
+                                .Where(_ => !_.SequenceToken.IsWarmUp())
+                                .Select(_ => _dataAdapter.GetCachedMessage(_));
+        if (cachedMessages.Any())
+        {
+            _cache.Add(cachedMessages.ToList(), DateTime.UtcNow);
+        }
     }
 
     /// <inheritdoc/>
@@ -77,7 +82,7 @@ public class EventSequenceQueueCache : IQueueCache
             return new EmptyEventSequenceQueueCacheCursor();
         }
 
-        return new Cursor(_cache, streamIdentity, token);
+        return new Cursor(_cache, streamIdentity, token, _eventLogStorageProvider);
 
         /*
         if (token is EventSequenceNumberTokenWithFilter tokenWithFilter)
@@ -108,21 +113,32 @@ public class EventSequenceQueueCache : IQueueCache
     /// <inheritdoc/>
     public bool TryPurgeFromCache(out IList<IBatchContainer> purgedItems)
     {
-        purgedItems = new List<IBatchContainer>();
-        return true;
+        purgedItems = null!;
+        _evictionStrategy.PerformPurge(DateTime.UtcNow);
+        return false;
     }
 
     class Cursor : IQueueCacheCursor
     {
-        private readonly PooledQueueCache _cache;
-        private readonly object _cursor;
-        private IBatchContainer _current;
+        readonly PooledQueueCache _cache;
+        readonly IStreamIdentity _streamIdentity;
+        readonly StreamSequenceToken _token;
+        readonly ProviderFor<IEventSequenceStorageProvider> _eventLogStorageProvider;
+        readonly object _cursor;
+        IBatchContainer _current;
 
-        public Cursor(PooledQueueCache cache, IStreamIdentity streamId, StreamSequenceToken token)
+        public Cursor(
+            PooledQueueCache cache,
+            IStreamIdentity streamIdentity,
+            StreamSequenceToken token,
+            ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider)
         {
             _current = null!;
             _cache = cache;
-            _cursor = cache.GetCursor(streamId, token);
+            _streamIdentity = streamIdentity;
+            _token = token;
+            _eventLogStorageProvider = eventLogStorageProvider;
+            _cursor = cache.GetCursor(streamIdentity, token);
         }
 
         public void Dispose()
@@ -137,17 +153,41 @@ public class EventSequenceQueueCache : IQueueCache
 
         public bool MoveNext()
         {
-            if (!_cache.TryGetNextMessage(_cursor, out var next))
+            try
             {
-                return false;
+                if (!_cache.TryGetNextMessage(_cursor, out var next))
+                {
+                    return false;
+                }
+                _current = next;
+            }
+            catch (QueueCacheMissException)
+            {
+                var events = _eventLogStorageProvider().GetRange(
+                    _streamIdentity.Guid,
+                    (ulong)_token.SequenceNumber,
+                    (ulong)_token.SequenceNumber + 1000);
+
+                var microserviceAndTenant = MicroserviceAndTenant.Parse(_streamIdentity.Namespace);
+                events.Select(_ => new EventSequenceBatchContainer(
+                    new[] { _ },
+                    _streamIdentity.Guid,
+                    microserviceAndTenant.MicroserviceId,
+                    microserviceAndTenant.TenantId,,
+                     ))
+                return MoveNext();
             }
 
-            _current = next;
             return true;
         }
 
         public void Refresh(StreamSequenceToken token)
         {
+            if (token.IsWarmUp())
+            {
+                return;
+            }
+            Console.WriteLine("Hello");
         }
 
         public void RecordDeliveryFailure()
