@@ -52,7 +52,7 @@ export const DebitAccounts = () => {
             });
             const result = await openDebitAccount.execute();
             if (!result.isSuccess) {
-                alert(`Validation Errors: \n ${result.validationErrors.map(_ => _.message).join('\n')}`);
+                alert(`Validation Errors: \n ${result.validationResults.map(_ => _.message).join('\n')}`);
             }
         }
     });

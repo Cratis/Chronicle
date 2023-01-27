@@ -17,7 +17,7 @@ export class CommandResult<TResponse = {}> implements ICommandResult<TResponse> 
         isAuthorized: true,
         isValid: true,
         hasExceptions: false,
-        validationErrors: [],
+        validationResults: [],
         exceptionMessages: [],
         exceptionStackTrace: '',
         response: null
@@ -62,7 +62,7 @@ export class CommandResult<TResponse = {}> implements ICommandResult<TResponse> 
         this.isAuthorized = result.isAuthorized;
         this.isValid = result.isValid;
         this.hasExceptions = result.hasExceptions;
-        this.validationResults = result.validationErrors.map(_ => new ValidationResult(_.severity, _.message, _.members, _.state));
+        this.validationResults = result.validationResults.map(_ => new ValidationResult(_.severity, _.message, _.members, _.state));
         this.exceptionMessages = result.exceptionMessages;
         this.exceptionStackTrace = result.exceptionStackTrace;
 
