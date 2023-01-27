@@ -6,7 +6,7 @@ using Aksio.Cratis.Clients;
 namespace Aksio.Cratis.Kernel.Domain.Clients;
 
 /// <summary>
-/// The exception that is thrown when a connection is not found for a client.
+/// Exception that gets thrown when a connection is not found for a client.
 /// </summary>
 public class ConnectionNotFoundForClient : Exception
 {

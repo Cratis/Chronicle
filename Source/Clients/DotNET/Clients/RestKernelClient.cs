@@ -170,7 +170,6 @@ public abstract class RestKernelClient : IClient, IDisposable
         }
         var resultAsString = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<CommandResult>(resultAsString, _jsonSerializerOptions);
-        //await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions);
         LogCommandResult(route, result);
 
         return result!;
