@@ -5,7 +5,7 @@ import { QueryResult } from '../../QueryResult';
 
 describe("when asking has data and it is defined instance", () => {
     const queryResult = new QueryResult<any>({
-        validationErrors: [],
+        validationResults: [],
         data: {}
     }, Object, false);
 

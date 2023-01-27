@@ -9,8 +9,6 @@ import {
     Panel,
     Stack,
     IPivotItemProps,
-    Pivot,
-    PivotItem,
     TextField,
     Dropdown,
     IDropdownStyles
@@ -252,8 +250,6 @@ export const EventSequences = () => {
         setSelectedEventType(undefined);
         dismissPanel();
     };
-
-    console.log(selectedEvent?.content);
 
     return (
         <>

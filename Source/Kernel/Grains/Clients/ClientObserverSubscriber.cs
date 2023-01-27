@@ -75,7 +75,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 
         if (first is not null)
         {
-            var client = _httpClientFactory.CreateClient();
+            var client = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
             client.BaseAddress = first.ClientUri;
 
             var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
@@ -86,7 +86,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                await ConnectedClients.OnClientDisconnected(first.ConnectionId);
+                await ConnectedClients.OnClientDisconnected(first.ConnectionId, "Client not found");
                 state = ObserverSubscriberState.Disconnected;
             }
             else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)

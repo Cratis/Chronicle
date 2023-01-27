@@ -4,6 +4,7 @@
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Clients;
+using Aksio.Cratis.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -60,12 +61,12 @@ public class ConnectedClients : Controller
         [FromRoute] ConnectionId connectionId,
         [FromBody] ClientInformation clientInformation)
     {
-        _logger.ClientConnected(clientInformation.ClientVersion, microserviceId, connectionId);
-
+        var uri = new Uri(clientInformation.AdvertisedUri).AdjustForDockerHost();
+        _logger.ClientConnected(clientInformation.ClientVersion, microserviceId, connectionId, uri);
         var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
         await connectedClients.OnClientConnected(
             connectionId,
-            new Uri(clientInformation.AdvertisedUri),
+            uri,
             clientInformation.ClientVersion);
     }
 }
