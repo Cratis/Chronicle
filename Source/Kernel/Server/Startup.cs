@@ -3,10 +3,20 @@
 
 #pragma warning disable SA1600
 
+using Aksio.Cratis.Kernel.Grains.Clients;
+
 namespace Aksio.Cratis.Kernel.Server;
 
 public class Startup
 {
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddHttpClient(ConnectedClients.ConnectedClientsHttpClient).ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (__, ___, ____, _____) => true
+        });
+    }
+
     public void Configure(IApplicationBuilder app)
     {
         app.UseRouting();
