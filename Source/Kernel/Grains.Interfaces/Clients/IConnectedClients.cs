@@ -32,8 +32,8 @@ public interface IConnectedClients : IGrainWithGuidKey
     /// Register that the client was seen.
     /// </summary>
     /// <param name="connectionId">The connection identifier.</param>
-    /// <returns>Awaitable task.</returns>
-    Task OnClientPing(ConnectionId connectionId);
+    /// <returns>True if connection is considered connected, false if not.</returns>
+    Task<bool> OnClientPing(ConnectionId connectionId);
 
     /// <summary>
     /// Subscribe to when a client is disconnected.
