@@ -14,7 +14,6 @@ namespace Aksio.Cratis.Kernel.EventSequences;
 public class EventSequenceBatchContainer : IBatchContainer
 {
     readonly IEnumerable<AppendedEvent> _events;
-    readonly IDictionary<string, object> _requestContext;
 
     /// <inheritdoc/>
     public Guid StreamGuid { get; }
@@ -28,12 +27,14 @@ public class EventSequenceBatchContainer : IBatchContainer
     /// <summary>
     /// Gets the microservice identifier.
     /// </summary>
-    public MicroserviceId MicroserviceId { get; }
+    public MicroserviceId MicroserviceId { get; }
 
     /// <summary>
     /// Gets the tenant identifier.
     /// </summary>
-    public TenantId TenantId { get; }
+    public TenantId TenantId { get; }
+
+    public IDictionary<string, object> AssociatedRequestContext { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceBatchContainer"/> class.
@@ -54,7 +55,7 @@ public class EventSequenceBatchContainer : IBatchContainer
         TenantId = tenantId;
         _events = events;
         StreamGuid = streamGuid;
-        _requestContext = requestContext;
+        AssociatedRequestContext = requestContext;
         StreamNamespace = new MicroserviceAndTenant(microserviceId, tenantId);
         if (_events.Any())
         {
@@ -73,7 +74,7 @@ public class EventSequenceBatchContainer : IBatchContainer
     /// <inheritdoc/>
     public bool ImportRequestContext()
     {
-        foreach (var (key, value) in _requestContext)
+        foreach (var (key, value) in AssociatedRequestContext)
         {
             RequestContext.Set(key, value);
         }

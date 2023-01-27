@@ -31,6 +31,7 @@ public static class Program
             .UseAksio(_ => _.InKernel(), microserviceId: MicroserviceId.Kernel)
             .UseOrleans(_ => _
                 .UseCluster()
+                .UseStreamCaching()
                 .ConfigureSerialization()
                 .UseTelemetry()
                 .UseDashboard(options =>
