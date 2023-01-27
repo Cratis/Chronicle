@@ -17,6 +17,9 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 [StorageProvider(ProviderName = ConnectedClientsState.StorageProvider)]
 public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 {
+    /// <summary>
+    /// Gets the name of the HTTP client for connected clients.
+    /// </summary>
     public const string ConnectedClientsHttpClient = "connected-clients";
 
     readonly IHttpClientFactory _httpClientFactory;
@@ -48,6 +51,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
         _logger.ClientConnected(microserviceId, connectionId);
+        State.Clients.Where(_ => _.ClientUri == clientUri).ToList().ForEach(_ => State.Clients.Remove(_));
         State.Clients.Add(new ConnectedClient(connectionId, clientUri, version, DateTimeOffset.UtcNow));
 
         await WriteStateAsync();
@@ -75,7 +79,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
-            State.Clients.Remove(client);
+            State.Clients.Where(_ => _.ClientUri == client.ClientUri).ToList().ForEach(_ => State.Clients.Remove(_));
             State.Clients.Add(client with { LastSeen = DateTimeOffset.UtcNow });
         }
 
@@ -119,7 +123,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
                     await OnClientDisconnected(connectedClient.ConnectionId, $"Status code was not OK : {response.StatusCode}");
                 }
             }
-            catch( Exception ex)
+            catch (Exception ex)
             {
                 await OnClientDisconnected(connectedClient.ConnectionId, ex.Message);
             }
