@@ -98,10 +98,10 @@ public class ClientBuilder : IClientBuilder
         logger?.ConfiguringCompliance();
 
         types.All.Where(_ =>
-            _ != typeof(ICanProvideComplianceMetadataForType) &&
-            _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
+                    _ != typeof(ICanProvideComplianceMetadataForType) &&
+                    _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
         types.All.Where(_ =>
-            _ != typeof(ICanProvideComplianceMetadataForProperty) &&
-            _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
+                    _ != typeof(ICanProvideComplianceMetadataForProperty) &&
+                    _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
     }
 }

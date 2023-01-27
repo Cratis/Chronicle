@@ -7,8 +7,8 @@ namespace Aksio.Cratis.Kernel.Domain.Clients;
 
 internal static partial class ConnectedClientsLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Client (v{Version}) for microservice '{MicroserviceId}' connected with connection identifier '{ConnectionId}'")]
-    internal static partial void ClientConnected(this ILogger<ConnectedClients> logger, string version, string microserviceId, string connectionId);
+    [LoggerMessage(0, LogLevel.Information, "Client (v{Version}) for microservice '{MicroserviceId}' connected with connection identifier '{ConnectionId}' - will use '{Uri}' as the client endpoint")]
+    internal static partial void ClientConnected(this ILogger<ConnectedClients> logger, string version, string microserviceId, string connectionId, Uri uri);
 
     [LoggerMessage(1, LogLevel.Information, "Client for microservice '{MicroserviceId}' disconnected with connection identifier '{ConnectionId}'")]
     internal static partial void ClientDisconnected(this ILogger<ConnectedClients> logger, string microserviceId, string connectionId);

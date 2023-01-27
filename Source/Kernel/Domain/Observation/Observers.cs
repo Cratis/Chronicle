@@ -43,15 +43,20 @@ public class Observers : Controller
     /// <param name="registrations">Collection of <see cref="ClientObserverRegistration"/>.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("register/{connectionId}")]
-    public async Task Register(
+    public Task Register(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] ConnectionId connectionId,
         [FromBody] IEnumerable<ClientObserverRegistration> registrations)
     {
         _logger.RegisterObservers();
 
-        var observers = _grainFactory.GetGrain<IClientObservers>(microserviceId);
-        await observers.Register(connectionId, registrations);
+        _ = Task.Run(() =>
+        {
+            var observers = _grainFactory.GetGrain<IClientObservers>(microserviceId);
+            return observers.Register(connectionId, registrations);
+        });
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
