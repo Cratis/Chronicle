@@ -43,24 +43,27 @@ public class BootProcedure : IPerformBootProcedure
     /// <inheritdoc/>
     public void Perform()
     {
-        foreach (var (microserviceId, microservice) in _configuration.Microservices)
+        _ = Task.Run(() =>
         {
-            _executionContextManager.Establish(microserviceId);
-            var schemaStore = _serviceProvider.GetService<Schemas.ISchemaStore>()!;
-            schemaStore.Populate().Wait();
-
-            var projections = _grainFactory.GetGrain<IProjections>((MicroserviceId)microserviceId);
-            projections.Rehydrate().Wait();
-
-            foreach (var outbox in microservice.Inbox.FromOutboxes)
+            foreach (var (microserviceId, microservice) in _configuration.Microservices)
             {
-                foreach (var (tenantId, _) in _configuration.Tenants)
+                _executionContextManager.Establish(microserviceId);
+                var schemaStore = _serviceProvider.GetService<Schemas.ISchemaStore>()!;
+                schemaStore.Populate().Wait();
+
+                var projections = _grainFactory.GetGrain<IProjections>((MicroserviceId)microserviceId);
+                projections.Rehydrate().Wait();
+
+                foreach (var outbox in microservice.Inbox.FromOutboxes)
                 {
-                    var key = new InboxKey(tenantId, outbox.Microservice);
-                    var inbox = _grainFactory.GetGrain<IInbox>((MicroserviceId)microserviceId, key);
-                    inbox.Start().Wait();
+                    foreach (var (tenantId, _) in _configuration.Tenants)
+                    {
+                        var key = new InboxKey(tenantId, outbox.Microservice);
+                        var inbox = _grainFactory.GetGrain<IInbox>((MicroserviceId)microserviceId, key);
+                        inbox.Start().Wait();
+                    }
                 }
             }
-        }
+        });
     }
 }
