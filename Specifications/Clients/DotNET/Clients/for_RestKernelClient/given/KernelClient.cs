@@ -12,6 +12,7 @@ namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
 public class KernelClient : RestKernelClient
 {
     internal readonly Mock<HttpClient> http_client;
+    internal bool should_connect = true;
 
     public KernelClient(
         ITaskFactory taskFactory,
@@ -30,6 +31,16 @@ public class KernelClient : RestKernelClient
             logger)
     {
         http_client = new();
+    }
+
+    public override Task Connect()
+    {
+        if (should_connect)
+        {
+            return base.Connect();
+        }
+
+        return Task.CompletedTask;
     }
 
     protected override HttpClient CreateHttpClient() => http_client.Object;
