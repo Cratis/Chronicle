@@ -6,13 +6,14 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/clients/{{microserviceId}}/connect/{{connectionId}}');
+const routeTemplate = Handlebars.compile('/api/clients/{{microserviceId}}/connect/{{connectionId}}?insideKernel={{insideKernel}}');
 
 export interface IConnect {
     microserviceId?: string;
     connectionId?: string;
     clientVersion?: string;
     advertisedUri?: string;
+    insideKernel?: boolean;
 }
 
 export class ConnectValidator extends CommandValidator {
@@ -21,11 +22,12 @@ export class ConnectValidator extends CommandValidator {
         connectionId: new Validator(),
         clientVersion: new Validator(),
         advertisedUri: new Validator(),
+        insideKernel: new Validator(),
     };
 }
 
 export class Connect extends Command<IConnect> implements IConnect {
-    readonly route: string = '/api/clients/{{microserviceId}}/connect/{{connectionId}}';
+    readonly route: string = '/api/clients/{{microserviceId}}/connect/{{connectionId}}?insideKernel={{insideKernel}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new ConnectValidator();
 
@@ -33,6 +35,7 @@ export class Connect extends Command<IConnect> implements IConnect {
     private _connectionId!: string;
     private _clientVersion!: string;
     private _advertisedUri!: string;
+    private _insideKernel!: boolean;
 
     constructor() {
         super(Object, false);
@@ -42,6 +45,7 @@ export class Connect extends Command<IConnect> implements IConnect {
         return [
             'microserviceId',
             'connectionId',
+            'insideKernel',
         ];
     }
 
@@ -51,6 +55,7 @@ export class Connect extends Command<IConnect> implements IConnect {
             'connectionId',
             'clientVersion',
             'advertisedUri',
+            'insideKernel',
         ];
     }
 
@@ -85,6 +90,14 @@ export class Connect extends Command<IConnect> implements IConnect {
     set advertisedUri(value: string) {
         this._advertisedUri = value;
         this.propertyChanged('advertisedUri');
+    }
+    get insideKernel(): boolean {
+        return this._insideKernel;
+    }
+
+    set insideKernel(value: boolean) {
+        this._insideKernel = value;
+        this.propertyChanged('insideKernel');
     }
 
     static use(initialValues?: IConnect): [Connect, SetCommandValues<IConnect>, ClearCommandValues] {
