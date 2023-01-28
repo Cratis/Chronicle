@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Applications.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -22,6 +23,7 @@ public static class LoggingHostBuilderExtensions
     {
         Log.Logger = new LoggerConfiguration()
             .Enrich.WithExceptionDetails()
+            .Enrich.WithExecutionContext()
             .ReadFrom.Configuration(ConfigurationHostBuilderExtensions.Configuration)
             .CreateLogger();
 
