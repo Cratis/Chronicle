@@ -1,3 +1,18 @@
+# [v8.2.0] - 2023-1-28 [PR: #720](https://github.com/aksio-insurtech/Cratis/pull/720)
+
+### Added
+
+- Adding log enrichment for execution context to Serilog. Automatically hooked up in Application Model. (#445)
+
+Usage:
+
+```csharp
+        Log.Logger = new LoggerConfiguration()
+            .Enrich.WithExecutionContext()
+            .CreateLogger();
+```
+
+
 # [v8.1.3] - 2023-1-27 [PR: #719](https://github.com/aksio-insurtech/Cratis/pull/719)
 
 ### Fixed
