@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
@@ -10,78 +11,111 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Kernel.EventSequences;
 
 /// <summary>
-/// Represents an implementation of <see cref="IQueueCacheCursor"/> for event log regular cache scenario.
+/// Represents an implementation of <see cref="IQueueCacheCursor"/> for event sequences.
 /// </summary>
 public class EventSequenceQueueCacheCursor : IQueueCacheCursor
 {
-#pragma warning disable SA1202, CA1051
-    /// <summary>
-    /// Gets the <see cref="IEventSequenceStorageProvider"/>.
-    /// </summary>
-    protected readonly IEventSequenceStorageProvider _storageProvider;
+    IEventSequenceCache _cache;
     readonly IExecutionContextManager _executionContextManager;
-    readonly EventSequenceNumber _cursorStart;
-    readonly IStreamIdentity _streamIdentity;
-    IEventCursor? _actualCursor;
-    EventSequenceNumber _lastProvidedSequenceNumber = EventSequenceNumber.First;
-    bool _firstRun;
+    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
+    readonly MicroserviceId _microserviceId;
+    readonly TenantId _tenantId;
+    readonly EventSequenceId _eventSequenceId;
+    AppendedEvent[] _events;
+    int _currentIndex;
+    EventSequenceNumber _previousEventSequenceNumber;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    /// <param name="cursorStart">The start of the cursor.</param>
-    /// <param name="streamIdentity"><see cref="IStreamIdentity"/> for the stream.</param>
-    /// <param name="storageProvider"><see cref="IEventSequenceStorageProvider"/> to ue for getting events from sequence.</param>
+    /// <param name="cache">The <see cref="IEventSequenceCache"/> for the cursor.</param>
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> the cursor is for.</param>
+    /// <param name="tenantId">The <see cref="TenantId"/> the cursor is for.</param>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cursor is for.</param>
+    /// <param name="from">The from <see cref="EventSequenceNumber"/>.</param>
     public EventSequenceQueueCacheCursor(
+        IEventSequenceCache cache,
         IExecutionContextManager executionContextManager,
-        EventSequenceNumber cursorStart,
-        IStreamIdentity streamIdentity,
-        IEventSequenceStorageProvider storageProvider)
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        MicroserviceId microserviceId,
+        TenantId tenantId,
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber from)
     {
+        _cache = cache;
         _executionContextManager = executionContextManager;
-        _cursorStart = cursorStart;
-        _streamIdentity = streamIdentity;
-        _storageProvider = storageProvider;
-        _firstRun = true;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _microserviceId = microserviceId;
+        _tenantId = tenantId;
+        _eventSequenceId = eventSequenceId;
+        _currentIndex = 0;
+        _previousEventSequenceNumber = EventSequenceNumber.Unavailable;
+        _events = _cache.GetView(from).ToArray();
+        if (!_events.Any())
+        {
+            PrimeCache(EventSequenceNumber.First);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _events = null!;
+        _cache = null!;
     }
 
     /// <inheritdoc/>
     public IBatchContainer GetCurrent(out Exception exception)
     {
         exception = null!;
-        if (_actualCursor is null)
-        {
-            return null!;
-        }
-
-        var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
-
-        var events = _actualCursor.Current;
-        if (!events.Any())
-        {
-            return null!;
-        }
-
-        _lastProvidedSequenceNumber = events.Last().Metadata.SequenceNumber;
-
+        var @event = _events[_currentIndex];
         return new EventSequenceBatchContainer(
-            events,
-            _streamIdentity.Guid,
-            microserviceAndTenant.MicroserviceId,
-            microserviceAndTenant.TenantId,
+            new[] { @event },
+            _eventSequenceId,
+            _microserviceId,
+            _tenantId,
             new Dictionary<string, object>
             {
-                { RequestContextKeys.MicroserviceId, microserviceAndTenant.MicroserviceId },
-                { RequestContextKeys.TenantId, microserviceAndTenant.TenantId }
+                { RequestContextKeys.MicroserviceId, _microserviceId },
+                { RequestContextKeys.TenantId, _tenantId },
+                { RequestContextKeys.CorrelationId, @event.Context.CorrelationId },
+                { RequestContextKeys.CausationId, @event.Context.CausationId },
+                { RequestContextKeys.CausedBy, @event.Context.CausedBy }
             });
     }
 
     /// <inheritdoc/>
     public bool MoveNext()
     {
-        InitializeCursorOnFirstRun();
-        return _actualCursor?.MoveNext().GetAwaiter().GetResult() ?? false;
+        if (_events.Length == 0)
+        {
+            PrimeCache(EventSequenceNumber.First);
+        }
+
+        if (_events.Length <= _currentIndex)
+        {
+            return false;
+        }
+
+        if (_previousEventSequenceNumber != EventSequenceNumber.Unavailable && _events[_currentIndex].Metadata.SequenceNumber != _previousEventSequenceNumber + 1)
+        {
+            PrimeCache(_previousEventSequenceNumber + 1);
+        }
+
+        _previousEventSequenceNumber = _events[_currentIndex].Metadata.SequenceNumber;
+
+        return ++_currentIndex < _events.Length;
+    }
+
+    /// <inheritdoc/>
+    public void Refresh(StreamSequenceToken token)
+    {
+        if (token.IsWarmUp())
+        {
+            return;
+        }
     }
 
     /// <inheritdoc/>
@@ -89,38 +123,18 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     {
     }
 
-    /// <inheritdoc/>
-    public void Refresh(StreamSequenceToken token)
+    void PrimeCache(EventSequenceNumber start)
     {
-        var microserviceAndTenant = (MicroserviceAndTenant)_streamIdentity.Namespace;
-        _executionContextManager.Establish(microserviceAndTenant.TenantId, CorrelationId.New(), microserviceAndTenant.MicroserviceId);
-
-        _actualCursor?.Dispose();
-        _actualCursor = GetActualEventCursor(_streamIdentity.Guid, (ulong)_lastProvidedSequenceNumber).GetAwaiter().GetResult();
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _actualCursor?.Dispose();
-        _actualCursor = null!;
-    }
-
-    void InitializeCursorOnFirstRun()
-    {
-        if (_firstRun)
+        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
+        var end = start + 1000;
+        var eventCursor = _eventSequenceStorageProvider().GetRange(_eventSequenceId, start, end).GetAwaiter().GetResult();
+        while (eventCursor.MoveNext().GetAwaiter().GetResult())
         {
-            _actualCursor = GetActualEventCursor(_streamIdentity.Guid, _cursorStart).GetAwaiter().GetResult();
-            _firstRun = false;
+            foreach (var @event in eventCursor.Current)
+            {
+                _cache.Add(@event);
+            }
         }
+        _events = _cache.GetView(start).ToArray();
     }
-
-    /// <summary>
-    /// Get the actual event cursor.
-    /// </summary>
-    /// <param name="sequenceId">The event sequence to get for.</param>
-    /// <param name="sequenceNumber">The start sequence number.</param>
-    /// <returns>Actual event cursor.</returns>
-    protected virtual Task<IEventCursor> GetActualEventCursor(EventSequenceId sequenceId, EventSequenceNumber sequenceNumber) =>
-        _storageProvider.GetFromSequenceNumber(sequenceId, sequenceNumber);
 }
