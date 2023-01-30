@@ -52,6 +52,9 @@ public class SourceGenerator : ISourceGenerator
             _derivedTypes.Add(type);
         }
 
+        // Sanitize the output folder
+        outputFolder = Path.GetFullPath(outputFolder);
+
         foreach (var classDeclaration in receiver!.Candidates)
         {
             try
@@ -369,6 +372,11 @@ public class SourceGenerator : ISourceGenerator
             !importPath.StartsWith("./")))
         {
             importPath = $"./{importPath}";
+        }
+
+        if (importPath.StartsWith("./.."))
+        {
+            importPath = importPath.Replace("./..", "..");
         }
 
         parentImportStatements.Add(new ImportStatement(type.Name, importPath));
