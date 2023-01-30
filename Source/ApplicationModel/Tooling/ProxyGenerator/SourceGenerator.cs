@@ -52,6 +52,9 @@ public class SourceGenerator : ISourceGenerator
             _derivedTypes.Add(type);
         }
 
+        // Sanitize the output folder
+        outputFolder = Path.GetFullPath(outputFolder);
+
         foreach (var classDeclaration in receiver!.Candidates)
         {
             try
