@@ -374,6 +374,11 @@ public class SourceGenerator : ISourceGenerator
             importPath = $"./{importPath}";
         }
 
+        if (importPath.StartsWith("./.."))
+        {
+            importPath = importPath.Replace("./..", "..");
+        }
+
         parentImportStatements.Add(new ImportStatement(type.Name, importPath));
 
         var properties = type.GetPublicPropertiesFrom();
