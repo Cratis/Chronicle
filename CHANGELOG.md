@@ -1,3 +1,10 @@
+# [v8.3.1] - 2023-1-30 [PR: #721](https://github.com/aksio-insurtech/Cratis/pull/721)
+
+### Fixed
+
+- The output folder path for proxy generation was not sanitized and properly resolved to an absolute path, so a relative path of `../Web/API` could end up with a `/your/path/to/the/code//../Web/Api` which then failed getting the correct relative path of a type when outputting types.
+
+
 # [v8.2.0] - 2023-1-28 [PR: #720](https://github.com/aksio-insurtech/Cratis/pull/720)
 
 ### Added
