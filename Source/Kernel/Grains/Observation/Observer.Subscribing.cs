@@ -36,11 +36,6 @@ public partial class Observer
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
         _subscriberType = subscriberType;
 
-        if (_observerId == "d1bb5522-5512-42ce-938a-d176536bb01d")
-        {
-            Console.WriteLine("Hello");
-        }
-
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
             await Rewind();

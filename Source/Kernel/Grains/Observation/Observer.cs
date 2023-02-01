@@ -125,11 +125,6 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
     async Task HandleEventForPartitionedObserver(AppendedEvent @event, bool setLastHandled = false)
     {
-        if (_observerId == "d661904f-15e0-4a96-a0cc-c7389635e4cd")
-        {
-            Console.WriteLine("Hello");
-        }
-
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
