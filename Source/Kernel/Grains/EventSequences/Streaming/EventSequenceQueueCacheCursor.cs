@@ -6,7 +6,6 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.Execution;
-using Microsoft.Extensions.Logging;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -28,7 +27,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
     /// </summary>
-    /// <param name="cache"></param>
+    /// <param name="cache">The <see cref="IEventSequenceCache"/> to use by the cursor.</param>
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> the cursor is for.</param>
     /// <param name="tenantId">The <see cref="TenantId"/> the cursor is for.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cursor is for.</param>
