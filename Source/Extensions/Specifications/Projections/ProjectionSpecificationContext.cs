@@ -63,7 +63,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
 
         var factory = new ProjectionFactory(
-            new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers),
+            new ModelPropertyExpressionResolvers(eventValueProviderExpressionResolvers, typeFormats),
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
             new ExpandoObjectConverter(typeFormats),
             new EventSequenceStorageProviderForSpecifications(_eventLog));

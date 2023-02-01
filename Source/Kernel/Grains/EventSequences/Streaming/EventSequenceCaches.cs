@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
-using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
@@ -16,24 +14,15 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 public class EventSequenceCaches : IEventSequenceCaches
 {
     readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
-    readonly ILogger<EventSequenceCache> _logger;
+    readonly IEventSequenceCacheFactory _eventSequenceCacheFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCaches"/> class.
     /// </summary>
-    /// <param name="executionContextManager"></param>
-    /// <param name="eventSequenceStorageProvider"></param>
-    /// <param name="logger"></param>
-    public EventSequenceCaches(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
-        ILogger<EventSequenceCache> logger)
+    /// <param name="eventSequenceCacheFactory"><see cref="IEventSequenceCacheFactory"/> for creating <see cref="IEventSequenceCache"/> instances.</param>
+    public EventSequenceCaches(IEventSequenceCacheFactory eventSequenceCacheFactory)
     {
-        _executionContextManager = executionContextManager;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _logger = logger;
+        _eventSequenceCacheFactory = eventSequenceCacheFactory;
     }
 
     /// <inheritdoc/>
@@ -42,7 +31,7 @@ public class EventSequenceCaches : IEventSequenceCaches
         var key = (microserviceId, tenantId, eventSequenceId);
         if (!_caches.TryGetValue(key, out var cache))
         {
-            cache = new EventSequenceCache(microserviceId, tenantId, eventSequenceId, _executionContextManager, _eventSequenceStorageProvider, _logger);
+            cache = _eventSequenceCacheFactory.Create(microserviceId, tenantId, eventSequenceId);
             _caches.TryAdd(key, cache);
         }
 
