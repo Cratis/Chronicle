@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
@@ -20,6 +21,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// </summary>
 public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
+    readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
     readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitionsProvider;
     readonly IProjectionFactory _projectionFactory;
@@ -29,20 +31,25 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     ProjectionPipelineDefinition? _pipelineDefinition;
     EngineProjection? _projection;
     IProjectionPipeline? _pipeline;
+    MicroserviceId _microserviceId = MicroserviceId.Unspecified;
+    TenantId _tenantId = TenantId.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
     /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="projectionDefinitionsProvider"><see cref="IProjectionDefinitions"/>.</param>
     /// <param name="projectionPipelineDefinitionsProvider"><see cref="IProjectionPipelineDefinitions"/> for working with pipelines.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> for creating the pipeline for the projection.</param>
     public ProjectionObserverSubscriber(
+        IExecutionContextManager executionContextManager,
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
         ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitionsProvider,
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory)
     {
+        _executionContextManager = executionContextManager;
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
         _projectionPipelineDefinitionsProvider = projectionPipelineDefinitionsProvider;
         _projectionFactory = projectionFactory;
@@ -55,6 +62,8 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
+        _microserviceId = key.MicroserviceId;
+        _tenantId = key.TenantId;
         var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
         await projection.SubscribeDefinitionsChanged(this);
 
@@ -77,6 +86,7 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
 
         try
         {
+            _executionContextManager.Establish(_tenantId, @event.Context.CorrelationId, _microserviceId);
             await _pipeline.Handle(@event);
             return ObserverSubscriberResult.Ok;
         }
@@ -88,6 +98,8 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
 
     async Task HandleDefinitionsAndInstances()
     {
+        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
+
         _definition = await _projectionDefinitionsProvider().GetFor(_projectionId);
         _pipelineDefinition = await _projectionPipelineDefinitionsProvider().GetFor(_projectionId);
         _projection = await _projectionFactory.CreateFrom(_definition);
