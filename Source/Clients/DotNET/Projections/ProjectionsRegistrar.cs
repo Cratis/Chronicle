@@ -11,6 +11,7 @@ using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Projections;
 
@@ -35,6 +36,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly ILogger<ProjectionsRegistrar> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -46,6 +48,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ProjectionsRegistrar(
         IClient client,
         IExecutionContextManager executionContextManager,
@@ -53,13 +56,15 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         ITypes types,
         IJsonSchemaGenerator schemaGenerator,
         IJsonProjectionSerializer projectionSerializer,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<ProjectionsRegistrar> logger)
     {
         _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator, jsonSerializerOptions);
         _client = client;
         _executionContextManager = executionContextManager;
         _projectionSerializer = projectionSerializer;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _logger = logger;
     }
 
     /// <summary>
@@ -88,6 +93,8 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     /// <inheritdoc/>
     public async Task ClientConnected()
     {
+        _logger.RegisterProjections();
+
         var registrations = _projections.Select(projection =>
         {
             var pipeline = new ProjectionPipelineDefinition(

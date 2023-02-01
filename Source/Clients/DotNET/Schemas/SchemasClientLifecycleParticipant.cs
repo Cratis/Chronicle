@@ -6,6 +6,7 @@ using Aksio.Cratis.Boot;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Schemas;
 
@@ -17,6 +18,7 @@ public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
     readonly IEnumerable<EventTypeRegistration> _definitions;
     readonly IClient _client;
     readonly IEventTypes _eventTypes;
+    readonly ILogger<SchemasClientLifecycleParticipant> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Schemas"/> class.
@@ -24,13 +26,16 @@ public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
     /// <param name="client">The Kernel <see cref="IClient"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for event types.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public SchemasClientLifecycleParticipant(
         IClient client,
         IEventTypes eventTypes,
-        IJsonSchemaGenerator schemaGenerator)
+        IJsonSchemaGenerator schemaGenerator,
+        ILogger<SchemasClientLifecycleParticipant> logger)
     {
         _client = client;
         _eventTypes = eventTypes;
+        _logger = logger;
         _definitions = eventTypes.All.Select(_ =>
         {
             var type = _eventTypes.GetClrTypeFor(_.Id)!;
@@ -44,6 +49,7 @@ public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
     /// <inheritdoc/>
     public async Task ClientConnected()
     {
+        _logger.RegisterEventTypes();
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/types";
         await _client.PerformCommand(route, new RegisterEventTypes(_definitions));
     }
