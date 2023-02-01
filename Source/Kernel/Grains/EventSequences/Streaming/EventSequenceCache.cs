@@ -15,6 +15,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 public class EventSequenceCache : IEventSequenceCache
 {
     const int MaxNumberOfEvents = 10000;
+    const int NumberOfEventsToFetch = 1000;
     readonly object _lock = new();
 
     readonly SortedSet<AppendedEvent> _events;
@@ -89,7 +90,7 @@ public class EventSequenceCache : IEventSequenceCache
     /// <inheritdoc/>
     public void Prime(EventSequenceNumber from)
     {
-        var to = from + 1000;
+        var to = from + NumberOfEventsToFetch;
         _logger.Priming(from, to);
         _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
         var eventCursor = _eventSequenceStorageProvider().GetRange(_eventSequenceId, from, to).GetAwaiter().GetResult();
