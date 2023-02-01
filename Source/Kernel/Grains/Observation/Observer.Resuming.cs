@@ -53,7 +53,7 @@ public partial class Observer
             async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, tailSequenceNumber),
             new EventSequenceNumberToken(sequenceNumber),
             EventTypesAndEventSourceIdFilter,
-            new EventTypesAndEventSourceId(State.EventTypes, eventSourceId));
+            new EventTypesAndEventSourceId(State.EventTypes.ToArray(), eventSourceId));
     }
 
     static bool EventTypesAndEventSourceIdFilter(IStreamIdentity stream, object filterData, object item)
@@ -61,9 +61,13 @@ public partial class Observer
         var appendedEvent = (item as AppendedEvent)!;
         var eventTypesAndEventSourceId = (filterData as EventTypesAndEventSourceId)!;
 
+        var shouldIncludeEventType =
+            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Equals(appendedEvent.Metadata.Type)) ||
+            eventTypesAndEventSourceId.EventTypes.Length == 0;
+
         return
             appendedEvent.Context.EventSourceId == eventTypesAndEventSourceId.EventSourceId &&
-            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Equals(appendedEvent.Metadata.Type));
+            shouldIncludeEventType;
     }
 
     async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, EventSequenceNumber tailSequenceNumber)
