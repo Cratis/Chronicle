@@ -71,12 +71,13 @@ public class EventSequenceQueueCache : IQueueCache
     public int GetMaxAddCount() => int.MaxValue;
 
     /// <inheritdoc/>
-    public bool IsUnderPressure() => false;
+    public bool IsUnderPressure() => _caches.IsUnderPressure();
 
     /// <inheritdoc/>
     public bool TryPurgeFromCache(out IList<IBatchContainer> purgedItems)
     {
         purgedItems = null!;
+        _caches.Purge();
         return false;
     }
 }

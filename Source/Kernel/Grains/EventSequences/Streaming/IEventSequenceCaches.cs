@@ -19,4 +19,15 @@ public interface IEventSequenceCaches
     /// <param name="eventSequenceId">EventSequenceId to get for.</param>
     /// <returns>The <see cref="IEventSequenceCache"/> associated.</returns>
     IEventSequenceCache GetFor(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Check if any of the caches are under pressure.
+    /// </summary>
+    /// <returns>True if any is, false if not.</returns>
+    bool IsUnderPressure();
+
+    /// <summary>
+    /// Purge items from any of the caches that are under pressure.
+    /// </summary>
+    void Purge();
 }
