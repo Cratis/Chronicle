@@ -29,7 +29,7 @@ public class SingletonLifetimeScope<TComponentLifetime> : ISharingLifetimeScope
     public IDisposer Disposer => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public object Tag => throw new NotImplementedException();
+    public object Tag => RootLifetimeScope.Tag;
 
     /// <inheritdoc/>
     public IComponentRegistry ComponentRegistry { get; }
