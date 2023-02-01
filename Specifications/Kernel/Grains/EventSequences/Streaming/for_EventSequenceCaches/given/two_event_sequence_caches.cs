@@ -18,7 +18,6 @@ public class two_event_sequence_caches : an_event_sequence_caches
     protected Mock<IEventSequenceCache> first_cache;
     protected Mock<IEventSequenceCache> second_cache;
 
-
     void Establish()
     {
         first_cache = new();

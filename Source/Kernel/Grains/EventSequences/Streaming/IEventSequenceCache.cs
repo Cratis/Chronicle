@@ -11,6 +11,11 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 public interface IEventSequenceCache : IDisposable
 {
     /// <summary>
+    /// Gets the number of events in the cache.
+    /// </summary>
+    int Count { get; }
+
+    /// <summary>
     /// Add an event to the cache.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to add.</param>

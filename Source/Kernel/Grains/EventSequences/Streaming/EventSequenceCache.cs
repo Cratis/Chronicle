@@ -14,18 +14,29 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </summary>
 public class EventSequenceCache : IEventSequenceCache
 {
-    const int MaxNumberOfEvents = 10000;
-    const int NumberOfEventsToFetch = 1000;
+    /// <summary>
+    /// The maximum number of events to keep in the cache.
+    /// </summary>
+    public const int MaxNumberOfEvents = 10000;
+
+    /// <summary>
+    /// The number of events to fetch from the event store.
+    /// </summary>
+    public const int NumberOfEventsToFetch = 1000;
+
     readonly object _lock = new();
 
-    readonly SortedSet<AppendedEvent> _events;
-    readonly SortedSet<AppendedEventByDate> _eventsByDate;
+    protected readonly SortedSet<AppendedEvent> _events;
+    protected readonly SortedSet<AppendedEventByDate> _eventsByDate;
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
     readonly ILogger<EventSequenceCache> _logger;
+
+    /// <inheritdoc/>
+    public int Count => _events.Count;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCache"/> class.
@@ -68,6 +79,8 @@ public class EventSequenceCache : IEventSequenceCache
         {
             if (_events.Contains(@event))
             {
+                _eventsByDate.RemoveWhere(_ => _.Event == @event);
+                _eventsByDate.Add(new(@event, DateTimeOffset.UtcNow));
                 return;
             }
 
