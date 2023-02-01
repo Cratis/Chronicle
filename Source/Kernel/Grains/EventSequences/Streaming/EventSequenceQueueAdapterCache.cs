@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.Extensions.Logging;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -12,27 +11,19 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 public class EventSequenceQueueAdapterCache : IQueueAdapterCache
 {
     readonly IEventSequenceCaches _caches;
-    readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapterCache"/> class.
     /// </summary>
-    /// <param name="caches"></param>
-    /// <param name="logger"></param>
-    public EventSequenceQueueAdapterCache(
-        IEventSequenceCaches caches,
-        ILogger logger)
+    /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
+    public EventSequenceQueueAdapterCache(IEventSequenceCaches caches)
     {
         _caches = caches;
-        _logger = logger;
     }
 
     /// <inheritdoc/>
     public IQueueCache CreateQueueCache(QueueId queueId)
     {
-        return new EventSequenceQueueCache(
-            _caches,
-            _logger,
-            queueId);
+        return new EventSequenceQueueCache(_caches);
     }
 }
