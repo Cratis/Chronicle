@@ -93,19 +93,18 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
             return false;
         }
 
+        _currentIndex++;
         if (_currentIndex >= _events.Length)
         {
-            GetEventsFromCache(_to);
-            _currentIndex = -1;
+            GetEventsFromCache(_previousEventSequenceNumber + 1);
+            _currentIndex = 0;
         }
-
-        _currentIndex++;
 
         if (_currentIndex < _events.Length)
         {
-            if (_currentIndex != 0 && _previousEventSequenceNumber != _events[_currentIndex].Metadata.SequenceNumber + 1)
+            if (_currentIndex != 0 && _events[_currentIndex].Metadata.SequenceNumber != _previousEventSequenceNumber + 1)
             {
-                GetEventsFromCache(_events[_currentIndex].Metadata.SequenceNumber);
+                GetEventsFromCache(_previousEventSequenceNumber + 1);
                 _currentIndex = 0;
             }
 

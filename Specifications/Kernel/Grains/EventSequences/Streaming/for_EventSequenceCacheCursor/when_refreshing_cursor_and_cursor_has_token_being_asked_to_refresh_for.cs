@@ -5,7 +5,7 @@ using Aksio.Cratis.Kernel.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor;
 
-public class when_refreshing_cursor_and_cursor_has_token_being_asked_to_refresh_for : given.cursor_with_ten_events_in_cache
+public class when_refreshing_cursor_and_cursor_has_token_being_asked_to_refresh_for : given.cursor_with_ten_events_from_cache
 {
     void Because() => cursor.Refresh(new EventSequenceNumberToken(5L));
 

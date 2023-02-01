@@ -17,3 +17,4 @@ public class when_creating_cursor_and_cache_is_empty : given.an_empty_cache
 
     [Fact] void should_prime_cache() => cache.Verify(_ => _.Prime(EventSequenceNumber.First), Once);
 }
+

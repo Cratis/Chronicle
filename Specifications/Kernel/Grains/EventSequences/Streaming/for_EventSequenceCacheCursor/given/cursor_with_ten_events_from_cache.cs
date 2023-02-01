@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQueueCacheCursor.given;
 
-public class cursor_with_ten_events_in_cache : all_dependencies
+public class cursor_with_ten_events_from_cache : all_dependencies
 {
     protected AppendedEvent[] events;
     protected EventSequenceQueueCacheCursor cursor;
