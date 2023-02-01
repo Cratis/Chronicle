@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.ModelProperties;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions;
@@ -22,7 +23,8 @@ public class ModelPropertyExpressionResolvers : IModelPropertyExpressionResolver
     /// Initializes a new instance of the <see cref="ModelPropertyExpressionResolvers"/> class.
     /// </summary>
     /// <param name="eventValueProviderExpressionResolvers"><see cref="IEventValueProviderExpressionResolvers"/> to use for value provider resolvers.</param>
-    public ModelPropertyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers)
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
+    public ModelPropertyExpressionResolvers(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats)
     {
         _eventValueProviderExpressionResolvers = eventValueProviderExpressionResolvers;
 
@@ -30,7 +32,7 @@ public class ModelPropertyExpressionResolvers : IModelPropertyExpressionResolver
             {
                 new AddExpressionResolver(_eventValueProviderExpressionResolvers),
                 new SubtractExpressionResolver(_eventValueProviderExpressionResolvers),
-                new CountExpressionResolver(),
+                new CountExpressionResolver(typeFormats),
                 new SetExpressionResolver(_eventValueProviderExpressionResolvers)
             };
     }
