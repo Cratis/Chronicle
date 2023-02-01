@@ -10,4 +10,4 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 /// <param name="EventTypes">EventTypes to filter on.</param>
 /// <param name="EventSourceId">EventSourceId to filter on.</param>
-public record EventTypesAndEventSourceId(IEnumerable<EventType> EventTypes, EventSourceId EventSourceId);
+public record EventTypesAndEventSourceId(EventType[] EventTypes, EventSourceId EventSourceId);

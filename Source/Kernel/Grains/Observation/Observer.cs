@@ -212,7 +212,11 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
     {
         var appendedEvent = (item as AppendedEvent)!;
-        var eventTypes = (filterData as IEnumerable<EventType>)!;
+        var eventTypes = (filterData as EventType[])!;
+        if (eventTypes.Length == 0)
+        {
+            return true;
+        }
         return eventTypes.Any(_ => _.Equals(appendedEvent.Metadata.Type));
     }
 
@@ -229,8 +233,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             },
             new EventSequenceNumberToken(State.NextEventSequenceNumber),
             EventTypesFilter,
-            State.EventTypes);
-        //State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));
+            State.EventTypes.ToArray());
 
         // Note: Add a warm up event. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
