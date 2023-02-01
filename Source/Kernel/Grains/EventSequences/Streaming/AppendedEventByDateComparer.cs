@@ -12,5 +12,5 @@ public class AppendedEventByDateComparer : IComparer<AppendedEventByDate>
 {
     /// <inheritdoc/>
     public int Compare(AppendedEventByDate? x, AppendedEventByDate? y) =>
-        Comparer<DateTimeOffset>.Default.Compare(x?.DateTime ?? DateTimeOffset.MaxValue, y?.DateTime ?? DateTimeOffset.MaxValue);
+        Comparer<long>.Default.Compare(x?.DateTime.Ticks ?? DateTimeOffset.MaxValue.Ticks, y?.DateTime.Ticks ?? DateTimeOffset.MaxValue.Ticks);
 }
