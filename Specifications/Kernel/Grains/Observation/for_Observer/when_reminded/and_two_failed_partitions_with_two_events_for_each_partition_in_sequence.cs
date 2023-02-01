@@ -42,18 +42,8 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
             .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
-                subscribed_token = token as EventSequenceNumberTokenWithFilter;
+                subscribed_token = token as EventSequenceNumberToken;
                 subscribed_tokens.Add(subscribed_token);
-
-                if (subscribed_token.Partition == first_partition)
-                {
-                    observer.OnNextAsync(first_partition_appended_event, subscribed_token);
-                }
-
-                if (subscribed_token.Partition == second_partition)
-                {
-                    observer.OnNextAsync(second_partition_appended_event, subscribed_token);
-                }
 
                 return Task.FromResult(subscription.Object);
             });

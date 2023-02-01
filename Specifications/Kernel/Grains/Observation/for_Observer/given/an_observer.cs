@@ -16,8 +16,8 @@ public class an_observer : GrainSpecification<ObserverState>
     protected ObserverId observer_id;
     protected Mock<IStreamProvider> sequence_stream_provider;
     protected Mock<IAsyncStream<AppendedEvent>> sequence_stream;
-    protected EventSequenceNumberTokenWithFilter subscribed_token;
-    protected List<EventSequenceNumberTokenWithFilter> subscribed_tokens;
+    protected EventSequenceNumberToken subscribed_token;
+    protected List<EventSequenceNumberToken> subscribed_tokens;
     protected List<Mock<StreamSubscriptionHandle<AppendedEvent>>> subscription_handles;
     protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
     protected List<IAsyncObserver<AppendedEvent>> observers;
@@ -61,7 +61,7 @@ public class an_observer : GrainSpecification<ObserverState>
             {
                 var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
                 subscription_handles.Add(subscription);
-                subscribed_token = token as EventSequenceNumberTokenWithFilter;
+                subscribed_token = token as EventSequenceNumberToken;
                 subscribed_tokens.Add(subscribed_token);
                 observers.Add(observer);
 
