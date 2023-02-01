@@ -75,7 +75,6 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         try
         {
             var @event = _events[_currentIndex];
-            _logger.LogInformation("Getting current ({QueueId}) for {MicroserviceId}:{TenantId}:{EventSequenceId} at {EventSequenceNumber}", _queueId, _microserviceId, _tenantId, _eventSequenceId, @event.Metadata.SequenceNumber);
             return new EventSequenceBatchContainer(
                 new[] { @event },
                 _eventSequenceId,
@@ -102,7 +101,6 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     {
         if (_to == EventSequenceNumber.Unavailable)
         {
-            _logger.LogInformation("MoveNext ({QueueId}) to is set to unavailable for {MicroserviceId}:{TenantId}:{EventSequenceId} - no more events", _queueId, _microserviceId, _tenantId, _eventSequenceId);
             return false;
         }
 
@@ -128,8 +126,6 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         }
 
         var atEnd = _currentIndex >= _events.Length;
-        _logger.LogInformation("At the end? : {AtEnd}", atEnd);
-
         return !atEnd;
     }
 
@@ -141,11 +137,8 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
             return;
         }
 
-        _logger.LogInformation("Refreshing ({QueueId}) for {MicroserviceId}:{TenantId}:{EventSequenceId} at {CurrentIndex}", _queueId, _microserviceId, _tenantId, _eventSequenceId, _currentIndex);
-
         if( _events.Any(_ => _.Metadata.SequenceNumber == (ulong)token.SequenceNumber))
         {
-            _logger.LogInformation("Refreshing ({QueueId}) for {MicroserviceId}:{TenantId}:{EventSequenceId} at {CurrentIndex} - found event in cursor", _queueId, _microserviceId, _tenantId, _eventSequenceId, _currentIndex);
             return;
         }
         GetEventsFromCache((ulong)token.SequenceNumber);
@@ -154,15 +147,12 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// <inheritdoc/>
     public void RecordDeliveryFailure()
     {
-        _logger.LogInformation("RecordDeliveryFailure ({QueueId}) for {MicroserviceId}:{TenantId}:{EventSequenceId} at {EventSequenceNumber}", _queueId, _microserviceId, _tenantId, _eventSequenceId, _events[_currentIndex].Metadata.SequenceNumber);
     }
 
     void GetEventsFromCache(EventSequenceNumber from)
     {
-        _logger.LogInformation("GetEventsFromCache ({QueueId}) for {MicroserviceId}:{TenantId}:{EventSequenceId} at {From}", _queueId, _microserviceId, _tenantId, _eventSequenceId, from);
         _events = _cache.GetView(from).ToArray();
 
-        _logger.LogInformation("Events in cache {Events}", _events.Length);
         if (!_events.Any())
         {
             _cache.Prime(from);
