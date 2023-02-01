@@ -1,37 +1,38 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.EventSequences;
+using Microsoft.Extensions.Logging;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueCache"/> for MongoDB event log.
 /// </summary>
 public class EventSequenceQueueCache : IQueueCache
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
     readonly IEventSequenceCaches _caches;
+    readonly ILogger _logger;
+    readonly QueueId _queueId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCache"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    /// <param name="eventSequenceStorageProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     /// <param name="caches"></param>
+    /// <param name="logger"></param>
+    /// <param name="queueId"></param>
     public EventSequenceQueueCache(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
-        IEventSequenceCaches caches)
+        IEventSequenceCaches caches,
+        ILogger logger,
+        QueueId queueId)
     {
-        _executionContextManager = executionContextManager;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _caches = caches;
+        _logger = logger;
+        _queueId = queueId;
     }
 
     /// <inheritdoc/>
@@ -69,12 +70,12 @@ public class EventSequenceQueueCache : IQueueCache
                 microserviceAndTenant.MicroserviceId,
                 microserviceAndTenant.TenantId,
                 (EventSequenceId)streamIdentity.Guid),
-            _executionContextManager,
-            _eventSequenceStorageProvider,
             microserviceAndTenant.MicroserviceId,
             microserviceAndTenant.TenantId,
             (EventSequenceId)streamIdentity.Guid,
-            (ulong)token.SequenceNumber);
+            (ulong)token.SequenceNumber,
+            _logger,
+            _queueId);
     }
 
     /// <inheritdoc/>

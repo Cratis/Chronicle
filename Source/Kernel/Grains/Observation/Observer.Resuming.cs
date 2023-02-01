@@ -51,7 +51,19 @@ public partial class Observer
         _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
         _streamSubscriptionsByEventSourceId[eventSourceId] = await _stream!.SubscribeAsync(
             async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, tailSequenceNumber),
-            new EventSequenceNumberTokenWithFilter(sequenceNumber, State.EventTypes, eventSourceId));
+            new EventSequenceNumberToken(sequenceNumber),
+            EventTypesAndEventSourceIdFilter,
+            new EventTypesAndEventSourceId(State.EventTypes, eventSourceId));
+    }
+
+    static bool EventTypesAndEventSourceIdFilter(IStreamIdentity stream, object filterData, object item)
+    {
+        var appendedEvent = (item as AppendedEvent)!;
+        var eventTypesAndEventSourceId = (filterData as EventTypesAndEventSourceId)!;
+
+        return
+            appendedEvent.Context.EventSourceId == eventTypesAndEventSourceId.EventSourceId &&
+            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Equals(appendedEvent.Metadata.Type));
     }
 
     async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, EventSequenceNumber tailSequenceNumber)

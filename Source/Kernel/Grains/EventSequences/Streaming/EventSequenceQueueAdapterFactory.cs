@@ -3,11 +3,11 @@
 
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IQueueAdapterFactory"/> for our persistent event store.
@@ -23,22 +23,19 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
-    /// <param name="eventLogStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
     /// <param name="eventSequenceCaches"></param>
+    /// <param name="logger"></param>
     public EventSequenceQueueAdapterFactory(
         string name,
-        IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequences> eventLogsProvider,
-        ProviderFor<IEventSequenceStorageProvider> eventLogStorageProvider,
-        IEventSequenceCaches eventSequenceCaches)
+        IEventSequenceCaches eventSequenceCaches,
+        ILogger<object> logger)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventSequenceQueueAdapterCache(
-            executionContextManager,
-            eventLogStorageProvider,
-            eventSequenceCaches);
+            eventSequenceCaches,
+            logger);
         _name = name;
         _eventLogsProvider = eventLogsProvider;
     }
@@ -53,10 +50,9 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     {
         return new(
             name,
-            serviceProvider.GetRequiredService<IExecutionContextManager>(),
             serviceProvider.GetRequiredService<ProviderFor<IEventSequences>>(),
-            serviceProvider.GetRequiredService<ProviderFor<IEventSequenceStorageProvider>>(),
-            serviceProvider.GetRequiredService<IEventSequenceCaches>());
+            serviceProvider.GetRequiredService<IEventSequenceCaches>(),
+            serviceProvider.GetRequiredService<ILogger<object>>());
     }
 
     /// <inheritdoc/>

@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis;
-using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -10,9 +8,9 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
+using Aksio.Cratis.Kernel.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.MongoDB.Tenants;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -28,7 +26,7 @@ public static class SiloBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="ISiloBuilder"/> to add for.</param>
     /// <returns><see cref="ISiloBuilder"/> for builder continuation.</returns>
-    public static ISiloBuilder AddEventSequenceStream(this ISiloBuilder builder)
+    public static ISiloBuilder UseMongoDB(this ISiloBuilder builder)
     {
         // TODO: Store Grain state in Mongo
         builder.AddMemoryGrainStorage("PubSubStore");
@@ -39,15 +37,7 @@ public static class SiloBuilderExtensions
             services.AddSingletonNamedService<IGrainStorage>(TenantConfigurationState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(ConnectedClientsState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>());
         });
-
-        builder.AddPersistentStreams(
-            WellKnownProviders.EventSequenceStreamProvider,
-            EventSequenceQueueAdapterFactory.Create,
-            _ =>
-            {
-                _.Configure<HashRingStreamQueueMapperOptions>(ob => ob.Configure(options => options.TotalQueueCount = 8));
-                _.ConfigureStreamPubSub();
-            });
+        builder.ConfigureServices(services => services.AddSingleton<IReminderTable, MongoDBReminderTable>());
         return builder;
     }
 }

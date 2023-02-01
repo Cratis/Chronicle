@@ -125,6 +125,11 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
 
     async Task HandleEventForPartitionedObserver(AppendedEvent @event, bool setLastHandled = false)
     {
+        if (_observerId == "d661904f-15e0-4a96-a0cc-c7389635e4cd")
+        {
+            Console.WriteLine("Hello");
+        }
+
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -209,7 +214,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         }
     }
 
-    static bool ObserverFilter(IStreamIdentity stream, object filterData, object item)
+    static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
     {
         var appendedEvent = (item as AppendedEvent)!;
         var eventTypes = (filterData as IEnumerable<EventType>)!;
@@ -228,7 +233,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
                 return handler(@event);
             },
             new EventSequenceNumberToken(State.NextEventSequenceNumber),
-            ObserverFilter,
+            EventTypesFilter,
             State.EventTypes);
         //State.EventTypes.Any() ? new EventSequenceNumberTokenWithFilter(State.NextEventSequenceNumber, State.EventTypes) : new EventSequenceNumberToken(State.NextEventSequenceNumber));
 
