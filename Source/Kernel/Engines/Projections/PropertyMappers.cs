@@ -5,6 +5,9 @@ using System.Dynamic;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Types;
+using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 
@@ -75,21 +78,32 @@ public static class PropertyMappers
     /// <summary>
     /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can count by increasing the target property when called.
     /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> to use.</param>
     /// <param name="targetProperty">Target property.</param>
+    /// <param name="targetPropertySchema">The target properties <see cref="JsonSchemaProperty"/>.</param>
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
-    public static PropertyMapper<AppendedEvent, ExpandoObject> Count(PropertyPath targetProperty)
+    public static PropertyMapper<AppendedEvent, ExpandoObject> Count(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
     {
+        var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats);
+
         return (AppendedEvent @event, ExpandoObject target, IArrayIndexers arrayIndexers) =>
         {
             var lastSegment = targetProperty.LastSegment;
             var actualTarget = target.EnsurePath(targetProperty, arrayIndexers) as IDictionary<string, object>;
             if (!actualTarget.ContainsKey(lastSegment.Value))
             {
-                actualTarget[lastSegment.Value] = 0D;
+                actualTarget[lastSegment.Value] = 0;
             }
-            var value = (double)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(double));
+            var value = (int)Convert.ChangeType(actualTarget[lastSegment.Value], typeof(int));
             value++;
-            actualTarget[lastSegment.Value] = value;
+            if (targetType?.Equals(typeof(int)) == false)
+            {
+                actualTarget[lastSegment.Value] = TypeConversion.Convert(targetType, value);
+            }
+            else
+            {
+                actualTarget[lastSegment.Value] = value;
+            }
         };
     }
 }
