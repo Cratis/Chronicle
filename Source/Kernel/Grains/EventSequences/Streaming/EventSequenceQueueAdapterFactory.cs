@@ -4,7 +4,6 @@
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -24,18 +23,14 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
-    /// <param name="eventSequenceCaches"></param>
-    /// <param name="logger"></param>
+    /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
         ProviderFor<IEventSequences> eventLogsProvider,
-        IEventSequenceCaches eventSequenceCaches,
-        ILogger<object> logger)
+        IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
-        _cache = new EventSequenceQueueAdapterCache(
-            eventSequenceCaches,
-            logger);
+        _cache = new EventSequenceQueueAdapterCache(caches);
         _name = name;
         _eventLogsProvider = eventLogsProvider;
     }
@@ -51,8 +46,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
         return new(
             name,
             serviceProvider.GetRequiredService<ProviderFor<IEventSequences>>(),
-            serviceProvider.GetRequiredService<IEventSequenceCaches>(),
-            serviceProvider.GetRequiredService<ILogger<object>>());
+            serviceProvider.GetRequiredService<IEventSequenceCaches>());
     }
 
     /// <inheritdoc/>

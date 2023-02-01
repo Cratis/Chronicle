@@ -5,7 +5,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
-using Microsoft.Extensions.Logging;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -16,23 +15,15 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 public class EventSequenceQueueCache : IQueueCache
 {
     readonly IEventSequenceCaches _caches;
-    readonly ILogger _logger;
-    readonly QueueId _queueId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCache"/> class.
     /// </summary>
-    /// <param name="caches"></param>
-    /// <param name="logger"></param>
-    /// <param name="queueId"></param>
+    /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueCache(
-        IEventSequenceCaches caches,
-        ILogger logger,
-        QueueId queueId)
+        IEventSequenceCaches caches)
     {
         _caches = caches;
-        _logger = logger;
-        _queueId = queueId;
     }
 
     /// <inheritdoc/>
@@ -73,9 +64,7 @@ public class EventSequenceQueueCache : IQueueCache
             microserviceAndTenant.MicroserviceId,
             microserviceAndTenant.TenantId,
             (EventSequenceId)streamIdentity.Guid,
-            (ulong)token.SequenceNumber,
-            _logger,
-            _queueId);
+            (ulong)token.SequenceNumber);
     }
 
     /// <inheritdoc/>
