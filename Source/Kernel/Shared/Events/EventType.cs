@@ -12,6 +12,11 @@ namespace Aksio.Cratis.Events;
 public record EventType(EventTypeId Id, EventGeneration Generation, bool IsPublic = false)
 {
     /// <summary>
+    /// Represents an unknown event type.
+    /// </summary>
+    public static readonly EventType Unknown = new(EventTypeId.Unknown, EventGeneration.First);
+
+    /// <summary>
     /// Implicitly convert from <see cref="EventType"/> to string.
     /// </summary>
     /// <param name="type">EventType to convert from.</param>
