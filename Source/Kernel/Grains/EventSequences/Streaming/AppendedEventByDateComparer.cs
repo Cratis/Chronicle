@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 #pragma warning disable RCS1241 // Implement IComparer
 

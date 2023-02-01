@@ -3,10 +3,11 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.EventSequences;
 using Orleans.Runtime;
 using Orleans.Streams;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an implementation of <see cref="IBatchContainer"/> for MongoDB event sequence events.

@@ -3,16 +3,16 @@
 
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 #pragma warning disable RCS1241 // Implement IComparer
 
 /// <summary>
 /// Represents a comparer for <see cref="AppendedEvent"/> by sequence number.
 /// </summary>
-public class AppendedEventComparer : IComparer<AppendedEventWithSequenceNumber>
+public class AppendedEventComparer : IComparer<AppendedEvent>
 {
     /// <inheritdoc/>
-    public int Compare(AppendedEventWithSequenceNumber? x, AppendedEventWithSequenceNumber? y) =>
-        Comparer<ulong>.Default.Compare(x?.SequenceNumber.Value ?? ulong.MaxValue, y?.SequenceNumber.Value ?? ulong.MaxValue);
+    public int Compare(AppendedEvent? x, AppendedEvent? y) =>
+        Comparer<ulong>.Default.Compare(x?.Metadata.SequenceNumber.Value ?? ulong.MaxValue, y?.Metadata.SequenceNumber.Value ?? ulong.MaxValue);
 }

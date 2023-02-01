@@ -4,7 +4,7 @@
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Defines a system that works with event sequence caches.

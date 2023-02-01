@@ -3,12 +3,12 @@
 
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Defines a system that can cache events.
 /// </summary>
-public interface IEventSequenceCache
+public interface IEventSequenceCache : IDisposable
 {
     /// <summary>
     /// Add an event to the cache.
@@ -22,5 +22,11 @@ public interface IEventSequenceCache
     /// <param name="from">The from sequence number.</param>
     /// <param name="to">Optional to sequence number.</param>
     /// <returns>A view containing a collection of <see cref="AppendedEvent"/>.</returns>
-    IEnumerable<AppendedEvent> GetView(EventSequenceNumber from, EventSequenceNumber? to = null);
+    SortedSet<AppendedEvent> GetView(EventSequenceNumber from, EventSequenceNumber? to = null);
+
+    /// <summary>
+    /// Populate the cache from a specific sequence number.
+    /// </summary>
+    /// <param name="from">The sequence number to populate from.</param>
+    void Prime(EventSequenceNumber from);
 }

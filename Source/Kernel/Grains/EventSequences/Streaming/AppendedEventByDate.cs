@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
 /// <summary>
 /// Represents an appended event with a date time.
