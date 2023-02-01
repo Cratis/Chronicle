@@ -29,4 +29,15 @@ public interface IEventSequenceCache : IDisposable
     /// </summary>
     /// <param name="from">The sequence number to populate from.</param>
     void Prime(EventSequenceNumber from);
+
+    /// <summary>
+    /// Check if the cache is under pressure.
+    /// </summary>
+    /// <returns>True if it is, false if not.</returns>
+    bool IsUnderPressure();
+
+    /// <summary>
+    /// Purge items from cache if cache is under pressure.
+    /// </summary>
+    void Purge();
 }

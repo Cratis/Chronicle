@@ -26,7 +26,10 @@ public class EventSequenceCaches : IEventSequenceCaches
     /// <param name="executionContextManager"></param>
     /// <param name="eventSequenceStorageProvider"></param>
     /// <param name="logger"></param>
-    public EventSequenceCaches(IExecutionContextManager executionContextManager, ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider, ILogger<EventSequenceCache> logger)
+    public EventSequenceCaches(
+        IExecutionContextManager executionContextManager,
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        ILogger<EventSequenceCache> logger)
     {
         _executionContextManager = executionContextManager;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
@@ -44,5 +47,17 @@ public class EventSequenceCaches : IEventSequenceCaches
         }
 
         return cache;
+    }
+
+    /// <inheritdoc/>
+    public bool IsUnderPressure() => _caches.Values.Any(_ => _.IsUnderPressure());
+
+    /// <inheritdoc/>
+    public void Purge()
+    {
+        foreach (var cache in _caches.Values.Where(_ => _.IsUnderPressure()))
+        {
+            cache.Purge();
+        }
     }
 }

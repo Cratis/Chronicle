@@ -14,6 +14,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </summary>
 public class EventSequenceCache : IEventSequenceCache
 {
+    const int MaxNumberOfEvents = 10000;
     readonly object _lock = new();
 
     readonly SortedSet<AppendedEvent> _events;
@@ -99,6 +100,31 @@ public class EventSequenceCache : IEventSequenceCache
                 lock (_lock)
                 {
                     Add(@event);
+                }
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool IsUnderPressure()
+    {
+        lock (_lock)
+        {
+            return _events.Count > MaxNumberOfEvents;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Purge()
+    {
+        if (IsUnderPressure())
+        {
+            lock (_lock)
+            {
+                foreach (var @event in _eventsByDate.Take(_events.Count - MaxNumberOfEvents).ToList())
+                {
+                    _events.Remove(@event.Event);
+                    _eventsByDate.Remove(@event);
                 }
             }
         }
