@@ -19,4 +19,12 @@ public record AppendedEvent(EventMetadata Metadata, EventContext Context, Expand
     /// <param name="eventSequenceNumber">Event sequence number it should hold.</param>
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event sequence number.</returns>
     public static AppendedEvent EmptyWithEventSequenceNumber(EventSequenceNumber eventSequenceNumber) => new(EventMetadata.EmptyWithEventSequenceNumber(eventSequenceNumber), EventContext.Empty, new ExpandoObject());
+
+    /// <summary>
+    /// Represents an empty <see cref="AppendedEvent"/> with a specific event type.
+    /// </summary>
+    /// <param name="eventType">Type of event it should be.</param>
+    /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>
+    public static AppendedEvent EmptyWithEventType(EventType eventType) => new(new EventMetadata(EventSequenceNumber.First, eventType), EventContext.Empty, new ExpandoObject());
+
 }
