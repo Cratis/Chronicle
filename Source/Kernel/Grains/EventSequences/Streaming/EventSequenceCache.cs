@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
+#pragma warning disable CA1051 // Do not declare visible instance fields
+
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceCache"/>.
 /// </summary>
@@ -24,10 +26,12 @@ public class EventSequenceCache : IEventSequenceCache
     /// </summary>
     public const int NumberOfEventsToFetch = 1000;
 
-    readonly object _lock = new();
-
+#pragma warning disable SA1600 // Elements should be documented
     protected readonly SortedSet<AppendedEvent> _events;
     protected readonly SortedSet<AppendedEventByDate> _eventsByDate;
+#pragma warning restore SA1600
+
+    readonly object _lock = new();
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
@@ -107,13 +111,16 @@ public class EventSequenceCache : IEventSequenceCache
         _logger.Priming(from, to);
         _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
         var eventCursor = _eventSequenceStorageProvider().GetRange(_eventSequenceId, from, to).GetAwaiter().GetResult();
-        while (eventCursor.MoveNext().GetAwaiter().GetResult())
+
+        lock (_lock)
         {
-            foreach (var @event in eventCursor.Current)
+            while (eventCursor.MoveNext().GetAwaiter().GetResult())
             {
-                lock (_lock)
+                foreach (var @event in eventCursor.Current)
                 {
-                    Add(@event);
+                    {
+                        Add(@event);
+                    }
                 }
             }
         }
@@ -122,10 +129,7 @@ public class EventSequenceCache : IEventSequenceCache
     /// <inheritdoc/>
     public bool IsUnderPressure()
     {
-        lock (_lock)
-        {
-            return _events.Count > MaxNumberOfEvents;
-        }
+        return _events.Count > MaxNumberOfEvents;
     }
 
     /// <inheritdoc/>
