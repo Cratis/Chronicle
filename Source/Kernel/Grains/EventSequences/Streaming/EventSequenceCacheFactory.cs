@@ -20,8 +20,8 @@ public class EventSequenceCacheFactory : IEventSequenceCacheFactory
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCacheFactory"/> class.
     /// </summary>
-    /// <param name="executionContextManager"></param>
-    /// <param name="eventSequenceStorageProvider"></param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public EventSequenceCacheFactory(
         IExecutionContextManager executionContextManager,

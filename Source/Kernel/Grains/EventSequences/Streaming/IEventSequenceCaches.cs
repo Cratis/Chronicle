@@ -15,7 +15,7 @@ public interface IEventSequenceCaches
     /// Get the cache for a specific event sequence for a specific tenant and microservice.
     /// </summary>
     /// <param name="microserviceId">MicroserviceId to get for.</param>
-    /// <param name="tenantId">TenantId to get for</param>
+    /// <param name="tenantId">TenantId to get for.</param>
     /// <param name="eventSequenceId">EventSequenceId to get for.</param>
     /// <returns>The <see cref="IEventSequenceCache"/> associated.</returns>
     IEventSequenceCache GetFor(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId);
