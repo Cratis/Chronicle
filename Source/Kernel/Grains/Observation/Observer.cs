@@ -55,7 +55,7 @@ public class Observer<TState> : Grain<TState>
     /// <summary>
     /// Handle an <see cref="AppendedEvent"/>.
     /// </summary>
-    /// <param name="@event">The <see cref="AppendedEvent"/> to handle.</param>
+    /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
     public Task<bool> Handle(AppendedEvent @event)
     {
         return Task.FromResult(true);
