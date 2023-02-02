@@ -19,14 +19,11 @@ public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
     /// <inheritdoc/>
     public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
     {
-        lock (_eventBatches)
+        if (!_eventBatches.IsEmpty)
         {
-            if (!_eventBatches.IsEmpty)
-            {
-                var result = _eventBatches.OrderBy(_ => _.SequenceToken).ToArray().ToList();
-                _eventBatches.Clear();
-                return Task.FromResult<IList<IBatchContainer>>(result);
-            }
+            var result = _eventBatches.OrderBy(_ => _.SequenceToken).ToArray().ToList();
+            _eventBatches.Clear();
+            return Task.FromResult<IList<IBatchContainer>>(result);
         }
 
         return Task.FromResult<IList<IBatchContainer>>(_empty);
@@ -55,9 +52,6 @@ public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
             return;
         }
 
-        lock (_eventBatches)
-        {
-            _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, requestContext));
-        }
+        _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, requestContext));
     }
 }
