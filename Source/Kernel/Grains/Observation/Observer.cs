@@ -66,7 +66,7 @@ public abstract class Observer : Grain
     protected IObserverSupervisor Supervisor => _supervisor ??= this switch
     {
         IObserverSupervisor supervisor => supervisor,
-        _ => GrainFactory.GetGrain<IObserverSupervisor>(ObserverId, new ObserverKey(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId));
+        _ => GrainFactory.GetGrain<IObserverSupervisor>(ObserverId, new ObserverKey(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId))
     };
 
     IEventSequenceStorageProvider EventSequenceStorageProvider
