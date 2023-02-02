@@ -41,7 +41,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     public async Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventType> eventTypes)
     {
         _logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
-        var observer = GrainFactory.GetGrain<IObserver>(_observerId!, _observerKey!);
+        var observer = GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
         await connectedClients.SubscribeDisconnected(this);
         await observer.SetMetadata(name, ObserverType.Client);
@@ -54,7 +54,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         _logger.ClientDisconnected(client.ConnectionId, _observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverKey.Parse(keyAsString);
-        var observer = GrainFactory.GetGrain<IObserver>(id, key);
+        var observer = GrainFactory.GetGrain<IObserverSupervisor>(id, key);
         observer.Unsubscribe();
     }
 }

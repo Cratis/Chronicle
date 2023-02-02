@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverState;
+namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisorState;
 
 public class when_clearing_recovered_partitions_that_has_failed : given.a_failed_partition
 {
