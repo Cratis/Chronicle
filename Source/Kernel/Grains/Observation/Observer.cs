@@ -10,7 +10,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents a base class for all observers containing common methods and functionality.
 /// </summary>
-public class Observer : Grain
+/// <typeparam name="TState">Type of state for the grain.</typeparam>
+public class Observer<TState> : Grain<TState>
 {
     /// <summary>
     /// Represents a filter for event types.
