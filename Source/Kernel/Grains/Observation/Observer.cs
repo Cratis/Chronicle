@@ -63,12 +63,18 @@ public abstract class Observer : Grain
     /// </summary>
     protected ObserverId ObserverId => ObserverState.State.ObserverId;
 
+    /// <summary>
+    /// Gets the <see cref="IObserverSupervisor"/>.
+    /// </summary>
     protected IObserverSupervisor Supervisor => _supervisor ??= this switch
     {
         IObserverSupervisor supervisor => supervisor,
         _ => GrainFactory.GetGrain<IObserverSupervisor>(ObserverId, new ObserverKey(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId))
     };
 
+    /// <summary>
+    /// Gets the <see cref="IEventSequenceStorageProvider"/> in the correct context.
+    /// </summary>
     protected IEventSequenceStorageProvider EventSequenceStorageProvider
     {
         get
@@ -101,14 +107,15 @@ public abstract class Observer : Grain
         _logger = logger;
     }
 
+#pragma warning disable IDE0060 // allow unused parameter
     /// <summary>
     /// Represents a filter for event types.
     /// </summary>
-    /// <param name="_">The stream identity.</param>
-    /// <param name="filterData">Data associated with the filter</param>
-    /// <param name="item">Item to filter</param>
+    /// <param name="streamIdentity">The stream identity.</param>
+    /// <param name="filterData">Data associated with the filter.</param>
+    /// <param name="item">Item to filter.</param>
     /// <returns>True if its to be included, false if not.</returns>
-    public static bool EventTypesFilter(IStreamIdentity _, object filterData, object item)
+    public static bool EventTypesFilter(IStreamIdentity streamIdentity, object filterData, object item)
     {
         var appendedEvent = (item as AppendedEvent)!;
         var eventTypes = (filterData as EventType[])!;
@@ -122,11 +129,11 @@ public abstract class Observer : Grain
     /// <summary>
     /// Represents a filter for event types.
     /// </summary>
-    /// <param name="_">The stream identity.</param>
-    /// <param name="filterData">Data associated with the filter</param>
-    /// <param name="item">Item to filter</param>
+    /// <param name="streamIdentity">The stream identity.</param>
+    /// <param name="filterData">Data associated with the filter.</param>
+    /// <param name="item">Item to filter.</param>
     /// <returns>True if its to be included, false if not.</returns>
-    public static bool EventTypesAndEventSourceIdFilter(IStreamIdentity _, object filterData, object item)
+    public static bool EventTypesAndEventSourceIdFilter(IStreamIdentity streamIdentity, object filterData, object item)
     {
         var appendedEvent = (item as AppendedEvent)!;
         var eventTypesAndEventSourceId = (filterData as EventTypesAndEventSourceId)!;
@@ -139,12 +146,14 @@ public abstract class Observer : Grain
             appendedEvent.Context.EventSourceId == eventTypesAndEventSourceId.EventSourceId &&
             shouldIncludeEventType;
     }
+#pragma warning restore IDE0060
 
     /// <summary>
     /// Handle an <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
     /// <param name="setLastHandled">Whether or not to set last handled.</param>
+    /// <returns>Awaitable task.</returns>
     public async Task Handle(AppendedEvent @event, bool setLastHandled)
     {
         var failed = false;

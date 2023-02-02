@@ -26,5 +26,4 @@ public record AppendedEvent(EventMetadata Metadata, EventContext Context, Expand
     /// <param name="eventType">Type of event it should be.</param>
     /// <returns>An empty <see cref="AppendedEvent"/> with a specific event type.</returns>
     public static AppendedEvent EmptyWithEventType(EventType eventType) => new(new EventMetadata(EventSequenceNumber.First, eventType), EventContext.Empty, new ExpandoObject());
-
 }
