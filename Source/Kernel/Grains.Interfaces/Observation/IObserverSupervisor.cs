@@ -47,4 +47,10 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <param name="eventSourceId">The partition to try to resume.</param>
     /// <returns>Awaitable task.</returns>
     Task TryResumePartition(EventSourceId eventSourceId);
+
+    /// <summary>
+    /// Notify that catch-up is complete.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task NotifyCatchUpComplete();
 }
