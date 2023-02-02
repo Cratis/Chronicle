@@ -119,6 +119,9 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
         await WriteStateAsync();
     }
 
+    /// <inheritdoc/>
+    public Task NotifyCatchUpComplete() => throw new NotImplementedException();
+
     static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
     {
         var appendedEvent = (item as AppendedEvent)!;
