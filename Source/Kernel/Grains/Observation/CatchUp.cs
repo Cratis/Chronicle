@@ -83,6 +83,6 @@ public class CatchUp : Observer, ICatchUp
             }
         }
 
-        await GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!).NotifyCatchUpComplete();
+        await Supervisor.NotifyCatchUpComplete();
     }
 }
