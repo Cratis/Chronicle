@@ -5,14 +5,16 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Observation;
+using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICatchUp"/>.
 /// </summary>
-public class CatchUp : Observer<CatchUpState>, ICatchUp
+public class CatchUp : Observer, ICatchUp
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
@@ -24,13 +26,32 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for </param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public CatchUp(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider)
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        [PersistentState(nameof(ObserverState), Observation.ObserverState.CatchUpStorageProvider)] IPersistentState<ObserverState> observerState,
+        ILogger<CatchUp> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
     {
         _executionContextManager = executionContextManager;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
+
+    /// <inheritdoc/>
+    protected override MicroserviceId MicroserviceId => _observerKey!.MicroserviceId;
+
+    /// <inheritdoc/>
+    protected override TenantId TenantId => _observerKey!.TenantId;
+
+    /// <inheritdoc/>
+    protected override EventSequenceId EventSequenceId => _observerKey!.EventSequenceId;
+
+    /// <inheritdoc/>
+    protected override MicroserviceId? SourceMicroserviceId => _observerKey!.SourceMicroserviceId;
+
+    /// <inheritdoc/>
+    protected override TenantId? SourceTenantId => _observerKey!.SourceTenantId;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync()
@@ -41,8 +62,9 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
     }
 
     /// <inheritdoc/>
-    public Task Start()
+    public Task Start(Type subscriberType)
     {
+        SubscriberType = subscriberType;
         RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.MaxValue);
         return Task.CompletedTask;
     }
@@ -52,16 +74,12 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
         _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
         var provider = _eventSequenceStorageProvider();
 
-        var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, State.NextEventSequenceNumber, eventTypes: State.EventTypes);
+        var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, ObserverState.State.NextEventSequenceNumber, eventTypes: ObserverState.State.EventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
             {
-                if (await Handle(@event))
-                {
-                    State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-                    await WriteStateAsync();
-                }
+                await Handle(@event, false);
             }
         }
 

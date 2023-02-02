@@ -62,7 +62,7 @@ public class ObserverStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public virtual async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
         var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString);
