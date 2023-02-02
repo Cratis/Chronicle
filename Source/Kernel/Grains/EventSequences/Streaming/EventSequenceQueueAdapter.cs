@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Orleans.Streams;
 
@@ -79,7 +80,15 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 {
                     // Make sure we put all successful events on the stream for any subscribers to get.
                     _receivers[queueId].AddAppendedEvent(streamGuid, streamNamespace, appendedEvents, requestContext);
-                    throw new UnableToAppendToEventSequence(streamGuid, streamNamespace, appendedEvent.Metadata.SequenceNumber, appendedEvent.Context.EventSourceId, ex);
+                    var microserviceAndTenant = MicroserviceAndTenant.Parse(streamNamespace);
+
+                    throw new UnableToAppendToEventSequence(
+                        streamGuid,
+                        microserviceAndTenant.MicroserviceId,
+                        microserviceAndTenant.TenantId,
+                        appendedEvent.Metadata.SequenceNumber,
+                        appendedEvent.Context.EventSourceId,
+                        ex);
                 }
             }
         }
