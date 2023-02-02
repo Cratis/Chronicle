@@ -75,7 +75,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 
         if (first is not null)
         {
-            var client = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
+            using var client = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
             client.BaseAddress = first.ClientUri;
 
             var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
