@@ -18,7 +18,6 @@ public class CatchUp : Observer, ICatchUp
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
-    ObserverId? _observerId;
     ObserverKey? _observerKey;
 
     /// <summary>
@@ -56,7 +55,7 @@ public class CatchUp : Observer, ICatchUp
     /// <inheritdoc/>
     public override Task OnActivateAsync()
     {
-        _observerId = this.GetPrimaryKey(out var keyAsString);
+        _ = this.GetPrimaryKey(out var keyAsString);
         _observerKey = ObserverKey.Parse(keyAsString);
         return Task.CompletedTask;
     }
