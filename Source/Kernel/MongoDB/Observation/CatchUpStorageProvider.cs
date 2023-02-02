@@ -27,6 +27,6 @@ public class CatchUpStorageProvider : ObserverStorageProvider
     /// <inheritdoc/>
     public override Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
-        return Task.CompletedTask;
+        return base.WriteStateAsync(grainType, grainReference, grainState);
     }
 }

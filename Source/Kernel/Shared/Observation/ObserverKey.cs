@@ -22,6 +22,11 @@ public record ObserverKey(
     TenantId? SourceTenantId = default)
 {
     /// <summary>
+    /// Gets the empty <see cref="ObserverKey"/>.
+    /// </summary>
+    public static ObserverKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Unspecified);
+
+    /// <summary>
     /// Implicitly convert from <see cref="ObserverKey"/> to string.
     /// </summary>
     /// <param name="key"><see cref="ObserverKey"/> to convert from.</param>

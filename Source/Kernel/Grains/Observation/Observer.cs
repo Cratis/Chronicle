@@ -69,7 +69,7 @@ public abstract class Observer : Grain
         _ => GrainFactory.GetGrain<IObserverSupervisor>(ObserverId, new ObserverKey(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId))
     };
 
-    IEventSequenceStorageProvider EventSequenceStorageProvider
+    protected IEventSequenceStorageProvider EventSequenceStorageProvider
     {
         get
         {

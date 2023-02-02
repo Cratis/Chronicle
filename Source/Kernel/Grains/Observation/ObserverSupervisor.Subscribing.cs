@@ -79,7 +79,15 @@ public partial class ObserverSupervisor
         }
 
         await WriteStateAsync();
-        await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
+
+        if (State.RunningState == ObserverRunningState.CatchingUp)
+        {
+            await GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(_subscriberType);
+        }
+        else
+        {
+            await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
+        }
     }
 
     Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event)
