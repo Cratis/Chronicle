@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
@@ -13,6 +14,7 @@ namespace Aksio.Cratis.Kernel.Engines.Compliance;
 /// <summary>
 /// Represents an implementation of <see cref="IJsonComplianceManager"/>.
 /// </summary>
+[Singleton]
 public class JsonComplianceManager : IJsonComplianceManager
 {
     readonly Dictionary<ComplianceMetadataType, IJsonCompliancePropertyValueHandler> _propertyValueHandlers;
