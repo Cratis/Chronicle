@@ -11,6 +11,8 @@ namespace Aksio.Cratis.Schemas;
 /// </summary>
 public static class JsonSchemaExtensions
 {
+    const string FlattenedProperties = "x-flattened-properties";
+
     /// <summary>
     /// Ensure the metadata is correct with correct types.
     /// </summary>
@@ -44,15 +46,39 @@ public static class JsonSchemaExtensions
     }
 
     /// <summary>
+    /// Ensure the flattened properties are available.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to ensure for.</param>
+    public static void EnsureFlattenedProperties(this JsonSchema schema)
+    {
+        if (schema.ExtensionData?.ContainsKey(FlattenedProperties) != true || schema.ExtensionData?[FlattenedProperties] is not IEnumerable<JsonSchemaProperty>)
+        {
+            var properties = new List<JsonSchemaProperty>();
+            CollectPropertiesFrom(schema, properties);
+
+            schema.ExtensionData ??= new Dictionary<string, object>();
+            schema.ExtensionData[FlattenedProperties] = properties.DistinctBy(_ => _.Name).ToArray().AsEnumerable();
+        }
+    }
+
+    /// <summary>
+    /// Reset the flattened properties.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to reset for.</param>
+    public static void ResetFlattenedProperties(this JsonSchema schema)
+    {
+        schema.ExtensionData.Remove(FlattenedProperties);
+    }
+
+    /// <summary>
     /// Get all actual properties from a schema, including any inherited properties from inherited schemas.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
     /// <returns>Collection of <see cref="JsonSchemaProperty"/>.</returns>
     public static IEnumerable<JsonSchemaProperty> GetFlattenedProperties(this JsonSchema schema)
     {
-        var properties = new List<JsonSchemaProperty>();
-        CollectPropertiesFrom(schema, properties);
-        return properties.DistinctBy(_ => _.Name).ToArray();
+        EnsureFlattenedProperties(schema);
+        return (schema.ExtensionData[FlattenedProperties] as IEnumerable<JsonSchemaProperty>)!;
     }
 
     /// <summary>

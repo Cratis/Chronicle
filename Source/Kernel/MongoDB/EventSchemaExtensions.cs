@@ -35,6 +35,8 @@ public static class EventSchemaExtensions
     {
         var result = JsonSchema.FromJsonAsync(schema.Schema).GetAwaiter().GetResult();
         result.EnsureCorrectMetadata();
+        result.ResetFlattenedProperties();
+        result.EnsureFlattenedProperties();
 
         return new EventSchema(
             new EventType(
