@@ -17,5 +17,6 @@ public record AppendedEvent(EventMetadata Metadata, EventContext Context, Expand
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event sequence number.
     /// </summary>
     /// <param name="eventSequenceNumber">Event sequence number it should hold.</param>
+    /// <returns>An empty <see cref="AppendedEvent"/> with a specific event sequence number.</returns>
     public static AppendedEvent EmptyWithEventSequenceNumber(EventSequenceNumber eventSequenceNumber) => new(EventMetadata.EmptyWithEventSequenceNumber(eventSequenceNumber), EventContext.Empty, new ExpandoObject());
 }

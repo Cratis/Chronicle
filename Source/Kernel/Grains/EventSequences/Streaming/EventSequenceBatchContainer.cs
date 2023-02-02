@@ -35,6 +35,9 @@ public class EventSequenceBatchContainer : IBatchContainer
     /// </summary>
     public TenantId TenantId { get; }
 
+    /// <summary>
+    /// Gets the associated request context.
+    /// </summary>
     public IDictionary<string, object> AssociatedRequestContext { get; }
 
     /// <summary>
