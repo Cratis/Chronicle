@@ -14,6 +14,7 @@ public interface ICatchUp : IGrainWithGuidKey
     /// <summary>
     /// Starts a catch up process for a given observer.
     /// </summary>
+    /// <param name="subscriberType">Type of subscriber.</param>
     /// <returns>Awaitable task.</returns>
-    Task Start();
+    Task Start(Type subscriberType);
 }
