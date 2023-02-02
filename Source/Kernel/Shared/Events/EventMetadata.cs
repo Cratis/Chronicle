@@ -14,5 +14,5 @@ public record EventMetadata(EventSequenceNumber SequenceNumber, EventType Type)
     /// Represents an empty <see cref="EventMetadata"/> with a specific event sequence number.
     /// </summary>
     /// <param name="eventSequenceNumber">The event sequence number it should hold.</param>
-    internal static EventMetadata EmptyWithEventSequenceNumber(EventSequenceNumber eventSequenceNumber) => new EventMetadata(eventSequenceNumber, EventType.Unknown);
+    public static EventMetadata EmptyWithEventSequenceNumber(EventSequenceNumber eventSequenceNumber) => new(eventSequenceNumber, EventType.Unknown);
 }
