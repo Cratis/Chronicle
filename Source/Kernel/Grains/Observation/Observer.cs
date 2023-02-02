@@ -51,4 +51,12 @@ public class Observer<TState> : Grain<TState>
             appendedEvent.Context.EventSourceId == eventTypesAndEventSourceId.EventSourceId &&
             shouldIncludeEventType;
     }
+
+    /// <summary>
+    /// Handle an <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="@event">The <see cref="AppendedEvent"/> to handle.</param>
+    public void Handle(AppendedEvent @event)
+    {
+    }
 }
