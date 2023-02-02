@@ -62,7 +62,7 @@ public partial class Observer
         var eventTypesAndEventSourceId = (filterData as EventTypesAndEventSourceId)!;
 
         var shouldIncludeEventType =
-            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Equals(appendedEvent.Metadata.Type)) ||
+            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id)) ||
             eventTypesAndEventSourceId.EventTypes.Length == 0;
 
         return
