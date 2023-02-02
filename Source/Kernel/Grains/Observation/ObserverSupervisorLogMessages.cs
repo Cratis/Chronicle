@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Holds log messages for <see cref="ObserverSupervisor"/>.
 /// </summary>
-internal static partial class ObserverLogMessages
+internal static partial class ObserverSupervisorLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Subscribing observer {ObserverId} with subscriber type {SubscriberType} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Subscribing(this ILogger<ObserverSupervisor> logger, ObserverId observerId, Type subscriberType, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);
