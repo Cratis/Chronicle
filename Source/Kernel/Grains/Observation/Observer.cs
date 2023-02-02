@@ -235,13 +235,7 @@ public abstract class Observer : Grain
                 SourceMicroserviceId ?? MicroserviceId.Unspecified,
                 SourceTenantId ?? TenantId.NotSet);
 
-            ObserverState.State.FailPartition(
-                @event.Context.EventSourceId,
-                @event.Metadata.SequenceNumber,
-                exceptionMessages.ToArray(),
-                exceptionStackTrace);
-
-            await ObserverState.WriteStateAsync();
+            await Supervisor.PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
         }
     }
 }

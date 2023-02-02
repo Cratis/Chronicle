@@ -127,6 +127,19 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
         await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
     }
 
+    /// <inheritdoc/>
+    public async Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        State.FailPartition(
+            @event.Context.EventSourceId,
+            @event.Metadata.SequenceNumber,
+            exceptionMessages.ToArray(),
+            exceptionStackTrace);
+
+        await WriteStateAsync();
+        await HandleReminderRegistration();
+    }
+
     static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
     {
         var appendedEvent = (item as AppendedEvent)!;
@@ -217,15 +230,8 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
                 _sourceMicroserviceId,
                 _sourceTenantId);
 
-            State.FailPartition(
-                @event.Context.EventSourceId,
-                @event.Metadata.SequenceNumber,
-                exceptionMessages.ToArray(),
-                exceptionStackTrace);
-
-            await WriteStateAsync();
-            await HandleReminderRegistration();
-        }
+            await PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
+       }
     }
 
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)

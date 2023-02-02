@@ -53,4 +53,13 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task NotifyCatchUpComplete();
+
+    /// <summary>
+    /// Notify that the partition has failed.
+    /// </summary>
+    /// <param name="event">The <see cref="AppendedEvent"/> that caused the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
 }
