@@ -5,6 +5,8 @@ using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
+#pragma warning disable CA1819 // Allow arrays to be used for filtering
+
 /// <summary>
 /// Represents the filter data for the event types and event source id filter.
 /// </summary>
