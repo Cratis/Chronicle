@@ -21,6 +21,7 @@ public abstract class Observer : Grain
     readonly ILogger<Observer> _logger;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
+    IObserverSupervisor? _supervisor;
 
     /// <summary>
     /// Gets or sets the subscriber type.
@@ -61,6 +62,12 @@ public abstract class Observer : Grain
     /// Gets the <see cref="ObserverId"/>.
     /// </summary>
     protected ObserverId ObserverId => ObserverState.State.ObserverId;
+
+    protected IObserverSupervisor Supervisor => _supervisor ??= this switch
+    {
+        IObserverSupervisor supervisor => supervisor,
+        _ => GrainFactory.GetGrain<IObserverSupervisor>(ObserverId, new ObserverKey(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId));
+    };
 
     IEventSequenceStorageProvider EventSequenceStorageProvider
     {
