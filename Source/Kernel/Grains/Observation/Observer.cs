@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -30,6 +29,7 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
     /// The name of the recover reminder.
     /// </summary>
     public const string RecoverReminder = "observer-failure-recovery";
+
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<Observer> _logger;
@@ -117,6 +117,17 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         State.Type = type;
 
         await WriteStateAsync();
+    }
+
+    static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
+    {
+        var appendedEvent = (item as AppendedEvent)!;
+        var eventTypes = (filterData as EventType[])!;
+        if (eventTypes.Length == 0)
+        {
+            return true;
+        }
+        return eventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id));
     }
 
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) =>
@@ -209,17 +220,6 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
         }
     }
 
-    static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
-    {
-        var appendedEvent = (item as AppendedEvent)!;
-        var eventTypes = (filterData as EventType[])!;
-        if (eventTypes.Length == 0)
-        {
-            return true;
-        }
-        return eventTypes.Any(_ => _.Equals(appendedEvent.Metadata.Type));
-    }
-
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {
         _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
@@ -235,22 +235,9 @@ public partial class Observer : Grain<ObserverState>, IObserver, IRemindable
             EventTypesFilter,
             State.EventTypes.ToArray());
 
-        // Note: Add a warm up event. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
+        // Note: Warm up the stream. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
         // stream. Since our observers can perform replays & catch ups at startup, we can't wait till the first event appears.
-        var @event = new AppendedEvent(
-            new(EventSequenceNumber.WarmUp, new EventType(EventTypeId.Unknown, 1)),
-            new(
-                EventSourceId.Unspecified,
-                EventSequenceNumber.WarmUp,
-                DateTimeOffset.UtcNow,
-                DateTimeOffset.UtcNow,
-                _tenantId,
-                CorrelationId.New(),
-                CausationId.System,
-                CausedBy.System,
-                EventObservationState.Initial),
-            new ExpandoObject());
-        await _stream!.OnNextAsync(@event, new EventSequenceNumberToken());
+        await _stream.WarmUp();
     }
 
     async Task UnsubscribeStream()
