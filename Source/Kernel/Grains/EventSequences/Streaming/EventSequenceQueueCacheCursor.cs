@@ -139,7 +139,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     {
         _events = _cache.GetView(from).ToArray();
 
-        if (!_events.Any())
+        if (_events.Length == 0)
         {
             _cache.Prime(from);
             _events = _cache.GetView(from).ToArray();
