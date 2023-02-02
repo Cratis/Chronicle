@@ -18,8 +18,12 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 /// </summary>
 public class ObserverStorageProvider : IGrainStorage
 {
-    readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+
+    /// <summary>
+    /// Gets the <see cref="IExecutionContextManager"/> for working with the execution context.
+    /// </summary>
+    protected IExecutionContextManager ExecutionContextManager { get; }
 
     /// <summary>
     /// Gets the <ze cref="IMongoCollection{TDocument}"/> for <see cref="ObserverState"/>.
@@ -35,7 +39,7 @@ public class ObserverStorageProvider : IGrainStorage
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
     {
-        _executionContextManager = executionContextManager;
+        ExecutionContextManager = executionContextManager;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
@@ -49,7 +53,7 @@ public class ObserverStorageProvider : IGrainStorage
         var observerKey = ObserverKey.Parse(observerKeyAsString);
         var eventSequenceId = observerKey.EventSequenceId;
 
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+        ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var key = GetKeyFrom(observerKey, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
@@ -70,7 +74,7 @@ public class ObserverStorageProvider : IGrainStorage
         var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString);
         var eventSequenceId = observerKey.EventSequenceId;
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+        ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var observerState = grainState.State as ObserverState;
         var key = GetKeyFrom(observerKey, observerId);
