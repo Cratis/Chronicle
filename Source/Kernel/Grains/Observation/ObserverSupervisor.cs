@@ -37,6 +37,7 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
     IAsyncStream<AppendedEvent>? _stream;
     ObserverId _observerId = Guid.Empty;
+    ObserverKey _observerKey = ObserverKey.NotSet;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
     MicroserviceId _sourceMicroserviceId = MicroserviceId.Unspecified;
@@ -76,13 +77,13 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
 
-        var key = ObserverKey.Parse(keyAsString);
-        _eventSequenceId = key.EventSequenceId;
+        _observerKey = ObserverKey.Parse(keyAsString);
+        _eventSequenceId = _observerKey.EventSequenceId;
         State.EventSequenceId = _eventSequenceId;
-        _microserviceId = key.MicroserviceId;
-        _tenantId = key.TenantId;
-        _sourceMicroserviceId = key.SourceMicroserviceId ?? _microserviceId;
-        _sourceTenantId = key.SourceTenantId ?? _tenantId;
+        _microserviceId = _observerKey.MicroserviceId;
+        _tenantId = _observerKey.TenantId;
+        _sourceMicroserviceId = _observerKey.SourceMicroserviceId ?? _microserviceId;
+        _sourceTenantId = _observerKey.SourceTenantId ?? _tenantId;
 
         _logger.Activating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
@@ -120,7 +121,11 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
     }
 
     /// <inheritdoc/>
-    public Task NotifyCatchUpComplete() => throw new NotImplementedException();
+    public async Task NotifyCatchUpComplete()
+    {
+        await ReadStateAsync();
+        await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
+    }
 
     static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
     {

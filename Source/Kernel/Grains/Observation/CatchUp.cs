@@ -70,8 +70,7 @@ public class CatchUp : Observer, ICatchUp
 
     async Task PerformCatchUp(object arg)
     {
-        _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
-        var provider = _eventSequenceStorageProvider();
+        var provider = EventSequenceStorageProvider;
 
         var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, ObserverState.State.NextEventSequenceNumber, eventTypes: ObserverState.State.EventTypes);
         while (await cursor.MoveNext())
