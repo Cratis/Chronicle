@@ -16,14 +16,13 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class CatchUp : Observer, ICatchUp
 {
-    readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
     ObserverKey? _observerKey;
+    IDisposable? _timer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for </param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -33,8 +32,6 @@ public class CatchUp : Observer, ICatchUp
         [PersistentState(nameof(ObserverState), Observation.ObserverState.CatchUpStorageProvider)] IPersistentState<ObserverState> observerState,
         ILogger<CatchUp> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
     {
-        _executionContextManager = executionContextManager;
-        _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
 
     /// <inheritdoc/>
@@ -64,12 +61,13 @@ public class CatchUp : Observer, ICatchUp
     public Task Start(Type subscriberType)
     {
         SubscriberType = subscriberType;
-        RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.MaxValue);
+        _timer = RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.MaxValue);
         return Task.CompletedTask;
     }
 
     async Task PerformCatchUp(object arg)
     {
+        _timer?.Dispose();
         var provider = EventSequenceStorageProvider;
 
         var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, ObserverState.State.NextEventSequenceNumber, eventTypes: ObserverState.State.EventTypes);

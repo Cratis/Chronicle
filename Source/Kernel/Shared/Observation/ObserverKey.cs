@@ -24,7 +24,7 @@ public record ObserverKey(
     /// <summary>
     /// Gets the empty <see cref="ObserverKey"/>.
     /// </summary>
-    public static ObserverKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Unspecified);
+    public static readonly ObserverKey NotSet = new(MicroserviceId.Unspecified, TenantId.NotSet, EventSequenceId.Unspecified);
 
     /// <summary>
     /// Implicitly convert from <see cref="ObserverKey"/> to string.
