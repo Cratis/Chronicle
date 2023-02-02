@@ -17,9 +17,7 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
     ObserverId? _observerId;
-    EventSequenceId? _eventSequenceId;
-    TenantId? _tenantId;
-    MicroserviceId? _microserviceId;
+    ObserverKey? _observerKey;;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
@@ -38,10 +36,7 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
     public override Task OnActivateAsync()
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
-        var key = ObserverKey.Parse(keyAsString);
-        _eventSequenceId = key.EventSequenceId;
-        _microserviceId = key.MicroserviceId;
-        _tenantId = key.TenantId;
+        _observerKey = ObserverKey.Parse(keyAsString);
         return Task.CompletedTask;
     }
 
@@ -54,10 +49,10 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
 
     async Task PerformCatchUp(object arg)
     {
-        _executionContextManager.Establish(_tenantId!, CorrelationId.New(), _microserviceId);
+        _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
         var provider = _eventSequenceStorageProvider();
 
-        var cursor = await provider.GetFromSequenceNumber(_eventSequenceId!, State.NextEventSequenceNumber, eventTypes: State.EventTypes);
+        var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, State.NextEventSequenceNumber, eventTypes: State.EventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
@@ -69,5 +64,7 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
                 }
             }
         }
+
+        await GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!).NotifyCatchUpComplete();
     }
 }
