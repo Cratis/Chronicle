@@ -34,6 +34,8 @@ public class CatchUpStorageProvider : ObserverStorageProvider
         var observerKey = ObserverKey.Parse(observerKeyAsString);
         var key = GetKeyFrom(observerKey, observerId);
 
+        ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+
         var state = (ObserverState)grainState.State;
         var update = Builders<ObserverState>.Update
             .Set(_ => _.NextEventSequenceNumber, state.NextEventSequenceNumber);
