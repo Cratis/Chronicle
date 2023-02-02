@@ -60,8 +60,10 @@ public class MongoDBSchemaStore : ISchemaStore
         {
             _schemasByTypeAndGeneration[type.Id] = new();
         }
-        _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
+        eventSchema.Schema.ResetFlattenedProperties();
         var mongoEventSchema = eventSchema.ToMongoDB();
+        schema.EnsureFlattenedProperties();
+        _schemasByTypeAndGeneration[type.Id][type.Generation] = eventSchema;
         GetCollection().ReplaceOne(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,
