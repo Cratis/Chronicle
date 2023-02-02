@@ -54,15 +54,19 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
 
     async Task PerformCatchUp(object arg)
     {
-        _executionContextManager.Establish(_tenantId!, CorrelationId.New(), _microserviceId!);
+        _executionContextManager.Establish(_tenantId!, CorrelationId.New(), _microserviceId);
         var provider = _eventSequenceStorageProvider();
 
         var cursor = await provider.GetFromSequenceNumber(_eventSequenceId!, State.NextEventSequenceNumber, eventTypes: State.EventTypes);
-        while( await cursor.MoveNext())
+        while (await cursor.MoveNext())
         {
-            foreach( var @event in cursor.Current )
+            foreach (var @event in cursor.Current)
             {
-                // Handle
+                if (await Handle(@event))
+                {
+                    State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+                    await WriteStateAsync();
+                }
             }
         }
     }
