@@ -17,7 +17,7 @@ public class CatchUp : Observer<CatchUpState>, ICatchUp
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
     ObserverId? _observerId;
-    ObserverKey? _observerKey;;
+    ObserverKey? _observerKey;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
