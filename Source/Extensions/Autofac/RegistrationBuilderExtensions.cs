@@ -46,4 +46,22 @@ public static class RegistrationBuilderExtensions
 
         return registration;
     }
+
+    /// <summary>
+    /// Share one instance of the component per microservice and tenant.
+    /// </summary>
+    /// <param name="registration">Registration to configure.</param>
+    /// <typeparam name="TLimit">Limit type.</typeparam>
+    /// <typeparam name="TActivatorData">Activator data type.</typeparam>
+    /// <typeparam name="TStyle">Style type.</typeparam>
+    /// <returns>Registration for continuation.</returns>
+    public static IRegistrationBuilder<TLimit, TActivatorData, TStyle> InstancePerMicroserviceAndTenant<TLimit, TActivatorData, TStyle>(
+            this IRegistrationBuilder<TLimit, TActivatorData, TStyle> registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration, nameof(registration));
+        registration.RegistrationData.Sharing = InstanceSharing.Shared;
+        registration.RegistrationData.Lifetime = SingletonPerMicroserviceAndTenantComponentLifetime.Instance;
+
+        return registration;
+    }
 }
