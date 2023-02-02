@@ -157,7 +157,7 @@ public abstract class RestKernelClient : IClient, IDisposable
 
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null)
     {
-        var client = CreateHttpClient();
+        using var client = CreateHttpClient();
         HttpResponseMessage response;
 
         if (command is not null)
@@ -176,7 +176,7 @@ public abstract class RestKernelClient : IClient, IDisposable
 
     HttpClient CreateReadyHttpClient()
     {
-        var client = CreateHttpClient();
+        using var client = CreateHttpClient();
         client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _executionContextManager.Current.TenantId.ToString());
         return client;
     }
