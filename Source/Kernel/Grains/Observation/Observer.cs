@@ -21,6 +21,7 @@ public abstract class Observer : Grain
     readonly ILogger<Observer> _logger;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
+    readonly IPersistentState<ObserverState> _observerState;
     IObserverSupervisor? _supervisor;
 
     /// <summary>
@@ -29,9 +30,9 @@ public abstract class Observer : Grain
     protected Type SubscriberType { get; set; } = typeof(IObserverSubscriber);
 
     /// <summary>
-    /// Gets the <see cref="IPersistentState{T}"/> for the <see cref="Observation.ObserverState"/>.
+    /// Gets the <see cref="ObserverState"/>.
     /// </summary>
-    protected IPersistentState<ObserverState> ObserverState { get; }
+    protected ObserverState State => _observerState.State;
 
     /// <summary>
     /// Gets the <see cref="MicroserviceId"/>.
@@ -61,7 +62,7 @@ public abstract class Observer : Grain
     /// <summary>
     /// Gets the <see cref="ObserverId"/>.
     /// </summary>
-    protected ObserverId ObserverId => ObserverState.State.ObserverId;
+    protected ObserverId ObserverId => State.ObserverId;
 
     /// <summary>
     /// Gets the <see cref="IObserverSupervisor"/>.
@@ -103,9 +104,21 @@ public abstract class Observer : Grain
     {
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
-        ObserverState = observerState;
+        _observerState = observerState;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Read the observer state
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected Task ReadStateAsync() => _observerState.ReadStateAsync();
+
+    /// <summary>
+    /// Write the observer state
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected Task WriteStateAsync() => _observerState.WriteStateAsync();
 
 #pragma warning disable IDE0060 // allow unused parameter
     /// <summary>
@@ -154,22 +167,22 @@ public abstract class Observer : Grain
     /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
     /// <param name="setLastHandled">Whether or not to set last handled.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Handle(AppendedEvent @event, bool setLastHandled)
+    public async Task Handle(AppendedEvent @event, bool setLastHandled = false)
     {
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         try
         {
-            if (ObserverState.State.IsDisconnected)
+            if (State.IsDisconnected)
             {
                 return;
             }
 
-            var next = ObserverState.State.NextEventSequenceNumber;
-            if (ObserverState.State.IsPartitionFailed(@event.Context.EventSourceId))
+            var next = State.NextEventSequenceNumber;
+            if (State.IsPartitionFailed(@event.Context.EventSourceId))
             {
-                next = ObserverState.State.GetFailedPartition(@event.Context.EventSourceId).SequenceNumber;
+                next = State.GetFailedPartition(@event.Context.EventSourceId).SequenceNumber;
             }
 
             if (@event.Metadata.SequenceNumber < next)
@@ -199,21 +212,13 @@ public abstract class Observer : Grain
                 {
                     return;
                 }
-                ObserverState.State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
                 if (setLastHandled)
                 {
-                    ObserverState.State.LastHandled = @event.Metadata.SequenceNumber;
+                    State.LastHandled = @event.Metadata.SequenceNumber;
                 }
 
-                var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(
-                    ObserverState.State.EventSequenceId, ObserverState.State.EventTypes);
-
-                if (ObserverState.State.NextEventSequenceNumber == nextSequenceNumber + 1 && ObserverState.State.RunningState != ObserverRunningState.Active)
-                {
-                    ObserverState.State.RunningState = ObserverRunningState.Active;
-                    _logger.Active(ObserverId, MicroserviceId, EventSequenceId, TenantId);
-                }
-                await ObserverState.WriteStateAsync();
+                await WriteStateAsync();
             }
         }
         catch (Exception ex)

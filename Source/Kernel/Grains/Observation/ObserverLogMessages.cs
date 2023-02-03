@@ -9,10 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
-/// <summary>
-/// Represents the log messages for an observer.
-/// </summary>
-public static partial class ObserverLogMessages
+internal static partial class ObserverLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Observer {ObserverId} is now active up for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'")]
     internal static partial void Active(this ILogger<Observer> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId);

@@ -56,23 +56,9 @@ public partial class ObserverSupervisor
             new EventTypesAndEventSourceId(State.EventTypes.ToArray(), eventSourceId));
     }
 
-    static bool EventTypesAndEventSourceIdFilter(IStreamIdentity stream, object filterData, object item)
-    {
-        var appendedEvent = (item as AppendedEvent)!;
-        var eventTypesAndEventSourceId = (filterData as EventTypesAndEventSourceId)!;
-
-        var shouldIncludeEventType =
-            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id)) ||
-            eventTypesAndEventSourceId.EventTypes.Length == 0;
-
-        return
-            appendedEvent.Context.EventSourceId == eventTypesAndEventSourceId.EventSourceId &&
-            shouldIncludeEventType;
-    }
-
     async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, EventSequenceNumber tailSequenceNumber)
     {
-        await HandleEventForPartitionedObserver(@event);
+        await Handle(@event);
         if (State.IsPartitionFailed(@event.Context.EventSourceId))
         {
             await _streamSubscriptionsByEventSourceId[@event.Context.EventSourceId]!.UnsubscribeAsync();
