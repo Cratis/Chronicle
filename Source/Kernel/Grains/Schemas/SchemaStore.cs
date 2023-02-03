@@ -29,7 +29,7 @@ public class SchemaStore : Grain, ISchemaStore
     public async Task Register(EventType type, string friendlyName, string schema)
     {
         var jsonSchema = await JsonSchema.FromJsonAsync(schema);
-        jsonSchema.EnsureCorrectMetadata();
+        jsonSchema.EnsureComplianceMetadata();
         await _underlyingSchemaStore().Register(type, friendlyName, jsonSchema);
     }
 }

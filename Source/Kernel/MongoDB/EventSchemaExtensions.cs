@@ -34,7 +34,7 @@ public static class EventSchemaExtensions
     public static EventSchema ToEventSchema(this EventSchemaMongoDB schema)
     {
         var result = JsonSchema.FromJsonAsync(schema.Schema).GetAwaiter().GetResult();
-        result.EnsureCorrectMetadata();
+        result.EnsureComplianceMetadata();
         result.ResetFlattenedProperties();
         result.EnsureFlattenedProperties();
 
