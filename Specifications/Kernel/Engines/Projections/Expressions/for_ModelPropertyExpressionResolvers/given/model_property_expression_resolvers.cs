@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
+using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.for_ModelPropertyExpressionResolvers.given;
 
@@ -13,6 +14,6 @@ public class model_property_expression_resolvers : Specification
     void Establish()
     {
         event_value_resolvers = new();
-        resolvers = new ModelPropertyExpressionResolvers(event_value_resolvers.Object);
+        resolvers = new ModelPropertyExpressionResolvers(event_value_resolvers.Object, new TypeFormats());
     }
 }
