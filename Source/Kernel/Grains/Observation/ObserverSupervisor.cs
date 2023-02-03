@@ -9,7 +9,6 @@ using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans;
-using Orleans.Providers;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -22,8 +21,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// This is a partial class. For structural, navigation and maintenance purposes, you'll find partial implementations
 /// representing different aspects.
 /// </remarks>
-[StorageProvider(ProviderName = ObserverState.StorageProvider)]
-public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervisor, IRemindable
+public partial class ObserverSupervisor : Observer, IObserverSupervisor, IRemindable
 {
     /// <summary>
     /// The name of the recover reminder.
@@ -44,33 +42,40 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
     TenantId _sourceTenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IGrainReminder? _recoverReminder;
-    Type? _subscriberType;
-
-    IEventSequenceStorageProvider EventSequenceStorageProvider
-    {
-        get
-        {
-            // TODO: This is a temporary work-around till we fix #264 & #265
-            _executionContextManager.Establish(_sourceTenantId, CorrelationId.New(), _sourceMicroserviceId);
-            return _eventSequenceStorageProviderProvider();
-        }
-    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverSupervisor"/> class.
     /// </summary>
+    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
     /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ObserverSupervisor(
+        [PersistentState(nameof(ObserverState), ObserverState.StorageProvider)] IPersistentState<ObserverState> observerState,
         ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
         IExecutionContextManager executionContextManager,
-        ILogger<ObserverSupervisor> logger)
+        ILogger<ObserverSupervisor> logger) : base(executionContextManager, eventSequenceStorageProviderProvider, observerState, logger)
     {
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
         _logger = logger;
     }
+
+    /// <inheritdoc/>
+    protected override MicroserviceId MicroserviceId => _observerKey!.MicroserviceId;
+
+    /// <inheritdoc/>
+    protected override TenantId TenantId => _observerKey!.TenantId;
+
+    /// <inheritdoc/>
+    protected override EventSequenceId EventSequenceId => _observerKey!.EventSequenceId;
+
+    /// <inheritdoc/>
+    protected override MicroserviceId? SourceMicroserviceId => _observerKey!.SourceMicroserviceId;
+
+    /// <inheritdoc/>
+    protected override TenantId? SourceTenantId => _observerKey!.SourceTenantId;
+
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
@@ -101,6 +106,7 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
     {
         _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
+        await StopAnyRunningCatchup();
         State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
         await UnsubscribeStream();
@@ -124,6 +130,10 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
     public async Task NotifyCatchUpComplete()
     {
         await ReadStateAsync();
+
+        State.RunningState = ObserverRunningState.Active;
+        await WriteStateAsync();
+
         await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
     }
 
@@ -140,99 +150,19 @@ public partial class ObserverSupervisor : Grain<ObserverState>, IObserverSupervi
         await HandleReminderRegistration();
     }
 
-    static bool EventTypesFilter(IStreamIdentity stream, object filterData, object item)
+    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(SubscriberType);
+    async Task StopAnyRunningCatchup()
     {
-        var appendedEvent = (item as AppendedEvent)!;
-        var eventTypes = (filterData as EventType[])!;
-        if (eventTypes.Length == 0)
+        if (State.RunningState != ObserverRunningState.CatchingUp)
         {
-            return true;
+            await GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Stop();
+            await ReadStateAsync();
         }
-        return eventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id));
     }
 
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) =>
         State.RunningState != ObserverRunningState.New &&
         !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
-
-    async Task HandleEventForPartitionedObserver(AppendedEvent @event, bool setLastHandled = false)
-    {
-        var failed = false;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-        try
-        {
-            if (State.IsDisconnected)
-            {
-                return;
-            }
-
-            var next = State.NextEventSequenceNumber;
-            if (State.IsPartitionFailed(@event.Context.EventSourceId))
-            {
-                next = State.GetFailedPartition(@event.Context.EventSourceId).SequenceNumber;
-            }
-
-            if (@event.Metadata.SequenceNumber < next)
-            {
-                return;
-            }
-
-            var key = new ObserverSubscriberKey(_microserviceId, _tenantId, _eventSequenceId, @event.Context.EventSourceId, _sourceMicroserviceId, _sourceTenantId);
-
-            if (_subscriberType is not null)
-            {
-                var subscriber = (GrainFactory.GetGrain(_subscriberType, _observerId, key) as IObserverSubscriber)!;
-                var result = await subscriber.OnNext(@event);
-                if (result.State == ObserverSubscriberState.Error)
-                {
-                    failed = true;
-                    exceptionMessages = result.ExceptionMessages;
-                    exceptionStackTrace = result.ExceptionStackTrace;
-                }
-                else if (result.State == ObserverSubscriberState.Disconnected)
-                {
-                    await Unsubscribe();
-                    return;
-                }
-                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-                if (setLastHandled)
-                {
-                    State.LastHandled = @event.Metadata.SequenceNumber;
-                }
-
-                var nextSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
-
-                if (State.NextEventSequenceNumber == nextSequenceNumber + 1 && State.RunningState != ObserverRunningState.Active)
-                {
-                    State.RunningState = ObserverRunningState.Active;
-                    _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-                }
-                await WriteStateAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            failed = true;
-            exceptionMessages = ex.GetAllMessages().ToArray();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-        }
-
-        if (failed)
-        {
-            _logger.PartitionFailed(
-                @event.Context.EventSourceId,
-                @event.Context.SequenceNumber,
-                _observerId,
-                _eventSequenceId,
-                _microserviceId,
-                _tenantId,
-                _sourceMicroserviceId,
-                _sourceTenantId);
-
-            await PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
-       }
-    }
 
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {

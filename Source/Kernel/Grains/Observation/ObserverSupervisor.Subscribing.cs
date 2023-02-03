@@ -19,8 +19,9 @@ public partial class ObserverSupervisor
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
-        _subscriberType = null;
+        SubscriberType = null!;
         _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+        await StopAnyRunningCatchup();
         State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
         await UnsubscribeStream();
@@ -34,7 +35,7 @@ public partial class ObserverSupervisor
     async Task Subscribe(Type subscriberType, IEnumerable<EventType> eventTypes)
     {
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
-        _subscriberType = subscriberType;
+        SubscriberType = subscriberType;
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
@@ -65,11 +66,6 @@ public partial class ObserverSupervisor
 
         var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
         var nextSequenceNumber = lastSequenceNumber + 1;
-        if (State.NextEventSequenceNumber < nextSequenceNumber)
-        {
-            State.RunningState = ObserverRunningState.CatchingUp;
-            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-        }
 
         if (lastSequenceNumber == EventSequenceNumber.Unavailable ||
             State.NextEventSequenceNumber == nextSequenceNumber)
@@ -77,12 +73,17 @@ public partial class ObserverSupervisor
             State.RunningState = ObserverRunningState.Active;
             _logger.Active(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         }
+        else if (State.NextEventSequenceNumber < nextSequenceNumber)
+        {
+            State.RunningState = ObserverRunningState.CatchingUp;
+            _logger.CatchingUp(_observerId, _microserviceId, _eventSequenceId, _tenantId);
+        }
 
         await WriteStateAsync();
 
         if (State.RunningState == ObserverRunningState.CatchingUp)
         {
-            await GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(_subscriberType);
+            await StartCatchup();
         }
         else
         {
@@ -100,6 +101,6 @@ public partial class ObserverSupervisor
             return Task.CompletedTask;
         }
 
-        return HandleEventForPartitionedObserver(@event, true);
+        return Handle(@event, true);
     }
 }

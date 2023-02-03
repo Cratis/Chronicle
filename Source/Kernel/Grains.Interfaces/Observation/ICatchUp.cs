@@ -16,4 +16,10 @@ public interface ICatchUp : IGrainWithGuidCompoundKey
     /// <param name="subscriberType">Type of subscriber.</param>
     /// <returns>Awaitable task.</returns>
     Task Start(Type subscriberType);
+
+    /// <summary>
+    /// Stop catching up.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Stop();
 }

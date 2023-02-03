@@ -18,7 +18,7 @@ public partial class ObserverSupervisor
         State.RunningState = ObserverRunningState.Rewinding;
         State.NextEventSequenceNumber = EventSequenceNumber.First;
 
-        if (State.IsDisconnected || _subscriberType is null)
+        if (State.IsDisconnected || SubscriberType is null)
         {
             await WriteStateAsync();
             return;
@@ -36,7 +36,7 @@ public partial class ObserverSupervisor
             _logger.OffsetIsAtTail(_observerId, _microserviceId, _eventSequenceId, _tenantId);
             State.RunningState = ObserverRunningState.TailOfReplay;
             await WriteStateAsync();
-            await Subscribe(_subscriberType!, State.EventTypes);
+            await Subscribe(SubscriberType!, State.EventTypes);
             return;
         }
 
@@ -90,7 +90,7 @@ public partial class ObserverSupervisor
 
         @event = new(@event.Metadata, @event.Context.WithState(state), @event.Content);
 
-        await HandleEventForPartitionedObserver(@event);
+        await Handle(@event);
 
         if (state.HasFlag(EventObservationState.TailOfReplay))
         {
@@ -99,7 +99,7 @@ public partial class ObserverSupervisor
             await UnsubscribeStream();
             if (!State.IsDisconnected)
             {
-                await Subscribe(_subscriberType!, State.EventTypes);
+                await Subscribe(SubscriberType!, State.EventTypes);
             }
         }
     }

@@ -16,8 +16,10 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public class CatchUp : Observer, ICatchUp
 {
+    readonly ILogger<CatchUp> _logger;
     ObserverKey? _observerKey;
     IDisposable? _timer;
+    bool _isRunning;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatchUp"/> class.
@@ -29,9 +31,10 @@ public class CatchUp : Observer, ICatchUp
     public CatchUp(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
-        [PersistentState(nameof(ObserverState), Observation.ObserverState.CatchUpStorageProvider)] IPersistentState<ObserverState> observerState,
+        [PersistentState(nameof(ObserverState), ObserverState.CatchUpStorageProvider)] IPersistentState<ObserverState> observerState,
         ILogger<CatchUp> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
     {
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -60,8 +63,19 @@ public class CatchUp : Observer, ICatchUp
     /// <inheritdoc/>
     public Task Start(Type subscriberType)
     {
+        _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         SubscriberType = subscriberType;
+        _isRunning = true;
         _timer = RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.MaxValue);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Stop()
+    {
+        _logger.Stopping(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
+        _isRunning = false;
+        _timer?.Dispose();
         return Task.CompletedTask;
     }
 
@@ -70,15 +84,19 @@ public class CatchUp : Observer, ICatchUp
         _timer?.Dispose();
         var provider = EventSequenceStorageProvider;
 
-        var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, ObserverState.State.NextEventSequenceNumber, eventTypes: ObserverState.State.EventTypes);
+        using var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, State.NextEventSequenceNumber, eventTypes: State.EventTypes);
         while (await cursor.MoveNext())
         {
+            if (!_isRunning) break;
+
             foreach (var @event in cursor.Current)
             {
+                if (!_isRunning) break;
                 await Handle(@event, false);
             }
         }
 
+        _logger.CaughtUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         await Supervisor.NotifyCatchUpComplete();
     }
 }
