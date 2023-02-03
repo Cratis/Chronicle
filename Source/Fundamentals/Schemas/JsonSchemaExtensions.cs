@@ -14,10 +14,10 @@ public static class JsonSchemaExtensions
     const string FlattenedProperties = "x-flattened-properties";
 
     /// <summary>
-    /// Ensure the metadata is correct with correct types.
+    /// Ensure the compliance metadata is correct with correct types.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to ensure.</param>
-    public static void EnsureCorrectMetadata(this JsonSchema schema)
+    public static void EnsureComplianceMetadata(this JsonSchema schema)
     {
         if ((schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false) &&
             schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] is object[] complianceObjects)
@@ -40,10 +40,47 @@ public static class JsonSchemaExtensions
         {
             foreach (var property in schema.Properties)
             {
-                property.Value.EnsureCorrectMetadata();
+                property.Value.EnsureComplianceMetadata();
             }
         }
     }
+
+    /// <summary>
+    /// Get compliance metadata from schema. This is not recursive.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    public static IEnumerable<ComplianceSchemaMetadata> GetComplianceMetadata(this JsonSchema schema)
+    {
+        if ((schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false) &&
+            schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] is IEnumerable<ComplianceSchemaMetadata> allMetadata)
+        {
+            return allMetadata;
+        }
+
+        return Array.Empty<ComplianceSchemaMetadata>();
+    }
+
+    /// <summary>
+    /// Check recursively if the schema has compliance metadata.
+    /// </summary>
+    /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
+    /// <returns>True if it has, false if not.</returns>
+    public static bool HasComplianceMetadata(this JsonSchema schema)
+    {
+        var hasMetadata = schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false;
+
+        if (!hasMetadata && schema.Properties != default)
+        {
+            foreach (var property in schema.GetFlattenedProperties())
+            {
+                hasMetadata = property.HasComplianceMetadata();
+                if (hasMetadata) break;
+            }
+        }
+
+        return hasMetadata;
+    }
+
 
     /// <summary>
     /// Ensure the flattened properties are available.
