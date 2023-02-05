@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
     readonly ILogger<ClientObserver> _logger;
+    readonly IExecutionContextManager _executionContextManager;
     ObserverId? _observerId;
     ObserverKey? _observerKey;
 
@@ -23,9 +25,13 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     /// Initializes a new instance of the <see cref="ClientObserver"/> class.
     /// </summary>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ClientObserver(ILogger<ClientObserver> logger)
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
+    public ClientObserver(
+        ILogger<ClientObserver> logger,
+        IExecutionContextManager executionContextManager)
     {
         _logger = logger;
+        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>
@@ -40,6 +46,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     /// <inheritdoc/>
     public async Task Start(ObserverName name, ConnectionId connectionId, IEnumerable<EventType> eventTypes)
     {
+        _executionContextManager.Establish(_observerKey!.TenantId, CorrelationId.New(), _observerKey!.MicroserviceId);
         _logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var observer = GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
