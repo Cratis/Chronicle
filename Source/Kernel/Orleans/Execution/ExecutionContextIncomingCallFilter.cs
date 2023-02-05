@@ -32,11 +32,11 @@ public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
     /// <returns>True if it could resolve, false if not.</returns>
     public static bool TryResolveExecutionContext(out ExecutionContext context)
     {
-        var microserviceId = RequestContext.Get(RequestContextKeys.MicroserviceId);
-        var tenantId = RequestContext.Get(RequestContextKeys.TenantId);
-        var correlationId = RequestContext.Get(RequestContextKeys.CorrelationId);
-        var causationId = RequestContext.Get(RequestContextKeys.CausationId);
-        var causedBy = RequestContext.Get(RequestContextKeys.CausedBy);
+        var microserviceId = RequestContext.Get(RequestContextKeys.MicroserviceId) as MicroserviceId;
+        var tenantId = RequestContext.Get(RequestContextKeys.TenantId) as TenantId;
+        var correlationId = RequestContext.Get(RequestContextKeys.CorrelationId) as CorrelationId;
+        var causationId = RequestContext.Get(RequestContextKeys.CausationId) as CausationId;
+        var causedBy = RequestContext.Get(RequestContextKeys.CausedBy) as CausedBy;
 
         if (microserviceId is not null
             || tenantId is not null
@@ -45,11 +45,11 @@ public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
             || causedBy is not null)
         {
             context = new ExecutionContext(
-                microserviceId?.ToString() ?? MicroserviceId.Unspecified,
-                tenantId?.ToString() ?? TenantId.NotSet,
-                correlationId?.ToString() ?? CorrelationId.New(),
-                causationId?.ToString() ?? "[n/a]",
-                causedBy?.ToString() ?? CausedBy.System);
+                microserviceId ?? MicroserviceId.Unspecified,
+                tenantId ?? TenantId.NotSet,
+                correlationId ?? CorrelationId.New(),
+                causationId ?? "[n/a]",
+                causedBy ?? CausedBy.System);
             return true;
         }
 
