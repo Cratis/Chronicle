@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -16,6 +17,8 @@ namespace Aksio.Cratis.Extensions.MongoDB;
 public class MongoDBClientFactory : IMongoDBClientFactory
 {
     readonly ILogger<MongoDBClientFactory> _logger;
+    readonly ConcurrentDictionary<string, IMongoClient> _clients = new();
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBClientFactory"/> class.
@@ -26,16 +29,22 @@ public class MongoDBClientFactory : IMongoDBClientFactory
     /// <inheritdoc/>
     public IMongoClient Create(MongoClientSettings settings)
     {
-        settings.ClusterConfigurator = builder =>
+        return _clients.GetOrAdd(settings.Server.ToString(), server =>
         {
-            builder
-                .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson()))
-                .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message))
-                .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
-        };
+            settings.ClusterConfigurator = builder =>
+            {
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    builder
+                        .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson()))
+                        .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message))
+                        .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
+                }
+            };
 
-        _logger.CreateClient(settings.Server.ToString());
-        return new MongoClient(settings);
+            _logger.CreateClient(settings.Server.ToString());
+            return new MongoClient(settings);
+        });
     }
 
     /// <inheritdoc/>
