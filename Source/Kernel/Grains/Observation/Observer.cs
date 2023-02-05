@@ -108,18 +108,6 @@ public abstract class Observer : Grain
         _logger = logger;
     }
 
-    /// <summary>
-    /// Read the observer state
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    protected Task ReadStateAsync() => _observerState.ReadStateAsync();
-
-    /// <summary>
-    /// Write the observer state
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    protected Task WriteStateAsync() => _observerState.WriteStateAsync();
-
 #pragma warning disable IDE0060 // allow unused parameter
     /// <summary>
     /// Represents a filter for event types.
@@ -243,4 +231,16 @@ public abstract class Observer : Grain
             await Supervisor.PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
         }
     }
+
+    /// <summary>
+    /// Read the observer state.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected Task ReadStateAsync() => _observerState.ReadStateAsync();
+
+    /// <summary>
+    /// Write the observer state.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected Task WriteStateAsync() => _observerState.WriteStateAsync();
 }
