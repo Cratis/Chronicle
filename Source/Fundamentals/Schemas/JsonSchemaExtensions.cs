@@ -81,7 +81,6 @@ public static class JsonSchemaExtensions
         return hasMetadata;
     }
 
-
     /// <summary>
     /// Ensure the flattened properties are available.
     /// </summary>
