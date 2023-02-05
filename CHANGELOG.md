@@ -1,3 +1,46 @@
+# [v8.3.1] - 2023-1-30 [PR: #721](https://github.com/aksio-insurtech/Cratis/pull/721)
+
+### Fixed
+
+- The output folder path for proxy generation was not sanitized and properly resolved to an absolute path, so a relative path of `../Web/API` could end up with a `/your/path/to/the/code//../Web/Api` which then failed getting the correct relative path of a type when outputting types.
+
+
+# [v8.2.0] - 2023-1-28 [PR: #720](https://github.com/aksio-insurtech/Cratis/pull/720)
+
+### Added
+
+- Adding log enrichment for execution context to Serilog. Automatically hooked up in Application Model. (#445)
+
+Usage:
+
+```csharp
+        Log.Logger = new LoggerConfiguration()
+            .Enrich.WithExecutionContext()
+            .CreateLogger();
+```
+
+
+# [v8.1.3] - 2023-1-27 [PR: #719](https://github.com/aksio-insurtech/Cratis/pull/719)
+
+### Fixed
+
+- Fixing connected client state. (#718)
+- Changing the dynamics from Client -> Server connectivity, server no longer pings but instead lets the client know if its considering it disconnected through the result.
+
+
+# [v8.1.2] - 2023-1-27 [PR: #716](https://github.com/aksio-insurtech/Cratis/pull/716)
+
+### Fixed
+
+- QueryResult and CommandResult was wrongly trying to resolve `validationErrors` while it has been renamed to `validationResults`.
+- Supporting clients connecting from outside Docker to Kernel running in Docker by changing their `AdvertisedClientUri` to `host.docker.internal`. (#715)
+- Supporting clients connecting with `https` and developer certificates. (#715)
+- Improving startup time by running Inbox grain setup in parallel, allowing the Kernel to have first priority of becoming responsive. (#710)
+- Run client observer registration in separate task, improving responsiveness for Kernel at startup. (#710)
+- Removing duplicate registrations for connected clients. (#714)
+- Adding log message for when the client is connected to the kernel. (#711)
+
+
 # [v8.1.1] - 2023-1-25 [PR: #708](https://github.com/aksio-insurtech/Cratis/pull/708)
 
 ### Fixed

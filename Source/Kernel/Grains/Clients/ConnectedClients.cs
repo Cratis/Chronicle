@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Net;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Orleans.Observers;
@@ -22,18 +21,15 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// </summary>
     public const string ConnectedClientsHttpClient = "connected-clients";
 
-    readonly IHttpClientFactory _httpClientFactory;
     readonly ILogger<ConnectedClients> _logger;
     readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
-    /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connections..</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ConnectedClients(IHttpClientFactory httpClientFactory, ILogger<ConnectedClients> logger)
+    public ConnectedClients(ILogger<ConnectedClients> logger)
     {
-        _httpClientFactory = httpClientFactory;
         _logger = logger;
         _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientDisconnectedObservers");
     }
@@ -41,7 +37,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <inheritdoc/>
     public override Task OnActivateAsync()
     {
-        RegisterTimer(PingClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        RegisterTimer(ReviseConnectedClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));
         return Task.CompletedTask;
     }
 
@@ -74,16 +70,18 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public async Task OnClientPing(ConnectionId connectionId)
+    public async Task<bool> OnClientPing(ConnectionId connectionId)
     {
         var client = State.Clients.FirstOrDefault(_ => _.ConnectionId == connectionId);
         if (client is not null)
         {
             State.Clients.Where(_ => _.ClientUri == client.ClientUri).ToList().ForEach(_ => State.Clients.Remove(_));
             State.Clients.Add(client with { LastSeen = DateTimeOffset.UtcNow });
+            await WriteStateAsync();
+            return true;
         }
 
-        await WriteStateAsync();
+        return false;
     }
 
     /// <inheritdoc/>
@@ -109,23 +107,13 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     /// <inheritdoc/>
     public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId) => Task.FromResult(State.Clients.First(_ => _.ConnectionId == connectionId));
 
-    async Task PingClients(object state)
+    async Task ReviseConnectedClients(object state)
     {
         foreach (var connectedClient in State.Clients.ToArray())
         {
-            using var client = _httpClientFactory.CreateClient(ConnectedClientsHttpClient);
-            client.BaseAddress = connectedClient.ClientUri;
-            try
+            if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-10))
             {
-                var response = await client.GetAsync("/.cratis/client/ping");
-                if (response.StatusCode != HttpStatusCode.OK)
-                {
-                    await OnClientDisconnected(connectedClient.ConnectionId, $"Status code was not OK : {response.StatusCode}");
-                }
-            }
-            catch (Exception ex)
-            {
-                await OnClientDisconnected(connectedClient.ConnectionId, ex.Message);
+                await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 2 seconds ago");
             }
         }
     }

@@ -12,6 +12,11 @@ public class ExecutionContextManager : IExecutionContextManager
     static readonly AsyncLocal<ExecutionContext> _currentExecutionContext = new();
 
     /// <summary>
+    /// Get whether or not there is a current <see cref="ExecutionContext"/>.
+    /// </summary>
+    public static bool HasCurrent => _currentExecutionContext.Value != default;
+
+    /// <summary>
     /// Get whether or not we're inside the kernel.
     /// </summary>
     public static bool IsInKernel { get; private set; }

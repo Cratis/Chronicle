@@ -39,13 +39,17 @@ public class ConnectedClients : Controller
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> that is connecting.</param>
     /// <param name="connectionId">The unique identifier of the connection that is pinging.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="ConnectionNotFoundForClient">Thrown if the connection is disconnected.</exception>
     [HttpPost("ping/{connectionId}")]
     public async Task Ping(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] ConnectionId connectionId)
     {
         var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
-        await connectedClients.OnClientPing(connectionId);
+        if (!await connectedClients.OnClientPing(connectionId))
+        {
+            throw new ConnectionNotFoundForClient(connectionId);
+        }
     }
 
     /// <summary>
@@ -61,7 +65,13 @@ public class ConnectedClients : Controller
         [FromRoute] ConnectionId connectionId,
         [FromBody] ClientInformation clientInformation)
     {
-        var uri = new Uri(clientInformation.AdvertisedUri).AdjustForDockerHost();
+        var uri = new Uri(clientInformation.AdvertisedUri);
+
+        if (microserviceId != MicroserviceId.Kernel)
+        {
+            uri = uri.AdjustForDockerHost();
+        }
+
         _logger.ClientConnected(clientInformation.ClientVersion, microserviceId, connectionId, uri);
         var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
         await connectedClients.OnClientConnected(
