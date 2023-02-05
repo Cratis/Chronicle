@@ -6,6 +6,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.given;
@@ -25,11 +26,17 @@ public class an_observer_supervisor : GrainSpecification<ObserverState>
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
     protected Mock<IObserverSubscriber> subscriber;
+    protected Mock<IPersistentState<ObserverState>> persistent_state;
 
     protected override Grain GetGrainInstance()
     {
+        persistent_state = new();
         event_sequence_storage_provider = new();
-        observer = new ObserverSupervisor(() => event_sequence_storage_provider.Object, Mock.Of<IExecutionContextManager>(), Mock.Of<ILogger<ObserverSupervisor>>());
+        observer = new ObserverSupervisor(
+            persistent_state.Object,
+            () => event_sequence_storage_provider.Object,
+            Mock.Of<IExecutionContextManager>(),
+            Mock.Of<ILogger<ObserverSupervisor>>());
         return observer;
     }
 
