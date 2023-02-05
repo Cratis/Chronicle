@@ -11,7 +11,10 @@ namespace Aksio.Cratis.Json;
 /// </summary>
 public static class JsonValueExtensions
 {
-    static readonly TimeOnly _noon = new(12, 0, 0);
+    /// <summary>
+    /// The value for midday.
+    /// </summary>
+    public static readonly TimeOnly Noon = new(12, 0, 0);
 
     /// <summary>
     /// Convert a <see cref="JsonValue"/> to a specific <see cref="Type"/>.
@@ -172,7 +175,7 @@ public static class JsonValueExtensions
                 return JsonValue.Create<DateTimeOffset>(actualValue);
 
             case DateOnly actualValue:
-                return JsonValue.Create<DateTime>(actualValue.ToDateTime(_noon));
+                return JsonValue.Create<DateTime>(actualValue.ToDateTime(Noon));
 
             case TimeOnly actualValue:
                 return JsonValue.Create<DateTime>(DateTime.MinValue.Add(actualValue.ToTimeSpan()));
