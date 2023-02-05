@@ -90,6 +90,33 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<EventType>? eventTypes = null,
+        EventSourceId? eventSourceId = null)
+    {
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var filters = new List<FilterDefinition<Event>>
+            {
+                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)
+            };
+
+        if (eventTypes?.Any() ?? false)
+        {
+            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+        }
+        if (eventSourceId?.IsSpecified == true)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var highest = collection.Find(filter).SortBy(_ => _.SequenceNumber).Limit(1).SingleOrDefault();
+        return Task.FromResult(highest?.SequenceNumber ?? EventSequenceNumber.Unavailable);
+    }
+
+    /// <inheritdoc/>
     public Task<bool> HasInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
         var filter = Builders<Event>.Filter.And(

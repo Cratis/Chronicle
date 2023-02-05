@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.DependencyInversion;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Observation;
@@ -84,7 +85,13 @@ public class CatchUp : Observer, ICatchUp
         _timer?.Dispose();
         var provider = EventSequenceStorageProvider;
 
-        using var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, State.NextEventSequenceNumber, eventTypes: State.EventTypes);
+        var next = State.NextEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : State.NextEventSequenceNumber;
+        var nextSequenceNumber = await provider.GetNextSequenceNumberGreaterOrEqualThan(_observerKey!.EventSequenceId!, next, State.EventTypes);
+        if (nextSequenceNumber == EventSequenceNumber.Unavailable)
+        {
+            nextSequenceNumber = EventSequenceNumber.First;
+        }
+        using var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, nextSequenceNumber, eventTypes: State.EventTypes);
         while (await cursor.MoveNext())
         {
             if (!_isRunning) break;
