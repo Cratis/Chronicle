@@ -1,11 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -27,10 +29,19 @@ public class an_observer_supervisor : GrainSpecification<ObserverState>
     protected EventSequenceId event_sequence_id;
     protected Mock<IObserverSubscriber> subscriber;
     protected Mock<IPersistentState<ObserverState>> persistent_state;
+    protected Mock<ICatchUp> catch_up;
 
     protected override Grain GetGrainInstance()
     {
         persistent_state = new();
+        persistent_state.Setup(_ => _.State).Returns(() => state);
+        persistent_state.Setup(_ => _.WriteStateAsync()).Returns(() =>
+        {
+            var serialized = JsonSerializer.Serialize(state);
+            state_on_write = JsonSerializer.Deserialize<ObserverState>(serialized);
+            return Task.CompletedTask;
+        });
+
         event_sequence_storage_provider = new();
         observer = new ObserverSupervisor(
             persistent_state.Object,
@@ -58,6 +69,9 @@ public class an_observer_supervisor : GrainSpecification<ObserverState>
         subscribed_tokens = new();
         subscription_handles = new();
         observers = new();
+
+        catch_up = new();
+        grain_factory.Setup(_ => _.GetGrain<ICatchUp>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(catch_up.Object);
 
         subscriber = new();
         subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));

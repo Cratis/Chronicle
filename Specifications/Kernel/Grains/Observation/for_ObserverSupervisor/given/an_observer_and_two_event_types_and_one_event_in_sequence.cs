@@ -22,6 +22,6 @@ public class an_observer_and_two_event_types_and_one_event_in_sequence : an_obse
 
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, event_source_id)).Returns(Task.FromResult(EventSequenceNumber.First));
-        storage.Invocations.Clear();
+        persistent_state.Invocations.Clear();
     }
 }
