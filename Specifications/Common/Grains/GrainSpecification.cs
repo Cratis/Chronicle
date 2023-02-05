@@ -58,21 +58,23 @@ public abstract class GrainSpecification<TState> : Specification
         stream_provider_collection = new Mock<IKeyedServiceCollection<string, IStreamProvider>>();
         service_provider.Setup(_ => _.GetService(typeof(IKeyedServiceCollection<string, IStreamProvider>))).Returns(stream_provider_collection.Object);
 
-        var storageProperty = typeof(Grain<TState>).GetField("storage", BindingFlags.Instance | BindingFlags.NonPublic);
-        storage = new Mock<IStorage<TState>>();
-        storageProperty.SetValue(grain, storage.Object);
-
         state = new TState();
-        storage.SetupGet(_ => _.State).Returns(state);
+        var storageProperty = grain.GetType().GetField("storage", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (storageProperty is not null)
+        {
+            storage = new Mock<IStorage<TState>>();
+            storageProperty.SetValue(grain, storage.Object);
+
+            storage.SetupGet(_ => _.State).Returns(state);
+            storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
+            {
+                var serialized = JsonSerializer.Serialize(state);
+                state_on_write = JsonSerializer.Deserialize<TState>(serialized);
+                return Task.CompletedTask;
+            });
+        }
 
         OnBeforeGrainActivate();
-
-        storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
-        {
-            var serialized = JsonSerializer.Serialize(state);
-            state_on_write = JsonSerializer.Deserialize<TState>(serialized);
-            return Task.CompletedTask;
-        });
 
         Orleans.GrainReferenceExtensions.GetReferenceOverride = (grain) => grain;
 

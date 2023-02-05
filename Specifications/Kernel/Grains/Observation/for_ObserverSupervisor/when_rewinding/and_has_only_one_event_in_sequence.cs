@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Execution;
-using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.when_rewinding;
 
@@ -24,7 +23,7 @@ public class and_has_only_one_event_in_sequence : given.an_observer_and_two_even
 
         event_source_id = Guid.NewGuid().ToString();
 
-        storage.Invocations.Clear();
+        persistent_state.Invocations.Clear();
 
         event_in_sequence = new AppendedEvent(
            new(EventSequenceNumber.First, event_types.ToArray()[0]),

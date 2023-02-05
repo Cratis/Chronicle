@@ -27,7 +27,7 @@ public class and_has_three_events_in_sequence : given.an_observer_and_two_event_
 
         event_source_id = Guid.NewGuid().ToString();
 
-        storage.Invocations.Clear();
+        persistent_state.Invocations.Clear();
 
         first_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First, event_types.ToArray()[0]),
