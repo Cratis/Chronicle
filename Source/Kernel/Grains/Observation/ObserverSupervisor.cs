@@ -76,7 +76,6 @@ public partial class ObserverSupervisor : Observer, IObserverSupervisor, IRemind
     /// <inheritdoc/>
     protected override TenantId? SourceTenantId => _observerKey!.SourceTenantId;
 
-
     /// <inheritdoc/>
     public override async Task OnActivateAsync()
     {
@@ -91,6 +90,8 @@ public partial class ObserverSupervisor : Observer, IObserverSupervisor, IRemind
         _sourceTenantId = _observerKey.SourceTenantId ?? _tenantId;
 
         _logger.Activating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
+
+        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
 
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         var microserviceAndTenant = new MicroserviceAndTenant(_sourceMicroserviceId, _sourceTenantId);
