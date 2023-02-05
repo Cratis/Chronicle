@@ -49,6 +49,7 @@ public static class JsonSchemaExtensions
     /// Get compliance metadata from schema. This is not recursive.
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to get from.</param>
+    /// <returns>Collection of <see cref="ComplianceSchemaMetadata"/>.</returns>
     public static IEnumerable<ComplianceSchemaMetadata> GetComplianceMetadata(this JsonSchema schema)
     {
         if ((schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false) &&

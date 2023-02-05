@@ -63,6 +63,23 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     public Task<EventSequenceNumber> GetTailSequenceNumber(EventSequenceId eventSequenceId, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null) => Task.FromResult(_eventLog.AppendedEvents.Last().Metadata.SequenceNumber);
 
     /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null)
+    {
+        var query = _eventLog.AppendedEvents.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber);
+        if (eventSourceId is not null)
+        {
+            query = query.Where(_ => _.Context.EventSourceId == eventSourceId);
+        }
+        if (eventTypes is not null)
+        {
+            query = query.Where(_ => eventTypes.Any(et => et.Id == _.Metadata.Type.Id));
+        }
+
+        var nextSequenceNumber = query.First().Metadata.SequenceNumber;
+        return Task.FromResult(nextSequenceNumber);
+    }
+
+    /// <inheritdoc/>
     public Task<AppendedEvent> GetLastInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
         var lastInstance = _eventLog.AppendedEvents.Where(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId).OrderByDescending(_ => _.Metadata.SequenceNumber).First();

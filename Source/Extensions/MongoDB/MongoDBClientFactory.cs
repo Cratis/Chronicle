@@ -19,7 +19,6 @@ public class MongoDBClientFactory : IMongoDBClientFactory
     readonly ILogger<MongoDBClientFactory> _logger;
     readonly ConcurrentDictionary<string, IMongoClient> _clients = new();
 
-
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBClientFactory"/> class.
     /// </summary>
@@ -27,29 +26,28 @@ public class MongoDBClientFactory : IMongoDBClientFactory
     public MongoDBClientFactory(ILogger<MongoDBClientFactory> logger) => _logger = logger;
 
     /// <inheritdoc/>
-    public IMongoClient Create(MongoClientSettings settings)
-    {
-        return _clients.GetOrAdd(settings.Server.ToString(), server =>
-        {
-            settings.ClusterConfigurator = builder =>
-            {
-                if (_logger.IsEnabled(LogLevel.Trace))
-                {
-                    builder
-                        .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson()))
-                        .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message))
-                        .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
-                }
-            };
-
-            _logger.CreateClient(settings.Server.ToString());
-            return new MongoClient(settings);
-        });
-    }
+    public IMongoClient Create(MongoClientSettings settings) => _clients.GetOrAdd(settings.Server.ToString(), (_, v) => v, CreateImplementation(settings));
 
     /// <inheritdoc/>
     public IMongoClient Create(MongoUrl url) => Create(MongoClientSettings.FromUrl(url));
 
     /// <inheritdoc/>
     public IMongoClient Create(string connectionString) => Create(MongoClientSettings.FromConnectionString(connectionString));
+
+    IMongoClient CreateImplementation(MongoClientSettings settings)
+    {
+        settings.ClusterConfigurator = builder =>
+        {
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                builder
+                    .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson()))
+                    .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message))
+                    .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
+            }
+        };
+
+        _logger.CreateClient(settings.Server.ToString());
+        return new MongoClient(settings);
+    }
 }
