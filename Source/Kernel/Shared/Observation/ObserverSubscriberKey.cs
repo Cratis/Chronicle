@@ -61,4 +61,7 @@ public record ObserverSubscriberKey(
         }
         return new(microserviceId, tenantId, eventSequenceId, eventSourceId, sourceMicroserviceId, sourceTenantId);
     }
+    
+    public static ObserverSubscriberKey FromObserverKey(ObserverKey observerKey, EventSourceId eventSourceId) 
+        => new(observerKey.MicroserviceId, observerKey.TenantId, observerKey.EventSequenceId, eventSourceId, observerKey.SourceMicroserviceId, observerKey.SourceTenantId);
 }
