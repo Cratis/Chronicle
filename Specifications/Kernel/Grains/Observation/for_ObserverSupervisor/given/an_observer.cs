@@ -12,7 +12,7 @@ using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.given;
 
-public class an_observer_supervisor : GrainSpecification<ObserverState>
+public class an_observer_supervisor : GrainSpecification
 {
     protected ObserverSupervisor observer;
     protected ObserverId observer_id;
@@ -27,8 +27,10 @@ public class an_observer_supervisor : GrainSpecification<ObserverState>
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
     protected Mock<IObserverSubscriber> subscriber;
-    protected Mock<IPersistentState<ObserverState>> persistent_state;
     protected Mock<ICatchUp> catch_up;
+    protected Mock<IPersistentState<ObserverState>> persistent_state;
+    protected ObserverState state;
+    protected ObserverState state_on_write;
 
     protected override Grain GetGrainInstance()
     {
@@ -57,7 +59,10 @@ public class an_observer_supervisor : GrainSpecification<ObserverState>
         event_sequence_id = EventSequenceId.Log;
         var key = new ObserverKey(microservice_id, tenant_id, event_sequence_id).ToString();
         observer_id = Guid.NewGuid();
-        state.ObserverId = observer_id;
+        state = new()
+        {
+            ObserverId = observer_id
+        };
         grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(observer_id);
 
         sequence_stream_provider = new();

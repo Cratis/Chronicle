@@ -11,19 +11,43 @@ using Orleans.Timers;
 
 namespace Aksio.Cratis.Common.Grains;
 
-public abstract class GrainSpecification<TState> : Specification
+public abstract class GrainSpecification<TState> : GrainSpecification
     where TState : new()
+{
+    protected Mock<IStorage<TState>> storage;
+    protected TState state;
+    protected TState state_on_write;
+
+    protected override void OnStateManagement()
+    {
+        state = new TState();
+        var storageProperty = grain.GetType().GetField("storage", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (storageProperty is not null)
+        {
+            storage = new Mock<IStorage<TState>>();
+            storageProperty.SetValue(grain, storage.Object);
+
+            storage.SetupGet(_ => _.State).Returns(state);
+            storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
+            {
+                var serialized = JsonSerializer.Serialize(state);
+                state_on_write = JsonSerializer.Deserialize<TState>(serialized);
+                return Task.CompletedTask;
+            });
+        }
+    }
+}
+
+public abstract class GrainSpecification : Specification
 {
     protected Mock<IGrainIdentity> grain_identity;
     protected Mock<IGrainRuntime> runtime;
-    protected Mock<IStorage<TState>> storage;
     protected Mock<IServiceProvider> service_provider;
     protected Mock<IKeyedServiceCollection<string, IStreamProvider>> stream_provider_collection;
     protected Mock<IReminderRegistry> reminder_registry;
     protected Mock<ITimerRegistry> timer_registry;
-    protected TState state;
-    protected TState state_on_write;
     protected Mock<IGrainFactory> grain_factory;
+    protected Grain grain;
 
     protected abstract Grain GetGrainInstance();
 
@@ -31,9 +55,13 @@ public abstract class GrainSpecification<TState> : Specification
     {
     }
 
+    protected virtual void OnStateManagement()
+    {
+    }
+
     void Establish()
     {
-        var grain = GetGrainInstance();
+        grain = GetGrainInstance();
 
         var identityField = typeof(Grain).GetField("Identity", BindingFlags.Instance | BindingFlags.NonPublic);
         grain_identity = new Mock<IGrainIdentity>();
@@ -58,22 +86,7 @@ public abstract class GrainSpecification<TState> : Specification
         stream_provider_collection = new Mock<IKeyedServiceCollection<string, IStreamProvider>>();
         service_provider.Setup(_ => _.GetService(typeof(IKeyedServiceCollection<string, IStreamProvider>))).Returns(stream_provider_collection.Object);
 
-        state = new TState();
-        var storageProperty = grain.GetType().GetField("storage", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (storageProperty is not null)
-        {
-            storage = new Mock<IStorage<TState>>();
-            storageProperty.SetValue(grain, storage.Object);
-
-            storage.SetupGet(_ => _.State).Returns(state);
-            storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
-            {
-                var serialized = JsonSerializer.Serialize(state);
-                state_on_write = JsonSerializer.Deserialize<TState>(serialized);
-                return Task.CompletedTask;
-            });
-        }
-
+        OnStateManagement();
         OnBeforeGrainActivate();
 
         Orleans.GrainReferenceExtensions.GetReferenceOverride = (grain) => grain;

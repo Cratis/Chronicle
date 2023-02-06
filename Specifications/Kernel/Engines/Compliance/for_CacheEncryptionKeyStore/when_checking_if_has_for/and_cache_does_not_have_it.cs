@@ -14,6 +14,6 @@ public class and_cache_does_not_have_it : given.a_cache_encryption_key_store
 
     async Task Because() => result = await store.HasFor(identifier);
 
-    [Fact] void should_ask_actual_store() => actual_store.Verify(_ => _.HasFor(identifier), Once());
+    [Fact] void should_ask_actual_store() => actual_store.Verify(_ => _.HasFor(identifier), Once);
     [Fact] void should_return_result_from_actual_store() => result.ShouldBeTrue();
 }

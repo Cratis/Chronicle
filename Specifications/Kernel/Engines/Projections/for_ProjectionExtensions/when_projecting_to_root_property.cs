@@ -15,5 +15,5 @@ public class when_projecting_to_root_property : given.an_observable_and_event_se
 
     void Because() => observable.OnNext(event_context);
 
-    [Fact] void should_set_properties_on_changeset() => changeset.Verify(_ => _.SetProperties(property_mappers, event_context.Key.ArrayIndexers), Once());
+    [Fact] void should_set_properties_on_changeset() => changeset.Verify(_ => _.SetProperties(property_mappers, event_context.Key.ArrayIndexers), Once);
 }
