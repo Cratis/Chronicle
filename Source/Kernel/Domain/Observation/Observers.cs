@@ -72,7 +72,7 @@ public class Observers : Controller
         [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId observerId)
     {
-        var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.Rewind();
     }
 }

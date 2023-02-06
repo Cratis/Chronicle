@@ -45,6 +45,6 @@ public class and_there_are_two_providers_out_of_three_that_can_provide : Specifi
     void Because() => result = resolver.GetMetadataFor(MyClass.SomethingProperty);
 
     [Fact] void should_return_metadata_for_first_provider() => result.ToArray()[0].ShouldEqual(first_provider_metadata);
-    [Fact] void should_not_ask_for_metadata_from_second_provider() => second_provider.Verify(_ => _.Provide(IsAny<PropertyInfo>()), Never());
+    [Fact] void should_not_ask_for_metadata_from_second_provider() => second_provider.Verify(_ => _.Provide(IsAny<PropertyInfo>()), Never);
     [Fact] void should_return_metadata_for_third_provider() => result.ToArray()[1].ShouldEqual(first_provider_metadata);
 }

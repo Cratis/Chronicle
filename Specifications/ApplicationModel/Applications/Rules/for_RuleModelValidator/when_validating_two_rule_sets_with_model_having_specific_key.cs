@@ -31,6 +31,6 @@ public class when_validating_two_rule_sets_with_model_record_having_specific_key
 
     void Because() => result = validator.Validate(context);
 
-    [Fact] void should_project_to_first_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(first_rule_set.Object, key), Once());
-    [Fact] void should_project_to_second_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(second_rule_set.Object, key), Once());
+    [Fact] void should_project_to_first_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(first_rule_set.Object, key), Once);
+    [Fact] void should_project_to_second_rule_set_without_model_key() => rules.Verify(_ => _.ProjectTo(second_rule_set.Object, key), Once);
 }

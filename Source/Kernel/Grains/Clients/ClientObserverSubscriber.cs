@@ -4,6 +4,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Aksio.Cratis.Clients;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -30,6 +31,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
     IConnectedClients ConnectedClients => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
+    IEnumerable<ConnectedClient> _clients = Enumerable.Empty<ConnectedClient>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
@@ -70,12 +72,15 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             _eventSequenceId,
             @event.Context.SequenceNumber);
 
-        var clients = await ConnectedClients.GetAllConnectedClients();
-        var first = clients.FirstOrDefault();
+        if (!_clients.Any())
+        {
+            _clients = await ConnectedClients.GetAllConnectedClients();
+        }
 
+        var first = _clients.FirstOrDefault();
         if (first is not null)
         {
-            var client = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
+            using var client = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
             client.BaseAddress = first.ClientUri;
 
             var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
@@ -87,6 +92,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 await ConnectedClients.OnClientDisconnected(first.ConnectionId, "Client not found");
+                _clients = Enumerable.Empty<ConnectedClient>();
                 state = ObserverSubscriberState.Disconnected;
             }
             else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)

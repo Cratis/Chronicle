@@ -10,30 +10,30 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 /// <summary>
 /// Internal class for holding all collection names.
 /// </summary>
-internal static class CollectionNames
+public static class CollectionNames
 {
     /// <summary>
     /// The collection that holds <see cref="ObserverState"/>.
     /// </summary>
-    internal const string Observers = "observers";
+    public const string Observers = "observers";
 
     /// <summary>
     /// The collection that holds <see cref="ReminderEntry"/>.
     /// </summary>
-    internal const string Reminders = "reminders";
+    public const string Reminders = "reminders";
 
     /// <summary>
     /// The collection that holds <see cref="TenantConfigurationState"/>.
     /// </summary>
-    internal const string TenantConfiguration = "tenants-configuration";
+    public const string TenantConfiguration = "tenants-configuration";
 
     /// <summary>
     /// The collection that holds event sequences.
     /// </summary>
-    internal const string EventSequences = "event-sequences";
+    public const string EventSequences = "event-sequences";
 
     /// <summary>
     /// The collection that holds connected clients state.
     /// </summary>
-    internal const string ConnectedClients = "connected-clients";
+    public const string ConnectedClients = "connected-clients";
 }

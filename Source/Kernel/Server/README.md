@@ -6,13 +6,14 @@ This sets up what is needed to work with Kernel development.
 ## Seq logging
 
 [Seq](https://datalust.co/seq) has been configured as logging tool in the `docker-compose.yml` file.
-To use it for the kernel, add a Serilog Sink in `Serilog.WriteTo` section in the `appsettings.Development.json` file:
+To use it for the kernel the Serilog Sink is configured in the `appsettings.Development.json` file as below.
+If you're running without Seq, remove the config.
 
 ```json
 {
     "Serilog": {
+    {
         "WriteTo": [
-            // Other sinks...
             {
                 "Name": "Seq",
                 "Args": {
@@ -20,6 +21,6 @@ To use it for the kernel, add a Serilog Sink in `Serilog.WriteTo` section in the
                 }
             }
         ]
-    }
+    },
 }
 ````

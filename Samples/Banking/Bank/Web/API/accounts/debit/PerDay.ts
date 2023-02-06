@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { DebitAccountsPerDay } from './../../../../Web/API/accounts/debit/DebitAccountsPerDay';
+import { DebitAccountsPerDay } from './DebitAccountsPerDay';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/debit/accounts-per-day');

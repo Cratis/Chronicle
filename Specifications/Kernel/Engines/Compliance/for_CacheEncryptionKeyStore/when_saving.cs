@@ -12,6 +12,6 @@ public class when_saving : given.a_cache_encryption_key_store
 
     Task Because() => store.SaveFor(identifier, key);
 
-    [Fact] void should_save_key_to_actual_store() => actual_store.Verify(_ => _.SaveFor(identifier, key), Once());
+    [Fact] void should_save_key_to_actual_store() => actual_store.Verify(_ => _.SaveFor(identifier, key), Once);
     [Fact] async Task should_have_the_key_anymore() => (await store.HasFor(identifier)).ShouldBeTrue();
 }
