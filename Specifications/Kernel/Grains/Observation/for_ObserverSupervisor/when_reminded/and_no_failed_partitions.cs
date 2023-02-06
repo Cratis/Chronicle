@@ -9,5 +9,5 @@ public class and_no_failed_partitions : given.an_observer_with_event_types_and_r
 {
     async Task Because() => await observer.ReceiveReminder(ObserverSupervisor.RecoverReminder, new TickStatus());
 
-    [Fact] void should_unregister_reminder() => reminder_registry.Verify(_ => _.UnregisterReminder(reminder.Object), Once());
+    [Fact] void should_unregister_reminder() => reminder_registry.Verify(_ => _.UnregisterReminder(reminder.Object), Once);
 }

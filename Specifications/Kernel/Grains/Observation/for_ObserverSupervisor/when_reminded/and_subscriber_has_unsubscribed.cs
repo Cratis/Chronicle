@@ -23,5 +23,5 @@ public class and_subscriber_has_unsubscribed : given.an_observer_with_event_type
 
     [Fact] void should_not_start_recovering_first_partition() => state.IsRecoveringPartition(first_partition).ShouldBeFalse();
     [Fact] void should_not_start_recovering_second_partition() => state.IsRecoveringPartition(second_partition).ShouldBeFalse();
-    [Fact] void should_not_subscribe_to_sequences_stream_for_any_partitions() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never());
+    [Fact] void should_not_subscribe_to_sequences_stream_for_any_partitions() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Never);
 }

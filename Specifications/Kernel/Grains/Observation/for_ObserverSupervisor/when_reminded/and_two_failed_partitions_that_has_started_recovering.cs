@@ -19,6 +19,6 @@ public class and_two_failed_partitions_that_has_started_recovering : given.an_ob
 
     [Fact] void should_start_recovering_first_partition() => state.IsRecoveringPartition(first_partition).ShouldBeTrue();
     [Fact] void should_start_recovering_second_partition() => state.IsRecoveringPartition(second_partition).ShouldBeTrue();
-    [Fact] void should_subscribe_to_sequences_stream_for_first_partition() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), new EventSequenceNumberToken(first_partition_failed_sequence), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
-    [Fact] void should_subscribe_to_sequences_stream_for_second_partition() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), new EventSequenceNumberToken(second_partition_failed_sequence), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once());
+    [Fact] void should_subscribe_to_sequences_stream_for_first_partition() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), new EventSequenceNumberToken(first_partition_failed_sequence), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once);
+    [Fact] void should_subscribe_to_sequences_stream_for_second_partition() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), new EventSequenceNumberToken(second_partition_failed_sequence), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once);
 }

@@ -31,10 +31,10 @@ public class when_invoked : Specification
 
     Task Because() => filter.Invoke(call_context.Object);
 
-    [Fact] void should_set_microservice_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.MicroserviceId, microservice_id), Once());
-    [Fact] void should_set_tenant_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.TenantId, tenant_id), Once());
-    [Fact] void should_set_correlation_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.CorrelationId, correlation_id), Once());
-    [Fact] void should_set_causation_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.CausationId, causation_id), Once());
-    [Fact] void should_set_caused_by_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.CausedBy, caused_by), Once());
-    [Fact] void should_forward_the_invoke() => call_context.Verify(_ => _.Invoke(), Once());
+    [Fact] void should_set_microservice_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.MicroserviceId, microservice_id), Once);
+    [Fact] void should_set_tenant_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.TenantId, tenant_id), Once);
+    [Fact] void should_set_correlation_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.CorrelationId, correlation_id), Once);
+    [Fact] void should_set_causation_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.CausationId, causation_id), Once);
+    [Fact] void should_set_caused_by_id() => request_context_manager.Verify(_ => _.Set(RequestContextKeys.CausedBy, caused_by), Once);
+    [Fact] void should_forward_the_invoke() => call_context.Verify(_ => _.Invoke(), Once);
 }

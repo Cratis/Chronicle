@@ -20,6 +20,6 @@ public class when_asking_can_resolve_for_set_expression : Specification
 
     void Because() => result = resolver.CanResolve(string.Empty, "something");
 
-    [Fact] void should_ask_event_value_resolvers() => event_value_resolvers.Verify(_ => _.CanResolve("something"), Once());
+    [Fact] void should_ask_event_value_resolvers() => event_value_resolvers.Verify(_ => _.CanResolve("something"), Once);
     [Fact] void should_be_able_to_resolve() => result.ShouldBeTrue();
 }

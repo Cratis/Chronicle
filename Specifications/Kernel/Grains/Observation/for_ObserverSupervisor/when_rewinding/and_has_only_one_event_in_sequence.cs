@@ -44,7 +44,7 @@ public class and_has_only_one_event_in_sequence : given.an_observer_and_two_even
     async Task Because()
     {
         await observer.Rewind();
-        await observers[1].OnNextAsync(event_in_sequence);
+        await observers[0].OnNextAsync(event_in_sequence);
     }
 
     [Fact] void should_set_head_and_tail_of_replay_as_event_observation_state_for_first_event() => appended_events[0].Context.ObservationState.ShouldEqual(EventObservationState.HeadOfReplay | EventObservationState.Replay | EventObservationState.TailOfReplay);

@@ -20,5 +20,5 @@ public class and_is_recovering_partitions : given.an_observer_and_two_event_type
     async Task Because() => await observer.Rewind();
 
     [Fact] void should_clear_failed_partitions() => state.HasFailedPartitions.ShouldBeFalse();
-    [Fact] void should_unsubscribe_stream_subscription() => subscription_handles[0].Verify(_ => _.UnsubscribeAsync(), Once());
+    [Fact] void should_unsubscribe_stream_subscription() => subscription_handles[0].Verify(_ => _.UnsubscribeAsync(), Once);
 }

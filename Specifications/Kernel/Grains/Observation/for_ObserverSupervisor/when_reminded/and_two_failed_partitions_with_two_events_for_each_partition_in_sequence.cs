@@ -13,6 +13,7 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
 {
     AppendedEvent first_partition_appended_event;
     AppendedEvent second_partition_appended_event;
+    IAsyncObserver<AppendedEvent> handler;
 
     Dictionary<EventSourceId, AppendedEvent> events_received;
 
@@ -40,11 +41,11 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
 
         var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
-            .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
+            .Returns((IAsyncObserver<AppendedEvent> _, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
             {
                 subscribed_token = token as EventSequenceNumberToken;
                 subscribed_tokens.Add(subscribed_token);
-
+                handler = _;
                 return Task.FromResult(subscription.Object);
             });
     }
@@ -52,6 +53,9 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
     async Task Because()
     {
         await observer.Subscribe<ObserverSubscriber>(event_types);
+        state.ClearRecoveringPartitions();
+        handler.OnNextAsync(first_partition_appended_event).Wait();
+        handler.OnNextAsync(second_partition_appended_event).Wait();
         await observer.ReceiveReminder(ObserverSupervisor.RecoverReminder, new TickStatus());
     }
 

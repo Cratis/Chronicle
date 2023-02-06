@@ -14,11 +14,12 @@ public partial class ObserverSupervisor
     /// <inheritdoc/>
     public async Task Rewind()
     {
+        var disconnected = State.IsDisconnected;
         _logger.Rewinding(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Rewinding;
         State.NextEventSequenceNumber = EventSequenceNumber.First;
 
-        if (State.IsDisconnected || SubscriberType is null)
+        if (disconnected || SubscriberType is null)
         {
             await WriteStateAsync();
             return;
