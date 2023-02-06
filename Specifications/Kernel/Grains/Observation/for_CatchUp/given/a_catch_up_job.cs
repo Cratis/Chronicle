@@ -19,9 +19,21 @@ public class a_catch_up_job : GrainSpecification
 
     protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
     protected Mock<IObserverSupervisor> supervisor;
+    protected Mock<IObserverSubscriber> subscriber;
+
+    protected override Guid GrainId => state.ObserverId;
+
+    protected override string GrainKeyExtension => new ObserverKey(
+        Guid.NewGuid(),
+        Guid.NewGuid(),
+        Guid.NewGuid());
 
     protected override Grain GetGrainInstance()
     {
+        state = new()
+        {
+            ObserverId = Guid.NewGuid(),
+        };
         persistent_state = new();
         persistent_state.Setup(_ => _.State).Returns(() => state);
         persistent_state.Setup(_ => _.WriteStateAsync()).Returns(() =>
@@ -32,9 +44,10 @@ public class a_catch_up_job : GrainSpecification
         });
 
         supervisor = new();
-        grain_factory.Setup(_ => _.GetGrain<IObserverSupervisor>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(supervisor.Object);
-
         event_sequence_storage_provider = new();
+
+        subscriber = new();
+        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
 
         catch_up = new CatchUp(
             Mock.Of<IExecutionContextManager>(),
@@ -43,5 +56,11 @@ public class a_catch_up_job : GrainSpecification
             Mock.Of<ILogger<CatchUp>>());
 
         return catch_up;
+    }
+
+    protected override void OnBeforeGrainActivate()
+    {
+        grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), state.ObserverId, IsAny<string>())).Returns(subscriber.Object);
+        grain_factory.Setup(_ => _.GetGrain<IObserverSupervisor>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(supervisor.Object);
     }
 }

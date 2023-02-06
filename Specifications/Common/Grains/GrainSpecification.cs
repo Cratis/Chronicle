@@ -49,6 +49,9 @@ public abstract class GrainSpecification : Specification
     protected Mock<IGrainFactory> grain_factory;
     protected Grain grain;
 
+    protected abstract Guid GrainId { get; }
+    protected abstract string GrainKeyExtension { get; }
+
     protected abstract Grain GetGrainInstance();
 
     protected virtual void OnBeforeGrainActivate()
@@ -85,6 +88,9 @@ public abstract class GrainSpecification : Specification
 
         stream_provider_collection = new Mock<IKeyedServiceCollection<string, IStreamProvider>>();
         service_provider.Setup(_ => _.GetService(typeof(IKeyedServiceCollection<string, IStreamProvider>))).Returns(stream_provider_collection.Object);
+
+        var key = GrainKeyExtension;
+        grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(GrainId);
 
         OnStateManagement();
         OnBeforeGrainActivate();
