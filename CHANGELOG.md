@@ -1,3 +1,25 @@
+# [v8.4.0] - 2023-2-6 [PR: #717](https://github.com/aksio-insurtech/Cratis/pull/717)
+
+### Added
+
+- Added an in-memory cache per silo for event sequences. This improves performance dramatically as we hit the underlying database much less. The cache is per microservice, per tenant, per event sequence.
+
+### Fixed
+
+- Fix count expression to use the actual target type for conversion if it is not an `Int32`
+- Fixing correct execution context for projections.
+- Improving performance of appending and observing events for events that does not have any actionable compliance rules associated.
+- Improving performance and memory growth for internal managing of events going through the system by caching flattened properties on the event schemas.
+- Do not hook up log messages for MongoDB commands unless in trace mode. This dramatically improves memory usage and performance.
+- Limit amount of `IMongoClient` instances to one per server. Improved memory and performance.
+- Separated catch-up operation for observers into its own grain. This improves reliability and also improves significantly the code maintainability and quality. (#722)
+- Switched from converting to and from string in execution context call filters. Improves memory footprint and performance.
+- Improving performance for client observers by not asking for connected clients on every event. We have a fail-safe if the client is not there.
+- Performance optimization for catch-up to start on the next event sequence number greater or equal to where it left off matching the first of the event types it is observing.
+
+
+
+
 # [v8.3.1] - 2023-1-30 [PR: #721](https://github.com/aksio-insurtech/Cratis/pull/721)
 
 ### Fixed
