@@ -177,7 +177,7 @@ public abstract class RestKernelClient : IClient, IDisposable
 
     HttpClient CreateReadyHttpClient()
     {
-        using var client = CreateHttpClient();
+        var client = CreateHttpClient();
         client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _executionContextManager.Current.TenantId.ToString());
         return client;
     }
