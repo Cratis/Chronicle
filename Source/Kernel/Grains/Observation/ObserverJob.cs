@@ -9,16 +9,15 @@ using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Runtime;
-using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
 /// <summary>
 /// Represents a base class for all observers containing common methods and functionality.
 /// </summary>
-public abstract class Observer : Grain
+public abstract class ObserverJob : Grain
 {
-    readonly ILogger<Observer> _logger;
+    readonly ILogger<ObserverJob> _logger;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IPersistentState<ObserverState> _observerState;
@@ -90,64 +89,23 @@ public abstract class Observer : Grain
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Observer"/> class.
+    /// Initializes a new instance of the <see cref="ObserverJob"/> class.
     /// </summary>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="Observation.ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    protected Observer(
+    protected ObserverJob(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
-        ILogger<Observer> logger)
+        ILogger<ObserverJob> logger)
     {
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
         _observerState = observerState;
         _logger = logger;
     }
-
-#pragma warning disable IDE0060 // allow unused parameter
-    /// <summary>
-    /// Represents a filter for event types.
-    /// </summary>
-    /// <param name="streamIdentity">The stream identity.</param>
-    /// <param name="filterData">Data associated with the filter.</param>
-    /// <param name="item">Item to filter.</param>
-    /// <returns>True if its to be included, false if not.</returns>
-    public static bool EventTypesFilter(IStreamIdentity streamIdentity, object filterData, object item)
-    {
-        var appendedEvent = (item as AppendedEvent)!;
-        var eventTypes = (filterData as EventType[])!;
-        if (eventTypes.Length == 0)
-        {
-            return true;
-        }
-        return eventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id));
-    }
-
-    /// <summary>
-    /// Represents a filter for event types.
-    /// </summary>
-    /// <param name="streamIdentity">The stream identity.</param>
-    /// <param name="filterData">Data associated with the filter.</param>
-    /// <param name="item">Item to filter.</param>
-    /// <returns>True if its to be included, false if not.</returns>
-    public static bool EventTypesAndEventSourceIdFilter(IStreamIdentity streamIdentity, object filterData, object item)
-    {
-        var appendedEvent = (item as AppendedEvent)!;
-        var eventTypesAndEventSourceId = (filterData as EventTypesAndEventSourceId)!;
-
-        var shouldIncludeEventType =
-            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id)) ||
-            eventTypesAndEventSourceId.EventTypes.Length == 0;
-
-        return
-            appendedEvent.Context.EventSourceId == eventTypesAndEventSourceId.EventSourceId &&
-            shouldIncludeEventType;
-    }
-#pragma warning restore IDE0060
 
     /// <summary>
     /// Handle an <see cref="AppendedEvent"/>.

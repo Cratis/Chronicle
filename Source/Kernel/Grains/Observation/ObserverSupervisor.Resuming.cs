@@ -52,7 +52,7 @@ public partial class ObserverSupervisor
         _streamSubscriptionsByEventSourceId[eventSourceId] = await _stream!.SubscribeAsync(
             async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, tailSequenceNumber),
             new EventSequenceNumberToken(sequenceNumber),
-            EventTypesAndEventSourceIdFilter,
+            ObserverFilters.EventTypesAndEventSourceIdFilter,
             new EventTypesAndEventSourceId(State.EventTypes.ToArray(), eventSourceId));
     }
 
