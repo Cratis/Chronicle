@@ -4,7 +4,7 @@
 
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/cratis-applications-frontend/commands';
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
-import { AccountDetails } from './../../../../Web/API/accounts/credit/AccountDetails';
+import { AccountDetails } from './AccountDetails';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/credit');
