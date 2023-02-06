@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// This is a partial class. For structural, navigation and maintenance purposes, you'll find partial implementations
 /// representing different aspects.
 /// </remarks>
-public partial class ObserverSupervisor : Observer, IObserverSupervisor, IRemindable
+public partial class ObserverSupervisor : ObserverJob, IObserverSupervisor, IRemindable
 {
     /// <summary>
     /// The name of the recover reminder.
@@ -177,7 +177,7 @@ public partial class ObserverSupervisor : Observer, IObserverSupervisor, IRemind
                 return handler(@event);
             },
             new EventSequenceNumberToken(State.NextEventSequenceNumber),
-            EventTypesFilter,
+            ObserverFilters.EventTypesFilter,
             State.EventTypes.ToArray());
 
         // Note: Warm up the stream. The internals of Orleans will only do the producer / consumer handshake after an event has gone through the
