@@ -14,6 +14,9 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.given;
 
 public class an_observer_supervisor : GrainSpecification
 {
+    Guid _grainId;
+    string _grainKeyExtension;
+
     protected ObserverSupervisor observer;
     protected ObserverId observer_id;
     protected Mock<IStreamProvider> sequence_stream_provider;
@@ -32,6 +35,9 @@ public class an_observer_supervisor : GrainSpecification
     protected ObserverState state;
     protected ObserverState state_on_write;
 
+    protected override Guid GrainId => _grainId;
+    protected override string GrainKeyExtension => _grainKeyExtension;
+
     protected override Grain GetGrainInstance()
     {
         persistent_state = new();
@@ -49,21 +55,25 @@ public class an_observer_supervisor : GrainSpecification
             () => event_sequence_storage_provider.Object,
             Mock.Of<IExecutionContextManager>(),
             Mock.Of<ILogger<ObserverSupervisor>>());
+
+        microservice_id = Guid.NewGuid();
+        tenant_id = Guid.NewGuid();
+        event_sequence_id = EventSequenceId.Log;
+
+        var key = new ObserverKey(microservice_id, tenant_id, event_sequence_id).ToString();
+        observer_id = Guid.NewGuid();
+        _grainId = observer_id;
+        _grainKeyExtension = key;
+
         return observer;
     }
 
     protected override void OnBeforeGrainActivate()
     {
-        microservice_id = Guid.NewGuid();
-        tenant_id = Guid.NewGuid();
-        event_sequence_id = EventSequenceId.Log;
-        var key = new ObserverKey(microservice_id, tenant_id, event_sequence_id).ToString();
-        observer_id = Guid.NewGuid();
         state = new()
         {
             ObserverId = observer_id
         };
-        grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(observer_id);
 
         sequence_stream_provider = new();
         stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
