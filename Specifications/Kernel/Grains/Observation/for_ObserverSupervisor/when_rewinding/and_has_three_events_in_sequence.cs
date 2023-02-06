@@ -58,9 +58,9 @@ public class and_has_three_events_in_sequence : given.an_observer_and_two_event_
     async Task Because()
     {
         await observer.Rewind();
-        await observers[1].OnNextAsync(first_appended_event);
-        await observers[1].OnNextAsync(second_appended_event);
-        await observers[1].OnNextAsync(third_appended_event);
+        await observers[0].OnNextAsync(first_appended_event);
+        await observers[0].OnNextAsync(second_appended_event);
+        await observers[0].OnNextAsync(third_appended_event);
     }
 
     [Fact] void should_set_head_of_replay_as_event_observation_state_for_first_event() => appended_events[0].Context.ObservationState.ShouldEqual(EventObservationState.HeadOfReplay | EventObservationState.Replay);

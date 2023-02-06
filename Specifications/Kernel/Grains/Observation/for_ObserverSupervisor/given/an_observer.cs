@@ -7,7 +7,6 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Microsoft.Extensions.Logging;
 using Orleans;
-using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -58,6 +57,7 @@ public class an_observer_supervisor : GrainSpecification<ObserverState>
         event_sequence_id = EventSequenceId.Log;
         var key = new ObserverKey(microservice_id, tenant_id, event_sequence_id).ToString();
         observer_id = Guid.NewGuid();
+        state.ObserverId = observer_id;
         grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(observer_id);
 
         sequence_stream_provider = new();
