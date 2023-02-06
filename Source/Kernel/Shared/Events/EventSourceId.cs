@@ -29,6 +29,12 @@ public record EventSourceId(string Value) : ConceptAs<string>(Value)
     public static implicit operator EventSourceId(string id) => new(id);
 
     /// <summary>
+    /// Create a new <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <returns>A new <see cref="EventSourceId"/>.</returns>
+    public static EventSourceId New() => Guid.NewGuid();
+
+    /// <summary>
     /// Check whether or not the <see cref="EventSourceId"/> is specified.
     /// </summary>
     public bool IsSpecified => this != Unspecified;

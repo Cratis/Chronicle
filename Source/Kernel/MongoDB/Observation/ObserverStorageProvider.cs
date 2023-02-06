@@ -18,10 +18,17 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 /// </summary>
 public class ObserverStorageProvider : IGrainStorage
 {
-    readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
-    IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetCollection<ObserverState>(CollectionNames.Observers);
+    /// <summary>
+    /// Gets the <see cref="IExecutionContextManager"/> for working with the execution context.
+    /// </summary>
+    protected IExecutionContextManager ExecutionContextManager { get; }
+
+    /// <summary>
+    /// Gets the <ze cref="IMongoCollection{TDocument}"/> for <see cref="ObserverState"/>.
+    /// </summary>
+    protected IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetCollection<ObserverState>(CollectionNames.Observers);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
@@ -32,7 +39,7 @@ public class ObserverStorageProvider : IGrainStorage
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
     {
-        _executionContextManager = executionContextManager;
+        ExecutionContextManager = executionContextManager;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
@@ -46,7 +53,7 @@ public class ObserverStorageProvider : IGrainStorage
         var observerKey = ObserverKey.Parse(observerKeyAsString);
         var eventSequenceId = observerKey.EventSequenceId;
 
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+        ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var key = GetKeyFrom(observerKey, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
@@ -62,12 +69,12 @@ public class ObserverStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public virtual async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
         var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
         var observerKey = ObserverKey.Parse(observerKeyAsString);
         var eventSequenceId = observerKey.EventSequenceId;
-        _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+        ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var observerState = grainState.State as ObserverState;
         var key = GetKeyFrom(observerKey, observerId);
@@ -78,7 +85,13 @@ public class ObserverStorageProvider : IGrainStorage
             new ReplaceOptions { IsUpsert = true });
     }
 
-    string GetKeyFrom(ObserverKey key, ObserverId observerId) => key.SourceMicroserviceId is not null ?
+    /// <summary>
+    /// Get the key for the observer state.
+    /// </summary>
+    /// <param name="key"><see cref="ObserverKey"/> to get for.</param>
+    /// <param name="observerId"><see cref="ObserverId"/> to get for.</param>
+    /// <returns>The actual key.</returns>
+    protected string GetKeyFrom(ObserverKey key, ObserverId observerId) => key.SourceMicroserviceId is not null ?
         $"{key.EventSequenceId} : {observerId} : {key.SourceMicroserviceId}" :
         $"{key.EventSequenceId} : {observerId}";
 }

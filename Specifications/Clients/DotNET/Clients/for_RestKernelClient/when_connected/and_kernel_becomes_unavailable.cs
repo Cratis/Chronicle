@@ -18,5 +18,5 @@ public class and_kernel_becomes_unavailable : given.a_connected_client
         return success_message;
     }
 
-    [Fact] void client_should_notify_client_lifecycle_about_being_disconnected() => client_lifecycle.Verify(_ => _.Disconnected(), Once());
+    [Fact] void client_should_notify_client_lifecycle_about_being_disconnected() => client_lifecycle.Verify(_ => _.Disconnected(), Once);
 }

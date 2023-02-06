@@ -4,6 +4,7 @@
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
@@ -17,18 +18,22 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
 {
     readonly ProviderFor<IEventConverter> _converterProvider;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ILogger<MongoDBEventSequenceStorageProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBEventSequenceStorageProvider"/> class.
     /// </summary>
     /// <param name="converterProvider"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/> to use.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public MongoDBEventSequenceStorageProvider(
         ProviderFor<IEventConverter> converterProvider,
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ILogger<MongoDBEventSequenceStorageProvider> logger)
     {
         _converterProvider = converterProvider;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -37,6 +42,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
+        _logger.GettingHeadSequenceNumber(eventSequenceId);
+
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
@@ -60,6 +67,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
+        _logger.GettingTailSequenceNumber(eventSequenceId);
+
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
@@ -81,6 +90,33 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<EventType>? eventTypes = null,
+        EventSourceId? eventSourceId = null)
+    {
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var filters = new List<FilterDefinition<Event>>
+            {
+                Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)
+            };
+
+        if (eventTypes?.Any() ?? false)
+        {
+            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+        }
+        if (eventSourceId?.IsSpecified == true)
+        {
+            filters.Add(Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId));
+        }
+
+        var filter = Builders<Event>.Filter.And(filters.ToArray());
+        var highest = collection.Find(filter).SortBy(_ => _.SequenceNumber).Limit(1).SingleOrDefault();
+        return Task.FromResult(highest?.SequenceNumber ?? EventSequenceNumber.Unavailable);
+    }
+
+    /// <inheritdoc/>
     public Task<bool> HasInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId)
     {
         var filter = Builders<Event>.Filter.And(
@@ -98,6 +134,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         EventTypeId eventTypeId,
         EventSourceId eventSourceId)
     {
+        _logger.GettingLastInstanceFor(eventSequenceId, eventTypeId, eventSourceId);
+
         var filter = Builders<Event>.Filter.And(
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
@@ -113,6 +151,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         EventSourceId eventSourceId,
         IEnumerable<EventTypeId> eventTypes)
     {
+        _logger.GettingLastInstanceOfAny(eventSequenceId, eventSourceId, eventTypes);
+
         var anyEventTypes = Builders<Event>.Filter.Or(eventTypes.Select(et => Builders<Event>.Filter.Eq(_ => _.Type, et)));
 
         var filter = Builders<Event>.Filter.And(
@@ -131,6 +171,8 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         EventSourceId? eventSourceId = null,
         IEnumerable<EventType>? eventTypes = null)
     {
+        _logger.GettingFromSequenceNumber(eventSequenceId, sequenceNumber);
+
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
@@ -160,6 +202,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? eventTypes = default)
     {
+        _logger.GettingRange(eventSequenceId, start, end);
         var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {

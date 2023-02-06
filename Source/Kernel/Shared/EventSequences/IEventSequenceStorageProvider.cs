@@ -29,6 +29,16 @@ public interface IEventSequenceStorageProvider
     Task<EventSequenceNumber> GetTailSequenceNumber(EventSequenceId eventSequenceId, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>
+    /// Get the next sequence number greater or equal to a specific sequence number with optionally filtered on event types and event source id.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="sequenceNumber">The sequence number to search from.</param>
+    /// <param name="eventTypes">Optional event types to get for.</param>
+    /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. It won't filter by this if omitted.</param>
+    /// <returns>The last sequence number. If providing event types, this will give the last sequence number from the selection of event types.</returns>
+    Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
+
+    /// <summary>
     /// Check if there is an instance of a specific event type for an event source.
     /// </summary>
     /// <param name="eventSequenceId">The event sequence to get for.</param>

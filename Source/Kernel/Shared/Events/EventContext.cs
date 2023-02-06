@@ -56,6 +56,13 @@ public record EventContext(
     }
 
     /// <summary>
+    /// Creates an empty <see cref="EventContext"/> for a specific <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to create for.</param>
+    /// <returns>A new <see cref="EventContext"/>.</returns>
+    public static EventContext EmptyWithEventSourceId(EventSourceId eventSourceId) => From(eventSourceId, EventSequenceNumber.Unavailable);
+
+    /// <summary>
     /// Creates a copy of the context object with the new desired state.
     /// </summary>
     /// <param name="desiredState">The desired state.</param>

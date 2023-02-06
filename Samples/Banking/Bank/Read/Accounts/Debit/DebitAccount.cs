@@ -7,10 +7,10 @@ using Concepts.Accounts;
 namespace Read.Accounts.Debit;
 
 public record DebitAccount(
-AccountId Id,
-AccountName Name,
-AccountHolderId AccountHolderId,
-AccountHolder AccountHolder,
-double? Balance,
-CardEnabledOnAccount HasCard,
-DateTimeOffset LastUpdated);
+    AccountId Id,
+    AccountName Name,
+    AccountHolderId AccountHolderId,
+    AccountHolder AccountHolder,
+    double? Balance,
+    CardEnabledOnAccount HasCard,
+    DateTimeOffset LastUpdated);

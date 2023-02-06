@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.RegularExpressions;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.ModelProperties;
@@ -15,10 +16,20 @@ namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.ModelProperties;
 public class CountExpressionResolver : IModelPropertyExpressionResolver
 {
     static readonly Regex _regularExpression = new("\\$count\\(\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+    readonly ITypeFormats _typeFormats;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CountExpressionResolver"/> class.
+    /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
+    public CountExpressionResolver(ITypeFormats typeFormats)
+    {
+        _typeFormats = typeFormats;
+    }
 
     /// <inheritdoc/>
     public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
 
     /// <inheritdoc/>
-    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Count(targetProperty);
+    public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Count(_typeFormats, targetProperty, targetPropertySchema);
 }

@@ -20,6 +20,11 @@ public class ObserverState
     public const string StorageProvider = "observer-state";
 
     /// <summary>
+    /// The name of the storage provider used for working with this type of state during catch-up.
+    /// </summary>
+    public const string CatchUpStorageProvider = "observer-state-catchup";
+
+    /// <summary>
     /// Gets or sets the identifier of the observer state.
     /// </summary>
     public string Id { get; set; } = string.Empty;

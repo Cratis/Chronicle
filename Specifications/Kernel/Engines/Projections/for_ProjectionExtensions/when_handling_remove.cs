@@ -9,5 +9,5 @@ public class when_handling_remove : given.an_observable_and_event_setup
 
     void Because() => observable.OnNext(event_context);
 
-    [Fact] void should_remove_on_changeset() => changeset.Verify(_ => _.Remove(), Once());
+    [Fact] void should_remove_on_changeset() => changeset.Verify(_ => _.Remove(), Once);
 }

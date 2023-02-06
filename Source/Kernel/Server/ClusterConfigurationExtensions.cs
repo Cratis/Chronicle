@@ -5,6 +5,7 @@ using System.Net;
 using Aksio.Cratis.Kernel.Orleans.Configuration;
 using Aksio.Cratis.Kernel.Server;
 using Orleans.Configuration;
+using Orleans.Providers.Streams.Common;
 
 namespace Orleans.Hosting;
 
@@ -13,6 +14,17 @@ namespace Orleans.Hosting;
 /// </summary>
 public static class ClusterConfigurationExtensions
 {
+    /// <summary>
+    /// Use Orleans stream caching.
+    /// </summary>
+    /// <param name="builder"><see cref="ISiloBuilder"/> to extend.</param>
+    /// <returns>Builder for continuation.</returns>
+    public static ISiloBuilder UseStreamCaching(this ISiloBuilder builder)
+    {
+        builder.ConfigureServices(_ => _.AddSingleton<ICacheMonitor, DefaultCacheMonitor>());
+        return builder;
+    }
+
     /// <summary>
     /// Use cluster from configuration.
     /// </summary>

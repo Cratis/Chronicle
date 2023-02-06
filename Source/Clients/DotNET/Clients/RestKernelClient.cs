@@ -157,7 +157,7 @@ public abstract class RestKernelClient : IClient, IDisposable
 
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null)
     {
-        var client = CreateHttpClient();
+        using var client = CreateHttpClient();
         HttpResponseMessage response;
 
         if (command is not null)

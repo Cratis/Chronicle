@@ -11,6 +11,6 @@ public class when_applying_without_any_applicable_value_handlers : given.no_valu
 
     async Task Because() => result = await manager.Apply(schema, string.Empty, input);
 
-    [Fact] void should_be_a_different_instance() => result.GetHashCode().ShouldNotBeSame(input.GetHashCode());
+    [Fact] void should_be_same_instance() => result.GetHashCode().ShouldEqual(input.GetHashCode());
     [Fact] void should_have_equal_objects() => result.ToString().ShouldEqual(input.ToString());
 }

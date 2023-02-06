@@ -31,6 +31,7 @@ public static class Program
             .UseAksio(_ => _.InKernel(), microserviceId: MicroserviceId.Kernel)
             .UseOrleans(_ => _
                 .UseCluster()
+                .UseStreamCaching()
                 .ConfigureSerialization()
                 .UseTelemetry()
                 .UseDashboard(options =>
@@ -39,9 +40,8 @@ public static class Program
                     options.Port = 8081;
                     options.HostSelf = true;
                 })
-                .AddEventSequenceStream()
-                .UseMongoDBReminderService()
-                .AddSimpleMessageStreamProvider("observer-handlers", cs => cs.Configure(o => o.FireAndForgetDelivery = false))
+                .UseMongoDB()
+                .AddEventSequenceStreaming()
                 .AddExecutionContext())
             .ConfigureWebHostDefaults(_ => _
                 .UseStartup<Startup>());

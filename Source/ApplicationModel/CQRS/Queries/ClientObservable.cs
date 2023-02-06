@@ -43,7 +43,7 @@ public class ClientObservable<T> : IClientObservable, IAsyncEnumerable<T>
     public async Task HandleConnection(ActionExecutingContext context, JsonOptions jsonOptions)
     {
         using var webSocket = await context.HttpContext.WebSockets.AcceptWebSocketAsync();
-        var subscription = _subject.Subscribe(_ =>
+        var subscription = _subject.Subscribe(async _ =>
         {
             var queryResult = new QueryResult
             {
@@ -52,7 +52,7 @@ public class ClientObservable<T> : IClientObservable, IAsyncEnumerable<T>
             var json = JsonSerializer.Serialize(queryResult, jsonOptions.JsonSerializerOptions);
             var message = Encoding.UTF8.GetBytes(json);
 
-            webSocket.SendAsync(new ArraySegment<byte>(message, 0, message.Length), WebSocketMessageType.Text, true, CancellationToken.None);
+            await webSocket.SendAsync(new ArraySegment<byte>(message, 0, message.Length), WebSocketMessageType.Text, true, CancellationToken.None);
         });
 
         var buffer = new byte[1024 * 4];

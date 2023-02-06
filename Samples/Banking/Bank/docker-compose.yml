@@ -8,3 +8,5 @@ services:
       - 8081:81
       - 11111:11111
       - 30000:30000
+    extra_hosts:
+      - host.docker.internal:host-gateway

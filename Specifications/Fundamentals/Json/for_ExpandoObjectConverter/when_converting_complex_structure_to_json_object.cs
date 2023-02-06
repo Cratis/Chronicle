@@ -58,8 +58,8 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
     [Fact] void should_set_top_level_guid_value_to_hold_correct_value() => result["guidValue"].GetValue<Guid>().ShouldEqual(Guid.Parse((string)source_dynamic.guidValue));
     [Fact] void should_set_top_level_date_time_value_to_hold_correct_value() => result["dateTimeValue"].GetValue<DateTime>().ShouldEqual(DateTime.Parse((string)source_dynamic.dateTimeValue, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
     [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => result["dateTimeOffsetValue"].GetValue<DateTimeOffset>().ShouldEqual(DateTimeOffset.Parse((string)source_dynamic.dateTimeOffsetValue));
-    [Fact] void should_set_top_level_date_only_value_to_hold_correct_value() => result["dateOnlyValue"].GetValue<DateOnly>().ShouldEqual(DateOnly.Parse((string)source_dynamic.dateOnlyValue));
-    [Fact] void should_set_top_level_time_only_value_to_hold_correct_value() => result["timeOnlyValue"].GetValue<TimeOnly>().ShouldEqual(TimeOnly.FromDateTime(DateTime.Parse((string)source_dynamic.timeOnlyValue)));
+    [Fact] void should_set_top_level_date_only_value_to_hold_correct_value() => result["dateOnlyValue"].GetValue<DateTime>().ShouldEqual(DateOnly.Parse((string)source_dynamic.dateOnlyValue).ToDateTime(JsonValueExtensions.Noon));
+    [Fact] void should_set_top_level_time_only_value_to_hold_correct_value() => result["timeOnlyValue"].GetValue<DateTime>().ShouldEqual(DateTime.MinValue.Add(TimeOnly.FromDateTime(DateTime.Parse((string)source_dynamic.timeOnlyValue)).ToTimeSpan()));
 
     [Fact] void should_set_reference_object_int_value_to_hold_correct_value() => result["reference"]["intValue"].GetValue<int>().ShouldEqual((int)source_dynamic.reference.intValue);
     [Fact] void should_set_reference_object_float_value_to_hold_correct_value() => result["reference"]["floatValue"].GetValue<float>().ShouldEqual((float)source_dynamic.reference.floatValue);

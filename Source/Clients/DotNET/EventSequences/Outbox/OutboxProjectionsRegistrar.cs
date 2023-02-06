@@ -11,6 +11,7 @@ using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Projections.Outbox;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.EventSequences.Outbox;
 
@@ -23,6 +24,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     readonly IInstancesOf<IOutboxProjections> _outboxProjections;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly ILogger<OutboxProjectionsRegistrar> _logger;
     readonly IEnumerable<OutboxProjectionsDefinition> _outboxProjectionsDefinitions;
 
     /// <summary>
@@ -34,18 +36,21 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="outboxProjections">All instances of <see cref="IOutboxProjections"/>.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public OutboxProjectionsRegistrar(
         IClient client,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
         IInstancesOf<IOutboxProjections> outboxProjections,
         IJsonProjectionSerializer projectionSerializer,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        ILogger<OutboxProjectionsRegistrar> logger)
     {
         _client = client;
         _outboxProjections = outboxProjections;
         _projectionSerializer = projectionSerializer;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _logger = logger;
         _outboxProjectionsDefinitions = _outboxProjections.Select(projections =>
         {
             var builder = new OutboxProjectionsBuilder(eventTypes, jsonSchemaGenerator, projections.Identifier, jsonSerializerOptions);
@@ -57,6 +62,8 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// <inheritdoc/>
     public async Task ClientConnected()
     {
+        _logger.RegisteringOutboxProjections();
+
         var registrations = _outboxProjectionsDefinitions.SelectMany(_ => _.TargetEventTypeProjections.Values).Select(projection =>
         {
             var pipeline = new ProjectionPipelineDefinition(

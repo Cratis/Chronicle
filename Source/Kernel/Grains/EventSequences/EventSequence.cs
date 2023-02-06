@@ -25,7 +25,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IJsonComplianceManager> _jsonComplianceManagerProvider;
+    readonly IJsonComplianceManager _jsonComplianceManagerProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly ILogger<EventSequence> _logger;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
@@ -43,7 +43,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     public EventSequence(
         ProviderFor<ISchemaStore> schemaStoreProvider,
         IExecutionContextManager executionContextManager,
-        ProviderFor<IJsonComplianceManager> jsonComplianceManagerProvider,
+        IJsonComplianceManager jsonComplianceManagerProvider,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<EventSequence> logger)
     {
@@ -89,7 +89,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 eventSourceId,
                 State.SequenceNumber);
 
-            var compliantEvent = await _jsonComplianceManagerProvider().Apply(eventSchema.Schema, eventSourceId, content);
+            var compliantEvent = await _jsonComplianceManagerProvider.Apply(eventSchema.Schema, eventSourceId, content);
 
             var compliantEventAsExpandoObject = _expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
