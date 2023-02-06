@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { AccountHolder } from './../../../Web/API/accountholders/AccountHolder';
+import { AccountHolder } from './AccountHolder';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accountholders');

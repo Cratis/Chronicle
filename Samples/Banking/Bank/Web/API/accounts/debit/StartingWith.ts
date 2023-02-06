@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { DebitAccount } from './../../../../Web/API/accounts/debit/DebitAccount';
+import { DebitAccount } from './DebitAccount';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/accounts/debit/starting-with?filter={{filter}}');
