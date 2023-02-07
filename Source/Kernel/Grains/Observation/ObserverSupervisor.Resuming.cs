@@ -58,7 +58,18 @@ public partial class ObserverSupervisor
 
     async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, EventSequenceNumber tailSequenceNumber)
     {
-        await Handle(@event);
+        if (!State.IsDisconnected && SubscriberType is not null && SubscriberType != typeof(IObserverSubscriber))
+        {
+            var result = await OnNext(@event);
+            if (result.State != ObserverSubscriberState.Ok)
+            {
+                State.FailPartition(
+                    @event.Context.EventSourceId,
+                    @event.Context.SequenceNumber,
+                    result.ExceptionMessages.ToArray(),
+                    result.ExceptionStackTrace);
+            }
+        }
         if (State.IsPartitionFailed(@event.Context.EventSourceId))
         {
             await _streamSubscriptionsByEventSourceId[@event.Context.EventSourceId]!.UnsubscribeAsync();

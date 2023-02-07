@@ -93,7 +93,7 @@ public abstract class ObserverWorker : Grain
     /// </summary>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
-    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="Observation.ObserverState"/>.</param>
+    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     protected ObserverWorker(
         IExecutionContextManager executionContextManager,
@@ -125,36 +125,28 @@ public abstract class ObserverWorker : Grain
                 return;
             }
 
-            var next = State.NextEventSequenceNumber;
-            if (State.IsPartitionFailed(@event.Context.EventSourceId))
+            if (@event.Metadata.SequenceNumber >= State.NextEventSequenceNumber)
             {
-                next = State.GetFailedPartition(@event.Context.EventSourceId).SequenceNumber;
-            }
+                if (!State.IsPartitionFailed(@event.Context.EventSourceId))
+                {
+                    var result = await OnNext(@event);
+                    if (result.State == ObserverSubscriberState.Failed)
+                    {
+                        failed = true;
+                        exceptionMessages = result.ExceptionMessages;
+                        exceptionStackTrace = result.ExceptionStackTrace;
+                    }
+                    else if (result.State == ObserverSubscriberState.Disconnected)
+                    {
+                        return;
+                    }
+                }
 
-            if (@event.Metadata.SequenceNumber < next)
-            {
-                return;
-            }
-
-            var key = new ObserverSubscriberKey(
-                MicroserviceId,
-                TenantId,
-                EventSequenceId,
-                @event.Context.EventSourceId,
-                SourceMicroserviceId,
-                SourceTenantId);
-
-            var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
-            var result = await subscriber.OnNext(@event);
-            if (result.State == ObserverSubscriberState.Failed)
-            {
-                failed = true;
-                exceptionMessages = result.ExceptionMessages;
-                exceptionStackTrace = result.ExceptionStackTrace;
-            }
-            else if (result.State == ObserverSubscriberState.Disconnected)
-            {
-                return;
+                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+                if (setLastHandled)
+                {
+                    State.LastHandled = @event.Metadata.SequenceNumber;
+                }
             }
         }
         catch (Exception ex)
@@ -163,16 +155,8 @@ public abstract class ObserverWorker : Grain
             exceptionMessages = ex.GetAllMessages().ToArray();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
         }
-        finally
-        {
-            State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-            if (setLastHandled)
-            {
-                State.LastHandled = @event.Metadata.SequenceNumber;
-            }
 
-            await WriteStateAsync();
-        }
+        await WriteStateAsync();
 
         if (failed)
         {
@@ -188,6 +172,20 @@ public abstract class ObserverWorker : Grain
 
             await Supervisor.PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
         }
+    }
+
+    protected Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
+    {
+        var key = new ObserverSubscriberKey(
+            MicroserviceId,
+            TenantId,
+            EventSequenceId,
+            @event.Context.EventSourceId,
+            SourceMicroserviceId,
+            SourceTenantId);
+
+        var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
+        return subscriber.OnNext(@event);
     }
 
     /// <summary>
