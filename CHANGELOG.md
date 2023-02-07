@@ -1,3 +1,10 @@
+# [v8.4.1] - 2023-2-7 [PR: #731](https://github.com/aksio-insurtech/Cratis/pull/731)
+
+### Fixed
+
+- Adding `lock` around schema metadata alterations as there could be concurrency issues as it could be modified from different tasks/threads.
+
+
 # [v8.4.0] - 2023-2-6 [PR: #717](https://github.com/aksio-insurtech/Cratis/pull/717)
 
 ### Added
