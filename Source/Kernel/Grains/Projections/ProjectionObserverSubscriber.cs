@@ -92,7 +92,7 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
         }
         catch (Exception ex)
         {
-            return new(ObserverSubscriberState.Error, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+            return new(ObserverSubscriberState.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
     }
 
