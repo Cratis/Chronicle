@@ -14,4 +14,7 @@ internal static partial class InboxObserverSubscriberLogMessages
 {
     [LoggerMessage(0, LogLevel.Debug, "Forwarding event ({EventName}-{EventTypeId}) with sequence number from origin {SequenceNumber} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
     internal static partial void ForwardingEvent(this ILogger<InboxObserverSubscriber> logger, TenantId tenantId, MicroserviceId microserviceId, EventTypeId eventTypeId, string eventName, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(1, LogLevel.Error, "Failed forwarding event ({EventTypeId}) with sequence number from origin {SequenceNumber} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
+    internal static partial void FailedForwardingEvent(this ILogger<InboxObserverSubscriber> logger, TenantId tenantId, MicroserviceId microserviceId, EventTypeId eventTypeId, EventSequenceNumber sequenceNumber, Exception exception);
 }
