@@ -94,6 +94,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
         }
         catch (Exception ex)
         {
+            _logger.FailedForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, @event.Metadata.SequenceNumber, ex);
             return new(ObserverSubscriberState.Error, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
     }
