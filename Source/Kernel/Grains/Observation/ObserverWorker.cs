@@ -120,7 +120,7 @@ public abstract class ObserverWorker : Grain
         var exceptionStackTrace = string.Empty;
         try
         {
-            if (State.IsDisconnected)
+            if (State.IsDisconnected || SubscriberType is null || SubscriberType == typeof(IObserverSubscriber))
             {
                 return;
             }
@@ -144,27 +144,17 @@ public abstract class ObserverWorker : Grain
                 SourceMicroserviceId,
                 SourceTenantId);
 
-            if (SubscriberType is not null)
+            var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
+            var result = await subscriber.OnNext(@event);
+            if (result.State == ObserverSubscriberState.Failed)
             {
-                var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
-                var result = await subscriber.OnNext(@event);
-                if (result.State == ObserverSubscriberState.Error)
-                {
-                    failed = true;
-                    exceptionMessages = result.ExceptionMessages;
-                    exceptionStackTrace = result.ExceptionStackTrace;
-                }
-                else if (result.State == ObserverSubscriberState.Disconnected)
-                {
-                    return;
-                }
-                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-                if (setLastHandled)
-                {
-                    State.LastHandled = @event.Metadata.SequenceNumber;
-                }
-
-                await WriteStateAsync();
+                failed = true;
+                exceptionMessages = result.ExceptionMessages;
+                exceptionStackTrace = result.ExceptionStackTrace;
+            }
+            else if (result.State == ObserverSubscriberState.Disconnected)
+            {
+                return;
             }
         }
         catch (Exception ex)
@@ -172,6 +162,16 @@ public abstract class ObserverWorker : Grain
             failed = true;
             exceptionMessages = ex.GetAllMessages().ToArray();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
+        }
+        finally
+        {
+            State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+            if (setLastHandled)
+            {
+                State.LastHandled = @event.Metadata.SequenceNumber;
+            }
+
+            await WriteStateAsync();
         }
 
         if (failed)
