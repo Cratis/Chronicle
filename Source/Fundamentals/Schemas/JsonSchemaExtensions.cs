@@ -19,28 +19,31 @@ public static class JsonSchemaExtensions
     /// <param name="schema"><see cref="JsonSchema"/> to ensure.</param>
     public static void EnsureComplianceMetadata(this JsonSchema schema)
     {
-        if ((schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false) &&
-            schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] is object[] complianceObjects)
+        lock (schema)
         {
-            var metadata = new List<ComplianceSchemaMetadata>();
-            foreach (var complianceObject in complianceObjects)
+            if ((schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false) &&
+                schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] is object[] complianceObjects)
             {
-                if (complianceObject is Dictionary<object, object> properties)
+                var metadata = new List<ComplianceSchemaMetadata>();
+                foreach (var complianceObject in complianceObjects)
                 {
-                    var metadataType = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.metadataType));
-                    var details = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.details));
-                    metadata.Add(new ComplianceSchemaMetadata(Guid.Parse(metadataType.Value.ToString()!), details.Value.ToString()!));
+                    if (complianceObject is Dictionary<object, object> properties)
+                    {
+                        var metadataType = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.metadataType));
+                        var details = properties.FirstOrDefault(kvp => (kvp.Key as string) == nameof(ComplianceSchemaMetadata.details));
+                        metadata.Add(new ComplianceSchemaMetadata(Guid.Parse(metadataType.Value.ToString()!), details.Value.ToString()!));
+                    }
                 }
+
+                schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = metadata;
             }
 
-            schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] = metadata;
-        }
-
-        if (schema.Properties != default)
-        {
-            foreach (var property in schema.Properties)
+            if (schema.Properties != default)
             {
-                property.Value.EnsureComplianceMetadata();
+                foreach (var property in schema.Properties)
+                {
+                    property.Value.EnsureComplianceMetadata();
+                }
             }
         }
     }
@@ -52,13 +55,16 @@ public static class JsonSchemaExtensions
     /// <returns>Collection of <see cref="ComplianceSchemaMetadata"/>.</returns>
     public static IEnumerable<ComplianceSchemaMetadata> GetComplianceMetadata(this JsonSchema schema)
     {
-        if ((schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false) &&
-            schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] is IEnumerable<ComplianceSchemaMetadata> allMetadata)
+        lock (schema)
         {
-            return allMetadata;
-        }
+            if ((schema.ExtensionData?.ContainsKey(JsonSchemaGenerator.ComplianceKey) ?? false) &&
+                schema.ExtensionData[JsonSchemaGenerator.ComplianceKey] is IEnumerable<ComplianceSchemaMetadata> allMetadata)
+            {
+                return allMetadata;
+            }
 
-        return Array.Empty<ComplianceSchemaMetadata>();
+            return Array.Empty<ComplianceSchemaMetadata>();
+        }
     }
 
     /// <summary>
@@ -88,13 +94,16 @@ public static class JsonSchemaExtensions
     /// <param name="schema"><see cref="JsonSchema"/> to ensure for.</param>
     public static void EnsureFlattenedProperties(this JsonSchema schema)
     {
-        if (schema.ExtensionData?.ContainsKey(FlattenedProperties) != true || schema.ExtensionData?[FlattenedProperties] is not IEnumerable<JsonSchemaProperty>)
+        lock (schema)
         {
-            var properties = new List<JsonSchemaProperty>();
-            CollectPropertiesFrom(schema, properties);
+            if (schema.ExtensionData?.ContainsKey(FlattenedProperties) != true || schema.ExtensionData?[FlattenedProperties] is not IEnumerable<JsonSchemaProperty>)
+            {
+                var properties = new List<JsonSchemaProperty>();
+                CollectPropertiesFrom(schema, properties);
 
-            schema.ExtensionData ??= new Dictionary<string, object>();
-            schema.ExtensionData[FlattenedProperties] = properties.DistinctBy(_ => _.Name).ToArray().AsEnumerable();
+                schema.ExtensionData ??= new Dictionary<string, object>();
+                schema.ExtensionData[FlattenedProperties] = properties.DistinctBy(_ => _.Name).ToArray().AsEnumerable();
+            }
         }
     }
 
@@ -114,8 +123,11 @@ public static class JsonSchemaExtensions
     /// <returns>Collection of <see cref="JsonSchemaProperty"/>.</returns>
     public static IEnumerable<JsonSchemaProperty> GetFlattenedProperties(this JsonSchema schema)
     {
-        EnsureFlattenedProperties(schema);
-        return (schema.ExtensionData[FlattenedProperties] as IEnumerable<JsonSchemaProperty>)!;
+        lock (schema)
+        {
+            EnsureFlattenedProperties(schema);
+            return (schema.ExtensionData[FlattenedProperties] as IEnumerable<JsonSchemaProperty>)!;
+        }
     }
 
     /// <summary>
