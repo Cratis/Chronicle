@@ -19,9 +19,9 @@ public enum ObserverSubscriberState
     Ok = 1,
 
     /// <summary>
-    /// The observer subscriber is errored.
+    /// The observer subscriber has failed.
     /// </summary>
-    Error = 2,
+    Failed = 2,
 
     /// <summary>
     /// The observer is disconnected.

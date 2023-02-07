@@ -12,12 +12,17 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public record ObserverSubscriberResult(ObserverSubscriberState State, IEnumerable<string> ExceptionMessages, string ExceptionStackTrace)
 {
     /// <summary>
-    /// The result that represents a disconnected observer.
-    /// </summary>
-    public static readonly ObserverSubscriberResult Disconnected = new(ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);
-
-    /// <summary>
     /// The result that represents a ok observer call.
     /// </summary>
     public static readonly ObserverSubscriberResult Ok = new(ObserverSubscriberState.Ok, Enumerable.Empty<string>(), string.Empty);
+
+    /// <summary>
+    /// The result that represents a failed observer.
+    /// </summary>
+    public static readonly ObserverSubscriberResult Failed = new(ObserverSubscriberState.Failed, Enumerable.Empty<string>(), string.Empty);
+
+    /// <summary>
+    /// The result that represents a disconnected observer.
+    /// </summary>
+    public static readonly ObserverSubscriberResult Disconnected = new(ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);
 }
