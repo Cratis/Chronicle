@@ -97,7 +97,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             }
             else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
             {
-                state = ObserverSubscriberState.Error;
+                state = ObserverSubscriberState.Failed;
             }
 
             return new ObserverSubscriberResult(state, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
