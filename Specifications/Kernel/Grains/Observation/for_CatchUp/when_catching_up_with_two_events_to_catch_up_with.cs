@@ -9,7 +9,7 @@ using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_CatchUp;
 
-public class when_catching_up_with_two_events_to_catch_up_with : given.a_catch_up_job
+public class when_catching_up_with_two_events_to_catch_up_with : given.a_catch_up_worker
 {
     AppendedEvent first_appended_event;
     AppendedEvent second_appended_event;

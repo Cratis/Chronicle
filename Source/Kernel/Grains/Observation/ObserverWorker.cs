@@ -15,9 +15,9 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents a base class for all observers containing common methods and functionality.
 /// </summary>
-public abstract class ObserverJob : Grain
+public abstract class ObserverWorker : Grain
 {
-    readonly ILogger<ObserverJob> _logger;
+    readonly ILogger<ObserverWorker> _logger;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IPersistentState<ObserverState> _observerState;
@@ -89,17 +89,17 @@ public abstract class ObserverJob : Grain
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverJob"/> class.
+    /// Initializes a new instance of the <see cref="ObserverWorker"/> class.
     /// </summary>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="Observation.ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    protected ObserverJob(
+    protected ObserverWorker(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
-        ILogger<ObserverJob> logger)
+        ILogger<ObserverWorker> logger)
     {
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;

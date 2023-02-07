@@ -10,7 +10,7 @@ using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_CatchUp.given;
 
-public class a_catch_up_job : GrainSpecification
+public class a_catch_up_worker : GrainSpecification
 {
     protected Mock<IPersistentState<ObserverState>> persistent_state;
     protected ObserverState state;
