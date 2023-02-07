@@ -63,6 +63,8 @@ public abstract class ObserverWorker : Grain
     /// </summary>
     protected ObserverId ObserverId => State.ObserverId;
 
+    protected bool IsActive => !State.IsDisconnected && SubscriberType is not null && SubscriberType != typeof(IObserverSubscriber);
+
     /// <summary>
     /// Gets the <see cref="IObserverSupervisor"/>.
     /// </summary>
@@ -120,7 +122,7 @@ public abstract class ObserverWorker : Grain
         var exceptionStackTrace = string.Empty;
         try
         {
-            if (State.IsDisconnected || SubscriberType is null || SubscriberType == typeof(IObserverSubscriber))
+            if (!IsActive)
             {
                 return;
             }
@@ -174,6 +176,11 @@ public abstract class ObserverWorker : Grain
         }
     }
 
+    /// <summary>
+    /// Perform OnNext on the subscriber.
+    /// </summary>
+    /// <param name="event">Appended event.</param>
+    /// <returns><see cref="ObserverSubscriberResult"/>.</returns>
     protected Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
     {
         var key = new ObserverSubscriberKey(
