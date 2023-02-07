@@ -58,7 +58,7 @@ public partial class ObserverSupervisor
 
     async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, EventSequenceNumber tailSequenceNumber)
     {
-        if (!State.IsDisconnected && SubscriberType is not null && SubscriberType != typeof(IObserverSubscriber))
+        if (IsActive)
         {
             var result = await OnNext(@event);
             if (result.State != ObserverSubscriberState.Ok)
