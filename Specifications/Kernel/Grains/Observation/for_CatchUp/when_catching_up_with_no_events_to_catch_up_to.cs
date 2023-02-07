@@ -7,7 +7,7 @@ using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_CatchUp;
 
-public class when_catching_up_with_no_events_to_catch_up_to : given.a_catch_up_job
+public class when_catching_up_with_no_events_to_catch_up_to : given.a_catch_up_worker
 {
     void Establish()
     {

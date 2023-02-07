@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="ICatchUp"/>.
 /// </summary>
-public class CatchUp : ObserverJob, ICatchUp
+public class CatchUp : ObserverWorker, ICatchUp
 {
     readonly ILogger<CatchUp> _logger;
     ObserverKey? _observerKey;
