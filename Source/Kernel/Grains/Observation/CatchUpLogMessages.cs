@@ -18,4 +18,7 @@ internal static partial class CatchUpLogMessages
 
     [LoggerMessage(2, LogLevel.Warning, "Observer {ObserverId} has caught up for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}' - observing source microservice '{SourceMicroserviceId}' and tenant '{SourceTenantId}'")]
     internal static partial void CaughtUp(this ILogger<CatchUp> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, MicroserviceId? sourceMicroserviceId, TenantId? sourceTenantId);
+
+    [LoggerMessage(3, LogLevel.Warning, "Observer {ObserverId} has is already catching up for {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}' - observing source microservice '{SourceMicroserviceId}' and tenant '{SourceTenantId}'")]
+    internal static partial void AlreadyCatchingUp(this ILogger<CatchUp> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, MicroserviceId? sourceMicroserviceId, TenantId? sourceTenantId);
 }
