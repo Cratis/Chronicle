@@ -63,6 +63,9 @@ public abstract class ObserverWorker : Grain
     /// </summary>
     protected ObserverId ObserverId => State.ObserverId;
 
+    /// <summary>
+    /// Gets a value indicating whether or not the observer is active.
+    /// </summary>
     protected bool IsActive => !State.IsDisconnected && SubscriberType is not null && SubscriberType != typeof(IObserverSubscriber);
 
     /// <summary>
