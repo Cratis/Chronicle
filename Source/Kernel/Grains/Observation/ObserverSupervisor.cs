@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// This is a partial class. For structural, navigation and maintenance purposes, you'll find partial implementations
 /// representing different aspects.
 /// </remarks>
-public partial class ObserverSupervisor : ObserverJob, IObserverSupervisor, IRemindable
+public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, IRemindable
 {
     /// <summary>
     /// The name of the recover reminder.
