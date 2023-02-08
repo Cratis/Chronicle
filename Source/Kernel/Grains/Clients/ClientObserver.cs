@@ -51,8 +51,9 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         var observer = GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
         await connectedClients.SubscribeDisconnected(this);
-        await observer.SetMetadata(name, ObserverType.Client);
-        await observer.Subscribe<IClientObserverSubscriber>(eventTypes);
+        await observer.SetNameAndType(name, ObserverType.Client);
+        var connectedClient = await connectedClients.GetConnectedClient(connectionId);
+        await observer.Subscribe<IClientObserverSubscriber>(eventTypes, connectedClient);
     }
 
     /// <inheritdoc/>

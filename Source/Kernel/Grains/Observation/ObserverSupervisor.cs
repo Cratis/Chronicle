@@ -119,7 +119,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
     }
 
     /// <inheritdoc/>
-    public async Task SetMetadata(ObserverName name, ObserverType type)
+    public async Task SetNameAndType(ObserverName name, ObserverType type)
     {
         State.Name = name;
         State.Type = type;
@@ -151,7 +151,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         await HandleReminderRegistration();
     }
 
-    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(SubscriberType);
+    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(SubscriberType, SubscriberArgs);
     async Task StopAnyRunningCatchup()
     {
         if (State.RunningState != ObserverRunningState.CatchingUp)

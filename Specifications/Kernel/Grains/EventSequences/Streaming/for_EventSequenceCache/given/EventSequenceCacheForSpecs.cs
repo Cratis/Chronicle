@@ -20,6 +20,6 @@ public class EventSequenceCacheForSpecs : EventSequenceCache
     {
     }
 
-    public SortedSet<AppendedEvent> Events => _events;
-    public SortedSet<AppendedEventByDate> EventsByDate => _eventsByDate;
+    public LinkedList<AppendedEvent> Events => _events;
+    public Dictionary<EventSequenceNumber, LinkedListNode<AppendedEvent>> EventsBySequenceNumber => _eventsBySequenceNumber;
 }

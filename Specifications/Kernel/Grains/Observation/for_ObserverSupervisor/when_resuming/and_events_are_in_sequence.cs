@@ -17,7 +17,7 @@ public class and_events_are_in_sequence : given.an_observer_and_two_event_types_
         await observers[0].OnNextAsync(appended_event);
     }
 
-    [Fact] void should_forward_event_to_observer_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event), Once);
+    [Fact] void should_forward_event_to_observer_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event, IsAny<ObserverSubscriberContext>()), Once);
     [Fact] void should_set_last_handled_to_event_sequence_number_from_the_event() => state_on_write.LastHandled.Value.ShouldEqual(appended_event.Metadata.SequenceNumber.Value);
     [Fact] void should_unsubscribe_stream_when_finished() => subscription_handles[0].Verify(_ => _.UnsubscribeAsync(), Once);
 }

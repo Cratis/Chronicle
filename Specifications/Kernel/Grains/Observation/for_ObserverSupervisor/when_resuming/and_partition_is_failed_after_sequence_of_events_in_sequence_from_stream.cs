@@ -17,6 +17,6 @@ public class and_partition_is_failed_after_sequence_of_events_in_sequence_from_s
         await observers[0].OnNextAsync(appended_event);
     }
 
-    [Fact] void should_not_forward_event_to_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event), Never);
+    [Fact] void should_not_forward_event_to_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event, IsAny<ObserverSubscriberContext>()), Never);
     [Fact] void should_not_set_offset_to_next_event_sequence() => state_on_write.NextEventSequenceNumber.Value.ShouldEqual(43U);
 }

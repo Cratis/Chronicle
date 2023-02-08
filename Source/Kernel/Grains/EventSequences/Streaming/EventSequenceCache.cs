@@ -22,13 +22,23 @@ public class EventSequenceCache : IEventSequenceCache
     public const int MaxNumberOfEvents = 10000;
 
     /// <summary>
+    /// The pressure point for the cache.
+    /// </summary>
+    public const int PressurePoint = 9000;
+
+    /// <summary>
+    /// Number of events to purge when the cache is under pressure.
+    /// </summary>
+    public const int NumberOfEventsToPurge = 2000;
+
+    /// <summary>
     /// The number of events to fetch from the event store.
     /// </summary>
     public const int NumberOfEventsToFetch = 1000;
 
-#pragma warning disable SA1600 // Elements should be documented
-    protected readonly SortedSet<AppendedEvent> _events;
-    protected readonly SortedSet<AppendedEventByDate> _eventsByDate;
+#pragma warning disable SA1600, MA0016 // Elements should be documented + concrete type should not be used
+    protected readonly LinkedList<AppendedEvent> _events;
+    protected readonly Dictionary<EventSequenceNumber, LinkedListNode<AppendedEvent>> _eventsBySequenceNumber;
 #pragma warning restore SA1600
 
     readonly object _lock = new();
@@ -59,8 +69,8 @@ public class EventSequenceCache : IEventSequenceCache
         ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
         ILogger<EventSequenceCache> logger)
     {
-        _events = new(new AppendedEventComparer());
-        _eventsByDate = new(new AppendedEventByDateComparer());
+        _events = new();
+        _eventsBySequenceNumber = new();
         _microserviceId = microserviceId;
         _tenantId = tenantId;
         _eventSequenceId = eventSequenceId;
@@ -73,7 +83,7 @@ public class EventSequenceCache : IEventSequenceCache
     public void Dispose()
     {
         _events.Clear();
-        _eventsByDate.Clear();
+        _eventsBySequenceNumber.Clear();
     }
 
     /// <inheritdoc/>
@@ -81,26 +91,17 @@ public class EventSequenceCache : IEventSequenceCache
     {
         lock (_lock)
         {
-            if (_events.Contains(@event))
+            if (_eventsBySequenceNumber.ContainsKey(@event.Metadata.SequenceNumber)) return;
+            if (_events.Count > 0 && _events.Last!.Value.Metadata.SequenceNumber >= @event.Metadata.SequenceNumber)
             {
-                _eventsByDate.RemoveWhere(_ => _.Event == @event);
-                _eventsByDate.Add(new(@event, DateTimeOffset.UtcNow));
-                return;
+                throw new EventSequenceNumberIsLessThanLastEventInCache(@event.Metadata.SequenceNumber, _events.Last!.Value.Metadata.SequenceNumber);
+            }
+            if (_events.Count > 0 && _events.Last!.Value.Metadata.SequenceNumber + 1 < @event.Metadata.SequenceNumber)
+            {
+                Prime(_events.Last!.Value.Metadata.SequenceNumber + 1);
             }
 
-            _events.Add(@event);
-            _eventsByDate.Add(new(@event, DateTimeOffset.UtcNow));
-        }
-    }
-
-    /// <inheritdoc/>
-    public SortedSet<AppendedEvent> GetView(EventSequenceNumber from, EventSequenceNumber? to = null)
-    {
-        lock (_lock)
-        {
-            var fromEvent = AppendedEvent.EmptyWithEventSequenceNumber(from);
-            var toEvent = AppendedEvent.EmptyWithEventSequenceNumber(to ?? EventSequenceNumber.Max);
-            return _events.GetViewBetween(fromEvent, toEvent);
+            AddImplementation(@event);
         }
     }
 
@@ -118,19 +119,14 @@ public class EventSequenceCache : IEventSequenceCache
             {
                 foreach (var @event in eventCursor.Current)
                 {
-                    {
-                        Add(@event);
-                    }
+                    AddImplementation(@event);
                 }
             }
         }
     }
 
     /// <inheritdoc/>
-    public bool IsUnderPressure()
-    {
-        return _events.Count > MaxNumberOfEvents;
-    }
+    public bool IsUnderPressure() => _events.Count > PressurePoint;
 
     /// <inheritdoc/>
     public void Purge()
@@ -139,12 +135,31 @@ public class EventSequenceCache : IEventSequenceCache
         {
             lock (_lock)
             {
-                foreach (var @event in _eventsByDate.Take(_events.Count - MaxNumberOfEvents).ToList())
+                foreach (var @event in _events.Take(NumberOfEventsToPurge).ToArray())
                 {
-                    _events.Remove(@event.Event);
-                    _eventsByDate.Remove(@event);
+                    _events.Remove(@event);
+                    _eventsBySequenceNumber.Remove(@event.Metadata.SequenceNumber);
                 }
             }
         }
     }
+
+    /// <inheritdoc/>
+    public bool HasEvent(EventSequenceNumber sequenceNumber) => _eventsBySequenceNumber.ContainsKey(sequenceNumber);
+
+    /// <inheritdoc/>
+    public LinkedListNode<AppendedEvent>? GetEvent(EventSequenceNumber sequenceNumber)
+    {
+        lock (_lock)
+        {
+            if (HasEvent(sequenceNumber))
+            {
+                return _eventsBySequenceNumber[sequenceNumber];
+            }
+
+            return null;
+        }
+    }
+
+    void AddImplementation(AppendedEvent @event) => _eventsBySequenceNumber[@event.Metadata.SequenceNumber] = _events.AddLast(@event);
 }

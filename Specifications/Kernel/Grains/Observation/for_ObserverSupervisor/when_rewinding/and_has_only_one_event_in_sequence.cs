@@ -33,8 +33,8 @@ public class and_has_only_one_event_in_sequence : given.an_observer_and_two_even
         state.LastHandled = EventSequenceNumber.First;
         appended_events = new();
         subscriber.Setup(_ => _.OnNext(
-            IsAny<AppendedEvent>())).Returns(
-                (AppendedEvent @event) =>
+            IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(
+                (AppendedEvent @event, ObserverSubscriberContext _) =>
                 {
                     appended_events.Add(@event);
                     return Task.FromResult(ObserverSubscriberResult.Ok);
@@ -47,6 +47,6 @@ public class and_has_only_one_event_in_sequence : given.an_observer_and_two_even
         await observers[0].OnNextAsync(event_in_sequence);
     }
 
-    [Fact] void should_set_head_and_tail_of_replay_as_event_observation_state_for_first_event() => appended_events[0].Context.ObservationState.ShouldEqual(EventObservationState.HeadOfReplay | EventObservationState.Replay | EventObservationState.TailOfReplay);
+    [Fact] void should_set_head_and_tail_of_replay_as_event_observation_state_for_first_event() => appended_events[0].Context.ObservationState.ShouldEqual(EventObservationState.HeadOfReplay | EventObservationState.Replay | EventObservationState.TailOfReplay);
     [Fact] void should_set_state_to_active() => state_on_write.RunningState.ShouldEqual(ObserverRunningState.Active);
 }
