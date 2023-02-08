@@ -1,3 +1,12 @@
+# [v8.4.2] - 2023-2-8 [PR: #737](https://github.com/aksio-insurtech/Cratis/pull/737)
+
+### Fixed
+
+- Only allow one catchup for a partition at once. Once a partition is in catchup, it shouldn't really be possible to handle events and end up in a second catchup.
+- Separating handling of events for failed partitions from the active or catchup, as they are very different.
+- Improved test coverage for catchup and observers.
+
+
 # [v8.4.1] - 2023-2-7 [PR: #731](https://github.com/aksio-insurtech/Cratis/pull/731)
 
 ### Fixed
