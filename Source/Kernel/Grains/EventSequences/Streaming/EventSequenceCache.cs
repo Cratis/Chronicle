@@ -36,7 +36,7 @@ public class EventSequenceCache : IEventSequenceCache
     /// </summary>
     public const int NumberOfEventsToFetch = 1000;
 
-#pragma warning disable SA1600 // Elements should be documented
+#pragma warning disable SA1600, MA0016 // Elements should be documented + concrete type should not be used
     protected readonly LinkedList<AppendedEvent> _events;
     protected readonly Dictionary<EventSequenceNumber, LinkedListNode<AppendedEvent>> _eventsBySequenceNumber;
 #pragma warning restore SA1600
