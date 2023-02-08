@@ -64,7 +64,7 @@ public class CatchUp : ObserverWorker, ICatchUp
     /// <inheritdoc/>
     public Task Start(Type subscriberType)
     {
-        if( _isRunning)
+        if (_isRunning)
         {
             _logger.AlreadyCatchingUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
             return Task.CompletedTask;
