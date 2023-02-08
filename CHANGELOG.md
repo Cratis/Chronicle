@@ -1,3 +1,10 @@
+# [v8.4.3] - 2023-2-8 [PR: #742](https://github.com/aksio-insurtech/Cratis/pull/742)
+
+### Fixed
+
+- Removing a tension point were the client observer subscriber was asking for all connected clients in the `OnNext` method to know what clients are connected.
+- Bug in the internal event sequence cache causing it to skip events under certain circumstances. The cache is simplified and focused on providing a rolling forward view.
+
 # [v8.4.2] - 2023-2-8 [PR: #737](https://github.com/aksio-insurtech/Cratis/pull/737)
 
 ### Fixed
