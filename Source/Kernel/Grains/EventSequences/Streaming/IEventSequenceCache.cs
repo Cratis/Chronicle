@@ -22,12 +22,18 @@ public interface IEventSequenceCache : IDisposable
     void Add(AppendedEvent @event);
 
     /// <summary>
-    /// Get a view of the cache.
+    /// Check if cache has a specific event based on its sequence number.
     /// </summary>
-    /// <param name="from">The from sequence number.</param>
-    /// <param name="to">Optional to sequence number.</param>
-    /// <returns>A view containing a collection of <see cref="AppendedEvent"/>.</returns>
-    SortedSet<AppendedEvent> GetView(EventSequenceNumber from, EventSequenceNumber? to = null);
+    /// <param name="sequenceNumber">Sequence number to check for.</param>
+    /// <returns>True if it has the event, false if not.</returns>
+    bool HasEvent(EventSequenceNumber sequenceNumber);
+
+    /// <summary>
+    /// Get an event from the cache based on its sequence number.
+    /// </summary>
+    /// <param name="sequenceNumber">Sequence number to get for.</param>
+    /// <returns>The node representing the event.</returns>
+    LinkedListNode<AppendedEvent>? GetEvent(EventSequenceNumber sequenceNumber);
 
     /// <summary>
     /// Populate the cache from a specific sequence number.

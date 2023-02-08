@@ -19,10 +19,8 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
-    AppendedEvent[] _events;
-    EventSequenceNumber _to = EventSequenceNumber.Unavailable;
-    int _currentIndex;
-    EventSequenceNumber _previousEventSequenceNumber;
+    LinkedListNode<AppendedEvent>? _current;
+    EventSequenceNumber _currentSequenceNumber;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueCacheCursor"/> class.
@@ -43,18 +41,12 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         _microserviceId = microserviceId;
         _tenantId = tenantId;
         _eventSequenceId = eventSequenceId;
-        _currentIndex = -1;
-        _previousEventSequenceNumber = EventSequenceNumber.Unavailable;
-        _events = Array.Empty<AppendedEvent>();
-
-        GetEventsFromCache(from);
+        _currentSequenceNumber = from;
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        _events = null!;
-        _cache.Dispose();
     }
 
     /// <inheritdoc/>
@@ -63,7 +55,12 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         exception = null!;
         try
         {
-            var @event = _events[_currentIndex];
+            if (_current is null)
+            {
+                return null!;
+            }
+
+            var @event = _current.Value;
             return new EventSequenceBatchContainer(
                 new[] { @event },
                 _eventSequenceId,
@@ -88,31 +85,21 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     /// <inheritdoc/>
     public bool MoveNext()
     {
-        if (_to == EventSequenceNumber.Unavailable)
+        if (_current is null)
         {
-            return false;
+            _current = TryToGetFromCache(_currentSequenceNumber);
+        }
+        else
+        {
+            _current = _current.Next ?? TryToGetFromCache(_currentSequenceNumber + 1);
         }
 
-        _currentIndex++;
-        if (_currentIndex >= _events.Length)
+        if (_current is not null)
         {
-            GetEventsFromCache(_previousEventSequenceNumber + 1);
-            _currentIndex = 0;
+            _currentSequenceNumber = _current.Value.Metadata.SequenceNumber;
         }
 
-        if (_currentIndex < _events.Length)
-        {
-            if (_currentIndex != 0 && _events[_currentIndex].Metadata.SequenceNumber != _previousEventSequenceNumber + 1)
-            {
-                GetEventsFromCache(_previousEventSequenceNumber + 1);
-                _currentIndex = 0;
-            }
-
-            _previousEventSequenceNumber = _events[_currentIndex].Metadata.SequenceNumber;
-        }
-
-        var atEnd = _currentIndex >= _events.Length;
-        return !atEnd;
+        return _current is not null;
     }
 
     /// <inheritdoc/>
@@ -123,11 +110,10 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
             return;
         }
 
-        if (_events.Any(_ => _.Metadata.SequenceNumber == (ulong)token.SequenceNumber))
+        if (!_cache.HasEvent((ulong)token.SequenceNumber))
         {
-            return;
+            _cache.Prime((ulong)token.SequenceNumber);
         }
-        GetEventsFromCache((ulong)token.SequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -135,24 +121,18 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     {
     }
 
-    void GetEventsFromCache(EventSequenceNumber from)
+    LinkedListNode<AppendedEvent>? TryToGetFromCache(EventSequenceNumber sequenceNumber)
     {
-        _events = _cache.GetView(from).ToArray();
-
-        if (_events.Length == 0)
+        if (!_cache.HasEvent(sequenceNumber))
         {
-            _cache.Prime(from);
-            _events = _cache.GetView(from).ToArray();
+            _cache.Prime(sequenceNumber);
         }
 
-        _currentIndex = -1;
-        if (_events.Length > 0)
+        if (_cache.HasEvent(sequenceNumber))
         {
-            _to = _events[^1].Metadata.SequenceNumber;
+            return _cache.GetEvent(sequenceNumber);
         }
-        else
-        {
-            _to = EventSequenceNumber.Unavailable;
-        }
+
+        return null;
     }
 }

@@ -34,7 +34,7 @@ public class an_observer_supervisor : GrainSpecification
     protected Mock<IPersistentState<ObserverState>> persistent_state;
     protected ObserverState state;
     protected ObserverState state_on_write;
-
+    protected object subscriber_args;
     protected override Guid GrainId => _grainId;
     protected override string GrainKeyExtension => _grainKeyExtension;
 
@@ -70,6 +70,7 @@ public class an_observer_supervisor : GrainSpecification
 
     protected override void OnBeforeGrainActivate()
     {
+        subscriber_args = Guid.NewGuid();
         state = new()
         {
             ObserverId = observer_id
@@ -89,7 +90,7 @@ public class an_observer_supervisor : GrainSpecification
         grain_factory.Setup(_ => _.GetGrain<ICatchUp>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(catch_up.Object);
 
         subscriber = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
+        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
         grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), observer_id, IsAny<string>())).Returns(subscriber.Object);
 
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))

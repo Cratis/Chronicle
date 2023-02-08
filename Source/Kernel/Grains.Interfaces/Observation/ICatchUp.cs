@@ -14,8 +14,9 @@ public interface ICatchUp : IGrainWithGuidCompoundKey
     /// Starts a catch up process for a given observer.
     /// </summary>
     /// <param name="subscriberType">Type of subscriber.</param>
+    /// <param name="subscriberArgs">Arguments associated with the subscriber.</param>
     /// <returns>Awaitable task.</returns>
-    Task Start(Type subscriberType);
+    Task Start(Type subscriberType, object? subscriberArgs = default);
 
     /// <summary>
     /// Stop catching up.
