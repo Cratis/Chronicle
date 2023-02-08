@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 
 public class ObserverSubscriber : IObserverSubscriber
 {
-    public Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
+    public Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
     {
         throw new NotImplementedException();
     }

@@ -12,14 +12,15 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public partial class ObserverSupervisor
 {
     /// <inheritdoc/>
-    public Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes)
+    public Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = default)
         where TObserverSubscriber : IObserverSubscriber
-        => Subscribe(typeof(TObserverSubscriber), eventTypes);
+        => Subscribe(typeof(TObserverSubscriber), eventTypes, subscriberArgs);
 
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
         SubscriberType = null!;
+        SubscriberArgs = null!;
         _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         await StopAnyRunningCatchup();
         State.RunningState = ObserverRunningState.Disconnected;
@@ -32,10 +33,14 @@ public partial class ObserverSupervisor
         }
     }
 
-    async Task Subscribe(Type subscriberType, IEnumerable<EventType> eventTypes)
+    async Task Subscribe(
+        Type subscriberType,
+        IEnumerable<EventType> eventTypes,
+        object? subscriberArgs = default)
     {
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
         SubscriberType = subscriberType;
+        SubscriberArgs = subscriberArgs;
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {

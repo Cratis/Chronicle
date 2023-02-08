@@ -18,6 +18,6 @@ public class and_event_should_be_handled : given.an_observer_worker
 
     Task Because() => worker.Handle(@event, false);
 
-    [Fact] void should_call_the_subscriber() => subscriber.Verify(_ => _.OnNext(@event), Once);
+    [Fact] void should_call_the_subscriber() => subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Once);
     [Fact] void should_move_the_sequence_number() => state.NextEventSequenceNumber.ShouldEqual(sequence_number + 1);
 }

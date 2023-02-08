@@ -62,7 +62,7 @@ public class CatchUp : ObserverWorker, ICatchUp
     }
 
     /// <inheritdoc/>
-    public Task Start(Type subscriberType)
+    public Task Start(Type subscriberType, object? subscriberArgs = default)
     {
         if (_isRunning)
         {
@@ -72,6 +72,7 @@ public class CatchUp : ObserverWorker, ICatchUp
 
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         SubscriberType = subscriberType;
+        SubscriberArgs = subscriberArgs;
         _isRunning = true;
         _timer = RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.MaxValue);
         return Task.CompletedTask;

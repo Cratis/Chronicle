@@ -7,7 +7,7 @@ public class when_catching_up_with_failure : given.a_catch_up_worker_with_two_pe
 {
     void Establish()
     {
-        subscriber.SetupSequence(_ => _.OnNext(IsAny<AppendedEvent>()))
+        subscriber.SetupSequence(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>()))
             .Returns(Task.FromResult(ObserverSubscriberResult.Ok))
             .Returns(Task.FromResult(ObserverSubscriberResult.Failed));
     }

@@ -18,15 +18,16 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <param name="name">Friendly name of the observer.</param>
     /// <param name="type"><see cref="ObserverType"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task SetMetadata(ObserverName name, ObserverType type);
+    Task SetNameAndType(ObserverName name, ObserverType type);
 
     /// <summary>
     /// Subscribe to observer.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
     /// <param name="eventTypes">Collection of <see cref="EventType">event types</see> to subscribe to.</param>
+    /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes)
+    Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = default)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>

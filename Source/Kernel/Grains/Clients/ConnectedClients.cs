@@ -113,7 +113,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         {
             if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-10))
             {
-                await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 2 seconds ago");
+                await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 10 seconds ago");
             }
         }
     }
