@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
 using MongoDB.Driver;
@@ -15,7 +16,6 @@ namespace Aksio.Cratis.Events.Schemas.MongoDB;
 [SingletonPerMicroservice]
 public class MongoDBSchemaStore : ISchemaStore
 {
-    const string SchemasCollection = "schemas";
     readonly ISharedDatabase _sharedDatabase;
     Dictionary<EventTypeId, Dictionary<EventGeneration, EventSchema>> _schemasByTypeAndGeneration = new();
 
@@ -131,7 +131,7 @@ public class MongoDBSchemaStore : ISchemaStore
         return Task.FromResult(schemas.Count == 1);
     }
 
-    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(SchemasCollection);
+    IMongoCollection<EventSchemaMongoDB> GetCollection() => _sharedDatabase.GetCollection<EventSchemaMongoDB>(CollectionNames.Schemas);
 
     FilterDefinition<EventSchemaMongoDB> GetFilterForSpecificSchema(EventTypeId type, EventGeneration? generation) => Builders<EventSchemaMongoDB>.Filter.And(
                    Builders<EventSchemaMongoDB>.Filter.Eq(_ => _.EventType, type.Value),

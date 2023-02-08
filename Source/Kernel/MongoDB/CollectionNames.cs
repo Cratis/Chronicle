@@ -36,4 +36,9 @@ public static class CollectionNames
     /// The collection that holds connected clients state.
     /// </summary>
     public const string ConnectedClients = "connected-clients";
+
+    /// <summary>
+    /// The collection that holds schemas.
+    /// </summary>
+    public const string Schemas = "schemas";
 }

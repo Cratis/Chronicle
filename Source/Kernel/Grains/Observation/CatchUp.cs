@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="ICatchUp"/>.
 /// </summary>
-public class CatchUp : ObserverJob, ICatchUp
+public class CatchUp : ObserverWorker, ICatchUp
 {
     readonly ILogger<CatchUp> _logger;
     ObserverKey? _observerKey;
@@ -64,6 +64,12 @@ public class CatchUp : ObserverJob, ICatchUp
     /// <inheritdoc/>
     public Task Start(Type subscriberType)
     {
+        if (_isRunning)
+        {
+            _logger.AlreadyCatchingUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
+            return Task.CompletedTask;
+        }
+
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         SubscriberType = subscriberType;
         _isRunning = true;
@@ -103,6 +109,7 @@ public class CatchUp : ObserverJob, ICatchUp
             }
         }
 
+        _isRunning = false;
         _logger.CaughtUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         await Supervisor.NotifyCatchUpComplete();
     }

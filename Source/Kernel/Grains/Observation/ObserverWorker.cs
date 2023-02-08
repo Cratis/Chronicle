@@ -15,9 +15,9 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents a base class for all observers containing common methods and functionality.
 /// </summary>
-public abstract class ObserverJob : Grain
+public abstract class ObserverWorker : Grain
 {
-    readonly ILogger<ObserverJob> _logger;
+    readonly ILogger<ObserverWorker> _logger;
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IPersistentState<ObserverState> _observerState;
@@ -64,6 +64,11 @@ public abstract class ObserverJob : Grain
     protected ObserverId ObserverId => State.ObserverId;
 
     /// <summary>
+    /// Gets a value indicating whether or not the observer is active.
+    /// </summary>
+    protected bool IsActive => !State.IsDisconnected && SubscriberType is not null && SubscriberType != typeof(IObserverSubscriber);
+
+    /// <summary>
     /// Gets the <see cref="IObserverSupervisor"/>.
     /// </summary>
     protected IObserverSupervisor Supervisor => _supervisor ??= this switch
@@ -89,17 +94,17 @@ public abstract class ObserverJob : Grain
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverJob"/> class.
+    /// Initializes a new instance of the <see cref="ObserverWorker"/> class.
     /// </summary>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
-    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="Observation.ObserverState"/>.</param>
+    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    protected ObserverJob(
+    protected ObserverWorker(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
-        ILogger<ObserverJob> logger)
+        ILogger<ObserverWorker> logger)
     {
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
         _executionContextManager = executionContextManager;
@@ -120,51 +125,33 @@ public abstract class ObserverJob : Grain
         var exceptionStackTrace = string.Empty;
         try
         {
-            if (State.IsDisconnected)
+            if (!IsActive)
             {
                 return;
             }
 
-            var next = State.NextEventSequenceNumber;
-            if (State.IsPartitionFailed(@event.Context.EventSourceId))
+            if (@event.Metadata.SequenceNumber >= State.NextEventSequenceNumber)
             {
-                next = State.GetFailedPartition(@event.Context.EventSourceId).SequenceNumber;
-            }
-
-            if (@event.Metadata.SequenceNumber < next)
-            {
-                return;
-            }
-
-            var key = new ObserverSubscriberKey(
-                MicroserviceId,
-                TenantId,
-                EventSequenceId,
-                @event.Context.EventSourceId,
-                SourceMicroserviceId,
-                SourceTenantId);
-
-            if (SubscriberType is not null)
-            {
-                var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
-                var result = await subscriber.OnNext(@event);
-                if (result.State == ObserverSubscriberState.Error)
+                if (!State.IsPartitionFailed(@event.Context.EventSourceId))
                 {
-                    failed = true;
-                    exceptionMessages = result.ExceptionMessages;
-                    exceptionStackTrace = result.ExceptionStackTrace;
+                    var result = await OnNext(@event);
+                    if (result.State == ObserverSubscriberState.Failed)
+                    {
+                        failed = true;
+                        exceptionMessages = result.ExceptionMessages;
+                        exceptionStackTrace = result.ExceptionStackTrace;
+                    }
+                    else if (result.State == ObserverSubscriberState.Disconnected)
+                    {
+                        return;
+                    }
                 }
-                else if (result.State == ObserverSubscriberState.Disconnected)
-                {
-                    return;
-                }
+
                 State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
                 if (setLastHandled)
                 {
                     State.LastHandled = @event.Metadata.SequenceNumber;
                 }
-
-                await WriteStateAsync();
             }
         }
         catch (Exception ex)
@@ -173,6 +160,8 @@ public abstract class ObserverJob : Grain
             exceptionMessages = ex.GetAllMessages().ToArray();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
         }
+
+        await WriteStateAsync();
 
         if (failed)
         {
@@ -188,6 +177,25 @@ public abstract class ObserverJob : Grain
 
             await Supervisor.PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
         }
+    }
+
+    /// <summary>
+    /// Perform OnNext on the subscriber.
+    /// </summary>
+    /// <param name="event">Appended event.</param>
+    /// <returns><see cref="ObserverSubscriberResult"/>.</returns>
+    protected Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
+    {
+        var key = new ObserverSubscriberKey(
+            MicroserviceId,
+            TenantId,
+            EventSequenceId,
+            @event.Context.EventSourceId,
+            SourceMicroserviceId,
+            SourceTenantId);
+
+        var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
+        return subscriber.OnNext(@event);
     }
 
     /// <summary>
