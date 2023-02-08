@@ -68,7 +68,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
+    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
     {
         try
         {

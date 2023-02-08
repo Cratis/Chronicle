@@ -31,7 +31,6 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
     IConnectedClients ConnectedClients => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
-    IEnumerable<ConnectedClient> _clients = Enumerable.Empty<ConnectedClient>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
@@ -62,7 +61,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
+    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
     {
         _logger.EventReceived(
             _observerId,
@@ -72,27 +71,21 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             _eventSequenceId,
             @event.Context.SequenceNumber);
 
-        if (!_clients.Any())
+        var connectedClient = context.Metadata as ConnectedClient;
+        if (connectedClient is not null)
         {
-            _clients = await ConnectedClients.GetAllConnectedClients();
-        }
-
-        var first = _clients.FirstOrDefault();
-        if (first is not null)
-        {
-            using var client = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
-            client.BaseAddress = first.ClientUri;
+            using var httpClient = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
+            httpClient.BaseAddress = connectedClient.ClientUri;
 
             var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
-            client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
-            var response = await client.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
+            httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
+            var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
             var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
             var state = ObserverSubscriberState.Ok;
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                await ConnectedClients.OnClientDisconnected(first.ConnectionId, "Client not found");
-                _clients = Enumerable.Empty<ConnectedClient>();
+                await ConnectedClients.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
                 state = ObserverSubscriberState.Disconnected;
             }
             else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)

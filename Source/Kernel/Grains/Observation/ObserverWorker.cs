@@ -29,6 +29,11 @@ public abstract class ObserverWorker : Grain
     protected Type SubscriberType { get; set; } = typeof(IObserverSubscriber);
 
     /// <summary>
+    /// Gets or sets any subscriber arguments.
+    /// </summary>
+    protected object? SubscriberArgs { get; set; }
+
+    /// <summary>
     /// Gets the <see cref="ObserverState"/>.
     /// </summary>
     protected ObserverState State => _observerState.State;
@@ -195,7 +200,7 @@ public abstract class ObserverWorker : Grain
             SourceTenantId);
 
         var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
-        return subscriber.OnNext(@event);
+        return subscriber.OnNext(@event, new(SubscriberArgs!));
     }
 
     /// <summary>

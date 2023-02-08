@@ -82,7 +82,7 @@ public class Projection : Grain, IProjection
 
         _observer = GrainFactory.GetGrain<IObserverSupervisor>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
 
-        await _observer.SetMetadata(_definition!.Name.Value, ObserverType.Projection);
+        await _observer.SetNameAndType(_definition!.Name.Value, ObserverType.Projection);
         await _observer.Subscribe<IProjectionObserverSubscriber>(_projection!.EventTypes);
     }
 

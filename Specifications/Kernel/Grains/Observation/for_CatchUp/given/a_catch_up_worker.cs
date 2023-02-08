@@ -22,6 +22,8 @@ public class a_catch_up_worker : GrainSpecification
     protected Mock<IObserverSupervisor> supervisor;
     protected Mock<IObserverSubscriber> subscriber;
 
+    protected object subscriber_args;
+
     protected override Guid GrainId => state.ObserverId;
 
     protected override string GrainKeyExtension => new ObserverKey(
@@ -50,7 +52,7 @@ public class a_catch_up_worker : GrainSpecification
         event_sequence_storage_provider = new();
 
         subscriber = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
+        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
 
         catch_up = new CatchUp(
             Mock.Of<IExecutionContextManager>(),
@@ -63,6 +65,8 @@ public class a_catch_up_worker : GrainSpecification
 
     protected override void OnBeforeGrainActivate()
     {
+        subscriber_args = Guid.NewGuid();
+
         grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), state.ObserverId, IsAny<string>())).Returns(subscriber.Object);
         grain_factory.Setup(_ => _.GetGrain<IObserverSupervisor>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(supervisor.Object);
 

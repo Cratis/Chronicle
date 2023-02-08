@@ -7,5 +7,5 @@ public class with_partition_being_recovered : given.an_observer_and_two_event_ty
 {
     void Establish() => state.StartRecoveringPartition(event_source_id);
 
-    [Fact] void should_not_forward_event_to_observer_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event), Never);
+    [Fact] void should_not_forward_event_to_observer_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event, IsAny<ObserverSubscriberContext>()), Never);
 }

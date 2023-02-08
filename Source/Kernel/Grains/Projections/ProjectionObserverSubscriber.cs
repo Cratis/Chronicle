@@ -77,7 +77,7 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event)
+    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
     {
         if (_pipeline is null)
         {

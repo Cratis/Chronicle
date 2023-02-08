@@ -32,8 +32,8 @@ public class and_two_failed_partitions_with_two_events_for_each_partition_in_seq
             new ExpandoObject());
 
         events_received = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>()))
-            .Returns((AppendedEvent @event) =>
+        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>()))
+            .Returns((AppendedEvent @event, ObserverSubscriberContext _) =>
             {
                 events_received[@event.Context.EventSourceId] = @event;
                 return Task.FromResult(ObserverSubscriberResult.Ok);

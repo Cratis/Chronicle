@@ -30,7 +30,7 @@ public class Inbox : Grain, IInbox
                 key.MicroserviceId,
                 key.TenantId));
 
-        await observer.SetMetadata($"Inbox for ${microserviceId}, Outbox from ${key.MicroserviceId} for Tenant ${key.TenantId}", ObserverType.Inbox);
+        await observer.SetNameAndType($"Inbox for ${microserviceId}, Outbox from ${key.MicroserviceId} for Tenant ${key.TenantId}", ObserverType.Inbox);
         await observer.Subscribe<IInboxObserverSubscriber>(Enumerable.Empty<EventType>());
     }
 }
