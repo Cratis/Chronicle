@@ -38,6 +38,8 @@ public partial class ObserverSupervisor
         IEnumerable<EventType> eventTypes,
         object? subscriberArgs = default)
     {
+        await ReadStateAsync();
+
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
         SubscriberType = subscriberType;
         SubscriberArgs = subscriberArgs;
@@ -106,6 +108,6 @@ public partial class ObserverSupervisor
             return Task.CompletedTask;
         }
 
-        return Handle(@event, true);
+        return Handle(@event);
     }
 }
