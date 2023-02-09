@@ -107,15 +107,16 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
     {
         _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
-        await StopAnyRunningCatchup();
-        State.RunningState = ObserverRunningState.Disconnected;
-        await WriteStateAsync();
         await UnsubscribeStream();
 
         if (_recoverReminder is not null)
         {
             await UnregisterReminder(_recoverReminder);
         }
+
+        await StopAnyRunningCatchup();
+        State.RunningState = ObserverRunningState.Disconnected;
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -152,6 +153,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
     }
 
     Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(SubscriberType, SubscriberArgs);
+
     async Task StopAnyRunningCatchup()
     {
         if (State.RunningState != ObserverRunningState.CatchingUp)
