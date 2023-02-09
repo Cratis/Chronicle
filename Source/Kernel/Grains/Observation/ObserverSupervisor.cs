@@ -128,8 +128,10 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         await WriteStateAsync();
     }
 
+    #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
     public Task<ObserverSubscription> GetCurrentSubscription() => Task.FromResult(CurrentSubscription);
+    #pragma warning restore CA1721 // Property names should not match get methods
 
     /// <inheritdoc/>
     public async Task NotifyCatchUpComplete()
