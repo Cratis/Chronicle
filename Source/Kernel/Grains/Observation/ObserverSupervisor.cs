@@ -145,6 +145,9 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
     }
 
     /// <inheritdoc/>
+    public Task NotifyFailedPartitionRecoveryComplete(EventSequenceNumber lastProcessedEvent) => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public async Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
     {
         State.FailPartition(
@@ -157,7 +160,10 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         await HandleReminderRegistration();
     }
 
-    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);
+    /// <inheritdoc/>
+    public Task<Type> GetSubscriberType() => Task.FromResult(SubscriberType);
+
+    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(SubscriberType, SubscriberArgs);
 
     async Task StopAnyRunningCatchup()
     {
