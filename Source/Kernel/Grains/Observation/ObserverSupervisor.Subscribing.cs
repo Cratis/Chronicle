@@ -19,8 +19,7 @@ public partial class ObserverSupervisor
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
-        SubscriberType = null!;
-        SubscriberArgs = null!;
+        CurrentSubscription = ObserverSubscription.Unsubscribed;
         _logger.Unsubscribing(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         await StopAnyRunningCatchup();
         State.RunningState = ObserverRunningState.Disconnected;
@@ -41,8 +40,7 @@ public partial class ObserverSupervisor
         await ReadStateAsync();
 
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
-        SubscriberType = subscriberType;
-        SubscriberArgs = subscriberArgs;
+        CurrentSubscription = new(subscriberType, subscriberArgs!);
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {

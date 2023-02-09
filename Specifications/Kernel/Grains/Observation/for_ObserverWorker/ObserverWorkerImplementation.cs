@@ -41,6 +41,6 @@ public class ObserverWorkerImplementation : ObserverWorker
     public void SetEventSequenceId(EventSequenceId eventSequenceId) => _eventSequenceId = eventSequenceId;
     public void SetSourceMicroserviceId(MicroserviceId sourceMicroserviceId) => _sourceMicroserviceId = sourceMicroserviceId;
     public void SetSourceTenantId(TenantId sourceTenantId) => _sourceTenantId = sourceTenantId;
-    public void SetSubscriberType(Type subscriberType) => SubscriberType = subscriberType;
+    public void SetCurrentSubscription(ObserverSubscription subscription) => CurrentSubscription = subscription;
 }
 
