@@ -60,6 +60,12 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task NotifyCatchUpComplete();
+    
+    /// <summary>
+    /// Notify that failed partition has run to completion.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task NotifyFailedPartitionRecoveryComplete(EventSequenceNumber lastProcessedEvent);
 
     /// <summary>
     /// Notify that the partition has failed.
@@ -69,4 +75,10 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
+
+    /// <summary>
+    /// Gets the type of the Subscriber
+    /// </summary>
+    /// <returns>Subscriber Type</returns>
+    Task<Type> GetSubscriberType();
 }
