@@ -35,10 +35,15 @@ public static class CollectionNames
     /// <summary>
     /// The collection that holds connected clients state.
     /// </summary>
-    public const string ConnectedClients = "connected-clients";
+    internal const string ConnectedClients = "connected-clients";
 
     /// <summary>
     /// The collection that holds schemas.
     /// </summary>
     public const string Schemas = "schemas";
+    
+    /// <summary>
+    /// The collection that holds schemas.
+    /// </summary>
+    public const string RecoverFailedPartitions = "recover-failed-partitions";
 }
