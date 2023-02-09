@@ -31,7 +31,7 @@ public abstract class ObserverWorker : Grain
     /// <summary>
     /// Gets or sets any subscriber arguments.
     /// </summary>
-    protected object? SubscriberArgs { get; set; }
+    protected object? SubscriberArgs { get; set; }
 
     /// <summary>
     /// Gets the <see cref="ObserverState"/>.
@@ -121,9 +121,8 @@ public abstract class ObserverWorker : Grain
     /// Handle an <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
-    /// <param name="setLastHandled">Whether or not to set last handled.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Handle(AppendedEvent @event, bool setLastHandled = false)
+    public async Task Handle(AppendedEvent @event)
     {
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
@@ -151,9 +150,8 @@ public abstract class ObserverWorker : Grain
                         return;
                     }
                 }
-
                 State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-                if (setLastHandled)
+                if (State.LastHandled < @event.Metadata.SequenceNumber)
                 {
                     State.LastHandled = @event.Metadata.SequenceNumber;
                 }

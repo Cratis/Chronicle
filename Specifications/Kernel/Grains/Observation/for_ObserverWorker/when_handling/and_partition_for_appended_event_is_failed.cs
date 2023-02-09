@@ -17,7 +17,7 @@ public class and_partition_for_appended_event_is_failed : given.an_observer_work
         state.FailPartition(@event.Context.EventSourceId, @event.Metadata.SequenceNumber, Array.Empty<string>(), string.Empty);
     }
 
-    Task Because() => worker.Handle(@event, false);
+    Task Because() => worker.Handle(@event);
 
     [Fact] void should_not_call_the_subscriber() => subscriber.VerifyNoOtherCalls();
     [Fact] void should_move_the_sequence_number() => state.NextEventSequenceNumber.ShouldEqual(sequence_number + 1);

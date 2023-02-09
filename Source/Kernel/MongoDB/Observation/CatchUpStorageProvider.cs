@@ -38,7 +38,8 @@ public class CatchUpStorageProvider : ObserverStorageProvider
 
         var state = (ObserverState)grainState.State;
         var update = Builders<ObserverState>.Update
-            .Set(_ => _.NextEventSequenceNumber, state.NextEventSequenceNumber);
+            .Set(_ => _.NextEventSequenceNumber, state.NextEventSequenceNumber)
+            .Set(_ => _.LastHandled, state.LastHandled);
 
         await Collection.UpdateOneAsync(
             _ => _.Id == key,
