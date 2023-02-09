@@ -12,7 +12,7 @@ public class when_catching_up_with_failure : given.a_catch_up_worker_with_two_pe
             .Returns(Task.FromResult(ObserverSubscriberResult.Failed));
     }
 
-    Task Because() => catch_up.Start(typeof(ObserverSubscriber));
+    Task Because() => catch_up.Start(new(typeof(ObserverSubscriber), null!));
 
     [Fact] void should_notify_supervisor_that_partition_has_failed_for_second_event() => supervisor.Verify(_ => _.PartitionFailed(second_appended_event, IsAny<IEnumerable<string>>(), IsAny<string>()), Once);
     [Fact] void should_notify_supervisor_that_catch_up_is_complete() => supervisor.Verify(_ => _.NotifyCatchUpComplete(), Once);
