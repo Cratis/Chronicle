@@ -35,6 +35,7 @@ public static class SiloBuilderExtensions
             services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<EventSequencesStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ObserverStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(ObserverState.CatchUpStorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<CatchUpStorageProvider>());
+            services.AddSingletonNamedService<IGrainStorage>(RecoverFailedPartitionState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<RecoverFailedPartitionStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(TenantConfigurationState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(ConnectedClientsState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>());
         });
