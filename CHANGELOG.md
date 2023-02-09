@@ -1,3 +1,12 @@
+# [v8.4.4] - 2023-2-9 [PR: #747](https://github.com/aksio-insurtech/Cratis/pull/747)
+
+### Fixed
+
+- Fixing so that `LastHandled`get set during catch-up if the `LastHandled` is less than the current sequence number on the event.
+- Read the state when subscribing an observer. Since we have worker grains (CatchUp) that will update parts of the state, we need to be sure we have the correct state when subscribing. This could be because a client is disconnected and then reconnected while a catchup is running.
+- Improving reliability on state persistence by making sure we do the tasks on unsubscribe / deactivate in the correct order.
+- Encapuslating observer subscription and adding a method for getting current subscription on the `IObserverSupervisor`.
+
 # [v8.4.3] - 2023-2-8 [PR: #742](https://github.com/aksio-insurtech/Cratis/pull/742)
 
 ### Fixed
