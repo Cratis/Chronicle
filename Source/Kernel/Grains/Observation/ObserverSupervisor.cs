@@ -107,15 +107,16 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
     {
         _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
-        await StopAnyRunningCatchup();
-        State.RunningState = ObserverRunningState.Disconnected;
-        await WriteStateAsync();
         await UnsubscribeStream();
 
         if (_recoverReminder is not null)
         {
             await UnregisterReminder(_recoverReminder);
         }
+
+        await StopAnyRunningCatchup();
+        State.RunningState = ObserverRunningState.Disconnected;
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -126,6 +127,11 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
 
         await WriteStateAsync();
     }
+
+    #pragma warning disable CA1721 // Property names should not match get methods
+    /// <inheritdoc/>
+    public Task<ObserverSubscription> GetCurrentSubscription() => Task.FromResult(CurrentSubscription);
+    #pragma warning restore CA1721 // Property names should not match get methods
 
     /// <inheritdoc/>
     public async Task NotifyCatchUpComplete()
@@ -151,7 +157,8 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         await HandleReminderRegistration();
     }
 
-    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(SubscriberType, SubscriberArgs);
+    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);
+
     async Task StopAnyRunningCatchup()
     {
         if (State.RunningState != ObserverRunningState.CatchingUp)

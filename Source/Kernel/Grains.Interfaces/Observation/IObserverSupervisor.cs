@@ -31,6 +31,12 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Get the current subscription.
+    /// </summary>
+    /// <returns><see cref="ObserverSubscription"/>.</returns>
+    Task<ObserverSubscription> GetCurrentSubscription();
+
+    /// <summary>
     /// Unsubscribe from the observer.
     /// </summary>
     /// <returns>Awaitable task.</returns>

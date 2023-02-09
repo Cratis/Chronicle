@@ -16,7 +16,7 @@ public class and_observer_is_disconnected : given.an_observer_worker
         state.NextEventSequenceNumber = expected_sequence_number;
     }
 
-    Task Because() => worker.Handle(@event, false);
+    Task Because() => worker.Handle(@event);
 
     [Fact] void should_not_call_the_subscriber() => subscriber.VerifyNoOtherCalls();
     [Fact] void should_not_move_the_sequence_number() => state.NextEventSequenceNumber.ShouldEqual(expected_sequence_number);

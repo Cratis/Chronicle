@@ -16,8 +16,8 @@ public class when_catching_up_twice : given.a_catch_up_worker_with_two_pending_e
 
     async Task Because()
     {
-        await catch_up.Start(typeof(ObserverSubscriber));
-        await catch_up.Start(typeof(ObserverSubscriber));
+        await catch_up.Start(new(typeof(ObserverSubscriber), null!));
+        await catch_up.Start(new(typeof(ObserverSubscriber), null!));
     }
 
     [Fact] void should_not_start_more_than_once() => timer_registry.Verify(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()), Once);

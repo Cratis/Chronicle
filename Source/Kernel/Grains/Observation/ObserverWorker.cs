@@ -26,12 +26,7 @@ public abstract class ObserverWorker : Grain
     /// <summary>
     /// Gets or sets the subscriber type.
     /// </summary>
-    protected Type SubscriberType { get; set; } = typeof(IObserverSubscriber);
-
-    /// <summary>
-    /// Gets or sets any subscriber arguments.
-    /// </summary>
-    protected object? SubscriberArgs { get; set; }
+    protected ObserverSubscription CurrentSubscription { get; set; } = ObserverSubscription.Unsubscribed;
 
     /// <summary>
     /// Gets the <see cref="ObserverState"/>.
@@ -71,7 +66,7 @@ public abstract class ObserverWorker : Grain
     /// <summary>
     /// Gets a value indicating whether or not the observer is active.
     /// </summary>
-    protected bool IsActive => !State.IsDisconnected && SubscriberType is not null && SubscriberType != typeof(IObserverSubscriber);
+    protected bool IsActive => !State.IsDisconnected && CurrentSubscription.IsSubscribed;
 
     /// <summary>
     /// Gets the <see cref="IObserverSupervisor"/>.
@@ -121,9 +116,8 @@ public abstract class ObserverWorker : Grain
     /// Handle an <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
-    /// <param name="setLastHandled">Whether or not to set last handled.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Handle(AppendedEvent @event, bool setLastHandled = false)
+    public async Task Handle(AppendedEvent @event)
     {
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
@@ -151,9 +145,8 @@ public abstract class ObserverWorker : Grain
                         return;
                     }
                 }
-
                 State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
-                if (setLastHandled)
+                if (State.LastHandled < @event.Metadata.SequenceNumber)
                 {
                     State.LastHandled = @event.Metadata.SequenceNumber;
                 }
@@ -199,8 +192,8 @@ public abstract class ObserverWorker : Grain
             SourceMicroserviceId,
             SourceTenantId);
 
-        var subscriber = (GrainFactory.GetGrain(SubscriberType, ObserverId, key) as IObserverSubscriber)!;
-        return subscriber.OnNext(@event, new(SubscriberArgs!));
+        var subscriber = (GrainFactory.GetGrain(CurrentSubscription.SubscriberType, ObserverId, key) as IObserverSubscriber)!;
+        return subscriber.OnNext(@event, new(CurrentSubscription.Arguments));
     }
 
     /// <summary>

@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverWorker.when_handling;
 
-public class and_subscriber_is_null : given.an_observer_worker
+public class and_subscriber_is_unsubscribed : given.an_observer_worker
 {
     AppendedEvent @event;
     EventSequenceNumber expected_sequence_number;
@@ -11,13 +11,13 @@ public class and_subscriber_is_null : given.an_observer_worker
     void Establish()
     {
         state.RunningState = ObserverRunningState.Active;
-        worker.SetSubscriberType(null!);
+        worker.SetCurrentSubscription(ObserverSubscription.Unsubscribed);
         @event = AppendedEvent.EmptyWithEventType(EventType.Unknown);
         expected_sequence_number = (ulong)Random.Shared.Next();
         state.NextEventSequenceNumber = expected_sequence_number;
     }
 
-    Task Because() => worker.Handle(@event, false);
+    Task Because() => worker.Handle(@event);
 
     [Fact] void should_not_call_the_subscriber() => subscriber.VerifyNoOtherCalls();
     [Fact] void should_not_move_the_sequence_number() => state.NextEventSequenceNumber.ShouldEqual(expected_sequence_number);
