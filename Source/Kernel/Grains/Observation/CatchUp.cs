@@ -79,12 +79,12 @@ public class CatchUp : ObserverWorker, ICatchUp
     }
 
     /// <inheritdoc/>
-    public Task Stop()
+    public async Task Stop()
     {
         _logger.Stopping(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         _isRunning = false;
         _timer?.Dispose();
-        return Task.CompletedTask;
+        await WriteStateAsync();
     }
 
     async Task PerformCatchUp(object arg)
@@ -106,7 +106,7 @@ public class CatchUp : ObserverWorker, ICatchUp
             foreach (var @event in cursor.Current)
             {
                 if (!_isRunning) break;
-                await Handle(@event, false);
+                await Handle(@event);
             }
         }
 
