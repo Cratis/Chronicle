@@ -17,7 +17,7 @@ public class and_subscriber_is_failed : given.an_observer_worker
         subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Failed));
     }
 
-    Task Because() => worker.Handle(@event, false);
+    Task Because() => worker.Handle(@event);
 
     [Fact] void should_fail_the_partition() => supervisor.Verify(_ => _.PartitionFailed(@event, IsAny<IEnumerable<string>>(), IsAny<string>()), Once);
     [Fact] void should_move_the_sequence_number() => state.NextEventSequenceNumber.ShouldEqual(sequence_number + 1);
