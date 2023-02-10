@@ -54,7 +54,7 @@ public class with_no_errors_on_processing : given.a_recover_failed_partition_wor
     void should_call_the_subscriber_for_each_event()
     {
         foreach (var @event in appended_events) 
-            subscriber.Verify(_ => _.OnNext(@event), Once);
+            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Once);
     }
     
     [Fact]

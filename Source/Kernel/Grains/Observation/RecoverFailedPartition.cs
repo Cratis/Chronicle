@@ -21,7 +21,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     PartitionedObserverKey? _key;
     ObserverKey? _observerKey;
     ObserverSubscriberKey? _subscriberKey;
-    Type? _subscriberType;
+    ObserverSubscription? _subscriberSubscription;
     IDisposable? _timer;
     bool _isRunning = false;
     
@@ -59,15 +59,15 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         State.Id = _key.ToString();
         _observerKey = string.IsNullOrWhiteSpace(State.ObserverKey) ? null : ObserverKey.Parse(State.ObserverKey);
         _subscriberKey = string.IsNullOrWhiteSpace(State.SubscriberKey) ? null : ObserverSubscriberKey.Parse(State.SubscriberKey);
-        await SetSubscriberType();
+        await SetSubscriberSubscription();
         ScheduleNextTimer();
     }
 
-    async Task SetSubscriberType()
+    async Task SetSubscriberSubscription()
     {
         if (_observerKey is not null && State.ObserverId != ObserverId.Unspecified)
         {
-            _subscriberType = await GetSupervisor(State.ObserverId, _observerKey).GetSubscriberType();
+            _subscriberSubscription = await GetSupervisor(State.ObserverId, _observerKey).GetCurrentSubscription();
         }
     }
 
@@ -77,7 +77,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         _observerKey = observerKey;
         _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId);
         State.InitialiseError(fromEvent, eventTypes, _observerKey, _subscriberKey);
-        await SetSubscriberType();
+        await SetSubscriberSubscription();
         await WriteStateAsync();
         ScheduleNextTimer();
     }
@@ -141,10 +141,10 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
                 return true;
             }
 
-            if (_subscriberType is not null)
+            if (_subscriberSubscription is not null)
             {
-                var subscriber = (GrainFactory.GetGrain(_subscriberType, State.ObserverId, _subscriberKey!) as IObserverSubscriber)!;
-                var result = await subscriber.OnNext(@event);
+                var subscriber = (GrainFactory.GetGrain(_subscriberSubscription.SubscriberType, State.ObserverId, _subscriberKey!) as IObserverSubscriber)!;
+                var result = await subscriber.OnNext(@event, new ObserverSubscriberContext(_subscriberSubscription.Arguments));
                 switch (result.State)
                 {
                     case ObserverSubscriberState.Failed:

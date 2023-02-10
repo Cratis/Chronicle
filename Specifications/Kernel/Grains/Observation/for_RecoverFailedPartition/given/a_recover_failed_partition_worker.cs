@@ -43,7 +43,7 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
         event_sequence_storage_provider = new();
 
         subscriber = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>())).Returns((AppendedEvent evt) => ProcessEvent(evt));
+        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns((AppendedEvent evt, ObserverSubscriberContext ctx) => ProcessEvent(evt));
 
         var recover = new RecoverFailedPartition(
             Mock.Of<IExecutionContextManager>(),
@@ -75,7 +75,7 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
                 return Task.CompletedTask;
             });
         
-        supervisor.Setup(_ => _.GetSubscriberType()).Returns(() => Task.FromResult(subscriber.Object.GetType()));
+        supervisor.Setup(_ => _.GetCurrentSubscription()).Returns(() => Task.FromResult(new ObserverSubscription(subscriber.Object.GetType(), new())));
     }
 
     internal record TimerSettings(TimeSpan Wait, TimeSpan Repeat);
