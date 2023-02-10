@@ -116,12 +116,9 @@ public class RecoverFailedPartitionState
     }
     
     /// <summary>
-    /// Updates the state with the latest error.
+    /// Updates the state with the latest succeeded event.
     /// </summary>
-    /// <param name="latestError">Event Sequence Number for the latest error</param>
-    /// <param name="messages">Error messages corresponding to the error</param>
-    /// <param name="stacktrace">The stacktrace for the error</param>
-    /// <param name="errored">When the error occurred</param>
+    /// <param name="processedEvent">Event that was successfully processed</param>
     public void UpdateWithLatestSuccess(AppendedEvent processedEvent)
     {
         NextSequenceNumberToProcess = processedEvent.Metadata.SequenceNumber + 1;
