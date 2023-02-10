@@ -160,10 +160,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         await HandleReminderRegistration();
     }
 
-    /// <inheritdoc/>
-    public Task<Type> GetSubscriberType() => Task.FromResult(SubscriberType);
-
-    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(SubscriberType, SubscriberArgs);
+    Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);
 
     async Task StopAnyRunningCatchup()
     {

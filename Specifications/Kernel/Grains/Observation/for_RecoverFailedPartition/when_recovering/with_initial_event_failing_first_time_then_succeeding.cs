@@ -63,14 +63,14 @@ public class with_initial_event_failing_first_time_then_succeeding : given.a_rec
     void should_call_the_subscriber_for_the_failed_event_twice()
     {
         foreach (var @event in appended_events.Where(_ => _.Metadata.SequenceNumber == initial_error)) 
-            subscriber.Verify(_ => _.OnNext(@event), Times.Exactly(2));
+            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Times.Exactly(2));
     }
     
     [Fact]
     void should_call_the_subscriber_for_each_successful_event_once()
     {
         foreach (var @event in appended_events.Where(_ => _.Metadata.SequenceNumber != initial_error)) 
-            subscriber.Verify(_ => _.OnNext(@event), Once);
+            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Once);
     }
     
     [Fact]

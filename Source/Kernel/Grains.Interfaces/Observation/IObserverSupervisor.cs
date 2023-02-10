@@ -75,10 +75,4 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
-
-    /// <summary>
-    /// Gets the type of the Subscriber
-    /// </summary>
-    /// <returns>Subscriber Type</returns>
-    Task<Type> GetSubscriberType();
 }

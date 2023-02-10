@@ -22,6 +22,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
     protected override IEnumerable<AppendedEvent> events => appended_events;
 
     protected override Task<ObserverSubscriberResult> ProcessEvent(AppendedEvent evt)
+    
     {
         if (countOfAttempts[evt.Metadata.SequenceNumber] != 0) return Task.FromResult(ObserverSubscriberResult.Ok);
         countOfAttempts[evt.Metadata.SequenceNumber] = 1;
@@ -74,7 +75,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
     void should_call_the_subscriber_for_each_successful_event_twice()
     {
         foreach (var @event in appended_events) 
-            subscriber.Verify(_ => _.OnNext(@event), Exactly(2));
+            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Exactly(2));
     }
     
     [Fact]

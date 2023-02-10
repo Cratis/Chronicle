@@ -6,14 +6,10 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.for_Reco
 public class when_updating_with_latest_success_and_was_current_error : Specification
 {
     RecoverFailedPartitionState state;
-    string[] messages;
-    string stacktrace;
     DateTimeOffset now;
 
     Task Establish()
     {
-        messages = new[] { "Something went wrong" };
-        stacktrace = "it went wrong here";
         now = DateTimeOffset.UtcNow;
         
         state = new RecoverFailedPartitionState()
