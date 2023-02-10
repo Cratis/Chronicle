@@ -23,8 +23,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     ObserverSubscriberKey? _subscriberKey;
     ObserverSubscription? _subscriberSubscription;
     IDisposable? _timer;
-    bool _isRunning = false;
-    
+
     /// <summary>
     /// Gets the <see cref="IEventSequenceStorageProvider"/> in the correct context.
     /// </summary>
@@ -68,15 +67,19 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         if (_observerKey is not null && State.ObserverId != ObserverId.Unspecified)
         {
             _subscriberSubscription = await GetSupervisor(State.ObserverId, _observerKey).GetCurrentSubscription();
+            return;
         }
+        _logger.UnableToGetSubscriberSubscription(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
     }
 
     /// <inheritdoc/>
     public async Task Recover(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, ObserverKey observerKey)
     {
+       
         _observerKey = observerKey;
         _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId);
         State.InitialiseError(fromEvent, eventTypes, _observerKey, _subscriberKey);
+        _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
         await SetSubscriberSubscription();
         await WriteStateAsync();
         ScheduleNextTimer();
@@ -88,6 +91,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     /// <inheritdoc/>
     public async Task Reset()
     {
+        _logger.ResetRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
         State.Reset();
         _timer?.Dispose();
         await WriteStateAsync();
@@ -95,15 +99,19 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
 
     async Task PerformRecovery(object state)
     {
+        _logger.RecoveryProcessingTriggered(State.ObserverId, _key!.MicroserviceId,
+            _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, State.NextSequenceNumberToProcess);
         var provider = EventSequenceStorageProvider;
         _timer?.Dispose(); // we don't want to run this again until we are done
         using var cursor = await provider.GetFromSequenceNumber(_key!.EventSequenceId!, State.NextSequenceNumberToProcess, _key.EventSourceId, eventTypes: State.EventTypes);
         var completed = true;
         
+        var eventSequenceNumber = EventSequenceNumber.Unavailable;
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
             {
+                eventSequenceNumber = @event.Metadata.SequenceNumber;
                 if (!await Handle(@event)) continue;
                 completed = false;
                 break;
@@ -112,23 +120,37 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
 
         if (completed)
         {
-            await GetSupervisor(State.ObserverId, _observerKey!).NotifyFailedPartitionRecoveryComplete(State.NextSequenceNumberToProcess-1); 
+            _logger.ProcessingCompleted(State.ObserverId, _key.MicroserviceId,
+                _key.TenantId, _key.EventSequenceId, _key.EventSourceId, eventSequenceNumber);
+            await GetSupervisor(State.ObserverId, _observerKey!).NotifyFailedPartitionRecoveryComplete(eventSequenceNumber); 
         }
         else
         {
+            _logger.ProcessingIncomplete(State.ObserverId, _key.MicroserviceId,
+                _key.TenantId, _key.EventSequenceId, _key.EventSourceId, eventSequenceNumber);
             ScheduleNextTimer();
         }
     }
 
     void ScheduleNextTimer()
     {
-        if(State.HasBeenInitialised())
-            _timer = RegisterTimer(PerformRecovery, null, State.GetNextAttemptSchedule(), State.GetNextAttemptSchedule());
+        if (State.HasBeenInitialised())
+        {
+            var nextAttempt = State.GetNextAttemptSchedule();
+            _logger.ProcessingScheduled(State.ObserverId, _key!.MicroserviceId,
+                _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, nextAttempt, State.NextSequenceNumberToProcess);
+            _timer = RegisterTimer(PerformRecovery, null, nextAttempt, nextAttempt); 
+        }
+        _logger.ProcessingScheduleIgnored(State.ObserverId, _key!.MicroserviceId,
+            _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);    
     }
 
 
     public async Task<bool> Handle(AppendedEvent @event)
     {
+        var eventSequenceNumber = @event.Metadata.SequenceNumber;
+        _logger.ReceivedEventForProcessing(State.ObserverId, _key!.MicroserviceId,
+            _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, eventSequenceNumber);
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -138,6 +160,8 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
 
             if (@event.Metadata.SequenceNumber < next)
             {
+                _logger.EventForProcessingIgnored(State.ObserverId, _key.MicroserviceId,
+                    _key.TenantId, _key.EventSequenceId, _key.EventSourceId, eventSequenceNumber, State.NextSequenceNumberToProcess);
                 return true;
             }
 
@@ -170,10 +194,14 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         if (failed)
         {
             State.UpdateWithLatestError(@event.Metadata.SequenceNumber, exceptionMessages, exceptionStackTrace, DateTimeOffset.UtcNow);
+            _logger.SubscriberEventProcessingFailed(eventSequenceNumber, State.ObserverId, _key.MicroserviceId,
+                _key.TenantId, _key.EventSequenceId, _key.EventSourceId, State.NumberOfAttemptsOnCurrentError, State.NumberOfAttemptsOnSinceInitialised);
         }
         else
         {
             State.UpdateWithLatestSuccess(@event);
+            _logger.SubscriberEventProcessed(eventSequenceNumber, State.ObserverId, _key.MicroserviceId,
+                _key.TenantId, _key.EventSequenceId, _key.EventSourceId, State.NextSequenceNumberToProcess);
         }
         await WriteStateAsync();
         return failed;
