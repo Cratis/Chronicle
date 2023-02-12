@@ -15,12 +15,12 @@ public class and_the_event_is_not_part_of_a_failed_partition : a_supervisor
         supervisor = get_clean_supervisor();
         return Task.CompletedTask;
     }
-    
+
     Task Because()
     {
-        is_for_failed_partition = supervisor.EventBelongsToFailingPartition(Guid.NewGuid(), EventSequenceNumber.First, DateTimeOffset.UtcNow);
+        is_for_failed_partition = supervisor.EventBelongsToFailingPartition(Guid.NewGuid(), EventSequenceNumber.First);
         return Task.CompletedTask;
     }
-    
+
     [Fact] void should_not_be_for_failed_partition() => is_for_failed_partition.ShouldBeFalse();
 }

@@ -39,7 +39,7 @@ public record PartitionedObserverKey(MicroserviceId MicroserviceId, TenantId Ten
         var eventSourceId = (EventSourceId)elements[3];
         return new(microserviceId, tenantId, eventSequenceId, eventSourceId);
     }
-    
+
     /// <summary>
     /// Creates a <see cref="PartitionedObserverKey"/> based on an Observer key and the partition key.
     /// </summary>

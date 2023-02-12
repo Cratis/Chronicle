@@ -5,10 +5,13 @@ using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
+/// <summary>
+/// State for a failed partition.
+/// </summary>
 public class FailedPartitionsState : IChildState<FailedPartitionsState>
 {
     /// <summary>
-    /// List of failed partitions being supervised
+    /// List of failed partitions being supervised.
     /// </summary>
     public IEnumerable<FailedPartition> FailedPartitions { get; set; } = Enumerable.Empty<FailedPartition>();
 }

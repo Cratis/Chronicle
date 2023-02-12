@@ -17,13 +17,13 @@ public class and_the_event_is_part_of_a_failed_partition : a_supervisor
         supervisor = get_supervisor_with_failed_partition(partition_id);
         return Task.CompletedTask;
     }
-    
+
     Task Because()
     {
-        is_for_failed_partition = supervisor.EventBelongsToFailingPartition(partition_id, 3, DateTimeOffset.UtcNow);
+        is_for_failed_partition = supervisor.EventBelongsToFailingPartition(partition_id, 3);
         return Task.CompletedTask;
     }
-    
+
     [Fact] void should_be_for_failed_partition() => is_for_failed_partition.ShouldBeTrue();
     [Fact] void should_increase_the_head_of_the_failed_partition() => supervisor.GetState().FailedPartitions.Single(_ => _.Partition == partition_id).Head.ShouldEqual(new EventSequenceNumber(3));
 }

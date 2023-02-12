@@ -3,6 +3,10 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
+/// <summary>
+/// Marker interface for child states.
+/// </summary>
+/// <typeparam name="T">The concrete type of the state.</typeparam>
 public interface IChildState<T>
 {
 }

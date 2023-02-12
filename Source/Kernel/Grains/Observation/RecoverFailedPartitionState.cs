@@ -12,64 +12,77 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public class RecoverFailedPartitionState
 {
     /// <summary>
-    /// Key for the storage provider for this state
+    /// Key for the storage provider for this state.
     /// </summary>
     public const string StorageProvider = "recover-failed-partition";
-    
+
     /// <summary>
     /// Unique identifier of the failed partition.
     /// </summary>
     public string Id { get; set; } = string.Empty;
+
     /// <summary>
     /// Event log sequence number of the initial event that errored.
     /// </summary>
     public EventSequenceNumber InitialError { get; set; } = EventSequenceNumber.Unavailable;
+
     /// <summary>
     /// Event log sequence number of the last event that errored.
     /// </summary>
     public EventSequenceNumber CurrentError { get; set; } = EventSequenceNumber.Unavailable;
+
     /// <summary>
     /// Event log sequence number of the next event that should be processed.
     /// </summary>
     public EventSequenceNumber NextSequenceNumberToProcess { get; set; } = EventSequenceNumber.Unavailable;
+
     /// <summary>
     /// Total number of attempts to processed the failed partition since the initial error.
     /// </summary>
     public int NumberOfAttemptsOnSinceInitialised { get; set; }
+
     /// <summary>
     /// Number of attempts to processed the failed partition on the current error.
     /// </summary>
     public int NumberOfAttemptsOnCurrentError { get; set; }
+
     /// <summary>
     /// Date and time of the initial error of the failed partition in UTC.
     /// </summary>
     public DateTimeOffset InitialPartitionFailedOn { get; set; } = DateTimeOffset.MinValue;
+
     /// <summary>
     /// Date and time of the last attempt to process the failed partition in UTC.
     /// </summary>
     public DateTimeOffset? LastAttemptOnCurrentError { get; set; } = DateTimeOffset.MinValue;
+
     /// <summary>
     /// The event types that are being processed by the failed partition.
     /// </summary>
     public IEnumerable<EventType> EventTypes { get; set; } = Enumerable.Empty<EventType>();
+
     /// <summary>
     /// Gets or sets the <see cref="ObserverId"/> for which this is a failed partition.
     /// </summary>
     public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
+
     /// <summary>
     /// Gets or sets the StackTrace for the last error on this failed partition.
     /// </summary>
     public string StackTrace { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the Error Messages for the last error on this failed partition.
     /// </summary>
     public IEnumerable<string> Messages { get; set; } = Enumerable.Empty<string>();
+
     /// <summary>
-    /// String form of the Observer Key for the origin of this failed partition
+    /// String form of the Observer Key for the origin of this failed partition.
     /// </summary>
     public string ObserverKey { get; set; } = string.Empty;
+
     /// <summary>
-    /// String form of the Subscriber key for the origin of this failed partition
+    /// String form of the Subscriber key for the origin of this failed partition.
     /// </summary>
     public string SubscriberKey { get; set; } = string.Empty;
 
@@ -89,11 +102,12 @@ public class RecoverFailedPartitionState
         StackTrace = string.Empty;
         Messages = Enumerable.Empty<string>();
     }
-    
+
     /// <summary>
     /// Resets the state of the failed partition.
     /// Metadata is not reset.
     /// </summary>
+    /// <param name="fromEvent">Event position that catch-up should begin from.</param>
     public void Catchup(EventSequenceNumber fromEvent)
     {
         CurrentError = fromEvent;
@@ -102,16 +116,15 @@ public class RecoverFailedPartitionState
         StackTrace = string.Empty;
         Messages = Enumerable.Empty<string>();
     }
-    
+
     /// <summary>
     /// Updates the state with the latest error.
     /// </summary>
-    /// <param name="latestError">Event Sequence Number for the latest error</param>
-    /// <param name="messages">Error messages corresponding to the error</param>
-    /// <param name="stacktrace">The stacktrace for the error</param>
-    /// <param name="errored">When the error occurred</param>
-    public void UpdateWithLatestError(EventSequenceNumber latestError, IEnumerable<string> messages, string stacktrace,
-        DateTimeOffset errored)
+    /// <param name="latestError">Event Sequence Number for the latest error.</param>
+    /// <param name="messages">Error messages corresponding to the error.</param>
+    /// <param name="stacktrace">The stacktrace for the error.</param>
+    /// <param name="errored">When the error occurred.</param>
+    public void UpdateWithLatestError(EventSequenceNumber latestError, IEnumerable<string> messages, string stacktrace, DateTimeOffset errored)
     {
         if (CurrentError == latestError)
         {
@@ -127,11 +140,11 @@ public class RecoverFailedPartitionState
         StackTrace = stacktrace;
         Messages = messages;
     }
-    
+
     /// <summary>
     /// Updates the state with the latest succeeded event.
     /// </summary>
-    /// <param name="processedEvent">Event that was successfully processed</param>
+    /// <param name="processedEvent">Event that was successfully processed.</param>
     public void UpdateWithLatestSuccess(AppendedEvent processedEvent)
     {
         NextSequenceNumberToProcess = processedEvent.Metadata.SequenceNumber + 1;
@@ -144,7 +157,7 @@ public class RecoverFailedPartitionState
     /// <summary>
     /// Returns when the next attempt should be made to process the failed partition.
     /// </summary>
-    /// <returns>Timespan representing time to next attempt</returns>
+    /// <returns>Timespan representing time to next attempt.</returns>
     public TimeSpan GetNextAttemptSchedule()
     {
         if(CurrentError == InitialError && NumberOfAttemptsOnCurrentError == 0)
@@ -156,8 +169,14 @@ public class RecoverFailedPartitionState
         return TimeSpan.FromSeconds(Math.Min(60 * 60, Math.Pow(2, NumberOfAttemptsOnCurrentError)));
     }
 
-    public void InitialiseError(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes,
-        ObserverKey observerKey, ObserverSubscriberKey subscriberKey)
+    /// <summary>
+    /// Sets the correct state when a new error is initialised.
+    /// </summary>
+    /// <param name="fromEvent">The position in the sequence where the error occurred.</param>
+    /// <param name="eventTypes">Types of event that are in the event sequence.</param>
+    /// <param name="observerKey">Key from the Observer.</param>
+    /// <param name="subscriberKey">Key from the Subscriber.</param>
+    public void InitialiseError(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, ObserverKey observerKey, ObserverSubscriberKey subscriberKey)
     {
         CurrentError = fromEvent;
         InitialError = fromEvent;
@@ -168,5 +187,9 @@ public class RecoverFailedPartitionState
         NextSequenceNumberToProcess = fromEvent;
     }
 
+    /// <summary>
+    /// Indicates whether the state has been initialised.
+    /// </summary>
+    /// <returns>True if initialised, false otherwise.</returns>
     public bool HasBeenInitialised() => CurrentError != EventSequenceNumber.Unavailable;
 }
