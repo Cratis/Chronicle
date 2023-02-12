@@ -11,8 +11,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.when
 
 public class with_each_event_failing_first_time_then_succeeding : given.a_recover_failed_partition_worker
 {
-    ObserverKey observer_key;
-    PartitionedObserverKey partitioned_observer_key;
     EventSequenceNumber current;
     EventType event_type;
     List<AppendedEvent> appended_events;
@@ -38,7 +36,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
     {
         var @event = new AppendedEvent(
             new(current, event_type),
-            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, partitioned_observer_key.TenantId, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, PartitionedObserverKey.TenantId, CorrelationId.New(), CausationId.System, CausedBy.System),
             new ExpandoObject());
         current++;
         return @event;
@@ -48,15 +46,13 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
     {
         event_type = new EventType(Guid.NewGuid(), EventGeneration.First);
         current = initial_error = 5;
-        partitioned_observer_key = PartitionedObserverKey.Parse(GrainKeyExtension);
-        observer_key = new(partitioned_observer_key.MicroserviceId, partitioned_observer_key.TenantId, partitioned_observer_key.EventSequenceId);
         appended_events = new List<AppendedEvent>()
         {
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId)
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId)
         };
         
         foreach (var evt in appended_events)
@@ -67,7 +63,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
 
     async Task Because()
     {
-        await (grain as RecoverFailedPartition).Recover(initial_error, new List<EventType>(), observer_key);
+        await (grain as RecoverFailedPartition).Recover(initial_error, new List<EventType>(), ObserverKey);
         Debug.WriteLine("Done");
     }
     
@@ -89,7 +85,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
         => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(state.NextSequenceNumberToProcess - 1));
     
     [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider()
-        => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(partitioned_observer_key.EventSequenceId, IsAny<EventSequenceNumber>(), partitioned_observer_key.EventSourceId, IsAny<IEnumerable<EventType>>()), Exactly(6));
+        => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(PartitionedObserverKey.EventSequenceId, IsAny<EventSequenceNumber>(), PartitionedObserverKey.EventSourceId, IsAny<IEnumerable<EventType>>()), Exactly(6));
 
     [Fact] void should_schedule_additional_timers_on_each_failure() => timer_registry.Verify(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()), Exactly(6));
     

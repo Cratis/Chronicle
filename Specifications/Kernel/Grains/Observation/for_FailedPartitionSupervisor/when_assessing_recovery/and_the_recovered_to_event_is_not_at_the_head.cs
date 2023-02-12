@@ -28,5 +28,5 @@ public class and_the_recovered_to_event_is_not_at_the_head : a_supervisor
 
     [Fact] void should_still_have_the_failed_partition() => supervisor.GetState().FailedPartitions.Any(_ => _.Partition == partition_id).ShouldBeTrue();                
     [Fact] void should_not_have_reset_the_failed_partition_job() => failed_partition_mock.Verify(_ => _.Reset(), Never);
-    [Fact] void should_restart_the_failed_partition_job() => failed_partition_mock.Verify(_ => _.Catchup(3, event_types), Never);
+    [Fact] void should_restart_the_failed_partition_job() => failed_partition_mock.Verify(_ => _.Catchup(3), Never);
 }

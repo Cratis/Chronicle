@@ -91,6 +91,19 @@ public class RecoverFailedPartitionState
     }
     
     /// <summary>
+    /// Resets the state of the failed partition.
+    /// Metadata is not reset.
+    /// </summary>
+    public void Catchup(EventSequenceNumber fromEvent)
+    {
+        CurrentError = fromEvent;
+        NextSequenceNumberToProcess = fromEvent;
+        NumberOfAttemptsOnCurrentError = 0;
+        StackTrace = string.Empty;
+        Messages = Enumerable.Empty<string>();
+    }
+    
+    /// <summary>
     /// Updates the state with the latest error.
     /// </summary>
     /// <param name="latestError">Event Sequence Number for the latest error</param>

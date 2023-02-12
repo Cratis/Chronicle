@@ -31,7 +31,6 @@ internal static partial class RecoverFailedPartitionLogMessages
 
     [LoggerMessage(8006, LogLevel.Warning, "Recovery Processing Incomplete for '{ObserverId}' partition '{PartitionId}' for sequence '{EventSequenceId}' for microservice '{MicroserviceId}' and tenant '{TenantId}'. Stopped on Event '{EventSequenceNumber}'.")]
     internal static partial void ProcessingIncomplete(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId, EventSequenceNumber eventSequenceNumber);
-
     
     [LoggerMessage(8007, LogLevel.Warning, "Processing Scheduled for '{ObserverId}' partition '{PartitionId}' for sequence '{EventSequenceId}' for microservice '{MicroserviceId}' and tenant '{TenantId}'. Scheduled for '{ScheduledTime}' with Event {EventSequenceNumber}.")]
     internal static partial void ProcessingScheduled(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId, TimeSpan scheduledTime, EventSequenceNumber eventSequenceNumber);
@@ -47,6 +46,10 @@ internal static partial class RecoverFailedPartitionLogMessages
 
     [LoggerMessage(8011, LogLevel.Warning, "Event '{EventSequenceNumber}' processed successfully on failing partition for observer '{ObserverId}' partition '{PartitionId}' for sequence '{EventSequenceId}' for microservice '{MicroserviceId}' and tenant '{TenantId}'.  The next event to process is {NextToProcess}.")]
     internal static partial void SubscriberEventProcessed(this ILogger<RecoverFailedPartition> logger, EventSequenceNumber eventSequenceNumber, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId, EventSequenceNumber nextToProcess);
-
     
+    [LoggerMessage(8012, LogLevel.Information, "Catchup requested for observer '{ObserverId}' partition '{PartitionId}' sequence '{EventSequenceId}' in microservice '{MicroserviceId}' with tenant '{TenantId}' from position '{EventSequenceNumber}'")]
+    internal static partial void CatchupRequested(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId, EventSequenceNumber eventSequenceNumber);
+    
+    [LoggerMessage(8012, LogLevel.Error, "SubscriberSubscription info missing on observer '{ObserverId}' partition '{PartitionId}' sequence '{EventSequenceId}' in microservice '{MicroserviceId}' with tenant '{TenantId}' when trying to process event '{EventSequenceNumber}'")]
+    internal static partial void MissingSubscriberSubscription(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId, EventSequenceNumber eventSequenceNumber);
 }

@@ -19,25 +19,32 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
 
     protected override Guid GrainId => state.ObserverId;
 
-    PartitionedObserverKey _partitionedObserverKey = new(
-        Guid.NewGuid(),
-        Guid.NewGuid(),
-        Guid.NewGuid(),
-        Guid.NewGuid());
-    protected override string GrainKeyExtension => _partitionedObserverKey;
+    protected static MicroserviceId MicroserviceId { get; } = Guid.NewGuid();
+    protected static TenantId TenantId { get; } = Guid.NewGuid();
+    protected static EventSequenceId EventSequenceId { get; } = Guid.NewGuid();
+    protected static ObserverId ObserverId { get; } = Guid.NewGuid();
+    protected static EventSourceId EventSourceId { get; } = Guid.NewGuid();
+    protected ObserverKey ObserverKey { get; } = new(MicroserviceId, TenantId, EventSequenceId);
+    
+
+    protected PartitionedObserverKey PartitionedObserverKey { get; } = new(MicroserviceId, TenantId, EventSequenceId, EventSourceId);
+    protected ObserverSubscriberKey SubscriberKey = new(MicroserviceId, TenantId, EventSequenceId, EventSourceId);
+    protected override string GrainKeyExtension => PartitionedObserverKey;
 
     protected virtual IEnumerable<AppendedEvent> events => Enumerable.Empty<AppendedEvent>();
     
+    protected virtual RecoverFailedPartitionState BuildState() => new()
+    {
+        ObserverId = ObserverId
+    };
+
     protected virtual Task<ObserverSubscriberResult> ProcessEvent(AppendedEvent evt) => Task.FromResult(ObserverSubscriberResult.Ok);
     
     protected virtual Task<IEventCursor> FetchEvents(EventSequenceNumber sequenceNumber) => Task.FromResult<IEventCursor>(new EventCursorForSpecifications(events));
     
     protected override Grain GetGrainInstance()
     {
-        state = new()
-        {
-            ObserverId = Guid.NewGuid(),
-        };
+        state = BuildState();
 
         supervisor = new();
         event_sequence_storage_provider = new();

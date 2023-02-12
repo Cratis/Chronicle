@@ -44,7 +44,7 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
         }
         else
         {
-            await GetRecoveryGrain(partitionId).Catchup(recoveredTo, _eventTypes);
+            await GetRecoveryGrain(partitionId).Catchup(recoveredTo);
         }
     }
 
