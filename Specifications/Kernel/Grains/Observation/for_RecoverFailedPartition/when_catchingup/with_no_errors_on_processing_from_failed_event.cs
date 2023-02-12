@@ -1,16 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Dynamic;
 using Aksio.Cratis.Execution;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.when_recovering;
+namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.when_catchingup;
 
-public class with_no_errors_on_processing_from_failed_event : given.a_recover_failed_partition_worker
+public class with_no_errors_on_processing_from_catchup_event : given.an_initiated_recover_failed_partition_worker
 {
-    ObserverKey observer_key;
-    PartitionedObserverKey partitioned_observer_key;
     EventSequenceNumber current;
     EventType event_type;
     IEnumerable<AppendedEvent> appended_events;
@@ -22,7 +19,7 @@ public class with_no_errors_on_processing_from_failed_event : given.a_recover_fa
     {
         var @event = new AppendedEvent(
             new(current, event_type),
-            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, partitioned_observer_key.TenantId, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, PartitionedObserverKey.TenantId, CorrelationId.New(), CausationId.System, CausedBy.System),
             new ExpandoObject());
         current++;
         return @event;
@@ -32,22 +29,17 @@ public class with_no_errors_on_processing_from_failed_event : given.a_recover_fa
     {
         event_type = new EventType(Guid.NewGuid(), EventGeneration.First);
         current = initial_error = 5;
-        partitioned_observer_key = PartitionedObserverKey.Parse(GrainKeyExtension);
-        observer_key = new(partitioned_observer_key.MicroserviceId, partitioned_observer_key.TenantId, partitioned_observer_key.EventSequenceId);
         appended_events = new List<AppendedEvent>()
         {
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId),
-            BuildAppendedEvent(partitioned_observer_key.EventSourceId)
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId),
+            BuildAppendedEvent(PartitionedObserverKey.EventSourceId)
         };
     }
 
-    async Task Because()
-    {
-        await (grain as RecoverFailedPartition).Recover(initial_error, new List<EventType>(), observer_key);
-    }
+    async Task Because() => await (grain as RecoverFailedPartition).Catchup(initial_error);
 
     [Fact]
     void should_call_the_subscriber_for_each_event()
@@ -67,7 +59,7 @@ public class with_no_errors_on_processing_from_failed_event : given.a_recover_fa
         => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(state.NextSequenceNumberToProcess - 1));
     
     [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider()
-        => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(partitioned_observer_key.EventSequenceId, initial_error, partitioned_observer_key.EventSourceId, IsAny<IEnumerable<EventType>>()), Once);
+        => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(PartitionedObserverKey.EventSequenceId, initial_error, PartitionedObserverKey.EventSourceId, IsAny<IEnumerable<EventType>>()), Once);
 
     [Fact] void should_not_schedule_any_more_timers() => timer_registry.Verify(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()), Once);
     

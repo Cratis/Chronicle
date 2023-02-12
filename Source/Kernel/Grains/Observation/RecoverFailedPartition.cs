@@ -86,7 +86,14 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     }
     
     /// <inheritdoc/>
-    public Task Catchup(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes) => throw new NotImplementedException();
+    public async Task Catchup(EventSequenceNumber fromEvent)
+    {
+        _logger.CatchupRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
+        State.Catchup(fromEvent);
+        await SetSubscriberSubscription();
+        await WriteStateAsync();
+        ScheduleNextTimer(isCatchup:true);
+    }
 
     /// <inheritdoc/>
     public async Task Reset()
@@ -132,11 +139,11 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         }
     }
 
-    void ScheduleNextTimer()
+    void ScheduleNextTimer(bool isCatchup = false)
     {
         if (State.HasBeenInitialised())
         {
-            var nextAttempt = State.GetNextAttemptSchedule();
+            var nextAttempt = isCatchup ? TimeSpan.Zero : State.GetNextAttemptSchedule();
             _logger.ProcessingScheduled(State.ObserverId, _key!.MicroserviceId,
                 _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, nextAttempt, State.NextSequenceNumberToProcess);
             _timer = RegisterTimer(PerformRecovery, null, nextAttempt, nextAttempt); 
@@ -183,6 +190,13 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
                         break;
                 }
             }
+            else
+            {
+                failed = true;
+                _logger.MissingSubscriberSubscription(State.ObserverId, _key!.MicroserviceId,
+                    _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, eventSequenceNumber);
+                
+            }
         }
         catch (Exception ex)
         {
@@ -208,4 +222,12 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     }
 
     IObserverSupervisor GetSupervisor(ObserverId observerId, ObserverKey key) => GrainFactory.GetGrain<IObserverSupervisor>(observerId, key);
+}
+
+public class InvalidFailedPartitionRecoveryState : Exception
+{
+    public InvalidFailedPartitionRecoveryState(string stateId, string stateObserverKey, string stateSubscriberKey)
+    : base($"Cannot ")
+    {
+    }
 }

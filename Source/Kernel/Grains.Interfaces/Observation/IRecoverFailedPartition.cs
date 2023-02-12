@@ -25,9 +25,8 @@ public interface IRecoverFailedPartition : IGrainWithGuidCompoundKey
     /// Catches up any additional events on a failed partition after recovery was completed 
     /// </summary>
     /// <param name="fromEvent">The event to start catching up from</param>
-    /// <param name="eventTypes">Event types to filter</param>
     /// <returns>Awaitable task</returns>
-    Task Catchup(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes);
+    Task Catchup(EventSequenceNumber fromEvent);
     
     /// <summary>
     /// Resets the recovery state for a failed partition
