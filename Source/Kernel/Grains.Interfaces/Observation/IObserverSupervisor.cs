@@ -60,10 +60,11 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task NotifyCatchUpComplete();
-    
+
     /// <summary>
     /// Notify that failed partition has run to completion.
     /// </summary>
+    /// <param name="lastProcessedEvent">The EventSequenceNumber of the last event that the worked processed when declaring itself complete.</param>
     /// <returns>Awaitable task.</returns>
     Task NotifyFailedPartitionRecoveryComplete(EventSequenceNumber lastProcessedEvent);
 
