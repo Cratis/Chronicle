@@ -65,8 +65,21 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         State.Id = _key.ToString();
         _observerKey = string.IsNullOrWhiteSpace(State.ObserverKey) ? null : ObserverKey.Parse(State.ObserverKey);
         _subscriberKey = string.IsNullOrWhiteSpace(State.SubscriberKey) ? null : ObserverSubscriberKey.Parse(State.SubscriberKey);
+        _logger.Activating(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
         await SetSubscriberSubscription();
         ScheduleNextTimer();
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnDeactivateAsync()
+    {
+        _logger.Deactivating(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
+        await WriteStateAsync();
+        if(_timer is not null)
+        {
+            _timer.Dispose();
+            _timer = null;
+        }
     }
 
     /// <inheritdoc/>

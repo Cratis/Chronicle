@@ -52,4 +52,10 @@ internal static partial class RecoverFailedPartitionLogMessages
 
     [LoggerMessage(8013, LogLevel.Error, "SubscriberSubscription info missing on observer '{ObserverId}' partition '{PartitionId}' sequence '{EventSequenceId}' in microservice '{MicroserviceId}' with tenant '{TenantId}' when trying to process event '{EventSequenceNumber}'")]
     internal static partial void MissingSubscriberSubscription(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(8014, LogLevel.Error, "Activating RecoverFailedPartition Grain for '{ObserverId}' partition '{PartitionId}' sequence '{EventSequenceId}' in microservice '{MicroserviceId}' with tenant '{TenantId}'.")]
+    internal static partial void Activating(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId);
+
+    [LoggerMessage(8015, LogLevel.Error, "Deactivating RecoverFailedPartition Grain for '{ObserverId}' partition '{PartitionId}' sequence '{EventSequenceId}' in microservice '{MicroserviceId}' with tenant '{TenantId}'.")]
+    internal static partial void Deactivating(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId);
 }
