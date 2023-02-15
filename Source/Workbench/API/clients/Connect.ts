@@ -13,6 +13,7 @@ export interface IConnect {
     connectionId?: string;
     clientVersion?: string;
     advertisedUri?: string;
+    isRunningWithDebugger?: boolean;
 }
 
 export class ConnectValidator extends CommandValidator {
@@ -21,6 +22,7 @@ export class ConnectValidator extends CommandValidator {
         connectionId: new Validator(),
         clientVersion: new Validator(),
         advertisedUri: new Validator(),
+        isRunningWithDebugger: new Validator(),
     };
 }
 
@@ -33,6 +35,7 @@ export class Connect extends Command<IConnect> implements IConnect {
     private _connectionId!: string;
     private _clientVersion!: string;
     private _advertisedUri!: string;
+    private _isRunningWithDebugger!: boolean;
 
     constructor() {
         super(Object, false);
@@ -51,6 +54,7 @@ export class Connect extends Command<IConnect> implements IConnect {
             'connectionId',
             'clientVersion',
             'advertisedUri',
+            'isRunningWithDebugger',
         ];
     }
 
@@ -85,6 +89,14 @@ export class Connect extends Command<IConnect> implements IConnect {
     set advertisedUri(value: string) {
         this._advertisedUri = value;
         this.propertyChanged('advertisedUri');
+    }
+    get isRunningWithDebugger(): boolean {
+        return this._isRunningWithDebugger;
+    }
+
+    set isRunningWithDebugger(value: boolean) {
+        this._isRunningWithDebugger = value;
+        this.propertyChanged('isRunningWithDebugger');
     }
 
     static use(initialValues?: IConnect): [Connect, SetCommandValues<IConnect>, ClearCommandValues] {

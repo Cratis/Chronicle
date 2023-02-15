@@ -11,4 +11,4 @@ namespace Aksio.Cratis.Kernel.MongoDB.Clients;
 /// </summary>
 /// <param name="Id">The <see cref="MicroserviceId"/>.</param>
 /// <param name="Clients">Collection of <see cref="ConnectedClient"/>.</param>
-public record MongoDBConnectedClientState(MicroserviceId Id, IEnumerable<ConnectedClient> Clients);
+public record MongoDBConnectedClientsForMicroserviceState(MicroserviceId Id, IEnumerable<ConnectedClient> Clients);
