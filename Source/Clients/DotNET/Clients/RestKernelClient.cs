@@ -159,6 +159,11 @@ public abstract class RestKernelClient : IClient, IDisposable
     /// <returns><see cref="HttpClient"/> ready to be used.</returns>
     protected abstract HttpClient CreateHttpClient();
 
+    /// <summary>
+    /// Gets called if the client is disconnected.
+    /// </summary>
+    protected virtual Task OnDisconnected() => Task.CompletedTask;
+
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null)
     {
         using var client = CreateHttpClient();
@@ -203,6 +208,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         {
             _logger.KernelDisconnected();
             await _clientLifecycle.Disconnected();
+            await OnDisconnected();
 
             _connectCompletion.TrySetCanceled();
             _connectCompletion = new();
