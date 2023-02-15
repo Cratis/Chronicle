@@ -40,7 +40,7 @@ public partial class ObserverSupervisor
         await ReadStateAsync();
 
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
-        CurrentSubscription = new(subscriberType, eventTypes, subscriberArgs!);
+        CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, subscriberArgs!);
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {
