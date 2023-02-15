@@ -10,4 +10,5 @@ namespace Aksio.Cratis.Clients;
 /// <param name="ClientUri">The uri of the client.</param>
 /// <param name="Version">Version of the client.</param>
 /// <param name="LastSeen">The date and time the client was last seen.</param>
-public record ConnectedClient(ConnectionId ConnectionId, Uri ClientUri, string Version, DateTimeOffset LastSeen);
+/// <param name="IsRunningWithDebugger">Whether or not the client is running with debugger attached.</param>
+public record ConnectedClient(ConnectionId ConnectionId, Uri ClientUri, string Version, DateTimeOffset LastSeen, bool IsRunningWithDebugger);

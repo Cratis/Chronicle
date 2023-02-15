@@ -8,4 +8,5 @@ namespace Aksio.Cratis.Clients;
 /// </summary>
 /// <param name="ClientVersion">The version of the client.</param>
 /// <param name="AdvertisedUri">The URI that the client is advertised with.</param>
-public record ClientInformation(string ClientVersion, string AdvertisedUri);
+/// <param name="IsRunningWithDebugger">Whether or not the client is running with debugger attached.</param>
+public record ClientInformation(string ClientVersion, string AdvertisedUri, bool IsRunningWithDebugger);
