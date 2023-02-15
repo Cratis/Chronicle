@@ -17,8 +17,9 @@ public interface IConnectedClients : IGrainWithGuidKey
     /// <param name="connectionId">The connection identifier.</param>
     /// <param name="clientUri">The client uri.</param>
     /// <param name="version">The version of the client.</param>
+    /// <param name="isRunningWithDebugger">Whether or not the client is running with debugger.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnClientConnected(ConnectionId connectionId, Uri clientUri, string version);
+    Task OnClientConnected(ConnectionId connectionId, Uri clientUri, string version, bool isRunningWithDebugger);
 
     /// <summary>
     /// Report that a client was disconnected.

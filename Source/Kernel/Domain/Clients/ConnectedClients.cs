@@ -77,6 +77,7 @@ public class ConnectedClients : Controller
         await connectedClients.OnClientConnected(
             connectionId,
             uri,
-            clientInformation.ClientVersion);
+            clientInformation.ClientVersion,
+            clientInformation.IsRunningWithDebugger);
     }
 }
