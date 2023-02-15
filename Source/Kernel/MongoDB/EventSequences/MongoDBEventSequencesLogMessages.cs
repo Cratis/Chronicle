@@ -17,4 +17,7 @@ internal static partial class MongoDBEventSequencesLogMessages
 
     [LoggerMessage(1, LogLevel.Error, "Problem appending event with '{SequenceNumber}' as sequence number for sequence '{EventSequenceId}' in microservice '{MicroserviceId}' for tenant '{TenantId}'")]
     internal static partial void AppendFailure(this ILogger<MongoDBEventSequences> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, Exception exception);
+
+    [LoggerMessage(2, LogLevel.Warning, "Duplicate event sequence number '{SequenceNumber}' when appending for sequence '{EventSequenceId}' in microservice '{MicroserviceId}' for tenant '{TenantId}'")]
+    internal static partial void DuplicateEventSequenceNumber(this ILogger<MongoDBEventSequences> logger, ulong sequenceNumber, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId);
 }
