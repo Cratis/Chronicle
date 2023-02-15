@@ -63,6 +63,13 @@ public class OrleansAzureTableStoreKernelClient : ClusteredKernelClient
     /// <inheritdoc/>
     protected override IEnumerable<Uri> Endpoints => _endpoints;
 
+    /// <inheritdoc/>
+    protected override Task OnDisconnected()
+    {
+        RefreshSilos();
+        return Task.CompletedTask;
+    }
+
     void RefreshSilos()
     {
         _clientLogger.GettingSilosFromStorage();
