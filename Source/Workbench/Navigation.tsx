@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Nav, INavLinkGroup, INavLink, INavStyles } from '@fluentui/react';
 import { useNavigate } from 'react-router-dom';
 
-import { default as styles } from './Navigation.module.scss';
+import { default as styles } from './Navigation.module.scss';
 
 const navStyles: Partial<INavStyles> = {
     root: {
@@ -39,6 +39,18 @@ const groups: INavLinkGroup[] = [
                         url: '',
                         route: '/configuration/tenants'
                     }
+                ]
+            },
+            {
+                name: 'Clients',
+                url: '',
+                links: [
+                    {
+                        name: 'Connected Clients',
+                        url: '',
+                        route: '/clients/connected'
+                    }
+
                 ]
             },
             {
