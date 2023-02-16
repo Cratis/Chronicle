@@ -24,5 +24,6 @@
 
     <ItemGroup>
         <None Include="$(MSBuildThisFileDirectory)/README.md" Pack="true" PackagePath="/"/>
+        <Compile Include="$(MSBuildThisFileDirectory)/GlobalAssemblyInfo.cs"/>
     </ItemGroup>
 </Project>
