@@ -117,7 +117,7 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// <summary>
     /// Try to recover a specific partition.
     /// </summary>
-    /// <param name="partition">Partition to recover</param>
+    /// <param name="partition">Partition to recover.</param>
     /// <returns>Awaitable task.</returns>
     public async Task TryRecoveringPartition(EventSourceId partition)
     {

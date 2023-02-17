@@ -88,21 +88,13 @@ public class MongoDBEventSequences : IEventSequences
             var collection = GetCollectionFor(eventSequenceId);
             await collection.InsertOneAsync(@event);
         }
-        catch (MongoWriteException writeException)
+        catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            if (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
-            {
-                _logger.DuplicateEventSequenceNumber(
-                    sequenceNumber,
-                    eventSequenceId,
-                    _executionContextManager.Current.MicroserviceId,
-                    _executionContextManager.Current.TenantId);
-
-            }
-            else
-            {
-                throw;
-            }
+            _logger.DuplicateEventSequenceNumber(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId);
         }
         catch (Exception ex)
         {

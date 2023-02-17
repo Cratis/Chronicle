@@ -26,7 +26,6 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ObserverSupervisor> _logger;
-    readonly Dictionary<EventSourceId, StreamSubscriptionHandle<AppendedEvent>> _streamSubscriptionsByEventSourceId = new();
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
     IAsyncStream<AppendedEvent>? _stream;
     ObserverId _observerId = Guid.Empty;
