@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Observation;
 /// <summary>
 /// Represents the state of a failed partition within the ObserverSupervisor.
 /// </summary>
-public class FailedPartition
+public record FailedPartition
 {
     /// <summary>
     /// Gets the EventSourceId that is the partition.
