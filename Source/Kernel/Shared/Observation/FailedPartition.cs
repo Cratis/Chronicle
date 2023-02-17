@@ -57,7 +57,14 @@ public record FailedPartition
     public bool IsRecovered => Head is null || Head.Value <= (RecoveredTo?.Value ?? EventSequenceNumber.First);
 
     /// <summary>
-    /// Creates a new instance of <see cref="FailedPartition"/>.
+    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
+    /// </summary>
+    public FailedPartition()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
     /// <param name="tail">The event sequence number (tail) where the error occurred.</param>

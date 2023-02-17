@@ -214,7 +214,11 @@ public abstract class ObserverWorker : Grain
     /// <param name="exceptionMessages">All exception messages.</param>
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <returns>Awaitable task.</returns>
-    public virtual Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace) => Task.CompletedTask;
+    public virtual Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        State.AddFailedPartition(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
+        return Task.CompletedTask;
+    }
 
     /// <summary>
     /// Read the observer state.

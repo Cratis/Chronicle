@@ -106,6 +106,12 @@ public class ObserverState
     List<RecoveringFailedObserverPartition> _partitionsBeingRecovered = new();
 
     /// <summary>
+    /// Add a failed partition.
+    /// </summary>
+    /// <param name="failedPartition"><see cref="FailedPartition"/> to add.</param>
+    public void AddFailedPartition(FailedPartition failedPartition) => _failedPartitions.Add(failedPartition);
+
+    /// <summary>
     /// Check whether or not a partition is failed.
     /// </summary>
     /// <param name="partition">Partition to check.</param>

@@ -165,6 +165,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
             exceptionStackTrace,
             DateTimeOffset.UtcNow);
 
+        State.FailedPartitions = _failedPartitionSupervisor.GetState().FailedPartitions;
         await WriteStateAsync();
     }
 

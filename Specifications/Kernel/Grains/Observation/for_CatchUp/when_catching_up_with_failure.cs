@@ -18,5 +18,7 @@ public class when_catching_up_with_failure : given.a_catch_up_worker_with_two_pe
 
     Task Because() => catch_up.Start(new(GrainId, ObserverKey.Parse(GrainKeyExtension), event_types, typeof(ObserverSubscriber), subscriber_args));
 
-    [Fact] void should_notify_supervisor_that_catch_up_is_complete_with_failed_partition() => failed_partitions.First().ShouldEqual(new FailedPartition(second_event_source_id, second_appended_event.Metadata.SequenceNumber, IsAny<IEnumerable<string>>(), IsAny<string>(), IsAny<DateTimeOffset>()));
+    [Fact] void should_notify_supervisor_that_catch_up_is_complete_with_failed_partition() => failed_partitions.Count().ShouldEqual(1);
+    [Fact] void should_have_correct_partition() => failed_partitions.First().Partition.ShouldEqual(second_event_source_id);
+    [Fact] void should_have_correct_tail() => failed_partitions.First().Tail.ShouldEqual(second_appended_event.Metadata.SequenceNumber);
 }
