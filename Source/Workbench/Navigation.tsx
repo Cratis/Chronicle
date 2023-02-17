@@ -92,6 +92,12 @@ const groups: INavLinkGroup[] = [
                         key: 'projections',
                         url: '',
                         route: '/events/store/projections'
+                    },
+                    {
+                        name: "Failed Partitions",
+                        key: 'failedPartitions',
+                        url: '',
+                        route: '/events/store/failed-partitions'
                     }
                 ]
             }
