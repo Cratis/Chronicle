@@ -5,32 +5,14 @@
 import { field } from '@aksio/cratis-fundamentals';
 
 
-export class FailedPartition {
+export class EventType {
 
     @field(String)
-    eventSourceId!: string;
+    id!: string;
 
     @field(Number)
-    tail!: number;
-
-    @field(String, true)
-    messages!: String[];
-
-    @field(String)
-    stackTrace!: string;
-
-    @field(Date)
-    occurred?: Date;
-
-    @field(String)
-    partition!: string;
-
-    @field(Number)
-    head?: number;
-
-    @field(Number)
-    recoveredTo?: number;
+    generation!: number;
 
     @field(Boolean)
-    isRecovered!: boolean;
+    isPublic!: boolean;
 }

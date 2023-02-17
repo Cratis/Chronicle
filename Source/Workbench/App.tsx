@@ -33,6 +33,7 @@ export const App = () => {
                     <Route path="/events/store/types" element={<EventTypes />}/>
                     <Route path="/events/store/sequence" element={<EventSequences />}/>
                     <Route path="/events/store/observers" element={<Observers />}/>
+                    <Route path="/events/store/failed-partitions" element={<Observers />}/>
                     <Route path="/events/store/projections" element={<Projections />}/>
                 </Routes>
             </div>

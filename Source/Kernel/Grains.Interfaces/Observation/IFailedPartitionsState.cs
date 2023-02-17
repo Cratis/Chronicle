@@ -6,12 +6,12 @@ using Aksio.Cratis.Kernel.Observation;
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
 /// <summary>
-/// State for a failed partition.
+/// Defines a system for working with <see cref="RecoverFailedPartitionState"/>.
 /// </summary>
-public class FailedPartitionsState : IChildState<FailedPartitionsState>
+public interface IFailedPartitionsState
 {
     /// <summary>
-    /// List of failed partitions being supervised.
+    /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="RecoverFailedPartitionState"/>.
     /// </summary>
-    public IEnumerable<FailedPartition> FailedPartitions { get; set; } = Enumerable.Empty<FailedPartition>();
+    IObservable<IEnumerable<RecoverFailedPartitionState>> All { get; }
 }

@@ -45,5 +45,5 @@ public static class CollectionNames
     /// <summary>
     /// The collection that holds schemas.
     /// </summary>
-    public const string RecoverFailedPartitions = "recover-failed-partitions";
+    public const string FailedPartitions = "failed-partitions";
 }

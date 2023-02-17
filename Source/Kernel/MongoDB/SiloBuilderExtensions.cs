@@ -10,6 +10,7 @@ using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.MongoDB.Tenants;
+using Aksio.Cratis.Kernel.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;

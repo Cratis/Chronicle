@@ -4,7 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
 
-namespace Aksio.Cratis.Kernel.Grains.Observation;
+namespace Aksio.Cratis.Kernel.Observation;
 
 /// <summary>
 /// Holds the state for the job to recover a failed partition.
@@ -20,6 +20,26 @@ public class RecoverFailedPartitionState
     /// Unique identifier of the failed partition.
     /// </summary>
     public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the <see cref="ObserverId"/> for which this is a failed partition.
+    /// </summary>
+    public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the name of the observer the failed partition belongs to.
+    /// </summary>
+    public ObserverName ObserverName { get; set; } = ObserverName.NotSpecified;
+
+    /// <summary>
+    /// String form of the Observer Key for the origin of this failed partition.
+    /// </summary>
+    public string ObserverKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// String form of the Subscriber key for the origin of this failed partition.
+    /// </summary>
+    public string SubscriberKey { get; set; } = string.Empty;
 
     /// <summary>
     /// Event log sequence number of the initial event that errored.
@@ -62,11 +82,6 @@ public class RecoverFailedPartitionState
     public IEnumerable<EventType> EventTypes { get; set; } = Enumerable.Empty<EventType>();
 
     /// <summary>
-    /// Gets or sets the <see cref="ObserverId"/> for which this is a failed partition.
-    /// </summary>
-    public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
-
-    /// <summary>
     /// Gets or sets the StackTrace for the last error on this failed partition.
     /// </summary>
     public string StackTrace { get; set; } = string.Empty;
@@ -75,16 +90,6 @@ public class RecoverFailedPartitionState
     /// Gets or sets the Error Messages for the last error on this failed partition.
     /// </summary>
     public IEnumerable<string> Messages { get; set; } = Enumerable.Empty<string>();
-
-    /// <summary>
-    /// String form of the Observer Key for the origin of this failed partition.
-    /// </summary>
-    public string ObserverKey { get; set; } = string.Empty;
-
-    /// <summary>
-    /// String form of the Subscriber key for the origin of this failed partition.
-    /// </summary>
-    public string SubscriberKey { get; set; } = string.Empty;
 
     /// <summary>
     /// Resets the state of the failed partition.
@@ -172,18 +177,31 @@ public class RecoverFailedPartitionState
     /// <summary>
     /// Sets the correct state when a new error is initialized.
     /// </summary>
+    /// <param name="observerKey">Key from the Observer.</param>
+    /// <param name="observerName">The name of the observer.</param>
+    /// <param name="subscriberKey">Key from the Subscriber.</param>
     /// <param name="fromEvent">The position in the sequence where the error occurred.</param>
     /// <param name="eventTypes">Types of event that are in the event sequence.</param>
-    /// <param name="observerKey">Key from the Observer.</param>
-    /// <param name="subscriberKey">Key from the Subscriber.</param>
-    public void InitializeError(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, ObserverKey observerKey, ObserverSubscriberKey subscriberKey)
+    /// <param name="messages">Any messages associated with the error.</param>
+    /// <param name="stacktrace">A stack trace associated with the error.</param>
+    public void InitializeError(
+        ObserverKey observerKey,
+        ObserverName observerName,
+        ObserverSubscriberKey subscriberKey,
+        EventSequenceNumber fromEvent,
+        IEnumerable<EventType> eventTypes,
+        IEnumerable<string> messages,
+        string stacktrace)
     {
+        ObserverKey = observerKey.ToString();
+        ObserverName = observerName;
+        SubscriberKey = subscriberKey.ToString();
         CurrentError = fromEvent;
         InitialError = fromEvent;
         InitialPartitionFailedOn = DateTimeOffset.UtcNow;
         EventTypes = eventTypes;
-        ObserverKey = observerKey.ToString();
-        SubscriberKey = subscriberKey.ToString();
+        Messages = messages;
+        StackTrace = stacktrace;
         NextSequenceNumberToProcess = fromEvent;
     }
 

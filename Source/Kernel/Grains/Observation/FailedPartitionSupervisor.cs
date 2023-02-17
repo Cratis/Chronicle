@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Orleans;
 
@@ -13,7 +14,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsState>
 {
     readonly ObserverId _observerId;
-    readonly ObserverKey _key;
+    readonly ObserverKey _observerKey;
+    readonly ObserverName _observerName;
     readonly IEnumerable<EventType> _eventTypes;
     readonly IGrainFactory _grainFactory;
     readonly List<FailedPartition> _failedPartitions;
@@ -27,14 +29,22 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// Instantiates an instance of <see cref="FailedPartitionSupervisor"/>.
     /// </summary>
     /// <param name="observerId">The Observer Id.</param>
-    /// <param name="key">The Observer Key.</param>
+    /// <param name="observerKey">The Observer Key.</param>
+    /// <param name="observerName">The name of the Observer</param>
     /// <param name="eventTypes">Events that the observer monitors.</param>
     /// <param name="failedPartitions">Existing failed partitions from state.</param>
     /// <param name="grainFactory">Grains factory to create child worker grains.</param>
-    public FailedPartitionSupervisor(ObserverId observerId, ObserverKey key, IEnumerable<EventType> eventTypes, IEnumerable<FailedPartition>? failedPartitions, IGrainFactory grainFactory)
+    public FailedPartitionSupervisor(
+        ObserverId observerId,
+        ObserverKey observerKey,
+        ObserverName observerName,
+        IEnumerable<EventType> eventTypes,
+        IEnumerable<FailedPartition>? failedPartitions,
+        IGrainFactory grainFactory)
     {
         _observerId = observerId;
-        _key = key;
+        _observerKey = observerKey;
+        _observerName = observerName;
         _eventTypes = eventTypes;
         _grainFactory = grainFactory;
         _failedPartitions = failedPartitions?.ToList() ?? new List<FailedPartition>();
@@ -125,19 +135,32 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
         if (failedPartition is null) return;
 
         await GetRecoveryGrain(failedPartition.Partition)
-            .Recover(failedPartition.RecoveredTo ?? failedPartition.Tail, _eventTypes, _key);
+            .Recover(
+                _observerKey,
+                _observerName,
+                failedPartition.RecoveredTo ?? failedPartition.Tail,
+                _eventTypes,
+                failedPartition.Messages,
+                failedPartition.StackTrace);
     }
 
     async Task StartRecovery(
         EventSourceId partitionId,
         EventSequenceNumber sequenceNumber,
-        IEnumerable<string> exceptionMessages,
-        string exceptionStackTrace,
+        IEnumerable<string> messages,
+        string stackTrace,
         DateTimeOffset occurred)
     {
-        _failedPartitions.Add(new FailedPartition(partitionId, sequenceNumber, exceptionMessages, exceptionStackTrace, occurred));
-        await GetRecoveryGrain(partitionId).Recover(sequenceNumber, _eventTypes, _key);
+        _failedPartitions.Add(new FailedPartition(partitionId, sequenceNumber, messages, stackTrace, occurred));
+        await GetRecoveryGrain(partitionId)
+            .Recover(
+                _observerKey,
+                _observerName,
+                sequenceNumber,
+                _eventTypes,
+                messages,
+                stackTrace);
     }
 
-    IRecoverFailedPartition GetRecoveryGrain(EventSourceId partitionId) => _grainFactory.GetGrain<IRecoverFailedPartition>(_observerId, PartitionedObserverKey.FromObserverKey(_key, partitionId));
+    IRecoverFailedPartition GetRecoveryGrain(EventSourceId partitionId) => _grainFactory.GetGrain<IRecoverFailedPartition>(_observerId, PartitionedObserverKey.FromObserverKey(_observerKey, partitionId));
 }

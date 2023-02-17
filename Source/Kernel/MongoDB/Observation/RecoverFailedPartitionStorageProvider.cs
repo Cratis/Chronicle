@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using MongoDB.Driver;
 using Orleans;
@@ -27,7 +27,7 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
     /// <summary>
     /// Gets the <ze cref="IMongoCollection{TDocument}"/> for <see cref="RecoverFailedPartitionState"/>.
     /// </summary>
-    protected IMongoCollection<RecoverFailedPartitionState> Collection => _eventStoreDatabaseProvider().GetCollection<RecoverFailedPartitionState>(CollectionNames.RecoverFailedPartitions);
+    protected IMongoCollection<RecoverFailedPartitionState> Collection => _eventStoreDatabaseProvider().GetCollection<RecoverFailedPartitionState>(CollectionNames.FailedPartitions);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecoverFailedPartitionStorageProvider"/> class.
@@ -79,8 +79,9 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
         var partitionKey = PartitionedObserverKey.Parse(keyAsString);
         ExecutionContextManager.Establish(partitionKey.TenantId, CorrelationId.New(), partitionKey.MicroserviceId);
 
-        var observerState = grainState.State as RecoverFailedPartitionState;
+        var observerState = (grainState.State as RecoverFailedPartitionState)!;
         var key = GetKeyFrom(partitionKey, observerId);
+        observerState.Id = key;
 
         await Collection.ReplaceOneAsync(
             _ => _.Id == key,
@@ -94,5 +95,5 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
     /// <param name="key"><see cref="PartitionedObserverKey"/> to get for.</param>
     /// <param name="observerId"><see cref="ObserverId"/> to get for.</param>
     /// <returns>The actual key.</returns>
-    protected string GetKeyFrom(PartitionedObserverKey key, ObserverId observerId) => $"{observerId}_{key.EventSequenceId}_{key.EventSourceId}_{key.MicroserviceId}_{key.TenantId}";
+    protected string GetKeyFrom(PartitionedObserverKey key, ObserverId observerId) => $"{observerId} : {key.EventSequenceId} : {key.EventSourceId}";
 }
