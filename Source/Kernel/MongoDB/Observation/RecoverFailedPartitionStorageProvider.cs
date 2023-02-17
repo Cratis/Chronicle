@@ -64,7 +64,7 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
 
         var key = GetKeyFrom(partitionedObserverKey, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
-        //TODO: populate this correctly
+
         grainState.State = await cursor.FirstOrDefaultAsync() ?? new RecoverFailedPartitionState()
         {
             Id = key,

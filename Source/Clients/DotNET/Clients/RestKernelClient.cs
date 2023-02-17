@@ -162,6 +162,7 @@ public abstract class RestKernelClient : IClient, IDisposable
     /// <summary>
     /// Gets called if the client is disconnected.
     /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     protected virtual Task OnDisconnected() => Task.CompletedTask;
 
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null)

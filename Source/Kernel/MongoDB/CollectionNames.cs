@@ -35,13 +35,13 @@ public static class CollectionNames
     /// <summary>
     /// The collection that holds connected clients state.
     /// </summary>
-    internal const string ConnectedClients = "connected-clients";
+    public const string ConnectedClients = "connected-clients";
 
     /// <summary>
     /// The collection that holds schemas.
     /// </summary>
     public const string Schemas = "schemas";
-    
+
     /// <summary>
     /// The collection that holds schemas.
     /// </summary>

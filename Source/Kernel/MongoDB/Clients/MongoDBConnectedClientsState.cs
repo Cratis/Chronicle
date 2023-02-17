@@ -57,6 +57,7 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
             }
             catch (Exception)
             {
+                observable.OnNext(Array.Empty<ConnectedClient>());
             }
         });
 
