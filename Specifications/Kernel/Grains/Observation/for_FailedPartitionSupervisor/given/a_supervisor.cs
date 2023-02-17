@@ -16,17 +16,17 @@ public class a_supervisor : Specification
     protected static readonly ObserverId observer_id = Guid.NewGuid();
 
     protected static readonly ObserverKey observer_key =
-        new (microservice_id, tenant_id, event_sequence_id, null, null);
-    
+        new(microservice_id, tenant_id, event_sequence_id, null, null);
+
     protected static Mock<IGrainFactory> grain_factory_mock = new();
 
     protected FailedPartitionSupervisor get_clean_supervisor() =>
-        new (observer_id, observer_key, event_types, null, grain_factory_mock.Object);
-    
+        new(observer_id, observer_key, event_types, null, grain_factory_mock.Object);
+
     protected FailedPartitionSupervisor get_supervisor_with_failed_partition(EventSourceId partition, EventSequenceNumber? fromEvent = null)
     {
-        var failedPartitions = new FailedPartition[]{ new(partition, fromEvent ?? EventSequenceNumber.First, DateTimeOffset.UtcNow ) };
-        return new (observer_id, observer_key, event_types, failedPartitions, grain_factory_mock.Object);
+        var failedPartitions = new FailedPartition[] { new(partition, fromEvent ?? EventSequenceNumber.First, Enumerable.Empty<string>(), string.Empty, DateTimeOffset.UtcNow) };
+        return new(observer_id, observer_key, event_types, failedPartitions, grain_factory_mock.Object);
     }
 
     protected PartitionedObserverKey get_partitioned_observer_key(EventSourceId partition_key) =>

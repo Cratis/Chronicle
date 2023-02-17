@@ -23,7 +23,7 @@ public class when_updating_with_latest_success_and_was_not_the_current_error : S
             CurrentError = EventSequenceNumber.Max,
             NextSequenceNumberToProcess = EventSequenceNumber.First,
             NumberOfAttemptsOnCurrentError = 10,
-            NumberOfAttemptsOnSinceInitialised = 100,
+            NumberOfAttemptsOnSinceInitialized = 100,
             InitialPartitionFailedOn = initial,
             LastAttemptOnCurrentError = last
         };
@@ -50,7 +50,7 @@ public class when_updating_with_latest_success_and_was_not_the_current_error : S
 
     [Fact]
     void should_not_change_attempts_on_current_error() => state.NumberOfAttemptsOnCurrentError.ShouldEqual(10);
-    
+
     [Fact]
     void should_not_change_last_attempt_on_current_error() => state.LastAttemptOnCurrentError.ShouldEqual(last);
 }

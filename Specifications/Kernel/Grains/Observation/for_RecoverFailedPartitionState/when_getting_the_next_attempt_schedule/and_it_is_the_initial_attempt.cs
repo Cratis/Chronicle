@@ -18,17 +18,17 @@ public class and_it_is_the_initial_attempt : Specification
             CurrentError = EventSequenceNumber.First,
             NextSequenceNumberToProcess = 2,
             NumberOfAttemptsOnCurrentError = 0,
-            NumberOfAttemptsOnSinceInitialised = 0
+            NumberOfAttemptsOnSinceInitialized = 0
         };
 
         return Task.CompletedTask;
     }
-    
+
     Task Because()
     {
         nextScheduledAttempt = state.GetNextAttemptSchedule();
         return Task.CompletedTask;
     }
-    
+
     [Fact] void should_return_an_immediate_schedule() => nextScheduledAttempt.ShouldEqual(TimeSpan.Zero);
 }

@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Dynamic;
 using Aksio.Cratis.Execution;
 
@@ -17,7 +16,7 @@ public class with_no_errors_on_processing_from_failed_event : given.a_recover_fa
     EventSequenceNumber initial_error;
 
     protected override IEnumerable<AppendedEvent> events => appended_events;
-    
+
     AppendedEvent BuildAppendedEvent(EventSourceId eventSourceId)
     {
         var @event = new AppendedEvent(
@@ -52,24 +51,19 @@ public class with_no_errors_on_processing_from_failed_event : given.a_recover_fa
     [Fact]
     void should_call_the_subscriber_for_each_event()
     {
-        foreach (var @event in appended_events) 
+        foreach (var @event in appended_events)
             subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Once);
     }
-    
-    [Fact]
-    void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(6);
-    
-    [Fact]
-    void should_have_recorded_the_number_of_attempts_in_the_state() => most_recent_written_state.NumberOfAttemptsOnSinceInitialised.ShouldEqual(0);
-    
-    [Fact]
-    void should_notify_the_supervisor_that_the_recovery_is_completed_with_the_last_processed_event() 
-        => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(state.NextSequenceNumberToProcess - 1));
-    
-    [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider()
-        => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(partitioned_observer_key.EventSequenceId, initial_error, partitioned_observer_key.EventSourceId, IsAny<IEnumerable<EventType>>()), Once);
+
+    [Fact] void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(6);
+
+    [Fact] void should_have_recorded_the_number_of_attempts_in_the_state() => most_recent_written_state.NumberOfAttemptsOnSinceInitialized.ShouldEqual(0);
+
+    [Fact] void should_notify_the_supervisor_that_the_recovery_is_completed_with_the_last_processed_event() => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(partitioned_observer_key.EventSourceId, state.NextSequenceNumberToProcess - 1));
+
+    [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider() => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(partitioned_observer_key.EventSequenceId, initial_error, partitioned_observer_key.EventSourceId, IsAny<IEnumerable<EventType>>()), Once);
 
     [Fact] void should_not_schedule_any_more_timers() => timer_registry.Verify(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()), Once);
-    
-    [Fact] void should_have_scheduled_the_immediate_timer_to_start_recovery() => timers.First().Wait.ShouldEqual(TimeSpan.Zero);
+
+    [Fact] void should_have_scheduled_the_immediate_timer_to_start_recovery() => timers[0].Wait.ShouldEqual(TimeSpan.Zero);
 }

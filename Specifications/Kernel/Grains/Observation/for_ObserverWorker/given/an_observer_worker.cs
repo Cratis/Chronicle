@@ -56,7 +56,7 @@ public class an_observer_worker : GrainSpecification
             persistent_state.Object,
             Mock.Of<ILogger<ObserverWorker>>());
 
-        worker.SetCurrentSubscription(new(typeof(ObserverSubscriber), null!));
+        worker.SetCurrentSubscription(new(GrainId, ObserverKey.Parse(GrainKeyExtension), Enumerable.Empty<EventType>(), typeof(ObserverSubscriber), null!));
 
         return worker;
     }

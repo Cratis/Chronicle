@@ -28,7 +28,7 @@ public class when_initialising_error : Specification
 
     void Because()
     {
-        state.InitialiseError(initial_error, event_types, observer_key, subscriber_key);
+        state.InitializeError(initial_error, event_types, observer_key, subscriber_key);
     }
 
     [Fact]

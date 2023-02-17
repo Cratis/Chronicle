@@ -8,13 +8,13 @@ public class and_partition_for_appended_event_is_failed : given.an_observer_work
     AppendedEvent @event;
     EventSequenceNumber sequence_number;
 
-    void Establish()
+    async Task Establish()
     {
         state.RunningState = ObserverRunningState.Active;
         sequence_number = (ulong)Random.Shared.Next();
         state.NextEventSequenceNumber = sequence_number;
         @event = new AppendedEvent(EventMetadata.EmptyWithEventSequenceNumber(sequence_number), EventContext.Empty with { EventSourceId = Guid.NewGuid() }, new System.Dynamic.ExpandoObject());
-        state.FailPartition(@event.Context.EventSourceId, @event.Metadata.SequenceNumber, Array.Empty<string>(), string.Empty);
+        await worker.PartitionFailed(@event.Context.EventSourceId, @event.Metadata.SequenceNumber, Enumerable.Empty<string>(), string.Empty);
     }
 
     Task Because() => worker.Handle(@event);

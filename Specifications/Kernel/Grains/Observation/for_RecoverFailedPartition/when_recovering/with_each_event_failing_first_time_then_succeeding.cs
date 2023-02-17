@@ -74,18 +74,13 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
             subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Exactly(2));
     }
 
-    [Fact]
-    void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(11);
+    [Fact] void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(11);
 
-    [Fact]
-    void should_record_the_total_number_of_attempts_on_the_state() => most_recent_written_state.NumberOfAttemptsOnSinceInitialised.ShouldEqual(5);
+    [Fact] void should_record_the_total_number_of_attempts_on_the_state() => most_recent_written_state.NumberOfAttemptsOnSinceInitialized.ShouldEqual(5);
 
-    [Fact]
-    void should_notify_the_supervisor_that_the_recovery_is_completed_with_the_last_processed_event()
-        => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(state.NextSequenceNumberToProcess - 1));
+    [Fact] void should_notify_the_supervisor_that_the_recovery_is_completed_with_the_last_processed_event() => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(PartitionedObserverKey.EventSourceId, state.NextSequenceNumberToProcess - 1));
 
-    [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider()
-        => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(PartitionedObserverKey.EventSequenceId, IsAny<EventSequenceNumber>(), PartitionedObserverKey.EventSourceId, IsAny<IEnumerable<EventType>>()), Exactly(6));
+    [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider() => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(PartitionedObserverKey.EventSequenceId, IsAny<EventSequenceNumber>(), PartitionedObserverKey.EventSourceId, IsAny<IEnumerable<EventType>>()), Exactly(6));
 
     [Fact] void should_schedule_additional_timers_on_each_failure() => timer_registry.Verify(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()), Exactly(6));
 

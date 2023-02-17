@@ -15,17 +15,17 @@ public class and_it_is_the_twentieth_attempt : Specification
             CurrentError = EventSequenceNumber.First,
             NextSequenceNumberToProcess = 2,
             NumberOfAttemptsOnCurrentError = 20,
-            NumberOfAttemptsOnSinceInitialised = 20
+            NumberOfAttemptsOnSinceInitialized = 20
         };
 
         return Task.CompletedTask;
     }
-    
+
     Task Because()
     {
         nextScheduledAttempt = state.GetNextAttemptSchedule();
         return Task.CompletedTask;
     }
-    
+
     [Fact] void should_return_1_hour() => nextScheduledAttempt.ShouldEqual(TimeSpan.FromHours(1));
 }

@@ -5,8 +5,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.for_CatchUp;
 
 public class when_catching_up_with_no_events_to_catch_up_to : given.a_catch_up_worker
 {
+    Task Because() => catch_up.Start(new(GrainId, ObserverKey.Parse(GrainKeyExtension), Enumerable.Empty<EventType>(), typeof(ObserverSubscriber), subscriber_args));
 
-    Task Because() => catch_up.Start(new(typeof(ObserverSubscriber), null!));
-
-    [Fact] void should_notify_supervisor_that_catch_up_is_complete() => supervisor.Verify(_ => _.NotifyCatchUpComplete(), Once);
+    [Fact] void should_notify_supervisor_that_catch_up_is_complete() => supervisor.Verify(_ => _.NotifyCatchUpComplete(IsAny<IEnumerable<FailedPartition>>()), Once);
 }
