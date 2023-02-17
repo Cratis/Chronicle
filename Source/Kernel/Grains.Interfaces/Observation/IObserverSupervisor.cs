@@ -51,9 +51,9 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <summary>
     /// Try to resume the partition.
     /// </summary>
-    /// <param name="eventSourceId">The partition to try to resume.</param>
+    /// <param name="partition">The partition to try to resume.</param>
     /// <returns>Awaitable task.</returns>
-    Task TryResumePartition(EventSourceId eventSourceId);
+    Task TryResumePartition(EventSourceId partition);
 
     /// <summary>
     /// Notify that catch-up is complete.
@@ -64,9 +64,10 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <summary>
     /// Notify that failed partition has run to completion.
     /// </summary>
+    /// <param name="partition">Partition that has recovered.</param>
     /// <param name="lastProcessedEvent">The EventSequenceNumber of the last event that the worked processed when declaring itself complete.</param>
     /// <returns>Awaitable task.</returns>
-    Task NotifyFailedPartitionRecoveryComplete(EventSequenceNumber lastProcessedEvent);
+    Task NotifyFailedPartitionRecoveryComplete(EventSourceId partition, EventSequenceNumber lastProcessedEvent);
 
     /// <summary>
     /// Notify that the partition has failed.

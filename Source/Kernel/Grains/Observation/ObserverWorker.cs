@@ -69,6 +69,11 @@ public abstract class ObserverWorker : Grain
     protected bool IsActive => !State.IsDisconnected && CurrentSubscription.IsSubscribed;
 
     /// <summary>
+    /// Gets a value indicating whether or not this worker is a supervisor.
+    /// </summary>
+    protected bool IsSupervisor => this is IObserverSupervisor;
+
+    /// <summary>
     /// Gets the <see cref="IObserverSupervisor"/>.
     /// </summary>
     protected IObserverSupervisor Supervisor => _supervisor ??= this switch
@@ -174,6 +179,11 @@ public abstract class ObserverWorker : Grain
                 SourceTenantId ?? TenantId.NotSet);
 
             await Supervisor.PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
+
+            if (!IsSupervisor)
+            {
+                await ReadStateAsync();
+            }
         }
     }
 

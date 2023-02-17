@@ -25,11 +25,6 @@ public partial class ObserverSupervisor
         State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
         await UnsubscribeStream();
-
-        if (_recoverReminder is not null)
-        {
-            await UnregisterReminder(_recoverReminder);
-        }
     }
 
     async Task Subscribe(
@@ -38,6 +33,8 @@ public partial class ObserverSupervisor
         object? subscriberArgs = default)
     {
         await ReadStateAsync();
+
+        _failedPartitionSupervisor = new(_observerId, _observerKey, eventTypes, State.FailedPartitions, GrainFactory);
 
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
         CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, subscriberArgs!);
@@ -54,7 +51,7 @@ public partial class ObserverSupervisor
             return;
         }
 
-        await TryResumeAnyFailedPartitions();
+        await _failedPartitionSupervisor.TryRecoveringAnyFailedPartitions();
 
         await UnsubscribeStream();
 
@@ -99,7 +96,6 @@ public partial class ObserverSupervisor
     Task HandleEventForPartitionedObserverWhenSubscribing(AppendedEvent @event)
     {
         if (State.IsPartitionFailed(@event.Context.EventSourceId) ||
-            State.IsRecoveringPartition(@event.Context.EventSourceId) ||
             State.RunningState == ObserverRunningState.Replaying ||
             State.IsDisconnected)
         {

@@ -75,7 +75,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     {
         _logger.Deactivating(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
         await WriteStateAsync();
-        if(_timer is not null)
+        if (_timer is not null)
         {
             _timer.Dispose();
             _timer = null;
@@ -87,7 +87,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     {
         _observerKey = observerKey;
         _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId);
-        State.InitialiseError(fromEvent, eventTypes, _observerKey, _subscriberKey);
+        State.InitializeError(fromEvent, eventTypes, _observerKey, _subscriberKey);
         _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
         await SetSubscriberSubscription();
         await WriteStateAsync();
@@ -114,7 +114,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     }
 
     /// <summary>
-    /// Handles the processing of an appeneded event.
+    /// Handles the processing of an appended event.
     /// </summary>
     /// <param name="event">The event to be processed.</param>
     /// <returns>Returns a task indicating if the processing succeeded or not.</returns>
@@ -169,7 +169,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         if (failed)
         {
             State.UpdateWithLatestError(@event.Metadata.SequenceNumber, exceptionMessages, exceptionStackTrace, DateTimeOffset.UtcNow);
-            _logger.SubscriberEventProcessingFailed(eventSequenceNumber, State.ObserverId, _key.MicroserviceId, _key.TenantId, _key.EventSequenceId, _key.EventSourceId, State.NumberOfAttemptsOnCurrentError, State.NumberOfAttemptsOnSinceInitialised);
+            _logger.SubscriberEventProcessingFailed(eventSequenceNumber, State.ObserverId, _key.MicroserviceId, _key.TenantId, _key.EventSequenceId, _key.EventSourceId, State.NumberOfAttemptsOnCurrentError, State.NumberOfAttemptsOnSinceInitialized);
         }
         else
         {
@@ -203,7 +203,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         if (completed)
         {
             _logger.ProcessingCompleted(State.ObserverId, _key.MicroserviceId, _key.TenantId, _key.EventSequenceId, _key.EventSourceId, eventSequenceNumber);
-            await GetSupervisor(State.ObserverId, _observerKey!).NotifyFailedPartitionRecoveryComplete(eventSequenceNumber);
+            await GetSupervisor(State.ObserverId, _observerKey!).NotifyFailedPartitionRecoveryComplete(_key.EventSourceId, eventSequenceNumber);
         }
         else
         {
@@ -214,7 +214,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
 
     void ScheduleNextTimer(bool isCatchup = false)
     {
-        if (State.HasBeenInitialised())
+        if (State.HasBeenInitialized())
         {
             var nextAttempt = isCatchup ? TimeSpan.Zero : State.GetNextAttemptSchedule();
             _logger.ProcessingScheduled(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, nextAttempt, State.NextSequenceNumberToProcess);
