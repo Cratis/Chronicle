@@ -17,13 +17,18 @@ import { Microservice } from 'API/configuration/microservices/Microservice';
 import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 import { IColumn, Panel, TextField } from '@fluentui/react';
 import { AllFailedPartitions } from 'API/events/store/failed-partitions/AllFailedPartitions';
-import { AllTenants } from '../../API/configuration/tenants/AllTenants';
-import { TenantInfo } from '../../API/configuration/tenants/TenantInfo';
-import { RecoverFailedPartitionState } from '../../API/events/store/failed-partitions/RecoverFailedPartitionState';
+import { AllTenants } from 'API/configuration/tenants/AllTenants';
+import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
+import { RecoverFailedPartitionState } from 'API/events/store/failed-partitions/RecoverFailedPartitionState';
 import { useBoolean } from '@fluentui/react-hooks';
+import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
+import { EventSequenceInformation } from '../../API/events/store/sequences/EventSequenceInformation';
+import { QueryResultWithState } from '@aksio/cratis-applications-frontend/queries';
 
 
 const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
+
+let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
 const columns: IColumn[] = [
     {
@@ -41,6 +46,25 @@ const columns: IColumn[] = [
         maxWidth: 250,
     },
     {
+        key: 'partition',
+        name: 'Partition',
+        fieldName: 'partition',
+        minWidth: 250,
+        maxWidth: 250,
+    },
+    {
+        key: 'sequence',
+        name: 'Event Sequence',
+        fieldName: 'eventSequenceId',
+        minWidth: 250,
+        maxWidth: 250,
+        onRender: (item: RecoverFailedPartitionState) => {
+            return (
+                <>{eventSequences.data.find(_ => _.id == item.eventSequenceId)?.name ?? item.id}</>
+            );
+        }
+    },
+    {
         key: 'occurred',
         name: 'Occurred',
         fieldName: 'initialPartitionFailedOn',
@@ -51,11 +75,13 @@ const columns: IColumn[] = [
                 <>{item.initialPartitionFailedOn ? new Date(item.initialPartitionFailedOn).toLocaleString() : ''}</>
             );
         }
-
     }
 ];
 
 export const FailedPartitions = () => {
+    const [es] = AllEventSequences.use();
+    eventSequences = es;
+
     const [microservices] = AllMicroservices.use();
     const [tenants] = AllTenants.use();
     const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();

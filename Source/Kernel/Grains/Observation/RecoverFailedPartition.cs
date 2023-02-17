@@ -64,6 +64,8 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         State.ObserverId = this.GetPrimaryKey(out var keyAsString);
         _key = PartitionedObserverKey.Parse(keyAsString);
         State.Id = _key.ToString();
+        State.Partition = _key.EventSourceId;
+        State.EventSequenceId = _key.EventSequenceId;
         _observerKey = string.IsNullOrWhiteSpace(State.ObserverKey) ? null : ObserverKey.Parse(State.ObserverKey);
         _subscriberKey = string.IsNullOrWhiteSpace(State.SubscriberKey) ? null : ObserverSubscriberKey.Parse(State.SubscriberKey);
         _logger.Activating(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
