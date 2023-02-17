@@ -7,6 +7,7 @@ import {
     Dropdown,
     IDropdownOption,
     IDropdownStyles,
+    Label,
     Stack,
     Selection,
     SelectionMode
@@ -194,11 +195,17 @@ export const FailedPartitions = () => {
                 isLightDismiss
                 isOpen={isDetailsPanelOpen}
                 onDismiss={closePanel}
-                headerText={selectedItem?.id}>
+                headerText={selectedItem?.observerName}>
                 <TextField label="Occurred" disabled defaultValue={selectedItem?.initialPartitionFailedOn.toLocaleDateString() ?? new Date().toLocaleString()} />
+                <Label>Messages</Label>
                 {
-                    (selectedItem) && Object.keys(selectedItem).map(_ => <TextField key={_} label={_} disabled defaultValue={selectedItem![_]} />)
+                    (selectedItem?.messages) && selectedItem.messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
                 }
+                <TextField label="Stack Trace" disabled defaultValue={selectedItem?.stackTrace} multiline title={selectedItem?.stackTrace.toString()} />
+                {/* {
+
+                    (selectedItem) && Object.keys(selectedItem).map(_ => <TextField key={_} label={_} disabled defaultValue={selectedItem![_]} />)
+                } */}
             </Panel>
         </>
 
