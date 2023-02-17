@@ -18,17 +18,17 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 public class RecoverFailedPartitionStorageProvider : IGrainStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
-    
+
     /// <summary>
     /// Gets the <see cref="IExecutionContextManager"/> for working with the execution context.
     /// </summary>
     protected IExecutionContextManager ExecutionContextManager { get; }
-    
+
     /// <summary>
     /// Gets the <ze cref="IMongoCollection{TDocument}"/> for <see cref="RecoverFailedPartitionState"/>.
     /// </summary>
     protected IMongoCollection<RecoverFailedPartitionState> Collection => _eventStoreDatabaseProvider().GetCollection<RecoverFailedPartitionState>(CollectionNames.RecoverFailedPartitions);
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RecoverFailedPartitionStorageProvider"/> class.
     /// </summary>
@@ -41,7 +41,7 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
         ExecutionContextManager = executionContextManager;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
-    
+
     /// <inheritdoc/>
     public async Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
@@ -53,8 +53,8 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
         var key = GetKeyFrom(partitionedObserverKey, observerId);
         await Collection.DeleteOneAsync(_ => _.Id == key);
     }
-    
-        /// <inheritdoc/>
+
+    /// <inheritdoc/>
     public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
         var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
