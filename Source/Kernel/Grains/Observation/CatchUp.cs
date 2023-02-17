@@ -119,7 +119,7 @@ public class CatchUp : ObserverWorker, ICatchUp
 
         _isRunning = false;
         _logger.CaughtUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-        await Supervisor.NotifyCatchUpComplete(_failedPartitions);
+        await Supervisor.NotifyCatchUpComplete(_failedPartitions.ToArray());
         _failedPartitions.Clear();
     }
 }
