@@ -12,9 +12,19 @@ namespace Aksio.Cratis.Observation;
 public class FailedPartition
 {
     /// <summary>
-    /// The EventSourceId that is the partition.
+    /// Gets the EventSourceId that is the partition.
     /// </summary>
     public EventSourceId Partition { get; }
+
+    /// <summary>
+    /// Gets the exception messages that caused the partition failure.
+    /// </summary>
+    public IEnumerable<string> ExceptionMessages { get; }
+
+    /// <summary>
+    /// Gets the exception stack trace that caused the partition failure.
+    /// </summary>
+    public string ExceptionStackTrace { get; }
 
     /// <summary>
     /// <para>Gets the <see cref="EventSequenceNumber"/> of the event that triggered the partition failure.</para>
@@ -36,7 +46,7 @@ public class FailedPartition
     /// <summary>
     /// Gets the Event Log Sequence Number of the event where the recovery process believes it has caught up.
     /// This is set by RecoverFailedPartition when it has successfully processed the event that triggered the failure
-    /// and all subsequent events in the parition until it has caught up with the Head..
+    /// and all subsequent events in the partition until it has caught up with the Head..
     /// </summary>
     public EventSequenceNumber? RecoveredTo { get; private set; }
 
@@ -51,11 +61,20 @@ public class FailedPartition
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
     /// <param name="tail">The event sequence number (tail) where the error occurred.</param>
+    /// <param name="exceptionMessages">The exception messages that caused the partition failure.</param>
+    /// <param name="exceptionStackTrace">The exception stack trace that caused the partition failure.</param>
     /// <param name="occurred">When the error occurred.</param>
-    public FailedPartition(EventSourceId eventSourceId, EventSequenceNumber tail, DateTimeOffset? occurred = null)
+    public FailedPartition(
+        EventSourceId eventSourceId,
+        EventSequenceNumber tail,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        DateTimeOffset? occurred = null)
     {
         Partition = eventSourceId;
         Tail = tail;
+        ExceptionMessages = exceptionMessages;
+        ExceptionStackTrace = exceptionStackTrace;
         Occurred = occurred ?? DateTimeOffset.UtcNow;
     }
 
