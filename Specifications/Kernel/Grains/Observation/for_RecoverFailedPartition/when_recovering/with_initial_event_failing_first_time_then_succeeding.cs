@@ -73,23 +73,17 @@ public class with_initial_event_failing_first_time_then_succeeding : given.a_rec
             subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Once);
     }
 
-    [Fact]
-    void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(7);
+    [Fact] void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(7);
 
-    [Fact]
-    void should_have_recorded_the_failed_attempt_in_the_state() => written_states[1].NumberOfAttemptsOnCurrentError.ShouldEqual(1);
+    [Fact] void should_have_recorded_the_failed_attempt_in_the_state() => written_states[1].NumberOfAttemptsOnCurrentError.ShouldEqual(1);
 
-    [Fact]
-    void should_have_recorded_the_number_of_attempts_in_the_state() => most_recent_written_state.NumberOfAttemptsOnSinceInitialised.ShouldEqual(1);
+    [Fact] void should_have_recorded_the_number_of_attempts_in_the_state() => most_recent_written_state.NumberOfAttemptsOnSinceInitialized.ShouldEqual(1);
 
-    [Fact]
-    void should_notify_the_supervisor_that_the_recovery_is_completed_with_the_last_processed_event()
-        => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(state.NextSequenceNumberToProcess - 1));
+    [Fact] void should_notify_the_supervisor_that_the_recovery_is_completed_with_the_last_processed_event() => supervisor.Verify(_ => _.NotifyFailedPartitionRecoveryComplete(partitioned_observer_key.EventSourceId, state.NextSequenceNumberToProcess - 1));
 
-    [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider()
-        => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(partitioned_observer_key.EventSequenceId, initial_error, partitioned_observer_key.EventSourceId, IsAny<IEnumerable<EventType>>()), Exactly(2));
+    [Fact] void should_retrieve_the_events_to_process_from_the_event_sequence_storage_provider() => event_sequence_storage_provider.Verify(_ => _.GetFromSequenceNumber(partitioned_observer_key.EventSequenceId, initial_error, partitioned_observer_key.EventSourceId, IsAny<IEnumerable<EventType>>()), Exactly(2));
 
     [Fact] void should_schedule_an_additional_timer() => timer_registry.Verify(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()), Exactly(2));
 
-    [Fact] void should_have_scheduled_the_immediate_timer_to_start_recovery() => timers.First().Wait.ShouldEqual(TimeSpan.Zero);
+    [Fact] void should_have_scheduled_the_immediate_timer_to_start_recovery() => timers[0].Wait.ShouldEqual(TimeSpan.Zero);
 }

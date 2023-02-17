@@ -11,27 +11,27 @@ public class when_updating_with_latest_success_and_was_current_error : Specifica
     Task Establish()
     {
         now = DateTimeOffset.UtcNow;
-        
+
         state = new RecoverFailedPartitionState()
         {
             InitialError = EventSequenceNumber.First,
             CurrentError = EventSequenceNumber.First,
             NextSequenceNumberToProcess = EventSequenceNumber.First,
             NumberOfAttemptsOnCurrentError = 10,
-            NumberOfAttemptsOnSinceInitialised = 100,
+            NumberOfAttemptsOnSinceInitialized = 100,
             InitialPartitionFailedOn = now.AddDays(-1),
             LastAttemptOnCurrentError = now.AddMinutes(-10)
         };
 
         return Task.CompletedTask;
     }
-    
+
     Task Because()
     {
         state.UpdateWithLatestSuccess(AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First));
         return Task.CompletedTask;
     }
-    
+
     [Fact] void should_not_change_the_initial_error() => state.InitialError.ShouldEqual(EventSequenceNumber.First);
     [Fact] void should_change_the_current_error_to_unavailable() => state.CurrentError.ShouldEqual(EventSequenceNumber.Unavailable);
     [Fact] void should_increment_the_next_sequence_number() => state.NextSequenceNumberToProcess.ShouldEqual(EventSequenceNumber.First + 1);

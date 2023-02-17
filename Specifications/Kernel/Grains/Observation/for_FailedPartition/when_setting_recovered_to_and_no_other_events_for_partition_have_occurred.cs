@@ -6,10 +6,10 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.for_Fail
 public class when_setting_recovered_to_and_no_other_events_for_partition_have_occurred : Specification
 {
     FailedPartition failed_partition;
-    
+
     Task Establish()
     {
-        failed_partition = new FailedPartition(Guid.NewGuid(), 2, DateTimeOffset.UtcNow);
+        failed_partition = new FailedPartition(Guid.NewGuid(), 2, Enumerable.Empty<string>(), string.Empty, DateTimeOffset.UtcNow);
         return Task.FromResult(failed_partition);
     }
 

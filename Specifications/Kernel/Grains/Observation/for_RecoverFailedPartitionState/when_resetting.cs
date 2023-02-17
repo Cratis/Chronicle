@@ -12,8 +12,8 @@ public class when_resetting : Specification
     RecoverFailedPartitionState state;
     ObserverId observer_id;
     string subscriber_key;
-    string observer_key; 
-    
+    string observer_key;
+
     Task Establish()
     {
         observer_id = Guid.NewGuid();
@@ -28,7 +28,7 @@ public class when_resetting : Specification
             CurrentError = EventSequenceNumber.Max,
             NextSequenceNumberToProcess = EventSequenceNumber.Max,
             NumberOfAttemptsOnCurrentError = 10,
-            NumberOfAttemptsOnSinceInitialised = 100,
+            NumberOfAttemptsOnSinceInitialized = 100,
             InitialPartitionFailedOn = DateTimeOffset.UtcNow,
             LastAttemptOnCurrentError = DateTimeOffset.UtcNow,
             Messages = new[] { "Something went wrong" },
@@ -36,7 +36,7 @@ public class when_resetting : Specification
             SubscriberKey = subscriber_key,
             ObserverKey = observer_key
         };
-        
+
         return Task.CompletedTask;
     }
 
@@ -50,7 +50,7 @@ public class when_resetting : Specification
     [Fact] void should_reset_the_current_error() => state.CurrentError.ShouldEqual(EventSequenceNumber.Unavailable);
     [Fact] void should_reset_the_next_sequence_number() => state.NextSequenceNumberToProcess.ShouldEqual(EventSequenceNumber.Unavailable);
     [Fact] void should_reset_the_number_of_attempts_current() => state.NumberOfAttemptsOnCurrentError.ShouldEqual(0);
-    [Fact] void should_reset_the_number_of_attempts_total() => state.NumberOfAttemptsOnSinceInitialised.ShouldEqual(0);
+    [Fact] void should_reset_the_number_of_attempts_total() => state.NumberOfAttemptsOnSinceInitialized.ShouldEqual(0);
     [Fact] void should_reset_the_initial_failed_on() => state.InitialPartitionFailedOn.ShouldEqual(DateTimeOffset.MinValue);
     [Fact] void should_reset_the_last_attempted() => state.LastAttemptOnCurrentError.ShouldEqual(DateTimeOffset.MinValue);
     [Fact] void should_reset_the_error_messages() => state.Messages.ShouldBeEmpty();

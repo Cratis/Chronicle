@@ -11,7 +11,7 @@ public class and_subscriber_is_of_default_type : given.an_observer_worker
     void Establish()
     {
         state.RunningState = ObserverRunningState.Active;
-        worker.SetCurrentSubscription(new(typeof(IObserverSubscriber), null));
+        worker.SetCurrentSubscription(new(GrainId, ObserverKey.Parse(GrainKeyExtension), new[] { EventType.Unknown }, typeof(IObserverSubscriber), null));
         @event = AppendedEvent.EmptyWithEventType(EventType.Unknown);
         expected_sequence_number = (ulong)Random.Shared.Next();
         state.NextEventSequenceNumber = expected_sequence_number;

@@ -12,7 +12,7 @@ public class and_the_partition_is_already_failed : given.a_supervisor
     DateTimeOffset occurred;
     Mock<IRecoverFailedPartition> failed_partition_mock;
 
-    Task Establish()
+    async Task Establish()
     {
         partition_id = Guid.NewGuid();
         sequence_number = 1;
@@ -24,22 +24,17 @@ public class and_the_partition_is_already_failed : given.a_supervisor
 
         grain_factory_mock.Setup(
             _ => _.GetGrain<IRecoverFailedPartition>(
-                observer_id, 
+                observer_id,
                 partition_key,
                 null)).Returns(failed_partition_mock.Object);
-        
-        supervisor.Fail(partition_id, sequence_number, occurred);
-        
-        return Task.CompletedTask;
-    }
-    
-    
-    Task Because() => supervisor.Fail(partition_id, next_sequence_number, occurred);
 
-    [Fact] void should_have_failed_partitions() => supervisor.HasFailedPartitions.ShouldBeTrue();  
+        await supervisor.Fail(partition_id, sequence_number, Enumerable.Empty<string>(), string.Empty, occurred);
+    }
+
+    Task Because() => supervisor.Fail(partition_id, sequence_number, Enumerable.Empty<string>(), string.Empty, occurred);
+
+    [Fact] void should_have_failed_partitions() => supervisor.HasFailedPartitions.ShouldBeTrue();
     [Fact] void should_have_the_failed_partition() => supervisor.GetState().FailedPartitions.SingleOrDefault(_ => _.Partition == partition_id).ShouldNotBeNull();
-    [Fact] void should_have_the_details_of_the_original_failed_partition() 
-        => supervisor.GetState().FailedPartitions.SingleOrDefault(_ => _.Partition == partition_id)
-            .Tail.ShouldEqual(sequence_number);
+    [Fact] void should_have_the_details_of_the_original_failed_partition() => supervisor.GetState().FailedPartitions.SingleOrDefault(_ => _.Partition == partition_id).Tail.ShouldEqual(sequence_number);
     [Fact] void should_not_initiate_the_failed_partition() => failed_partition_mock.Verify(_ => _.Recover(next_sequence_number, event_types, IsAny<ObserverKey>()), Never);
 }
