@@ -27,9 +27,9 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
         return Task.FromResult(ObserverSubscriberResult.Failed);
     }
 
-    protected override Task<IEventCursor> FetchEvents(EventSequenceNumber seq)
+    protected override Task<IEventCursor> FetchEvents(EventSequenceNumber sequenceNumber)
     {
-        return Task.FromResult(new EventCursorForSpecifications(appended_events.Where(_ => _.Metadata.SequenceNumber >= seq).ToList()) as IEventCursor);
+        return Task.FromResult(new EventCursorForSpecifications(appended_events.Where(_ => _.Metadata.SequenceNumber >= sequenceNumber).ToList()) as IEventCursor);
     }
 
     AppendedEvent BuildAppendedEvent(EventSourceId eventSourceId)
@@ -84,5 +84,5 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
 
     [Fact] void should_schedule_additional_timers_on_each_failure() => timer_registry.Verify(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()), Exactly(6));
 
-    [Fact] void should_have_scheduled_the_immediate_timer_to_start_recovery() => timers.First().Wait.ShouldEqual(TimeSpan.Zero);
+    [Fact] void should_have_scheduled_the_immediate_timer_to_start_recovery() => timers[0].Wait.ShouldEqual(TimeSpan.Zero);
 }
