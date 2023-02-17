@@ -46,6 +46,13 @@ const columns: IColumn[] = [
         maxWidth: 250,
     },
     {
+        key: 'attempts',
+        name: 'Attempts',
+        fieldName: 'numberOfAttemptsOnSinceInitialized',
+        minWidth: 100,
+        maxWidth: 100,
+    },
+    {
         key: 'partition',
         name: 'Partition',
         fieldName: 'partition',
@@ -56,8 +63,8 @@ const columns: IColumn[] = [
         key: 'sequence',
         name: 'Event Sequence',
         fieldName: 'eventSequenceId',
-        minWidth: 250,
-        maxWidth: 250,
+        minWidth: 120,
+        maxWidth: 120,
         onRender: (item: RecoverFailedPartitionState) => {
             return (
                 <>{eventSequences.data.find(_ => _.id == item.eventSequenceId)?.name ?? item.id}</>
