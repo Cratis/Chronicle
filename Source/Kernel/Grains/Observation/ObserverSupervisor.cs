@@ -120,7 +120,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 #pragma warning restore CA1721 // Property names should not match get methods
 
     /// <inheritdoc/>
-    public async Task NotifyCatchUpComplete()
+    public async Task NotifyCatchUpComplete(IEnumerable<FailedPartition> failedPartitions)
     {
         await ReadStateAsync();
 
@@ -128,6 +128,19 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
         await WriteStateAsync();
 
         await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
+
+        if (_failedPartitionSupervisor is not null)
+        {
+            foreach (var failedPartition in failedPartitions)
+            {
+                await _failedPartitionSupervisor.Fail(
+                    failedPartition.Partition,
+                    failedPartition.Tail,
+                    failedPartition.ExceptionMessages,
+                    failedPartition.ExceptionStackTrace,
+                    failedPartition.Occurred);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -141,13 +154,13 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     }
 
     /// <inheritdoc/>
-    public async Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    public override async Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
     {
         if (_failedPartitionSupervisor is null) return;
 
         await _failedPartitionSupervisor.Fail(
-            @event.Context.EventSourceId,
-            @event.Metadata.SequenceNumber,
+            partition,
+            sequenceNumber,
             exceptionMessages,
             exceptionStackTrace,
             DateTimeOffset.UtcNow);

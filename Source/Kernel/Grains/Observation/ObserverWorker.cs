@@ -178,7 +178,7 @@ public abstract class ObserverWorker : Grain
                 SourceMicroserviceId ?? MicroserviceId.Unspecified,
                 SourceTenantId ?? TenantId.NotSet);
 
-            await Supervisor.PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
+            await PartitionFailed(@event.Context.EventSourceId, @event.Context.SequenceNumber, exceptionMessages, exceptionStackTrace);
 
             if (!IsSupervisor)
             {
@@ -205,6 +205,16 @@ public abstract class ObserverWorker : Grain
         var subscriber = (GrainFactory.GetGrain(CurrentSubscription.SubscriberType, ObserverId, key) as IObserverSubscriber)!;
         return subscriber.OnNext(@event, new(CurrentSubscription.Arguments));
     }
+
+    /// <summary>
+    /// Notify that the partition has failed.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <returns>Awaitable task.</returns>
+    public virtual Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace) => Task.CompletedTask;
 
     /// <summary>
     /// Read the observer state.
