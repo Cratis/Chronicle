@@ -18,6 +18,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public class CatchUp : ObserverWorker, ICatchUp
 {
     readonly ILogger<CatchUp> _logger;
+    readonly List<FailedPartition> _failedPartitions = new();
     ObserverKey? _observerKey;
     IDisposable? _timer;
     bool _isRunning;
@@ -86,6 +87,13 @@ public class CatchUp : ObserverWorker, ICatchUp
         await WriteStateAsync();
     }
 
+    /// <inheritdoc/>
+    public override Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        _failedPartitions.Add(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
+        return Task.CompletedTask;
+    }
+
     async Task PerformCatchUp(object arg)
     {
         _timer?.Dispose();
@@ -111,6 +119,7 @@ public class CatchUp : ObserverWorker, ICatchUp
 
         _isRunning = false;
         _logger.CaughtUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-        await Supervisor.NotifyCatchUpComplete();
+        await Supervisor.NotifyCatchUpComplete(_failedPartitions);
+        _failedPartitions.Clear();
     }
 }

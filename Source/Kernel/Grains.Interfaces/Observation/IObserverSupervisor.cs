@@ -58,8 +58,9 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <summary>
     /// Notify that catch-up is complete.
     /// </summary>
+    /// <param name="failedPartitions">Collection of any <see cref="FailedPartition">failed partitions</see>.</param>
     /// <returns>Awaitable task.</returns>
-    Task NotifyCatchUpComplete();
+    Task NotifyCatchUpComplete(IEnumerable<FailedPartition> failedPartitions);
 
     /// <summary>
     /// Notify that failed partition has run to completion.
@@ -72,9 +73,10 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <summary>
     /// Notify that the partition has failed.
     /// </summary>
-    /// <param name="event">The <see cref="AppendedEvent"/> that caused the failure.</param>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
     /// <param name="exceptionMessages">All exception messages.</param>
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
+    Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
 }
