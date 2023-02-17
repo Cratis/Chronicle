@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.EventSequences;
-using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
@@ -13,97 +11,13 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public partial class ObserverSupervisor
 {
     /// <inheritdoc/>
-    public async Task TryResumePartition(EventSourceId eventSourceId)
+    public async Task TryResumePartition(EventSourceId partition)
     {
-        if (State.IsDisconnected || !State.IsPartitionFailed(eventSourceId))
+        if (State.IsDisconnected || !State.IsPartitionFailed(partition) || _failedPartitionSupervisor is null)
         {
             return;
         }
 
-        var failedPartition = State.GetFailedPartition(eventSourceId);
-        if (State.IsRecoveringPartition(failedPartition.EventSourceId) &&
-            _streamSubscriptionsByEventSourceId.ContainsKey(eventSourceId))
-        {
-            return;
-        }
-
-        State.StartRecoveringPartition(eventSourceId);
-        await WriteStateAsync();
-
-        if (_streamSubscriptionsByEventSourceId.ContainsKey(eventSourceId))
-        {
-            await _streamSubscriptionsByEventSourceId[eventSourceId]!.UnsubscribeAsync();
-        }
-
-        var tailSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes, eventSourceId);
-        await SubscribeForResumingPartition(eventSourceId, failedPartition.SequenceNumber, tailSequenceNumber);
-    }
-
-    /// <summary>
-    /// Subscribe to stream for a specific eventsource id and sequence number. Typically used while resuming a partition.
-    /// </summary>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to subscribe for.</param>
-    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to use as offset.</param>
-    /// <param name="tailSequenceNumber"><see cref="EventSequenceNumber"/> as the tail.</param>
-    /// <returns>Awaitable task.</returns>
-    public async Task SubscribeForResumingPartition(EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, EventSequenceNumber tailSequenceNumber)
-    {
-        _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, _stream!.Guid, _stream!.Namespace);
-        _streamSubscriptionsByEventSourceId[eventSourceId] = await _stream!.SubscribeAsync(
-            async (@event, _) => await HandleEventForRecoveringPartitionedObserver(@event, tailSequenceNumber),
-            new EventSequenceNumberToken(sequenceNumber),
-            ObserverFilters.EventTypesAndEventSourceIdFilter,
-            new EventTypesAndEventSourceId(State.EventTypes.ToArray(), eventSourceId));
-    }
-
-    async Task HandleEventForRecoveringPartitionedObserver(AppendedEvent @event, EventSequenceNumber tailSequenceNumber)
-    {
-        if (IsActive)
-        {
-            var result = await OnNext(@event);
-            if (result.State != ObserverSubscriberState.Ok)
-            {
-                State.FailPartition(
-                    @event.Context.EventSourceId,
-                    @event.Context.SequenceNumber,
-                    result.ExceptionMessages.ToArray(),
-                    result.ExceptionStackTrace);
-            }
-        }
-        if (State.IsPartitionFailed(@event.Context.EventSourceId))
-        {
-            await _streamSubscriptionsByEventSourceId[@event.Context.EventSourceId]!.UnsubscribeAsync();
-            _streamSubscriptionsByEventSourceId.Remove(@event.Context.EventSourceId);
-        }
-        else
-        {
-            var partitionRecovery = State.GetPartitionRecovery(@event.Context.EventSourceId);
-            partitionRecovery.SequenceNumber++;
-            await WriteStateAsync();
-
-            if (partitionRecovery.SequenceNumber >= tailSequenceNumber)
-            {
-                var actualTailSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes, @event.Context.EventSourceId);
-                if (actualTailSequenceNumber == tailSequenceNumber)
-                {
-                    State.PartitionRecovered(@event.Context.EventSourceId);
-                    await WriteStateAsync();
-
-                    await _streamSubscriptionsByEventSourceId[@event.Context.EventSourceId]!.UnsubscribeAsync();
-                    _streamSubscriptionsByEventSourceId.Remove(@event.Context.EventSourceId);
-                }
-            }
-        }
-    }
-
-    async Task TryResumeAnyFailedPartitions()
-    {
-        if (State.HasFailedPartitions)
-        {
-            foreach (var partition in State.FailedPartitions)
-            {
-                await TryResumePartition(partition.EventSourceId);
-            }
-        }
+        await _failedPartitionSupervisor.TryRecoveringPartition(partition);
     }
 }

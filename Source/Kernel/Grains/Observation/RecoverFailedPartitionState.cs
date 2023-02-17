@@ -39,7 +39,7 @@ public class RecoverFailedPartitionState
     /// <summary>
     /// Total number of attempts to processed the failed partition since the initial error.
     /// </summary>
-    public int NumberOfAttemptsOnSinceInitialised { get; set; }
+    public int NumberOfAttemptsOnSinceInitialized { get; set; }
 
     /// <summary>
     /// Number of attempts to processed the failed partition on the current error.
@@ -95,7 +95,7 @@ public class RecoverFailedPartitionState
         InitialError = EventSequenceNumber.Unavailable;
         CurrentError = EventSequenceNumber.Unavailable;
         NextSequenceNumberToProcess = EventSequenceNumber.Unavailable;
-        NumberOfAttemptsOnSinceInitialised = 0;
+        NumberOfAttemptsOnSinceInitialized = 0;
         NumberOfAttemptsOnCurrentError = 0;
         InitialPartitionFailedOn = DateTimeOffset.MinValue;
         LastAttemptOnCurrentError = DateTimeOffset.MinValue;
@@ -135,7 +135,7 @@ public class RecoverFailedPartitionState
             CurrentError = latestError;
             NumberOfAttemptsOnCurrentError = 1;
         }
-        NumberOfAttemptsOnSinceInitialised++;
+        NumberOfAttemptsOnSinceInitialized++;
         LastAttemptOnCurrentError = errored;
         StackTrace = stacktrace;
         Messages = messages;
@@ -157,7 +157,7 @@ public class RecoverFailedPartitionState
     /// <summary>
     /// Returns when the next attempt should be made to process the failed partition.
     /// </summary>
-    /// <returns>Timespan representing time to next attempt.</returns>
+    /// <returns><see cref="TimeSpan"/> representing time to next attempt.</returns>
     public TimeSpan GetNextAttemptSchedule()
     {
         if(CurrentError == InitialError && NumberOfAttemptsOnCurrentError == 0)
@@ -165,18 +165,18 @@ public class RecoverFailedPartitionState
             return TimeSpan.Zero;
         }
 
-        // exponential backoff but with a max of 1 hour
+        // exponential back-off but with a max of 1 hour
         return TimeSpan.FromSeconds(Math.Min(60 * 60, Math.Pow(2, NumberOfAttemptsOnCurrentError)));
     }
 
     /// <summary>
-    /// Sets the correct state when a new error is initialised.
+    /// Sets the correct state when a new error is initialized.
     /// </summary>
     /// <param name="fromEvent">The position in the sequence where the error occurred.</param>
     /// <param name="eventTypes">Types of event that are in the event sequence.</param>
     /// <param name="observerKey">Key from the Observer.</param>
     /// <param name="subscriberKey">Key from the Subscriber.</param>
-    public void InitialiseError(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, ObserverKey observerKey, ObserverSubscriberKey subscriberKey)
+    public void InitializeError(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, ObserverKey observerKey, ObserverSubscriberKey subscriberKey)
     {
         CurrentError = fromEvent;
         InitialError = fromEvent;
@@ -188,8 +188,8 @@ public class RecoverFailedPartitionState
     }
 
     /// <summary>
-    /// Indicates whether the state has been initialised.
+    /// Indicates whether the state has been initialized.
     /// </summary>
-    /// <returns>True if initialised, false otherwise.</returns>
-    public bool HasBeenInitialised() => CurrentError != EventSequenceNumber.Unavailable;
+    /// <returns>True if initialized, false otherwise.</returns>
+    public bool HasBeenInitialized() => CurrentError != EventSequenceNumber.Unavailable;
 }

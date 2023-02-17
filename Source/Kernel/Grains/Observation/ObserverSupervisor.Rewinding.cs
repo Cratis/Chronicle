@@ -44,27 +44,10 @@ public partial class ObserverSupervisor
         if (State.HasFailedPartitions)
         {
             _logger.ClearingFailedPartitions(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-            State.ClearFailedPartitions();
-            var reminder = await GetReminder(RecoverReminder);
-            if (reminder is not null)
-            {
-                await UnregisterReminder(reminder);
-            }
-        }
 
-        if (State.IsRecoveringAnyPartition)
-        {
-            _logger.ClearingRecoveringPartitions(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-
-            foreach (var recoveringPartition in State.RecoveringPartitions)
-            {
-                if (_streamSubscriptionsByEventSourceId.ContainsKey(recoveringPartition.EventSourceId))
-                {
-                    await _streamSubscriptionsByEventSourceId[recoveringPartition.EventSourceId].UnsubscribeAsync();
-                }
-            }
-
-            State.ClearRecoveringPartitions();
+            // TODO:
+            // Clear failed partitions
+            // Stop any recovering partitions
         }
 
         _logger.Replaying(_observerId, _microserviceId, _eventSequenceId, _tenantId);

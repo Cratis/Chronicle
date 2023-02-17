@@ -21,13 +21,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// This is a partial class. For structural, navigation and maintenance purposes, you'll find partial implementations
 /// representing different aspects.
 /// </remarks>
-public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, IRemindable
+public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 {
-    /// <summary>
-    /// The name of the recover reminder.
-    /// </summary>
-    public const string RecoverReminder = "observer-failure-recovery";
-
     readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ObserverSupervisor> _logger;
@@ -41,7 +36,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
     MicroserviceId _sourceMicroserviceId = MicroserviceId.Unspecified;
     TenantId _sourceTenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
-    IGrainReminder? _recoverReminder;
+    FailedPartitionSupervisor? _failedPartitionSupervisor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverSupervisor"/> class.
@@ -97,8 +92,6 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         var microserviceAndTenant = new MicroserviceAndTenant(_sourceMicroserviceId, _sourceTenantId);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, microserviceAndTenant);
 
-        _recoverReminder = await GetReminder(RecoverReminder);
-        await HandleReminderRegistration();
         await base.OnActivateAsync();
     }
 
@@ -108,12 +101,6 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         _logger.Deactivating(_observerId, _eventSequenceId, _microserviceId, _tenantId, _sourceMicroserviceId, _sourceTenantId);
 
         await UnsubscribeStream();
-
-        if (_recoverReminder is not null)
-        {
-            await UnregisterReminder(_recoverReminder);
-        }
-
         await StopAnyRunningCatchup();
         State.RunningState = ObserverRunningState.Disconnected;
         await WriteStateAsync();
@@ -128,10 +115,10 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
         await WriteStateAsync();
     }
 
-    #pragma warning disable CA1721 // Property names should not match get methods
+#pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
     public Task<ObserverSubscription> GetCurrentSubscription() => Task.FromResult(CurrentSubscription);
-    #pragma warning restore CA1721 // Property names should not match get methods
+#pragma warning restore CA1721 // Property names should not match get methods
 
     /// <inheritdoc/>
     public async Task NotifyCatchUpComplete()
@@ -145,19 +132,28 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor, I
     }
 
     /// <inheritdoc/>
-    public Task NotifyFailedPartitionRecoveryComplete(EventSequenceNumber lastProcessedEvent) => Task.CompletedTask;
+    public async Task NotifyFailedPartitionRecoveryComplete(EventSourceId partition, EventSequenceNumber lastProcessedEvent)
+    {
+        if (_failedPartitionSupervisor is null) return;
+
+        await _failedPartitionSupervisor.AssessRecovery(partition, lastProcessedEvent);
+        State.FailedPartitions = _failedPartitionSupervisor.GetState().FailedPartitions;
+        await WriteStateAsync();
+    }
 
     /// <inheritdoc/>
     public async Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
     {
-        State.FailPartition(
+        if (_failedPartitionSupervisor is null) return;
+
+        await _failedPartitionSupervisor.Fail(
             @event.Context.EventSourceId,
             @event.Metadata.SequenceNumber,
-            exceptionMessages.ToArray(),
-            exceptionStackTrace);
+            exceptionMessages,
+            exceptionStackTrace,
+            DateTimeOffset.UtcNow);
 
         await WriteStateAsync();
-        await HandleReminderRegistration();
     }
 
     Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);
