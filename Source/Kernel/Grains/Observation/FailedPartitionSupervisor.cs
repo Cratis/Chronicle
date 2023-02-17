@@ -42,20 +42,27 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     }
 
     /// <inheritdoc/>
-    public FailedPartitionsState GetState() => new () { FailedPartitions = _failedPartitions.ToArray() };
+    public FailedPartitionsState GetState() => new() { FailedPartitions = _failedPartitions.ToArray() };
 
     /// <summary>
     /// Indicates to the supervisor that a partition has failed.
     /// </summary>
     /// <param name="partitionId">The Partition Id that failed.</param>
-    /// <param name="sequenceNumber">The position where the failure occured.</param>
+    /// <param name="sequenceNumber">The position where the failure occurred.</param>
+    /// <param name="exceptionMessages">The exception messages that caused the partition failure.</param>
+    /// <param name="exceptionStackTrace">The exception stack trace that caused the partition failure.</param>
     /// <param name="occurred">When the failure occurred.</param>
     /// <returns>A task that starts the recovery.</returns>
-    public async Task Fail(EventSourceId partitionId, EventSequenceNumber sequenceNumber, DateTimeOffset occurred)
+    public async Task Fail(
+        EventSourceId partitionId,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        DateTimeOffset occurred)
     {
         if (_failedPartitions.Any(_ => _.Partition == partitionId))
             return;
-        await StartRecovery(partitionId, sequenceNumber, occurred);
+        await StartRecovery(partitionId, sequenceNumber, exceptionMessages, exceptionStackTrace, occurred);
     }
 
     /// <summary>
@@ -95,9 +102,40 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
         return true;
     }
 
-    async Task StartRecovery(EventSourceId partitionId, EventSequenceNumber sequenceNumber, DateTimeOffset occurred)
+    /// <summary>
+    /// Try to recover any failed partitions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public async Task TryRecoveringAnyFailedPartitions()
     {
-        _failedPartitions.Add(new FailedPartition(partitionId, sequenceNumber, occurred));
+        foreach (var failedPartition in _failedPartitions)
+        {
+            await TryRecoveringPartition(failedPartition.Partition);
+        }
+    }
+
+    /// <summary>
+    /// Try to recover a specific partition.
+    /// </summary>
+    /// <param name="partition">Partition to recover</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task TryRecoveringPartition(EventSourceId partition)
+    {
+        var failedPartition = _failedPartitions.Find(_ => _.Partition == partition);
+        if (failedPartition is null) return;
+
+        await GetRecoveryGrain(failedPartition.Partition)
+            .Recover(failedPartition.RecoveredTo ?? failedPartition.Tail, _eventTypes, _key);
+    }
+
+    async Task StartRecovery(
+        EventSourceId partitionId,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        DateTimeOffset occurred)
+    {
+        _failedPartitions.Add(new FailedPartition(partitionId, sequenceNumber, exceptionMessages, exceptionStackTrace, occurred));
         await GetRecoveryGrain(partitionId).Recover(sequenceNumber, _eventTypes, _key);
     }
 
