@@ -12,6 +12,12 @@ export class RecoverFailedPartitionState {
     id!: string;
 
     @field(String)
+    partition!: string;
+
+    @field(String)
+    eventSequenceId!: string;
+
+    @field(String)
     observerId!: string;
 
     @field(String)

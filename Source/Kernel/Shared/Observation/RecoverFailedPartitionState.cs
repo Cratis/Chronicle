@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Observation;
@@ -20,6 +21,16 @@ public class RecoverFailedPartitionState
     /// Unique identifier of the failed partition.
     /// </summary>
     public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the partition that is failed.
+    /// </summary>
+    public EventSourceId Partition { get; set; } = EventSourceId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the <see cref="EventSequenceId"/> the failed partition is on.
+    /// </summary>
+    public EventSequenceId EventSequenceId { get; set; } = EventSequenceId.Unspecified;
 
     /// <summary>
     /// Gets or sets the <see cref="ObserverId"/> for which this is a failed partition.
