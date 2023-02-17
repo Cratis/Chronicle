@@ -61,7 +61,7 @@ export const ConnectedClients = () => {
     const [microservices] = AllMicroservices.use();
     const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
 
-    const [connectedClients] = ConnectedClientsForMicroservice.use({microserviceId: selectedMicroservice?.id ?? undefined!});
+    const [connectedClients] = ConnectedClientsForMicroservice.use({ microserviceId: selectedMicroservice?.id ?? undefined! });
 
     const microserviceOptions = microservices.data.map(_ => {
         return {
@@ -71,8 +71,10 @@ export const ConnectedClients = () => {
     });
 
     useEffect(() => {
-
-    }, [selectedMicroservice]);
+        if (microservices.data.length > 0) {
+            setSelectedMicroservice(microservices.data[0]);
+        }
+    }, [microservices.data]);
 
     const commandBarItems: ICommandBarItemProps[] = [
         {
