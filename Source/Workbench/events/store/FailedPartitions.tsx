@@ -61,6 +61,13 @@ const columns: IColumn[] = [
         maxWidth: 250,
     },
     {
+        key: 'sequenceNumber',
+        name: 'Sequence Number',
+        fieldName: 'currentError',
+        minWidth: 120,
+        maxWidth: 120,
+    },
+    {
         key: 'sequence',
         name: 'Event Sequence',
         fieldName: 'eventSequenceId',
