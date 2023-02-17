@@ -35,7 +35,7 @@ internal static partial class RecoverFailedPartitionLogMessages
     [LoggerMessage(8007, LogLevel.Warning, "Processing Scheduled for '{ObserverId}' partition '{PartitionId}' for sequence '{EventSequenceId}' for microservice '{MicroserviceId}' and tenant '{TenantId}'. Scheduled for '{ScheduledTime}' with Event {EventSequenceNumber}.")]
     internal static partial void ProcessingScheduled(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId, TimeSpan scheduledTime, EventSequenceNumber eventSequenceNumber);
 
-    [LoggerMessage(8008, LogLevel.Warning, "Request to schedule recover for '{ObserverId}' partition '{PartitionId}' for sequence '{EventSequenceId}' for microservice '{MicroserviceId}' and tenant '{TenantId}' was ignored.  Recovery has not been initialised.")]
+    [LoggerMessage(8008, LogLevel.Warning, "Request to schedule recover for '{ObserverId}' partition '{PartitionId}' for sequence '{EventSequenceId}' for microservice '{MicroserviceId}' and tenant '{TenantId}' was ignored.  Recovery has not been initialized.")]
     internal static partial void ProcessingScheduleIgnored(this ILogger<RecoverFailedPartition> logger, ObserverId observerId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId, EventSourceId partitionId);
 
     [LoggerMessage(8009, LogLevel.Information, "Recovery process for '{ObserverId}' partition '{PartitionId}' for sequence '{EventSequenceId}' for microservice '{MicroserviceId}' and tenant '{TenantId}' received Event '{EventSequenceNumber}' for processing.")]
