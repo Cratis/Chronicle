@@ -4,7 +4,7 @@
 #nullable disable
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Observation;
+namespace Aksio.Cratis.Kernel.Observation;
 
 /// <summary>
 /// Represents the state of a failed partition within the ObserverSupervisor.
@@ -19,12 +19,12 @@ public record FailedPartition
     /// <summary>
     /// Gets the exception messages that caused the partition failure.
     /// </summary>
-    public IEnumerable<string> ExceptionMessages { get; }
+    public IEnumerable<string> Messages { get; }
 
     /// <summary>
     /// Gets the exception stack trace that caused the partition failure.
     /// </summary>
-    public string ExceptionStackTrace { get; }
+    public string StackTrace { get; }
 
     /// <summary>
     /// <para>Gets the <see cref="EventSequenceNumber"/> of the event that triggered the partition failure.</para>
@@ -68,20 +68,20 @@ public record FailedPartition
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
     /// <param name="tail">The event sequence number (tail) where the error occurred.</param>
-    /// <param name="exceptionMessages">The exception messages that caused the partition failure.</param>
-    /// <param name="exceptionStackTrace">The exception stack trace that caused the partition failure.</param>
+    /// <param name="messages">Any messages that caused the partition failure.</param>
+    /// <param name="stackTrace">The stack trace that caused the partition failure.</param>
     /// <param name="occurred">When the error occurred.</param>
     public FailedPartition(
         EventSourceId eventSourceId,
         EventSequenceNumber tail,
-        IEnumerable<string> exceptionMessages,
-        string exceptionStackTrace,
+        IEnumerable<string> messages,
+        string stackTrace,
         DateTimeOffset? occurred = null)
     {
         Partition = eventSourceId;
         Tail = tail;
-        ExceptionMessages = exceptionMessages;
-        ExceptionStackTrace = exceptionStackTrace;
+        Messages = messages;
+        StackTrace = stackTrace;
         Occurred = occurred ?? DateTimeOffset.UtcNow;
     }
 

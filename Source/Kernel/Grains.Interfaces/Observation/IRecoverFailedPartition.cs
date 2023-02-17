@@ -15,11 +15,14 @@ public interface IRecoverFailedPartition : IGrainWithGuidCompoundKey
     /// <summary>
     /// Initiates recovery of a failed partition on an observer.
     /// </summary>
+    /// <param name="observerKey">Key for the observer that is the source of this failed partition.</param>
+    /// <param name="observerName">The name of the observer that has failed partition.</param>
     /// <param name="fromEvent">The event to start recovering from.</param>
     /// <param name="eventTypes">Event types to filter.</param>
-    /// <param name="observerKey">Key for the observer that is the source of this failed partition.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Recover(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, ObserverKey observerKey);
+    /// <param name="messages">Any messages associated with the failure.</param>
+    /// <param name="stackTrace">A stack trace associated with the failure.</param>
+    /// /// <returns>Awaitable task.</returns>
+    Task Recover(ObserverKey observerKey, ObserverName observerName, EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, IEnumerable<string> messages, string stackTrace);
 
     /// <summary>
     /// Catches up any additional events on a failed partition after recovery was completed.

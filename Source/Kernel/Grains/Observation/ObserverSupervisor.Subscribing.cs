@@ -34,7 +34,7 @@ public partial class ObserverSupervisor
     {
         await ReadStateAsync();
 
-        _failedPartitionSupervisor = new(_observerId, _observerKey, eventTypes, State.FailedPartitions, GrainFactory);
+        _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
 
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
         CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, subscriberArgs!);

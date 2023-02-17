@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -136,8 +137,8 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
                 await _failedPartitionSupervisor.Fail(
                     failedPartition.Partition,
                     failedPartition.Tail,
-                    failedPartition.ExceptionMessages,
-                    failedPartition.ExceptionStackTrace,
+                    failedPartition.Messages,
+                    failedPartition.StackTrace,
                     failedPartition.Occurred);
             }
         }

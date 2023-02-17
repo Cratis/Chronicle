@@ -5,6 +5,7 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -83,11 +84,11 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     }
 
     /// <inheritdoc/>
-    public async Task Recover(EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, ObserverKey observerKey)
+    public async Task Recover(ObserverKey observerKey, ObserverName observerName, EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, IEnumerable<string> messages, string stackTrace)
     {
         _observerKey = observerKey;
         _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId);
-        State.InitializeError(fromEvent, eventTypes, _observerKey, _subscriberKey);
+        State.InitializeError(_observerKey, observerName, _subscriberKey, fromEvent, eventTypes, messages, stackTrace);
         _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
         await SetSubscriberSubscription();
         await WriteStateAsync();
@@ -218,7 +219,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         {
             var nextAttempt = isCatchup ? TimeSpan.Zero : State.GetNextAttemptSchedule();
             _logger.ProcessingScheduled(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, nextAttempt, State.NextSequenceNumberToProcess);
-            _timer = RegisterTimer(PerformRecovery, null, nextAttempt, nextAttempt);
+            _timer = RegisterTimer(PerformRecovery, null, nextAttempt, TimeSpan.MaxValue);
         }
         _logger.ProcessingScheduleIgnored(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
     }

@@ -10,6 +10,7 @@ public class DebitAccountObserver
 {
     public Task Opened(DebitAccountOpened @event, EventContext context)
     {
+        throw new NotImplementedException();
         Console.WriteLine(@event);
         Console.WriteLine(context);
         return Task.CompletedTask;
