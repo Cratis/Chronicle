@@ -81,4 +81,4 @@ around with the sample.
 ## Contributing / Running locally
 
 If you're looking to either contribute or dive into the code by building and running the Cratis Kernel locally,
-you can read more [here](./Documentation/contributing.md).
+you can read more [here](./Documentation/contributing.md). You'll find issues to start with by going to [here](https://github.com/aksio-insurtech/Cratis/contribute).
