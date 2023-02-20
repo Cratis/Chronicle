@@ -11,20 +11,19 @@ public class and_the_recovered_to_event_is_at_the_head : a_supervisor
     FailedPartitionSupervisor supervisor;
     Mock<IRecoverFailedPartition> failed_partition_mock;
 
-    Task Establish()
+    void Establish()
     {
         partition_id = Guid.NewGuid();
         var partition_key = get_partitioned_observer_key(partition_id);
         failed_partition_mock = a_failed_partition_mock(partition_key.EventSourceId);
 
-        grain_factory_mock.Setup(
+        grain_factory.Setup(
             _ => _.GetGrain<IRecoverFailedPartition>(
                 observer_id,
                 partition_key,
                 null)).Returns(failed_partition_mock.Object);
         supervisor = get_supervisor_with_failed_partition(partition_id);
         supervisor.EventBelongsToFailingPartition(partition_id, 3);
-        return Task.CompletedTask;
     }
 
     Task Because() =>  supervisor.AssessRecovery(partition_id, 3);
