@@ -64,19 +64,20 @@ public class Replay : ObserverWorker, IReplay
     }
 
     /// <inheritdoc/>
-    public Task Start(ObserverSubscription subscription)
+    public async Task Start(ObserverSubscription subscription)
     {
         if (_isRunning)
         {
             _logger.AlreadyReplaying(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-            return Task.CompletedTask;
+            return;
         }
+
+        await ReadStateAsync();
 
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         CurrentSubscription = subscription;
         _isRunning = true;
         _timer = RegisterTimer(PerformReplay, null, TimeSpan.Zero, TimeSpan.MaxValue);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
