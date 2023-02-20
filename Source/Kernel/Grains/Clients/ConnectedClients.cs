@@ -42,13 +42,17 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public async Task OnClientConnected(ConnectionId connectionId, Uri clientUri, string version)
+    public async Task OnClientConnected(
+        ConnectionId connectionId,
+        Uri clientUri,
+        string version,
+        bool isRunningWithDebugger)
     {
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
         _logger.ClientConnected(microserviceId, connectionId);
         State.Clients.Where(_ => _.ClientUri == clientUri).ToList().ForEach(_ => State.Clients.Remove(_));
-        State.Clients.Add(new ConnectedClient(connectionId, clientUri, version, DateTimeOffset.UtcNow));
+        State.Clients.Add(new ConnectedClient(connectionId, clientUri, version, DateTimeOffset.UtcNow, isRunningWithDebugger));
 
         await WriteStateAsync();
     }
@@ -111,6 +115,8 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     {
         foreach (var connectedClient in State.Clients.ToArray())
         {
+            if (connectedClient.IsRunningWithDebugger) continue;
+
             if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-10))
             {
                 await OnClientDisconnected(connectedClient.ConnectionId, "Last seen was more than 10 seconds ago");

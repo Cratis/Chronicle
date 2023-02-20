@@ -5,8 +5,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Engines/Engines.csproj"/>
-        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../Engines/Engines.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
     <ItemGroup>

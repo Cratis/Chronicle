@@ -6,7 +6,7 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind/{{tenantId}}');
 
 export interface IRewind {
     microserviceId?: string;
@@ -23,7 +23,7 @@ export class RewindValidator extends CommandValidator {
 }
 
 export class Rewind extends Command<IRewind> implements IRewind {
-    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind';
+    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind/{{tenantId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RewindValidator();
 

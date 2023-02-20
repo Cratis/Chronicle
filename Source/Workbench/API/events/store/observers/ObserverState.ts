@@ -7,7 +7,7 @@ import { field } from '@aksio/cratis-fundamentals';
 import { EventType } from './EventType';
 import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
-import { FailedObserverPartition } from './FailedObserverPartition';
+import { FailedPartition } from './FailedPartition';
 import { RecoveringFailedObserverPartition } from './RecoveringFailedObserverPartition';
 
 export class ObserverState {
@@ -39,8 +39,8 @@ export class ObserverState {
     @field(Number)
     runningState!: ObserverRunningState;
 
-    @field(FailedObserverPartition, true)
-    failedPartitions!: FailedObserverPartition[];
+    @field(FailedPartition, true)
+    failedPartitions!: FailedPartition[];
 
     @field(RecoveringFailedObserverPartition, true)
     recoveringPartitions!: RecoveringFailedObserverPartition[];

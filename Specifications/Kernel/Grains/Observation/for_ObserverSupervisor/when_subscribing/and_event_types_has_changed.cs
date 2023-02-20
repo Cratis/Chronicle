@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans.Streams;
-
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.when_subscribing;
 
 public class and_event_types_has_changed : given.an_observer_and_two_event_types
@@ -21,9 +19,8 @@ public class and_event_types_has_changed : given.an_observer_and_two_event_types
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult((EventSequenceNumber)0));
     }
 
-    async Task Because() => await observer.Subscribe<ObserverSubscriber>(new_event_types);
+    async Task Because() => await observer.Subscribe<ObserverSubscriber>(new_event_types, subscriber_args);
 
     [Fact] void should_set_state_to_replaying() => state.RunningState.ShouldEqual(ObserverRunningState.Replaying);
-    [Fact] void should_subscribe_to_sequences_stream() => sequence_stream.Verify(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()), Once);
-    [Fact] void should_subscribe_with_offset_at_beginning() => subscribed_token.SequenceNumber.ShouldEqual((long)EventSequenceNumber.First.Value);
+    [Fact] void should_initiate_replay() => replay.Verify(_ => _.Start(new(GrainId, ObserverKey.Parse(GrainKeyExtension), new_event_types, typeof(ObserverSubscriber), subscriber_args)), Once);
 }

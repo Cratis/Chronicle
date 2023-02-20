@@ -69,6 +69,11 @@ public abstract class ObserverWorker : Grain
     protected bool IsActive => !State.IsDisconnected && CurrentSubscription.IsSubscribed;
 
     /// <summary>
+    /// Gets a value indicating whether or not this worker is a supervisor.
+    /// </summary>
+    protected bool IsSupervisor => this is IObserverSupervisor;
+
+    /// <summary>
     /// Gets the <see cref="IObserverSupervisor"/>.
     /// </summary>
     protected IObserverSupervisor Supervisor => _supervisor ??= this switch
@@ -110,6 +115,20 @@ public abstract class ObserverWorker : Grain
         _executionContextManager = executionContextManager;
         _observerState = observerState;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Notify that the partition has failed.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <returns>Awaitable task.</returns>
+    public virtual Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        State.AddFailedPartition(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -173,7 +192,12 @@ public abstract class ObserverWorker : Grain
                 SourceMicroserviceId ?? MicroserviceId.Unspecified,
                 SourceTenantId ?? TenantId.NotSet);
 
-            await Supervisor.PartitionFailed(@event, exceptionMessages, exceptionStackTrace);
+            await PartitionFailed(@event.Context.EventSourceId, @event.Context.SequenceNumber, exceptionMessages, exceptionStackTrace);
+
+            if (!IsSupervisor)
+            {
+                await ReadStateAsync();
+            }
         }
     }
 

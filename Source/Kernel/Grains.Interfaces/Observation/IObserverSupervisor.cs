@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Orleans;
 
@@ -51,22 +52,39 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <summary>
     /// Try to resume the partition.
     /// </summary>
-    /// <param name="eventSourceId">The partition to try to resume.</param>
+    /// <param name="partition">The partition to try to resume.</param>
     /// <returns>Awaitable task.</returns>
-    Task TryResumePartition(EventSourceId eventSourceId);
+    Task TryResumePartition(EventSourceId partition);
 
     /// <summary>
     /// Notify that catch-up is complete.
     /// </summary>
+    /// <param name="failedPartitions">Collection of any <see cref="FailedPartition">failed partitions</see>.</param>
     /// <returns>Awaitable task.</returns>
-    Task NotifyCatchUpComplete();
+    Task NotifyCatchUpComplete(IEnumerable<FailedPartition> failedPartitions);
+
+    /// <summary>
+    /// Notify that replay is complete.
+    /// </summary>
+    /// <param name="failedPartitions">Collection of any <see cref="FailedPartition">failed partitions</see>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task NotifyReplayComplete(IEnumerable<FailedPartition> failedPartitions);
+
+    /// <summary>
+    /// Notify that failed partition has run to completion.
+    /// </summary>
+    /// <param name="partition">Partition that has recovered.</param>
+    /// <param name="lastProcessedEvent">The EventSequenceNumber of the last event that the worked processed when declaring itself complete.</param>
+    /// <returns>Awaitable task.</returns>
+    Task NotifyFailedPartitionRecoveryComplete(EventSourceId partition, EventSequenceNumber lastProcessedEvent);
 
     /// <summary>
     /// Notify that the partition has failed.
     /// </summary>
-    /// <param name="event">The <see cref="AppendedEvent"/> that caused the failure.</param>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
     /// <param name="exceptionMessages">All exception messages.</param>
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(AppendedEvent @event, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
+    Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
 }

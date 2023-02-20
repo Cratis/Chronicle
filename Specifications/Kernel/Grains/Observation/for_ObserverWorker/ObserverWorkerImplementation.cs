@@ -43,4 +43,3 @@ public class ObserverWorkerImplementation : ObserverWorker
     public void SetSourceTenantId(TenantId sourceTenantId) => _sourceTenantId = sourceTenantId;
     public void SetCurrentSubscription(ObserverSubscription subscription) => CurrentSubscription = subscription;
 }
-
