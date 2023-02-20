@@ -64,6 +64,13 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     Task NotifyCatchUpComplete(IEnumerable<FailedPartition> failedPartitions);
 
     /// <summary>
+    /// Notify that replay is complete.
+    /// </summary>
+    /// <param name="failedPartitions">Collection of any <see cref="FailedPartition">failed partitions</see>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task NotifyReplayComplete(IEnumerable<FailedPartition> failedPartitions);
+
+    /// <summary>
     /// Notify that failed partition has run to completion.
     /// </summary>
     /// <param name="partition">Partition that has recovered.</param>
