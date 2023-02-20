@@ -17,7 +17,7 @@ public class and_the_recovered_to_event_is_not_at_the_head : a_supervisor
         var partition_key = get_partitioned_observer_key(partition_id);
         failed_partition_mock = a_failed_partition_mock(partition_key.EventSourceId);
 
-        grain_factory_mock.Setup(
+        grain_factory.Setup(
             _ => _.GetGrain<IRecoverFailedPartition>(
                 observer_id,
                 partition_key,
