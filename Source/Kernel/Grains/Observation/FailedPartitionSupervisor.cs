@@ -144,6 +144,19 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
                 failedPartition.StackTrace);
     }
 
+    /// <summary>
+    /// Reset any recovering partitions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public async Task Reset()
+    {
+        foreach (var failedPartition in _failedPartitions)
+        {
+            await GetRecoveryGrain(failedPartition.Partition).Reset();
+        }
+        _failedPartitions.Clear();
+    }
+
     async Task StartRecovery(
         EventSourceId partitionId,
         EventSequenceNumber sequenceNumber,
