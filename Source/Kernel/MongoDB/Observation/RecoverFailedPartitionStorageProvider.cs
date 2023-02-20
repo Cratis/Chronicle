@@ -83,10 +83,17 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
         var key = GetKeyFrom(partitionKey, observerId);
         observerState.Id = key;
 
-        await Collection.ReplaceOneAsync(
-            _ => _.Id == key,
-            observerState!,
-            new ReplaceOptions { IsUpsert = true });
+        if (!observerState.HasBeenInitialized())
+        {
+            await Collection.DeleteOneAsync(_ => _.Id == key);
+        }
+        else
+        {
+            await Collection.ReplaceOneAsync(
+                _ => _.Id == key,
+                observerState!,
+                new ReplaceOptions { IsUpsert = true });
+        }
     }
 
     /// <summary>
