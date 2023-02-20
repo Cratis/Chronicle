@@ -93,20 +93,34 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
             var compliantEventAsExpandoObject = _expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
 
-            var appendedEvent = new AppendedEvent(
-                new(State.SequenceNumber, eventType),
-                new(
-                    eventSourceId,
-                    State.SequenceNumber,
-                    DateTimeOffset.UtcNow,
-                    validFrom ?? DateTimeOffset.MinValue,
-                    _microserviceAndTenant.TenantId,
-                    _executionContextManager.Current.CorrelationId,
-                    _executionContextManager.Current.CausationId,
-                    _executionContextManager.Current.CausedBy),
-                compliantEventAsExpandoObject);
+            var appending = true;
+            while (appending)
+            {
+                try
+                {
+                    var appendedEvent = new AppendedEvent(
+                        new(State.SequenceNumber, eventType),
+                        new(
+                            eventSourceId,
+                            State.SequenceNumber,
+                            DateTimeOffset.UtcNow,
+                            validFrom ?? DateTimeOffset.MinValue,
+                            _microserviceAndTenant.TenantId,
+                            _executionContextManager.Current.CorrelationId,
+                            _executionContextManager.Current.CausationId,
+                            _executionContextManager.Current.CausedBy),
+                        compliantEventAsExpandoObject);
 
-            await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
+                    await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
+
+                    appending = false;
+                }
+                catch (DuplicateEventSequenceNumber)
+                {
+                    State.SequenceNumber++;
+                    await WriteStateAsync();
+                }
+            }
             updateSequenceNumber = true;
         }
         catch (UnableToAppendToEventSequence ex)

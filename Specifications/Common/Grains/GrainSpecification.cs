@@ -16,25 +16,33 @@ public abstract class GrainSpecification<TState> : GrainSpecification
 {
     protected Mock<IStorage<TState>> storage;
     protected TState state;
-    protected TState state_on_write;
+    protected List<TState> written_states = new();
+    protected TState most_recent_written_state;
+    protected Type grain_type = typeof(Grain<TState>);
 
+        
     protected override void OnStateManagement()
     {
-        state = new TState();
-        var storageProperty = grain.GetType().GetField("storage", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (storageProperty is not null)
-        {
-            storage = new Mock<IStorage<TState>>();
-            storageProperty.SetValue(grain, storage.Object);
+        state ??= new TState();
+        
+        var storageProperty = grain_type.GetField("storage", BindingFlags.FlattenHierarchy | 
+                                                             BindingFlags.Instance | 
+                                                             BindingFlags.NonPublic);
 
-            storage.SetupGet(_ => _.State).Returns(state);
-            storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
-            {
-                var serialized = JsonSerializer.Serialize(state);
-                state_on_write = JsonSerializer.Deserialize<TState>(serialized);
-                return Task.CompletedTask;
-            });
-        }
+        if (storageProperty is null)
+            throw new MissingMemberException(grain.GetType().Name, "storage");
+
+        storage = new Mock<IStorage<TState>>();
+        storageProperty.SetValue(grain, storage.Object);
+
+        storage.SetupGet(_ => _.State).Returns(state);
+        storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
+        {
+            var serialized = JsonSerializer.Serialize(state);
+            most_recent_written_state = JsonSerializer.Deserialize<TState>(serialized);
+            written_states.Add(most_recent_written_state);
+            return Task.CompletedTask;
+        });
     }
 }
 
@@ -50,7 +58,7 @@ public abstract class GrainSpecification : Specification
     protected Grain grain;
 
     protected abstract Guid GrainId { get; }
-    protected abstract string GrainKeyExtension { get; }
+    protected abstract string GrainKeyExtension { get; }
 
     protected abstract Grain GetGrainInstance();
 

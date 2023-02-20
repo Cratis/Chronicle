@@ -43,7 +43,8 @@ public static class TypeSymbolExtensions
         { "System.Text.Json.Nodes.JsonNode", AnyTypeFinal },
         { "System.Text.Json.Nodes.JsonObject", AnyTypeFinal },
         { "System.Text.Json.Nodes.JsonArray", AnyTypeFinal },
-        { "System.Text.Json.JsonDocument", AnyTypeFinal }
+        { "System.Text.Json.JsonDocument", AnyTypeFinal },
+        { "System.Uri", new("string", "String") }
     };
 
     /// <summary>

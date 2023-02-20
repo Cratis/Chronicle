@@ -8,8 +8,10 @@ using Aksio.Cratis.Extensions.Autofac;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
+using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.MongoDB;
+using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Projections.MongoDB;
 using Autofac;
@@ -34,5 +36,7 @@ public class ServiceRegistrations : Module
         builder.RegisterType<MongoDBEventSequenceStorageProvider>().As<IEventSequenceStorageProvider>().SingleInstance();
         builder.RegisterType<MongoDBEventSequences>().As<IEventSequences>().SingleInstance();
         builder.RegisterType<MongoDBObserversState>().As<IObserversState>().SingleInstance();
+        builder.RegisterType<MongoDBFailedPartitionState>().As<IFailedPartitionsState>().SingleInstance();
+        builder.RegisterType<MongoDBConnectedClientsState>().As<IConnectedClientsState>().SingleInstance();
     }
 }

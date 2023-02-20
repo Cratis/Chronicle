@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
@@ -86,7 +87,7 @@ public abstract class RestKernelClient : IClient, IDisposable
 
             var attribute = typeof(SingleKernelClient).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             var version = attribute?.InformationalVersion ?? "1.0.0";
-            var info = new ClientInformation(version, _clientEndpoint.ToString());
+            var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached);
 
             for (; ; )
             {
@@ -109,7 +110,10 @@ public abstract class RestKernelClient : IClient, IDisposable
             await _clientLifecycle.Connected();
             _logger.KernelConnected();
 
-            _timer ??= _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
+            if (!Debugger.IsAttached)
+            {
+                _timer ??= _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
+            }
         });
 
         return Task.CompletedTask;
@@ -155,6 +159,12 @@ public abstract class RestKernelClient : IClient, IDisposable
     /// <returns><see cref="HttpClient"/> ready to be used.</returns>
     protected abstract HttpClient CreateHttpClient();
 
+    /// <summary>
+    /// Gets called if the client is disconnected.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected virtual Task OnDisconnected() => Task.CompletedTask;
+
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null)
     {
         using var client = CreateHttpClient();
@@ -199,6 +209,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         {
             _logger.KernelDisconnected();
             await _clientLifecycle.Disconnected();
+            await OnDisconnected();
 
             _connectCompletion.TrySetCanceled();
             _connectCompletion = new();

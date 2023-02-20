@@ -66,7 +66,7 @@ public class Observers : Controller
     /// <param name="tenantId"><see cref="TenantId"/> the observer is for.</param>
     /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{observerId}/rewind")]
+    [HttpPost("{observerId}/rewind/{tenantId}")]
     public async Task Rewind(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId,

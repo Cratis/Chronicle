@@ -5,6 +5,7 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -18,6 +19,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public class CatchUp : ObserverWorker, ICatchUp
 {
     readonly ILogger<CatchUp> _logger;
+    readonly List<FailedPartition> _failedPartitions = new();
     ObserverKey? _observerKey;
     IDisposable? _timer;
     bool _isRunning;
@@ -62,19 +64,20 @@ public class CatchUp : ObserverWorker, ICatchUp
     }
 
     /// <inheritdoc/>
-    public Task Start(ObserverSubscription subscription)
+    public async Task Start(ObserverSubscription subscription)
     {
         if (_isRunning)
         {
             _logger.AlreadyCatchingUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-            return Task.CompletedTask;
+            return;
         }
+
+        await ReadStateAsync();
 
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         CurrentSubscription = subscription;
         _isRunning = true;
         _timer = RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.MaxValue);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -84,6 +87,13 @@ public class CatchUp : ObserverWorker, ICatchUp
         _isRunning = false;
         _timer?.Dispose();
         await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public override Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        _failedPartitions.Add(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
+        return Task.CompletedTask;
     }
 
     async Task PerformCatchUp(object arg)
@@ -111,6 +121,7 @@ public class CatchUp : ObserverWorker, ICatchUp
 
         _isRunning = false;
         _logger.CaughtUp(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-        await Supervisor.NotifyCatchUpComplete();
+        await Supervisor.NotifyCatchUpComplete(_failedPartitions.ToArray());
+        _failedPartitions.Clear();
     }
 }

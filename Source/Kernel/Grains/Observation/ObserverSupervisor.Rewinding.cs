@@ -44,64 +44,16 @@ public partial class ObserverSupervisor
         if (State.HasFailedPartitions)
         {
             _logger.ClearingFailedPartitions(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-            State.ClearFailedPartitions();
-            var reminder = await GetReminder(RecoverReminder);
-            if (reminder is not null)
+            if (_failedPartitionSupervisor is not null)
             {
-                await UnregisterReminder(reminder);
+                await _failedPartitionSupervisor.Reset();
+                State.FailedPartitions = _failedPartitionSupervisor.GetState().FailedPartitions;
             }
-        }
-
-        if (State.IsRecoveringAnyPartition)
-        {
-            _logger.ClearingRecoveringPartitions(_observerId, _microserviceId, _eventSequenceId, _tenantId);
-
-            foreach (var recoveringPartition in State.RecoveringPartitions)
-            {
-                if (_streamSubscriptionsByEventSourceId.ContainsKey(recoveringPartition.EventSourceId))
-                {
-                    await _streamSubscriptionsByEventSourceId[recoveringPartition.EventSourceId].UnsubscribeAsync();
-                }
-            }
-
-            State.ClearRecoveringPartitions();
         }
 
         _logger.Replaying(_observerId, _microserviceId, _eventSequenceId, _tenantId);
         State.RunningState = ObserverRunningState.Replaying;
+        await StartReplay();
         await WriteStateAsync();
-
-        var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventSequenceId, State.EventTypes);
-        await SubscribeStream(_ => HandleEventForPartitionedObserverWhenReplaying(_, headSequenceNumber));
-    }
-
-    async Task HandleEventForPartitionedObserverWhenReplaying(AppendedEvent @event, EventSequenceNumber headSequenceNumber)
-    {
-        var state = EventObservationState.Replay;
-
-        if (headSequenceNumber == @event.Metadata.SequenceNumber)
-        {
-            state |= EventObservationState.HeadOfReplay;
-        }
-
-        if (@event.Metadata.SequenceNumber == State.LastHandled)
-        {
-            state |= EventObservationState.TailOfReplay;
-        }
-
-        @event = new(@event.Metadata, @event.Context.WithState(state), @event.Content);
-
-        await Handle(@event);
-
-        if (state.HasFlag(EventObservationState.TailOfReplay))
-        {
-            State.RunningState = ObserverRunningState.TailOfReplay;
-            await WriteStateAsync();
-            await UnsubscribeStream();
-            if (!State.IsDisconnected)
-            {
-                await Subscribe(CurrentSubscription.SubscriberType!, State.EventTypes);
-            }
-        }
     }
 }

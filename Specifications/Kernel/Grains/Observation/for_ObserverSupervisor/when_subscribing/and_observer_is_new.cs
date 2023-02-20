@@ -16,5 +16,5 @@ public class and_observer_is_new : given.an_observer_and_two_event_types
     async Task Because() => await observer.Subscribe<ObserverSubscriber>(event_types, subscriber_args);
 
     [Fact] void should_set_state_to_catching_up() => state_on_write.RunningState.ShouldEqual(ObserverRunningState.CatchingUp);
-    [Fact] void should_initiate_catchup() => catch_up.Verify(_ => _.Start(new(typeof(ObserverSubscriber), subscriber_args)), Once);
+    [Fact] void should_initiate_catchup() => catch_up.Verify(_ => _.Start(new(GrainId, ObserverKey.Parse(GrainKeyExtension), event_types, typeof(ObserverSubscriber), subscriber_args)), Once);
 }

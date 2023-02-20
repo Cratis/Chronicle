@@ -1,0 +1,98 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#nullable disable
+using Aksio.Cratis.Events;
+
+namespace Aksio.Cratis.Kernel.Observation;
+
+/// <summary>
+/// Represents the state of a failed partition within the ObserverSupervisor.
+/// </summary>
+public record FailedPartition
+{
+    /// <summary>
+    /// Gets the EventSourceId that is the partition.
+    /// </summary>
+    public EventSourceId Partition { get; }
+
+    /// <summary>
+    /// Gets the exception messages that caused the partition failure.
+    /// </summary>
+    public IEnumerable<string> Messages { get; }
+
+    /// <summary>
+    /// Gets the exception stack trace that caused the partition failure.
+    /// </summary>
+    public string StackTrace { get; }
+
+    /// <summary>
+    /// <para>Gets the <see cref="EventSequenceNumber"/> of the event that triggered the partition failure.</para>
+    /// <para>The partition will be retried from this event. If this event succeeds but subsequent events fail, the partition will be retried from the last failed event
+    /// but the Tail will continue to be reported as the event that first sparked a failure. This will be removed when the partition has successfully caught up.</para>
+    /// </summary>
+    public EventSequenceNumber Tail { get; } = EventSequenceNumber.First;
+
+    /// <summary>
+    /// Gets the occurred time of the failure.
+    /// </summary>
+    public DateTimeOffset Occurred { get; }
+
+    /// <summary>
+    /// Gets or sets the Head of the partition.
+    /// </summary>
+    public EventSequenceNumber? Head { get; set; }
+
+    /// <summary>
+    /// Gets the Event Log Sequence Number of the event where the recovery process believes it has caught up.
+    /// This is set by RecoverFailedPartition when it has successfully processed the event that triggered the failure
+    /// and all subsequent events in the partition until it has caught up with the Head..
+    /// </summary>
+    public EventSequenceNumber? RecoveredTo { get; private set; }
+
+    /// <summary>
+    /// Indicates whether the partition has been recovered.
+    /// A recovered partition is one that has been successfully processed from the event that triggered the failure to the Head for the partition.
+    /// </summary>
+    public bool IsRecovered => Head is null || Head.Value <= (RecoveredTo?.Value ?? EventSequenceNumber.First);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
+    /// </summary>
+    public FailedPartition()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
+    /// <param name="tail">The event sequence number (tail) where the error occurred.</param>
+    /// <param name="messages">Any messages that caused the partition failure.</param>
+    /// <param name="stackTrace">The stack trace that caused the partition failure.</param>
+    /// <param name="occurred">When the error occurred.</param>
+    public FailedPartition(
+        EventSourceId eventSourceId,
+        EventSequenceNumber tail,
+        IEnumerable<string> messages,
+        string stackTrace,
+        DateTimeOffset? occurred = null)
+    {
+        Partition = eventSourceId;
+        Tail = tail;
+        Messages = messages;
+        StackTrace = stackTrace;
+        Occurred = occurred ?? DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Sets the recovered to sequence number.  This is used by the RecoverFailedPartition job to indicate that it has successfully processed events to this point.
+    /// </summary>
+    /// <param name="sequenceNumber">Point that the RecoverFailedPartition job has processed to and considers complete.</param>
+    /// <returns>True if the partition is recovered, false if there are more events to be processed.</returns>
+    public bool SetRecoveredTo(EventSequenceNumber sequenceNumber)
+    {
+        RecoveredTo = sequenceNumber;
+        return IsRecovered;
+    }
+}

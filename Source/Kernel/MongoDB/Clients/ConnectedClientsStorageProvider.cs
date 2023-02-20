@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Clients;
 public class ConnectedClientsStorageProvider : IGrainStorage
 {
     readonly ISharedDatabase _database;
-    IMongoCollection<MongoDBConnectedClientState> Collection => _database.GetCollection<MongoDBConnectedClientState>(CollectionNames.ConnectedClients);
+    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _database.GetCollection<MongoDBConnectedClientsForMicroserviceState>(CollectionNames.ConnectedClients);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClientsStorageProvider"/> class.
@@ -50,7 +50,7 @@ public class ConnectedClientsStorageProvider : IGrainStorage
     {
         var microserviceId = (MicroserviceId)grainReference.GetPrimaryKey();
         var state = (grainState.State as ConnectedClientsState)!;
-        var mongoState = new MongoDBConnectedClientState(microserviceId, state.Clients);
+        var mongoState = new MongoDBConnectedClientsForMicroserviceState(microserviceId, state.Clients);
         return Collection.ReplaceOneAsync(_ => _.Id == microserviceId, mongoState, options: new ReplaceOptions { IsUpsert = true });
     }
 }
