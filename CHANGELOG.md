@@ -1,9 +1,5 @@
 # [v8.5.0] - 2023-2-20 [PR: #754](https://github.com/aksio-insurtech/Cratis/pull/754)
 
-Notes:
-
-- If we have failed partitions during catch-up, we should not start recovering them before catch-up is done
-
 ### Added
 
 - Workbench view of connected clients.
