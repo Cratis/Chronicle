@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Observation;
+
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_CatchUp;
 
 public class when_catching_up_with_two_events_to_catch_up_with : given.a_catch_up_worker_with_two_pending_events

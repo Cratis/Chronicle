@@ -53,17 +53,13 @@ public class with_initial_event_failing_first_time_then_succeeding : given.a_rec
         };
     }
 
-    async Task Because()
-    {
-        await (grain as RecoverFailedPartition).Recover(initial_error, new List<EventType>(), observer_key);
-        Debug.WriteLine("Done");
-    }
+    Task Because() => (grain as RecoverFailedPartition).Recover(observer_key, string.Empty, initial_error, Enumerable.Empty<EventType>(), Enumerable.Empty<string>(), string.Empty);
 
     [Fact]
     void should_call_the_subscriber_for_the_failed_event_twice()
     {
         foreach (var @event in appended_events.Where(_ => _.Metadata.SequenceNumber == initial_error))
-            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Times.Exactly(2));
+            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Exactly(2));
     }
 
     [Fact]

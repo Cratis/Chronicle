@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Observation;
 using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.for_FailedPartitionSupervisor.given;
@@ -21,12 +22,12 @@ public class a_supervisor : Specification
     protected static Mock<IGrainFactory> grain_factory_mock = new();
 
     protected FailedPartitionSupervisor get_clean_supervisor() =>
-        new(observer_id, observer_key, event_types, null, grain_factory_mock.Object);
+        new(observer_id, observer_key, string.Empty, event_types, null, grain_factory_mock.Object);
 
     protected FailedPartitionSupervisor get_supervisor_with_failed_partition(EventSourceId partition, EventSequenceNumber? fromEvent = null)
     {
         var failedPartitions = new FailedPartition[] { new(partition, fromEvent ?? EventSequenceNumber.First, Enumerable.Empty<string>(), string.Empty, DateTimeOffset.UtcNow) };
-        return new(observer_id, observer_key, event_types, failedPartitions, grain_factory_mock.Object);
+        return new(observer_id, observer_key, string.Empty, event_types, failedPartitions, grain_factory_mock.Object);
     }
 
     protected PartitionedObserverKey get_partitioned_observer_key(EventSourceId partition_key) =>

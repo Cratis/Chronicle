@@ -31,6 +31,7 @@ public class an_observer_supervisor : GrainSpecification
     protected EventSequenceId event_sequence_id;
     protected Mock<IObserverSubscriber> subscriber;
     protected Mock<ICatchUp> catch_up;
+    protected Mock<IReplay> replay;
     protected Mock<IPersistentState<ObserverState>> persistent_state;
     protected ObserverState state;
     protected ObserverState state_on_write;
@@ -88,6 +89,8 @@ public class an_observer_supervisor : GrainSpecification
 
         catch_up = new();
         grain_factory.Setup(_ => _.GetGrain<ICatchUp>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(catch_up.Object);
+        replay = new();
+        grain_factory.Setup(_ => _.GetGrain<IReplay>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(replay.Object);
 
         subscriber = new();
         subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
