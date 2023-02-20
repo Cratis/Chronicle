@@ -118,6 +118,20 @@ public abstract class ObserverWorker : Grain
     }
 
     /// <summary>
+    /// Notify that the partition has failed.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <returns>Awaitable task.</returns>
+    public virtual Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    {
+        State.AddFailedPartition(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Handle an <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
@@ -204,20 +218,6 @@ public abstract class ObserverWorker : Grain
 
         var subscriber = (GrainFactory.GetGrain(CurrentSubscription.SubscriberType, ObserverId, key) as IObserverSubscriber)!;
         return subscriber.OnNext(@event, new(CurrentSubscription.Arguments));
-    }
-
-    /// <summary>
-    /// Notify that the partition has failed.
-    /// </summary>
-    /// <param name="partition">The partition that failed.</param>
-    /// <param name="sequenceNumber">The sequence number of the failure.</param>
-    /// <param name="exceptionMessages">All exception messages.</param>
-    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
-    /// <returns>Awaitable task.</returns>
-    public virtual Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
-    {
-        State.AddFailedPartition(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
-        return Task.CompletedTask;
     }
 
     /// <summary>

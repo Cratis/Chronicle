@@ -30,7 +30,7 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     /// </summary>
     /// <param name="observerId">The Observer Id.</param>
     /// <param name="observerKey">The Observer Key.</param>
-    /// <param name="observerName">The name of the Observer</param>
+    /// <param name="observerName">The name of the Observer.</param>
     /// <param name="eventTypes">Events that the observer monitors.</param>
     /// <param name="failedPartitions">Existing failed partitions from state.</param>
     /// <param name="grainFactory">Grains factory to create child worker grains.</param>
