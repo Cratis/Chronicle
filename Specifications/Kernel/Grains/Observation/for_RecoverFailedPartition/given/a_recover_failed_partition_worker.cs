@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Specifications;
 using Microsoft.Extensions.Logging;
 using Orleans;
