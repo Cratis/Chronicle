@@ -1,3 +1,25 @@
+# [v8.5.0] - 2023-2-20 [PR: #754](https://github.com/aksio-insurtech/Cratis/pull/754)
+
+Notes:
+
+- If we have failed partitions during catch-up, we should not start recovering them before catch-up is done
+
+### Added
+
+- Workbench view of connected clients.
+- Added collection of event types on the `ObserverSubscription` and also `ObserverId` and `ObserverKey`. (#752)
+- `OnDisconnected()` method on client - implemented for the Orleans Silo based cluster config to refresh the silo configuration at that point. (#753)
+- Added new and improved failed partition worker grains.
+- Added view in Workbench to see failed partitions and details on a failed partition.
+- Added view of connected clients in Workbench.
+- Added new and improved replay worker grain.
+
+### Fixed
+
+- Adding support for running with the debugger attached. It will not consider the Kernel disconnected. (#750)
+- Making event sequence number duplication a transient error by retrying with an increment of 1. (#263)
+- Rewind now works again in Workbench.
+
 # [v8.4.4] - 2023-2-9 [PR: #747](https://github.com/aksio-insurtech/Cratis/pull/747)
 
 ### Fixed
