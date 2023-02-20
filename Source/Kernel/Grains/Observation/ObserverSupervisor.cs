@@ -145,6 +145,30 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     }
 
     /// <inheritdoc/>
+    public async Task NotifyReplayComplete(IEnumerable<FailedPartition> failedPartitions)
+    {
+        await ReadStateAsync();
+
+        State.RunningState = ObserverRunningState.Active;
+        await WriteStateAsync();
+
+        await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
+
+        if (_failedPartitionSupervisor is not null)
+        {
+            foreach (var failedPartition in failedPartitions)
+            {
+                await _failedPartitionSupervisor.Fail(
+                    failedPartition.Partition,
+                    failedPartition.Tail,
+                    failedPartition.Messages,
+                    failedPartition.StackTrace,
+                    failedPartition.Occurred);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task NotifyFailedPartitionRecoveryComplete(EventSourceId partition, EventSequenceNumber lastProcessedEvent)
     {
         if (_failedPartitionSupervisor is null) return;
@@ -171,6 +195,8 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     }
 
     Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);
+
+    Task StartReplay() => GrainFactory.GetGrain<IReplay>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);
 
     async Task StopAnyRunningCatchup()
     {
