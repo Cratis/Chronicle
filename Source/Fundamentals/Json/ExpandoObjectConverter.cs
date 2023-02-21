@@ -113,7 +113,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
     }
 
-    object? ConvertFromJsonNode(JsonNode jsonNode, JsonSchemaProperty schemaProperty)
+    object? ConvertFromJsonNode(JsonNode jsonNode, JsonSchema schemaProperty)
     {
         if (jsonNode is JsonObject childObject)
         {
@@ -124,7 +124,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
         if (jsonNode is JsonArray array)
         {
-            return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty)).ToArray();
+            return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item)).ToArray();
         }
 
         if (_typeFormats.IsKnown(schemaProperty.Format))
@@ -134,7 +134,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
     }
 
-    object? ConvertJsonValueFromUnknownFormat(JsonNode jsonNode, JsonSchemaProperty schemaProperty)
+    object? ConvertJsonValueFromUnknownFormat(JsonNode jsonNode, JsonSchema schemaProperty)
     {
         if (jsonNode is null)
         {
@@ -225,18 +225,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
         if (value is JsonArray array)
         {
-            return array.Select(_ => ConvertUnknownSchemaTypeToClrType(value)).ToArray();
+            return array.Select(_ => ConvertUnknownSchemaTypeToClrType(_!)).ToArray();
         }
 
         var jsonValue = value.AsValue();
-
-        var element = value.GetValue<JsonElement>();
-        if (element.TryGetValue(out var result))
-        {
-            return result;
-        }
-
-        return null;
+        return value.GetValue<object>();
     }
 
     object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchema schemaProperty)
