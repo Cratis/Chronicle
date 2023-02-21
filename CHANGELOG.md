@@ -1,3 +1,11 @@
+# [v8.5.4] - 2023-2-21 [PR: #763](https://github.com/aksio-insurtech/Cratis/pull/763)
+
+### Fixed
+
+- Fixing so we don't crash if there are no array indexers when projecting with arrays, set the properties instead rather than try to update specific part of array.
+- Fixing conversion to `ExpandoObject` when JSON holds arrays of string or numbers and schema matches. This became null before.
+
+
 # [v8.5.3] - 2023-2-21 [PR: #761](https://github.com/aksio-insurtech/Cratis/pull/761)
 
 ### Fixed
