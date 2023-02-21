@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Globalization;
 using Aksio.Cratis.Concepts;
 using Aksio.Cratis.Types;
@@ -197,6 +198,16 @@ public static class BsonValueExtensions
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                     schemaProperty.Reference.Type :
                     schemaProperty.Type;
+
+        if (type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
+        {
+            var convertedArray = new BsonArray();
+            foreach (var item in enumerable)
+            {
+                convertedArray.Add(item.ToBsonValueBasedOnSchemaPropertyType(schemaProperty.Item));
+            }
+            return convertedArray;
+        }
 
         if (type.HasFlag(JsonObjectType.Null))
         {
