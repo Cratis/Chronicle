@@ -1,3 +1,10 @@
+# [v8.5.1] - 2023-2-21 [PR: #758](https://github.com/aksio-insurtech/Cratis/pull/758)
+
+### Fixed
+
+- Fixing projections check for if it has changes to return true if it has changes and not the opposite as it was. 
+
+
 # [v8.5.0] - 2023-2-20 [PR: #754](https://github.com/aksio-insurtech/Cratis/pull/754)
 
 ### Added
