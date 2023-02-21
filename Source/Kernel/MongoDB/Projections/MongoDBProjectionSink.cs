@@ -399,9 +399,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                 case ArrayProperty:
                     {
                         var collectionIdentifier = currentPropertyPath.LastSegment.Value.ToCamelCase();
-                        var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
-                        if (arrayIndexer is not null)
+                        if (arrayIndexers.HasFor(currentPropertyPath))
                         {
+                            var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
                             propertyBuilder.AppendFormat("{0}.$[{1}]", segment.Value, collectionIdentifier);
                             var filter = new ExpandoObject();
                             ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier);

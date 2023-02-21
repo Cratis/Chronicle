@@ -52,4 +52,6 @@ public record TargetType(
     DateOnly DateOnlyValue,
     TimeOnly TimeOnlyValue,
     OtherType Reference,
-    IEnumerable<OtherType> Children);
+    IEnumerable<OtherType> Children,
+    IEnumerable<string> StringArray,
+    IEnumerable<int> IntArray);
