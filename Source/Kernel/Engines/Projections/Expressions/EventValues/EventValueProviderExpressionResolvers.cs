@@ -5,6 +5,7 @@ using System.Collections;
 using System.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using NJsonSchema;
@@ -76,7 +77,7 @@ public class EventValueProviderExpressionResolvers : IEventValueProviderExpressi
             return TypeConversion.Convert(targetType, input);
         }
 
-        if (input is IEnumerable)
+        if (input.GetType().IsEnumerable())
         {
             var children = new List<object>();
             foreach (var child in (input as IEnumerable)!)
