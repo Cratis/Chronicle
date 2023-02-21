@@ -1,3 +1,10 @@
+# [v8.5.2] - 2023-2-21 [PR: #759](https://github.com/aksio-insurtech/Cratis/pull/759)
+
+### Fixed
+
+- Projection has changed fixed from doing `.Equals()` on JSON object against a JSON string to both being JSON strings.
+
+
 # [v8.5.1] - 2023-2-21 [PR: #758](https://github.com/aksio-insurtech/Cratis/pull/758)
 
 ### Fixed
