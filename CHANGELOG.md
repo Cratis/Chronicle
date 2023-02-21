@@ -1,3 +1,10 @@
+# [v8.5.3] - 2023-2-21 [PR: #761](https://github.com/aksio-insurtech/Cratis/pull/761)
+
+### Fixed
+
+- Fixing an error where converting events from the MongoDB represetantion with arrays and elements being null during conversion to the schema - ignore these values, they are null.
+
+
 # [v8.5.2] - 2023-2-21 [PR: #759](https://github.com/aksio-insurtech/Cratis/pull/759)
 
 ### Fixed
