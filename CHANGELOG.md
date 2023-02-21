@@ -1,3 +1,11 @@
+# [v8.5.5] - 2023-2-21 [PR: #764](https://github.com/aksio-insurtech/Cratis/pull/764)
+
+### Fixed
+
+- MongoDB Projection sink now handles setting arrays directly without array indexers.
+- Projections now support pulling array of primitives directly from the event and onto the target model.
+
+
 # [v8.5.4] - 2023-2-21 [PR: #763](https://github.com/aksio-insurtech/Cratis/pull/763)
 
 ### Fixed
