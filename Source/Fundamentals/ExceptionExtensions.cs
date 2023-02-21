@@ -4,9 +4,6 @@
 #pragma warning disable RCS1110, CA1050, MA0047
 
 /// <summary>
-/// Represents a simple logger for looking at timings. It measures from last call and outputs delta.
-/// </summary>
-/// <summary>
 /// Extension methods for working with exceptions.
 /// </summary>
 public static class ExceptionExtensions
