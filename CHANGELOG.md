@@ -1,3 +1,10 @@
+# [v8.5.6] - 2023-2-22 [PR: #765](https://github.com/aksio-insurtech/Cratis/pull/765)
+
+### Fixed
+
+- Fixed frontend QueryFor to return correct query result with data set to correct default value when errors occur.
+
+
 # [v8.5.5] - 2023-2-21 [PR: #764](https://github.com/aksio-insurtech/Cratis/pull/764)
 
 ### Fixed
