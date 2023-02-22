@@ -27,10 +27,12 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
 
     /** @inheritdoc */
     async perform(args?: TArguments): Promise<QueryResult<TDataType>> {
+        const noSuccess = { ...QueryResult.noSuccess, ...{ data: this.defaultValue } } as QueryResult<TDataType>;
+
         let actualRoute = this.route;
         if (!ValidateRequestArguments(this.constructor.name, this.requestArguments, args)) {
             return new Promise<QueryResult<TDataType>>((resolve) => {
-                resolve({ ...QueryResult.noSuccess, ...{ data: this.defaultValue } } as QueryResult<TDataType>);
+                resolve(noSuccess);
             });
         }
 
@@ -47,7 +49,7 @@ export abstract class QueryFor<TDataType, TArguments = {}> implements IQueryFor<
             const result = await response.json();
             return new QueryResult(result, this.modelType, this.enumerable);
         } catch (ex) {
-            return QueryResult.noSuccess as any;
+            return noSuccess;
         }
     }
 }
