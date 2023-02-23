@@ -8,7 +8,6 @@ import { EventType } from './EventType';
 import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
 import { FailedPartition } from './FailedPartition';
-import { RecoveringFailedObserverPartition } from './RecoveringFailedObserverPartition';
 
 export class ObserverState {
 
@@ -42,14 +41,8 @@ export class ObserverState {
     @field(FailedPartition, true)
     failedPartitions!: FailedPartition[];
 
-    @field(RecoveringFailedObserverPartition, true)
-    recoveringPartitions!: RecoveringFailedObserverPartition[];
-
     @field(Boolean)
     hasFailedPartitions!: boolean;
-
-    @field(Boolean)
-    isRecoveringAnyPartition!: boolean;
 
     @field(Boolean)
     isDisconnected!: boolean;
