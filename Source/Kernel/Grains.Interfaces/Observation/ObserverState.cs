@@ -85,23 +85,9 @@ public class ObserverState
     }
 
     /// <summary>
-    /// Gets or sets the failed partitions for the observer.
-    /// </summary>
-    public IEnumerable<RecoveringFailedObserverPartition> RecoveringPartitions
-    {
-        get => _partitionsBeingRecovered;
-        set => _partitionsBeingRecovered = new(value);
-    }
-
-    /// <summary>
     /// Gets whether or not there are any failed partitions.
     /// </summary>
     public bool HasFailedPartitions => _failedPartitions.Count > 0;
-
-    /// <summary>
-    /// Gets whether or not there are any partitions being recovered.
-    /// </summary>
-    public bool IsRecoveringAnyPartition => _partitionsBeingRecovered.Count > 0;
 
     /// <summary>
     /// Gets whether or not the observer is in disconnected state. Meaning that there is no subscriber to it.
@@ -109,7 +95,6 @@ public class ObserverState
     public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
 
     List<FailedPartition> _failedPartitions = new();
-    List<RecoveringFailedObserverPartition> _partitionsBeingRecovered = new();
 
     /// <summary>
     /// Add a failed partition.
