@@ -56,6 +56,15 @@ public class ModelPropertiesBuilder<TModel, TEvent, TBuilder, TParentBuilder> : 
     }
 
     /// <inheritdoc/>
+    public TBuilder UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
+    {
+        var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>();
+        builderCallback(compositeKeyBuilder);
+        _parentKey = compositeKeyBuilder;
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
     public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
         _parentKey = new KeyBuilder(new EventContextPropertyExpression(keyAccessor.GetPropertyPath()));
