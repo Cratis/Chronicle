@@ -34,9 +34,7 @@ public class ObserverInvoker : IObserverInvoker
         _middlewares = middlewares;
         _targetType = targetType;
 
-        // TODO: Make a choice; can we have multiple methods handling the same event -
-        // if so, make this either throw an exception if duplicates, or array of methods if allowed
-        _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+        _methodsByEventTypeId = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                                         .Where(_ => IsObservingMethod(_))
                                         .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
     }
@@ -71,7 +69,7 @@ public class ObserverInvoker : IObserverInvoker
 
     bool IsObservingMethod(MethodInfo methodInfo)
     {
-        var isObservingMethod = methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
+        var isObservingMethod = (methodInfo.ReturnType.IsAssignableTo(typeof(Task)) && !methodInfo.ReturnType.IsGenericType) ||
                                 methodInfo.ReturnType == typeof(void);
 
         if (!isObservingMethod) return false;

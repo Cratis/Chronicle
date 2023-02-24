@@ -38,6 +38,15 @@ public interface IAddChildBuilder<TChildModel, TEvent>
     IAddChildBuilder<TChildModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor);
 
     /// <summary>
+    /// Define what composite key based on properties on the event represents the parent key. This is typically used in child relationships to identify the parent model to
+    /// work with.
+    /// </summary>
+    /// <typeparam name="TKeyType">Type of key.</typeparam>
+    /// <param name="builderCallback">Builder callback for building the composite key.</param>
+    /// <returns>Builder continuation.</returns>
+    IAddChildBuilder<TChildModel, TEvent> UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback);
+
+    /// <summary>
     /// Define what property on the event represents the parent key based on a property in the <see cref="EventContext"/>. This is typically used in child relationships to identify the parent model to
     /// work with.
     /// </summary>
