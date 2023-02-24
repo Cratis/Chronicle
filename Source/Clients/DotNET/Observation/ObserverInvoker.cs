@@ -69,7 +69,7 @@ public class ObserverInvoker : IObserverInvoker
 
     bool IsObservingMethod(MethodInfo methodInfo)
     {
-        var isObservingMethod = (methodInfo.ReturnType.IsAssignableTo(typeof(Task)) && !methodInfo.ReturnType.IsGenericType)  ||
+        var isObservingMethod = (methodInfo.ReturnType.IsAssignableTo(typeof(Task)) && !methodInfo.ReturnType.IsGenericType) ||
                                 methodInfo.ReturnType == typeof(void);
 
         if (!isObservingMethod) return false;

@@ -42,6 +42,7 @@ public interface IModelPropertiesBuilder<TModel, TEvent, TBuilder>
 
     /// <summary>
     /// Define what composite key based on properties on the event represents the parent key. This is typically used in child relationships to identify the parent model to
+    /// work with.
     /// </summary>
     /// <typeparam name="TKeyType">Type of key.</typeparam>
     /// <param name="builderCallback">Builder callback for building the composite key.</param>
