@@ -17,13 +17,14 @@ The methods you add onto the class will be discovered by convention and the syst
 signatures, name of the method(s) can be anything:
 
 ```csharp
-void SynchronousMethodWithoutContext(MyEvent @event);
-void SynchronousMethodWithContext(MyEvent @event, EventContext context);
-Task AsynchronousMethodWithoutContext(MyEvent @event);
-Task AsynchronousMethodWithContext(MyEvent @event, EventContext context);
+public void SynchronousMethodWithoutContext(MyEvent @event);
+public void SynchronousMethodWithContext(MyEvent @event, EventContext context);
+public Task AsynchronousMethodWithoutContext(MyEvent @event);
+public Task AsynchronousMethodWithContext(MyEvent @event, EventContext context);
 ```
 
-> Note: Both public and non-public methods are supported.
+> Note: Only public methods are supported without any return types. Also worth noting is that you can't have
+> two methods handling the same event as the system would not know how to recover if one of them fails.
 
 ## Middlewares
 
