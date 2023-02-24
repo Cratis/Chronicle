@@ -1,3 +1,19 @@
+# [v8.6.0] - 2023-2-24 [PR: #769](https://github.com/aksio-insurtech/Cratis/pull/769)
+
+### Added
+
+- Adding support for composite keys for parent key definition for child definitions in projections.
+
+### Fixed
+
+- Adding logging of errors for a client lifecycle participant failure. (#768)
+- Removing residues of recovering partitions on the observer state.
+- Fixing observer method convention to not include methods that return a generic `Task<>`. (#767)
+- Fixing observer method convention to not include non-public methods. (#767)
+
+
+
+
 # [v8.5.6] - 2023-2-22 [PR: #765](https://github.com/aksio-insurtech/Cratis/pull/765)
 
 ### Fixed
