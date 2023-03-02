@@ -51,7 +51,7 @@ public partial class ObserverSupervisor
             return;
         }
 
-        await _failedPartitionSupervisor.TryRecoveringAnyFailedPartitions();
+        TryRecoveringAnyFailedPartitions();
 
         await UnsubscribeStream();
 
