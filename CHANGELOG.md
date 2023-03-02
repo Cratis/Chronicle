@@ -1,3 +1,12 @@
+# [v8.6.1] - 2023-3-2 [PR: #772](https://github.com/aksio-insurtech/Cratis/pull/772)
+
+### Fixed
+
+- Keeping observers alive forever by telling Orleans to never deactivate them (only the logical unpartitioned observer). (#770)
+- Fixing how failed partitions state is rehydrated for observer state to be rehydrated from the actual collection of failed partitions.
+- Delaying recovery of partitions through a timer that starts immediately. This fixes so that we don't end up in dead-lock scenarios due to recovery grain calling the supervisor during start up.
+
+
 # [v8.6.0] - 2023-2-24 [PR: #769](https://github.com/aksio-insurtech/Cratis/pull/769)
 
 ### Added
