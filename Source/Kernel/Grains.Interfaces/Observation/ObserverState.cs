@@ -80,7 +80,7 @@ public class ObserverState
     /// </summary>
     public IEnumerable<FailedPartition> FailedPartitions
     {
-        get => _failedPartitions.Where(_ => _.Partition is not null && _.Partition != string.Empty);
+        get => _failedPartitions;
         set => _failedPartitions = new(value);
     }
 

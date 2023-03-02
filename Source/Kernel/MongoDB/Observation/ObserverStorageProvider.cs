@@ -71,16 +71,17 @@ public class ObserverStorageProvider : IGrainStorage
 
         var key = GetKeyFrom(observerKey, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
-        grainState.State = await cursor.FirstOrDefaultAsync() ?? new ObserverState
+        var state = await cursor.FirstOrDefaultAsync() ?? new ObserverState
         {
             Id = key,
             EventSequenceId = eventSequenceId,
             ObserverId = observerId,
             NextEventSequenceNumber = EventSequenceNumber.First,
             LastHandled = EventSequenceNumber.First,
-            RunningState = ObserverRunningState.New,
-            FailedPartitions = failedPartitions
+            RunningState = ObserverRunningState.New
         };
+        state.FailedPartitions = failedPartitions;
+        grainState.State = state;
     }
 
     /// <inheritdoc/>
