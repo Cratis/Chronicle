@@ -70,6 +70,11 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
         string exceptionStackTrace,
         DateTimeOffset occurred)
     {
+        if (string.IsNullOrEmpty(partitionId))
+        {
+            return;
+        }
+
         if (_failedPartitions.Any(_ => _.Partition == partitionId))
             return;
         await StartRecovery(partitionId, sequenceNumber, exceptionMessages, exceptionStackTrace, occurred);
