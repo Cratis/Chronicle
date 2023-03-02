@@ -25,7 +25,7 @@ public class RecoverFailedPartitionState
     /// <summary>
     /// Gets or sets the partition that is failed.
     /// </summary>
-    public EventSourceId Partition { get; set; } = EventSourceId.Unspecified;
+    public EventSourceId Partition { get; set; } = EventSourceId.Unspecified;
 
     /// <summary>
     /// Gets or sets the <see cref="EventSequenceId"/> the failed partition is on.
@@ -176,7 +176,7 @@ public class RecoverFailedPartitionState
     /// <returns><see cref="TimeSpan"/> representing time to next attempt.</returns>
     public TimeSpan GetNextAttemptSchedule()
     {
-        if(CurrentError == InitialError && NumberOfAttemptsOnCurrentError == 0)
+        if (CurrentError == InitialError && NumberOfAttemptsOnCurrentError == 0)
         {
             return TimeSpan.Zero;
         }
@@ -220,5 +220,8 @@ public class RecoverFailedPartitionState
     /// Indicates whether the state has been initialized.
     /// </summary>
     /// <returns>True if initialized, false otherwise.</returns>
-    public bool HasBeenInitialized() => CurrentError != EventSequenceNumber.Unavailable;
+    public bool HasBeenInitialized() =>
+        CurrentError != EventSequenceNumber.Unavailable &&
+        !string.IsNullOrEmpty(Partition) &&
+        Messages is not null;
 }
