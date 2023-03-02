@@ -76,6 +76,9 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
 
+        // Keep the Grain alive forever: Confirmed here: https://github.com/dotnet/orleans/issues/1721#issuecomment-216566448
+        DelayDeactivation(TimeSpan.MaxValue);
+
         _observerKey = ObserverKey.Parse(keyAsString);
         _eventSequenceId = _observerKey.EventSequenceId;
         State.EventSequenceId = _eventSequenceId;
