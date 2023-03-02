@@ -37,6 +37,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     TenantId _sourceTenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     FailedPartitionSupervisor? _failedPartitionSupervisor;
+    IDisposable? _recoverFailedPartitionsTimer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverSupervisor"/> class.
@@ -195,6 +196,20 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 
         State.FailedPartitions = _failedPartitionSupervisor.GetState().FailedPartitions;
         await WriteStateAsync();
+    }
+
+    void TryRecoveringAnyFailedPartitions()
+    {
+        _recoverFailedPartitionsTimer = RegisterTimer(
+            (object state) =>
+            {
+                var task = _failedPartitionSupervisor!.TryRecoveringAnyFailedPartitions();
+                _recoverFailedPartitionsTimer?.Dispose();
+                return task;
+            },
+            null,
+            TimeSpan.Zero,
+            TimeSpan.MaxValue);
     }
 
     Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);
