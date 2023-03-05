@@ -118,6 +118,8 @@ public class ObjectsComparer : IObjectsComparer
                         var elementDifferences = new List<PropertyDifference>();
                         CompareValues(leftElementType, leftElements[i], rightElements[i], propertyPath, elementDifferences);
                         differences.AddRange(elementDifferences);
+
+                        if (elementDifferences.Count > 0) break;
                     }
                 }
                 else
@@ -132,6 +134,8 @@ public class ObjectsComparer : IObjectsComparer
                             propertyPath,
                             elementDifferences);
                         differences.AddRange(elementDifferences);
+
+                        if (elementDifferences.Count > 0) break;
                     }
                 }
             }
@@ -139,6 +143,12 @@ public class ObjectsComparer : IObjectsComparer
         else
         {
             var different = false;
+
+            if (leftValue!.GetType() != rightValue!.GetType())
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+                return;
+            }
 
             if (type.IsComparable())
             {
