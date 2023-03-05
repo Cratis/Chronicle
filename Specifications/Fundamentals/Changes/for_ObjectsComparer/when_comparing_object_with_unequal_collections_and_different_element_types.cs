@@ -1,13 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Changes.for_ObjectsComparer;
 
-public class when_comparing_object_with_unequal_collections : given.an_object_comparer
+public class when_comparing_object_with_unequal_collections_and_different_element_types : given.an_object_comparer
 {
-    record TheType(IEnumerable<int> Collection);
+    record TheType(IEnumerable Collection);
 
     TheType left;
     TheType right;
@@ -17,8 +18,8 @@ public class when_comparing_object_with_unequal_collections : given.an_object_co
 
     void Establish()
     {
-        left = new(new[] { 1, 2, 3 });
-        right = new(new[] { 4, 5, 6 });
+        left = new(new object[] { "1", "2", "3" });
+        right = new(new int[] { 1, 2, 3 });
     }
 
     void Because() => result = comparer.Equals(left, right, out differences);
