@@ -75,6 +75,8 @@ public class ObjectsComparer : IObjectsComparer
 
     void CompareValues(Type type, object? leftValue, object? rightValue, PropertyPath propertyPath, List<PropertyDifference> differences)
     {
+        if (leftValue is null && rightValue is null) return;
+
         if ((leftValue is null && rightValue is not null) ||
           (leftValue is not null && rightValue is null))
         {
@@ -113,11 +115,11 @@ public class ObjectsComparer : IObjectsComparer
                 {
                     for (var i = 0; i < leftElements.Length; i++)
                     {
-                        if (!leftElements[i].Equals(rightElements[i]))
-                        {
-                            differences.Add(new(propertyPath, leftValue, rightValue));
-                            break;
-                        }
+                        var elementDifferences = new List<PropertyDifference>();
+                        CompareValues(leftElementType, leftElements[i], rightElements[i], propertyPath, elementDifferences);
+                        differences.AddRange(elementDifferences);
+
+                        if (elementDifferences.Count > 0) break;
                     }
                 }
                 else
@@ -125,8 +127,15 @@ public class ObjectsComparer : IObjectsComparer
                     for (var i = 0; i < leftElements.Length; i++)
                     {
                         var elementDifferences = new List<PropertyDifference>();
-                        CompareValues(leftElements[i].GetType(), leftElements[i], rightElements[i], propertyPath, elementDifferences);
+                        CompareValues(
+                            leftElements[i]?.GetType() ?? rightElements[i]?.GetType() ?? typeof(object),
+                            leftElements[i],
+                            rightElements[i],
+                            propertyPath,
+                            elementDifferences);
                         differences.AddRange(elementDifferences);
+
+                        if (elementDifferences.Count > 0) break;
                     }
                 }
             }
@@ -134,6 +143,12 @@ public class ObjectsComparer : IObjectsComparer
         else
         {
             var different = false;
+
+            if (leftValue!.GetType() != rightValue!.GetType())
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+                return;
+            }
 
             if (type.IsComparable())
             {
