@@ -5,9 +5,9 @@ using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Changes.for_ObjectsComparer;
 
-public class when_comparing_object_with_collections_that_have_different_number_of_elements : given.an_object_comparer
+public class when_comparing_object_with_collections_with_known_element_type_that_have_null_value_in_left_but_values_in_right : given.an_object_comparer
 {
-    record TheType(IEnumerable<int> Collection);
+    record TheType(IEnumerable<string> Collection);
 
     TheType left;
     TheType right;
@@ -17,8 +17,8 @@ public class when_comparing_object_with_collections_that_have_different_number_o
 
     void Establish()
     {
-        left = new(new[] { 1, 2, 3 });
-        right = new(new[] { 4, 5 });
+        left = new(new[] { (string)null! });
+        right = new(new[] { "1" });
     }
 
     void Because() => result = comparer.Equals(left, right, out differences);
