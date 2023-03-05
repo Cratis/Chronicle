@@ -1,3 +1,10 @@
+# [v8.6.2] - 2023-3-5 [PR: #773](https://github.com/aksio-insurtech/Cratis/pull/773)
+
+### Fixed
+
+- Null value handling in the `ObjectsComparer` for elements in collections.
+
+
 # [v8.6.1] - 2023-3-2 [PR: #772](https://github.com/aksio-insurtech/Cratis/pull/772)
 
 ### Fixed
