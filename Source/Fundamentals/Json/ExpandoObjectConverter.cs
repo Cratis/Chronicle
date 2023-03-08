@@ -141,6 +141,17 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         }
 
         var value = jsonNode.AsValue();
+
+        // Nullable enum values are represented as a discriminated union with a null value. We need to get the actual property definition.
+        // Other types could also be represented in this manner and it is therefor important to get the actual property definition.
+        if (schemaProperty.OneOf.Count > 0)
+        {
+            var oneOfSchema = schemaProperty.OneOf.FirstOrDefault(_ => _.Type != JsonObjectType.Null);
+            if (oneOfSchema != default)
+            {
+                schemaProperty = oneOfSchema;
+            }
+        }
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                 schemaProperty.Reference.Type :
                 schemaProperty.Type;
@@ -256,6 +267,16 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return null;
         }
 
+        // Nullable enum values are represented as a discriminated union with a null value. We need to get the actual property definition.
+        // Other types could also be represented in this manner and it is therefor important to get the actual property definition.
+        if (schemaProperty.OneOf.Count > 0)
+        {
+            var oneOfSchema = schemaProperty.OneOf.FirstOrDefault(_ => _.Type != JsonObjectType.Null);
+            if (oneOfSchema != default)
+            {
+                schemaProperty = oneOfSchema;
+            }
+        }
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                 schemaProperty.Reference.Type :
                 schemaProperty.Type;

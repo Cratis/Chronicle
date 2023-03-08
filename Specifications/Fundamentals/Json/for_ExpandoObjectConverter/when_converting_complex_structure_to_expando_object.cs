@@ -36,6 +36,8 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
             ["floatValue"] = 42.42,
             ["doubleValue"] = 42.42,
             ["enumValue"] = 2,
+            ["nullableEnumValue"] = 1,
+            ["nullableEnumValueSetToNull"] = null,
             ["enumAsStringValueRepresentedAsInt"] = 2,
             ["enumAsStringValueWithJsonConverter"] = 2,
             ["enumAsStringValue"] = "Second",
@@ -61,6 +63,8 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_set_top_level_double_value_to_hold_correct_value() => ((double)result.doubleValue).ShouldEqual(source["doubleValue"].GetValue<double>());
     [Fact] void should_set_top_level_enum_value_to_be_of_int_type() => ((object)result.enumValue).ShouldBeOfExactType<int>();
     [Fact] void should_set_top_level_enum_value_to_hold_correct_value() => ((int)result.enumValue).ShouldEqual(source["enumValue"].GetValue<int>());
+    [Fact] void should_set_top_level_nullable_enum_value_to_be_of_int_type() => ((object)result.nullableEnumValue).ShouldBeOfExactType<int>();
+    [Fact] void should_set_top_level_nullable_enum_value_to_hold_correct_value() => ((int)result.nullableEnumValue).ShouldEqual(source["nullableEnumValue"].GetValue<int>());
     [Fact] void should_set_top_level_enum_as_string_value_to_be_of_int_type() => ((object)result.enumValue).ShouldBeOfExactType<int>();
     [Fact] void should_set_top_level_enum_as_string_value_to_hold_correct_value() => ((int)result.enumValue).ShouldEqual((int)AnEnumWithStringValues.Second);
     [Fact] void should_set_top_level_enum_as_string_value_represented_as_int_to_be_of_int_type() => ((object)result.enumAsStringValueRepresentedAsInt).ShouldBeOfExactType<int>();
