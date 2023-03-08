@@ -1,3 +1,10 @@
+# [v8.6.3] - 2023-3-8 [PR: #775](https://github.com/aksio-insurtech/Cratis/pull/775)
+
+### Fixed
+
+- Nullable enum values are now supported. They're represented using the `OneOf` in the JSON schema and not just a `JsonObjectType` of `Number` and the flag `Null` set, deviates from any other types.
+
+
 # [v8.6.2] - 2023-3-5 [PR: #773](https://github.com/aksio-insurtech/Cratis/pull/773)
 
 ### Fixed
