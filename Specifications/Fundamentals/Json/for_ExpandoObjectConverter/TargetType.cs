@@ -43,6 +43,8 @@ public record TargetType(
     float FloatValue,
     double DoubleValue,
     AnEnumValue EnumValue,
+    AnEnumValue? NullableEnumValue,
+    AnEnumValue? NullableEnumValueSetToNull,
     AnEnumWithStringValues EnumAsStringValueRepresentedAsInt,
     AnEnumWithStringValues EnumAsStringValue,
     AnEnumWithStringValuesAndJsonConverter EnumAsStringValueWithJsonConverter,
