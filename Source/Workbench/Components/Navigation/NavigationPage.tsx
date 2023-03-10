@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Grid, Paper } from '@mui/material';
+import { Box, Grid, Paper } from '@mui/material';
 import { ReactElement } from 'react';
 import { NavigationContainer } from './NavigationContainer';
 import { ChildTypes, PropsForComponentWithChildTypes } from '../ComponentWithChildTypesUtility';
@@ -29,7 +29,7 @@ export const NavigationPage = (props: PropsForComponentWithChildTypes) => {
                     </Paper>
                 </Grid>
                 <Grid item xs={10}>
-                    <Paper elevation={0} sx={{ height: '100%' }}>
+                    <Paper elevation={0} sx={{ height: '100%', padding: '24px' }}>
                         {content && content}
                     </Paper>
                 </Grid>
