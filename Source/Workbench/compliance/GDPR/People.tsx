@@ -7,10 +7,10 @@ import { AllPeople } from 'API/compliance/gdpr/people/AllPeople';
 import { useMemo, useState } from 'react';
 import { Person } from 'API/compliance/gdpr/people/Person';
 import { useBoolean } from '@fluentui/react-hooks';
-import { SearchForPeople } from '../API/compliance/gdpr/people/SearchForPeople';
-import { CreateAndRegisterKeyFor } from '../API/compliance/gdpr/pii/CreateAndRegisterKeyFor';
+import { SearchForPeople } from '../../API/compliance/gdpr/people/SearchForPeople';
+import { CreateAndRegisterKeyFor } from '../../API/compliance/gdpr/pii/CreateAndRegisterKeyFor';
 import { AddKeyDialog } from './AddKeyDialog';
-import { DeletePIIForPerson } from '../API/compliance/gdpr/pii/DeletePIIForPerson';
+import { DeletePIIForPerson } from '../../API/compliance/gdpr/pii/DeletePIIForPerson';
 
 const columns: IColumn[] = [
     {
