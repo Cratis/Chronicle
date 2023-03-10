@@ -5,8 +5,6 @@ import { useState } from 'react';
 import { Nav, INavLinkGroup, INavLink, INavStyles } from '@fluentui/react';
 import { useNavigate } from 'react-router-dom';
 
-import { default as styles } from './Navigation.module.scss';
-
 const navStyles: Partial<INavStyles> = {
     root: {
         width: 200
@@ -117,7 +115,7 @@ export const Navigation = () => {
         }
     };
     return (
-        <div className={styles.navigationContainer}>
+        <div>
             <Nav
                 groups={groups}
                 styles={navStyles}

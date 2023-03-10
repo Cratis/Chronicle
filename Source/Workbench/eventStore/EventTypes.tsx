@@ -13,7 +13,6 @@ import {
     Stack
 } from '@fluentui/react';
 
-import { default as styles } from './EventTypes.module.scss';
 import { useState, useEffect } from 'react';
 import { EventTypeSchema } from './EventTypeSchema';
 import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
@@ -105,8 +104,8 @@ export const EventTypes = () => {
     }, [eventType]);
 
     return (
-        <div className={styles.container}>
-            <div className={styles.eventList}>
+        <div>
+            <div>
                 <Stack>
                     <Dropdown
                         styles={commandBarDropdownStyles}
@@ -126,7 +125,7 @@ export const EventTypes = () => {
                     />
                 </Stack>
             </div>
-            <div className={styles.eventDetails}>
+            <div>
                 <Pivot linkFormat="tabs" defaultSelectedKey="2">
                     {generationalSchemas.data.map((schema: EventTypeSchema) => {
                         const properties = Object.keys(schema.properties || []).map(_ => {

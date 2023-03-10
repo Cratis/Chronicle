@@ -5,7 +5,7 @@ import { ReactElement, JSXElementConstructor } from 'react';
 
 
 export interface PropsForComponentWithChildTypes {
-    children: ReactElement | ReactElement[];
+    children?: ReactElement | ReactElement[];
 }
 
 export class ChildTypes {
@@ -14,6 +14,9 @@ export class ChildTypes {
     }
 
     static get(props: PropsForComponentWithChildTypes): ChildTypes {
+        if (!props.children) {
+            return new ChildTypes([]);
+        }
         if (props.children instanceof Array) {
             return new ChildTypes([...props.children]);
         } else {
