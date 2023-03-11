@@ -52,7 +52,7 @@ function getButtonStyle(variant: NavigationButtonVariant): SxProps<Theme> {
 
 function getTypography(variant: NavigationButtonVariant): TypographyProps {
     switch (variant) {
-        case NavigationButtonVariant.Primary: {
+        case NavigationButtonVariant.Header: {
             return {
                 fontSize: 20,
                 fontWeight: 'medium',
