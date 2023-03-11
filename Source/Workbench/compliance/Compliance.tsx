@@ -1,22 +1,27 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { NavigationPage, NavigationButton } from '../Components/Navigation';
+import { NavigationPage, NavigationItem } from '../Components/Navigation';
 import * as icons from '@mui/icons-material';
+import { DataSubjects } from './GDPR/DataSubjects';
+
+const navigationItems: NavigationItem[] = [
+    {
+        title: 'GDPR',
+        icon: <icons.HowToReg/>,
+        path: 'gdpr',
+        children: [{
+            title: 'Data Subjects',
+            icon: <icons.Person/>,
+            path: 'data-subjects',
+            content: <DataSubjects />
+        }]
+    }
+];
+
 
 export const Compliance = () => {
     return (
-        <NavigationPage>
-            <NavigationPage.Navigation>
-                <>
-                    <NavigationButton
-                        title="GDPR"
-                        icon={<icons.HowToReg/>}
-                        />
-                </>
-
-            </NavigationPage.Navigation>
-
-        </NavigationPage>
+        <NavigationPage navigationItems={navigationItems}/>
     );
 };

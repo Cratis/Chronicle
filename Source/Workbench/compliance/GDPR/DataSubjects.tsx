@@ -36,7 +36,7 @@ const columns: IColumn[] = [
 
 
 
-export const People = () => {
+export const DataSubjects = () => {
     const [searching, setSearching] = useState(false);
     const [people] = AllPeople.use();
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
