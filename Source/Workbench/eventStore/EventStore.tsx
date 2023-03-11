@@ -15,6 +15,7 @@ export const EventStore = () => {
             title: microservice.name,
             icon: <icons.Cabin />,
             targetPath: microservice.id,
+            routePath: ':microserviceId',
             children: [{
                 title: 'Types',
                 icon: <icons.DataObject />,
