@@ -9,11 +9,11 @@ const navigationItems: NavigationItem[] = [
     {
         title: 'GDPR',
         icon: <icons.HowToReg/>,
-        path: 'gdpr',
+        targetPath: 'gdpr',
         children: [{
             title: 'Data Subjects',
             icon: <icons.Person/>,
-            path: 'data-subjects',
+            targetPath: 'data-subjects',
             content: <DataSubjects />
         }]
     }
