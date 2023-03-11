@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { NavigationRootItem } from '../Components/Navigation/NavigationRootItem';
+import { NavigationButton } from '../Components/Navigation/NavigationButton';
 import { NavigationPage } from '../Components/Navigation/NavigationPage';
 import * as icons from '@mui/icons-material';
 import { useNavigate, Routes, Route } from 'react-router-dom';
@@ -14,12 +14,12 @@ export const Configuration = () => {
     return (
         <NavigationPage>
             <NavigationPage.Navigation>
-                <NavigationRootItem
+                <NavigationButton
                     title="Tenants"
                     icon={<icons.Apartment />}
                     onClick={() => navigate('/configuration/tenants')} />
 
-                <NavigationRootItem
+                <NavigationButton
                     title="Microservices"
                     icon={<icons.Cabin />}
                     onClick={() => navigate('/configuration/microservices')} />
