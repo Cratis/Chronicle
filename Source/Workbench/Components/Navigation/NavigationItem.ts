@@ -4,7 +4,8 @@
 export type NavigationItem = {
     title: string;
     icon: JSX.Element;
-    path: string;
+    targetPath: string;
+    routePath?: string;
     content?: JSX.Element;
     children?: NavigationItem[]
 };
