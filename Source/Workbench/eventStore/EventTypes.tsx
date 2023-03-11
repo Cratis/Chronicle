@@ -3,9 +3,7 @@
 
 import {
     DetailsList,
-    Dropdown,
     IColumn,
-    IDropdownOption,
     IDropdownStyles,
     Pivot,
     PivotItem,
@@ -15,114 +13,91 @@ import {
 
 import { useState, useEffect } from 'react';
 import { EventTypeSchema } from './EventTypeSchema';
-import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
-import { Microservice } from 'API/configuration/microservices/Microservice';
 import { AllEventTypes, AllEventTypesArguments } from 'API/events/store/types/AllEventTypes';
 import { GenerationSchemasForType } from 'API/events/store/types/GenerationSchemasForType';
+import { useRouteParams } from './RouteParams';
+import { DataGrid, GridColDef, GridRowSelectionModel, GridCallbackDetails } from '@mui/x-data-grid';
+import { Box } from '@mui/material';
+import { EventTypeInformation } from '../API/events/store/types/EventTypeInformation';
 
-const eventTypesColumns: IColumn[] = [
+const eventTypesColumns: GridColDef[] = [
     {
-        key: 'identifier',
-        name: 'Identifier',
-        fieldName: 'identifier',
-        minWidth: 100,
-        maxWidth: 200,
+        headerName: 'Identifier',
+        field: 'identifier',
+        width: 300,
     },
     {
-        key: 'name',
-        name: 'Name',
-        fieldName: 'name',
-        minWidth: 300
+        headerName: 'Name',
+        field: 'name',
+        width: 300
     },
     {
-        key: 'generations',
-        name: 'Generations',
-        fieldName: 'generations',
-        minWidth: 100
+        headerName: 'Generations',
+        field: 'generations',
+        width: 100
     }
 ];
 
-const eventSchemaColumns: IColumn[] = [
+const eventSchemaColumns: GridColDef[] = [
     {
-        key: 'property',
-        name: 'Property',
-        fieldName: 'name',
-        minWidth: 200
+        headerName: 'Property',
+        field: 'name',
+        width: 200
     },
     {
-        key: 'type',
-        name: 'Type',
-        fieldName: 'type',
-        minWidth: 100
+        headerName: 'Type',
+        field: 'type',
+        width: 100
     }
 ];
 
 const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
 
 export const EventTypes = () => {
-    const [microservices] = AllMicroservices.use();
-    const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
-    const [eventType, setEventType] = useState();
+    const { microserviceId } = useRouteParams();
+    const [eventType, setEventType] = useState<string>();
 
     const getAllEventTypesArguments = () => {
         return {
-            microserviceId: selectedMicroservice?.id || undefined!
+            microserviceId
         } as AllEventTypesArguments;
     };
 
     const getGenerationalSchemasForTypeArguments = () => {
         return {
-            microserviceId: selectedMicroservice?.id || undefined!,
+            microserviceId,
             eventTypeId: eventType!
         };
     };
 
     const [generationalSchemas, reloadGenerationalSchemas] = GenerationSchemasForType.use(getGenerationalSchemasForTypeArguments());
-    const [eventTypes, refreshEventTypes] = AllEventTypes.use(getAllEventTypesArguments());
-
-    const microserviceOptions = microservices.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    useEffect(() => {
-        if (microservices.data.length > 0) {
-            setSelectedMicroservice(microservices.data[0]);
-        }
-    }, [microservices.data]);
-
-    useEffect(() => {
-        if (selectedMicroservice) {
-            refreshEventTypes(getAllEventTypesArguments());
-        }
-    }, [selectedMicroservice]);
+    const [eventTypes] = AllEventTypes.use(getAllEventTypesArguments());
 
     useEffect(() => {
         reloadGenerationalSchemas(getGenerationalSchemasForTypeArguments());
     }, [eventType]);
 
+    const eventTypeSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
+        const selectedItems = selectionModel.map((id => eventTypes.data.find(eventType => eventType.identifier == id))) as EventTypeInformation[];
+        if (selectedItems.length > 0) {
+            setEventType(selectedItems[0].identifier);
+        }
+    };
+
     return (
         <div>
             <div>
                 <Stack>
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={microserviceOptions}
-                        selectedKey={selectedMicroservice?.id}
-                        onChange={(e, option) => {
-                            setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
-                        }} />
-
-                    <DetailsList
-                        items={eventTypes.data}
-                        columns={eventTypesColumns}
-                        selectionMode={SelectionMode.single}
-                        onActiveItemChanged={(item: any) => {
-                            setEventType(item.identifier);
-                        }}
-                    />
+                    <Box sx={{ height: 400 }}>
+                        <DataGrid
+                            columns={eventTypesColumns}
+                            filterMode="client"
+                            sortingMode="client"
+                            getRowId={(row: EventTypeInformation) => row.identifier}
+                            onRowSelectionModelChange={eventTypeSelected}
+                            rows={eventTypes.data}
+                        />
+                    </Box>
                 </Stack>
             </div>
             <div>
@@ -140,11 +115,18 @@ export const EventTypes = () => {
                             };
                         });
                         return (
-
                             <PivotItem key={schema.generation} headerText={schema.generation.toString()}>
-                                <DetailsList items={properties}
-                                    columns={eventSchemaColumns}
-                                    selectionMode={SelectionMode.none} />
+                                <Box sx={{ height: 400 }}>
+                                    <DataGrid
+                                        columns={eventSchemaColumns}
+                                        filterMode="client"
+                                        sortingMode="client"
+                                        getRowId={(row) => row.name}
+                                        onRowSelectionModelChange={eventTypeSelected}
+                                        rows={properties}
+                                    />
+                                </Box>
+
                             </PivotItem>
                         );
                     })}
