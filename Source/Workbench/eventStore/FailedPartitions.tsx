@@ -23,7 +23,7 @@ import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { RecoverFailedPartitionState } from 'API/events/store/failed-partitions/RecoverFailedPartitionState';
 import { useBoolean } from '@fluentui/react-hooks';
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
-import { EventSequenceInformation } from '../../API/events/store/sequences/EventSequenceInformation';
+import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/cratis-applications-frontend/queries';
 
 
