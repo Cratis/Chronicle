@@ -14,11 +14,11 @@ export const EventStore = () => {
         return {
             title: microservice.name,
             icon: <icons.Cabin />,
-            path: microservice.id,
+            targetPath: microservice.id,
             children: [{
                 title: 'Types',
                 icon: <icons.DataObject />,
-                path: 'types',
+                targetPath: 'types',
                 content: <EventTypes />
             }]
         } as NavigationItem;
