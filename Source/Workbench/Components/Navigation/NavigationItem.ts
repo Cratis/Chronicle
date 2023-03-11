@@ -5,6 +5,6 @@ export type NavigationItem = {
     title: string;
     icon: JSX.Element;
     path: string;
-    content: JSX.Element;
+    content?: JSX.Element;
     children?: NavigationItem[]
 };
