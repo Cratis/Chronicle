@@ -27,7 +27,7 @@ export const EventStore = () => {
                 content: <EventTypes />
             }, {
                 title: 'Sequences',
-                icon: <icons.ErrorOutline />,
+                icon: <icons.Stream />,
                 targetPath: 'sequences',
                 content: <EventSequences />
             }, {
