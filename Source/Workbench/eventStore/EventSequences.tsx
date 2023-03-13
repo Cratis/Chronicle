@@ -2,16 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import {
-    CommandBar,
     ICommandBarItemProps,
-    IconButton,
     IDropdownOption,
     Panel,
-    Stack,
-    IPivotItemProps,
     TextField,
-    Dropdown,
-    IDropdownStyles
 } from '@fluentui/react';
 
 import { useBoolean } from '@fluentui/react-hooks';
@@ -28,37 +22,19 @@ import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
-import { Microservice } from 'API/configuration/microservices/Microservice';
-import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { useEffect } from 'react';
-
-function pivotItemHeaderRenderer(
-    link?: IPivotItemProps,
-    defaultRenderer?: (link?: IPivotItemProps) => JSX.Element | null,
-): JSX.Element | null {
-    if (!link || !defaultRenderer) {
-        return null;
-    }
-
-    return (
-        <span style={{ flex: '0 1 100%' }}>
-            <IconButton iconProps={{ iconName: 'StatusCircleErrorX' }} title="Close query" onClick={() => alert('hello world')} />
-            {defaultRenderer({ ...link, itemIcon: undefined })}
-        </span>
-    );
-}
-
-const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
+import { useRouteParams } from './RouteParams';
+import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar } from '@mui/material';
+import * as icons from '@mui/icons-material';
 
 export const EventSequences = () => {
+    const { microserviceId } = useRouteParams();
     const [eventSequences] = AllEventSequences.use();
-    const [microservices] = AllMicroservices.use();
     const [tenants] = AllTenants.use();
 
     const [selectedEventSequence, setSelectedEventSequence] = useState<EventSequenceInformation>();
-    const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
 
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
@@ -68,7 +44,7 @@ export const EventSequences = () => {
     const getFindForArguments = () => {
         return {
             eventSequenceId: selectedEventSequence?.id || undefined!,
-            microserviceId: selectedMicroservice?.id || undefined!,
+            microserviceId: microserviceId,
             tenantId: selectedTenant?.id || undefined
         } as FindForArguments;
     };
@@ -76,20 +52,13 @@ export const EventSequences = () => {
     const [events, refreshEvents] = FindFor.use(getFindForArguments());
 
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
-    const [selectedEventType, setSelectedEventType] = useState<EventTypeInformation| undefined>(undefined);
+    const [selectedEventType, setSelectedEventType] = useState<EventTypeInformation | undefined>(undefined);
 
     const [eventTypes, refreshEventTypes] = AllEventTypes.use({
-        microserviceId: selectedMicroservice?.id || undefined!,
+        microserviceId: microserviceId,
     });
 
     const eventSequenceOptions = eventSequences.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    const microserviceOptions = microservices.data.map(_ => {
         return {
             key: _.id,
             text: _.name
@@ -112,129 +81,16 @@ export const EventSequences = () => {
     }, [eventSequences.data]);
 
     useEffect(() => {
-        if (microservices.data.length > 0) {
-            setSelectedMicroservice(microservices.data[0]);
-            refreshEventTypes({
-                microserviceId: microservices.data[0].id
-            });
-        }
-    }, [microservices.data]);
-
-    useEffect(() => {
         if (tenants.data.length > 0) {
             setSelectedTenant(tenants.data[0]);
         }
     }, [tenants.data]);
 
     useEffect(() => {
-        if (selectedEventSequence && selectedMicroservice && selectedTenant) {
+        if (selectedEventSequence && selectedTenant) {
             refreshEvents(getFindForArguments());
         }
-    }, [selectedEventSequence, selectedMicroservice, selectedTenant]);
-
-    useEffect(() => {
-        if (selectedMicroservice) {
-            refreshEventTypes({
-                microserviceId: selectedMicroservice.id
-            });
-        }
-    }, [selectedMicroservice]);
-
-    commandBarItems = [...commandBarItems, ...[
-        // {
-        //     key: 'timeline',
-        //     name: 'Timeline',
-        //     iconProps: { iconName: 'Timeline' },
-        //     onClick: () => {
-        //         toggleTimeline();
-        //         if (isFilterOpen) toggleFilter();
-        //     }
-        // },
-        // {
-        //     key: 'filter',
-        //     name: 'Filter',
-        //     iconProps: { iconName: 'QueryList' },
-        //     onClick: () => {
-        //         toggleFilter();
-        //         if (isTimelineOpen) toggleTimeline();
-        //     }
-        // },
-        {
-            key: 'eventSequences',
-            name: 'Event Sequences',
-            onRender: () => {
-                return (
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={eventSequenceOptions}
-                        selectedKey={selectedEventSequence?.id}
-                        onChange={(e, option) => {
-                            setSelectedEventSequence(eventSequences.data.find(_ => _.id == option!.key));
-                        }} />
-                );
-            }
-        },
-        {
-            key: 'microservice',
-            text: 'Microservice',
-            onRender: () => {
-                return (
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={microserviceOptions}
-                        selectedKey={selectedMicroservice?.id}
-                        onChange={(e, option) => {
-                            setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
-                        }} />
-                );
-            }
-        },
-        {
-            key: 'tenant',
-            text: 'Tenant',
-            onRender: () => {
-                return (
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={tenantOptions}
-                        selectedKey={selectedTenant?.id}
-                        onChange={(e, option) => {
-                            setSelectedTenant(tenants.data.find(_ => _.id == option!.key));
-                        }} />
-                );
-            }
-        },
-        {
-            key: 'run',
-            text: 'Run',
-            onClick: () => {
-                refreshEvents(getFindForArguments());
-            },
-            iconProps: { iconName: 'Play' }
-        }
-    ] as ICommandBarItemProps[]];
-
-    if (isTimelineOpen || isFilterOpen) {
-        commandBarItems[commandBarItems.length - 1].split = true;
-    }
-
-    if (isTimelineOpen) {
-        commandBarItems.push(
-            {
-                key: 'resetZoom',
-                text: 'Reset Zoom',
-
-                iconProps: { iconName: 'ZoomToFit' },
-                onClick: () => {
-                    // getChart().dispatchAction({
-                    //     type: 'dataZoom',
-                    //     start: 0,
-                    //     end: 100
-                    // });
-                }
-            }
-        );
-    }
+    }, [selectedEventSequence, selectedTenant]);
 
     const eventSelected = (item: any) => {
         if (item !== selectedEvent) {
@@ -253,7 +109,7 @@ export const EventSequences = () => {
 
     return (
         <>
-            <Stack style={{ height: '100%' }}>
+            <Stack direction="column" style={{ height: '100%' }}>
                 {/* <Stack.Item>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">
@@ -263,16 +119,66 @@ export const EventSequences = () => {
                         <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
                     </Stack>
                 </Stack.Item> */}
-                <Stack.Item>
-                    <CommandBar items={commandBarItems} />
-                </Stack.Item>
-                <Stack.Item>
+                {/* <CommandBar items={commandBarItems} /> */}
+                <Toolbar>
+                    <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
+                        <InputLabel>Sequence</InputLabel>
+                        <Select
+                            label="Sequence"
+                            autoWidth
+                            value={selectedEventSequence?.id || ''}
+                            onChange={e => setSelectedEventSequence(eventSequences.data.find(_ => _.id == e.target.value))}>
+
+                            {eventSequences.data.map(sequence => {
+                                return (
+                                    <MenuItem key={sequence.id} value={sequence.id}>{sequence.name}</MenuItem>
+                                );
+                            })}
+                        </Select>
+                    </FormControl>
+
+                    <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
+                        <InputLabel>Tenant</InputLabel>
+                        <Select
+                            label="Tenant"
+                            autoWidth
+                            value={selectedTenant?.id || ''}
+                            onChange={e => setSelectedTenant(tenants.data.find(_ => _.id == e.target.value))}>
+
+                            {tenants.data.map(tenant => {
+                                return (
+                                    <MenuItem key={tenant.id} value={tenant.id}>{tenant.name}</MenuItem>
+                                );
+                            })}
+                        </Select>
+                    </FormControl>
+
+
+                    <Button startIcon={<icons.Timeline />} onClick={() => {
+                        toggleTimeline();
+                        if (isFilterOpen) toggleFilter();
+                    }}>Timeline</Button>
+                    <Button startIcon={<icons.FilterAlt />} onClick={() => {
+                        toggleFilter();
+                        if (isTimelineOpen) toggleTimeline();
+                    }}>Filter</Button>
+                    <Button startIcon={<icons.PlayArrow />} onClick={() => refreshEvents(getFindForArguments())}>Run</Button>
+
+                    {isTimelineOpen &&
+                        <Button startIcon={<icons.ZoomOutMap />} onClick={() => {
+                        }}>Reset Zoom</Button>}
+
+
+
+                </Toolbar>
+                <div>
                     {isTimelineOpen && <EventHistogram eventLog={selectedEventSequence!.id} />}
                     {isFilterOpen && <FilterBuilder />}
-                </Stack.Item>
-                <Stack.Item grow={1}>
+                </div>
+                <div>
+
                     <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected} />
-                </Stack.Item>
+                </div>
             </Stack>
             <Panel
                 isLightDismiss

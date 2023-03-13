@@ -6,6 +6,10 @@ import { NavigationPage } from '../Components/Navigation/NavigationPage';
 import * as icons from '@mui/icons-material';
 import { NavigationItem, NavigationButton } from '../Components/Navigation';
 import { EventTypes } from './EventTypes';
+import { FailedPartitions } from './FailedPartitions';
+import { Observers } from './Observers';
+import { Projections } from './Projections';
+import { EventSequences } from './EventSequences';
 
 export const EventStore = () => {
     const [microservices] = AllMicroservices.use();
@@ -21,6 +25,26 @@ export const EventStore = () => {
                 icon: <icons.DataObject />,
                 targetPath: 'types',
                 content: <EventTypes />
+            }, {
+                title: 'Sequences',
+                icon: <icons.ErrorOutline />,
+                targetPath: 'sequences',
+                content: <EventSequences />
+            }, {
+                title: 'Failed partitions',
+                icon: <icons.ErrorOutline />,
+                targetPath: 'failed-partitions',
+                content: <FailedPartitions />
+            }, {
+                title: 'Observers',
+                icon: <icons.LoupeOutlined />,
+                targetPath: 'observers',
+                content: <Observers />
+            }, {
+                title: 'Projections',
+                icon: <icons.Mediation />,
+                targetPath: 'projections',
+                content: <Projections />
             }]
         } as NavigationItem;
     });
