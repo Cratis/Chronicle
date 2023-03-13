@@ -2,21 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import {
-    CommandBar,
-    ICommandBarItemProps,
-    Dropdown,
-    IDropdownOption,
     IDropdownStyles,
     Label,
-    Stack,
     Selection,
-    SelectionMode
+    SelectionMode,
+    Panel,
+    TextField
 } from '@fluentui/react';
-import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
 import { useEffect, useState, useMemo } from 'react';
-import { Microservice } from 'API/configuration/microservices/Microservice';
-import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
-import { IColumn, Panel, TextField } from '@fluentui/react';
 import { AllFailedPartitions } from 'API/events/store/failed-partitions/AllFailedPartitions';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
@@ -25,148 +18,79 @@ import { useBoolean } from '@fluentui/react-hooks';
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/cratis-applications-frontend/queries';
+import { useRouteParams } from './RouteParams';
+import { Box, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar } from '@mui/material';
+import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid';
 
 
 const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
 
 let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
-const columns: IColumn[] = [
+const columns: GridColDef[] = [
     {
-        key: 'observerId',
-        name: 'Observer Id',
-        fieldName: 'observerId',
-        minWidth: 250,
-        maxWidth: 250,
+        headerName: 'Observer Id',
+        field: 'observerId',
+        width: 250
     },
     {
-        key: 'observerName',
-        name: 'Observer Name',
-        fieldName: 'observerName',
-        minWidth: 250,
-        maxWidth: 250,
+        headerName: 'Observer Name',
+        field: 'observerName',
+        width: 250
     },
     {
-        key: 'attempts',
-        name: 'Attempts',
-        fieldName: 'numberOfAttemptsOnSinceInitialized',
-        minWidth: 100,
-        maxWidth: 100,
+        headerName: 'Attempts',
+        field: 'numberOfAttemptsOnSinceInitialized',
+        width: 100
     },
     {
-        key: 'partition',
-        name: 'Partition',
-        fieldName: 'partition',
-        minWidth: 250,
-        maxWidth: 250,
+        headerName: 'Partition',
+        field: 'partition',
+        width: 250
     },
     {
-        key: 'sequenceNumber',
-        name: 'Sequence Number',
-        fieldName: 'currentError',
-        minWidth: 120,
-        maxWidth: 120,
+        headerName: 'Sequence Number',
+        field: 'currentError',
+        width: 120
     },
     {
-        key: 'sequence',
-        name: 'Event Sequence',
-        fieldName: 'eventSequenceId',
-        minWidth: 120,
-        maxWidth: 120,
-        onRender: (item: RecoverFailedPartitionState) => {
-            return (
-                <>{eventSequences.data.find(_ => _.id == item.eventSequenceId)?.name ?? item.id}</>
-            );
+        headerName: 'Event Sequence',
+        field: 'eventSequenceId',
+        width: 120,
+        valueGetter: (params: GridValueGetterParams<RecoverFailedPartitionState>) => {
+            return eventSequences.data.find(_ => _.id == params.row.eventSequenceId)?.name ?? params.row.id;
         }
     },
     {
-        key: 'occurred',
-        name: 'Occurred',
-        fieldName: 'initialPartitionFailedOn',
-        minWidth: 250,
-        maxWidth: 250,
-        onRender: (item: RecoverFailedPartitionState) => {
-            return (
-                <>{item.initialPartitionFailedOn ? new Date(item.initialPartitionFailedOn).toLocaleString() : ''}</>
-            );
+        headerName: 'Occurred',
+        field: 'initialPartitionFailedOn',
+        width: 250,
+        valueGetter: (params: GridValueGetterParams<RecoverFailedPartitionState>) => {
+            return params.row.initialPartitionFailedOn ? params.row.initialPartitionFailedOn.toLocaleString() : '';
         }
     }
 ];
 
 export const FailedPartitions = () => {
+    const { microserviceId } = useRouteParams();
+
     const [es] = AllEventSequences.use();
     eventSequences = es;
-
-    const [microservices] = AllMicroservices.use();
     const [tenants] = AllTenants.use();
-    const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
     const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [selectedItem, setSelectedItem] = useState<RecoverFailedPartitionState>();
 
     const [failedPartitions] = AllFailedPartitions.use({
-        microserviceId: selectedMicroservice?.id ?? undefined!,
+        microserviceId: microserviceId,
         tenantId: selectedTenant?.id ?? undefined!
     });
-
-    const microserviceOptions = microservices.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    const tenantOptions = tenants.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    useEffect(() => {
-        if (microservices.data.length > 0) {
-            setSelectedMicroservice(microservices.data[0]);
-        }
-    }, [microservices.data]);
 
     useEffect(() => {
         if (tenants.data.length > 0) {
             setSelectedTenant(tenants.data[0]);
         }
     }, [tenants.data]);
-
-    const commandBarItems: ICommandBarItemProps[] = [
-        {
-            key: 'microservice',
-            text: 'Microservice',
-            onRender: () => {
-                return (
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={microserviceOptions}
-                        selectedKey={selectedMicroservice?.id}
-                        onChange={(e, option) => {
-                            setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
-                        }} />
-                );
-            }
-        },
-        {
-            key: 'tenant',
-            text: 'Tenant',
-            onRender: () => {
-                return (
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={tenantOptions}
-                        selectedKey={selectedTenant?.id}
-                        onChange={(e, option) => {
-                            setSelectedTenant(tenants.data.find(_ => _.id == option!.key));
-                        }} />
-                );
-            }
-        }
-    ];
 
     const closePanel = () => {
         setSelectedItem(undefined);
@@ -189,14 +113,34 @@ export const FailedPartitions = () => {
 
     return (
         <>
-            <Stack style={{ height: '100%' }}>
-                <CommandBar items={commandBarItems} />
-                <ScrollableDetailsList
-                    columns={columns}
-                    items={failedPartitions.data}
-                    selection={selection}
+            <Stack direction="column" style={{ height: '100%' }}>
+                <Toolbar>
+                    <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
+                        <InputLabel>Tenant</InputLabel>
+                        <Select
+                            label="Tenant"
+                            autoWidth
+                            value={selectedTenant?.id || ''}
+                            onChange={e => setSelectedTenant(tenants.data.find(_ => _.id == e.target.value))}>
 
-                />
+                            {tenants.data.map(tenant => {
+                                return (
+                                    <MenuItem key={tenant.id} value={tenant.id}>{tenant.name}</MenuItem>
+                                );
+                            })}
+                        </Select>
+                    </FormControl>
+                </Toolbar>
+
+                <Box sx={{ height: 400 }}>
+                    <DataGrid
+                        columns={columns}
+                        filterMode="client"
+                        sortingMode="client"
+                        getRowId={row => row.id}
+                        rows={failedPartitions.data}
+                    />
+                </Box>
             </Stack>
             <Panel
                 isLightDismiss

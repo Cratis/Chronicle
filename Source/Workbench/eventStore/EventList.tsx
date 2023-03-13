@@ -41,7 +41,7 @@ export const EventList = (props: EventListProps) => {
             field: 'context.occurred',
             width: 300,
             valueGetter: (params: GridValueGetterParams<AppendedEvent>) => {
-                return new Date(params.row.context.occurred).toLocaleString();
+                return params.row.context.occurred.toLocaleString();
             }
         }
     ];

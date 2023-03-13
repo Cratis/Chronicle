@@ -72,8 +72,6 @@ export const EventSequences = () => {
         } as IDropdownOption;
     });
 
-    let commandBarItems: ICommandBarItemProps[] = [];
-
     useEffect(() => {
         if (eventSequences.data.length > 0) {
             setSelectedEventSequence(eventSequences.data[0]);
@@ -185,7 +183,7 @@ export const EventSequences = () => {
                 isOpen={isDetailsPanelOpen}
                 onDismiss={closePanel}
                 headerText={selectedEventType?.name}>
-                <TextField label="Occurred" disabled defaultValue={new Date(selectedEvent?.context.occurred || new Date().toISOString()).toLocaleString()} />
+                <TextField label="Occurred" disabled defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
                 {
                     (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ => <TextField key={_} label={_} disabled defaultValue={selectedEvent!.content[_]} />)
                 }

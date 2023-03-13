@@ -2,12 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import {
-    DetailsList,
-    IColumn,
     IDropdownStyles,
     Pivot,
     PivotItem,
-    SelectionMode,
     Stack
 } from '@fluentui/react';
 
