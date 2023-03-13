@@ -87,6 +87,6 @@ export const EventHistogram = (props: EventHistogramProps) => {
     }, []);
 
     return (
-        <div style={{ width: 'calc(100%)'}} ref={chartContainer} />
+        <div style={{ width: 'calc(100%);', height: 300}} ref={chartContainer} />
     );
 };
