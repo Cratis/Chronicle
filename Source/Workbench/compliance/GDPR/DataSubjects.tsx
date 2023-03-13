@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ModalButtons, ScrollableDetailsList, useModal, ModalResult, IModalProps } from '@aksio/cratis-fluentui';
-import { CommandBar, IColumn, ICommandBarItemProps, IconButton, Panel, SearchBox, Selection, SelectionMode, Stack, TextField } from '@fluentui/react';
+import { ModalButtons, useModal, ModalResult, IModalProps } from '@aksio/cratis-fluentui';
+import { CommandBar, ICommandBarItemProps, Panel, Selection, SelectionMode, TextField } from '@fluentui/react';
 import { AllPeople } from 'API/compliance/gdpr/people/AllPeople';
 import { useMemo, useState } from 'react';
 import { Person } from 'API/compliance/gdpr/people/Person';
@@ -11,30 +11,26 @@ import { SearchForPeople } from '../../API/compliance/gdpr/people/SearchForPeopl
 import { CreateAndRegisterKeyFor } from '../../API/compliance/gdpr/pii/CreateAndRegisterKeyFor';
 import { AddKeyDialog } from './AddKeyDialog';
 import { DeletePIIForPerson } from '../../API/compliance/gdpr/pii/DeletePIIForPerson';
+import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
+import { Box, Stack } from '@mui/material';
 
-const columns: IColumn[] = [
+const columns: GridColDef[] = [
     {
-        key: 'socialSecurityNumber',
-        name: 'Social Security Number',
-        fieldName: 'socialSecurityNumber',
-        minWidth: 150,
-        maxWidth: 150
+        headerName: 'Social Security Number',
+        field: 'socialSecurityNumber',
+        width: 150,
     },
     {
-        key: 'firstName',
-        name: 'First Name',
-        fieldName: 'firstName',
-        minWidth: 200
+        headerName: 'First Name',
+        field: 'firstName',
+        width: 200
     },
     {
-        key: 'lastName',
-        name: 'Last Name',
-        fieldName: 'lastName',
-        minWidth: 200
+        headerName: 'Last Name',
+        field: 'lastName',
+        width: 200
     }
 ];
-
-
 
 export const DataSubjects = () => {
     const [searching, setSearching] = useState(false);
@@ -126,18 +122,29 @@ export const DataSubjects = () => {
             items: people.data as any
         }), [people.data]);
 
+
+    const personSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
+        const selectedItems = selectionModel.map((id => data.find(person => person.id == id))) as Person[];
+        if (selectedItems.length > 0) {
+            setSelectedPerson(selectedItems[0]);
+        }
+    };
+
     return (
         <>
-            <Stack style={{ height: '100%' }}>
-                <Stack.Item>
-                    <CommandBar items={commandBarItems} />
-                </Stack.Item>
-                <Stack.Item>
-                    <ScrollableDetailsList
+            <Stack direction="column" style={{ height: '100%' }}>
+                <CommandBar items={commandBarItems} />
+
+                <Box sx={{ height: 400 }}>
+                    <DataGrid
                         columns={columns}
-                        items={data}
-                        selection={selection} />
-                </Stack.Item>
+                        filterMode="server"
+                        sortingMode="server"
+                        getRowId={(row: Person) => row.id}
+                        onRowSelectionModelChange={personSelected}
+                        rows={data}
+                    />
+                </Box>
             </Stack>
 
             {isDetailsPanelOpen &&
