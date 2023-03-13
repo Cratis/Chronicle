@@ -3,7 +3,6 @@
 
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
-import { default as styles } from './EventHistogram.module.scss';
 import { Histogram } from 'API/events/store/sequence/Histogram';
 
 type EChartsOption = echarts.EChartsOption;
@@ -88,6 +87,6 @@ export const EventHistogram = (props: EventHistogramProps) => {
     }, []);
 
     return (
-        <div className={styles.eventSamplesContainer} ref={chartContainer} />
+        <div style={{ width: 'calc(100%)'}} ref={chartContainer} />
     );
 };

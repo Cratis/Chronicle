@@ -3,72 +3,60 @@
 
 import { useMemo, useRef, useEffect } from 'react';
 
-import {
-    IColumn,
-    Selection,
-    SelectionMode,
-} from '@fluentui/react';
-
-import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
+import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
+import { Box } from '@mui/material';
 
-export type EventSelected = (item: any) => void;
+export type EventSelected = (item: AppendedEvent) => void;
 
 export interface EventListProps {
-    items: any[];
+    items: AppendedEvent[];
     eventTypes: EventTypeInformation[];
     onEventSelected?: EventSelected;
 }
 
 export const EventList = (props: EventListProps) => {
-    const eventListColumns: IColumn[] = [
+    const eventListColumns: GridColDef[] = [
 
         {
-            key: 'sequence',
-            name: 'Sequence',
-            minWidth: 100,
-            maxWidth: 100,
-            onRender: (item: AppendedEvent) => {
-                return (
-                    <span>{item.metadata.sequenceNumber}</span>
-                );
+            headerName: 'Sequence',
+            field: 'metadata.sequenceNumber',
+            width: 100,
+            valueGetter: (params: GridValueGetterParams<AppendedEvent>) => {
+                return params.row.metadata.sequenceNumber;
             }
         },
         {
-            key: 'name',
-            name: 'Name',
-            minWidth: 200,
-            onRender: (item: AppendedEvent) => {
-                const eventType = props.eventTypes.find(_ => _.identifier == item.metadata.type.id);
-                return (
-                    <span>{eventType?.name || '[n/a]'}</span>
-                );
+            headerName: 'Name',
+            field: 'metadata.type',
+            width: 300,
+            valueGetter: (params: GridValueGetterParams<AppendedEvent>) => {
+                const eventType = props.eventTypes.find(_ => _.identifier == params.row.metadata.type.id);
+                return eventType?.name || '[n/a]';
             }
         },
         {
-            key: 'occurred',
-            name: 'Occurred',
-            minWidth: 300,
-            onRender: (item: AppendedEvent) => {
-                return (
-                    <span>{new Date(item.context.occurred).toLocaleString()}</span>
-                );
+            headerName: 'Occurred',
+            field: 'context.occurred',
+            width: 300,
+            valueGetter: (params: GridValueGetterParams<AppendedEvent>) => {
+                return new Date(params.row.context.occurred).toLocaleString();
             }
         }
     ];
 
-    const selection = useMemo(
-        () => new Selection({
-            selectionMode: SelectionMode.single,
-            onSelectionChanged: () => {
-                const selected = selection.getSelection();
-                if (selected.length === 1) {
-                    props.onEventSelected?.(selected[0]);
-                }
-            },
-            items: props.items
-        }), [props.items]);
+    // const selection = useMemo(
+    //     () => new Selection({
+    //         selectionMode: SelectionMode.single,
+    //         onSelectionChanged: () => {
+    //             const selected = selection.getSelection();
+    //             if (selected.length === 1) {
+    //                 props.onEventSelected?.(selected[0]);
+    //             }
+    //         },
+    //         items: props.items
+    //     }), [props.items]);
 
     useEffect(() => {
         const detailsList = document.querySelector('.ms-DetailsList.eventList');
@@ -77,11 +65,23 @@ export const EventList = (props: EventListProps) => {
         }
     }, []);
 
+    const eventTypeSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
+        selectionModel.forEach((selected) => {
+            const selectedEvent = props.items.find(_ => _.metadata.sequenceNumber == selected);
+            props.onEventSelected?.(selectedEvent!);
+        });
+    };
+
     return (
-        <ScrollableDetailsList
-            columns={eventListColumns}
-            selection={selection}
-            items={props.items}
-        />
+        <Box sx={{ height: 400 }}>
+            <DataGrid
+                columns={eventListColumns}
+                filterMode="server"
+                sortingMode="server"
+                getRowId={(row) => row.metadata.sequenceNumber}
+                onRowSelectionModelChange={eventTypeSelected}
+                rows={props.items}
+            />
+        </Box>
     );
 };
