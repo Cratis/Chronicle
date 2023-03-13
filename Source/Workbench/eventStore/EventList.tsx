@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useMemo, useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
@@ -45,18 +45,6 @@ export const EventList = (props: EventListProps) => {
             }
         }
     ];
-
-    // const selection = useMemo(
-    //     () => new Selection({
-    //         selectionMode: SelectionMode.single,
-    //         onSelectionChanged: () => {
-    //             const selected = selection.getSelection();
-    //             if (selected.length === 1) {
-    //                 props.onEventSelected?.(selected[0]);
-    //             }
-    //         },
-    //         items: props.items
-    //     }), [props.items]);
 
     useEffect(() => {
         const detailsList = document.querySelector('.ms-DetailsList.eventList');
