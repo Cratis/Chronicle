@@ -1,143 +1,66 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { AllProjections, AllProjectionsArguments } from 'API/events/store/projections/AllProjections';
 import { Projection } from 'API/events/store/projections/Projection';
+import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
+import { useRouteParams } from './RouteParams';
+import { Box, Stack } from '@mui/material';
 
-import {
-    DetailsList,
-    Dropdown,
-    IColumn,
-    IDetailsListStyles,
-    IDropdownOption,
-    IDropdownStyles,
-    Pivot,
-    PivotItem,
-    Selection,
-    SelectionMode,
-    Stack
-} from '@fluentui/react';
-import { Collections } from './Collections';
-import { useEffect } from 'react';
-import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
-import { Microservice } from 'API/configuration/microservices/Microservice';
-
-const gridStyles: Partial<IDetailsListStyles> = {
-    root: {
-        height: '100%',
-        overflowX: 'scroll',
-        selectors: {
-            '& [role=grid]': {
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'start'
-            },
-        },
-    },
-    headerWrapper: {
-        flex: '0 0 auto',
-    },
-    contentWrapper: {
-        flex: '1 1 auto',
-        overflowX: 'hidden',
-        overflowY: 'auto',
-        height: '300px'
-    },
-};
-
-const columns: IColumn[] = [
+const columns: GridColDef[] = [
     {
-        key: 'id',
-        name: 'Id',
-        fieldName: 'id',
-        minWidth: 250,
-        maxWidth: 250,
+        headerName: 'Id',
+        field: 'id',
+        width: 250
     },
     {
-        key: 'name',
-        name: 'Name',
-        fieldName: 'name',
-        minWidth: 200,
-        isResizable: true
+        headerName: 'Name',
+        field: 'name',
+        width: 200,
+        resizable: true
     },
     {
-        key: 'model-name',
-        name: 'Model Name',
-        fieldName: 'modelName',
-        minWidth: 200,
-        isResizable: true
+        headerName: 'Model Name',
+        field: 'modelName',
+        width: 200,
+        resizable: true
     },
 ];
 
-const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
-
 export const Projections = () => {
-    const [microservices] = AllMicroservices.use();
-    const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
+    const { microserviceId } = useRouteParams();
 
     const getAllProjectionsArguments = () => {
         return {
-            microserviceId: selectedMicroservice?.id || undefined!
+            microserviceId
         } as AllProjectionsArguments;
     };
 
     const [projections, refreshProjections] = AllProjections.use(getAllProjectionsArguments());
     const [selected, setSelected] = useState<Projection>();
 
-    const microserviceOptions = microservices.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    useEffect(() => {
-        if (microservices.data.length > 0) {
-            setSelectedMicroservice(microservices.data[0]);
+    const projectionSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
+        const selectedItems = selectionModel.map(_ => projections.data.find(__ => __.id == _)) as Projection[];
+        if (selectedItems.length > 0) {
+            setSelected(selectedItems[0]);
         }
-    }, [microservices.data]);
-
-    useEffect(() => {
-        if (selectedMicroservice) {
-            refreshProjections(getAllProjectionsArguments());
-        }
-    }, [selectedMicroservice]);
-
-    const selection = useMemo(
-        () => new Selection({
-            selectionMode: SelectionMode.single,
-            onSelectionChanged: () => {
-                const selected = selection.getSelection();
-                if (selected.length === 1) {
-                    setSelected(selected[0] as Projection);
-                } else {
-                    setSelected(undefined);
-                }
-            },
-        }), [projections.data]);
+    };
 
     return (
         <Stack style={{ height: '100%' }}>
-            <Stack.Item>
-                <Dropdown
-                    styles={commandBarDropdownStyles}
-                    options={microserviceOptions}
-                    selectedKey={selectedMicroservice?.id}
-                    onChange={(e, option) => {
-                        setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
-                    }} />
 
-            </Stack.Item>
-            <Stack.Item grow={1}>
-                <DetailsList
-                    items={projections.data}
+            <Box sx={{ height: 400 }}>
+                <DataGrid
                     columns={columns}
-                    selection={selection}
-                    styles={gridStyles} />
-            </Stack.Item>
-            {selected &&
+                    filterMode="client"
+                    sortingMode="client"
+                    getRowId={row => row.id}
+                    rows={projections.data}
+                    onRowSelectionModelChange={projectionSelected} />
+            </Box>
+
+            {/* {selected &&
                 <Stack.Item grow={1}>
                     <Pivot linkFormat="links">
                         <PivotItem headerText="Collections">
@@ -145,7 +68,7 @@ export const Projections = () => {
                         </PivotItem>
                     </Pivot>
                 </Stack.Item>
-            }
-        </Stack >
+            } */}
+        </Stack>
     );
 };

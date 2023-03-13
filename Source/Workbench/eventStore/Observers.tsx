@@ -2,28 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useEffect, useMemo } from 'react';
-import { AllMicroservices } from 'API/configuration/microservices/AllMicroservices';
-import { Microservice } from 'API/configuration/microservices/Microservice';
 import { AllObservers } from 'API/events/store/observers/AllObservers';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllObserversArguments } from 'API/events/store/observers/AllObservers';
-import {
-    CommandBar,
-    Dropdown,
-    IColumn,
-    ICommandBarItemProps,
-    IDropdownOption,
-    IDropdownStyles,
-    Selection,
-    SelectionMode,
-    Stack
-} from '@fluentui/react';
-import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
 import { ObserverState } from 'API/events/store/observers/ObserverState';
 import { Rewind } from 'API/events/store/observers/Rewind';
-
-const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
+import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
+import { Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar } from '@mui/material';
+import { useRouteParams } from './RouteParams';
+import * as icons from '@mui/icons-material';
 
 const observerRunningStates: { [key: number]: string; } = {
     0: 'Unknown',
@@ -47,85 +35,56 @@ const observerTypes: { [key: number]: string; } = {
     3: 'Inbox'
 };
 
-const columns: IColumn[] = [
+const columns: GridColDef[] = [
     {
-        key: 'id',
-        name: 'Id',
-        fieldName: 'observerId',
-        minWidth: 250,
-        maxWidth: 250,
+        headerName: 'Id',
+        field: 'observerId',
+        width: 250
     },
     {
-        key: 'name',
-        name: 'Name',
-        fieldName: 'name',
-        minWidth: 300,
+        headerName: 'Name',
+        field: 'name',
+        width: 300,
     },
     {
-        key: 'type',
-        name: 'Type',
-        minWidth: 200,
-        onRender: (item: ObserverState) => {
-            return (
-                <>{observerTypes[item.type as number]}</>
-            );
+        headerName: 'Type',
+        field: 'type',
+        width: 200,
+        valueGetter: (params: GridValueGetterParams<ObserverState>) => {
+            return observerTypes[params.row.type as number];
         }
     },
     {
-        key: 'running-state',
-        name: 'State',
-        minWidth: 200,
-        onRender: (item: ObserverState) => {
-            return (
-                <>{observerRunningStates[item.runningState as number]}</>
-            );
+        headerName: 'State',
+        field: 'runningState',
+        width: 200,
+        valueGetter: (params: GridValueGetterParams<ObserverState>) => {
+            return observerRunningStates[params.row.runningState as number];
         }
     },
     {
-        key: 'next-event',
-        name: 'Next Event',
-        fieldName: 'nextEventSequenceNumber',
-        minWidth: 200,
+        headerName: 'Next Event',
+        field: 'nextEventSequenceNumber',
+        width: 200,
     },
 ];
 
 export const Observers = () => {
-    const [microservices] = AllMicroservices.use();
-    const [tenants] = AllTenants.use();
+    const { microserviceId } = useRouteParams();
 
-    const [selectedMicroservice, setSelectedMicroservice] = useState<Microservice>();
+    const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
 
     const [selectedObserver, setSelectedObserver] = useState<ObserverState>();
 
     const getAllObserversArguments = () => {
         return {
-            microserviceId: selectedMicroservice?.id || undefined,
+            microserviceId: microserviceId,
             tenantId: selectedTenant?.id || undefined
         } as AllObserversArguments;
     };
 
     const [observers] = AllObservers.use(getAllObserversArguments());
-
-    const microserviceOptions = microservices.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    const tenantOptions = tenants.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    useEffect(() => {
-        if (microservices.data.length > 0) {
-            setSelectedMicroservice(microservices.data[0]);
-        }
-    }, [microservices.data]);
 
     useEffect(() => {
         if (tenants.data.length > 0) {
@@ -133,75 +92,59 @@ export const Observers = () => {
         }
     }, [tenants.data]);
 
-    const selection = useMemo(
-        () => new Selection({
-            selectionMode: SelectionMode.single,
-            onSelectionChanged: () => {
-                const selected = selection.getSelection();
-                if (selected.length == 1) {
-                    setSelectedObserver(selected[0] as ObserverState);
-                }
-            }
-        }), [observers.data]);
-
     const [rewindCommand, setRewindCommandVales] = Rewind.use();
 
-    const commandBarItems: ICommandBarItemProps[] = [
-        {
-            key: 'microservice',
-            text: 'Microservice',
-            onRender: () => {
-                return (
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={microserviceOptions}
-                        selectedKey={selectedMicroservice?.id}
-                        onChange={(e, option) => {
-                            setSelectedMicroservice(microservices.data.find(_ => _.id == option!.key));
-                        }} />
-                );
-            }
-        },
-        {
-            key: 'tenant',
-            text: 'Tenant',
-            onRender: () => {
-                return (
-                    <Dropdown
-                        styles={commandBarDropdownStyles}
-                        options={tenantOptions}
-                        selectedKey={selectedTenant?.id}
-                        onChange={(e, option) => {
-                            setSelectedTenant(tenants.data.find(_ => _.id == option!.key));
-                        }} />
-                );
-            }
-        },
-        {
-            key: 'rewind',
-            text: 'Rewind',
-            disabled: !selectedObserver,
-            onClick: () => {
-                setRewindCommandVales({
-                    observerId: selectedObserver?.observerId,
-                    microserviceId: selectedMicroservice?.id,
-                    tenantId: selectedTenant?.id
-                });
-                rewindCommand.execute();
-            },
-            iconProps: { iconName: 'Rewind' }
+    const observerSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
+        const selectedItems = selectionModel.map(_ => observers.data.find(__ => __.id == _)) as ObserverState[];
+        if (selectedItems.length > 0) {
+            setSelectedObserver(selectedItems[0])
         }
-    ];
+    };
 
     return (
-        <Stack style={{ height: '100%' }}>
-            <CommandBar items={commandBarItems} />
+        <Stack direction="column" style={{ height: '100%' }}>
+            <Toolbar>
+                <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
+                    <InputLabel>Tenant</InputLabel>
+                    <Select
+                        label="Tenant"
+                        autoWidth
+                        value={selectedTenant?.id || ''}
+                        onChange={e => setSelectedTenant(tenants.data.find(_ => _.id == e.target.value))}>
 
-            <ScrollableDetailsList
-                columns={columns}
-                selection={selection}
-                items={observers.data}
-            />
+                        {tenants.data.map(tenant => {
+                            return (
+                                <MenuItem key={tenant.id} value={tenant.id}>{tenant.name}</MenuItem>
+                            );
+                        })}
+                    </Select>
+                </FormControl>
+
+                {selectedObserver &&
+                    <Button
+                        startIcon={<icons.Replay />}
+                        onClick={() => {
+                            setRewindCommandVales({
+                                observerId: selectedObserver?.observerId,
+                                microserviceId: microserviceId,
+                                tenantId: selectedTenant?.id
+                            });
+                            rewindCommand.execute();
+                        }}>Rewind</Button>
+                }
+
+            </Toolbar>
+
+            <Box sx={{ height: 'calc(100%)' }}>
+                <DataGrid
+                    columns={columns}
+                    filterMode="client"
+                    sortingMode="client"
+                    getRowId={row => row.id}
+                    rows={observers.data}
+                    onRowSelectionModelChange={observerSelected}
+                />
+            </Box>
         </Stack>
     );
 };
