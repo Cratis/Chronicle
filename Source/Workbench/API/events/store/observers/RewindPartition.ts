@@ -6,7 +6,7 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind/{{tenantId}}/{{eventSourceId}}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind/{{tenantId}}/{{eventSourceId}}');
 
 export interface IRewindPartition {
     microserviceId?: string;
@@ -25,7 +25,7 @@ export class RewindPartitionValidator extends CommandValidator {
 }
 
 export class RewindPartition extends Command<IRewindPartition> implements IRewindPartition {
-    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind/{{tenantId}}/{{eventSourceId}}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/observers/{{observerId}}/rewind/{{tenantId}}/{{eventSourceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new RewindPartitionValidator();
 
