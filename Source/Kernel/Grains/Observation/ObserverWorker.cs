@@ -17,8 +17,12 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public abstract class ObserverWorker : Grain
 {
+    #pragma warning disable CA1051, SA1600
+    // TODO: We will have to handle the rewinding as a worker grain.
+    protected bool _rewindingPartition;
+    #pragma warning restore // CA1051
     readonly ILogger<ObserverWorker> _logger;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IPersistentState<ObserverState> _observerState;
     IObserverSupervisor? _supervisor;
@@ -83,9 +87,9 @@ public abstract class ObserverWorker : Grain
     };
 
     /// <summary>
-    /// Gets the <see cref="IEventSequenceStorageProvider"/> in the correct context.
+    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
     /// </summary>
-    protected IEventSequenceStorageProvider EventSequenceStorageProvider
+    protected IEventSequenceStorage EventSequenceStorageProvider
     {
         get
         {
@@ -102,12 +106,12 @@ public abstract class ObserverWorker : Grain
     /// Initializes a new instance of the <see cref="ObserverWorker"/> class.
     /// </summary>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
-    /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
+    /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorage"/> for working with the underlying event sequence.</param>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     protected ObserverWorker(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
         ILogger<ObserverWorker> logger)
     {
@@ -148,7 +152,8 @@ public abstract class ObserverWorker : Grain
                 return;
             }
 
-            if (@event.Metadata.SequenceNumber >= State.NextEventSequenceNumber)
+            // TODO: We will have to handle the rewinding as a worker grain.
+            if (@event.Metadata.SequenceNumber >= State.NextEventSequenceNumber || _rewindingPartition)
             {
                 if (!State.IsPartitionFailed(@event.Context.EventSourceId))
                 {

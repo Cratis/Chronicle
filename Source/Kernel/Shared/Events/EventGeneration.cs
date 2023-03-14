@@ -22,6 +22,11 @@ public record EventGeneration(uint Value) : ConceptAs<uint>(Value)
     public static readonly EventGeneration First = new(FirstValue);
 
     /// <summary>
+    /// Gets the definition of the first generation.
+    /// </summary>
+    public static readonly EventGeneration Unspecified = new(uint.MaxValue);
+
+    /// <summary>
     /// /// Implicitly convert from <see cref="uint"/> to <see cref="EventGeneration"/>.
     /// </summary>
     /// <param name="generation"><see cref="uint"/> to convert from.</param>

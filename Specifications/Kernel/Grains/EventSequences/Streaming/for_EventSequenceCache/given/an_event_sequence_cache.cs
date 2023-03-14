@@ -13,7 +13,7 @@ public class an_event_sequence_cache : Specification
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
     protected Mock<IExecutionContextManager> execution_context_manager;
-    protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
+    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
 
     protected EventSequenceCacheForSpecs cache;
 

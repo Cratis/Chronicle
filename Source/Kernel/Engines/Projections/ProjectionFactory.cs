@@ -23,7 +23,7 @@ public class ProjectionFactory : IProjectionFactory
     readonly IModelPropertyExpressionResolvers _propertyMapperExpressionResolvers;
     readonly IKeyExpressionResolvers _keyExpressionResolvers;
     readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly IEventSequenceStorageProvider _eventProvider;
+    readonly IEventSequenceStorage _eventProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionFactory"/> class.
@@ -31,12 +31,12 @@ public class ProjectionFactory : IProjectionFactory
     /// <param name="propertyMapperExpressionResolvers"><see cref="IModelPropertyExpressionResolvers"/> for resolving expressions for properties.</param>
     /// <param name="keyExpressionResolvers"><see cref="IKeyExpressionResolvers"/> for resolving keys.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from expando objects.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for providing events from the event store.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for providing events from the event store.</param>
     public ProjectionFactory(
         IModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
         IKeyExpressionResolvers keyExpressionResolvers,
         IExpandoObjectConverter expandoObjectConverter,
-        IEventSequenceStorageProvider eventProvider)
+        IEventSequenceStorage eventProvider)
     {
         _propertyMapperExpressionResolvers = propertyMapperExpressionResolvers;
         _keyExpressionResolvers = keyExpressionResolvers;

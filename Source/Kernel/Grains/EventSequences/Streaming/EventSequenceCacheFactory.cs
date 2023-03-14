@@ -14,18 +14,18 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 public class EventSequenceCacheFactory : IEventSequenceCacheFactory
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<EventSequenceCache> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCacheFactory"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public EventSequenceCacheFactory(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         ILogger<EventSequenceCache> logger)
     {
         _executionContextManager = executionContextManager;
