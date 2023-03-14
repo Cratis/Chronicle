@@ -15,7 +15,7 @@ public class EventSequenceCacheForSpecs : EventSequenceCache
         TenantId tenantId,
         EventSequenceId eventSequenceId,
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         ILogger<EventSequenceCache> logger) : base(microserviceId, tenantId, eventSequenceId, executionContextManager, eventSequenceStorageProvider, logger)
     {
     }

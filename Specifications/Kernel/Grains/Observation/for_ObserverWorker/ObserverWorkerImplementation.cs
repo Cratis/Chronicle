@@ -29,7 +29,7 @@ public class ObserverWorkerImplementation : ObserverWorker
 
     public ObserverWorkerImplementation(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
         ILogger<ObserverWorker> logger)
         : base(executionContextManager, eventSequenceStorageProviderProvider, observerState, logger)

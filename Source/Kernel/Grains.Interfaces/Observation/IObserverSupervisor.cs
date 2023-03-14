@@ -57,6 +57,14 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     Task RewindPartition(EventSourceId partition);
 
     /// <summary>
+    /// Rewind the observer for a specific partition to a specific sequence number.
+    /// </summary>
+    /// <param name="partition">The partition to rewind.</param>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to rewind to.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber);
+
+    /// <summary>
     /// Try to resume the partition.
     /// </summary>
     /// <param name="partition">The partition to try to resume.</param>

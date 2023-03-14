@@ -18,7 +18,7 @@ public class a_catch_up_worker : GrainSpecification
     protected ObserverState state_on_write;
     protected CatchUp catch_up;
 
-    protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
+    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected Mock<IObserverSupervisor> supervisor;
     protected Mock<IObserverSubscriber> subscriber;
 

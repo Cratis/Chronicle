@@ -78,7 +78,7 @@ public class EventSequence : Controller
     }
 
     /// <summary>
-    /// Redact multiple events
+    /// Redact multiple events.
     /// </summary>
     /// <param name="microserviceId">The microservice to redact for.</param>
     /// <param name="eventSequenceId">The event sequence to redact for.</param>

@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Events;
 /// <summary>
 /// Represents the content of a redaction event.
 /// </summary>
-/// <param name="Reason">The reason for redaction</param>
+/// <param name="Reason">The reason for redaction.</param>
 /// <param name="OriginalEventType">The original type the redaction is for.</param>
 /// <param name="Occurred">The time the redaction occurred.</param>
 /// <param name="CausationId">The unique identifier of the cause.</param>
