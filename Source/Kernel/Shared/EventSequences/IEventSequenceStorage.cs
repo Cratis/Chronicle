@@ -9,7 +9,7 @@ namespace Aksio.Cratis.EventSequences;
 /// <summary>
 /// Defines a storage provider for the event sequence.
 /// </summary>
-public interface IEventSequenceStorageProvider
+public interface IEventSequenceStorage
 {
     /// <summary>
     /// Append a single event to the event store.
@@ -40,8 +40,8 @@ public interface IEventSequenceStorageProvider
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to redact from.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
     /// <param name="reason">Reason for redacting.</param>
-    /// <returns>Affected event type.</returns>
-    Task<EventType> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason);
+    /// <returns>Affected event.</returns>
+    Task<AppendedEvent> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.

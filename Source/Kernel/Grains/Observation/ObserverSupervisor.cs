@@ -24,7 +24,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </remarks>
 public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 {
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ObserverSupervisor> _logger;
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
@@ -48,7 +48,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ObserverSupervisor(
         [PersistentState(nameof(ObserverState), ObserverState.StorageProvider)] IPersistentState<ObserverState> observerState,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
         IExecutionContextManager executionContextManager,
         ILogger<ObserverSupervisor> logger) : base(executionContextManager, eventSequenceStorageProviderProvider, observerState, logger)
     {
@@ -171,6 +171,9 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
             }
         }
     }
+
+    /// <inheritdoc/>
+    public Task NotifyPartitionReplayComplete(EventSourceId eventSourceId, IEnumerable<FailedPartition> failedPartitions) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task NotifyFailedPartitionRecoveryComplete(EventSourceId partition, EventSequenceNumber lastProcessedEvent)

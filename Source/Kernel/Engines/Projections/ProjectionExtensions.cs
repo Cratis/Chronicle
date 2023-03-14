@@ -54,13 +54,13 @@ public static class ProjectionExtensions
     /// Resolve a join for events that has happened.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting the event in the past.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting the event in the past.</param>
     /// <param name="joinEventType">Type of event to be joined.</param>
     /// <param name="onModelProperty">The property on the model to join on.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
-        IEventSequenceStorageProvider eventProvider,
+        IEventSequenceStorage eventProvider,
         EventType joinEventType,
         PropertyPath onModelProperty)
     {

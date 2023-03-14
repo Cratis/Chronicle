@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;
 public class OutboxProjectionSink : IProjectionSink, IDisposable
 {
     readonly Model _model;
-    readonly IEventSequenceStorageProvider _eventSequenceStorageProvider;
+    readonly IEventSequenceStorage _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IGrainFactory _grainFactory;
@@ -39,13 +39,13 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
     /// Initializes a new instance of the <see cref="OutboxProjectionSink"/> class.
     /// </summary>
     /// <param name="model"><see cref="Model"/> the sink is for.</param>
-    /// <param name="eventSequenceStorageProvider">The <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="eventSequenceStorageProvider">The <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonSerializerOptions">The global serialization options.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     public OutboxProjectionSink(
         Model model,
-        IEventSequenceStorageProvider eventSequenceStorageProvider,
+        IEventSequenceStorage eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
         JsonSerializerOptions jsonSerializerOptions,
         IGrainFactory grainFactory)

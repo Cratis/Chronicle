@@ -16,18 +16,18 @@ namespace Aksio.Cratis.Kernel.Read.EventSequences;
 [Route("/api/events/store/{microserviceId}/{tenantId}/sequence/{eventSequenceId}")]
 public class EventSequence : Controller
 {
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
-    /// <param name="eventSequenceStorageProviderProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="eventSequenceStorageProviderProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventSequence(
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
         JsonSerializerOptions jsonSerializerOptions,
         IExecutionContextManager executionContextManager)
     {

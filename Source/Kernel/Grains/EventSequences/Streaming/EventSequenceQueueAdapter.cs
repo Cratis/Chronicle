@@ -19,7 +19,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     readonly ConcurrentDictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
 
     readonly IStreamQueueMapper _mapper;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
 
     /// <inheritdoc/>
     public string Name { get; }
@@ -35,11 +35,11 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider)
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
     {
         Name = name;
         _mapper = mapper;

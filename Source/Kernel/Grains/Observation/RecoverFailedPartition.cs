@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecoverFailedPartition
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<RecoverFailedPartition> _logger;
     PartitionedObserverKey? _key;
     ObserverKey? _observerKey;
@@ -27,9 +27,9 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     IDisposable? _timer;
 
     /// <summary>
-    /// Gets the <see cref="IEventSequenceStorageProvider"/> in the correct context.
+    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
     /// </summary>
-    protected IEventSequenceStorageProvider EventSequenceStorageProvider
+    protected IEventSequenceStorage EventSequenceStorageProvider
     {
         get
         {
@@ -50,7 +50,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     /// <param name="logger">A logger.</param>
     public RecoverFailedPartition(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         ILogger<RecoverFailedPartition> logger)
     {
         _executionContextManager = executionContextManager;
