@@ -14,9 +14,10 @@ namespace Aksio.Cratis.Events;
 /// <param name="CausationId">The unique identifier of the cause.</param>
 /// <param name="CorrelationId">The unique identifier used to correlation.</param>
 /// <param name="CausedBy">Who or what caused the event.</param>
-public record RedactionEventContent(
+[EventType(GlobalEventTypes.Redaction)]
+public record EventRedacted(
     RedactionReason Reason,
-    EventTypeId OriginalEventType,
+    Type OriginalEventType,
     DateTimeOffset Occurred,
     CausationId CausationId,
     CorrelationId CorrelationId,

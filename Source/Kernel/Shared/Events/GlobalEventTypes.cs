@@ -11,5 +11,5 @@ public static class GlobalEventTypes
     /// <summary>
     /// Gets the unique identifier for the event type representing a redaction.
     /// </summary>
-    public static readonly EventTypeId Redaction = Guid.Parse("fd5bdc58-a224-4e74-897c-fb28aed51c8b");
+    public const string Redaction = "fd5bdc58-a224-4e74-897c-fb28aed51c8b";
 }

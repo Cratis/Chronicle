@@ -50,8 +50,8 @@ public class EventSequence : Controller
         [FromBody] AppendEvent eventToAppend)
     {
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-        var eventLog = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        await eventLog.Append(
+        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        await eventSequence.Append(
             eventToAppend.EventSourceId,
             eventToAppend.EventType,
             eventToAppend.Content);
@@ -73,8 +73,8 @@ public class EventSequence : Controller
         [FromBody] RedactEvent redaction)
     {
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-        var eventLog = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        await eventLog.Redact(redaction.SequenceNumber, redaction.Reason);
+        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        await eventSequence.Redact(redaction.SequenceNumber, redaction.Reason);
     }
 
     /// <summary>
@@ -93,8 +93,8 @@ public class EventSequence : Controller
         [FromBody] RedactEvents redaction)
     {
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-        var eventLog = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        await eventLog.Redact(
+        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        await eventSequence.Redact(
             redaction.EventSourceId,
             redaction.Reason,
             redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray());

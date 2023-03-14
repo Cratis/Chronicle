@@ -24,6 +24,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManagerProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
@@ -36,18 +37,21 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
         ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManagerProvider,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<EventSequence> logger)
     {
         _schemaStoreProvider = schemaStoreProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _executionContextManager = executionContextManager;
         _jsonComplianceManagerProvider = jsonComplianceManagerProvider;
         _expandoObjectConverter = expandoObjectConverter;
@@ -170,7 +174,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
+    public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
     {
         _logger.Redacting(
             _microserviceAndTenant.MicroserviceId,
@@ -178,11 +182,14 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             _eventSequenceId,
             sequenceNumber);
 
-        return Task.CompletedTask;
+        var affectedEventType = await _eventSequenceStorageProvider().Redact(_eventSequenceId, sequenceNumber, reason);
+
+        // Get all observers for the affected event type
+        // Trigger a redaction on each observer
     }
 
     /// <inheritdoc/>
-    public Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes)
+    public async Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes)
     {
         _logger.RedactingMultiple(
             _microserviceAndTenant.MicroserviceId,
@@ -191,6 +198,9 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             eventSourceId,
             eventTypes);
 
-        return Task.CompletedTask;
+        var affectedEventTypes = await _eventSequenceStorageProvider().Redact(_eventSequenceId, eventSourceId, reason, eventTypes);
+
+        // Get all observers for the affected event types
+        // Trigger a redaction on each observer
     }
 }

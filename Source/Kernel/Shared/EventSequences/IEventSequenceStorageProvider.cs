@@ -38,10 +38,10 @@ public interface IEventSequenceStorageProvider
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to redact from.</param>
-    /// <param name="reason">Reason for redacting.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Redact(EventSequenceId eventSequenceId, RedactionReason reason, EventSequenceNumber sequenceNumber);
+    /// <param name="reason">Reason for redacting.</param>
+    /// <returns>Affected event type.</returns>
+    Task<EventType> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.
@@ -50,8 +50,8 @@ public interface IEventSequenceStorageProvider
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
     /// /// <param name="reason">Reason for redacting.</param>
     /// <param name="eventTypes">Optionally any specific event types.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes);
+    /// <returns>Affected event types.</returns>
+    Task<IEnumerable<EventType>> Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes);
 
     /// <summary>
     /// Get the sequence number of the first event as part of the filtered event types.
@@ -89,6 +89,14 @@ public interface IEventSequenceStorageProvider
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
     /// <returns>The <see cref="AppendedEvent"/> found.</returns>
     Task<bool> HasInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId);
+
+    /// <summary>
+    /// Gets the event at a specific sequence number.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="sequenceNumber">The sequence number the event is at.</param>
+    /// <returns>The <see cref="AppendedEvent"/> found.</returns>
+    Task<AppendedEvent> GetEventAt(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
 
     /// <summary>
     /// Get the last instance of a specific event type for an event source.
