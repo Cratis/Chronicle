@@ -85,7 +85,7 @@ public class Observers : Controller
     /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
     /// <param name="eventSourceId">Specific <see cref="EventSourceId"/> to rewind.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{observerId}/rewind/{tenantId}/{eventSourceId}}")]
+    [HttpPost("{observerId}/rewind/{tenantId}/{eventSourceId}")]
     public async Task RewindPartition(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId,

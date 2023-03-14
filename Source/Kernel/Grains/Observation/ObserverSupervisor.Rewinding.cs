@@ -31,7 +31,10 @@ public partial class ObserverSupervisor
     }
 
     /// <inheritdoc/>
-    public Task RewindPartition(EventSourceId partition) => throw new NotImplementedException();
+    public Task RewindPartition(EventSourceId partition)
+    {
+        return Task.CompletedTask;
+    }
 
     async Task Replay()
     {
