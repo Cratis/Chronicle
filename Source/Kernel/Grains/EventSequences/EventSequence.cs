@@ -9,6 +9,9 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -24,6 +27,8 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
+    readonly ProviderFor<IObserverStorage> _observerStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManagerProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
@@ -36,18 +41,24 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// Initializes a new instance of <see cref="EventSequence"/>.
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
+    /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public EventSequence(
         ProviderFor<ISchemaStore> schemaStoreProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
+        ProviderFor<IObserverStorage> observerStorageProvider,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManagerProvider,
         IExpandoObjectConverter expandoObjectConverter,
         ILogger<EventSequence> logger)
     {
         _schemaStoreProvider = schemaStoreProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _observerStorageProvider = observerStorageProvider;
         _executionContextManager = executionContextManager;
         _jsonComplianceManagerProvider = jsonComplianceManagerProvider;
         _expandoObjectConverter = expandoObjectConverter;
@@ -167,5 +178,42 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             sequenceNumber);
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
+    {
+        _logger.Redacting(
+            _microserviceAndTenant.MicroserviceId,
+            _microserviceAndTenant.TenantId,
+            _eventSequenceId,
+            sequenceNumber);
+
+        var affectedEvent = await _eventSequenceStorageProvider().Redact(_eventSequenceId, sequenceNumber, reason);
+        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, sequenceNumber, new[] { affectedEvent.Metadata.Type });
+    }
+
+    /// <inheritdoc/>
+    public async Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes)
+    {
+        _logger.RedactingMultiple(
+            _microserviceAndTenant.MicroserviceId,
+            _microserviceAndTenant.TenantId,
+            _eventSequenceId,
+            eventSourceId,
+            eventTypes);
+
+        var affectedEventTypes = await _eventSequenceStorageProvider().Redact(_eventSequenceId, eventSourceId, reason, eventTypes);
+        await RewindPartitionForAffectedObservers(eventSourceId, EventSequenceNumber.First, affectedEventTypes);
+    }
+
+    async Task RewindPartitionForAffectedObservers(EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType> affectedEventTypes)
+    {
+        var observerIds = await _observerStorageProvider().GetObserversForEventTypes(affectedEventTypes);
+        foreach (var observerId in observerIds)
+        {
+            var observer = GrainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId));
+            await observer.RewindPartitionTo(eventSourceId, sequenceNumber);
+        }
     }
 }

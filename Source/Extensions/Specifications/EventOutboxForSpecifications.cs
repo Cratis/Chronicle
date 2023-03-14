@@ -39,4 +39,10 @@ public class EventOutboxForSpecifications : IEventOutbox
 
     /// <inheritdoc/>
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default) => _sequence.Append(eventSourceId, @event);
+
+    /// <inheritdoc/>
+    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = null) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
 }

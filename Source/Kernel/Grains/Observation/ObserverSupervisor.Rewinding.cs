@@ -30,6 +30,24 @@ public partial class ObserverSupervisor
         await Replay();
     }
 
+    /// <inheritdoc/>
+    public async Task RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber)
+    {
+        _rewindingPartition = true;
+        var events = await _eventSequenceStorageProvider().GetFromSequenceNumber(_eventSequenceId, sequenceNumber, partition, State.EventTypes);
+        while (await events.MoveNext())
+        {
+            foreach (var @event in events.Current)
+            {
+                await Handle(@event);
+            }
+        }
+        _rewindingPartition = false;
+    }
+
+    /// <inheritdoc/>
+    public async Task RewindPartition(EventSourceId partition) => await RewindPartitionTo(partition, EventSequenceNumber.First);
+
     async Task Replay()
     {
         if (State.NextEventSequenceNumber > State.LastHandled)

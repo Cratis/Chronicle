@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Microsoft.AspNetCore.Mvc;
@@ -49,10 +50,56 @@ public class EventSequence : Controller
         [FromBody] AppendEvent eventToAppend)
     {
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-        var eventLog = _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
-        await eventLog.Append(
+        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        await eventSequence.Append(
             eventToAppend.EventSourceId,
             eventToAppend.EventType,
             eventToAppend.Content);
     }
+
+    /// <summary>
+    /// Redact a specific single event by its sequence number.
+    /// </summary>
+    /// <param name="microserviceId">The microservice to redact for.</param>
+    /// <param name="eventSequenceId">The event sequence to redact for.</param>
+    /// <param name="tenantId">The tenant to redact for.</param>
+    /// <param name="redaction">The <see cref="RedactEvent"/> to redact.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("redact-event")]
+    public async Task Redact(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] TenantId tenantId,
+        [FromBody] RedactEvent redaction)
+    {
+        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        await eventSequence.Redact(redaction.SequenceNumber, redaction.Reason);
+    }
+
+    /// <summary>
+    /// Redact multiple events.
+    /// </summary>
+    /// <param name="microserviceId">The microservice to redact for.</param>
+    /// <param name="eventSequenceId">The event sequence to redact for.</param>
+    /// <param name="tenantId">The tenant to redact for.</param>
+    /// <param name="redaction">The redaction filter to use.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("redact-events")]
+    public async Task Redact(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] TenantId tenantId,
+        [FromBody] RedactEvents redaction)
+    {
+        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        await eventSequence.Redact(
+            redaction.EventSourceId,
+            redaction.Reason,
+            redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray());
+    }
+
+    IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
+        _grainFactory.GetGrain<IEventSequence>(eventSequenceId, keyExtension: new MicroserviceAndTenant(microserviceId, tenantId));
 }

@@ -47,4 +47,21 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// Its generational information is taken into account when compensating.
     /// </remarks>
     Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default);
+
+    /// <summary>
+    /// Redact an event at a specific sequence number.
+    /// </summary>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
+        /// <param name="reason">Reason for redacting.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason);
+
+    /// <summary>
+    /// Redact all events for a specific <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
+    /// <param name="reason">Reason for redacting.</param>
+    /// <param name="eventTypes">Optionally any specific event types.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes);
 }

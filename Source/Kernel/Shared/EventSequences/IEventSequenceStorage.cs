@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.EventSequences;
@@ -8,8 +9,50 @@ namespace Aksio.Cratis.EventSequences;
 /// <summary>
 /// Defines a storage provider for the event sequence.
 /// </summary>
-public interface IEventSequenceStorageProvider
+public interface IEventSequenceStorage
 {
+    /// <summary>
+    /// Append a single event to the event store.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to append to.</param>
+    /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
+    /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
+    /// <param name="content">The content of the event.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, DateTimeOffset validFrom, ExpandoObject content);
+
+    /// <summary>
+    /// Compensate a single event to the event store.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to append to.</param>
+    /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
+    /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
+    /// <param name="content">The content of the event.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, DateTimeOffset validFrom, ExpandoObject content);
+
+    /// <summary>
+    /// Redact an event at a specific sequence number.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to redact from.</param>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
+    /// <param name="reason">Reason for redacting.</param>
+    /// <returns>Affected event.</returns>
+    Task<AppendedEvent> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason);
+
+    /// <summary>
+    /// Redact all events for a specific <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to redact from.</param>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
+    /// /// <param name="reason">Reason for redacting.</param>
+    /// <param name="eventTypes">Optionally any specific event types.</param>
+    /// <returns>Affected event types.</returns>
+    Task<IEnumerable<EventType>> Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes);
+
     /// <summary>
     /// Get the sequence number of the first event as part of the filtered event types.
     /// </summary>
@@ -46,6 +89,14 @@ public interface IEventSequenceStorageProvider
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
     /// <returns>The <see cref="AppendedEvent"/> found.</returns>
     Task<bool> HasInstanceFor(EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId);
+
+    /// <summary>
+    /// Gets the event at a specific sequence number.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="sequenceNumber">The sequence number the event is at.</param>
+    /// <returns>The <see cref="AppendedEvent"/> found.</returns>
+    Task<AppendedEvent> GetEventAt(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber);
 
     /// <summary>
     /// Get the last instance of a specific event type for an event source.

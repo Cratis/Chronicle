@@ -36,7 +36,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _eventLog.AppendedEvents;
 
     readonly IProjection _projection;
-    readonly IEventSequenceStorageProvider _eventSequenceStorageProvider;
+    readonly IEventSequenceStorage _eventSequenceStorage;
     readonly IProjectionPipeline _pipeline;
     readonly InMemoryProjectionSink _sink;
 
@@ -71,11 +71,11 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 
         var objectsComparer = new ObjectsComparer();
 
-        _eventSequenceStorageProvider = new EventSequenceStorageProviderForSpecifications(_eventLog);
+        _eventSequenceStorage = new EventSequenceStorageProviderForSpecifications(_eventLog);
         _sink = new InMemoryProjectionSink(_projection.Model, typeFormats, objectsComparer);
         _pipeline = new ProjectionPipeline(
             _projection,
-            _eventSequenceStorageProvider,
+            _eventSequenceStorage,
             _sink,
             objectsComparer,
             new NullChangesetStorage(),
@@ -99,7 +99,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     {
         var projectedEventsCount = 0;
         modelId ??= eventSourceId;
-        var cursor = await _eventSequenceStorageProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
+        var cursor = await _eventSequenceStorage.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, eventSourceId, _projection.EventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
