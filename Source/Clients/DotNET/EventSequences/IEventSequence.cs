@@ -18,4 +18,21 @@ public interface IEventSequence
     /// <param name="validFrom">Optional date and time for when the event is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default);
+
+    /// <summary>
+    /// Redact an event at a specific sequence number.
+    /// </summary>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
+    /// <param name="reason">Optional reason for redacting. Will default to <see cref="RedactionReason.Unknown"/> if not specified.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = default);
+
+    /// <summary>
+    /// Redact all events for a specific <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
+    /// <param name="reason">Optional reason for redacting. Will default to <see cref="RedactionReason.Unknown"/> if not specified.</param>
+    /// <param name="eventTypes">Optionally any specific event types.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task Redact(EventSourceId eventSourceId, RedactionReason? reason = default, params Type[] eventTypes);
 }

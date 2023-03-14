@@ -51,4 +51,27 @@ public class EventSequence : IEventSequence
         var route = $"/api/events/store/{microserviceId}/{tenantId}/sequence/{_eventSequenceId}";
         await _client.PerformCommand(route, payload);
     }
+
+    /// <inheritdoc/>
+    public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = default)
+    {
+        reason ??= RedactionReason.Unknown;
+        var tenantId = _executionContextManager.Current.TenantId;
+        var microserviceId = _executionContextManager.Current.MicroserviceId;
+        var payload = new RedactEvent(sequenceNumber, reason);
+        var route = $"/api/events/store/{microserviceId}/{tenantId}/sequence/{_eventSequenceId}";
+        await _client.PerformCommand(route, payload);
+    }
+
+    /// <inheritdoc/>
+    public async Task Redact(EventSourceId eventSourceId, RedactionReason? reason = default, params Type[] eventTypes)
+    {
+        reason ??= RedactionReason.Unknown;
+        var tenantId = _executionContextManager.Current.TenantId;
+        var microserviceId = _executionContextManager.Current.MicroserviceId;
+        var eventTypeIds = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_).Id).ToArray();
+        var payload = new RedactEvents(eventSourceId, reason, eventTypeIds);
+        var route = $"/api/events/store/{microserviceId}/{tenantId}/sequence/{_eventSequenceId}";
+        await _client.PerformCommand(route, payload);
+    }
 }

@@ -16,23 +16,23 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IQueueAdapterCache _cache;
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
-    readonly ProviderFor<IEventSequences> _eventLogsProvider;
+    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
-    /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
     /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
-        ProviderFor<IEventSequences> eventLogsProvider,
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
         IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
         _cache = new EventSequenceQueueAdapterCache(caches);
         _name = name;
-        _eventLogsProvider = eventLogsProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
 
     /// <summary>
@@ -45,12 +45,12 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     {
         return new(
             name,
-            serviceProvider.GetRequiredService<ProviderFor<IEventSequences>>(),
+            serviceProvider.GetRequiredService<ProviderFor<IEventSequenceStorageProvider>>(),
             serviceProvider.GetRequiredService<IEventSequenceCaches>());
     }
 
     /// <inheritdoc/>
-    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventLogsProvider));
+    public Task<IQueueAdapter> CreateAdapter() => Task.FromResult<IQueueAdapter>(new EventSequenceQueueAdapter(_name, _mapper, _eventSequenceStorageProvider));
 
     /// <inheritdoc/>
     public Task<IStreamFailureHandler> GetDeliveryFailureHandler(QueueId queueId) => Task.FromResult<IStreamFailureHandler>(new NoOpStreamDeliveryFailureHandler());

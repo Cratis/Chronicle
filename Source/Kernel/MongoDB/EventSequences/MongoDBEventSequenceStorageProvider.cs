@@ -1,10 +1,16 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using System.Text.Json;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Execution;
+using Aksio.Cratis.Json;
+using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
@@ -16,24 +22,131 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 /// </summary>
 public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
 {
+    readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventConverter> _converterProvider;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
+    readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<MongoDBEventSequenceStorageProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBEventSequenceStorageProvider"/> class.
     /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
     /// <param name="converterProvider"><see cref="IEventConverter"/> to convert event types.</param>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/> to use.</param>
+    /// <param name="schemaStoreProvider">The <see cref="ISchemaStore"/> for working with the schema types.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
+    /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public MongoDBEventSequenceStorageProvider(
+        IExecutionContextManager executionContextManager,
         ProviderFor<IEventConverter> converterProvider,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ProviderFor<ISchemaStore> schemaStoreProvider,
+        IExpandoObjectConverter expandoObjectConverter,
+        JsonSerializerOptions jsonSerializerOptions,
         ILogger<MongoDBEventSequenceStorageProvider> logger)
     {
+        _executionContextManager = executionContextManager;
         _converterProvider = converterProvider;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+        _schemaStoreProvider = schemaStoreProvider;
+        _expandoObjectConverter = expandoObjectConverter;
+        _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task Append(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        EventSourceId eventSourceId,
+        EventType eventType,
+        DateTimeOffset validFrom,
+        ExpandoObject content)
+    {
+        try
+        {
+            var schema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
+            var jsonObject = _expandoObjectConverter.ToJsonObject(content, schema.Schema);
+            var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, _jsonSerializerOptions));
+            _logger.Appending(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId);
+            var @event = new Event(
+                sequenceNumber,
+                _executionContextManager.Current.CorrelationId,
+                _executionContextManager.Current.CausationId,
+                _executionContextManager.Current.CausedBy,
+                eventType.Id,
+                DateTimeOffset.UtcNow,
+                validFrom,
+                eventSourceId,
+                new Dictionary<string, BsonDocument>
+                {
+                        { eventType.Generation.ToString(), document }
+                },
+                Array.Empty<EventCompensation>());
+            var collection = GetCollectionFor(eventSequenceId);
+            await collection.InsertOneAsync(@event);
+        }
+        catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            _logger.DuplicateEventSequenceNumber(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId);
+        }
+        catch (Exception ex)
+        {
+            _logger.AppendFailure(
+                sequenceNumber,
+                eventSequenceId,
+                _executionContextManager.Current.MicroserviceId,
+                _executionContextManager.Current.TenantId,
+                ex);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task Compensate(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        EventType eventType,
+        DateTimeOffset validFrom,
+        ExpandoObject content) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Redact(EventSequenceId eventSequenceId, RedactionReason reason, EventSequenceNumber sequenceNumber)
+    {
+        _logger.Redacting(eventSequenceId, sequenceNumber);
+        var collection = GetCollectionFor(eventSequenceId);
+
+        //     var redactionContent = new RedactionEventContent(reason, )
+
+        //     var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
+        //     var update = Builders<Event>.Update.Set(e =>
+        // {
+
+        // }
+
+        return Task.CompletedTask;
+
+    }
+
+    /// <inheritdoc/>
+    public Task Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes)
+    {
+        _logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes);
+        var collection = GetCollectionFor(eventSequenceId);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -44,7 +157,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     {
         _logger.GettingHeadSequenceNumber(eventSequenceId);
 
-        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var collection = GetCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
         {
@@ -69,7 +182,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     {
         _logger.GettingTailSequenceNumber(eventSequenceId);
 
-        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var collection = GetCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
         {
@@ -123,7 +236,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var collection = GetCollectionFor(eventSequenceId);
         var count = collection.Find(filter).CountDocuments();
         return Task.FromResult(count > 0);
     }
@@ -140,7 +253,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
             Builders<Event>.Filter.Eq(_ => _.Type, eventTypeId),
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var collection = GetCollectionFor(eventSequenceId);
         var @event = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).Single();
         return await _converterProvider().ToAppendedEvent(@event);
     }
@@ -159,7 +272,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
             anyEventTypes,
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
-        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var collection = GetCollectionFor(eventSequenceId);
         var @event = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).Single();
         return await _converterProvider().ToAppendedEvent(@event);
     }
@@ -173,7 +286,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     {
         _logger.GettingFromSequenceNumber(eventSequenceId, sequenceNumber);
 
-        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var collection = GetCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, sequenceNumber.Value)
@@ -203,7 +316,7 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         IEnumerable<EventType>? eventTypes = default)
     {
         _logger.GettingRange(eventSequenceId, start, end);
-        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+        var collection = GetCollectionFor(eventSequenceId);
         var filters = new List<FilterDefinition<Event>>
             {
                 Builders<Event>.Filter.Gte(_ => _.SequenceNumber, start.Value),
@@ -225,4 +338,6 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         var cursor = collection.Find(filter).ToCursor();
         return Task.FromResult<IEventCursor>(new EventCursor(_converterProvider(), cursor));
     }
+
+    IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
 }
