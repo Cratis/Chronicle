@@ -41,4 +41,7 @@ internal static partial class MongoDBEventSequenceStorageProviderLogMessages
 
     [LoggerMessage(10, LogLevel.Information, "Redacting events with event source id {EventSourceId} and event types {EventTypes} from sequence {EventSequenceId}")]
     internal static partial void RedactingMultiple(this ILogger<MongoDBEventSequenceStorageProvider> logger, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
+
+    [LoggerMessage(11, LogLevel.Debug, "Getting instance of event at sequence number {EventSequenceNumber} in event sequence {EventSequenceId}")]
+    internal static partial void GettingEventAtSequenceNumber(this ILogger<MongoDBEventSequenceStorageProvider> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 }

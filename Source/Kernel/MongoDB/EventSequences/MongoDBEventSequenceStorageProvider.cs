@@ -123,30 +123,43 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         ExpandoObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task Redact(EventSequenceId eventSequenceId, RedactionReason reason, EventSequenceNumber sequenceNumber)
+    public async Task<EventType> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason)
     {
         _logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = GetCollectionFor(eventSequenceId);
 
-        //     var redactionContent = new RedactionEventContent(reason, )
+        var @event = await GetEventAt(eventSequenceId, sequenceNumber);
+        var updateModel = CreateRedactionUpdateModelFor(@event, reason);
+        await collection.UpdateOneAsync(updateModel.Filter, updateModel.Update);
 
-        //     var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
-        //     var update = Builders<Event>.Update.Set(e =>
-        // {
-
-        // }
-
-        return Task.CompletedTask;
-
+        return @event.Metadata.Type;
     }
 
     /// <inheritdoc/>
-    public Task Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes)
+    public async Task<IEnumerable<EventType>> Redact(
+        EventSequenceId eventSequenceId,
+        EventSourceId eventSourceId,
+        RedactionReason reason,
+        IEnumerable<EventType>? eventTypes)
     {
-        _logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes);
+        _logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? Enumerable.Empty<EventType>());
         var collection = GetCollectionFor(eventSequenceId);
+        var updates = new List<UpdateOneModel<Event>>();
+        var affectedEventTypes = new HashSet<EventType>();
 
-        return Task.CompletedTask;
+        var cursor = await GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First, eventSourceId, eventTypes);
+        while (await cursor.MoveNext())
+        {
+            foreach (var @event in cursor.Current)
+            {
+                updates.Add(CreateRedactionUpdateModelFor(@event, reason));
+                affectedEventTypes.Add(@event.Metadata.Type);
+            }
+
+            collection.BulkWrite(updates);
+        }
+
+        return affectedEventTypes;
     }
 
     /// <inheritdoc/>
@@ -239,6 +252,18 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         var collection = GetCollectionFor(eventSequenceId);
         var count = collection.Find(filter).CountDocuments();
         return Task.FromResult(count > 0);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppendedEvent> GetEventAt(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber)
+    {
+        _logger.GettingEventAtSequenceNumber(eventSequenceId, sequenceNumber);
+
+        var filter = Builders<Event>.Filter.And(Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber));
+
+        var collection = GetCollectionFor(eventSequenceId);
+        var @event = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).Single();
+        return await _converterProvider().ToAppendedEvent(@event);
     }
 
     /// <inheritdoc/>
@@ -340,4 +365,28 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     }
 
     IMongoCollection<Event> GetCollectionFor(EventSequenceId eventSequenceId) => _eventStoreDatabaseProvider().GetEventSequenceCollectionFor(eventSequenceId);
+
+    UpdateOneModel<Event> CreateRedactionUpdateModelFor(AppendedEvent @event, RedactionReason reason)
+    {
+        var executionContext = _executionContextManager.Current;
+        var content = new RedactionEventContent(
+            reason,
+            @event.Metadata.Type.Id,
+            DateTimeOffset.UtcNow,
+            executionContext.CausationId,
+            executionContext.CorrelationId,
+            executionContext.CausedBy);
+
+        var document = content.ToBsonDocument();
+        var generationalContent = new Dictionary<string, BsonDocument>
+                {
+                        { EventGeneration.First.ToString(), document }
+                };
+
+        return new UpdateOneModel<Event>(
+            Builders<Event>.Filter.Eq(e => e.SequenceNumber, @event.Metadata.SequenceNumber),
+            Builders<Event>.Update
+                .Set(e => e.Type, GlobalEventTypes.Redaction)
+                .Set(e => e.Content, generationalContent));
+    }
 }
