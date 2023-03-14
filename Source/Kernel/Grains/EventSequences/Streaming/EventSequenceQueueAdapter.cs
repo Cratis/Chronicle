@@ -19,7 +19,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     readonly ConcurrentDictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
 
     readonly IStreamQueueMapper _mapper;
-    readonly ProviderFor<IEventSequences> _eventLogsProvider;
+    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
 
     /// <inheritdoc/>
     public string Name { get; }
@@ -35,15 +35,15 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
-    /// <param name="eventLogsProvider">Provider for <see cref="IEventSequences"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
     public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
-        ProviderFor<IEventSequences> eventLogsProvider)
+        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider)
     {
         Name = name;
         _mapper = mapper;
-        _eventLogsProvider = eventLogsProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
     }
 
     /// <inheritdoc/>
@@ -66,7 +66,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 var appendedEvent = (@event as AppendedEvent)!;
                 try
                 {
-                    await _eventLogsProvider().Append(
+                    await _eventSequenceStorageProvider().Append(
                         streamGuid,
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,

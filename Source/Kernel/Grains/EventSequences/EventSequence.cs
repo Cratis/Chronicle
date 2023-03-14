@@ -168,4 +168,29 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
+    {
+        _logger.Redacting(
+            _microserviceAndTenant.MicroserviceId,
+            _microserviceAndTenant.TenantId,
+            _eventSequenceId,
+            sequenceNumber);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes)
+    {
+        _logger.RedactingMultiple(
+            _microserviceAndTenant.MicroserviceId,
+            _microserviceAndTenant.TenantId,
+            _eventSequenceId,
+            eventSourceId,
+            eventTypes);
+
+        return Task.CompletedTask;
+    }
 }
