@@ -30,6 +30,9 @@ public partial class ObserverSupervisor
         await Replay();
     }
 
+    /// <inheritdoc/>
+    public Task RewindPartition(EventSourceId partition) => throw new NotImplementedException();
+
     async Task Replay()
     {
         if (State.NextEventSequenceNumber > State.LastHandled)

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Clients;
@@ -74,5 +75,24 @@ public class Observers : Controller
     {
         var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.Rewind();
+    }
+
+    /// <summary>
+    /// Rewind a specific observer for a microservice and tenant.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> the observer is for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> the observer is for.</param>
+    /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
+    /// <param name="eventSourceId">Specific <see cref="EventSourceId"/> to rewind.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("{observerId}/rewind/{tenantId}/{eventSourceId}}")]
+    public async Task RewindPartition(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] ObserverId observerId,
+        [FromRoute] EventSourceId eventSourceId)
+    {
+        var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        await observer.RewindPartition(eventSourceId);
     }
 }

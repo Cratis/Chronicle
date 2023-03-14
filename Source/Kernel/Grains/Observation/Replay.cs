@@ -28,12 +28,12 @@ public class Replay : ObserverWorker, IReplay
     /// Initializes a new instance of the <see cref="Replay"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/>.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Replay(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         [PersistentState(nameof(ObserverState), ObserverState.ReplayStorageProvider)] IPersistentState<ObserverState> observerState,
         ILogger<Replay> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
     {

@@ -18,7 +18,7 @@ public static class KeyResolvers
     /// Create a <see cref="KeyResolver"/> that provides the event source id from an event.
     /// </summary>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
-    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers))!;
+    public static readonly KeyResolver FromEventSourceId = (IEventSequenceStorage eventProvider, AppendedEvent @event) => Task.FromResult(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers))!;
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
@@ -27,7 +27,7 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> eventValueProvider)
     {
-        return (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
+        return (IEventSequenceStorage eventProvider, AppendedEvent @event) =>
         {
             var key = eventValueProvider(@event);
             return Task.FromResult(new Key(key, ArrayIndexers.NoIndexers))!;
@@ -41,7 +41,7 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver Composite(IDictionary<PropertyPath, ValueProvider<AppendedEvent>> propertiesWithKeyValueProviders)
     {
-        return (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
+        return (IEventSequenceStorage eventProvider, AppendedEvent @event) =>
         {
             var key = new ExpandoObject();
             foreach (var keyValue in propertiesWithKeyValueProviders)
@@ -63,7 +63,7 @@ public static class KeyResolvers
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public static KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty)
     {
-        return async (IEventSequenceStorageProvider eventProvider, AppendedEvent @event) =>
+        return async (IEventSequenceStorage eventProvider, AppendedEvent @event) =>
         {
             var arrayIndexers = new List<ArrayIndexer>();
             var parentKey = await parentKeyResolver(eventProvider, @event);

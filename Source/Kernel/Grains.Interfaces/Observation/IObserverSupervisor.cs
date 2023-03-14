@@ -50,6 +50,13 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     Task Rewind();
 
     /// <summary>
+    /// Rewind the observer for a specific partition.
+    /// </summary>
+    /// <param name="partition">The partition to rewind.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RewindPartition(EventSourceId partition);
+
+    /// <summary>
     /// Try to resume the partition.
     /// </summary>
     /// <param name="partition">The partition to try to resume.</param>
@@ -69,6 +76,14 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// <param name="failedPartitions">Collection of any <see cref="FailedPartition">failed partitions</see>.</param>
     /// <returns>Awaitable task.</returns>
     Task NotifyReplayComplete(IEnumerable<FailedPartition> failedPartitions);
+
+    /// <summary>
+    /// Notify that replay of a specific partition is complete.
+    /// </summary>
+    /// <param name="eventSourceId">The partition that is complete.</param>
+    /// <param name="failedPartitions">Collection of any <see cref="FailedPartition">failed partitions</see>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task NotifyPartitionReplayComplete(EventSourceId eventSourceId, IEnumerable<FailedPartition> failedPartitions);
 
     /// <summary>
     /// Notify that failed partition has run to completion.

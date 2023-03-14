@@ -13,14 +13,14 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB.EventSequences;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventSequenceStorageProvider"/> for MongoDB.
+/// Represents an implementation of <see cref="IEventSequenceStorage"/> for MongoDB.
 /// </summary>
-public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
+public class MongoDBEventSequenceStorage : IEventSequenceStorage
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventConverter> _converterProvider;
@@ -28,10 +28,10 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly ILogger<MongoDBEventSequenceStorageProvider> _logger;
+    readonly ILogger<MongoDBEventSequenceStorage> _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBEventSequenceStorageProvider"/> class.
+    /// Initializes a new instance of the <see cref="MongoDBEventSequenceStorage"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for getting current <see cref="ExecutionContext"/>.</param>
     /// <param name="converterProvider"><see cref="IEventConverter"/> to convert event types.</param>
@@ -40,14 +40,14 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public MongoDBEventSequenceStorageProvider(
+    public MongoDBEventSequenceStorage(
         IExecutionContextManager executionContextManager,
         ProviderFor<IEventConverter> converterProvider,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
         ProviderFor<ISchemaStore> schemaStoreProvider,
         IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<MongoDBEventSequenceStorageProvider> logger)
+        ILogger<MongoDBEventSequenceStorage> logger)
     {
         _executionContextManager = executionContextManager;
         _converterProvider = converterProvider;
@@ -123,16 +123,16 @@ public class MongoDBEventSequenceStorageProvider : IEventSequenceStorageProvider
         ExpandoObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public async Task<EventType> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason)
+    public async Task<AppendedEvent> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason)
     {
         _logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = GetCollectionFor(eventSequenceId);
 
         var @event = await GetEventAt(eventSequenceId, sequenceNumber);
         var updateModel = CreateRedactionUpdateModelFor(@event, reason);
-        await collection.UpdateOneAsync(updateModel.Filter, updateModel.Update);
+        collection.UpdateOne(updateModel.Filter, updateModel.Update);
 
-        return @event.Metadata.Type;
+        return @event;
     }
 
     /// <inheritdoc/>

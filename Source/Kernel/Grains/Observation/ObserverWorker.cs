@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 public abstract class ObserverWorker : Grain
 {
     readonly ILogger<ObserverWorker> _logger;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProviderProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IPersistentState<ObserverState> _observerState;
     IObserverSupervisor? _supervisor;
@@ -83,9 +83,9 @@ public abstract class ObserverWorker : Grain
     };
 
     /// <summary>
-    /// Gets the <see cref="IEventSequenceStorageProvider"/> in the correct context.
+    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
     /// </summary>
-    protected IEventSequenceStorageProvider EventSequenceStorageProvider
+    protected IEventSequenceStorage EventSequenceStorageProvider
     {
         get
         {
@@ -107,7 +107,7 @@ public abstract class ObserverWorker : Grain
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     protected ObserverWorker(
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProviderProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
         IPersistentState<ObserverState> observerState,
         ILogger<ObserverWorker> logger)
     {

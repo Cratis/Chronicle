@@ -56,8 +56,6 @@ public class MongoDBObserversState : IObserversState
         }
     }
 
-    IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetCollection<ObserverState>(CollectionNames.Observers);
-
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBObserversState"/> class.
     /// </summary>
@@ -70,4 +68,6 @@ public class MongoDBObserversState : IObserversState
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
         _logger = logger;
     }
+
+    IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetObserverStateCollection();
 }
