@@ -190,7 +190,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             sequenceNumber);
 
         var affectedEvent = await _eventSequenceStorageProvider().Redact(_eventSequenceId, sequenceNumber, reason);
-        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, new[] { affectedEvent.Metadata.Type });
+        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, sequenceNumber, new[] { affectedEvent.Metadata.Type });
     }
 
     /// <inheritdoc/>
@@ -204,16 +204,16 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             eventTypes);
 
         var affectedEventTypes = await _eventSequenceStorageProvider().Redact(_eventSequenceId, eventSourceId, reason, eventTypes);
-        await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
+        await RewindPartitionForAffectedObservers(eventSourceId, EventSequenceNumber.First, affectedEventTypes);
     }
 
-    async Task RewindPartitionForAffectedObservers(EventSourceId eventSourceId, IEnumerable<EventType> affectedEventTypes)
+    async Task RewindPartitionForAffectedObservers(EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType> affectedEventTypes)
     {
         var observerIds = await _observerStorageProvider().GetObserversForEventTypes(affectedEventTypes);
         foreach (var observerId in observerIds)
         {
             var observer = GrainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId));
-            await observer.RewindPartition(eventSourceId);
+            await observer.RewindPartitionTo(eventSourceId, sequenceNumber);
         }
     }
 }

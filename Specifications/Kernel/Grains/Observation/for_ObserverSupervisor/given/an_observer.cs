@@ -24,7 +24,7 @@ public class an_observer_supervisor : GrainSpecification
     protected EventSequenceNumberToken subscribed_token;
     protected List<EventSequenceNumberToken> subscribed_tokens;
     protected List<Mock<StreamSubscriptionHandle<AppendedEvent>>> subscription_handles;
-    protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
+    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected List<IAsyncObserver<AppendedEvent>> observers;
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;

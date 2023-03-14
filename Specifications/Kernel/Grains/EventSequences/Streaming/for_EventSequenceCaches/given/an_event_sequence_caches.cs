@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceC
 public class an_event_sequence_caches : Specification
 {
     protected Mock<IExecutionContextManager> execution_context_manager;
-    protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
+    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected Mock<IEventSequenceCacheFactory> event_sequence_cache_factory;
     protected EventSequenceCaches caches;
 

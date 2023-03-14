@@ -24,7 +24,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </remarks>
 public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 {
-    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ObserverSupervisor> _logger;
     StreamSubscriptionHandle<AppendedEvent>? _streamSubscription;
@@ -43,16 +43,16 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     /// Initializes a new instance of the <see cref="ObserverSupervisor"/> class.
     /// </summary>
     /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
-    /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorageProvider"/> for working with the underlying event sequence.</param>
+    /// <param name="eventSequenceStorageProvider"><see creF="IEventSequenceStorage"/> for working with the underlying event sequence.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
     public ObserverSupervisor(
         [PersistentState(nameof(ObserverState), ObserverState.StorageProvider)] IPersistentState<ObserverState> observerState,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
-        ILogger<ObserverSupervisor> logger) : base(executionContextManager, eventSequenceStorageProviderProvider, observerState, logger)
+        ILogger<ObserverSupervisor> logger) : base(executionContextManager, eventSequenceStorageProvider, observerState, logger)
     {
-        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
+        _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _executionContextManager = executionContextManager;
         _logger = logger;
     }
