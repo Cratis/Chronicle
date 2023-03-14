@@ -377,7 +377,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
             executionContext.CorrelationId,
             executionContext.CausedBy);
 
-        var document = content.ToBsonDocument();
+        var document = BsonDocument.Parse(JsonSerializer.Serialize(content, _jsonSerializerOptions));
         var generationalContent = new Dictionary<string, BsonDocument>
                 {
                         { EventGeneration.First.ToString(), document }
