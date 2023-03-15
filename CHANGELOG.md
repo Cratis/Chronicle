@@ -1,3 +1,10 @@
+# [v8.7.0] - 2023-3-15 [PR: #780](https://github.com/aksio-insurtech/Cratis/pull/780)
+
+### Added
+
+- Functional support for redaction that rewinds partitions automatically. This will be iterated on the next couple of days. (#778)
+
+
 # [v8.6.3] - 2023-3-8 [PR: #775](https://github.com/aksio-insurtech/Cratis/pull/775)
 
 ### Fixed
