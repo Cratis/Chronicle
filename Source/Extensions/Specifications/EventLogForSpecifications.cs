@@ -40,4 +40,10 @@ public class EventLogForSpecifications : IEventLog
 
     /// <inheritdoc/>
     public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetTailSequenceNumber() => throw new NotImplementedException();
 }

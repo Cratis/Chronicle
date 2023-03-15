@@ -209,8 +209,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
     async Task RewindPartitionForAffectedObservers(EventSourceId eventSourceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType> affectedEventTypes)
     {
-        var observerIds = await _observerStorageProvider().GetObserversForEventTypes(affectedEventTypes);
-        foreach (var observerId in observerIds)
+        var observers = await _observerStorageProvider().GetObserversForEventTypes(affectedEventTypes);
+        foreach (var observerId in observers.Select(_ => _.ObserverId))
         {
             var observer = GrainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(_microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId, _eventSequenceId));
             await observer.RewindPartitionTo(eventSourceId, sequenceNumber);
