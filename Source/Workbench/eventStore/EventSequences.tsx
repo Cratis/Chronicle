@@ -28,7 +28,7 @@ import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { useEffect } from 'react';
 import { useRouteParams } from './RouteParams';
-import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
+import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography, Divider } from '@mui/material';
 import * as icons from '@mui/icons-material';
 
 export const EventSequences = () => {
@@ -111,6 +111,7 @@ export const EventSequences = () => {
         <>
             <Stack direction='column' style={{ height: '100%' }}>
                 <Typography variant='h4'>Event sequences</Typography>
+                <Divider sx={{mt:1,mb:3}} />
                 {/* <Stack.Item>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">

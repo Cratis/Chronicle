@@ -17,20 +17,23 @@ export interface NavigationButtonProps extends PropsForComponentWithChildTypes {
     icon?: JSX.Element;
     onClick?: MouseEventHandler<HTMLAnchorElement>;
     variant?: NavigationButtonVariant;
+    active?: boolean;
 }
 
 const Actions = ChildElementWithChildren();
 
-function getBackgroundStyle(variant: NavigationButtonVariant): SxProps<Theme> {
+function getBackgroundStyle(variant: NavigationButtonVariant, isActive: boolean): SxProps<Theme> {
     switch (variant) {
         case NavigationButtonVariant.Primary:
             return {
-                bgcolor: theme.palette.primary.main,
+                bgcolor: isActive ? theme.palette.primary.light : 'transparent',
                 p: 0,
                 m: 0
             };
     }
-    return {};
+    return {
+        bgcolor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent'
+    };
 }
 
 function getButtonStyle(variant: NavigationButtonVariant): SxProps<Theme> {
@@ -71,7 +74,7 @@ export const NavigationButton = (props: NavigationButtonProps) => {
     const variant = props.variant ?? NavigationButtonVariant.Primary;
 
     return (
-        <Box sx={getBackgroundStyle(variant)}>
+        <Box sx={getBackgroundStyle(variant, props.active ?? false)}>
             <ListItemButton
                 sx={getButtonStyle(variant)}
                 component='a'
