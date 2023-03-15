@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Commands;
-using Aksio.Cratis.Queries;
 
 namespace Aksio.Cratis.Clients;
 
@@ -38,8 +37,9 @@ public interface IClient
     /// <summary>
     /// Perform a query.
     /// </summary>
+    /// <typeparam name="TResult">Type of the data within the result.</typeparam>
     /// <param name="route">Route of the command.</param>
     /// <param name="queryString">Optional querystring.</param>
-    /// <returns><see cref="QueryResult"/> of the operation.</returns>
-    Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = default);
+    /// <returns><see cref="TypedQueryResult{T}"/> of the operation.</returns>
+    Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = default);
 }
