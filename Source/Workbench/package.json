@@ -1,5 +1,6 @@
 {
     "name": "@aksio/cratis-workbench",
+    "type": "module",
     "version": "1.0.0",
     "description": "",
     "private": true,
@@ -10,9 +11,9 @@
         "node": ">= 16"
     },
     "scripts": {
-        "build": "webpack --mode=production",
-        "build:dev": "webpack --mode=development",
-        "start:dev": "webpack serve --mode=development --progress --hot",
+        "build": "vite build",
+        "dev": "vite serve",
+        "preview": "vite preview",
         "clean": "tsc -b --clean",
         "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
         "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
@@ -39,6 +40,10 @@
         "handlebars": "4.7.7"
     },
     "devDependencies": {
-        "@aksio/cratis-webpack": "1.0.0"
+        "vite-plugin-ejs": "^1.6.4",
+        "@aksio/cratis-webpack": "1.0.0",
+        "@vitejs/plugin-react": "^3.1.0",
+        "vite": "^4.1.4",
+        "vite-plugin-html": "^3.2.0"
     }
 }

@@ -6,7 +6,21 @@ import { createTheme } from '@mui/material/styles';
 export const theme = createTheme({
     palette: {
         mode: 'dark',
-        primary: { main: 'rgb(102, 157, 246)' },
-        background: { paper: 'rgb(5, 30, 52)' },
-    },
+        primary: {
+            main: 'rgb(68, 60, 104)',
+            light: 'rgb(99, 89, 133)',
+            dark: 'rgb(57, 48, 83)',
+            contrastText: 'rgb(255, 255, 255)'
+        },
+        background: {
+            paper: 'rgb(11,8,19)',
+            default: 'rgb(24, 18, 43)'
+        },
+        text: {
+            primary: 'rgb(255, 255, 255)',
+            secondary: 'rgb(255, 255, 255)'
+        },
+        divider: 'rgb(255, 255, 255)'
+
+    }
 });

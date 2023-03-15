@@ -5,7 +5,7 @@ import {
     ICommandBarItemProps,
     IDropdownOption,
     Panel,
-    TextField,
+    TextField
 } from '@fluentui/react';
 
 import { useBoolean } from '@fluentui/react-hooks';
@@ -19,14 +19,16 @@ import { EventSequenceInformation } from 'API/events/store/sequences/EventSequen
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 
 import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
-import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
+import {
+    AppendedEventWithJsonAsContent as AppendedEvent
+} from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { useEffect } from 'react';
 import { useRouteParams } from './RouteParams';
-import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar } from '@mui/material';
+import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
 import * as icons from '@mui/icons-material';
 
 export const EventSequences = () => {
@@ -55,7 +57,7 @@ export const EventSequences = () => {
     const [selectedEventType, setSelectedEventType] = useState<EventTypeInformation | undefined>(undefined);
 
     const [eventTypes, refreshEventTypes] = AllEventTypes.use({
-        microserviceId: microserviceId,
+        microserviceId: microserviceId
     });
 
     const eventSequenceOptions = eventSequences.data.map(_ => {
@@ -107,7 +109,8 @@ export const EventSequences = () => {
 
     return (
         <>
-            <Stack direction="column" style={{ height: '100%' }}>
+            <Stack direction='column' style={{ height: '100%' }}>
+                <Typography variant='h4'>Event sequences</Typography>
                 {/* <Stack.Item>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">
@@ -119,10 +122,10 @@ export const EventSequences = () => {
                 </Stack.Item> */}
                 {/* <CommandBar items={commandBarItems} /> */}
                 <Toolbar>
-                    <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
+                    <FormControl size='small' sx={{ m: 1, minWidth: 120 }}>
                         <InputLabel>Sequence</InputLabel>
                         <Select
-                            label="Sequence"
+                            label='Sequence'
                             autoWidth
                             value={selectedEventSequence?.id || ''}
                             onChange={e => setSelectedEventSequence(eventSequences.data.find(_ => _.id == e.target.value))}>
@@ -135,10 +138,10 @@ export const EventSequences = () => {
                         </Select>
                     </FormControl>
 
-                    <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
+                    <FormControl size='small' sx={{ m: 1, minWidth: 120 }}>
                         <InputLabel>Tenant</InputLabel>
                         <Select
-                            label="Tenant"
+                            label='Tenant'
                             autoWidth
                             value={selectedTenant?.id || ''}
                             onChange={e => setSelectedTenant(tenants.data.find(_ => _.id == e.target.value))}>
@@ -160,12 +163,12 @@ export const EventSequences = () => {
                         toggleFilter();
                         if (isTimelineOpen) toggleTimeline();
                     }}>Filter</Button>
-                    <Button startIcon={<icons.PlayArrow />} onClick={() => refreshEvents(getFindForArguments())}>Run</Button>
+                    <Button startIcon={<icons.PlayArrow />}
+                            onClick={() => refreshEvents(getFindForArguments())}>Run</Button>
 
                     {isTimelineOpen &&
                         <Button startIcon={<icons.ZoomOutMap />} onClick={() => {
                         }}>Reset Zoom</Button>}
-
 
 
                 </Toolbar>
@@ -183,9 +186,11 @@ export const EventSequences = () => {
                 isOpen={isDetailsPanelOpen}
                 onDismiss={closePanel}
                 headerText={selectedEventType?.name}>
-                <TextField label="Occurred" disabled defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
+                <TextField label='Occurred' disabled
+                           defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
                 {
-                    (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ => <TextField key={_} label={_} disabled defaultValue={selectedEvent!.content[_]} />)
+                    (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ => <TextField
+                        key={_} label={_} disabled defaultValue={selectedEvent!.content[_]} />)
                 }
             </Panel>
         </>
