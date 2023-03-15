@@ -11,20 +11,20 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
-/// Represents an implementation of <see cref="Observers"/>.
+/// Represents an implementation of <see cref="ObserversRegistrar"/>.
 /// </summary>
 [Singleton]
-public class Observers : IObservers
+public class ObserversRegistrar : IObserversRegistrar
 {
     readonly IExecutionContextManager _executionContextManager;
     readonly IClient _client;
-    readonly ILogger<Observers> _logger;
+    readonly ILogger<ObserversRegistrar> _logger;
 
     /// <inheritdoc/>
     public IEnumerable<ObserverHandler> Handlers { get; }
 
     /// <summary>
-    /// Initializes a new instance of <see cref="Observers"/>.
+    /// Initializes a new instance of <see cref="ObserversRegistrar"/>.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
@@ -34,7 +34,7 @@ public class Observers : IObservers
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
     /// <param name="client"><see cref="IClient"/> for working with kernel.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public Observers(
+    public ObserversRegistrar(
         IExecutionContextManager executionContextManager,
         IServiceProvider serviceProvider,
         IObserverMiddlewares middlewares,
@@ -42,7 +42,7 @@ public class Observers : IObservers
         IEventSerializer eventSerializer,
         ITypes types,
         IClient client,
-        ILogger<Observers> logger)
+        ILogger<ObserversRegistrar> logger)
     {
         Handlers = types.AllObservers()
                             .Select(_ =>

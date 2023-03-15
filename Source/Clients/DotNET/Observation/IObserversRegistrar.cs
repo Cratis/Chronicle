@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Observation;
 /// <summary>
 /// Defines a system for working with observers.
 /// </summary>
-public interface IObservers
+public interface IObserversRegistrar
 {
     /// <summary>
     /// Initialize the observers system.

@@ -13,16 +13,16 @@ namespace Aksio.Cratis.Observation;
 [Route("/.cratis/observers")]
 public class ClientObservers : Controller
 {
-    readonly IObservers _observers;
+    readonly IObserversRegistrar _observers;
     readonly ILogger<ClientObservers> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObservers"/> class.
     /// </summary>
-    /// <param name="observers">The <see cref="IObservers"/> in the system.</param>
+    /// <param name="observers">The <see cref="IObserversRegistrar"/> in the system.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientObservers(
-        IObservers observers,
+        IObserversRegistrar observers,
         ILogger<ClientObservers> logger)
     {
         _observers = observers;

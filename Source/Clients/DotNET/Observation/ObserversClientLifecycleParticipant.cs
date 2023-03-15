@@ -6,17 +6,17 @@ using Aksio.Cratis.Clients;
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
-/// Represents a <see cref="IParticipateInClientLifecycle"/> for handling <see cref="IObservers"/>.
+/// Represents a <see cref="IParticipateInClientLifecycle"/> for handling <see cref="IObserversRegistrar"/>.
 /// </summary>
 public class ObserversClientLifecycleParticipant : IParticipateInClientLifecycle
 {
-    readonly IObservers _observers;
+    readonly IObserversRegistrar _observers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserversClientLifecycleParticipant"/> class.
     /// </summary>
-    /// <param name="observers"><see cref="IObservers"/> to work with.</param>
-    public ObserversClientLifecycleParticipant(IObservers observers) => _observers = observers;
+    /// <param name="observers"><see cref="IObserversRegistrar"/> to work with.</param>
+    public ObserversClientLifecycleParticipant(IObserversRegistrar observers) => _observers = observers;
 
     /// <inheritdoc/>
     public Task ClientConnected() => _observers.Initialize();
