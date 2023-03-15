@@ -1,3 +1,12 @@
+# [v8.8.0] - 2023-3-15 [PR: #781](https://github.com/aksio-insurtech/Cratis/pull/781)
+
+### Added
+
+- Introducing REST API in Kernel and client API on top of it for working with observers.
+- Introducing REST API in Kernel and client API on top of it  for getting head and next event sequence number with event sequence
+
+
+
 # [v8.7.0] - 2023-3-15 [PR: #780](https://github.com/aksio-insurtech/Cratis/pull/780)
 
 ### Added
