@@ -7,5 +7,6 @@ export type NavigationItem = {
     targetPath: string;
     routePath?: string;
     content?: JSX.Element;
-    children?: NavigationItem[]
+    children?: NavigationItem[],
+    indexPage?: boolean;
 };

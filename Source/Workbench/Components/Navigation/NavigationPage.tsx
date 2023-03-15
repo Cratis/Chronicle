@@ -6,7 +6,8 @@ import { ReactElement } from 'react';
 import { NavigationContainer } from './NavigationContainer';
 import { NavigationItem } from './NavigationItem';
 import { ChildTypes, PropsForComponentWithChildTypes } from '../ComponentWithChildTypesUtility';
-import { useNavigate, Routes, Route } from 'react-router-dom';
+import { useNavigate, Routes, Route, useLocation } from 'react-router-dom';
+
 import { NavigationButton, NavigationButtonVariant } from './NavigationButton';
 
 export interface NavigationPageProps extends PropsForComponentWithChildTypes {
@@ -26,7 +27,6 @@ export const NavigationPage = (props: NavigationPageProps) => {
     const navigation = childTypes.getSingleSpecificType(Navigation);
     const content = childTypes.getSingleSpecificType(Content);
     const navigate = useNavigate();
-
     return (
         <>
             <Grid container sx={{ height: '100%' }}>
@@ -34,29 +34,37 @@ export const NavigationPage = (props: NavigationPageProps) => {
                     <Paper elevation={1} sx={{ width: '100%', height: '100%' }}>
                         <NavigationContainer>
                             {props.navigationItems && props.navigationItems.map((item, index) => {
+                                const path = !item.indexPage && item.children?.length ? `${item.targetPath}/${item.children[0].targetPath}` : item.targetPath;
+                                const match = useLocation().pathname.match(item.targetPath);
                                 return (
                                     <NavigationButton
+                                        active={!!match?.length}
                                         key={index}
                                         variant={NavigationButtonVariant.Header}
                                         title={item.title}
                                         icon={item.icon}
-                                        onClick={() => navigate(item.targetPath)} />);
+                                        onClick={() => navigate(path)} />);
                             })}
-
                             <Routes>
                                 {props.navigationItems && props.navigationItems.map((item, index) => {
                                     const path = item.routePath ?? item.targetPath;
                                     return (
                                         <Route key={index} path={`${path}/*`} element={
                                             <>
+                                                <div>
+
+                                                </div>
                                                 {item.children?.map((child, childIndex) => {
+                                                    const path = `${item.targetPath}/${child.targetPath}`;
+                                                    const match = useLocation().pathname.match(path);
                                                     return (
                                                         <NavigationButton
+                                                            active={!!match?.length}
                                                             key={childIndex}
                                                             variant={NavigationButtonVariant.Primary}
                                                             title={child.title}
                                                             icon={child.icon}
-                                                            onClick={() => navigate(`${item.targetPath}/${child.targetPath}`)} />);
+                                                            onClick={() => navigate(path)} />);
                                                 })}
                                             </>
                                         } />
@@ -78,7 +86,8 @@ export const NavigationPage = (props: NavigationPageProps) => {
                                         <>
                                             {item.children?.map((child, childIndex) => {
                                                 return (
-                                                    <Route key={`${index}-${childIndex}`} path={`${child.targetPath}`} element={child.content} />
+                                                    <Route key={`${index}-${childIndex}`} path={`${child.targetPath}`}
+                                                           element={child.content} />
                                                 );
                                             })}
                                         </>

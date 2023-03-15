@@ -17,10 +17,10 @@ export const theme = createTheme({
             default: 'rgb(24, 18, 43)'
         },
         text: {
-            primary: 'rgb(255, 255, 255)',
-            secondary: 'rgb(255, 255, 255)'
+            primary: 'rgb(201,201,201)',
+            secondary: 'rgb(129,129,129)'
         },
-        divider: 'rgb(255, 255, 255)'
+        divider: 'rgb(82,82,82)'
 
     }
 });
