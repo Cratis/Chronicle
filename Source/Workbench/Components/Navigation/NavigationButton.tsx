@@ -25,8 +25,9 @@ function getBackgroundStyle(variant: NavigationButtonVariant): SxProps<Theme> {
     switch (variant) {
         case NavigationButtonVariant.Primary:
             return {
-                bgcolor: theme.palette.divider,
-                pb: 2,
+                bgcolor: theme.palette.primary.main,
+                p: 0,
+                m: 0
             };
     }
     return {};
@@ -36,14 +37,15 @@ function getButtonStyle(variant: NavigationButtonVariant): SxProps<Theme> {
     switch (variant) {
         case NavigationButtonVariant.Header:
             return {
-                my: 0
+                my: 0,
+                pb: 2,
+                pt: 2
             };
 
         case NavigationButtonVariant.Primary:
             return {
-                px: 3,
-                pt: 2.5,
-                pb: 0,
+                pl: 4,
+                py: 2,
                 '&:hover, &focus': { '& svg': { opacity: 1 } }
             };
     }
@@ -72,7 +74,7 @@ export const NavigationButton = (props: NavigationButtonProps) => {
         <Box sx={getBackgroundStyle(variant)}>
             <ListItemButton
                 sx={getButtonStyle(variant)}
-                component="a"
+                component='a'
                 onClick={props.onClick}>
                 {props.icon && <ListItemIcon>{props.icon}</ListItemIcon>}
                 <ListItemText

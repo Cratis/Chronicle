@@ -4,18 +4,16 @@
 
 <head>
     <meta charset="utf-8" />
-    <title><%- htmlWebpackPlugin.options.metadata.title %></title>
+    <title><%- title %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
-    <base href="<%- htmlWebpackPlugin.options.metadata.baseUrl %>">
+    <base href='/'>
+    <link rel="stylesheet" href="index.css" />
 </head>
 
 <body>
     <div id="root" style="height: 100%;"></div>
-    <% if (htmlWebpackPlugin.options.metadata.server) { %>
-    <!-- Webpack Dev Server reload -->
-    <script src="/webpack-dev-server.js"></script>
-    <% } %>
+    <script type="module" src="index.tsx"></script>
 </body>
 
 </html>
