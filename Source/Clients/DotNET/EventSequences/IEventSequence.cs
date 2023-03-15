@@ -11,6 +11,18 @@ namespace Aksio.Cratis.EventSequences;
 public interface IEventSequence
 {
     /// <summary>
+    /// Get the next sequence number.
+    /// </summary>
+    /// <returns>Next sequence number.</returns>
+    Task<EventSequenceNumber> GetNextSequenceNumber();
+
+    /// <summary>
+    /// Get the sequence number of the last (tail) event in the sequence.
+    /// </summary>
+    /// <returns>Tail sequence number.</returns>
+    Task<EventSequenceNumber> GetTailSequenceNumber();
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>

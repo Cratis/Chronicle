@@ -6,7 +6,7 @@ import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/c
 import { AppendedEventWithJsonAsContent } from '../sequence/AppendedEventWithJsonAsContent';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{microserviceId}/{tenantId}/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}');
 
 export interface FindForArguments {
     eventSequenceId: string;
@@ -14,7 +14,7 @@ export interface FindForArguments {
     tenantId: string;
 }
 export class FindFor extends QueryFor<AppendedEventWithJsonAsContent[], FindForArguments> {
-    readonly route: string = '/api/events/store/{microserviceId}/{tenantId}/sequence/{{eventSequenceId}}?microserviceId={{microserviceId}}&tenantId={{tenantId}}';
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: AppendedEventWithJsonAsContent[] = [];
 
