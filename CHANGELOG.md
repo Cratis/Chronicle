@@ -1,3 +1,12 @@
+# [v8.8.3] - 2023-3-16 [PR: #791](https://github.com/aksio-insurtech/Cratis/pull/791)
+
+### Fixed
+
+- Fixing proxy generator to output correct type for enumerable element when it is a known type. E.g. `ConceptAs<>` types.
+- Fixing the redaction commands to not be overloads, as that produces same name on the proxies.
+- Fixing tenant configuration to work - its been broken since we changed client type.
+
+
 # [v8.8.2] - 2023-3-16 [PR: #790](https://github.com/aksio-insurtech/Cratis/pull/790)
 
 ### Fixed
