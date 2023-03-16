@@ -1,3 +1,10 @@
+# [v8.8.2] - 2023-3-16 [PR: #790](https://github.com/aksio-insurtech/Cratis/pull/790)
+
+### Fixed
+
+- Fixing tenant configuration to work - its been broken since we changed client type.
+
+
 # [v8.8.1] - 2023-3-16 [PR: #787](https://github.com/aksio-insurtech/Cratis/pull/787)
 
 ### Fixed

@@ -82,7 +82,6 @@ public class ClientBuilder : IClientBuilder
         logger.ConfiguringServices();
         services
             .AddCratisClient()
-            .AddSingleton(Globals.JsonSerializerOptions!)
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
             .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()
