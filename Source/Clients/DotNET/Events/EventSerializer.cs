@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Types;
 
 namespace Aksio.Cratis.Events;
@@ -10,6 +11,7 @@ namespace Aksio.Cratis.Events;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSerializer"/>.
 /// </summary>
+[Singleton]
 public class EventSerializer : IEventSerializer
 {
     readonly IInstancesOf<ICanProvideAdditionalEventInformation> _additionalEventInformationProviders;
@@ -19,13 +21,21 @@ public class EventSerializer : IEventSerializer
     /// Initializes a new instance of the <see cref="EventSerializer"/> class.
     /// </summary>
     /// <param name="additionalEventInformationProviders">Providers of additional event information.</param>
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
     public EventSerializer(
         IInstancesOf<ICanProvideAdditionalEventInformation> additionalEventInformationProviders,
+        IEventTypes eventTypes,
         JsonSerializerOptions serializerOptions)
     {
         _additionalEventInformationProviders = additionalEventInformationProviders;
-        _serializerOptions = serializerOptions;
+        _serializerOptions = new JsonSerializerOptions(serializerOptions)
+        {
+            Converters =
+            {
+                new EventRedactedConverter(eventTypes)
+            }
+        };
     }
 
     /// <inheritdoc/>

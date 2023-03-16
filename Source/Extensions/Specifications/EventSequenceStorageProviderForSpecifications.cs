@@ -1,15 +1,16 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Specifications;
 
 /// <summary>
-/// Represents an in-memory implementation of <see cref="IEventSequenceStorageProvider"/>.
+/// Represents an in-memory implementation of <see cref="IEventSequenceStorage"/>.
 /// </summary>
-public class EventSequenceStorageProviderForSpecifications : IEventSequenceStorageProvider
+public class EventSequenceStorageProviderForSpecifications : IEventSequenceStorage
 {
     readonly EventLogForSpecifications _eventLog;
 
@@ -99,4 +100,19 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
         var count = _eventLog.AppendedEvents.Count(_ => _.Metadata.Type.Id == eventTypeId && _.Context.EventSourceId == eventSourceId);
         return Task.FromResult(count > 0);
     }
+
+    /// <inheritdoc/>
+    public Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, DateTimeOffset validFrom, ExpandoObject content) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, DateTimeOffset validFrom, ExpandoObject content) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<AppendedEvent> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<EventType>> Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<AppendedEvent> GetEventAt(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
 }

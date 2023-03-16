@@ -35,7 +35,8 @@ public static class MongoDBReadModels
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default)
     {
-        var logger = loggerFactory?.CreateLogger("MongodBReadModels");
+        loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger("MongodBReadModels");
 
         services.AddTransient(sp =>
         {
@@ -74,13 +75,13 @@ public static class MongoDBReadModels
         return modelName.ToCamelCase();
     }
 
-    static void RegisterMongoCollectionTypes(IServiceCollection services, IEnumerable<Type> readModelTypes, ILogger? logger = default)
+    static void RegisterMongoCollectionTypes(IServiceCollection services, IEnumerable<Type> readModelTypes, ILogger logger)
     {
         foreach (var readModelType in readModelTypes)
         {
             var modelName = GetReadModelName(readModelType);
 
-            logger?.AddingMongoDBCollectionBinding(readModelType, modelName);
+            logger.AddingMongoDBCollectionBinding(readModelType, modelName);
             services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
             {
                 var database = sp.GetService<IMongoDatabase>();

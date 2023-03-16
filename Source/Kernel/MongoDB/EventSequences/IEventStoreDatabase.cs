@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
@@ -25,4 +26,10 @@ public interface IEventStoreDatabase
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> identifier.</param>
     /// <returns>The collection instance.</returns>
     IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Get the <see cref="IMongoCollection{T}"/> for the observer state.
+    /// </summary>
+    /// <returns>The collection instance.</returns>
+    IMongoCollection<ObserverState> GetObserverStateCollection();
 }

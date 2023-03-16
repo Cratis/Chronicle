@@ -1,3 +1,40 @@
+# [v8.8.2] - 2023-3-16 [PR: #790](https://github.com/aksio-insurtech/Cratis/pull/790)
+
+### Fixed
+
+- Fixing tenant configuration to work - its been broken since we changed client type.
+
+
+# [v8.8.1] - 2023-3-16 [PR: #787](https://github.com/aksio-insurtech/Cratis/pull/787)
+
+### Fixed
+
+- If no logger factory is specified during configuration of Cratis client, it will create a default one.
+
+
+# [v8.8.0] - 2023-3-15 [PR: #781](https://github.com/aksio-insurtech/Cratis/pull/781)
+
+### Added
+
+- Introducing REST API in Kernel and client API on top of it for working with observers.
+- Introducing REST API in Kernel and client API on top of it  for getting head and next event sequence number with event sequence
+
+
+
+# [v8.7.0] - 2023-3-15 [PR: #780](https://github.com/aksio-insurtech/Cratis/pull/780)
+
+### Added
+
+- Functional support for redaction that rewinds partitions automatically. This will be iterated on the next couple of days. (#778)
+
+
+# [v8.6.3] - 2023-3-8 [PR: #775](https://github.com/aksio-insurtech/Cratis/pull/775)
+
+### Fixed
+
+- Nullable enum values are now supported. They're represented using the `OneOf` in the JSON schema and not just a `JsonObjectType` of `Number` and the flag `Null` set, deviates from any other types.
+
+
 # [v8.6.2] - 2023-3-5 [PR: #773](https://github.com/aksio-insurtech/Cratis/pull/773)
 
 ### Fixed

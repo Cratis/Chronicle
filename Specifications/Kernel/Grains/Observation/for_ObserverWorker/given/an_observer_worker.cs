@@ -17,7 +17,7 @@ public class an_observer_worker : GrainSpecification
     protected Mock<IPersistentState<ObserverState>> persistent_state;
     protected ObserverState state;
     protected ObserverState state_on_write;
-    protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
+    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected Mock<IObserverSupervisor> supervisor;
     protected Mock<IObserverSubscriber> subscriber;
     protected override Guid GrainId => state.ObserverId;

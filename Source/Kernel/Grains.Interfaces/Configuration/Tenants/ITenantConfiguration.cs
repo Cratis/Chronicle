@@ -29,5 +29,5 @@ public interface ITenantConfiguration : IGrainWithGuidKey
     /// Gets all the configuration for the tenant.
     /// </summary>
     /// <returns><see cref="TenantConfigurationState"/>.</returns>
-    Task<TenantConfigurationState> All();
+    Task<IDictionary<string, string>> All();
 }

@@ -21,7 +21,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     Mock<IProjection> third_level_projection;
     Mock<IProjection> forth_level_projection;
 
-    Mock<IEventSequenceStorageProvider> storage;
+    Mock<IEventSequenceStorage> storage;
     Key result;
 
     static EventType root_event_type = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);

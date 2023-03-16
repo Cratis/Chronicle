@@ -129,7 +129,7 @@ public abstract class RestKernelClient : IClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null)
+    public async Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = null)
     {
         _logger.PerformingQuery(route);
         await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -147,10 +147,19 @@ public abstract class RestKernelClient : IClient, IDisposable
         {
             response = await client.GetAsync(route);
         }
-        var result = await response.Content.ReadFromJsonAsync<QueryResult>(_jsonSerializerOptions);
+        var result = (await response.Content.ReadFromJsonAsync<QueryResult>(_jsonSerializerOptions))!;
         LogQueryResult(route, result);
+        var element = (JsonElement)result.Data;
+        var deserializedData = element.Deserialize<TResult>(_jsonSerializerOptions)!;
 
-        return result!;
+        return new TypedQueryResult<TResult>
+        {
+            IsAuthorized = result.IsAuthorized,
+            ValidationResults = result.ValidationResults,
+            ExceptionMessages = result.ExceptionMessages,
+            ExceptionStackTrace = result.ExceptionStackTrace,
+            Data = deserializedData
+        };
     }
 
     /// <summary>

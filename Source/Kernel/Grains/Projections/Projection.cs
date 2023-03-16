@@ -31,7 +31,7 @@ public class Projection : Grain, IProjection
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
     readonly IProjectionFactory _projectionFactory;
     readonly IObjectsComparer _objectsComparer;
-    readonly IEventSequenceStorageProvider _eventProvider;
+    readonly IEventSequenceStorage _eventProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
     EngineProjection? _projection;
@@ -47,14 +47,14 @@ public class Projection : Grain, IProjection
     /// <param name="projectionDefinitionsProvider"><see cref="IProjectionDefinitions"/>.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public Projection(
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
         IProjectionFactory projectionFactory,
         IObjectsComparer objectsComparer,
-        IEventSequenceStorageProvider eventProvider,
+        IEventSequenceStorage eventProvider,
         IExecutionContextManager executionContextManager,
         ILogger<Projection> logger)
     {

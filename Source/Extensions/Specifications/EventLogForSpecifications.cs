@@ -34,4 +34,16 @@ public class EventLogForSpecifications : IEventLog
 
     /// <inheritdoc/>
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null) => _sequence.Append(eventSourceId, @event, validFrom);
+
+    /// <inheritdoc/>
+    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = null) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetTailSequenceNumber() => throw new NotImplementedException();
 }
