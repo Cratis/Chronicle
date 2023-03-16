@@ -14,7 +14,7 @@ export class FailedPartition {
     tail!: number;
 
     @field(String, true)
-    messages!: String[];
+    messages!: string[];
 
     @field(String)
     stackTrace!: string;
