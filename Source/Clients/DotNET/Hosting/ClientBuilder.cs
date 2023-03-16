@@ -58,7 +58,8 @@ public class ClientBuilder : IClientBuilder
         ITypes? types = default,
         ILoggerFactory? loggerFactory = default)
     {
-        var logger = loggerFactory?.CreateLogger<ClientBuilder>()!;
+        loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<ClientBuilder>()!;
         logger.Configuring();
 
         if (types == default)
@@ -95,7 +96,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
             .AddObservers(types);
 
-        logger?.ConfiguringCompliance();
+        logger.ConfiguringCompliance();
 
         types.All.Where(_ =>
                     _ != typeof(ICanProvideComplianceMetadataForType) &&
