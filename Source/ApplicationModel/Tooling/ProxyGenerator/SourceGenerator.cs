@@ -486,6 +486,7 @@ public class SourceGenerator : ISourceGenerator
                 var hasDerivatives = false;
                 var derivatives = new List<string>();
                 var actualType = propertyType;
+                var actualTypeName = propertyType.Name;
                 var constructorType = actualType.Name;
 
                 if (propertyType.TypeKind == TypeKind.Enum)
@@ -498,7 +499,15 @@ public class SourceGenerator : ISourceGenerator
                     if (namedType.TypeArguments != default && namedType.TypeArguments.Length > 0)
                     {
                         actualType = ((INamedTypeSymbol)propertyType).TypeArguments[0];
+                        actualTypeName = actualType.Name;
                         constructorType = actualType.Name;
+                        if (actualType.IsKnownType())
+                        {
+                            targetType = actualType.GetTypeScriptType(out additionalImportStatements);
+                            additionalImportStatements.ForEach(_ => typeImportStatements.Add(_));
+                            actualTypeName = targetType.Type;
+                            constructorType = targetType.Constructor;
+                        }
                     }
                 }
 
@@ -533,7 +542,7 @@ public class SourceGenerator : ISourceGenerator
                     typeImportStatements,
                     useRouteAsPath,
                     baseApiRoute));
-                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualType.Name, constructorType, isEnumerable, isNullable, hasDerivatives, derivatives));
+                propertyDescriptors.Add(new PropertyDescriptor(property.Name, actualTypeName, constructorType, isEnumerable, isNullable, hasDerivatives, derivatives));
             }
             else
             {
