@@ -25,7 +25,7 @@ public class TenantConfiguration : ITenantConfiguration
     /// <inheritdoc/>
     public async Task<ConfigurationForTenant> GetAllFor(TenantId tenantId)
     {
-        var result = await _client.PerformQuery<Dictionary<string,string>>($"/api/configuration/tenants/{tenantId}");
+        var result = await _client.PerformQuery<Dictionary<string, string>>($"/api/configuration/tenants/{tenantId}");
         return new(result.Data);
     }
 }

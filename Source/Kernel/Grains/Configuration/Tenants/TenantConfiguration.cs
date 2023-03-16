@@ -30,5 +30,5 @@ public class TenantConfiguration : Grain<TenantConfigurationState>, ITenantConfi
     }
 
     /// <inheritdoc/>
-    public Task<IDictionary<string, string>> All() => Task.FromResult<IDictionary<string,string>>(new Dictionary<string, string>(State));
+    public Task<IDictionary<string, string>> All() => Task.FromResult<IDictionary<string, string>>(new Dictionary<string, string>(State));
 }
