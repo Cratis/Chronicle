@@ -66,7 +66,7 @@ public class EventSequence : Controller
     /// <param name="redaction">The <see cref="RedactEvent"/> to redact.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-event")]
-    public async Task Redact(
+    public async Task RedactEvent(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] TenantId tenantId,
@@ -86,7 +86,7 @@ public class EventSequence : Controller
     /// <param name="redaction">The redaction filter to use.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-events")]
-    public async Task Redact(
+    public async Task RedactEvents(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] TenantId tenantId,
