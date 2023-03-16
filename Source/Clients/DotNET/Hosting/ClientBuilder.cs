@@ -96,7 +96,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
             .AddObservers(types);
 
-        logger?.ConfiguringCompliance();
+        logger.ConfiguringCompliance();
 
         types.All.Where(_ =>
                     _ != typeof(ICanProvideComplianceMetadataForType) &&
