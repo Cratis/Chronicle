@@ -28,9 +28,9 @@ public static class ClientServiceCollectionExtensions
     {
         services.AddSingleton(_ =>
         {
-            var configuration = _.GetRequiredService<ClientConfiguration>();
             var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
-            var loadBalancer = _.GetRequiredService<ILoadBalancer>();
+            var configuration = _.GetService<ClientConfiguration>() ?? new ClientConfiguration();
+            var loadBalancer = _.GetService<ILoadBalancer>() ?? new LoadBalancer(httpClientFactory);
             var serializerOptions = _.GetRequiredService<JsonSerializerOptions>();
             serializerOptions = new JsonSerializerOptions(serializerOptions);
             var orleansAzureTableClientLogger = _.GetRequiredService<ILogger<OrleansAzureTableStoreKernelClient>>();
