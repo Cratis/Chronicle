@@ -58,7 +58,8 @@ public class ClientBuilder : IClientBuilder
         ITypes? types = default,
         ILoggerFactory? loggerFactory = default)
     {
-        var logger = loggerFactory?.CreateLogger<ClientBuilder>()!;
+        loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<ClientBuilder>()!;
         logger.Configuring();
 
         if (types == default)
