@@ -1,3 +1,10 @@
+# [v8.8.1] - 2023-3-16 [PR: #787](https://github.com/aksio-insurtech/Cratis/pull/787)
+
+### Fixed
+
+- If no logger factory is specified during configuration of Cratis client, it will create a default one.
+
+
 # [v8.8.0] - 2023-3-15 [PR: #781](https://github.com/aksio-insurtech/Cratis/pull/781)
 
 ### Added
