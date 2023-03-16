@@ -25,7 +25,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
 {
     readonly IProjectionFactory _projectionFactory;
     readonly IObjectsComparer _objectsComparer;
-    readonly IEventSequenceStorageProvider _eventProvider;
+    readonly IEventSequenceStorage _eventProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
     EngineProjection? _projection;
@@ -36,13 +36,13 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// </summary>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
     /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
-    /// <param name="eventProvider"><see cref="IEventSequenceStorageProvider"/> for getting events from storage.</param>
+    /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public ImmediateProjection(
         IProjectionFactory projectionFactory,
         IObjectsComparer objectsComparer,
-        IEventSequenceStorageProvider eventProvider,
+        IEventSequenceStorage eventProvider,
         IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager)
     {

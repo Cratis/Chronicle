@@ -15,7 +15,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
     Key result;
     Mock<IProjection> root_projection;
     Mock<IProjection> child_projection;
-    Mock<IEventSequenceStorageProvider> storage;
+    Mock<IEventSequenceStorage> storage;
 
     static EventType root_event_type = new("5f4f4368-6989-4d9d-a84e-7393e0b41cfd", 1);
     const string parent_key = "61fcc353-3478-4cf9-a783-da508013b36f";

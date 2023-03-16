@@ -41,14 +41,49 @@ public class EventSequence : IEventSequence
     }
 
     /// <inheritdoc/>
+    public async Task<EventSequenceNumber> GetNextSequenceNumber()
+    {
+        var route = $"{GetBaseRoute()}/next-sequence-number";
+        var result = await _client.PerformQuery<EventSequenceNumber>(route);
+        return result.Data;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EventSequenceNumber> GetTailSequenceNumber()
+    {
+        var route = $"{GetBaseRoute()}/tail-sequence-number";
+        var result = await _client.PerformQuery<EventSequenceNumber>(route);
+        return result.Data;
+    }
+
+    /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
-        var tenantId = _executionContextManager.Current.TenantId;
-        var microserviceId = _executionContextManager.Current.MicroserviceId;
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
         var serializedEvent = await _eventSerializer.Serialize(@event);
         var payload = new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
-        var route = $"/api/events/store/{microserviceId}/{tenantId}/sequence/{_eventSequenceId}";
+        var route = $"{GetBaseRoute()}";
         await _client.PerformCommand(route, payload);
     }
+
+    /// <inheritdoc/>
+    public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = default)
+    {
+        reason ??= RedactionReason.Unknown;
+        var payload = new RedactEvent(sequenceNumber, reason);
+        var route = $"{GetBaseRoute()}/redact-event";
+        await _client.PerformCommand(route, payload);
+    }
+
+    /// <inheritdoc/>
+    public async Task Redact(EventSourceId eventSourceId, RedactionReason? reason = default, params Type[] eventTypes)
+    {
+        reason ??= RedactionReason.Unknown;
+        var eventTypeIds = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_).Id).ToArray();
+        var payload = new RedactEvents(eventSourceId, reason, eventTypeIds);
+        var route = $"{GetBaseRoute()}/redact-events";
+        await _client.PerformCommand(route, payload);
+    }
+
+    string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_executionContextManager.Current.TenantId}/sequence/{_eventSequenceId}";
 }

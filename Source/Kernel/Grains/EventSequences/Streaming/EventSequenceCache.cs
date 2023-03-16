@@ -46,7 +46,7 @@ public class EventSequenceCache : IEventSequenceCache
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
     readonly IExecutionContextManager _executionContextManager;
-    readonly ProviderFor<IEventSequenceStorageProvider> _eventSequenceStorageProvider;
+    readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<EventSequenceCache> _logger;
 
     /// <inheritdoc/>
@@ -59,14 +59,14 @@ public class EventSequenceCache : IEventSequenceCache
     /// <param name="tenantId">The <see cref="TenantId"/> the cache is for.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the cache is for.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorageProvider"/> for working with the event store.</param>
+    /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/> for working with the event store.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public EventSequenceCache(
         MicroserviceId microserviceId,
         TenantId tenantId,
         EventSequenceId eventSequenceId,
         IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorageProvider> eventSequenceStorageProvider,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         ILogger<EventSequenceCache> logger)
     {
         _events = new();

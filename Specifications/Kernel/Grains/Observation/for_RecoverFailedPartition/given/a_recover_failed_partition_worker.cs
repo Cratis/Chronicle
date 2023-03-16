@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.give
 
 public class a_recover_failed_partition_worker : GrainSpecification<RecoverFailedPartitionState>
 {
-    protected Mock<IEventSequenceStorageProvider> event_sequence_storage_provider;
+    protected Mock<IEventSequenceStorage> event_sequence_storage_provider;
     protected Mock<IObserverSupervisor> supervisor;
     protected Mock<IObserverSubscriber> subscriber;
 

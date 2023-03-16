@@ -6,14 +6,14 @@ import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@a
 import { ObserverState } from '../observers/ObserverState';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/observers');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/observers/observe');
 
 export interface AllObserversArguments {
     microserviceId: string;
     tenantId: string;
 }
 export class AllObservers extends ObservableQueryFor<ObserverState[], AllObserversArguments> {
-    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/observers';
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/observers/observe';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly defaultValue: ObserverState[] = [];
 

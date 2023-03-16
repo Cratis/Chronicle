@@ -21,7 +21,7 @@ public class FailedPartitions : Controller
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="failedPartitionsState"><see cref="IObserversState"/> for working with the state of observers.</param>
+    /// <param name="failedPartitionsState"><see cref="IFailedPartitionsState"/> for working with the state of observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public FailedPartitions(
         IFailedPartitionsState failedPartitionsState,

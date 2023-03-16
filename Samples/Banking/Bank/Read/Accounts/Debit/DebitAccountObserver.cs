@@ -14,4 +14,9 @@ public class DebitAccountObserver
         Console.WriteLine(context);
         return Task.CompletedTask;
     }
+
+    public Task Redacted(EventRedacted @event, EventContext context)
+    {
+        return Task.CompletedTask;
+    }
 }

@@ -6,7 +6,6 @@ using Aksio.Cratis.Commands;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Net;
-using Aksio.Cratis.Queries;
 using Aksio.Cratis.Tasks;
 using Aksio.Cratis.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -78,5 +77,5 @@ public class InsideKernelClient : IClient
     public Task<CommandResult> PerformCommand(string route, object? command = null) => _innerClient.PerformCommand(route, command);
 
     /// <inheritdoc/>
-    public Task<QueryResult> PerformQuery(string route, IDictionary<string, string>? queryString = null) => _innerClient.PerformQuery(route, queryString);
+    public Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = null) => _innerClient.PerformQuery<TResult>(route, queryString);
 }

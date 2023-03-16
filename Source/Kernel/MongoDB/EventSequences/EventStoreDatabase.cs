@@ -5,6 +5,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
@@ -62,4 +63,7 @@ public class EventStoreDatabase : IEventStoreDatabase
 
         return _database.GetCollection<Event>(collectionName);
     }
+
+    /// <inheritdoc/>
+    public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(CollectionNames.Observers);
 }
