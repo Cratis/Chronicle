@@ -182,7 +182,7 @@ export interface CreateAccountOutput {
     description: string;
 }
 
-export const CreateAccount =  (props: IModalProps<{}}, CreateAccountOutput>) => {
+export const CreateAccount =  (props: IModalProps<{}>, CreateAccountOutput>) => {
     const [name, setName] = useState(props.input.name);
     const [description, setDescription] = useState(props.input.description);
 
