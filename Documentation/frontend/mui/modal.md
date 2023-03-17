@@ -195,8 +195,8 @@ export const CreateAccount =  (props: IModalProps<{}}, CreateAccountOutput>) => 
 
     return (
         <div>
-            <TextField label='Name' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
-            <TextField label='Description' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
+            <TextField label='Name' required defaultValue={name} onChange={(e) => setName(e.currentTarget.value)} />
+            <TextField label='Description' required defaultValue={description} onChange={(e) => setDescription(e.currentTarget.value)} />
         </div>
     );
 };
