@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { IIdentityContext } from './IIdentityContext';
+import { useState, useEffect } from 'react';
 
 const defaultIdentityContext: IIdentityContext = {
     details: {}
@@ -28,13 +29,22 @@ function getCookie(name: string) {
 }
 
 export const IdentityProvider = (props: IdentityProviderProps) => {
-    let context: IIdentityContext = defaultIdentityContext;
+    const [context, setContext] = useState<IIdentityContext>(defaultIdentityContext);
     const identityCookie = getCookie(cookieName);
     if (identityCookie.length == 2) {
         const json = atob(identityCookie[1]);
-        context = {
+        setContext({
             details: JSON.parse(json.toString())
-        };
+        });
+    } else {
+        useEffect(() => {
+            fetch('/.aksio/me').then(async response => {
+                const json = await response.json();
+                setContext({
+                    details: json
+                });
+            });
+        }, []);
     }
 
     return (
