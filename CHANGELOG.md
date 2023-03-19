@@ -1,3 +1,10 @@
+# [v8.8.4] - 2023-3-19 [PR: #793](https://github.com/aksio-insurtech/Cratis/pull/793)
+
+### Fixed
+
+- Fixed the frontend `IdentityContextProvider` to explicitly call the `/.aksio/me` endpoint if no cookie is there. This is to improve the devex. It does however require the `x-ms-client-*` headers to be set for the endpoint to work.
+
+
 # [v8.8.3] - 2023-3-16 [PR: #791](https://github.com/aksio-insurtech/Cratis/pull/791)
 
 ### Fixed
