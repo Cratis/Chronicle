@@ -8,7 +8,7 @@ module.exports = (env, argv) => {
         config.resolve.alias.API = path.resolve('./API');
         config.devServer.port = 9100;
         config.devServer.proxy = {
-            '/graphql': 'http://localhost:5100',
+            '/.aksio/me': 'http://localhost:5100',
             '/api': {
                 target: 'http://localhost:5100',
                 ws: true
