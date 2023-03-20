@@ -1,3 +1,10 @@
+# [v8.9.0] - 2023-3-20 [PR: #794](https://github.com/aksio-insurtech/Cratis/pull/794)
+
+### Added
+
+- Support for getting the tail sequence number based on an observer and the event types it observers. This will return the tail of the event type that is last in the sequence.
+
+
 # [v8.8.4] - 2023-3-19 [PR: #793](https://github.com/aksio-insurtech/Cratis/pull/793)
 
 ### Fixed
