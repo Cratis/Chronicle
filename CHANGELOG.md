@@ -1,3 +1,10 @@
+# [v8.9.3] - 2023-3-20 [PR: #799](https://github.com/aksio-insurtech/Cratis/pull/799)
+
+### Fixed
+
+- Added missing API for getting an observer CLR type by its observer id.
+
+
 # [v8.9.2] - 2023-3-20 [PR: #798](https://github.com/aksio-insurtech/Cratis/pull/798)
 
 ### Fixed
