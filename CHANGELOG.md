@@ -1,3 +1,10 @@
+# [v8.9.2] - 2023-3-20 [PR: #798](https://github.com/aksio-insurtech/Cratis/pull/798)
+
+### Fixed
+
+- Bringing back a way to get all registered handlers.
+
+
 # [v8.9.1] - 2023-3-20 [PR: #797](https://github.com/aksio-insurtech/Cratis/pull/797)
 
 ### Fixed
