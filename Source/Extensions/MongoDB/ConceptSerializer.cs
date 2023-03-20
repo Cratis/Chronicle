@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
 using Aksio.Cratis.Concepts;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
@@ -72,24 +71,29 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
     /// <inheritdoc/>
     public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value)
     {
-        var underlyingValue = value?.GetType()!.GetTypeInfo()!.GetProperty(nameof(ConceptAs<object>.Value))!.GetValue(value, null);
+        var bsonWriter = context.Writer;
+        if (value is null)
+        {
+            bsonWriter.WriteNull();
+            return;
+        }
+
+        var underlyingValue = value.GetConceptValue();
         var nominalType = args.NominalType;
         var underlyingValueType = nominalType.GetConceptValueType();
 
-        var bsonWriter = context.Writer;
-
         if (underlyingValueType == typeof(Guid))
         {
-            var guid = (Guid)(underlyingValue ?? default(Guid));
+            var guid = (Guid)underlyingValue;
             bsonWriter.WriteBinaryData(new BsonBinaryData(guid, GuidRepresentation.Standard));
         }
         else if (underlyingValueType == typeof(double))
         {
-            bsonWriter.WriteDouble((double)(underlyingValue ?? default(double)));
+            bsonWriter.WriteDouble((double)underlyingValue);
         }
         else if (underlyingValueType == typeof(float))
         {
-            bsonWriter.WriteDouble((double)(underlyingValue ?? default(double)));
+            bsonWriter.WriteDouble((double)underlyingValue);
         }
         else if (underlyingValueType == typeof(int) || underlyingValueType == typeof(uint))
         {
@@ -98,7 +102,7 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
                 underlyingValue = Convert.ChangeType(underlyingValue, typeof(int))!;
             }
 
-            bsonWriter.WriteInt32((int)(underlyingValue ?? default(int)));
+            bsonWriter.WriteInt32((int)underlyingValue);
         }
         else if (underlyingValueType == typeof(long) || underlyingValueType == typeof(ulong))
         {
@@ -107,11 +111,11 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
                 underlyingValue = Convert.ChangeType(underlyingValue, typeof(long))!;
             }
 
-            bsonWriter.WriteInt64((long)(underlyingValue ?? default(long)));
+            bsonWriter.WriteInt64((long)underlyingValue);
         }
         else if (underlyingValueType == typeof(bool))
         {
-            bsonWriter.WriteBoolean((bool)(underlyingValue ?? default(bool)));
+            bsonWriter.WriteBoolean((bool)underlyingValue);
         }
         else if (underlyingValueType == typeof(string))
         {
@@ -119,7 +123,7 @@ public class ConceptSerializer<T> : IBsonSerializer<T>
         }
         else if (underlyingValueType == typeof(decimal))
         {
-            bsonWriter.WriteDecimal128((decimal)(underlyingValue ?? default(decimal)));
+            bsonWriter.WriteDecimal128((decimal)underlyingValue);
         }
     }
 
