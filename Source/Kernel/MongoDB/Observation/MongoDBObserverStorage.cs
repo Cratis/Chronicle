@@ -5,6 +5,7 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Observation;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
@@ -26,6 +27,12 @@ public class MongoDBObserverStorage : IObserverStorage
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
+
+    /// <inheritdoc/>
+    public Task<ObserverInformation> GetObserver(ObserverId observerId) =>
+        Task.FromResult(ToObserverInformation(Collection
+            .Find(_ => _.ObserverId == observerId)
+            .First()));
 
     /// <inheritdoc/>
     public Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<EventType> eventTypes) =>
