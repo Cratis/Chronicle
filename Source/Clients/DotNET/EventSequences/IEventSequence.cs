@@ -23,6 +23,16 @@ public interface IEventSequence
     Task<EventSequenceNumber> GetTailSequenceNumber();
 
     /// <summary>
+    /// Get the sequence number of the last (tail) event in the sequence for a specific observer.
+    /// </summary>
+    /// <param name="type">Type of observer to get for.</param>
+    /// <returns>Tail sequence number.</returns>
+    /// <remarks>
+    /// This is based on the tail of the event types the observer is interested in.
+    /// </remarks>
+    Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type);
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>

@@ -41,7 +41,7 @@ public class ClientObservers : Controller
         [FromBody] AppendedEvent @event)
     {
         _logger.EventReceived(@event.Metadata.Type.Id, observerId);
-        var handler = _observers.Handlers.FirstOrDefault(_ => _.ObserverId == observerId);
+        var handler = _observers.GetById(observerId);
         if (handler is not null)
         {
             await handler.OnNext(@event);

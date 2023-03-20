@@ -46,4 +46,7 @@ public class EventLogForSpecifications : IEventLog
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumber() => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => throw new NotImplementedException();
 }

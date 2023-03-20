@@ -57,5 +57,5 @@ export class RecoverFailedPartitionState {
     stackTrace!: string;
 
     @field(String, true)
-    messages!: String[];
+    messages!: string[];
 }

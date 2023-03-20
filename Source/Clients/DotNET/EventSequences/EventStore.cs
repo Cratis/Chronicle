@@ -4,6 +4,7 @@
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.EventSequences;
 
@@ -24,23 +25,27 @@ public class EventStore : IEventStore
     /// <param name="eventTypes">The <see cref="IEventTypes"/> in the system.</param>
     /// <param name="serializer"><see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="client"><see cref="IClient"/> for connecting to kernel.</param>
+    /// <param name="observersRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with execution context.</param>
     public EventStore(
         IEventTypes eventTypes,
         IEventSerializer serializer,
         IClient client,
+        IObserversRegistrar observersRegistrar,
         IExecutionContextManager executionContextManager)
     {
         EventLog = new EventLog(
             eventTypes,
             serializer,
             client,
+            observersRegistrar,
             executionContextManager);
 
         Outbox = new EventOutbox(
             eventTypes,
             serializer,
             client,
+            observersRegistrar,
             executionContextManager);
     }
 }
