@@ -15,6 +15,12 @@ public interface IObserversRegistrar
     Task Initialize();
 
     /// <summary>
+    /// Get all registered handlers.
+    /// </summary>
+    /// <returns>Collection of <see cref="ObserverHandler"/>.</returns>
+    IEnumerable<ObserverHandler> GetAll();
+
+    /// <summary>
     /// Gets a specific handler by its id.
     /// </summary>
     /// <param name="observerId"><see cref="ObserverId"/> to get for.</param>

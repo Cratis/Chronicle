@@ -62,6 +62,9 @@ public class ObserversRegistrar : IObserversRegistrar
     }
 
     /// <inheritdoc/>
+    public IEnumerable<ObserverHandler> GetAll() => _handlers.Values;
+
+    /// <inheritdoc/>
     public ObserverHandler GetById(ObserverId observerId)
     {
         var observer = _handlers.Values.SingleOrDefault(_ => _.ObserverId == observerId);
