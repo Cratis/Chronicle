@@ -177,6 +177,7 @@ export const EventSequences = () => {
                 <div>
                     {selectedEventSequence &&
                         <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected}
+                                   onEventsRedacted={() => refreshEvents(getFindForArguments())}
                                    sequenceNumber={selectedEventSequence!.id} />}
                 </div>
             </Stack>
