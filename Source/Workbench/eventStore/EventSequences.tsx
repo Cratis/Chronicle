@@ -111,7 +111,7 @@ export const EventSequences = () => {
         <>
             <Stack direction='column' style={{ height: '100%' }}>
                 <Typography variant='h4'>Event sequences</Typography>
-                <Divider sx={{mt:1,mb:3}} />
+                <Divider sx={{ mt: 1, mb: 3 }} />
                 {/* <Stack.Item>
                     <Stack horizontal style={{ textAlign: 'center' }}>
                         <Pivot linkFormat="links">
@@ -155,7 +155,6 @@ export const EventSequences = () => {
                         </Select>
                     </FormControl>
 
-
                     <Button startIcon={<icons.Timeline />} onClick={() => {
                         toggleTimeline();
                         if (isFilterOpen) toggleFilter();
@@ -170,16 +169,15 @@ export const EventSequences = () => {
                     {isTimelineOpen &&
                         <Button startIcon={<icons.ZoomOutMap />} onClick={() => {
                         }}>Reset Zoom</Button>}
-
-
                 </Toolbar>
                 <div>
                     {isTimelineOpen && <EventHistogram eventLog={selectedEventSequence!.id} />}
                     {isFilterOpen && <FilterBuilder />}
                 </div>
                 <div>
-
-                    <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected} />
+                    {selectedEventSequence &&
+                        <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected}
+                                   sequenceNumber={selectedEventSequence!.id} />}
                 </div>
             </Stack>
             <Panel
