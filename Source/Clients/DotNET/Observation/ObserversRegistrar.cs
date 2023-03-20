@@ -19,9 +19,7 @@ public class ObserversRegistrar : IObserversRegistrar
     readonly IExecutionContextManager _executionContextManager;
     readonly IClient _client;
     readonly ILogger<ObserversRegistrar> _logger;
-
-    /// <inheritdoc/>
-    public IEnumerable<ObserverHandler> Handlers { get; }
+    readonly IDictionary<Type, ObserverHandler> _handlers;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ObserversRegistrar"/>.
@@ -44,21 +42,38 @@ public class ObserversRegistrar : IObserversRegistrar
         IClient client,
         ILogger<ObserversRegistrar> logger)
     {
-        Handlers = types.AllObservers()
-                            .Select(_ =>
-                            {
-                                var observer = _.GetCustomAttribute<ObserverAttribute>()!;
-                                return new ObserverHandler(
-                                    observer.ObserverId,
-                                    _.FullName ?? $"{_.Namespace}.{_.Name}",
-                                    observer.EventSequenceId,
-                                    eventTypes,
-                                    new ObserverInvoker(serviceProvider, eventTypes, middlewares, _),
-                                    eventSerializer);
-                            });
+        _handlers = types.AllObservers()
+                            .ToDictionary(
+                                _ => _,
+                                _ =>
+                                {
+                                    var observer = _.GetCustomAttribute<ObserverAttribute>()!;
+                                    return new ObserverHandler(
+                                        observer.ObserverId,
+                                        _.FullName ?? $"{_.Namespace}.{_.Name}",
+                                        observer.EventSequenceId,
+                                        eventTypes,
+                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, _),
+                                        eventSerializer);
+                                });
         _executionContextManager = executionContextManager;
         _client = client;
         _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public ObserverHandler GetById(ObserverId observerId)
+    {
+        var observer = _handlers.Values.SingleOrDefault(_ => _.ObserverId == observerId);
+        ObserverDoesNotExist.ThrowIfDoesNotExist(observerId, observer);
+        return observer!;
+    }
+
+    /// <inheritdoc/>
+    public ObserverHandler GetByType(Type observerType)
+    {
+        ThrowIfTypeIsNotAnObserver(observerType);
+        return _handlers[observerType];
     }
 
     /// <inheritdoc/>
@@ -66,7 +81,7 @@ public class ObserversRegistrar : IObserversRegistrar
     {
         _logger.RegisterObservers();
 
-        foreach (var observerHandler in Handlers)
+        foreach (var observerHandler in _handlers.Values)
         {
             _logger.RegisterObserver(
                 observerHandler.ObserverId,
@@ -76,11 +91,19 @@ public class ObserversRegistrar : IObserversRegistrar
 
         var microserviceId = _executionContextManager.Current.MicroserviceId;
         var route = $"/api/events/store/{microserviceId}/observers/register/{_client.ConnectionId}";
-        var registrations = Handlers.Select(_ => new ClientObserverRegistration(
+        var registrations = _handlers.Values.Select(_ => new ClientObserverRegistration(
             _.ObserverId,
             _.Name,
             _.EventSequenceId,
             _.EventTypes));
         await _client.PerformCommand(route, registrations);
+    }
+
+    void ThrowIfTypeIsNotAnObserver(Type observerType)
+    {
+        if (!_handlers.ContainsKey(observerType))
+        {
+            throw new TypeIsNotAnObserver(observerType);
+        }
     }
 }

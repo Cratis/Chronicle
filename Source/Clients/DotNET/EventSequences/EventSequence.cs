@@ -4,6 +4,7 @@
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.EventSequences;
 
@@ -16,6 +17,7 @@ public class EventSequence : IEventSequence
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
     readonly IClient _client;
+    readonly IObserversRegistrar _observerRegistrar;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
@@ -25,18 +27,21 @@ public class EventSequence : IEventSequence
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="client"><see cref="IClient"/> for getting connections.</param>
+    /// <param name="observerRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequence(
         EventSequenceId eventSequenceId,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         IClient client,
+        IObserversRegistrar observerRegistrar,
         IExecutionContextManager executionContextManager)
     {
         _eventSequenceId = eventSequenceId;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
         _client = client;
+        _observerRegistrar = observerRegistrar;
         _executionContextManager = executionContextManager;
     }
 
@@ -52,6 +57,15 @@ public class EventSequence : IEventSequence
     public async Task<EventSequenceNumber> GetTailSequenceNumber()
     {
         var route = $"{GetBaseRoute()}/tail-sequence-number";
+        var result = await _client.PerformQuery<EventSequenceNumber>(route);
+        return result.Data;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)
+    {
+        var observer = _observerRegistrar.GetByType(type);
+        var route = $"{GetBaseRoute()}/tail-sequence-number/observer/{observer.ObserverId}";
         var result = await _client.PerformQuery<EventSequenceNumber>(route);
         return result.Data;
     }
