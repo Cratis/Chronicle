@@ -23,6 +23,7 @@ import { useRouteParams } from './RouteParams';
 import { ModalButtons, ModalResult, useModal } from '@aksio/cratis-mui';
 import RedactEventModal from './RedactEventModal';
 import GlobalEventTypes from '../GlobalEventTypes';
+import RedactEventsModal from './RedactEventsModal';
 
 export type EventSelected = (item: AppendedEvent) => void;
 
@@ -70,7 +71,31 @@ export const EventList = (props: EventListProps) => {
             }
         }
     );
-
+    const [showRedactEventsModal, closeRedactEventsModal] = useModal('Redact Events',
+        ModalButtons.OkCancel,
+        RedactEventsModal,
+        async (result, output) => {
+            if (result === ModalResult.success && output) {
+                if (output.content.reason.length === 0) {
+                    openSnackBar('Reason is required', 'error');
+                    return;
+                }
+                setRedactEventsCmd({
+                    microserviceId: microserviceId,
+                    eventSequenceId: props.sequenceNumber,
+                    tenantId: output.context.tenantId,
+                    reason: output.content.reason,
+                    eventSourceId: output.context.eventSourceId,
+                    eventTypes: []
+                });
+                const cmdResult = await redactEventsCmd.execute();
+                if (cmdResult.isSuccess) {
+                    openSnackBar('Events redacted', 'success');
+                    props.onEventsRedacted?.();
+                }
+            }
+        }
+    );
     const openSnackBar = (message: string, severity: AlertColor) => {
         setSnackBarState({
             open: true,
@@ -89,7 +114,7 @@ export const EventList = (props: EventListProps) => {
         showRedactEventModal(event);
     };
     const redactAllWithSameEventSourceId = (event: AppendedEvent) => {
-        console.log('redact all with same event source id', event);
+        showRedactEventsModal(event);
     };
     const redactAllEventTypesWithThisEventSourceId = (event: AppendedEvent) => {
         console.log('redact all event types with this event source id', event);
@@ -145,15 +170,15 @@ export const EventList = (props: EventListProps) => {
                         onClick={() => {
                             redactAllWithSameEventSourceId(params.row as AppendedEvent);
                         }}
-                    />,
-                    <GridActionsCellItem
-                        key={1}
-                        label='Redact all event types with this event source ID'
-                        showInMenu
-                        onClick={() => {
-                            redactAllEventTypesWithThisEventSourceId(params.row as AppendedEvent);
-                        }}
                     />
+                    // <GridActionsCellItem
+                    //     key={1}
+                    //     label='Redact all event types with this event source ID'
+                    //     showInMenu
+                    //     onClick={() => {
+                    //         redactAllEventTypesWithThisEventSourceId(params.row as AppendedEvent);
+                    //     }}
+                    // />
 
                 ];
 
