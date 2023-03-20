@@ -58,8 +58,20 @@ public static class TypeExtensions
     /// <returns>True if type is nullable, false if not.</returns>
     public static bool IsNullable(this Type type)
     {
-        return type.GetTypeInfo().IsGenericType &&
-               type.GetGenericTypeDefinition() == typeof(Nullable<>);
+        while (!type.Equals(typeof(object)))
+        {
+            if (type.GetTypeInfo().IsGenericType &&
+               type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                return true;
+            }
+
+            if (type.BaseType is null) break;
+
+            type = type.BaseType;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -297,7 +309,7 @@ public static class TypeExtensions
     }
 
     /// <summary>
-    /// Check if a type is a "primitve" type.  This is not just dot net primitives but basic types like string, decimal, datetime,
+    /// Check if a type is a "primitive" type.  This is not just dot net primitives but basic types like string, decimal, datetime,
     /// that are not classified as primitive types.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to check.</param>
