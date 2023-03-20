@@ -1,12 +1,28 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
+import {
+    AppendedEventWithJsonAsContent as AppendedEvent
+} from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
-import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
-import { Box } from '@mui/material';
+import {
+    DataGrid,
+    GridActionsCellItem,
+    GridCallbackDetails,
+    GridColDef,
+    GridRowParams,
+    GridRowSelectionModel,
+    GridValueGetterParams
+} from '@mui/x-data-grid';
+import { Alert, AlertColor, Box, Snackbar } from '@mui/material';
+import { RedactEvent } from 'API/events/store/sequence/RedactEvent';
+import { RedactEvents } from 'API/events/store/sequence/RedactEvents';
+import { useRouteParams } from './RouteParams';
+import { ModalButtons, ModalResult, useModal } from '@aksio/cratis-mui';
+import RedactEventModal from './RedactEventModal';
+import GlobalEventTypes from '../GlobalEventTypes';
 
 export type EventSelected = (item: AppendedEvent) => void;
 
@@ -14,11 +30,72 @@ export interface EventListProps {
     items: AppendedEvent[];
     eventTypes: EventTypeInformation[];
     onEventSelected?: EventSelected;
+    onEventsRedacted?: () => void;
+    sequenceNumber?: string;
 }
 
 export const EventList = (props: EventListProps) => {
-    const eventListColumns: GridColDef[] = [
 
+    const [redactEventCmd, setRedactEventCmd] = RedactEvent.use();
+    const [redactEventsCmd, setRedactEventsCmd] = RedactEvents.use();
+    const { microserviceId } = useRouteParams();
+    const [snackBarState, setSnackBarState] = useState({
+        open: false,
+        message: '',
+        severity: 'success' as AlertColor
+    });
+
+
+    const [showRedactEventModal, closeRedactEventModal] = useModal('Redact Event',
+        ModalButtons.OkCancel,
+        RedactEventModal,
+        async (result, output) => {
+            if (result === ModalResult.success && output) {
+                if (output.content.reason.length === 0) {
+                    openSnackBar('Reason is required', 'error');
+                    return;
+                }
+                setRedactEventCmd({
+                    microserviceId: microserviceId,
+                    eventSequenceId: props.sequenceNumber,
+                    tenantId: output.context.tenantId,
+                    sequenceNumber: output.context.sequenceNumber,
+                    reason: output.content.reason
+                });
+                const cmdResult = await redactEventCmd.execute();
+                if (cmdResult.isSuccess) {
+                    openSnackBar('Event redacted', 'success');
+                    props.onEventsRedacted?.();
+                }
+            }
+        }
+    );
+
+    const openSnackBar = (message: string, severity: AlertColor) => {
+        setSnackBarState({
+            open: true,
+            message: message,
+            severity: severity
+        });
+    };
+    const handleCloseSnackBar = () => {
+        setSnackBarState({
+            ...snackBarState,
+            open: false
+        });
+    };
+
+    const redactEvent = (event: AppendedEvent) => {
+        showRedactEventModal(event);
+    };
+    const redactAllWithSameEventSourceId = (event: AppendedEvent) => {
+        console.log('redact all with same event source id', event);
+    };
+    const redactAllEventTypesWithThisEventSourceId = (event: AppendedEvent) => {
+        console.log('redact all event types with this event source id', event);
+    };
+
+    const eventListColumns: GridColDef[] = [
         {
             headerName: 'Sequence',
             field: 'metadata.sequenceNumber',
@@ -43,6 +120,44 @@ export const EventList = (props: EventListProps) => {
             valueGetter: (params: GridValueGetterParams<AppendedEvent>) => {
                 return params.row.context.occurred.toLocaleString();
             }
+        },
+        {
+            headerName: 'Actions',
+            field: 'actions',
+            type: 'actions',
+            width: 100,
+            getActions: (params: GridRowParams) => {
+                const disabled = params.row.metadata.type.id === GlobalEventTypes.redaction;
+                return [
+                    <GridActionsCellItem
+                        key={1}
+                        label='Redact this event'
+                        showInMenu
+                        disabled={disabled}
+                        onClick={() => {
+                            redactEvent(params.row as AppendedEvent);
+                        }}
+                    />,
+                    <GridActionsCellItem
+                        key={1}
+                        label='Redact all with same event source ID'
+                        showInMenu
+                        onClick={() => {
+                            redactAllWithSameEventSourceId(params.row as AppendedEvent);
+                        }}
+                    />,
+                    <GridActionsCellItem
+                        key={1}
+                        label='Redact all event types with this event source ID'
+                        showInMenu
+                        onClick={() => {
+                            redactAllEventTypesWithThisEventSourceId(params.row as AppendedEvent);
+                        }}
+                    />
+
+                ];
+
+            }
         }
     ];
 
@@ -61,15 +176,22 @@ export const EventList = (props: EventListProps) => {
     };
 
     return (
-        <Box sx={{ height: 400 }}>
+        <Box
+            sx={{ height: 400 }}>
             <DataGrid
                 columns={eventListColumns}
-                filterMode="server"
-                sortingMode="server"
+                filterMode='server'
+                sortingMode='server'
                 getRowId={(row) => row.metadata.sequenceNumber}
                 onRowSelectionModelChange={eventTypeSelected}
                 rows={props.items}
             />
+            <Snackbar open={snackBarState.open} autoHideDuration={6000} onClose={handleCloseSnackBar}
+                      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+                <Alert onClose={handleCloseSnackBar} severity={snackBarState.severity} sx={{ width: '100%' }}>
+                    {snackBarState.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

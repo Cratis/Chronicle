@@ -27,6 +27,7 @@ export const NavigationPage = (props: NavigationPageProps) => {
     const navigation = childTypes.getSingleSpecificType(Navigation);
     const content = childTypes.getSingleSpecificType(Content);
     const navigate = useNavigate();
+    const pathname = useLocation().pathname;
     return (
         <>
             <Grid container sx={{ height: '100%' }}>
@@ -35,7 +36,7 @@ export const NavigationPage = (props: NavigationPageProps) => {
                         <NavigationContainer>
                             {props.navigationItems && props.navigationItems.map((item, index) => {
                                 const path = !item.indexPage && item.children?.length ? `${item.targetPath}/${item.children[0].targetPath}` : item.targetPath;
-                                const match = useLocation().pathname.match(item.targetPath);
+                                const match = pathname.match(item.targetPath);
                                 return (
                                     <NavigationButton
                                         active={!!match?.length}
@@ -51,12 +52,9 @@ export const NavigationPage = (props: NavigationPageProps) => {
                                     return (
                                         <Route key={index} path={`${path}/*`} element={
                                             <>
-                                                <div>
-
-                                                </div>
                                                 {item.children?.map((child, childIndex) => {
                                                     const path = `${item.targetPath}/${child.targetPath}`;
-                                                    const match = useLocation().pathname.match(path);
+                                                    const match = pathname.match(path);
                                                     return (
                                                         <NavigationButton
                                                             active={!!match?.length}

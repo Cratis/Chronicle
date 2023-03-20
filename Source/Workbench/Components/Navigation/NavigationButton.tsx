@@ -26,7 +26,7 @@ function getBackgroundStyle(variant: NavigationButtonVariant, isActive: boolean)
     switch (variant) {
         case NavigationButtonVariant.Primary:
             return {
-                bgcolor: isActive ? theme.palette.primary.light : 'transparent',
+                bgcolor: isActive ? theme.palette.primary.dark : 'transparent',
                 p: 0,
                 m: 0
             };
