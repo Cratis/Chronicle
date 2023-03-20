@@ -80,6 +80,14 @@ public class ObserversRegistrar : IObserversRegistrar
     }
 
     /// <inheritdoc/>
+    public Type GetClrType(ObserverId observerId)
+    {
+        var observer = _handlers.SingleOrDefault(_ => _.Value.ObserverId == observerId);
+        ObserverDoesNotExist.ThrowIfDoesNotExist(observerId, observer.Value);
+        return observer.Key;
+    }
+
+    /// <inheritdoc/>
     public async Task Initialize()
     {
         _logger.RegisterObservers();
