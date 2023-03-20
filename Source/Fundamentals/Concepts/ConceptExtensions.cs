@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Concepts;
@@ -50,6 +51,6 @@ public static class ConceptExtensions
     {
         if (!IsConcept(conceptObject)) throw new TypeIsNotAConcept(conceptObject.GetType());
 
-        return ((dynamic)conceptObject).Value;
+        return conceptObject.GetType()!.GetTypeInfo()!.GetProperty(nameof(ConceptAs<object>.Value))!.GetValue(conceptObject, null)!;
     }
 }
