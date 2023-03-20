@@ -1,3 +1,10 @@
+# [v8.9.1] - 2023-3-20 [PR: #797](https://github.com/aksio-insurtech/Cratis/pull/797)
+
+### Fixed
+
+- Null `ConceptAs<>` values are now serialized to MongoDB Null - not the `default` value as before, which is completely wrong.
+
+
 # [v8.9.0] - 2023-3-20 [PR: #794](https://github.com/aksio-insurtech/Cratis/pull/794)
 
 ### Added
