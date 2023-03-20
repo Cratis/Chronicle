@@ -33,4 +33,11 @@ public interface IObserversRegistrar
     /// <param name="observerType">The <see cref="ObserverType"/> to get for.</param>
     /// <returns><see cref="ObserverHandler"/>.</returns>
     ObserverHandler GetByType(Type observerType);
+
+    /// <summary>
+    /// Get the CLR type for a specific observer.
+    /// </summary>
+    /// <param name="observerId"><see cref="ObserverId"/> to get for.</param>
+    /// <returns>The type.</returns>
+    Type GetClrType(ObserverId observerId);
 }
