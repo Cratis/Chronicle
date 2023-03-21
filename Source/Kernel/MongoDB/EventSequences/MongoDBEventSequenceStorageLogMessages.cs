@@ -45,4 +45,7 @@ internal static partial class MongoDBEventSequenceStorageLogMessages
 
     [LoggerMessage(11, LogLevel.Debug, "Getting instance of event at sequence number {EventSequenceNumber} in event sequence {EventSequenceId}")]
     internal static partial void GettingEventAtSequenceNumber(this ILogger<MongoDBEventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(12, LogLevel.Warning, "Redaction of event with sequence number {EventSequenceNumber} on sequence {EventSequenceId} has already been performed. Ignoring.")]
+    internal static partial void RedactionAlreadyApplied(this ILogger<MongoDBEventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 }
