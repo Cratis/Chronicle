@@ -129,7 +129,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var collection = GetCollectionFor(eventSequenceId);
 
         var @event = await GetEventAt(eventSequenceId, sequenceNumber);
-        if( @event.Metadata.Type == GlobalEventTypes.Redaction)
+        if (@event.Metadata.Type == GlobalEventTypes.Redaction)
         {
             _logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
             return @event;
