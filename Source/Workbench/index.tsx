@@ -5,7 +5,6 @@ import 'reflect-metadata';
 import { createRoot } from 'react-dom/client';
 
 
-
 import { App } from './App';
 import { BrowserRouter } from 'react-router-dom';
 import { CssBaseline, Paper, ThemeProvider } from '@mui/material';
@@ -19,7 +18,7 @@ root.render(
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <ModalProvider>
-                <Paper elevation={0} sx={{ height: '100%' }}>
+                <Paper elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <App />
                 </Paper>
             </ModalProvider>

@@ -37,15 +37,15 @@ export const Header = () => {
     };
 
     return (
-        <AppBar position="static" color="primary">
-            <Container maxWidth="xl">
+        <AppBar position='static' color='primary'>
+            <Container maxWidth='xl'>
                 <Toolbar disableGutters>
                     <BorderClear sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
                     <Typography
-                        variant="h5"
+                        variant='h5'
                         noWrap
-                        component="a"
-                        href=""
+                        component='a'
+                        href=''
                         sx={{
                             mr: 2,
                             display: { xs: 'flex', md: 'none' },
@@ -54,7 +54,7 @@ export const Header = () => {
                             fontWeight: 700,
                             letterSpacing: '.3rem',
                             color: 'inherit',
-                            textDecoration: 'none',
+                            textDecoration: 'none'
                         }}>
                         Cratis
                     </Typography>
@@ -70,6 +70,6 @@ export const Header = () => {
                     </Box>
                 </Toolbar>
             </Container>
-        </AppBar >
+        </AppBar>
     );
 };

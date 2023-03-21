@@ -16,7 +16,7 @@ import {
     GridRowSelectionModel,
     GridValueGetterParams
 } from '@mui/x-data-grid';
-import { Alert, AlertColor, Box, Snackbar } from '@mui/material';
+import { Alert, AlertColor, Box, Grid, Snackbar } from '@mui/material';
 import { RedactEvent } from 'API/events/store/sequence/RedactEvent';
 import { RedactEvents } from 'API/events/store/sequence/RedactEvents';
 import { useRouteParams } from './RouteParams';
@@ -202,15 +202,25 @@ export const EventList = (props: EventListProps) => {
 
     return (
         <Box
-            sx={{ height: 400 }}>
-            <DataGrid
-                columns={eventListColumns}
-                filterMode='server'
-                sortingMode='server'
-                getRowId={(row) => row.metadata.sequenceNumber}
-                onRowSelectionModelChange={eventTypeSelected}
-                rows={props.items}
-            />
+            sx={{ height: '100%',flex:1 }}>
+            <Grid container spacing={2} sx={{height:'100%'}}>
+                <Grid item xs={8}>
+                    <DataGrid
+                        columns={eventListColumns}
+                        filterMode='server'
+                        sortingMode='server'
+                        getRowId={(row) => row.metadata.sequenceNumber}
+                        onRowSelectionModelChange={eventTypeSelected}
+                        rows={props.items}
+                    />
+                </Grid>
+
+                <Grid item xs={4} >
+                    <Box>foo
+                    </Box>
+                </Grid>
+            </Grid>
+
             <Snackbar open={snackBarState.open} autoHideDuration={6000} onClose={handleCloseSnackBar}
                       anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
                 <Alert onClose={handleCloseSnackBar} severity={snackBarState.severity} sx={{ width: '100%' }}>
