@@ -76,7 +76,7 @@ public class EventSequence : IEventSequence
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
         var serializedEvent = await _eventSerializer.Serialize(@event);
         var payload = new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
-        var route = $"{GetBaseRoute()}";
+        var route = GetBaseRoute();
         await _client.PerformCommand(route, payload);
     }
 
