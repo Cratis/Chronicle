@@ -129,6 +129,12 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var collection = GetCollectionFor(eventSequenceId);
 
         var @event = await GetEventAt(eventSequenceId, sequenceNumber);
+        if( @event.Metadata.Type == GlobalEventTypes.Redaction)
+        {
+            _logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
+            return @event;
+        }
+
         var updateModel = CreateRedactionUpdateModelFor(@event, reason);
         collection.UpdateOne(updateModel.Filter, updateModel.Update);
 
@@ -152,6 +158,12 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         {
             foreach (var @event in cursor.Current)
             {
+                if (@event.Metadata.Type == GlobalEventTypes.Redaction)
+                {
+                    _logger.RedactionAlreadyApplied(eventSequenceId, @event.Metadata.SequenceNumber);
+                    continue;
+                }
+
                 updates.Add(CreateRedactionUpdateModelFor(@event, reason));
                 affectedEventTypes.Add(@event.Metadata.Type);
             }
