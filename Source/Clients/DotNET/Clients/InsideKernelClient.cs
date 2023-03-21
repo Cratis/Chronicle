@@ -74,8 +74,8 @@ public class InsideKernelClient : IClient
     public Task Connect() => _innerClient.Connect();
 
     /// <inheritdoc/>
-    public Task<CommandResult> PerformCommand(string route, object? command = null) => _innerClient.PerformCommand(route, command);
+    public Task<CommandResult> PerformCommand(string route, object? command = null, object? metadata = default) => _innerClient.PerformCommand(route, command, metadata);
 
     /// <inheritdoc/>
-    public Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = null) => _innerClient.PerformQuery<TResult>(route, queryString);
+    public Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = null, object? metadata = default) => _innerClient.PerformQuery<TResult>(route, queryString, metadata);
 }
