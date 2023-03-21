@@ -1,3 +1,10 @@
+# [v8.9.4] - 2023-3-21 [PR: #801](https://github.com/aksio-insurtech/Cratis/pull/801)
+
+### Fixed
+
+- Skip redacting if an event is already redacted. (#796)
+
+
 # [v8.9.3] - 2023-3-20 [PR: #799](https://github.com/aksio-insurtech/Cratis/pull/799)
 
 ### Fixed
