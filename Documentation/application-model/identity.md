@@ -16,6 +16,10 @@ Internally, it is based on the following HTTP headers to be present.
 | x-ms-client-principal-id | The unique identifier from the identity provider for the identity |
 | x-ms-client-principal-name | The name of the identity, typically resolved from claims within the token |
 
+> Important note: Since local development is not configured with the identity provider, but you still need a way to test that both the backend and the frontend
+> deals with the identity in the correct way. This can be achieved by creating the correct token and injecting it as request headers using
+> a browser extension. Read more [here](./generating-principal.md).
+
 The system in the application model leverages these header values and encapsulates it into what is called a `IdentityProviderContext` to make it more clear
 and you as an implementor of this don't have to deal with parsing the JWT tokens.
 

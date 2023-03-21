@@ -4,6 +4,13 @@ Based on the output of the [Aksio Middleware](https://github.com/aksio-insurtech
 getting the user details provided by the application all the way into the frontend without having to make an extra call to the
 backend.
 
+While in development mode on your local machine, if there is no cookie it will call the `.aksio/me` endpoint from the frontend
+itself. This makes it possible to work without having to simulate the production environment.
+
+> Important note: Since local development is not configured with the identity provider, but you still need a way to test that both the backend and the frontend
+> deals with the identity in the correct way. This can be achieved by creating the correct token and injecting it as request headers using
+> a browser extension. Read more [here](./generating-principal.md).
+
 This information is stored in a cookie called `.aksio-identity`. The content of this is a base64 encoded string containing the
 JSON structure returned by the backend to the ingress middleware.
 

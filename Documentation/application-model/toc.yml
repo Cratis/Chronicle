@@ -12,5 +12,7 @@
   href: rules.md
 - name: Identity
   href: identity.md
+- name: Generating Principal
+  href: generating-principal.md
 - name: Frontend
   href: frontend/toc.yml
