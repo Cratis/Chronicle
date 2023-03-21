@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Commands;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Queries;
 using Aksio.Cratis.Tasks;
@@ -120,8 +121,12 @@ public abstract class RestKernelClient : IClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<CommandResult> PerformCommand(string route, object? command = null)
+    public async Task<CommandResult> PerformCommand(string route, object? command = null, object? metadata = default)
     {
+        metadata ??= new object();
+        var metadataDictionary = (metadata.AsExpandoObject() as IDictionary<string, object>)!;
+
+        using var scope = _logger.BeginScope(metadataDictionary);
         _logger.PerformingCommand(route);
         ThrowIfClientIsDisconnected();
         await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -129,8 +134,13 @@ public abstract class RestKernelClient : IClient, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = null)
+    public async Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = null, object? metadata = default)
     {
+        metadata ??= new object();
+        var metadataDictionary = (metadata.AsExpandoObject() as IDictionary<string, object>)!;
+
+        using var scope = _logger.BeginScope(metadataDictionary);
+
         _logger.PerformingQuery(route);
         await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(10));
         ThrowIfClientIsDisconnected();
@@ -174,7 +184,7 @@ public abstract class RestKernelClient : IClient, IDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     protected virtual Task OnDisconnected() => Task.CompletedTask;
 
-    async Task<CommandResult> PerformCommandInternal(string route, object? command = null)
+    async Task<CommandResult> PerformCommandInternal(string route, object? command = null, bool logResult = true)
     {
         using var client = CreateHttpClient();
         HttpResponseMessage response;
@@ -189,7 +199,8 @@ public abstract class RestKernelClient : IClient, IDisposable
         }
         var resultAsString = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<CommandResult>(resultAsString, _jsonSerializerOptions);
-        LogCommandResult(route, result);
+
+        if (logResult) LogCommandResult(route, result);
 
         return result!;
     }
@@ -206,7 +217,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         bool failed;
         try
         {
-            var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/ping/{ConnectionId}");
+            var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/ping/{ConnectionId}", logResult: false);
             failed = !result.IsSuccess;
         }
         catch
@@ -233,7 +244,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         {
             if (result.HasExceptions)
             {
-                _logger.CommandResultExceptions(route, result.ExceptionMessages);
+                _logger.CommandResultExceptions(route, result.ExceptionMessages, result.ExceptionStackTrace);
             }
 
             if (!result.IsValid)
@@ -253,7 +264,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         {
             if (result.HasExceptions)
             {
-                _logger.QueryResultExceptions(route, result.ExceptionMessages);
+                _logger.QueryResultExceptions(route, result.ExceptionMessages, result.ExceptionStackTrace);
             }
 
             if (!result.IsValid)

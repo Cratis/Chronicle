@@ -49,7 +49,7 @@ public class EventSequence : IEventSequence
     public async Task<EventSequenceNumber> GetNextSequenceNumber()
     {
         var route = $"{GetBaseRoute()}/next-sequence-number";
-        var result = await _client.PerformQuery<EventSequenceNumber>(route);
+        var result = await _client.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
         return result.Data;
     }
 
@@ -57,7 +57,7 @@ public class EventSequence : IEventSequence
     public async Task<EventSequenceNumber> GetTailSequenceNumber()
     {
         var route = $"{GetBaseRoute()}/tail-sequence-number";
-        var result = await _client.PerformQuery<EventSequenceNumber>(route);
+        var result = await _client.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
         return result.Data;
     }
 
@@ -66,18 +66,28 @@ public class EventSequence : IEventSequence
     {
         var observer = _observerRegistrar.GetByType(type);
         var route = $"{GetBaseRoute()}/tail-sequence-number/observer/{observer.ObserverId}";
-        var result = await _client.PerformQuery<EventSequenceNumber>(route);
+        var result = await _client.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
         return result.Data;
     }
 
     /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
+        var eventTypeClr = @event.GetType();
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
         var serializedEvent = await _eventSerializer.Serialize(@event);
         var payload = new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
         var route = GetBaseRoute();
-        await _client.PerformCommand(route, payload);
+        await _client.PerformCommand(
+            route,
+            payload,
+            new
+            {
+                EventSequenceId = _eventSequenceId,
+                EventSourceId = eventSourceId,
+                EventType = eventType,
+                EventTypeClrName = eventTypeClr.FullName
+            });
     }
 
     /// <inheritdoc/>
@@ -86,7 +96,7 @@ public class EventSequence : IEventSequence
         reason ??= RedactionReason.Unknown;
         var payload = new RedactEvent(sequenceNumber, reason);
         var route = $"{GetBaseRoute()}/redact-event";
-        await _client.PerformCommand(route, payload);
+        await _client.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
     }
 
     /// <inheritdoc/>
@@ -96,7 +106,7 @@ public class EventSequence : IEventSequence
         var eventTypeIds = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_).Id).ToArray();
         var payload = new RedactEvents(eventSourceId, reason, eventTypeIds);
         var route = $"{GetBaseRoute()}/redact-events";
-        await _client.PerformCommand(route, payload);
+        await _client.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
     }
 
     string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_executionContextManager.Current.TenantId}/sequence/{_eventSequenceId}";

@@ -22,8 +22,8 @@ internal static partial class RestKernelClientLogMessages
     [LoggerMessage(4, LogLevel.Trace, "Result of performing command '{Route}' - Success: '{Success}'")]
     internal static partial void CommandResult(this ILogger<RestKernelClient> logger, string route, bool success);
 
-    [LoggerMessage(5, LogLevel.Trace, "Result of performing command '{Route}' - Exceptions: '{Exceptions}'")]
-    internal static partial void CommandResultExceptions(this ILogger<RestKernelClient> logger, string route, IEnumerable<string> exceptions);
+    [LoggerMessage(5, LogLevel.Trace, "Result of performing command '{Route}' - Exceptions: '{Exceptions}' - StackTrace: '{ExceptionStackTrace}'")]
+    internal static partial void CommandResultExceptions(this ILogger<RestKernelClient> logger, string route, IEnumerable<string> exceptions, string exceptionStackTrace);
 
     [LoggerMessage(6, LogLevel.Trace, "Result of performing command '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
     internal static partial void CommandResultValidationResult(this ILogger<RestKernelClient> logger, string route, string members, string message);
@@ -31,8 +31,8 @@ internal static partial class RestKernelClientLogMessages
     [LoggerMessage(7, LogLevel.Trace, "Result of performing query '{Route}' - Success: '{Success}'")]
     internal static partial void QueryResult(this ILogger<RestKernelClient> logger, string route, bool success);
 
-    [LoggerMessage(8, LogLevel.Trace, "Result of performing query '{Route}' - Exceptions: '{Exceptions}'")]
-    internal static partial void QueryResultExceptions(this ILogger<RestKernelClient> logger, string route, IEnumerable<string> exceptions);
+    [LoggerMessage(8, LogLevel.Trace, "Result of performing query '{Route}' - Exceptions: '{Exceptions}' - StackTrace: '{ExceptionStackTrace}'")]
+    internal static partial void QueryResultExceptions(this ILogger<RestKernelClient> logger, string route, IEnumerable<string> exceptions, string exceptionStackTrace);
 
     [LoggerMessage(9, LogLevel.Trace, "Result of performing query '{Route}' - Validation failed for members '{Members}' with message '{Message}'")]
     internal static partial void QueryResultValidationResult(this ILogger<RestKernelClient> logger, string route, string members, string message);

@@ -31,8 +31,9 @@ public interface IClient
     /// </summary>
     /// <param name="route">Route of the command.</param>
     /// <param name="command">Optional command payload.</param>
+    /// <param name="metadata">Optional metadata associated with the command.</param>
     /// <returns><see cref="CommandResult"/> of the operation.</returns>
-    Task<CommandResult> PerformCommand(string route, object? command = default);
+    Task<CommandResult> PerformCommand(string route, object? command = default, object? metadata = default);
 
     /// <summary>
     /// Perform a query.
@@ -40,6 +41,7 @@ public interface IClient
     /// <typeparam name="TResult">Type of the data within the result.</typeparam>
     /// <param name="route">Route of the command.</param>
     /// <param name="queryString">Optional querystring.</param>
+    /// <param name="metadata">Optional metadata associated with the query.</param>
     /// <returns><see cref="TypedQueryResult{T}"/> of the operation.</returns>
-    Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = default);
+    Task<TypedQueryResult<TResult>> PerformQuery<TResult>(string route, IDictionary<string, string>? queryString = default, object? metadata = default);
 }
