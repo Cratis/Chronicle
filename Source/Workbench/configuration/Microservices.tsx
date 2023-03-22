@@ -22,7 +22,7 @@ export const Microservices = () => {
     const [allMicroservices] = AllMicroservices.use();
 
     return (
-        <Box sx={{ height: 400 }}>
+        <Box sx={{ height: '100%', flex: 1 }}>
             <DataGrid
                 columns={columns}
                 filterMode="client"

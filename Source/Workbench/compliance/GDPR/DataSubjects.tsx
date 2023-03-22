@@ -135,7 +135,7 @@ export const DataSubjects = () => {
             <Stack direction="column" style={{ height: '100%' }}>
                 <CommandBar items={commandBarItems} />
 
-                <Box sx={{ height: 400 }}>
+                <Box sx={{ height: '100%', flex: 1 }}>
                     <DataGrid
                         columns={columns}
                         filterMode="server"

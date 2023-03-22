@@ -6,7 +6,7 @@ import { AllProjections, AllProjectionsArguments } from 'API/events/store/projec
 import { Projection } from 'API/events/store/projections/Projection';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { useRouteParams } from './RouteParams';
-import { Box, Stack } from '@mui/material';
+import { Box } from '@mui/material';
 
 const columns: GridColDef[] = [
     {
@@ -48,27 +48,14 @@ export const Projections = () => {
     };
 
     return (
-        <Stack style={{ height: '100%' }}>
-
-            <Box sx={{ height: 400 }}>
-                <DataGrid
-                    columns={columns}
-                    filterMode="client"
-                    sortingMode="client"
-                    getRowId={row => row.id}
-                    rows={projections.data}
-                    onRowSelectionModelChange={projectionSelected} />
-            </Box>
-
-            {/* {selected &&
-                <Stack.Item grow={1}>
-                    <Pivot linkFormat="links">
-                        <PivotItem headerText="Collections">
-                            <Collections microserviceId={selectedMicroservice?.id || ''} projectionId={selected.id} />
-                        </PivotItem>
-                    </Pivot>
-                </Stack.Item>
-            } */}
-        </Stack>
+        <Box sx={{ height: '100%', flex: 1 }}>
+            <DataGrid
+                columns={columns}
+                filterMode="client"
+                sortingMode="client"
+                getRowId={row => row.id}
+                rows={projections.data}
+                onRowSelectionModelChange={projectionSelected} />
+        </Box>
     );
 };
