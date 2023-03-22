@@ -116,9 +116,6 @@ export const EventList = (props: EventListProps) => {
     const redactAllWithSameEventSourceId = (event: AppendedEvent) => {
         showRedactEventsModal(event);
     };
-    const redactAllEventTypesWithThisEventSourceId = (event: AppendedEvent) => {
-        console.log('redact all event types with this event source id', event);
-    };
 
     const eventListColumns: GridColDef[] = [
         {
@@ -171,15 +168,6 @@ export const EventList = (props: EventListProps) => {
                             redactAllWithSameEventSourceId(params.row as AppendedEvent);
                         }}
                     />
-                    // <GridActionsCellItem
-                    //     key={1}
-                    //     label='Redact all event types with this event source ID'
-                    //     showInMenu
-                    //     onClick={() => {
-                    //         redactAllEventTypesWithThisEventSourceId(params.row as AppendedEvent);
-                    //     }}
-                    // />
-
                 ];
 
             }
