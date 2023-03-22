@@ -1,13 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import {
-    ICommandBarItemProps,
-    IDropdownOption,
-    Panel,
-    TextField
-} from '@fluentui/react';
-
 import { useBoolean } from '@fluentui/react-hooks';
 
 import { EventHistogram } from './EventHistogram';
@@ -19,16 +12,15 @@ import { EventSequenceInformation } from 'API/events/store/sequences/EventSequen
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 
 import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
-import {
-    AppendedEventWithJsonAsContent as AppendedEvent
-} from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
+import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { useEffect } from 'react';
 import { useRouteParams } from './RouteParams';
-import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography, Divider } from '@mui/material';
+
+import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography, Divider, Grid, Box, TextField } from '@mui/material';
 import * as icons from '@mui/icons-material';
 
 export const EventSequences = () => {
@@ -39,7 +31,6 @@ export const EventSequences = () => {
     const [selectedEventSequence, setSelectedEventSequence] = useState<EventSequenceInformation>();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
 
-    const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
     const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
 
@@ -58,20 +49,6 @@ export const EventSequences = () => {
 
     const [eventTypes, refreshEventTypes] = AllEventTypes.use({
         microserviceId: microserviceId
-    });
-
-    const eventSequenceOptions = eventSequences.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
-    });
-
-    const tenantOptions = tenants.data.map(_ => {
-        return {
-            key: _.id,
-            text: _.name
-        } as IDropdownOption;
     });
 
     useEffect(() => {
@@ -94,17 +71,10 @@ export const EventSequences = () => {
 
     const eventSelected = (item: any) => {
         if (item !== selectedEvent) {
-            openPanel();
             setSelectedEvent(item);
 
             setSelectedEventType(eventTypes.data.find(_ => _.identifier == item.metadata.type.id));
         }
-    };
-
-    const closePanel = () => {
-        setSelectedEvent(undefined);
-        setSelectedEventType(undefined);
-        dismissPanel();
     };
 
     return (
@@ -155,16 +125,16 @@ export const EventSequences = () => {
                         </Select>
                     </FormControl>
 
-                    <Button startIcon={<icons.Timeline />} onClick={() => {
+                    {/* <Button startIcon={<icons.Timeline />} onClick={() => {
                         toggleTimeline();
                         if (isFilterOpen) toggleFilter();
                     }}>Timeline</Button>
                     <Button startIcon={<icons.FilterAlt />} onClick={() => {
                         toggleFilter();
                         if (isTimelineOpen) toggleTimeline();
-                    }}>Filter</Button>
+                    }}>Filter</Button> */}
                     <Button startIcon={<icons.PlayArrow />}
-                            onClick={() => refreshEvents(getFindForArguments())}>Run</Button>
+                        onClick={() => refreshEvents(getFindForArguments())}>Run</Button>
 
                     {isTimelineOpen &&
                         <Button startIcon={<icons.ZoomOutMap />} onClick={() => {
@@ -175,22 +145,36 @@ export const EventSequences = () => {
                     {isFilterOpen && <FilterBuilder />}
                 </div>
                 {selectedEventSequence &&
-                    <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected}
-                               onEventsRedacted={() => refreshEvents(getFindForArguments())}
-                               sequenceNumber={selectedEventSequence!.id} />}
+                    <Box sx={{ height: '100%', flex: 1 }}>
+                        <Grid container spacing={2} sx={{ height: '100%' }}>
+                            <Grid item xs={8}>
+                                <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected}
+                                    onEventsRedacted={() => refreshEvents(getFindForArguments())}
+                                    sequenceNumber={selectedEventSequence!.id} />
+                            </Grid>
+
+                            <Grid item xs={4} >
+                                {selectedEvent &&
+                                    <Box>
+                                        <Typography variant='h6'>{selectedEventType?.name}</Typography>
+                                        <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
+                                            <TextField label='Occurred' disabled
+                                                defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
+                                        </FormControl>
+                                        {
+                                            (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ =>
+                                                <FormControl key={_} size='small' sx={{ m: 1, minWidth: '90%' }}>
+                                                    <TextField
+                                                        label={_} disabled defaultValue={selectedEvent!.content[_]} />
+                                                </FormControl>)
+                                        }
+
+                                    </Box>
+                                }
+                            </Grid>
+                        </Grid>
+                    </Box>}
             </Stack>
-            <Panel
-                isLightDismiss
-                isOpen={isDetailsPanelOpen}
-                onDismiss={closePanel}
-                headerText={selectedEventType?.name}>
-                <TextField label='Occurred' disabled
-                           defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
-                {
-                    (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ => <TextField
-                        key={_} label={_} disabled defaultValue={selectedEvent!.content[_]} />)
-                }
-            </Panel>
         </>
     );
 };
