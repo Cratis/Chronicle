@@ -23,7 +23,7 @@ export const Tenants = () => {
     const [allTenants] = AllTenants.use();
 
     return (
-        <Box sx={{ height: 400 }}>
+        <Box sx={{ height: '100%', flex: 1 }}>
             <DataGrid
                 columns={columns}
                 filterMode="client"

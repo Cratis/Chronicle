@@ -2,12 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import {
-    IDropdownStyles,
-    Label,
-    Selection,
-    SelectionMode,
-    Panel,
-    TextField
+    Panel
 } from '@fluentui/react';
 import { useEffect, useState, useMemo } from 'react';
 import { AllFailedPartitions } from 'API/events/store/failed-partitions/AllFailedPartitions';
@@ -19,11 +14,9 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/cratis-applications-frontend/queries';
 import { useRouteParams } from './RouteParams';
-import { Box, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar } from '@mui/material';
+import { Box, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid';
-
-
-const commandBarDropdownStyles: Partial<IDropdownStyles> = { dropdown: { width: 200, marginLeft: 8, marginTop: 8 } };
+import { Label } from '@mui/icons-material';
 
 let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
@@ -97,20 +90,6 @@ export const FailedPartitions = () => {
         dismissPanel();
     };
 
-    const selection = useMemo(
-        () => new Selection({
-            selectionMode: SelectionMode.single,
-            onSelectionChanged: () => {
-                const selected = selection.getSelection();
-                if (selected.length === 1) {
-                    setSelectedItem(selected[0] as RecoverFailedPartitionState);
-                    openPanel();
-                }
-            },
-            items: failedPartitions.data as any[]
-        }), [failedPartitions.data]);
-
-
     return (
         <>
             <Stack direction="column" style={{ height: '100%' }}>
@@ -132,33 +111,41 @@ export const FailedPartitions = () => {
                     </FormControl>
                 </Toolbar>
 
-                <Box sx={{ height: 400 }}>
-                    <DataGrid
-                        columns={columns}
-                        filterMode="client"
-                        sortingMode="client"
-                        getRowId={row => row.id}
-                        rows={failedPartitions.data}
-                    />
+                <Box sx={{ height: '100%', flex: 1 }}>
+                    <Grid container spacing={2} sx={{ height: '100%' }}>
+                        <Grid item xs={8}>
+                            <DataGrid
+                                columns={columns}
+                                filterMode="client"
+                                sortingMode="client"
+                                getRowId={row => row.id}
+                                rows={failedPartitions.data}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <Box>
+                                <Typography variant='h5'>Details</Typography>
+                                {selectedItem &&
+                                    <>
+
+                                        <Typography variant='h6'>{selectedItem?.observerName}</Typography>
+                                        <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
+                                            <TextField label='Occurred' disabled
+                                                defaultValue={(selectedItem?.initialPartitionFailedOn || new Date()).toISOString().toLocaleString()} />
+                                        </FormControl>
+                                        <Label>Messages</Label>
+                                        {
+                                            (selectedItem?.messages) && selectedItem.messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
+                                        }
+                                        <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
+                                            <TextField label="Stack Trace" disabled defaultValue={selectedItem?.stackTrace} multiline title={selectedItem?.stackTrace.toString()} />
+                                        </FormControl>
+                                    </>}
+                            </Box>
+                        </Grid>
+                    </Grid>
                 </Box>
             </Stack>
-            <Panel
-                isLightDismiss
-                isOpen={isDetailsPanelOpen}
-                onDismiss={closePanel}
-                headerText={selectedItem?.observerName}>
-                <TextField label="Occurred" disabled defaultValue={selectedItem?.initialPartitionFailedOn.toLocaleDateString() ?? new Date().toLocaleString()} />
-                <Label>Messages</Label>
-                {
-                    (selectedItem?.messages) && selectedItem.messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
-                }
-                <TextField label="Stack Trace" disabled defaultValue={selectedItem?.stackTrace} multiline title={selectedItem?.stackTrace.toString()} />
-                {/* {
-
-                    (selectedItem) && Object.keys(selectedItem).map(_ => <TextField key={_} label={_} disabled defaultValue={selectedItem![_]} />)
-                } */}
-            </Panel>
         </>
-
     );
 };
