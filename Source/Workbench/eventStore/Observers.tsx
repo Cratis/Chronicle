@@ -97,7 +97,7 @@ export const Observers = () => {
     const observerSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
         const selectedItems = selectionModel.map(_ => observers.data.find(__ => __.id == _)) as ObserverState[];
         if (selectedItems.length > 0) {
-            setSelectedObserver(selectedItems[0])
+            setSelectedObserver(selectedItems[0]);
         }
     };
 
