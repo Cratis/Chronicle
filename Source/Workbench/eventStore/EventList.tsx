@@ -201,32 +201,22 @@ export const EventList = (props: EventListProps) => {
     };
 
     return (
-        <Box
-            sx={{ height: '100%',flex:1 }}>
-            <Grid container spacing={2} sx={{height:'100%'}}>
-                <Grid item xs={8}>
-                    <DataGrid
-                        columns={eventListColumns}
-                        filterMode='server'
-                        sortingMode='server'
-                        getRowId={(row) => row.metadata.sequenceNumber}
-                        onRowSelectionModelChange={eventTypeSelected}
-                        rows={props.items}
-                    />
-                </Grid>
-
-                <Grid item xs={4} >
-                    <Box>foo
-                    </Box>
-                </Grid>
-            </Grid>
+        <>
+            <DataGrid
+                columns={eventListColumns}
+                filterMode='server'
+                sortingMode='server'
+                getRowId={(row) => row.metadata.sequenceNumber}
+                onRowSelectionModelChange={eventTypeSelected}
+                rows={props.items}
+            />
 
             <Snackbar open={snackBarState.open} autoHideDuration={6000} onClose={handleCloseSnackBar}
-                      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
                 <Alert onClose={handleCloseSnackBar} severity={snackBarState.severity} sx={{ width: '100%' }}>
                     {snackBarState.message}
                 </Alert>
             </Snackbar>
-        </Box>
+        </>
     );
 };
