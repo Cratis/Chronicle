@@ -1,3 +1,10 @@
+# [v8.10.1] - 2023-3-23 [PR: #806](https://github.com/aksio-insurtech/Cratis/pull/806)
+
+### Fixed
+
+- FIxing overflow of the `DataGrid` in the event types and projections views.
+
+
 # [v8.10.0] - 2023-3-23 [PR: #803](https://github.com/aksio-insurtech/Cratis/pull/803)
 
 ### Added
