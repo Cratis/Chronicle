@@ -1,3 +1,14 @@
+# [v8.10.0] - 2023-3-23 [PR: #803](https://github.com/aksio-insurtech/Cratis/pull/803)
+
+### Added
+
+- Workbench support for redaction of events.
+
+### Changed
+
+- Non-breaking change: Changed from FluentUI to MUI and got a whole new look and feel for the Workbench.
+
+
 # [v8.9.5] - 2023-3-23 [PR: #804](https://github.com/aksio-insurtech/Cratis/pull/804)
 
 ### Fixed
