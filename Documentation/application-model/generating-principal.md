@@ -9,11 +9,12 @@ The [backend part](./identity.md) of the identity system is relying on the follo
 | x-ms-client-principal-id | The unique identifier from the identity provider for the identity |
 | x-ms-client-principal-name | The name of the identity, typically resolved from claims within the token |
 
-Once these are set and the `x-ms-client-principal` is in the expected format (Base64 encoded JWT token with claims), it
+Once these are set and the `x-ms-client-principal` is in the expected format, it
 will pass these onto your **identity details provider**.
 
+The expected format needs to be according to the [Microsoft Client Principal Data definition](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=csharp#client-principal-data).
 To simulate users, all you have to do is generate the correct values and use an extension for your browser to set the
-HTTP request headers. The backend expects this to be according to the [Microsoft Client Principal Data definition](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=csharp#client-principal-data).
+HTTP request headers.
 
 ```json
 {
