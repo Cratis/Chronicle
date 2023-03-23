@@ -2,21 +2,26 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import 'reflect-metadata';
-import ReactDOM from 'react-dom';
-import { BrowserRouter } from 'react-router-dom';
+import { createRoot } from 'react-dom/client';
 
-import './index.scss';
-import './styles/theme';
 
 import { App } from './App';
-import { ModalProvider } from '@aksio/cratis-fluentui';
+import { BrowserRouter } from 'react-router-dom';
+import { CssBaseline, Paper, ThemeProvider } from '@mui/material';
+import { ModalProvider } from '@aksio/cratis-mui';
 
-ReactDOM.render(
-    <ModalProvider>
-        <BrowserRouter>
-            <App />
-        </BrowserRouter>
-    </ModalProvider>,
+import { theme } from './theme';
 
-    document.getElementById('root')
+const root = createRoot(document.getElementById('root')!);
+root.render(
+    <BrowserRouter>
+        <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <ModalProvider>
+                <Paper elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <App />
+                </Paper>
+            </ModalProvider>
+        </ThemeProvider>
+    </BrowserRouter>
 );

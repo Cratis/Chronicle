@@ -11,8 +11,8 @@
         "dist",
         "**/*.ts"
     ],
-    "main": "dist/index.js",
-    "module": "dist/index.js",
+    "main": "index.ts",
+    "module": "index.ts",
     "typings": "dist/index.d.ts",
     "scripts": {
         "prepublish": "yarn build",

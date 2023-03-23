@@ -49,6 +49,9 @@
     "typescript.suggest.autoImports": true,
     "typescript.implementationsCodeLens.enabled": true,
     "typescript.tsdk": "./node_modules/typescript/lib",
+    "eslint.packageManager": "yarn",
+    "prettier.packageManager": "yarn",
+    "npm.packageManager": "yarn",
     "cSpell.words": [
         "aksioinsurtech",
         "appsettings",
