@@ -6,6 +6,10 @@ import { ViteEjsPlugin } from 'vite-plugin-ejs';
 import path from 'path';
 
 export default defineConfig({
+    build: {
+        outDir: './wwwroot',
+        assetsDir: ''
+    },
     plugins: [
         react(),
         ViteEjsPlugin((viteConfig) => {
