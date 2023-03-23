@@ -13,9 +13,11 @@ Once these are set and the `x-ms-client-principal` is in the expected format (Ba
 will pass these onto your **identity details provider**.
 
 To simulate users, all you have to do is generate the correct values and use an extension for your browser to set the
-HTTP request headers.
+HTTP request headers. The backend expects this to be according to the [Microsoft Client Principal Data definition](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=csharp#client-principal-data).
+Basically what you then need to do is generate something that matches that structure and `Base64` encode it.
+Which can be done for instance [here](https://www.base64encode.org).
 
-You can generate the information using the site [JWT.io](https://jwt.io). This allows you to edit a JSON with the
+Another way, would be to generate the information using the site [JWT.io](https://jwt.io). This allows you to edit a JSON with the
 expected structure and then get the finished base64 encoded value to use.
 
 The first step is to clear the "Encoded" text field on the left hand side at [JWT.io](https://jwt.io):
