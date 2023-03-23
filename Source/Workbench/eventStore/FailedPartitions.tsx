@@ -14,7 +14,7 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/cratis-applications-frontend/queries';
 import { useRouteParams } from './RouteParams';
-import { Box, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
+import { Box, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid';
 import { Label } from '@mui/icons-material';
 
@@ -71,7 +71,6 @@ export const FailedPartitions = () => {
     eventSequences = es;
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
-    const [isDetailsPanelOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false);
     const [selectedItem, setSelectedItem] = useState<RecoverFailedPartitionState>();
 
     const [failedPartitions] = AllFailedPartitions.use({
@@ -87,12 +86,13 @@ export const FailedPartitions = () => {
 
     const closePanel = () => {
         setSelectedItem(undefined);
-        dismissPanel();
     };
 
     return (
         <>
             <Stack direction="column" style={{ height: '100%' }}>
+                <Typography variant='h4'>Failed partitions</Typography>
+                <Divider sx={{ mt: 1, mb: 3 }} />
                 <Toolbar>
                     <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
                         <InputLabel>Tenant</InputLabel>

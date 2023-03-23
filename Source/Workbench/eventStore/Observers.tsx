@@ -9,7 +9,7 @@ import { AllObserversArguments } from 'API/events/store/observers/AllObservers';
 import { ObserverState } from 'API/events/store/observers/ObserverState';
 import { Rewind } from 'API/events/store/observers/Rewind';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
-import { Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar } from '@mui/material';
+import { Box, Button, Divider, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
 import { useRouteParams } from './RouteParams';
 import * as icons from '@mui/icons-material';
 
@@ -103,6 +103,9 @@ export const Observers = () => {
 
     return (
         <Stack direction="column" style={{ height: '100%' }}>
+            <Typography variant='h4'>Observers</Typography>
+            <Divider sx={{ mt: 1, mb: 3 }} />
+
             <Toolbar>
                 <FormControl size="small" sx={{ m: 1, minWidth: 120 }}>
                     <InputLabel>Tenant</InputLabel>
