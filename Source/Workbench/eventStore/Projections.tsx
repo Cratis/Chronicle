@@ -6,7 +6,7 @@ import { AllProjections, AllProjectionsArguments } from 'API/events/store/projec
 import { Projection } from 'API/events/store/projections/Projection';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { useRouteParams } from './RouteParams';
-import { Box } from '@mui/material';
+import { Box, Divider, Typography } from '@mui/material';
 
 const columns: GridColDef[] = [
     {
@@ -49,6 +49,9 @@ export const Projections = () => {
 
     return (
         <Box sx={{ height: '100%', flex: 1 }}>
+            <Typography variant='h4'>Projections</Typography>
+            <Divider sx={{ mt: 1, mb: 3 }} />
+
             <DataGrid
                 columns={columns}
                 filterMode="client"

@@ -7,7 +7,7 @@ import { AllEventTypes, AllEventTypesArguments } from 'API/events/store/types/Al
 import { GenerationSchemasForType } from 'API/events/store/types/GenerationSchemasForType';
 import { useRouteParams } from './RouteParams';
 import { DataGrid, GridColDef, GridRowSelectionModel, GridCallbackDetails } from '@mui/x-data-grid';
-import { Box, Grid, Tab, Tabs  } from '@mui/material';
+import { Box, Divider, Grid, Tab, Tabs, Typography  } from '@mui/material';
 import { EventTypeInformation } from '../API/events/store/types/EventTypeInformation';
 
 interface TabPanelProps {
@@ -102,6 +102,8 @@ export const EventTypes = () => {
     return (
 
         <Box sx={{ height: '100%', flex: 1 }}>
+            <Typography variant='h4'>Event types</Typography>
+            <Divider sx={{ mt: 1, mb: 3 }} />
             <Grid container spacing={2} sx={{ height: '100%' }}>
                 <Grid item xs={8}>
                     <DataGrid
