@@ -6,7 +6,7 @@ import { AllProjections, AllProjectionsArguments } from 'API/events/store/projec
 import { Projection } from 'API/events/store/projections/Projection';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { useRouteParams } from './RouteParams';
-import { Box, Divider, Typography } from '@mui/material';
+import { Box, Divider, Stack, Typography } from '@mui/material';
 
 const columns: GridColDef[] = [
     {
@@ -17,7 +17,7 @@ const columns: GridColDef[] = [
     {
         headerName: 'Name',
         field: 'name',
-        width: 200,
+        width: 700,
         resizable: true
     },
     {
@@ -48,7 +48,7 @@ export const Projections = () => {
     };
 
     return (
-        <Box sx={{ height: '100%', flex: 1 }}>
+        <Stack direction="column" style={{ height: '100%' }}>
             <Typography variant='h4'>Projections</Typography>
             <Divider sx={{ mt: 1, mb: 3 }} />
 
@@ -59,6 +59,6 @@ export const Projections = () => {
                 getRowId={row => row.id}
                 rows={projections.data}
                 onRowSelectionModelChange={projectionSelected} />
-        </Box>
+        </Stack>
     );
 };
