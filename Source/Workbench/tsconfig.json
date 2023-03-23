@@ -18,6 +18,9 @@
             "path": "../Node/Fundamentals/tsconfig.json"
         },
         {
+            "path": "../Node/MUI/tsconfig.json"
+        },
+        {
             "path": "../Node/FluentUI/tsconfig.json"
         }
     ],
