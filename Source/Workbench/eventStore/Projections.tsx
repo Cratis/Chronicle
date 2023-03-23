@@ -23,7 +23,7 @@ const columns: GridColDef[] = [
     {
         headerName: 'Model Name',
         field: 'modelName',
-        width: 200,
+        width: 400,
         resizable: true
     },
 ];
