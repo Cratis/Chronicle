@@ -63,7 +63,7 @@ export const CircularMenu = (props: ICircularMenuProps) => {
         if (label !== newLabel) {
             setLabelCrossFade(true);
         }
-    }
+    };
 
     const onMouseMove = (event: MouseEvent) => {
         mouseX = event.clientX;

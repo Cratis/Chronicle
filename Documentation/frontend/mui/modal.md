@@ -114,8 +114,8 @@ export const EditAccountDetails =  (props: IModalProps<EditAccountInput, EditAcc
 
     return (
         <div>
-            <TextField label='Name' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
-            <TextField label='Description' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
+            <TextField label='Name' required defaultValue={name} onChange={(e) => setName(e.currentTarget.value)} />
+            <TextField label='Description' required defaultValue={description} onChange={(e) => setDescription(e.currentTarget.value)} />
         </div>
     );
 };
@@ -182,7 +182,7 @@ export interface CreateAccountOutput {
     description: string;
 }
 
-export const CreateAccount =  (props: IModalProps<{}}, CreateAccountOutput>) => {
+export const CreateAccount =  (props: IModalProps<{}>, CreateAccountOutput>) => {
     const [name, setName] = useState(props.input.name);
     const [description, setDescription] = useState(props.input.description);
 
@@ -195,8 +195,8 @@ export const CreateAccount =  (props: IModalProps<{}}, CreateAccountOutput>) => 
 
     return (
         <div>
-            <TextField label='Name' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
-            <TextField label='Description' required defaultValue={name} onChange={(e) => setId(e.currentTarget.value)} />
+            <TextField label='Name' required defaultValue={name} onChange={(e) => setName(e.currentTarget.value)} />
+            <TextField label='Description' required defaultValue={description} onChange={(e) => setDescription(e.currentTarget.value)} />
         </div>
     );
 };

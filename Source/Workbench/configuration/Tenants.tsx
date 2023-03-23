@@ -1,34 +1,36 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { ScrollableDetailsList } from '@aksio/cratis-fluentui';
-import { IColumn } from '@fluentui/react';
+import { Box } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 
-const columns: IColumn[] = [
+const columns: GridColDef[] = [
     {
-        key: 'id',
-        name: 'Id',
-        fieldName: 'id',
-        minWidth: 240,
-        maxWidth: 240
+        field: 'id',
+        headerName: 'Id',
+        width: 240,
     },
     {
-        key: 'name',
-        name: 'Name',
-        fieldName: 'name',
-        minWidth: 200
+        field: 'name',
+        headerName: 'Name',
+        width: 240,
     }
 ];
 
 
 export const Tenants = () => {
-
     const [allTenants] = AllTenants.use();
 
     return (
-        <ScrollableDetailsList
-            columns={columns}
-            items={allTenants.data} />
+        <Box sx={{ height: '100%', flex: 1 }}>
+            <DataGrid
+                columns={columns}
+                filterMode="client"
+                sortingMode="client"
+                getRowId={row => row.id}
+                rows={allTenants.data}
+            />
+        </Box>
     );
 };
