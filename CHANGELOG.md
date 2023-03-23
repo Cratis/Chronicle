@@ -1,3 +1,10 @@
+# [v8.9.5] - 2023-3-23 [PR: #804](https://github.com/aksio-insurtech/Cratis/pull/804)
+
+### Fixed
+
+- Moving the instantiation of the identity provider to a per request level.
+
+
 # [v8.9.4] - 2023-3-21 [PR: #801](https://github.com/aksio-insurtech/Cratis/pull/801)
 
 ### Fixed
