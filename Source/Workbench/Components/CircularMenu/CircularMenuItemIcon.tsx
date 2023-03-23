@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { RenderingItem } from './RenderingItem';
 import { default as styles } from './CircularMenuItemIcon.module.scss';
 
-let first = true;
+const first = true;
 
 export const CircularMenuItemIcon = (item: RenderingItem) => {
     const [XOffset, setXOffset] = useState(20);
