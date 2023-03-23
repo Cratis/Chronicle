@@ -64,8 +64,8 @@ public static class IdentityProviderEndpointExtensions
                             }
                         }
 
-                        var context = new IdentityProviderContext(identityId, identityName, tokenAsJson, claims);
                         var provider = (app.ApplicationServices.GetService(providerTypes[0]) as IProvideIdentityDetails)!;
+                        var context = new IdentityProviderContext(identityId, identityName, tokenAsJson, claims);
                         var result = await provider.Provide(context);
 
                         if (result.IsUserAuthorized)
