@@ -40,7 +40,6 @@ public static class IdentityProviderEndpointExtensions
 
         if (providerTypes.Length == 1)
         {
-            var provider = (app.ApplicationServices.GetService(providerTypes[0]) as IProvideIdentityDetails)!;
             endpoints.MapGet(".aksio/me", async (HttpRequest request, HttpResponse response) =>
             {
                 if (request.Headers.ContainsKey(IdentityIdHeader) &&
@@ -66,6 +65,7 @@ public static class IdentityProviderEndpointExtensions
                         }
 
                         var context = new IdentityProviderContext(identityId, identityName, tokenAsJson, claims);
+                        var provider = (app.ApplicationServices.GetService(providerTypes[0]) as IProvideIdentityDetails)!;
                         var result = await provider.Provide(context);
 
                         if (result.IsUserAuthorized)
