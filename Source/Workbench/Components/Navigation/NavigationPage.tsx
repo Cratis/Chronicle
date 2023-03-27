@@ -34,41 +34,35 @@ export const NavigationPage = (props: NavigationPageProps) => {
                 <Grid item xs={2}>
                     <Paper elevation={1} sx={{ width: '100%', height: '100%' }}>
                         <NavigationContainer>
+
                             {props.navigationItems && props.navigationItems.map((item, index) => {
                                 const path = !item.indexPage && item.children?.length ? `${item.targetPath}/${item.children[0].targetPath}` : item.targetPath;
                                 const match = pathname.match(item.targetPath);
+
                                 return (
-                                    <NavigationButton
-                                        active={!!match?.length}
-                                        key={index}
-                                        variant={NavigationButtonVariant.Header}
-                                        title={item.title}
-                                        icon={item.icon}
-                                        onClick={() => navigate(path)} />);
+                                    <>
+                                        <NavigationButton
+                                            active={!!match?.length}
+                                            key={index}
+                                            variant={NavigationButtonVariant.Header}
+                                            title={item.title}
+                                            icon={item.icon}
+                                            onClick={() => navigate(path)} />
+                                        {match && item.children?.map((child, childIndex) => {
+                                            const path = `${item.targetPath}/${child.targetPath}`;
+                                            const match = pathname.match(path);
+                                            return (
+                                                <NavigationButton
+                                                    active={!!match?.length}
+                                                    key={childIndex}
+                                                    variant={NavigationButtonVariant.Primary}
+                                                    title={child.title}
+                                                    icon={child.icon}
+                                                    onClick={() => navigate(path)} />);
+                                        })}
+                                    </>
+                                );
                             })}
-                            <Routes>
-                                {props.navigationItems && props.navigationItems.map((item, index) => {
-                                    const path = item.routePath ?? item.targetPath;
-                                    return (
-                                        <Route key={index} path={`${path}/*`} element={
-                                            <>
-                                                {item.children?.map((child, childIndex) => {
-                                                    const path = `${item.targetPath}/${child.targetPath}`;
-                                                    const match = pathname.match(path);
-                                                    return (
-                                                        <NavigationButton
-                                                            active={!!match?.length}
-                                                            key={childIndex}
-                                                            variant={NavigationButtonVariant.Primary}
-                                                            title={child.title}
-                                                            icon={child.icon}
-                                                            onClick={() => navigate(path)} />);
-                                                })}
-                                            </>
-                                        } />
-                                    );
-                                })}
-                            </Routes>
 
                             {navigation && navigation}
                         </NavigationContainer>
@@ -85,7 +79,7 @@ export const NavigationPage = (props: NavigationPageProps) => {
                                             {item.children?.map((child, childIndex) => {
                                                 return (
                                                     <Route key={`${index}-${childIndex}`} path={`${child.targetPath}`}
-                                                           element={child.content} />
+                                                        element={child.content} />
                                                 );
                                             })}
                                         </>
