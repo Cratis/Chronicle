@@ -15,4 +15,3 @@ public class when_adding_existing_event : given.an_event_sequence_cache
 
     [Fact] void should_not_add_event() => cache.Count.ShouldEqual(2);
 }
-

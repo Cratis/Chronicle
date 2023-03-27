@@ -12,5 +12,5 @@ public class when_purging_cache_under_pressure : given.an_event_sequence_cache
     void Because() => cache.Purge();
 
     [Fact] void should_not_be_under_pressure_anymore() => cache.IsUnderPressure().ShouldBeFalse();
-    [Fact] void should_only_have_max_number_of_events() => cache.Count.ShouldEqual(EventSequenceCache.MaxNumberOfEvents - EventSequenceCache.NumberOfEventsToPurge + 100);
+    [Fact] void should_only_have_max_number_of_events() => cache.Count.ShouldEqual(EventSequenceCache.MaxNumberOfEvents - EventSequenceCache.NumberOfEventsToPurge);
 }
