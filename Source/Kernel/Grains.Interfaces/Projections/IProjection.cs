@@ -13,13 +13,6 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 public interface IProjection : IGrainWithGuidCompoundKey
 {
     /// <summary>
-    /// Get a model instance by its <see cref="EventSourceId">identifier</see>.
-    /// </summary>
-    /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
-    /// <returns>A projected model in the form of a <see cref="JsonObject"/>.</returns>
-    Task<JsonObject> GetModelInstanceById(EventSourceId eventSourceId);
-
-    /// <summary>
     /// Refresh the projection definition.
     /// </summary>
     /// <returns>Awaitable task.</returns>
