@@ -169,7 +169,7 @@ public abstract class ObserverWorker : Grain
                         return;
                     }
                 }
-                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber + 1;
+                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber.Next();
                 if (State.LastHandled < @event.Metadata.SequenceNumber)
                 {
                     State.LastHandled = @event.Metadata.SequenceNumber;
