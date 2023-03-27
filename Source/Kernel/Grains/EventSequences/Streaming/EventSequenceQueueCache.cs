@@ -20,8 +20,7 @@ public class EventSequenceQueueCache : IQueueCache
     /// Initializes a new instance of the <see cref="EventSequenceQueueCache"/> class.
     /// </summary>
     /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
-    public EventSequenceQueueCache(
-        IEventSequenceCaches caches)
+    public EventSequenceQueueCache(IEventSequenceCaches caches)
     {
         _caches = caches;
     }
@@ -56,11 +55,18 @@ public class EventSequenceQueueCache : IQueueCache
         }
 
         var microserviceAndTenant = (MicroserviceAndTenant)streamIdentity.Namespace;
-        return new EventSequenceQueueCacheCursor(
-            _caches.GetFor(
+        var cache = _caches.GetFor(
                 microserviceAndTenant.MicroserviceId,
                 microserviceAndTenant.TenantId,
-                (EventSequenceId)streamIdentity.Guid),
+                (EventSequenceId)streamIdentity.Guid);
+
+        if (token.SequenceNumber < (long)cache.Head.Value)
+        {
+            return new EmptyEventSequenceQueueCacheCursor();
+        }
+
+        return new EventSequenceQueueCacheCursor(
+            cache,
             microserviceAndTenant.MicroserviceId,
             microserviceAndTenant.TenantId,
             (EventSequenceId)streamIdentity.Guid,

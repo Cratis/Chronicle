@@ -19,7 +19,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
-    LinkedListNode<AppendedEvent>? _current;
+    CachedAppendedEvent? _current;
     EventSequenceNumber _currentSequenceNumber;
 
     /// <summary>
@@ -60,7 +60,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
                 return null!;
             }
 
-            var @event = _current.Value;
+            var @event = _current.Event;
             return new EventSequenceBatchContainer(
                 new[] { @event },
                 _eventSequenceId,
@@ -91,12 +91,12 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
         }
         else
         {
-            _current = _current.Next ?? TryToGetFromCache(_currentSequenceNumber + 1);
+            _current = _current.Next ?? TryToGetFromCache(_currentSequenceNumber.Next());
         }
 
         if (_current is not null)
         {
-            _currentSequenceNumber = _current.Value.Metadata.SequenceNumber;
+            _currentSequenceNumber = _current.Event.Metadata.SequenceNumber;
         }
 
         return _current is not null;
@@ -121,7 +121,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
     {
     }
 
-    LinkedListNode<AppendedEvent>? TryToGetFromCache(EventSequenceNumber sequenceNumber)
+    CachedAppendedEvent? TryToGetFromCache(EventSequenceNumber sequenceNumber)
     {
         if (!_cache.HasEvent(sequenceNumber))
         {

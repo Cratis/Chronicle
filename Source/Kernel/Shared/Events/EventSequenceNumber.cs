@@ -83,4 +83,10 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="right"><see cref="EventSequenceNumber"/> to subtract.</param>
     /// <returns>new event sequence number.</returns>
     public static EventSequenceNumber operator -(EventSequenceNumber left, EventSequenceNumber right) => new(left.Value - right.Value);
+
+    /// <summary>
+    /// Get the next <see cref="EventSequenceNumber"/>.
+    /// </summary>
+    /// <returns>The next <see cref="EventSequenceNumber"/>.</returns>
+    public EventSequenceNumber Next() => this + 1;
 }

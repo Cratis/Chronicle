@@ -66,8 +66,32 @@ public partial class ObserverSupervisor
         State.RunningState = ObserverRunningState.Subscribing;
         State.EventTypes = eventTypes;
 
+        var tailSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId);
         var lastSequenceNumber = await EventSequenceStorageProvider.GetTailSequenceNumber(State.EventSequenceId, State.EventTypes);
-        var nextSequenceNumber = lastSequenceNumber + 1;
+        var nextSequenceNumber = lastSequenceNumber.Next();
+
+        if (lastSequenceNumber != EventSequenceNumber.Unavailable &&
+            lastSequenceNumber < tailSequenceNumber &&
+            State.NextEventSequenceNumber != EventSequenceNumber.Unavailable)
+        {
+            var highestNumber = await _eventSequenceStorageProvider().GetNextSequenceNumberGreaterOrEqualThan(
+                _eventSequenceId,
+                nextSequenceNumber,
+                State.EventTypes);
+
+            if (highestNumber == EventSequenceNumber.Unavailable)
+            {
+                State.RunningState = ObserverRunningState.Active;
+                State.NextEventSequenceNumber = tailSequenceNumber.Next();
+                _logger.FastForwarding(
+                    State.NextEventSequenceNumber,
+                    highestNumber,
+                    _observerId,
+                    _eventSequenceId,
+                    _microserviceId,
+                    _tenantId);
+            }
+        }
 
         if (lastSequenceNumber == EventSequenceNumber.Unavailable ||
             State.NextEventSequenceNumber == nextSequenceNumber)

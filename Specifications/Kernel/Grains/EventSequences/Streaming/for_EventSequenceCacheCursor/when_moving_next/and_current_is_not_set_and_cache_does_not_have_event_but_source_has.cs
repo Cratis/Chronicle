@@ -19,7 +19,7 @@ public class and_current_is_not_set_and_cache_does_not_have_event_but_source_has
 
         @event = AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First);
 
-        cache.Setup(_ => _.GetEvent(EventSequenceNumber.First)).Returns(new LinkedListNode<AppendedEvent>(@event));
+        cache.Setup(_ => _.GetEvent(EventSequenceNumber.First)).Returns(new CachedAppendedEvent(@event));
     }
 
     void Because()
