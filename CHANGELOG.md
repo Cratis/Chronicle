@@ -1,3 +1,13 @@
+# [v8.10.2] - 2023-3-27 [PR: #810](https://github.com/aksio-insurtech/Cratis/pull/810)
+
+### Fixed
+
+- Cache was getting hammered with cache misses. Changnig behavior to be a window into the tail of the sequence.
+- Observers will do a fast forward if their `NextSequenceNumber` is behind and there is no event of any of the types it is subscribing to between its `Next`and the tail of the event sequence.
+- Fixing navigation in workbench.
+- Removing unused obsolete API for getting an instance from projections. This is now in `ImmediateProjection`.
+
+
 # [v8.10.1] - 2023-3-23 [PR: #806](https://github.com/aksio-insurtech/Cratis/pull/806)
 
 ### Fixed
