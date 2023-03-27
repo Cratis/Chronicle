@@ -12,6 +12,16 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 public class CachedAppendedEvent
 {
     /// <summary>
+    /// Gets the <see cref="AppendedEvent"/> that is cached.
+    /// </summary>
+    public AppendedEvent Event { get; }
+
+    /// <summary>
+    /// Gets the next <see cref="CachedAppendedEvent"/> in the chain.
+    /// </summary>
+    public CachedAppendedEvent? Next { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CachedAppendedEvent"/> class.
     /// </summary>
     /// <param name="event">The <see cref="AppendedEvent"/> to cache.</param>
@@ -21,14 +31,4 @@ public class CachedAppendedEvent
         Event = @event;
         Next = next;
     }
-
-    /// <summary>
-    /// Gets the <see cref="AppendedEvent"/> that is cached.
-    /// </summary>
-    public AppendedEvent Event { get; }
-
-    /// <summary>
-    /// Gets the next <see cref="CachedAppendedEvent"/> in the chain.
-    /// </summary>
-    public CachedAppendedEvent? Next { get; set; }
 }
