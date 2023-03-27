@@ -163,7 +163,7 @@ public class RecoverFailedPartitionState
     /// <param name="processedEvent">Event that was successfully processed.</param>
     public void UpdateWithLatestSuccess(AppendedEvent processedEvent)
     {
-        NextSequenceNumberToProcess = processedEvent.Metadata.SequenceNumber + 1;
+        NextSequenceNumberToProcess = processedEvent.Metadata.SequenceNumber.Next();
         if (processedEvent.Metadata.SequenceNumber != CurrentError) return;
         CurrentError = EventSequenceNumber.Unavailable;
         LastAttemptOnCurrentError = DateTimeOffset.MinValue;
