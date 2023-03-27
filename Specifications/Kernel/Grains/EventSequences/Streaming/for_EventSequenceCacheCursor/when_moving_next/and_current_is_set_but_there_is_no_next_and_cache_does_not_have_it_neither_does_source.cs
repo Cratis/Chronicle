@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQ
 public class and_current_is_set_but_there_is_no_next_and_cache_does_not_have_it_neither_does_source : given.a_cursor_and_an_empty_cache
 {
     bool result;
-    LinkedListNode<AppendedEvent> first_event;
+    CachedAppendedEvent first_event;
 
     void Establish()
     {
@@ -18,7 +18,7 @@ public class and_current_is_set_but_there_is_no_next_and_cache_does_not_have_it_
             .Returns(false)
             .Returns(false);
 
-        first_event = new LinkedListNode<AppendedEvent>(AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First));
+        first_event = new CachedAppendedEvent(AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First));
         cache.Setup(_ => _.GetEvent(EventSequenceNumber.First)).Returns(first_event);
         result = cursor.MoveNext();
     }
