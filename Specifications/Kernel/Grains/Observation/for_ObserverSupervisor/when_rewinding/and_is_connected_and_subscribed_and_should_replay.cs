@@ -7,6 +7,7 @@ public class and_is_connected_and_subscribed_and_should_replay : given.an_observ
 {
     async Task Establish()
     {
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).ReturnsAsync(new EventSequenceNumber(42L));
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).ReturnsAsync(new EventSequenceNumber(42L));
         state.RunningState = ObserverRunningState.Active;
         state.NextEventSequenceNumber = EventSequenceNumber.First;
