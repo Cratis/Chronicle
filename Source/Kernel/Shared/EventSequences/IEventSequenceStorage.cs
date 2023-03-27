@@ -78,7 +78,11 @@ public interface IEventSequenceStorage
     /// <param name="sequenceNumber">The sequence number to search from.</param>
     /// <param name="eventTypes">Optional event types to get for.</param>
     /// <param name="eventSourceId">Optional <see cref="EventSourceId"/> to get for. It won't filter by this if omitted.</param>
-    /// <returns>The last sequence number. If providing event types, this will give the last sequence number from the selection of event types.</returns>
+    /// <returns>
+    /// <p>The last sequence number.</p>
+    /// <p>If providing event types, this will give the last sequence number from the selection of event types.</p>
+    /// <p>If no event is found, it will return <see cref="EventSequenceNumber.Unavailable"/>.</p>
+    /// </returns>
     Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>

@@ -7,7 +7,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceC
 
 public class when_getting_event_it_has : given.an_event_sequence_cache
 {
-    LinkedListNode<AppendedEvent>? result;
+    CachedAppendedEvent? result;
 
     void Establish() => Enumerable.Range(0, 100).ForEach(_ => cache.Add(AppendedEvent.EmptyWithEventSequenceNumber((ulong)_)));
 

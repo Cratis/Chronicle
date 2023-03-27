@@ -20,6 +20,8 @@ public class EventSequenceCacheForSpecs : EventSequenceCache
     {
     }
 
-    public LinkedList<AppendedEvent> Events => _events;
-    public Dictionary<EventSequenceNumber, LinkedListNode<AppendedEvent>> EventsBySequenceNumber => _eventsBySequenceNumber;
+    public IEnumerable<AppendedEvent> Events => _eventsBySequenceNumber.Select(_ => _.Value.Event);
+    public CachedAppendedEvent HeadEvent => _head;
+    public CachedAppendedEvent TailEvent => _tail;
+    public Dictionary<EventSequenceNumber, CachedAppendedEvent> EventsBySequenceNumber => _eventsBySequenceNumber;
 }

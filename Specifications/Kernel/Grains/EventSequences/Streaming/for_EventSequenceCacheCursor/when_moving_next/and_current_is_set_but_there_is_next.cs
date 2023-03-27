@@ -6,8 +6,8 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming.for_EventSequenceQ
 public class and_current_is_set_but_there_is_next : given.a_cursor_and_an_empty_cache
 {
     bool result;
-    LinkedListNode<AppendedEvent> first_event;
-    LinkedListNode<AppendedEvent> second_event;
+    CachedAppendedEvent first_event;
+    CachedAppendedEvent second_event;
     EventSequenceBatchContainer container;
 
     void Establish()
@@ -16,11 +16,8 @@ public class and_current_is_set_but_there_is_next : given.a_cursor_and_an_empty_
             .Returns(false)
             .Returns(true);
 
-        var list = new LinkedList<AppendedEvent>();
-        first_event = new LinkedListNode<AppendedEvent>(AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First));
-        second_event = new LinkedListNode<AppendedEvent>(AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First + 1));
-        list.AddLast(first_event);
-        list.AddLast(second_event);
+        second_event = new CachedAppendedEvent(AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First + 1));
+        first_event = new CachedAppendedEvent(AppendedEvent.EmptyWithEventSequenceNumber(EventSequenceNumber.First), second_event);
 
         cache.Setup(_ => _.GetEvent(EventSequenceNumber.First)).Returns(first_event);
         result = cursor.MoveNext();
@@ -34,5 +31,5 @@ public class and_current_is_set_but_there_is_next : given.a_cursor_and_an_empty_
 
     [Fact] void should_not_prime_cache_for_second_event() => cache.Verify(_ => _.Prime(EventSequenceNumber.First), Once);
     [Fact] void should_return_true() => result.ShouldBeTrue();
-    [Fact] void should_hold_the_next_event() => container.GetEvents<AppendedEvent>().First().Item1.ShouldEqual(second_event.Value);
+    [Fact] void should_hold_the_next_event() => container.GetEvents<AppendedEvent>().First().Item1.ShouldEqual(second_event.Event);
 }

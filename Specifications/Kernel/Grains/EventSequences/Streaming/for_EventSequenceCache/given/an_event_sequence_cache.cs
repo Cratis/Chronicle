@@ -26,6 +26,15 @@ public class an_event_sequence_cache : Specification
         execution_context_manager = new();
         event_sequence_storage_provider = new();
 
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult(EventSequenceNumber.First));
+
+        var cursor = new Mock<IEventCursor>();
+        cursor.Setup(_ => _.MoveNext()).Returns(Task.FromResult(false));
+
+        event_sequence_storage_provider.Setup(_ =>
+            _.GetRange(event_sequence_id, 0, EventSequenceCache.NumberOfEventsToFetch, null, null))
+            .Returns(Task.FromResult(cursor.Object));
+
         cache = new(
             microservice_id,
             tenant_id,

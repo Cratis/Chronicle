@@ -16,6 +16,16 @@ public interface IEventSequenceCache : IDisposable
     int Count { get; }
 
     /// <summary>
+    /// Gets the head sequence numbers.
+    /// </summary>
+    EventSequenceNumber Head { get; }
+
+    /// <summary>
+    /// Gets the tail sequence numbers.
+    /// </summary>
+    EventSequenceNumber Tail { get; }
+
+    /// <summary>
     /// Add an event to the cache.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to add.</param>
@@ -33,7 +43,7 @@ public interface IEventSequenceCache : IDisposable
     /// </summary>
     /// <param name="sequenceNumber">Sequence number to get for.</param>
     /// <returns>The node representing the event.</returns>
-    LinkedListNode<AppendedEvent>? GetEvent(EventSequenceNumber sequenceNumber);
+    CachedAppendedEvent? GetEvent(EventSequenceNumber sequenceNumber);
 
     /// <summary>
     /// Populate the cache from a specific sequence number.
