@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 
-
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequenceCache"/>.
 /// </summary>
@@ -35,7 +34,7 @@ public class EventSequenceCache : IEventSequenceCache
     /// </summary>
     public const int NumberOfEventsToFetch = 1000;
 
-#pragma warning disable SA1600, MA0016 // Elements should be documented + concrete type should not be used
+#pragma warning disable CA1051, SA1600, MA0016 // Elements should be documented + concrete type should not be used + visible instance fields.
     protected readonly Dictionary<EventSequenceNumber, CachedAppendedEvent> _eventsBySequenceNumber = new();
     protected CachedAppendedEvent? _head;
     protected CachedAppendedEvent? _tail;
@@ -75,7 +74,6 @@ public class EventSequenceCache : IEventSequenceCache
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         ILogger<EventSequenceCache> logger)
     {
-        _events = new();
         _eventsBySequenceNumber = new();
         _microserviceId = microserviceId;
         _tenantId = tenantId;
@@ -83,13 +81,16 @@ public class EventSequenceCache : IEventSequenceCache
         _executionContextManager = executionContextManager;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;
+
+        PreFillWithTailWindow();
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        _events.Clear();
         _eventsBySequenceNumber.Clear();
+        _head = null;
+        _tail = null;
     }
 
     /// <inheritdoc/>
@@ -97,7 +98,6 @@ public class EventSequenceCache : IEventSequenceCache
     {
         lock (_lock)
         {
-            RelievePressure();
             AddImplementation(@event);
         }
     }
@@ -105,6 +105,11 @@ public class EventSequenceCache : IEventSequenceCache
     /// <inheritdoc/>
     public void Prime(EventSequenceNumber from)
     {
+        if (from < (_head?.Event.Metadata.SequenceNumber ?? EventSequenceNumber.First))
+        {
+            return;
+        }
+
         var to = from + NumberOfEventsToFetch;
         _logger.Priming(from, to);
         _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
@@ -153,6 +158,11 @@ public class EventSequenceCache : IEventSequenceCache
 
     void AddImplementation(AppendedEvent @event)
     {
+        if (_eventsBySequenceNumber.ContainsKey(@event.Metadata.SequenceNumber))
+        {
+            return;
+        }
+
         if (_head is null)
         {
             _head = new CachedAppendedEvent(@event);
@@ -166,18 +176,30 @@ public class EventSequenceCache : IEventSequenceCache
             _tail.Next = new CachedAppendedEvent(@event, null);
             _tail = _tail.Next;
             _eventsBySequenceNumber[@event.Metadata.SequenceNumber] = _tail;
+            return;
         }
+
+        throw new EventSequenceNumberIsLessThanLastEventInCache(@event.Metadata.SequenceNumber, _tail.Event.Metadata.SequenceNumber);
     }
 
     void RelievePressure()
     {
         lock (_lock)
         {
-            while (Count > MaxNumberOfEvents)
+            while (Count > MaxNumberOfEvents - NumberOfEventsToPurge)
             {
                 _eventsBySequenceNumber.Remove(_head!.Event.Metadata.SequenceNumber);
                 _head = _head.Next;
             }
         }
+    }
+
+    void PreFillWithTailWindow()
+    {
+        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
+        var tail = _eventSequenceStorageProvider().GetTailSequenceNumber(_eventSequenceId).GetAwaiter().GetResult();
+        tail -= NumberOfEventsToFetch;
+        if ((long)tail.Value < 0) tail = 0;
+        Prime(tail);
     }
 }
