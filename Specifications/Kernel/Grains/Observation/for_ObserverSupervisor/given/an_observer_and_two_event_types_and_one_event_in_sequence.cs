@@ -20,6 +20,7 @@ public class an_observer_and_two_event_types_and_one_event_in_sequence : an_obse
             new(event_source_id, EventSequenceNumber.First, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
             new ExpandoObject());
 
+        event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, null, null)).Returns(Task.FromResult(EventSequenceNumber.First));
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, null)).Returns(Task.FromResult(EventSequenceNumber.First));
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(event_sequence_id, event_types, event_source_id)).Returns(Task.FromResult(EventSequenceNumber.First));
         persistent_state.Invocations.Clear();
