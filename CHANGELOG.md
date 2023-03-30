@@ -1,3 +1,10 @@
+# [v8.10.6] - 2023-3-30 [PR: #816](https://github.com/aksio-insurtech/Cratis/pull/816)
+
+### Fixed
+
+- FIxing so that observers gets called properly after a redaction. There was an error in the query for getting observers based on event types.
+
+
 # [v8.10.5] - 2023-3-30 [PR: #813](https://github.com/aksio-insurtech/Cratis/pull/813)
 
 ### Fixed
