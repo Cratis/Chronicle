@@ -158,7 +158,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         {
             foreach (var @event in cursor.Current)
             {
-                if (@event.Metadata.Type == GlobalEventTypes.Redaction)
+                if (@event.Metadata.Type.Id == GlobalEventTypes.Redaction)
                 {
                     _logger.RedactionAlreadyApplied(eventSequenceId, @event.Metadata.SequenceNumber);
                     continue;
