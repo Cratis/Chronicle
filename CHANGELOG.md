@@ -1,3 +1,11 @@
+# [v8.10.5] - 2023-3-30 [PR: #813](https://github.com/aksio-insurtech/Cratis/pull/813)
+
+### Fixed
+
+- `EventType` now supports parsing string representation without generation info, defaulting to `EventGeneration.First` for that scenario.
+- When checking if redaction has already happened, we now check only the `Id` part - we don't care about which generation at that point.
+
+
 # [v8.10.4] - 2023-3-30 [PR: #812](https://github.com/aksio-insurtech/Cratis/pull/812)
 
 ### Fixed
