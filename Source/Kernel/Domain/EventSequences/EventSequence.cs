@@ -49,7 +49,7 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] AppendEvent eventToAppend)
     {
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         await eventSequence.Append(
             eventToAppend.EventSourceId,
@@ -72,7 +72,7 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] RedactEvent redaction)
     {
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         await eventSequence.Redact(redaction.SequenceNumber, redaction.Reason);
     }
@@ -92,7 +92,7 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] RedactEvents redaction)
     {
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         await eventSequence.Redact(
             redaction.EventSourceId,
