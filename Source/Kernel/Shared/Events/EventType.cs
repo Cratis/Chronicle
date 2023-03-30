@@ -46,6 +46,10 @@ public record EventType(EventTypeId Id, EventGeneration Generation, bool IsPubli
     public static EventType Parse(string input)
     {
         var segments = input.Split('+');
+        if (segments.Length == 1)
+        {
+            return new(segments[0], EventGeneration.First);
+        }
         return new(segments[0], uint.Parse(segments[1]));
     }
 }
