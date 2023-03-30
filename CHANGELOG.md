@@ -1,3 +1,10 @@
+# [v8.10.4] - 2023-3-30 [PR: #812](https://github.com/aksio-insurtech/Cratis/pull/812)
+
+### Fixed
+
+- The ´useIdentity()` hook is now fixed to not go into an endless re-render loop when the identity cookie is available.
+
+
 # [v8.10.3] - 2023-3-30 [PR: #811](https://github.com/aksio-insurtech/Cratis/pull/811)
 
 ### Fixed
