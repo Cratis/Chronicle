@@ -35,12 +35,15 @@ public class MongoDBObserverStorage : IObserverStorage
             .First()));
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<EventType> eventTypes) =>
-        Task.FromResult(Collection
+    public Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<EventType> eventTypes)
+    {
+        var eventTypeIds = eventTypes.Select(_ => _.Id).ToArray();
+        return Task.FromResult(Collection
             .Find(_ => true)
             .ToEnumerable()
-            .Where(_ => _.EventTypes.Any(_ => eventTypes.Contains(_)))
+            .Where(observer => observer.EventTypes.Any(_ => eventTypeIds.Contains(_.Id)))
             .Select(_ => ToObserverInformation(_)).ToArray().AsEnumerable());
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<ObserverInformation>> GetAllObservers() =>
