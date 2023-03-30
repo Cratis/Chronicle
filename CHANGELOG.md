@@ -1,3 +1,10 @@
+# [v8.10.3] - 2023-3-30 [PR: #811](https://github.com/aksio-insurtech/Cratis/pull/811)
+
+### Fixed
+
+- Added missing API endpoint for getting tail sequence number for a specific observer. 
+
+
 # [v8.10.2] - 2023-3-27 [PR: #810](https://github.com/aksio-insurtech/Cratis/pull/810)
 
 ### Fixed
