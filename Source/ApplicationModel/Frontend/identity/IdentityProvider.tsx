@@ -31,21 +31,21 @@ function getCookie(name: string) {
 export const IdentityProvider = (props: IdentityProviderProps) => {
     const [context, setContext] = useState<IIdentityContext>(defaultIdentityContext);
     const identityCookie = getCookie(cookieName);
-    if (identityCookie.length == 2) {
-        const json = atob(identityCookie[1]);
-        setContext({
-            details: JSON.parse(json.toString())
-        });
-    } else {
-        useEffect(() => {
+    useEffect(() => {
+        if (identityCookie.length == 2) {
+            const json = atob(identityCookie[1]);
+            setContext({
+                details: JSON.parse(json.toString())
+            });
+        } else {
             fetch('/.aksio/me').then(async response => {
                 const json = await response.json();
                 setContext({
                     details: json
                 });
             });
-        }, []);
-    }
+        }
+    }, []);
 
     return (
         <IdentityProviderContext.Provider value={context}>
