@@ -6,6 +6,8 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -19,6 +21,7 @@ namespace Aksio.Cratis.Kernel.Read.EventSequences;
 public class EventSequence : Controller
 {
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
+    readonly ProviderFor<IObserverStorage> _observerStorage;
     readonly IGrainFactory _grainFactory;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IExecutionContextManager _executionContextManager;
@@ -27,16 +30,19 @@ public class EventSequence : Controller
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="eventSequenceStorageProviderProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
+    /// <param name="observerStorage">Provider for <see cref="IObserverStorage"/>.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public EventSequence(
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
+        ProviderFor<IObserverStorage> observerStorage,
         IGrainFactory grainFactory,
         JsonSerializerOptions jsonSerializerOptions,
         IExecutionContextManager executionContextManager)
     {
         _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
+        _observerStorage = observerStorage;
         _grainFactory = grainFactory;
         _jsonSerializerOptions = jsonSerializerOptions;
         _executionContextManager = executionContextManager;
@@ -71,6 +77,32 @@ public class EventSequence : Controller
         GetEventSequence(microserviceId, eventSequenceId, tenantId).GetTailSequenceNumber();
 
     /// <summary>
+    /// Get the tail sequence number for a specific observer.
+    /// </summary>
+    /// <param name="eventSequenceId">Event sequence to get for.</param>
+    /// <param name="microserviceId">Microservice to get for.</param>
+    /// <param name="tenantId">Tenant to get for.</param>
+    /// <param name="observerId">The observer to get for.</param>
+    /// <returns>The tail sequence number.</returns>
+    /// <remarks>
+    /// This will use the event types of the observer to determine the tail sequence number of
+    /// the last event that was appended to the event sequence that the observer is interested in.
+    /// </remarks>
+    [HttpGet("tail-sequence-number/observer/{observerId}")]
+    public async Task<EventSequenceNumber> TailForObserver(
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] ObserverId observerId)
+    {
+        var correlationId = _executionContextManager.Current.CorrelationId;
+        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
+
+        var observer = await _observerStorage().GetObserver(observerId);
+        return await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(eventSequenceId, observer.EventTypes);
+    }
+
+    /// <summary>
     /// Get events for a specific event sequence in a microservice for a specific tenant.
     /// </summary>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
@@ -84,7 +116,10 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId)
     {
         var result = new List<AppendedEventWithJsonAsContent>();
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+
+        var correlationId = _executionContextManager.Current.CorrelationId;
+        _executionContextManager.Establish(tenantId, correlationId, microserviceId);
+
         var cursor = await _eventSequenceStorageProviderProvider().GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First);
         while (await cursor.MoveNext())
         {
