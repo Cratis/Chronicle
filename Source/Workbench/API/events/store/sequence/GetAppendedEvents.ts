@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/cratis-applications-frontend/queries';
-import { AppendedEvents } from '../sequence/AppendedEvents';
+import { PagedQueryResult } from '../sequence/PagedQueryResult';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?pageSize={{pageSize}}&pageNumber={{pageNumber}}');
@@ -15,13 +15,13 @@ export interface GetAppendedEventsArguments {
     pageSize: number;
     pageNumber: number;
 }
-export class GetAppendedEvents extends QueryFor<AppendedEvents, GetAppendedEventsArguments> {
+export class GetAppendedEvents extends QueryFor<PagedQueryResult, GetAppendedEventsArguments> {
     readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?pageSize={{pageSize}}&pageNumber={{pageNumber}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: AppendedEvents = {} as any;
+    readonly defaultValue: PagedQueryResult = {} as any;
 
     constructor() {
-        super(AppendedEvents, false);
+        super(PagedQueryResult, false);
     }
 
     get requestArguments(): string[] {
@@ -34,7 +34,7 @@ export class GetAppendedEvents extends QueryFor<AppendedEvents, GetAppendedEvent
         ];
     }
 
-    static use(args?: GetAppendedEventsArguments): [QueryResultWithState<AppendedEvents>, PerformQuery<GetAppendedEventsArguments>] {
-        return useQuery<AppendedEvents, GetAppendedEvents, GetAppendedEventsArguments>(GetAppendedEvents, args);
+    static use(args?: GetAppendedEventsArguments): [QueryResultWithState<PagedQueryResult>, PerformQuery<GetAppendedEventsArguments>] {
+        return useQuery<PagedQueryResult, GetAppendedEvents, GetAppendedEventsArguments>(GetAppendedEvents, args);
     }
 }

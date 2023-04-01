@@ -112,7 +112,7 @@ public class EventSequence : Controller
     /// <param name="pageNumber">Page number to return.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
-    public async Task<AppendedEvents> GetAppendedEvents(
+    public async Task<PagedQueryResult<AppendedEventWithJsonAsContent>> GetAppendedEvents(
         [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId,
@@ -126,7 +126,7 @@ public class EventSequence : Controller
 
         var from = EventSequenceNumber.First + (pageNumber * pageSize);
         var tail = await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(eventSequenceId);
-        var cursor = await _eventSequenceStorageProviderProvider().GetRange(eventSequenceId, from, from + pageSize);
+        var cursor = await _eventSequenceStorageProviderProvider().GetRange(eventSequenceId, from, from + (pageSize - 1));
         while (await cursor.MoveNext())
         {
             result.AddRange(cursor.Current.Select(_ => new AppendedEventWithJsonAsContent(
