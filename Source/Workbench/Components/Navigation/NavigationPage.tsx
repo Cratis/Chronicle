@@ -40,7 +40,7 @@ export const NavigationPage = (props: NavigationPageProps) => {
                                 const match = pathname.match(item.targetPath);
 
                                 return (
-                                    <>
+                                    <span key={index}>
                                         <NavigationButton
                                             active={!!match?.length}
                                             key={index}
@@ -60,7 +60,8 @@ export const NavigationPage = (props: NavigationPageProps) => {
                                                     icon={child.icon}
                                                     onClick={() => navigate(path)} />);
                                         })}
-                                    </>
+
+                                    </span>
                                 );
                             })}
 

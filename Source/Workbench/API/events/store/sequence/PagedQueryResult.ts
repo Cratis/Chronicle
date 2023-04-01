@@ -4,27 +4,13 @@
 
 import { field } from '@aksio/cratis-fundamentals';
 
+import { AppendedEventWithJsonAsContent } from './AppendedEventWithJsonAsContent';
 
-export class FailedObserverPartition {
+export class PagedQueryResult {
 
-    @field(String)
-    eventSourceId!: string;
-
-    @field(Number)
-    sequenceNumber!: number;
-
-    @field(Date)
-    occurred!: Date;
-
-    @field(Date)
-    lastAttempt!: Date;
+    @field(AppendedEventWithJsonAsContent, true)
+    items!: AppendedEventWithJsonAsContent[];
 
     @field(Number)
-    attempts!: number;
-
-    @field(String, true)
-    messages!: string[];
-
-    @field(String)
-    stackTrace!: string;
+    totalCount!: number;
 }

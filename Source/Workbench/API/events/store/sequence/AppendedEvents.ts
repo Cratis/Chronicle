@@ -4,15 +4,13 @@
 
 import { field } from '@aksio/cratis-fundamentals';
 
+import { AppendedEventWithJsonAsContent } from './AppendedEventWithJsonAsContent';
 
-export class RecoveringFailedObserverPartition {
+export class AppendedEvents {
 
-    @field(String)
-    eventSourceId!: string;
+    @field(AppendedEventWithJsonAsContent, true)
+    events!: AppendedEventWithJsonAsContent[];
 
     @field(Number)
-    sequenceNumber!: number;
-
-    @field(Date)
-    startedRecoveryAt!: Date;
+    tailSequenceNumber!: number;
 }
