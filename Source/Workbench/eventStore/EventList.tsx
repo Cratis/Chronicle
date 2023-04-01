@@ -24,11 +24,14 @@ import { ModalButtons, ModalResult, useModal } from '@aksio/cratis-mui';
 import RedactEventModal from './RedactEventModal';
 import GlobalEventTypes from '../GlobalEventTypes';
 import RedactEventsModal from './RedactEventsModal';
+import { GetAppendedEvents, GetAppendedEventsArguments } from 'API/events/store/sequence/GetAppendedEvents';
 
 export type EventSelected = (item: AppendedEvent) => void;
 
 export interface EventListProps {
-    items: AppendedEvent[];
+    microserviceId: string;
+    tenantId: string;
+    eventSequenceId: string;
     eventTypes: EventTypeInformation[];
     onEventSelected?: EventSelected;
     onEventsRedacted?: () => void;
@@ -36,6 +39,35 @@ export interface EventListProps {
 }
 
 export const EventList = (props: EventListProps) => {
+    const [pageState, setPageState] = useState({
+        isLoading: false,
+        data: [] as AppendedEvent[],
+        total: 0,
+        pageNumber: 0,
+        pageSize: 100
+    });
+
+    const getAppendedEventsArguments = () => {
+        return {
+            eventSequenceId: props.eventSequenceId,
+            microserviceId: props.microserviceId,
+            tenantId: props.tenantId,
+            pageNumber: pageState.pageNumber,
+            pageSize: pageState.pageSize
+        } as GetAppendedEventsArguments;
+    };
+
+    const [events, refreshEvents] = GetAppendedEvents.use();
+
+    const fetchEvents = async () => {
+        setPageState(old => ({ ...old, isLoading: true }));
+        await refreshEvents(getAppendedEventsArguments());
+        setPageState(old => ({ ...old, isLoading: false, data: events.data.events, total: events.data.tailSequenceNumber }));
+    };
+
+    useEffect(() => {
+        fetchEvents();
+    }, [pageState.pageNumber, pageState.pageSize]);
 
     const [redactEventCmd, setRedactEventCmd] = RedactEvent.use();
     const [redactEventsCmd, setRedactEventsCmd] = RedactEvents.use();
@@ -64,8 +96,10 @@ export const EventList = (props: EventListProps) => {
                     reason: output.content.reason
                 });
                 const cmdResult = await redactEventCmd.execute();
+
                 if (cmdResult.isSuccess) {
                     openSnackBar('Event redacted', 'success');
+                    await fetchEvents();
                     props.onEventsRedacted?.();
                 }
             }
@@ -91,6 +125,7 @@ export const EventList = (props: EventListProps) => {
                 const cmdResult = await redactEventsCmd.execute();
                 if (cmdResult.isSuccess) {
                     openSnackBar('Events redacted', 'success');
+                    await fetchEvents();
                     props.onEventsRedacted?.();
                 }
             }
@@ -183,21 +218,28 @@ export const EventList = (props: EventListProps) => {
 
     const eventTypeSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
         selectionModel.forEach((selected) => {
-            const selectedEvent = props.items.find(_ => _.metadata.sequenceNumber == selected);
+            const selectedEvent = events.data.events.find(_ => _.metadata.sequenceNumber == selected);
             props.onEventSelected?.(selectedEvent!);
         });
     };
 
     return (
         <>
-            <DataGrid
-                columns={eventListColumns}
-                filterMode='server'
-                sortingMode='server'
-                getRowId={(row) => row.metadata.sequenceNumber}
-                onRowSelectionModelChange={eventTypeSelected}
-                rows={props.items}
-            />
+            {((events.data.events && events.data.events.length > 0) &&
+                <DataGrid
+                    paginationMode='server'
+                    loading={pageState.isLoading}
+                    rowCount={events.data.tailSequenceNumber}
+                    pageSizeOptions={[10, 25, 50, 100]}
+                    paginationModel={{ page: pageState.pageNumber, pageSize: pageState.pageSize }}
+                    columns={eventListColumns}
+                    filterMode='server'
+                    sortingMode='server'
+                    getRowId={(row) => row.metadata.sequenceNumber}
+                    onRowSelectionModelChange={eventTypeSelected}
+                    onPaginationModelChange={(params) => { setPageState(old => ({ ...old, ...{ pageNumber: params.page, pageSize: params.pageSize } })); }}
+                    rows={events.data.events}
+                />)}
 
             <Snackbar open={snackBarState.open} autoHideDuration={6000} onClose={handleCloseSnackBar}
                 anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
