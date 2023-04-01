@@ -4,7 +4,7 @@
 import { useBoolean } from '@fluentui/react-hooks';
 
 import { EventHistogram } from './EventHistogram';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { FilterBuilder } from './FilterBuilder';
 import { EventList } from './EventList';
 
@@ -39,6 +39,11 @@ export const EventSequences = () => {
     const [eventTypes, refreshEventTypes] = AllEventTypes.use({
         microserviceId: microserviceId
     });
+
+    const refreshEventsCallback = useRef<() => void>();
+    function registerRefreshEventsCallback(callback: () => void) {
+        refreshEventsCallback.current = callback;
+    }
 
     useEffect(() => {
         if (eventSequences.data.length > 0) {
@@ -117,7 +122,7 @@ export const EventSequences = () => {
                         if (isTimelineOpen) toggleTimeline();
                     }}>Filter</Button> */}
                     <Button startIcon={<icons.PlayArrow />}
-                        onClick={() => {}}>Run</Button>
+                        onClick={() => refreshEventsCallback.current?.()}>Run</Button>
 
                     {isTimelineOpen &&
                         <Button startIcon={<icons.ZoomOutMap />} onClick={() => {
@@ -132,6 +137,7 @@ export const EventSequences = () => {
                         <Grid container spacing={2} sx={{ height: '100%' }}>
                             <Grid item xs={8}>
                                 <EventList
+                                    registerRefreshEvents={registerRefreshEventsCallback}
                                     eventSequenceId={selectedEventSequence.id}
                                     tenantId={selectedTenant!.id}
                                     microserviceId={microserviceId}
