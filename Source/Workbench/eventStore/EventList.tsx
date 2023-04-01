@@ -63,7 +63,7 @@ export const EventList = (props: EventListProps) => {
     const fetchEvents = async () => {
         setPageState(old => ({ ...old, isLoading: true }));
         await refreshEvents(getAppendedEventsArguments());
-        setPageState(old => ({ ...old, isLoading: false, data: events.data.events, total: events.data.tailSequenceNumber }));
+        setPageState(old => ({ ...old, isLoading: false, data: events.data.items, total: events.data.totalCount }));
     };
 
     useEffect(() => {
@@ -221,18 +221,18 @@ export const EventList = (props: EventListProps) => {
 
     const eventTypeSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
         selectionModel.forEach((selected) => {
-            const selectedEvent = events.data.events.find(_ => _.metadata.sequenceNumber == selected);
+            const selectedEvent = events.data.items.find(_ => _.metadata.sequenceNumber == selected);
             props.onEventSelected?.(selectedEvent!);
         });
     };
 
     return (
         <>
-            {((events.data.events && events.data.events.length > 0) &&
+            {((events.data.items && events.data.items.length > 0) &&
                 <DataGrid
                     paginationMode='server'
                     loading={pageState.isLoading}
-                    rowCount={events.data.tailSequenceNumber}
+                    rowCount={events.data.totalCount}
                     pageSizeOptions={[10, 25, 50, 100]}
                     paginationModel={{ page: pageState.pageNumber, pageSize: pageState.pageSize }}
                     columns={eventListColumns}
@@ -241,7 +241,7 @@ export const EventList = (props: EventListProps) => {
                     getRowId={(row) => row.metadata.sequenceNumber}
                     onRowSelectionModelChange={eventTypeSelected}
                     onPaginationModelChange={(params) => { setPageState(old => ({ ...old, ...{ pageNumber: params.page, pageSize: params.pageSize } })); }}
-                    rows={events.data.events}
+                    rows={events.data.items}
                 />)}
 
             <Snackbar open={snackBarState.open} autoHideDuration={6000} onClose={handleCloseSnackBar}
