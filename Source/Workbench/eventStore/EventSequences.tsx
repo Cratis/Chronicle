@@ -11,7 +11,6 @@ import { EventList } from './EventList';
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 
-import { FindFor, FindForArguments } from 'API/events/store/sequence/FindFor';
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
@@ -34,16 +33,6 @@ export const EventSequences = () => {
     const [isTimelineOpen, { toggle: toggleTimeline }] = useBoolean(false);
     const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
 
-    const getFindForArguments = () => {
-        return {
-            eventSequenceId: selectedEventSequence?.id || undefined!,
-            microserviceId: microserviceId,
-            tenantId: selectedTenant?.id || undefined
-        } as FindForArguments;
-    };
-
-    const [events, refreshEvents] = FindFor.use(getFindForArguments());
-
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
     const [selectedEventType, setSelectedEventType] = useState<EventTypeInformation | undefined>(undefined);
 
@@ -62,12 +51,6 @@ export const EventSequences = () => {
             setSelectedTenant(tenants.data[0]);
         }
     }, [tenants.data]);
-
-    useEffect(() => {
-        if (selectedEventSequence && selectedTenant) {
-            refreshEvents(getFindForArguments());
-        }
-    }, [selectedEventSequence, selectedTenant]);
 
     const eventSelected = (item: any) => {
         if (item !== selectedEvent) {
@@ -134,7 +117,7 @@ export const EventSequences = () => {
                         if (isTimelineOpen) toggleTimeline();
                     }}>Filter</Button> */}
                     <Button startIcon={<icons.PlayArrow />}
-                        onClick={() => refreshEvents(getFindForArguments())}>Run</Button>
+                        onClick={() => {}}>Run</Button>
 
                     {isTimelineOpen &&
                         <Button startIcon={<icons.ZoomOutMap />} onClick={() => {
@@ -144,12 +127,16 @@ export const EventSequences = () => {
                     {isTimelineOpen && <EventHistogram eventLog={selectedEventSequence!.id} />}
                     {isFilterOpen && <FilterBuilder />}
                 </div>
-                {selectedEventSequence &&
+                {(selectedEventSequence && selectedTenant) &&
                     <Box sx={{ height: '100%', flex: 1 }}>
                         <Grid container spacing={2} sx={{ height: '100%' }}>
                             <Grid item xs={8}>
-                                <EventList items={events.data} eventTypes={eventTypes.data} onEventSelected={eventSelected}
-                                    onEventsRedacted={() => refreshEvents(getFindForArguments())}
+                                <EventList
+                                    eventSequenceId={selectedEventSequence.id}
+                                    tenantId={selectedTenant!.id}
+                                    microserviceId={microserviceId}
+                                    eventTypes={eventTypes.data} onEventSelected={eventSelected}
+                                    onEventsRedacted={() => { }}
                                     sequenceNumber={selectedEventSequence!.id} />
                             </Grid>
 
