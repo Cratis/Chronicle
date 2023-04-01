@@ -36,6 +36,7 @@ export interface EventListProps {
     onEventSelected?: EventSelected;
     onEventsRedacted?: () => void;
     sequenceNumber?: string;
+    registerRefreshEvents: (refreshEvents: () => void) => void;
 }
 
 export const EventList = (props: EventListProps) => {
@@ -68,6 +69,8 @@ export const EventList = (props: EventListProps) => {
     useEffect(() => {
         fetchEvents();
     }, [pageState.pageNumber, pageState.pageSize]);
+
+    props.registerRefreshEvents(fetchEvents);
 
     const [redactEventCmd, setRedactEventCmd] = RedactEvent.use();
     const [redactEventsCmd, setRedactEventsCmd] = RedactEvents.use();
