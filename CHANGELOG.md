@@ -1,3 +1,10 @@
+# [v8.11.0] - 2023-4-1 [PR: #818](https://github.com/aksio-insurtech/Cratis/pull/818)
+
+### Added
+
+- Workbench now has server side paging for event sequences.
+
+
 # [v8.10.6] - 2023-3-30 [PR: #816](https://github.com/aksio-insurtech/Cratis/pull/816)
 
 ### Fixed
