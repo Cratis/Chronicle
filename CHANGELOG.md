@@ -1,3 +1,10 @@
+# [v8.11.1] - 2023-4-3 [PR: #819](https://github.com/aksio-insurtech/Cratis/pull/819)
+
+### Fixed
+
+- During learning more about ESModules we accidently committed test config, this broke the MUI package. This is now fixed.
+
+
 # [v8.11.0] - 2023-4-1 [PR: #818](https://github.com/aksio-insurtech/Cratis/pull/818)
 
 ### Added
