@@ -6,7 +6,7 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/cratis-applications-frontend/validation';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/clients/{{microserviceId}}/connect/{{connectionId}}');
+const routeTemplate = Handlebars.compile('/api/clients/{{microserviceId}}/disconnect/{{connectionId}}');
 
 export interface IDisconnect {
     microserviceId?: string;
@@ -21,7 +21,7 @@ export class DisconnectValidator extends CommandValidator {
 }
 
 export class Disconnect extends Command<IDisconnect> implements IDisconnect {
-    readonly route: string = '/api/clients/{{microserviceId}}/connect/{{connectionId}}';
+    readonly route: string = '/api/clients/{{microserviceId}}/disconnect/{{connectionId}}';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
     readonly validation: CommandValidator = new DisconnectValidator();
 
