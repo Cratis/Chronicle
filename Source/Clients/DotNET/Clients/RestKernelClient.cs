@@ -126,7 +126,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         _timer?.Dispose();
         _timer = null;
 
-        await PerformCommandInternal($"/api/clients/{_microserviceId}/disconnect", ConnectionId);
+        await PerformCommandInternal($"/api/clients/{_microserviceId}/disconnect/{ConnectionId}");
     }
 
     /// <inheritdoc/>
