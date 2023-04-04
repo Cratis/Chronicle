@@ -84,8 +84,8 @@ public class ConnectedClients : Controller
     /// <summary>
     /// Disconnect a client.
     /// </summary>
-    /// <param name="microserviceId"></param>
-    /// <param name="connectionId"></param>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> that is connecting.</param>
+    /// <param name="connectionId">The unique identifier of the connection.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("connect/{connectionId}")]
     public async Task Disconnect(
