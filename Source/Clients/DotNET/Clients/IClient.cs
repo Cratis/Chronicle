@@ -27,6 +27,12 @@ public interface IClient
     Task Connect();
 
     /// <summary>
+    /// Disconnect from the kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Disconnect();
+
+    /// <summary>
     /// Perform a command.
     /// </summary>
     /// <param name="route">Route of the command.</param>
