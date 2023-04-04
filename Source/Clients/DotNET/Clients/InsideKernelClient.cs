@@ -74,6 +74,9 @@ public class InsideKernelClient : IClient
     public Task Connect() => _innerClient.Connect();
 
     /// <inheritdoc/>
+    public Task Disconnect() => _innerClient.Disconnect();
+
+    /// <inheritdoc/>
     public Task<CommandResult> PerformCommand(string route, object? command = null, object? metadata = default) => _innerClient.PerformCommand(route, command, metadata);
 
     /// <inheritdoc/>
