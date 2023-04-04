@@ -53,7 +53,7 @@ public class ConnectedClients : Controller
     }
 
     /// <summary>
-    /// Accepts client connections over Web Sockets.
+    /// Connect a client.
     /// </summary>
     /// <param name="microserviceId">The <see cref="MicroserviceId"/> that is connecting.</param>
     /// <param name="connectionId">The unique identifier of the connection.</param>
@@ -79,5 +79,23 @@ public class ConnectedClients : Controller
             uri,
             clientInformation.ClientVersion,
             clientInformation.IsRunningWithDebugger);
+    }
+
+    /// <summary>
+    /// Disconnect a client.
+    /// </summary>
+    /// <param name="microserviceId"></param>
+    /// <param name="connectionId"></param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("connect/{connectionId}")]
+    public async Task Disconnect(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] ConnectionId connectionId)
+    {
+        _logger.ClientDisconnected(microserviceId, connectionId);
+        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+        await connectedClients.OnClientDisconnected(
+            connectionId,
+            "Explicit disconnect");
     }
 }
