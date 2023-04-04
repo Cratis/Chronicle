@@ -121,6 +121,15 @@ public abstract class RestKernelClient : IClient, IDisposable
     }
 
     /// <inheritdoc/>
+    public async Task Disconnect()
+    {
+        _timer?.Dispose();
+        _timer = null;
+
+        await PerformCommandInternal($"/api/clients/{_microserviceId}/disconnect", ConnectionId);
+    }
+
+    /// <inheritdoc/>
     public async Task<CommandResult> PerformCommand(string route, object? command = null, object? metadata = default)
     {
         metadata ??= new object();
