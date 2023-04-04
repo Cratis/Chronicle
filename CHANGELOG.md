@@ -1,3 +1,10 @@
+# [v8.12.1] - 2023-4-4 [PR: #823](https://github.com/aksio-insurtech/Cratis/pull/823)
+
+### Fixed
+
+- Fixed the route for disconnect on both server and client.
+
+
 # [v8.12.0] - 2023-4-4 [PR: #822](https://github.com/aksio-insurtech/Cratis/pull/822)
 
 ### Added
