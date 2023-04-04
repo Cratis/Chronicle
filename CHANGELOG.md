@@ -1,3 +1,14 @@
+# [v8.12.0] - 2023-4-4 [PR: #822](https://github.com/aksio-insurtech/Cratis/pull/822)
+
+### Added
+
+- Support for disconnecting explicltly a client.
+
+### Fixed
+
+- When doing redact it uses the `RewindPartitionTo()` method on observers, this was faulty and did a full replay of the observer - which it shouldn't.
+
+
 # [v8.11.1] - 2023-4-3 [PR: #819](https://github.com/aksio-insurtech/Cratis/pull/819)
 
 ### Fixed
