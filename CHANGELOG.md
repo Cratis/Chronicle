@@ -1,3 +1,11 @@
+# [v8.12.2] - 2023-4-5 [PR: #824](https://github.com/aksio-insurtech/Cratis/pull/824)
+
+### Fixed
+
+- Fixing so that the next event sequence number for observers that gets called with `RewindPartitionTo()` gets set to what it was after it is done.
+
+
+
 # [v8.12.1] - 2023-4-4 [PR: #823](https://github.com/aksio-insurtech/Cratis/pull/823)
 
 ### Fixed
