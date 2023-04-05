@@ -34,6 +34,7 @@ public partial class ObserverSupervisor
     public async Task RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber)
     {
         _rewindingPartition = true;
+        var nextEventSequenceNumber = State.NextEventSequenceNumber;
         var events = await _eventSequenceStorageProvider().GetFromSequenceNumber(_eventSequenceId, sequenceNumber, partition, State.EventTypes);
         while (await events.MoveNext())
         {
@@ -42,6 +43,8 @@ public partial class ObserverSupervisor
                 await Handle(@event);
             }
         }
+        State.NextEventSequenceNumber = nextEventSequenceNumber;
+        await WriteStateAsync();
         _rewindingPartition = false;
     }
 
