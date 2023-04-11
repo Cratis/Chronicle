@@ -1,3 +1,10 @@
+# [v8.12.3] - 2023-4-11 [PR: #825](https://github.com/aksio-insurtech/Cratis/pull/825)
+
+### Fixed
+
+- Fixed the log message when fast forwarding, it was using the wrong sequence numbers making it hard to see why it fast forwarded.
+
+
 # [v8.12.2] - 2023-4-5 [PR: #824](https://github.com/aksio-insurtech/Cratis/pull/824)
 
 ### Fixed
