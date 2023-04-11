@@ -66,6 +66,7 @@ public class ProjectionPipeline : IProjectionPipeline
         {
             await Sink.BeginReplay();
         }
+        var isReplaying = @event.Context.ObservationState.HasFlag(EventObservationState.Replay);
 
         _logger.HandlingEvent(@event.Metadata.SequenceNumber);
         var correlationId = CorrelationId.New();
@@ -73,14 +74,14 @@ public class ProjectionPipeline : IProjectionPipeline
         var key = await keyResolver(_eventProvider, @event);
         key = EnsureCorrectTypeForArrayIndexersOnKey(key);
         _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
-        var initialState = await Sink.FindOrDefault(key);
+        var initialState = await Sink.FindOrDefault(key, isReplaying);
         initialState ??= Projection.InitialModelState;
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset);
         await HandleEventFor(Projection, context);
         if (changeset.HasChanges)
         {
-            await Sink.ApplyChanges(key, changeset);
+            await Sink.ApplyChanges(key, changeset, isReplaying);
             await _changesetStorage.Save(correlationId, changeset);
             _logger.SavingResult(@event.Metadata.SequenceNumber);
         }
