@@ -82,10 +82,11 @@ public partial class ObserverSupervisor
             if (highestNumber == EventSequenceNumber.Unavailable)
             {
                 State.RunningState = ObserverRunningState.Active;
+                var previousNext = State.NextEventSequenceNumber;
                 State.NextEventSequenceNumber = tailSequenceNumber.Next();
                 _logger.FastForwarding(
+                    previousNext,
                     State.NextEventSequenceNumber,
-                    highestNumber,
                     _observerId,
                     _eventSequenceId,
                     _microserviceId,

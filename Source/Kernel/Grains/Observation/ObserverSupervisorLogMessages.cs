@@ -56,6 +56,6 @@ internal static partial class ObserverSupervisorLogMessages
     [LoggerMessage(13, LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber} observer {ObserverId} for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}' - observing source microservice '{SourceMicroserviceId}' and tenant '{SourceTenantId}'")]
     internal static partial void PartitionFailed(this ILogger<ObserverSupervisor> logger, string partition, EventSequenceNumber eventSequenceNumber, ObserverId observerId, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, MicroserviceId sourceMicroserviceId, TenantId sourceTenantId);
 
-    [LoggerMessage(14, LogLevel.Warning, "Fast forwarding from sequence number {EventSequenceNumber} to {TailEventSequenceNumber} for observer {ObserverId} for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
+    [LoggerMessage(14, LogLevel.Information, "Fast forwarding from sequence number {EventSequenceNumber} to {TailEventSequenceNumber} for observer {ObserverId} for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
     internal static partial void FastForwarding(this ILogger<ObserverSupervisor> logger, EventSequenceNumber eventSequenceNumber, EventSequenceNumber tailEventSequenceNumber, ObserverId observerId, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId);
 }
