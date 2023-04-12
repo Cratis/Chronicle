@@ -1,3 +1,10 @@
+# [v8.12.6] - 2023-4-12 [PR: #828](https://github.com/aksio-insurtech/Cratis/pull/828)
+
+### Fixed
+
+- Adding more logging to replaying
+
+
 # [v8.12.5] - 2023-4-12 [PR: #827](https://github.com/aksio-insurtech/Cratis/pull/827)
 
 ### Fixed
