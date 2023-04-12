@@ -53,7 +53,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task<ExpandoObject?> FindOrDefault(Key key)
+    public Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)
     {
         var collection = Collection;
         var keyValue = GetActualKeyValue(key);
@@ -72,7 +72,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying)
     {
         var state = changeset.InitialState.Clone();
         var collection = Collection;
@@ -104,7 +104,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun()
+    public Task PrepareInitialRun(bool isReplaying)
     {
         Collection.Clear();
         return Task.CompletedTask;

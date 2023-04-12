@@ -35,8 +35,6 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     readonly Storage _configuration;
     readonly IMongoDatabase _database;
 
-    bool _isReplaying;
-
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "MongoDB";
 
@@ -72,9 +70,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<ExpandoObject?> FindOrDefault(Key key)
+    public async Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)
     {
-        var collection = GetCollection();
+        var collection = GetCollection(isReplaying);
 
         var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key)));
         var instance = result.SingleOrDefault();
@@ -87,14 +85,14 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+    public async Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying)
     {
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
         UpdateDefinition<BsonDocument>? updateBuilder = default;
         var hasChanges = false;
 
         var filter = Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key));
-        var collection = GetCollection();
+        var collection = GetCollection(isReplaying);
 
         if (changeset.HasBeenRemoved())
         {
@@ -103,7 +101,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         }
 
         var arrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
-        await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
+        await ApplyActualChanges(key, changeset.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, isReplaying);
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         if (!hasChanges) return;
@@ -122,14 +120,12 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     /// <inheritdoc/>
     public async Task BeginReplay()
     {
-        _isReplaying = true;
-        await PrepareInitialRun();
+        await PrepareInitialRun(true);
     }
 
     /// <inheritdoc/>
     public async Task EndReplay()
     {
-        _isReplaying = false;
         var rewindName = ReplayCollectionName;
         var rewoundCollectionsPrefix = $"{_model.Name}-";
         var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
@@ -165,9 +161,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun()
+    public Task PrepareInitialRun(bool isReplaying)
     {
-        var collection = GetCollection();
+        var collection = GetCollection(isReplaying);
         return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
     }
 
@@ -183,7 +179,8 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder,
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
-        List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument)
+        List<BsonDocumentArrayFilterDefinition<BsonDocument>> arrayFiltersForDocument,
+        bool isReplaying)
     {
         var joinTasks = new List<Task>();
 
@@ -258,10 +255,10 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         var serializedKey = GetBsonValueFrom(key.Value);
                         var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
 
-                        var collection = GetCollection();
+                        var collection = GetCollection(isReplaying);
 
                         var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
-                        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument).Wait();
+                        ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();
 
                         if (hasJoinChanges)
                         {
@@ -280,7 +277,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
                 case ResolvedJoin resolvedJoined:
                     {
-                        ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument);
+                        ApplyActualChanges(key, resolvedJoined.Changes, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, isReplaying);
                     }
                     break;
             }
@@ -431,7 +428,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         return client.GetDatabase(url.DatabaseName);
     }
 
-    IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
+    IMongoCollection<BsonDocument> GetCollection(bool isReplaying) => isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
 
     string GetNameForPropertyInBsonDocument(string name)
     {
