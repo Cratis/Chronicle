@@ -99,46 +99,54 @@ public class Replay : ObserverWorker, IReplay
     async Task PerformReplay(object arg)
     {
         _timer?.Dispose();
-        var provider = EventSequenceStorageProvider;
-
-        var next = State.NextEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : State.NextEventSequenceNumber;
-        var nextSequenceNumber = await provider.GetNextSequenceNumberGreaterOrEqualThan(_observerKey!.EventSequenceId!, next, State.EventTypes);
-        if (nextSequenceNumber == EventSequenceNumber.Unavailable)
+        try
         {
-            nextSequenceNumber = EventSequenceNumber.First;
-        }
+            var provider = EventSequenceStorageProvider;
 
-        var tailSequenceNumber = await provider.GetTailSequenceNumber(_observerKey!.EventSequenceId!, State.EventTypes);
-        var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventSequenceId, State.EventTypes);
-        using var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, nextSequenceNumber, eventTypes: State.EventTypes);
-        while (await cursor.MoveNext())
-        {
-            if (!_isRunning) break;
-
-            foreach (var @event in cursor.Current)
+            var next = State.NextEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : State.NextEventSequenceNumber;
+            var nextSequenceNumber = await provider.GetNextSequenceNumberGreaterOrEqualThan(_observerKey!.EventSequenceId!, next, State.EventTypes);
+            if (nextSequenceNumber == EventSequenceNumber.Unavailable)
             {
-                var state = EventObservationState.Replay;
-
-                if (headSequenceNumber == @event.Metadata.SequenceNumber)
-                {
-                    state |= EventObservationState.HeadOfReplay;
-                }
-
-                if (@event.Metadata.SequenceNumber == tailSequenceNumber)
-                {
-                    state |= EventObservationState.TailOfReplay;
-                }
-
-                var actualEvent = new AppendedEvent(@event.Metadata, @event.Context.WithState(state), @event.Content);
-
-                if (!_isRunning) break;
-                await Handle(actualEvent);
+                nextSequenceNumber = EventSequenceNumber.First;
             }
-        }
 
-        _isRunning = false;
-        _logger.Replayed(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-        await Supervisor.NotifyCatchUpComplete(_failedPartitions.ToArray());
-        _failedPartitions.Clear();
+            var tailSequenceNumber = await provider.GetTailSequenceNumber(_observerKey!.EventSequenceId!, State.EventTypes);
+            var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventSequenceId, State.EventTypes);
+            using var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, nextSequenceNumber, eventTypes: State.EventTypes);
+            while (await cursor.MoveNext())
+            {
+                if (!_isRunning) break;
+
+                foreach (var @event in cursor.Current)
+                {
+                    var state = EventObservationState.Replay;
+
+                    if (@event.Metadata.SequenceNumber == headSequenceNumber)
+                    {
+                        state |= EventObservationState.HeadOfReplay;
+                        _logger.HeadOfReplay(headSequenceNumber, ObserverId, _observerKey!.EventSequenceId);
+                    }
+
+                    if (@event.Metadata.SequenceNumber == tailSequenceNumber)
+                    {
+                        state |= EventObservationState.TailOfReplay;
+                    }
+
+                    var actualEvent = new AppendedEvent(@event.Metadata, @event.Context.WithState(state), @event.Content);
+
+                    if (!_isRunning) break;
+                    await Handle(actualEvent);
+                }
+            }
+
+            _isRunning = false;
+            _logger.Replayed(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
+            await Supervisor.NotifyCatchUpComplete(_failedPartitions.ToArray());
+            _failedPartitions.Clear();
+        }
+        catch (Exception ex)
+        {
+            _logger.ErrorDuringReplay(ObserverId, _observerKey!.EventSequenceId, ex);
+        }
     }
 }
