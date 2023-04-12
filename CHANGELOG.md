@@ -1,3 +1,10 @@
+# [v8.12.5] - 2023-4-12 [PR: #827](https://github.com/aksio-insurtech/Cratis/pull/827)
+
+### Fixed
+
+- Added the compact JSON formatter as it was missing as a dependency.
+
+
 # [v8.12.4] - 2023-4-12 [PR: #826](https://github.com/aksio-insurtech/Cratis/pull/826)
 
 ### Fixed
