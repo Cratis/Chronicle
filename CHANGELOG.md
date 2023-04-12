@@ -1,3 +1,12 @@
+# [v8.12.4] - 2023-4-12 [PR: #826](https://github.com/aksio-insurtech/Cratis/pull/826)
+
+### Fixed
+
+- Replay worker fixed, observation state was never set to `TailOfReplay` unless the `LastHandled` event sequence number was the same as the tail. This is now fixed. The problem it caused was that projections never reached the end of replay and the temporary collections never renamed.
+- Fixed the replay state across projections and projection sink, so that it is not a global "isReplaying" that can change and especially since lifecycle of sinks could be transient. This results now in correct projection replays to the correct collections.
+- Fixed the `RunAsSinglePageApplication()` - catch all middleware to return a 404 if there are no files matching.
+
+
 # [v8.12.3] - 2023-4-11 [PR: #825](https://github.com/aksio-insurtech/Cratis/pull/825)
 
 ### Fixed
