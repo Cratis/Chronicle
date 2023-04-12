@@ -38,6 +38,10 @@ public static class WebApplicationBuilderExtensions
             {
                 await context.Response.SendFileAsync(fileInfo);
             }
+            else
+            {
+                context.Response.StatusCode = 404;
+            }
         });
     }
 }

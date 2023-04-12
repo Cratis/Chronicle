@@ -108,6 +108,7 @@ public class Replay : ObserverWorker, IReplay
             nextSequenceNumber = EventSequenceNumber.First;
         }
 
+        var tailSequenceNumber = await provider.GetTailSequenceNumber(_observerKey!.EventSequenceId!, State.EventTypes);
         var headSequenceNumber = await EventSequenceStorageProvider.GetHeadSequenceNumber(State.EventSequenceId, State.EventTypes);
         using var cursor = await provider.GetFromSequenceNumber(_observerKey!.EventSequenceId!, nextSequenceNumber, eventTypes: State.EventTypes);
         while (await cursor.MoveNext())
@@ -123,7 +124,7 @@ public class Replay : ObserverWorker, IReplay
                     state |= EventObservationState.HeadOfReplay;
                 }
 
-                if (@event.Metadata.SequenceNumber == State.LastHandled)
+                if (@event.Metadata.SequenceNumber == tailSequenceNumber)
                 {
                     state |= EventObservationState.TailOfReplay;
                 }
