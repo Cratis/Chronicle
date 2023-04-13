@@ -6,12 +6,14 @@ using Aksio.Cratis.Kernel.Orleans.Configuration;
 using Azure.Data.Tables;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Concurrency;
 
 namespace Aksio.Cratis.Kernel.Grains.Silos;
 
 /// <summary>
 /// Represents an implementation of <see cref="IDeadSilosScavenger"/>.
 /// </summary>
+[StatelessWorker(1)]
 public class DeadSilosScavenger : Grain, IDeadSilosScavenger
 {
     readonly KernelConfiguration _configuration;
@@ -35,26 +37,36 @@ public class DeadSilosScavenger : Grain, IDeadSilosScavenger
     {
         if (_configuration.Cluster.Options is AzureStorageClusterOptions options)
         {
-            RegisterTimer(_ => CleanUpDeadSilos(options), null!, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
+            RegisterTimer(_ => CleanUp(), null!, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
         }
 
         return Task.CompletedTask;
     }
 
-    async Task CleanUpDeadSilos(AzureStorageClusterOptions options)
+    /// <inheritdoc/>
+    public async Task CleanUp()
     {
-        var client = new TableClient(
-            options.ConnectionString,
-            options.TableName);
-
-        var result = client.QueryAsync<OrleansSiloInfo>(filter: "Status eq 'Dead'");
-        await foreach (var page in result.AsPages())
+        if (_configuration.Cluster.Options is AzureStorageClusterOptions options)
         {
-            foreach (var entity in page.Values)
+            var deadSilos = 0;
+            _logger.LookForDeadSilos();
+
+            var client = new TableClient(
+                options.ConnectionString,
+                options.TableName);
+
+            var result = client.QueryAsync<OrleansSiloInfo>(filter: "Status eq 'Dead'");
+            await foreach (var page in result.AsPages())
             {
-                _logger.RemovingDeadSiloFromClusterInfo(entity.Address);
-                await client.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, entity.ETag);
+                foreach (var entity in page.Values)
+                {
+                    _logger.RemovingDeadSiloFromClusterInfo(entity.Address);
+                    await client.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, entity.ETag);
+                    deadSilos++;
+                }
             }
+
+            if (deadSilos == 0) _logger.NoDeadSilos();
         }
     }
 }

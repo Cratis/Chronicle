@@ -8,11 +8,17 @@ namespace Aksio.Cratis.Kernel.Grains.Silos;
 /// <summary>
 /// Represents a scavenger that collects dead silos.
 /// </summary>
-public interface IDeadSilosScavenger : IGrainWithGuidKey
+public interface IDeadSilosScavenger : IGrainWithIntegerKey
 {
     /// <summary>
     /// Start the scavenger.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Start();
+
+    /// <summary>
+    /// Perform a clean up of any dead silos.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task CleanUp();
 }
