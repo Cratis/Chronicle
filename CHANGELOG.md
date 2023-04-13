@@ -1,3 +1,30 @@
+# [v8.13.0] - 2023-4-13 [PR: #831](https://github.com/aksio-insurtech/Cratis/pull/831)
+
+### Added
+
+- Added custom Serilog formatter for outputting a rendered compact JSON format, yet not as compact as the official one. Based on the official implementation found [here](https://github.com/serilog/serilog-formatting-compact/tree/dev/src/Serilog.Formatting.Compact/Formatting/Compact).
+
+Usage:
+
+```json
+{
+    "Serilog": {
+        "Using": [
+            "Serilog.Sinks.Console"
+        ],
+        "WriteTo": [
+            {
+                "Name": "Console",
+                "Args": {
+                    "formatter": "Aksio.Cratis.Applications.Logging.RenderedCompactJsonFormatter, Aksio.Cratis.Applications"
+                }
+            }
+        ]
+    }
+}
+```
+
+
 # [v8.12.8] - 2023-4-13 [PR: #830](https://github.com/aksio-insurtech/Cratis/pull/830)
 
 ### Fixed
