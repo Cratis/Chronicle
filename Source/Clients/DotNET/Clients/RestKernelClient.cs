@@ -104,6 +104,7 @@ public abstract class RestKernelClient : IClient, IDisposable
                 {
                 }
                 _logger.KernelUnavailable();
+                await OnKernelUnavailable();
                 await _taskFactory.Delay(2000);
             }
 
@@ -192,6 +193,12 @@ public abstract class RestKernelClient : IClient, IDisposable
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     protected virtual Task OnDisconnected() => Task.CompletedTask;
+
+    /// <summary>
+    /// Gets called if the kernel is unavailable.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected virtual Task OnKernelUnavailable() => Task.CompletedTask;
 
     async Task<CommandResult> PerformCommandInternal(string route, object? command = null, bool logResult = true)
     {
