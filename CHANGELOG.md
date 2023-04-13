@@ -1,3 +1,10 @@
+# [v8.13.3] - 2023-4-13 [PR: #837](https://github.com/aksio-insurtech/Cratis/pull/837)
+
+### Fixed
+
+- Fixing so that results from the `.aksio/me` identity details endpoint does not escape JSON result during serialization.
+
+
 # [v8.13.2] - 2023-4-13 [PR: #836](https://github.com/aksio-insurtech/Cratis/pull/836)
 
 ### Fixed
