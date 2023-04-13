@@ -70,6 +70,13 @@ public class OrleansAzureTableStoreKernelClient : ClusteredKernelClient
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    protected override Task OnKernelUnavailable()
+    {
+        RefreshSilos();
+        return Task.CompletedTask;
+    }
+
     void RefreshSilos()
     {
         _clientLogger.GettingSilosFromStorage();
