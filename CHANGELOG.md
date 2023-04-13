@@ -1,3 +1,10 @@
+# [v8.12.7] - 2023-4-13 [PR: #829](https://github.com/aksio-insurtech/Cratis/pull/829)
+
+### Fixed
+
+- Fixing a problem where message batches for the event sequence could be queued before the `CreateReceiver` have been called by Orleans, which then causes observers to be faulty at startup.
+
+
 # [v8.12.6] - 2023-4-12 [PR: #828](https://github.com/aksio-insurtech/Cratis/pull/828)
 
 ### Fixed
