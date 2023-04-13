@@ -47,17 +47,13 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     }
 
     /// <inheritdoc/>
-    public IQueueAdapterReceiver CreateReceiver(QueueId queueId)
-    {
-        var receiver = new EventSequenceQueueAdapterReceiver();
-        _receivers[queueId] = receiver;
-        return receiver;
-    }
+    public IQueueAdapterReceiver CreateReceiver(QueueId queueId) => CreateReceiverIfNotExists(queueId);
 
     /// <inheritdoc/>
     public async Task QueueMessageBatchAsync<T>(Guid streamGuid, string streamNamespace, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
         var queueId = _mapper.GetQueueForStream(streamGuid, streamNamespace);
+        CreateReceiverIfNotExists(queueId);
         if (!token.IsWarmUp())
         {
             var appendedEvents = new List<AppendedEvent>();
@@ -94,5 +90,14 @@ public class EventSequenceQueueAdapter : IQueueAdapter
         }
 
         _receivers[queueId].AddAppendedEvent(streamGuid, streamNamespace, events.Cast<AppendedEvent>().ToArray(), requestContext);
+    }
+
+    IQueueAdapterReceiver CreateReceiverIfNotExists(QueueId queueId)
+    {
+        if (_receivers.ContainsKey(queueId)) return _receivers[queueId];
+
+        var receiver = new EventSequenceQueueAdapterReceiver();
+        _receivers[queueId] = receiver;
+        return receiver;
     }
 }
