@@ -25,6 +25,6 @@ public class BootProcedure : IPerformBootProcedure
     /// <inheritdoc/>
     public void Perform()
     {
-        _grainFactory.GetGrain<IDeadSilosScavenger>(Guid.Empty).Start().Wait();
+        _grainFactory.GetGrain<IDeadSilosScavenger>(0).Start().Wait();
     }
 }
