@@ -1,3 +1,10 @@
+# [v8.13.2] - 2023-4-13 [PR: #836](https://github.com/aksio-insurtech/Cratis/pull/836)
+
+### Fixed
+
+- Adding a `OnKernelUnavaialable()` virtual method for `RestKernelClient` implemented by the `OlreansAzureTableStoreKernelClient` which will refresh silo information before a retry.
+
+
 # [v8.13.1] - 2023-4-13 [PR: #833](https://github.com/aksio-insurtech/Cratis/pull/833)
 
 ### Fixed
