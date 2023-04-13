@@ -1,3 +1,10 @@
+# [v8.12.8] - 2023-4-13 [PR: #830](https://github.com/aksio-insurtech/Cratis/pull/830)
+
+### Fixed
+
+- Setting Serilog Compact Json formatter dependency to stable version, not a pre-release.
+
+
 # [v8.12.7] - 2023-4-13 [PR: #829](https://github.com/aksio-insurtech/Cratis/pull/829)
 
 ### Fixed
