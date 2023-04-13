@@ -1,3 +1,10 @@
+# [v8.13.1] - 2023-4-13 [PR: #833](https://github.com/aksio-insurtech/Cratis/pull/833)
+
+### Fixed
+
+- Scavenger job that cleans up dead silos when using Azure Table Store. Fixing #624.
+
+
 # [v8.13.0] - 2023-4-13 [PR: #831](https://github.com/aksio-insurtech/Cratis/pull/831)
 
 ### Added
