@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Applications.Identity;
@@ -76,7 +77,13 @@ public static class IdentityProviderEndpointExtensions
                         {
                             response.StatusCode = 403;
                         }
-                        await response.WriteAsJsonAsync(result.Details, serializerOptions);
+
+                        response.ContentType = "application/json; charset=utf-8";
+                        var options = new JsonSerializerOptions(serializerOptions)
+                        {
+                            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                        };
+                        await response.WriteAsJsonAsync(result.Details, options);
                     }
                 }
             });
