@@ -1,3 +1,10 @@
+# [v8.13.4] - 2023-4-14 [PR: #839](https://github.com/aksio-insurtech/Cratis/pull/839)
+
+### Fixed
+
+- Adding more logging for observers for easier diagnostics.
+
+
 # [v8.13.3] - 2023-4-13 [PR: #837](https://github.com/aksio-insurtech/Cratis/pull/837)
 
 ### Fixed
