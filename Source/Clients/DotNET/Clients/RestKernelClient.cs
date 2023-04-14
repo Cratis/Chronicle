@@ -65,7 +65,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         _jsonSerializerOptions = jsonSerializerOptions;
         _clientLifecycle = clientLifecycle;
         _logger = logger;
-        _microserviceId = _executionContextManager.Current.MicroserviceId;
+        _microserviceId = ExecutionContextManager.GlobalMicroserviceId;
         _connectCompletion = new TaskCompletionSource<bool>();
     }
 
@@ -224,7 +224,10 @@ public abstract class RestKernelClient : IClient, IDisposable
     HttpClient CreateReadyHttpClient()
     {
         var client = CreateHttpClient();
-        client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _executionContextManager.Current.TenantId.ToString());
+        if (_executionContextManager.IsInContext)
+        {
+            client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _executionContextManager.Current.TenantId.ToString());
+        }
         return client;
     }
 
