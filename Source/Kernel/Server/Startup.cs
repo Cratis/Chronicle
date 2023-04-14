@@ -4,8 +4,6 @@
 #pragma warning disable SA1600
 
 using Aksio.Cratis.Kernel.Grains.Clients;
-using Orleans;
-using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Server;
 
