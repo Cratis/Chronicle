@@ -21,6 +21,7 @@ public partial class ObserverSupervisor
 
         if (disconnected || !CurrentSubscription.IsSubscribed)
         {
+            _logger.IgnoringRewinding(_observerId, _microserviceId, _eventSequenceId, _tenantId, disconnected, CurrentSubscription.IsSubscribed);
             await WriteStateAsync();
             return;
         }
@@ -33,6 +34,7 @@ public partial class ObserverSupervisor
     /// <inheritdoc/>
     public async Task RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber)
     {
+        _logger.RewindingPartitionTo(_observerId, _microserviceId, _eventSequenceId, _tenantId, partition, sequenceNumber);
         _rewindingPartition = true;
         var nextEventSequenceNumber = State.NextEventSequenceNumber;
         var events = await _eventSequenceStorageProvider().GetFromSequenceNumber(_eventSequenceId, sequenceNumber, partition, State.EventTypes);
