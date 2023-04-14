@@ -62,7 +62,7 @@ public class DeadSilosScavenger : Grain, IDeadSilosScavenger
                 {
                     _logger.RemovingDeadSiloFromClusterInfo(entity.Address);
 
-                    // await client.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, entity.ETag);
+                    // Trigger: await client.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, entity.ETag);
                     deadSilos++;
                 }
             }
