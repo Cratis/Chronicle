@@ -58,4 +58,10 @@ internal static partial class ObserverSupervisorLogMessages
 
     [LoggerMessage(14, LogLevel.Information, "Fast forwarding from sequence number {EventSequenceNumber} to {TailEventSequenceNumber} for observer {ObserverId} for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}'")]
     internal static partial void FastForwarding(this ILogger<ObserverSupervisor> logger, EventSequenceNumber eventSequenceNumber, EventSequenceNumber tailEventSequenceNumber, ObserverId observerId, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId);
+
+    [LoggerMessage(15, LogLevel.Information, "Ignoring rewinding for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'. The disconnect state is {DisconnectState} and subscription state is {SubscriptionState}")]
+    internal static partial void IgnoringRewinding(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, bool disconnectState, bool subscriptionState);
+
+    [LoggerMessage(16, LogLevel.Information, "Rewinding partition {Partition} to {SequenceNumber} for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'. The disconnect state is {DisconnectState} and subscription state is {SubscriptionState}")]
+    internal static partial void RewindingPartitionTo(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, EventSourceId partition, EventSequenceNumber sequenceNumber);
 }
