@@ -1,3 +1,10 @@
+# [v8.13.5] - 2023-4-14 [PR: #840](https://github.com/aksio-insurtech/Cratis/pull/840)
+
+### Fixed
+
+- Fixing so that the client can call the Kernel API out of execution context. We're for the most part very specific on providing the necessary information on API routes.
+
+
 # [v8.13.4] - 2023-4-14 [PR: #839](https://github.com/aksio-insurtech/Cratis/pull/839)
 
 ### Fixed
