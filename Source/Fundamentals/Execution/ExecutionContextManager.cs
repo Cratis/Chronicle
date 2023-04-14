@@ -32,6 +32,12 @@ public class ExecutionContextManager : IExecutionContextManager
     /// <returns>The current microservice identifier.</returns>
     public static MicroserviceId GlobalMicroserviceId { get; private set; } = MicroserviceId.Unspecified;
 
+    /// <summary>
+    /// Get the global <see cref="MicroserviceId"/> for the running process.
+    /// </summary>
+    /// <returns>The current microservice identifier.</returns>
+    public static MicroserviceName GlobalMicroserviceName { get; private set; } = MicroserviceName.Unspecified;
+
     /// <inheritdoc/>
     public bool IsInContext => _currentExecutionContext?.Value != default;
 
@@ -74,6 +80,16 @@ public class ExecutionContextManager : IExecutionContextManager
     /// while establishing a context for current task context.
     /// </remarks>
     public static void SetGlobalMicroserviceId(MicroserviceId microserviceId) => GlobalMicroserviceId = microserviceId;
+
+    /// <summary>
+    /// Set the global <see cref="MicroserviceName"/> for the running process.
+    /// </summary>
+    /// <param name="microserviceName"><see cref="MicroserviceName"/> to set.</param>
+    /// <remarks>
+    /// The global microservice name is the value being used when not a specific one is used
+    /// while establishing a context for current task context.
+    /// </remarks>
+    public static void SetGlobalMicroserviceName(MicroserviceName microserviceName) => GlobalMicroserviceName = microserviceName;
 
     /// <inheritdoc/>
     public ExecutionContext Establish(MicroserviceId microserviceId)
