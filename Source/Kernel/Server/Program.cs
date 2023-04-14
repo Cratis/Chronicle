@@ -28,7 +28,10 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
-            .UseAksio(_ => _.InKernel(), microserviceId: MicroserviceId.Kernel)
+            .UseAksio(_ =>
+                _.InKernel(),
+                microserviceId: MicroserviceId.Kernel,
+                microserviceName: "Cratis Kernel")
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
