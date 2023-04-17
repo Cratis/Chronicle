@@ -17,10 +17,10 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public abstract class ObserverWorker : Grain
 {
-    #pragma warning disable CA1051, SA1600
+#pragma warning disable CA1051, SA1600
     // TODO: We will have to handle the rewinding as a worker grain.
     protected bool _rewindingPartition;
-    #pragma warning restore // CA1051
+#pragma warning restore // CA1051
     readonly ILogger<ObserverWorker> _logger;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
@@ -229,11 +229,33 @@ public abstract class ObserverWorker : Grain
     /// Read the observer state.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    protected Task ReadStateAsync() => _observerState.ReadStateAsync();
+    protected Task ReadStateAsync()
+    {
+        if (string.IsNullOrEmpty(State.CurrentSubscriptionType))
+        {
+            CurrentSubscription = ObserverSubscription.Unsubscribed;
+        }
+        else
+        {
+            _logger.SubscribedObserver(ObserverId, EventSequenceId, MicroserviceId, TenantId, State.CurrentSubscriptionType);
+            CurrentSubscription = new(
+                ObserverId,
+                new(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId),
+                State.EventTypes,
+                Type.GetType(State.CurrentSubscriptionType)!,
+                State.CurrentSubscriptionArguments!);
+        }
+        return _observerState.ReadStateAsync();
+    }
 
     /// <summary>
     /// Write the observer state.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    protected Task WriteStateAsync() => _observerState.WriteStateAsync();
+    protected Task WriteStateAsync()
+    {
+        State.CurrentSubscriptionType = CurrentSubscription.SubscriberType.AssemblyQualifiedName;
+        State.CurrentSubscriptionArguments = CurrentSubscription.Arguments;
+        return _observerState.WriteStateAsync();
+    }
 }
