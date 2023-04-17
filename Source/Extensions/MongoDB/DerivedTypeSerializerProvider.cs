@@ -41,7 +41,7 @@ public class DerivedTypeSerializerProvider : IBsonSerializationProvider
     {
         if (_derivedTypes.IsDerivedType(type))
         {
-            var createSerializerGenericMethod = GetType().GetMethod(nameof(DerivedTypeSerializerProvider.CreateSerializer))!.MakeGenericMethod(type);
+            var createSerializerGenericMethod = GetType().GetMethod(nameof(CreateSerializer))!.MakeGenericMethod(type);
             return (createSerializerGenericMethod.Invoke(this, Array.Empty<object>()) as IBsonSerializer)!;
         }
 
