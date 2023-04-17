@@ -94,6 +94,16 @@ public class ObserverState
     /// </summary>
     public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
 
+    /// <summary>
+    /// Gets or sets the current subscription type.
+    /// </summary>
+    public string CurrentSubscriptionType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the current subscription arguments.
+    /// </summary>
+    public object? CurrentSubscriptionArguments { get; set; }
+
     List<FailedPartition> _failedPartitions = new();
 
     /// <summary>
