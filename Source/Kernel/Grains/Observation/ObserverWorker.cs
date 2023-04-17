@@ -229,8 +229,9 @@ public abstract class ObserverWorker : Grain
     /// Read the observer state.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    protected Task ReadStateAsync()
+    protected async Task ReadStateAsync()
     {
+        await _observerState.ReadStateAsync();
         if (string.IsNullOrEmpty(State.CurrentSubscriptionType))
         {
             CurrentSubscription = ObserverSubscription.Unsubscribed;
@@ -245,7 +246,6 @@ public abstract class ObserverWorker : Grain
                 Type.GetType(State.CurrentSubscriptionType)!,
                 State.CurrentSubscriptionArguments!);
         }
-        return _observerState.ReadStateAsync();
     }
 
     /// <summary>
