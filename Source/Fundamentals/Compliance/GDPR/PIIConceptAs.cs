@@ -11,6 +11,7 @@ namespace Aksio.Cratis.Compliance.GDPR;
 /// <param name="Value">Underlying value.</param>
 /// <typeparam name="T">Type of the underlying value.</typeparam>
 public record PIIConceptAs<T>(T Value) : ConceptAs<T>(Value), IHoldPII
+    where T : IComparable
 {
     /// <summary>
     /// Gets the details for the PII.
