@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.Metrics;
 using System.IO.Compression;
 using Aksio.Cratis.Applications;
 using Aksio.Cratis.Conversion;
@@ -52,6 +51,7 @@ public static class HostBuilderExtensions
             "Azure",
             "Elasticsearch",
             "FluentValidation",
+            "Grpc",
             "Handlebars",
             "Humanizer",
             "NJsonSchema",
@@ -76,7 +76,6 @@ public static class HostBuilderExtensions
             .ConfigureServices(_ =>
             {
                 _
-                .AddSingleton(new Meter(microserviceName))
                 .AddSingleton(Internals.Types)
                 .AddSingleton<IDerivedTypes>(derivedTypes)
                 .AddSingleton<ProviderFor<IServiceProvider>>(() => Internals.ServiceProvider!)
