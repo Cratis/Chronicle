@@ -23,6 +23,8 @@ public static class Program
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
+        Types.Types.AddAssemblyPrefixesToExclude("OpenTelemetry");
+
         return CreateHostBuilder(args).RunConsoleAsync();
     }
 
