@@ -18,6 +18,7 @@ public class TelemetryTypeValueResolver : IConfigurationValueResolver
         {
             TelemetryTypes.None => null!,
             TelemetryTypes.AppInsights => new AppInsightsTelemetryOptions(),
+            TelemetryTypes.OpenTelemetry => new OpenTelemetryOptions(),
             _ => null!
         };
     }
