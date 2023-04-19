@@ -17,4 +17,9 @@ public static class TelemetryTypes
     /// Gets the value representing Azure Application Insights.
     /// </summary>
     public const string AppInsights = "app-insights";
+
+    /// <summary>
+    /// Gets the value representing Open Telemetry.
+    /// </summary>
+    public const string OpenTelemetry = "open-telemetry";
 }
