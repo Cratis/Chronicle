@@ -137,6 +137,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                 }
                 catch (DuplicateEventSequenceNumber)
                 {
+                    _metrics?.DuplicateEventSequenceNumber();
                     State.SequenceNumber++;
                     await WriteStateAsync();
                 }
@@ -145,6 +146,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         }
         catch (UnableToAppendToEventSequence ex)
         {
+            _metrics?.FailedAppending();
             _logger.FailedAppending(
                 _microserviceAndTenant.MicroserviceId,
                 _microserviceAndTenant.TenantId,
