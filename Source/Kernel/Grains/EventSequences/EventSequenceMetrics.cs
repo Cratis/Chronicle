@@ -41,9 +41,9 @@ public class EventSequenceMetrics : IEventSequenceMetrics
             new("tenant_id", _tenantId.ToString())
         }));
 
-        _appendedEvents = meter.CreateCounter<int>("event_sequences_appended_events", "Number of events appended to the event sequence");
-        _duplicateEventSequenceNumbers = meter.CreateCounter<int>("event_sequences_duplicate_event_sequence_numbers", "Number of duplicate sequence numbers");
-        _failedAppendedEvents = meter.CreateCounter<int>("event_sequences_failed_appended_events", "Number of events that failed to be appended to the event sequence");
+        _appendedEvents = meter.CreateCounter<int>("cratis-event_sequences-appended-events", "Number of events appended to the event sequence");
+        _duplicateEventSequenceNumbers = meter.CreateCounter<int>("cratis-event-sequences-duplicate-event-sequence-numbers", "Number of duplicate sequence numbers");
+        _failedAppendedEvents = meter.CreateCounter<int>("cratis-event-sequences-failed-appended-events", "Number of events that failed to be appended to the event sequence");
     }
 
     /// <inheritdoc/>
