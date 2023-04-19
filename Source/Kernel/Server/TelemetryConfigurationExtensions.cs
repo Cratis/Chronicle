@@ -4,8 +4,6 @@
 using System.Diagnostics.Metrics;
 using Aksio.Cratis.Kernel.Orleans.Configuration;
 using Azure.Monitor.OpenTelemetry.Exporter;
-using OpenTelemetry;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
