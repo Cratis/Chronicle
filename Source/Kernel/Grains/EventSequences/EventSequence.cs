@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
@@ -29,6 +30,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
+    readonly IEventSequenceMetricsFactory _metricsFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManagerProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
@@ -36,6 +38,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     MicroserviceAndTenant _microserviceAndTenant = MicroserviceAndTenant.NotSet;
     IAsyncStream<AppendedEvent>? _stream;
+    IEventSequenceMetrics? _metrics;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
@@ -43,6 +46,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
+    /// <param name="metricsFactory">Factory for creating metrics.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
@@ -51,6 +55,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         ProviderFor<ISchemaStore> schemaStoreProvider,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         ProviderFor<IObserverStorage> observerStorageProvider,
+        IEventSequenceMetricsFactory metricsFactory,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManagerProvider,
         IExpandoObjectConverter expandoObjectConverter,
@@ -59,6 +64,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         _schemaStoreProvider = schemaStoreProvider;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _observerStorageProvider = observerStorageProvider;
+        _metricsFactory = metricsFactory;
         _executionContextManager = executionContextManager;
         _jsonComplianceManagerProvider = jsonComplianceManagerProvider;
         _expandoObjectConverter = expandoObjectConverter;
@@ -73,6 +79,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, streamNamespace);
+
+        _metrics = _metricsFactory.CreateFor(_eventSequenceId, _microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId);
 
         await base.OnActivateAsync();
     }
@@ -90,7 +98,6 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         try
         {
             var eventSchema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
-
             _logger.Appending(
                 _microserviceAndTenant.MicroserviceId,
                 _microserviceAndTenant.TenantId,
@@ -123,6 +130,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                         compliantEventAsExpandoObject);
 
                     await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
+
+                    _metrics?.AppendedEvent();
 
                     appending = false;
                 }
