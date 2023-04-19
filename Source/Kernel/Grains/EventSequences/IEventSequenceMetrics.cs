@@ -9,4 +9,6 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 public interface IEventSequenceMetrics
 {
     void AppendedEvent();
+    void DuplicateEventSequenceNumber();
+    void FailedAppending();
 }
