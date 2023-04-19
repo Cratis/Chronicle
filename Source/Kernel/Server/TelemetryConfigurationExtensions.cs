@@ -34,8 +34,8 @@ public static class TelemetryConfigurationExtensions
                 .WithTracing(tracing =>
                 {
                     tracing
-                         .AddAspNetCoreInstrumentation()
-                         .AddHttpClientInstrumentation();
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation();
 
                     switch (telemetryConfig.Type)
                     {
