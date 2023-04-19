@@ -11,5 +11,12 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// </summary>
 public interface IEventSequenceMetricsFactory
 {
+    /// <summary>
+    /// Create an instance of <see cref="IEventSequenceMetrics"/>.
+    /// </summary>
+    /// <param name="eventSequenceId">Event sequence to create for.</param>
+    /// <param name="microserviceId">Microservice to create for.</param>
+    /// <param name="tenantId">Tenant to create for.</param>
+    /// <returns><see cref="IEventSequenceMetrics"/> instance.</returns>
     IEventSequenceMetrics CreateFor(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId);
 }
