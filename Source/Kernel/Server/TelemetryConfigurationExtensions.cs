@@ -4,7 +4,10 @@
 using System.Diagnostics.Metrics;
 using Aksio.Cratis.Kernel.Orleans.Configuration;
 using Azure.Monitor.OpenTelemetry.Exporter;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 namespace Orleans.Hosting;
 
@@ -26,22 +29,71 @@ public static class TelemetryConfigurationExtensions
             var meter = new Meter("Cratis.Kernel");
             services.AddSingleton(meter);
 
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+            services
+                .AddOpenTelemetry()
+                .WithTracing(tracing =>
+                {
+                    tracing
+                         .AddAspNetCoreInstrumentation()
+                         .AddHttpClientInstrumentation();
+
+                    switch (telemetryConfig.Type)
+                    {
+                        case TelemetryTypes.AppInsights:
+                            {
+                                var options = telemetryConfig.GetAppInsightsTelemetryOptions();
+                                if (!string.IsNullOrEmpty(options.ConnectionString))
+                                {
+                                    tracing.AddAzureMonitorTraceExporter(exporter => exporter.ConnectionString = options.ConnectionString);
+                                }
+                            }
+                            break;
+
+                        case TelemetryTypes.OpenTelemetry:
+                            {
+                                var openTelemetryOptions = telemetryConfig.GetOpenTelemetryOptions();
+                                tracing.AddOtlpExporter(options => options.Endpoint = new Uri(openTelemetryOptions.Endpoint));
+                            }
+                            break;
+                    }
+                })
+                .WithMetrics(metrics =>
+                {
+                    metrics
+                        .AddMeter(meter.Name)
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddRuntimeInstrumentation();
+
+                    switch (telemetryConfig.Type)
+                    {
+                        case TelemetryTypes.AppInsights:
+                            {
+                                var options = telemetryConfig.GetAppInsightsTelemetryOptions();
+                                if (!string.IsNullOrEmpty(options.ConnectionString))
+                                {
+                                    metrics.AddAzureMonitorMetricExporter(exporter => exporter.ConnectionString = options.ConnectionString);
+                                }
+                            }
+                            break;
+
+                        case TelemetryTypes.OpenTelemetry:
+                            {
+                                var openTelemetryOptions = telemetryConfig.GetOpenTelemetryOptions();
+                                metrics.AddOtlpExporter(options => options.Endpoint = new Uri(openTelemetryOptions.Endpoint));
+                            }
+                            break;
+                    }
+                });
+
             switch (telemetryConfig.Type)
             {
                 case TelemetryTypes.AppInsights:
-                    var options = telemetryConfig.GetAppInsightsTelemetryOptions();
-                    builder.AddApplicationInsightsTelemetryConsumer(options.Key);
-
-                    if (!string.IsNullOrEmpty(options.ConnectionString))
                     {
-                        services
-                            .AddOpenTelemetry()
-                            .WithMetrics(metrics => metrics
-                                .AddMeter(meter.Name)
-                                .AddAspNetCoreInstrumentation()
-                                .AddHttpClientInstrumentation()
-                                .AddRuntimeInstrumentation()
-                                .AddAzureMonitorMetricExporter(exporter => exporter.ConnectionString = options.ConnectionString));
+                        var options = telemetryConfig.GetAppInsightsTelemetryOptions();
+                        builder.AddApplicationInsightsTelemetryConsumer(options.Key);
                     }
                     break;
             }
