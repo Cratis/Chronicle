@@ -8,6 +8,12 @@ authorization or validation rules based on the type.
 When we do these formalization, there is an underlying base type that represents these called `ConceptAs<>`. With it we can handle cross cutting
 things like serialization of these types.
 
+`ConceptAs<>` implements `IComparable<>` and makes it possible to compare the primitive types without having to unwrap the concept. It is
+important to note that it inherently means that the type the concept represents needs to a type that implements `IComparable<>`, which is
+true for primitives. However, this means that `enum` does not work as it is not an `IComparable` even though it is by default looked upon
+as an `int` and you can cast it easily to one. Enums are inherently a domain concept on its own and its therefor viewed as not something
+you need a further formalization on.
+
 The wrapped type is not necessarily what you want to have represented when storing in databases or during transport. There are therefor
 implementations for the common things we use to translate the concepts to its underlying type.
 
