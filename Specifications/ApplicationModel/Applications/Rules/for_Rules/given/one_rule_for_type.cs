@@ -15,6 +15,7 @@ public class one_rule_for_type : all_dependencies
 
         rules = new(
             execution_context,
+            model_name_convention.Object,
             event_types.Object,
             json_schema_generator.Object,
             json_serializer_options,

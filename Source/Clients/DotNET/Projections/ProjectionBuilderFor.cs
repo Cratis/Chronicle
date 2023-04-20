@@ -8,8 +8,6 @@ using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Strings;
-using Humanizer;
 
 namespace Aksio.Cratis.Projections;
 

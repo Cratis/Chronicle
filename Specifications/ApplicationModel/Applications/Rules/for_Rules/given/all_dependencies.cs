@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using NJsonSchema;
@@ -12,6 +13,7 @@ namespace Aksio.Cratis.Applications.Rules.for_Rules.given;
 public class all_dependencies : Specification
 {
     protected Mock<IEventTypes> event_types;
+    protected Mock<IModelNameConvention> model_name_convention;
     protected Mock<IJsonSchemaGenerator> json_schema_generator;
     protected Mock<ITypes> types;
     protected Mock<IImmediateProjections> immediate_projections;
@@ -21,6 +23,7 @@ public class all_dependencies : Specification
     void Establish()
     {
         event_types = new();
+        model_name_convention = new();
         types = new();
         immediate_projections = new();
         json_schema_generator = new();
