@@ -1,3 +1,21 @@
+# [v8.14.0] - 2023-4-20 [PR: #841](https://github.com/aksio-insurtech/Cratis/pull/841)
+
+### Added
+
+- MicroserviceName introduced, optionally for now. This will in the future be required as we move configuration out of JSON into automatically configure.
+- Metrics for event sequences and connected clients supporting both ApplicationInsight and OpenTelemetry directly.
+
+### Changed
+
+- Describe the outwards facing code change
+
+### Fixed
+
+- Removing custom scavenger job for cleaning up silos and instead configuring Orleans defunct silo expiration cleanup.
+- Observers now persist the subscription information letting it continue if restarted. This is especially important for projections, as they don't have an active client reconnecting.
+
+
+
 # [v8.13.5] - 2023-4-14 [PR: #840](https://github.com/aksio-insurtech/Cratis/pull/840)
 
 ### Fixed
