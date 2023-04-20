@@ -14,7 +14,9 @@ Out of the box there is a convention that includes the namespace in the model na
 When configuring the `ClientBuilder` you can use it in the following way
 
 ```csharp
-clientBuilder.UseModelNameConvention(new NamespaceModelNameConvention());
+using Aksio.Cratis.Models;
+
+clientBuilder.UseModelNameConvention(new NamespacedModelNameConvention());
 ```
 
 The convention supports the following optional parameters on the constructor:
