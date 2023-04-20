@@ -51,6 +51,6 @@ public static class ConceptExtensions
     {
         if (!IsConcept(conceptObject)) throw new TypeIsNotAConcept(conceptObject.GetType());
 
-        return conceptObject.GetType()!.GetTypeInfo()!.GetProperty(nameof(ConceptAs<object>.Value))!.GetValue(conceptObject, null)!;
+        return conceptObject.GetType()!.GetTypeInfo()!.GetProperty(nameof(ConceptAs<string>.Value))!.GetValue(conceptObject, null)!;
     }
 }

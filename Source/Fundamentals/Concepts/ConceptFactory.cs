@@ -26,7 +26,7 @@ public static class ConceptFactory
         var genericArgumentType = GetPrimitiveTypeConceptIsBasedOn(type);
         value = TypeConversion.Convert(genericArgumentType, value);
         var instance = Activator.CreateInstance(type, value);
-        var valueProperty = type.GetTypeInfo().GetProperty(nameof(ConceptAs<object>.Value));
+        var valueProperty = type.GetTypeInfo().GetProperty(nameof(ConceptAs<string>.Value));
         valueProperty.SetValue(instance, value, null);
         return instance;
     }
