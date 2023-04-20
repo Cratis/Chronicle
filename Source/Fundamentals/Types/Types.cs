@@ -21,7 +21,8 @@ public class Types : ITypes
         "netstandard",
         "WindowsBase",
         "Namotion",
-        "Semver"
+        "Semver",
+        "Humanizer"
     };
 
     readonly List<string> _assemblyPrefixesToInclude = new()

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,6 +19,13 @@ public interface IClientBuilder
     /// </summary>
     /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
     IClientBuilder InKernel();
+
+    /// <summary>
+    /// Specify what <see cref="IModelNameConvention"/> to use.
+    /// </summary>
+    /// <param name="convention"><see cref="IModelNameConvention"/> to use.</param>
+    /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
+    IClientBuilder UseModelNameConvention(IModelNameConvention convention);
 
     /// <summary>
     /// Build the client.

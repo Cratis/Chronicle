@@ -8,6 +8,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
@@ -23,6 +24,7 @@ namespace Aksio.Cratis.Hosting;
 public class ClientBuilder : IClientBuilder
 {
     bool _inKernel;
+    IModelNameConvention? _modelNameConvention;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
@@ -52,6 +54,13 @@ public class ClientBuilder : IClientBuilder
     }
 
     /// <inheritdoc/>
+    public IClientBuilder UseModelNameConvention(IModelNameConvention convention)
+    {
+        _modelNameConvention = convention;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public void Build(
         HostBuilderContext hostBuilderContext,
         IServiceCollection services,
@@ -69,7 +78,7 @@ public class ClientBuilder : IClientBuilder
 
         services
             .AddHttpClient()
-            .AddMongoDBReadModels(types, loggerFactory: loggerFactory)
+            .AddMongoDBReadModels(types, loggerFactory: loggerFactory, modelNameConvention: _modelNameConvention)
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
             .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
 

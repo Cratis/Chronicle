@@ -5,6 +5,7 @@ using System.Text.Json;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
@@ -31,6 +32,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// Initializes a new instance of the <see cref="OutboxProjectionsRegistrar"/> class.
     /// </summary>
     /// <param name="client">The Cratis <see cref="IClient"/>.</param>
+    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for projections.</param>
     /// <param name="outboxProjections">All instances of <see cref="IOutboxProjections"/>.</param>
@@ -39,6 +41,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public OutboxProjectionsRegistrar(
         IClient client,
+        IModelNameConvention modelNameConvention,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
         IInstancesOf<IOutboxProjections> outboxProjections,
@@ -53,7 +56,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
         _logger = logger;
         _outboxProjectionsDefinitions = _outboxProjections.Select(projections =>
         {
-            var builder = new OutboxProjectionsBuilder(eventTypes, jsonSchemaGenerator, projections.Identifier, jsonSerializerOptions);
+            var builder = new OutboxProjectionsBuilder(modelNameConvention, eventTypes, jsonSchemaGenerator, projections.Identifier, jsonSerializerOptions);
             projections.Define(builder);
             return builder.Build();
         }).ToArray();
