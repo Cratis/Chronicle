@@ -64,5 +64,5 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
         return observable;
     }
 
-    IEnumerable<ConnectedClient> GetClients(MongoDBConnectedClientsForMicroserviceState microservice) => microservice?.Clients.OrderBy(_ => _.ConnectionId.Value).AsEnumerable() ?? Array.Empty<ConnectedClient>();
+    IEnumerable<ConnectedClient> GetClients(MongoDBConnectedClientsForMicroserviceState microservice) => microservice?.Clients.OrderBy(_ => _.ConnectionId).AsEnumerable() ?? Array.Empty<ConnectedClient>();
 }
