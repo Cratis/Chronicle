@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Guids;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Outbox;
@@ -18,6 +19,7 @@ public class OutboxProjectionsBuilder : IOutboxProjectionsBuilder
 {
     readonly Dictionary<EventType, ProjectionDefinition> _projectionDefinitionsPerEventType = new();
     readonly IEventTypes _eventTypes;
+    readonly IModelNameConvention _modelNameConvention;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly ProjectionId _projectionId;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -25,17 +27,20 @@ public class OutboxProjectionsBuilder : IOutboxProjectionsBuilder
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxProjectionsBuilder"/> class.
     /// </summary>
+    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for projections.</param>
     /// <param name="projectionId">The root projectionId.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public OutboxProjectionsBuilder(
+        IModelNameConvention modelNameConvention,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
         ProjectionId projectionId,
         JsonSerializerOptions jsonSerializerOptions)
     {
         _eventTypes = eventTypes;
+        _modelNameConvention = modelNameConvention;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _projectionId = projectionId;
         _jsonSerializerOptions = jsonSerializerOptions;
@@ -57,7 +62,7 @@ public class OutboxProjectionsBuilder : IOutboxProjectionsBuilder
         }
 
         var identifier = _projectionId.Value.Xor(eventType.Id.Value);
-        var projectionBuilder = new ProjectionBuilderFor<TTargetEvent>(identifier, _eventTypes, _jsonSchemaGenerator, _jsonSerializerOptions);
+        var projectionBuilder = new ProjectionBuilderFor<TTargetEvent>(identifier, _modelNameConvention, _eventTypes, _jsonSchemaGenerator, _jsonSerializerOptions);
         projectionBuilderCallback(projectionBuilder);
         projectionBuilder.WithName($"Outbox for ${eventClrType.FullName}");
         _projectionDefinitionsPerEventType[eventType] = projectionBuilder.Build();

@@ -53,7 +53,6 @@ public static class HostBuilderExtensions
             "FluentValidation",
             "Grpc",
             "Handlebars",
-            "Humanizer",
             "NJsonSchema",
             "MongoDB",
             "Orleans",

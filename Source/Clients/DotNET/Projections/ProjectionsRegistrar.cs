@@ -6,6 +6,7 @@ using System.Text.Json;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Reflection;
@@ -22,10 +23,10 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
 {
     static class ProjectionDefinitionCreator<TModel>
     {
-        public static ProjectionDefinition CreateAndDefine(Type type, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator, JsonSerializerOptions jsonSerializerOptions)
+        public static ProjectionDefinition CreateAndDefine(Type type, IModelNameConvention modelNameConvention, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator, JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (Activator.CreateInstance(type) as IProjectionFor<TModel>)!;
-            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, eventTypes, schemaGenerator, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }
@@ -34,6 +35,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     readonly IEnumerable<ProjectionDefinition> _projections;
     readonly IClient _client;
     readonly IExecutionContextManager _executionContextManager;
+    readonly IModelNameConvention _modelNameConvention;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<ProjectionsRegistrar> _logger;
@@ -45,6 +47,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
+    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
@@ -54,41 +57,20 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         IExecutionContextManager executionContextManager,
         IEventTypes eventTypes,
         ITypes types,
+        IModelNameConvention modelNameConvention,
         IJsonSchemaGenerator schemaGenerator,
         IJsonProjectionSerializer projectionSerializer,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<ProjectionsRegistrar> logger)
     {
-        _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator, jsonSerializerOptions);
         _client = client;
         _executionContextManager = executionContextManager;
+        _modelNameConvention = modelNameConvention;
         _projectionSerializer = projectionSerializer;
         _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
+        _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator, jsonSerializerOptions);
     }
-
-    /// <summary>
-    /// Find all projection definitions.
-    /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
-    /// <param name="types"><see cref="ITypes"/> to find from.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating the schema for the model.</param>
-    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-    /// <returns>Collection of <see cref="ProjectionDefinition"/>.</returns>
-    public static IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
-        IEventTypes eventTypes,
-        ITypes types,
-        IJsonSchemaGenerator schemaGenerator,
-        JsonSerializerOptions jsonSerializerOptions) =>
-        types.All
-                .Where(_ => _.HasInterface(typeof(IProjectionFor<>)))
-                .Select(_ =>
-                {
-                    var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
-                    var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
-                    var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                    return (method.Invoke(null, new object[] { _, eventTypes, schemaGenerator, jsonSerializerOptions }) as ProjectionDefinition)!;
-                }).ToArray();
 
     /// <inheritdoc/>
     public async Task ClientConnected()
@@ -117,4 +99,19 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
 
     /// <inheritdoc/>
     public Task ClientDisconnected() => Task.CompletedTask;
+
+    IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
+        IEventTypes eventTypes,
+        ITypes types,
+        IJsonSchemaGenerator schemaGenerator,
+        JsonSerializerOptions jsonSerializerOptions) =>
+        types.All
+                .Where(_ => _.HasInterface(typeof(IProjectionFor<>)))
+                .Select(_ =>
+                {
+                    var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
+                    var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
+                    var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
+                    return (method.Invoke(null, new object[] { _, _modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions }) as ProjectionDefinition)!;
+                }).ToArray();
 }

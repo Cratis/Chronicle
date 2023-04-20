@@ -9,7 +9,4 @@
         <ProjectReference Include="../Reactions/Reactions.csproj" />
         <ProjectReference Include="../Read/Read.csproj" />
     </ItemGroup>
-    <ItemGroup>
-      <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="8.4.1" />
-    </ItemGroup>
 </Project>

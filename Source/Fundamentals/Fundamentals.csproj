@@ -15,5 +15,6 @@
       <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0"/>
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJson)"/>
       <PackageReference Include="System.Reactive" Version="$(SystemReactive)" />
+      <PackageReference Include="Humanizer" Version="$(Humanizer)" />
     </ItemGroup>
 </Project>
