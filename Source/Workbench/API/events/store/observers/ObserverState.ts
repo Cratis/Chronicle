@@ -8,6 +8,7 @@ import { EventType } from './EventType';
 import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
 import { FailedPartition } from './FailedPartition';
+import { Object } from './Object';
 
 export class ObserverState {
 
@@ -46,4 +47,10 @@ export class ObserverState {
 
     @field(Boolean)
     isDisconnected!: boolean;
+
+    @field(String)
+    currentSubscriptionType!: string;
+
+    @field(Object)
+    currentSubscriptionArguments?: Object;
 }

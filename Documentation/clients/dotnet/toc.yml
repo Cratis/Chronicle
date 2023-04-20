@@ -1,3 +1,5 @@
+- name: Model names
+  href: ./model-names.md
 - name: Events
   href: events/events.md
 - name: Observers

@@ -28,13 +28,15 @@ public static class HostBuilderExtensions
     /// </summary>
     /// <param name="builder"><see cref="IHostBuilder"/> to extend.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> for the running process.</param>
+    /// <param name="microserviceId">Optional <see cref="MicroserviceId"/> for the running process. Defaults to <see cref="MicroserviceId.Unspecified"/>.</param>
+    /// <param name="microserviceName">Optional <see cref="MicroserviceName"/> for the running process. Defaults to <see cref="MicroserviceName.Unspecified"/>.</param>
     /// <param name="mvcOptionsDelegate">Optional delegate if one wants to configure MVC specifics, since this configured MVC automatically.</param>
     /// <returns><see cref="IHostBuilder"/> for building continuation.</returns>
     public static IHostBuilder UseAksio(
         this IHostBuilder builder,
         Action<IClientBuilder>? configureDelegate = default,
         MicroserviceId? microserviceId = default,
+        MicroserviceName? microserviceName = default,
         Action<MvcOptions>? mvcOptionsDelegate = default)
     {
         var loggerFactory = builder.UseDefaultLogging();
@@ -49,8 +51,8 @@ public static class HostBuilderExtensions
             "Azure",
             "Elasticsearch",
             "FluentValidation",
+            "Grpc",
             "Handlebars",
-            "Humanizer",
             "NJsonSchema",
             "MongoDB",
             "Orleans",
@@ -63,6 +65,7 @@ public static class HostBuilderExtensions
         var derivedTypes = new DerivedTypes(Internals.Types);
 
         microserviceId ??= MicroserviceId.Unspecified;
+        microserviceName ??= MicroserviceName.Unspecified;
 
         Globals.Configure(derivedTypes);
 

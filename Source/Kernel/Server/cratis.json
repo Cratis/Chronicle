@@ -21,9 +21,9 @@
         "options": {}
     },
     "telemetry": {
-        "type": "app-insights",
+        "type": "open-telemetry",
         "options": {
-            "key": ""
+            "url": "http://localhost:4317"
         }
     },
     "storage": {

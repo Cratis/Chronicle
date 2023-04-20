@@ -22,22 +22,30 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     public const string ConnectedClientsHttpClient = "connected-clients";
 
     readonly ILogger<ConnectedClients> _logger;
+    readonly IConnectedClientsMetricsFactory _metricsFactory;
     readonly ObserverManager<INotifyClientDisconnected> _clientDisconnectedObservers;
+    IConnectedClientsMetrics? _metrics;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClients"/> class.
     /// </summary>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ConnectedClients(ILogger<ConnectedClients> logger)
+    /// <param name="metricsFactory"><see cref="IConnectedClientsMetricsFactory"/> for creating metrics.</param>
+    public ConnectedClients(
+        ILogger<ConnectedClients> logger,
+        IConnectedClientsMetricsFactory metricsFactory)
     {
         _logger = logger;
+        _metricsFactory = metricsFactory;
         _clientDisconnectedObservers = new(TimeSpan.FromMinutes(1), logger, "ClientDisconnectedObservers");
     }
 
     /// <inheritdoc/>
     public override Task OnActivateAsync()
     {
+        _metrics = _metricsFactory.Create(this.GetPrimaryKey());
         RegisterTimer(ReviseConnectedClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+
         return Task.CompletedTask;
     }
 
@@ -53,6 +61,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         _logger.ClientConnected(microserviceId, connectionId);
         State.Clients.Where(_ => _.ClientUri == clientUri).ToList().ForEach(_ => State.Clients.Remove(_));
         State.Clients.Add(new ConnectedClient(connectionId, clientUri, version, DateTimeOffset.UtcNow, isRunningWithDebugger));
+        _metrics?.SetConnectedClients(State.Clients.Count);
 
         await WriteStateAsync();
     }
@@ -71,6 +80,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
             await WriteStateAsync();
             _clientDisconnectedObservers.Notify(_ => _.OnClientDisconnected(client));
         }
+        _metrics?.SetConnectedClients(State.Clients.Count);
     }
 
     /// <inheritdoc/>

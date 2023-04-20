@@ -11,5 +11,10 @@ public class AppInsightsTelemetryOptions
     /// <summary>
     /// Gets the instrumentation key to use for connecting to Application Insights.
     /// </summary>
-    public string Key { get; init; } = string.Empty;
+    public string Key { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the connection string to use for connecting to Application Insights.
+    /// </summary>
+    public string ConnectionString { get; init; } = string.Empty;
 }

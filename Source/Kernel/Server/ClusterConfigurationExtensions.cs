@@ -45,6 +45,13 @@ public static class ClusterConfigurationExtensions
                     options.ServiceId = "kernel";
                 });
 
+            builder
+                .Configure<ClusterMembershipOptions>(options =>
+                {
+                    options.DefunctSiloExpiration = TimeSpan.FromMinutes(1);
+                    options.DefunctSiloCleanupPeriod = TimeSpan.FromMinutes(1);
+                });
+
             if (!string.IsNullOrEmpty(clusterConfig.AdvertisedIP))
             {
                 logger?.UsingAdvertisedIP(clusterConfig.AdvertisedIP);

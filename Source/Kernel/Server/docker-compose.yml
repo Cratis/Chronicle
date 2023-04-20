@@ -12,3 +12,28 @@ services:
     ports:
       - 27017:27017
 
+  zipkin-all-in-one:
+      image: openzipkin/zipkin:latest
+      ports:
+        - "9411:9411"
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ./Metrics/prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./Metrics/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - ./output:/etc/output:rw # Store the logs
+    ports:
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter metrics
+      - "4317:4317"   # OTLP gRPC receiver
+    depends_on:
+      - zipkin-all-in-one

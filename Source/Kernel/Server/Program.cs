@@ -23,12 +23,17 @@ public static class Program
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
+        Types.Types.AddAssemblyPrefixesToExclude("OpenTelemetry");
+
         return CreateHostBuilder(args).RunConsoleAsync();
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
-            .UseAksio(_ => _.InKernel(), microserviceId: MicroserviceId.Kernel)
+            .UseAksio(
+                _ => _.InKernel(),
+                microserviceId: MicroserviceId.Kernel,
+                microserviceName: "Cratis Kernel")
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
