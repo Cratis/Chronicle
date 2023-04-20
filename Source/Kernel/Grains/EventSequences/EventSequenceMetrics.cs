@@ -25,10 +25,10 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequenceMetrics"/>.
     /// </summary>
-    /// <param name="meter"></param>
-    /// <param name="eventSequenceId"></param>
-    /// <param name="microserviceId"></param>
-    /// <param name="tenantId"></param>
+    /// <param name="meter">The global <see cref="Meter"/>.</param>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> the metrics is for.</param>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> the metrics is for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> the metrics is for.</param>
     public EventSequenceMetrics(Meter meter, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId)
     {
         _eventSequenceId = eventSequenceId;
@@ -49,7 +49,8 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     /// <inheritdoc/>
     public void FailedAppending(EventSourceId eventSourceId, string eventName) => _failedAppendedEvents.Add(1, GetTagsFor(eventSourceId, eventName));
 
-    TagList GetTagsFor(EventSourceId eventSourceId, string eventName) => new(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[] {
+    TagList GetTagsFor(EventSourceId eventSourceId, string eventName) => new(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[]
+    {
         new("event_sequence_id", _eventSequenceId.ToString()),
         new("microservice_id", _microserviceId.ToString()),
         new("tenant_id", _tenantId.ToString()),

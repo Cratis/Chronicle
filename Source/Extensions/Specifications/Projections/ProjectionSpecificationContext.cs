@@ -14,6 +14,7 @@ using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
 using Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
@@ -56,7 +57,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         _eventLog = new(expandoObjectConverter, schemaGenerator);
 
-        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new EventTypesForSpecifications(), schemaGenerator, Globals.JsonSerializerOptions);
+        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new DefaultModelNameConvention(), new EventTypesForSpecifications(), schemaGenerator, Globals.JsonSerializerOptions);
         defineProjection(builder);
         var projectionDefinition = builder.Build();
 

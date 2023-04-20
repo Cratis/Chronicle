@@ -17,7 +17,7 @@ public class EventSequenceMetricsFactory : IEventSequenceMetricsFactory
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequenceMetricsFactory"/>.
     /// </summary>
-    /// <param name="meter"></param>
+    /// <param name="meter">The global <see cref="Meter"/>.</param>
     public EventSequenceMetricsFactory(Meter meter) => _meter = meter;
 
     /// <inheritdoc/>
