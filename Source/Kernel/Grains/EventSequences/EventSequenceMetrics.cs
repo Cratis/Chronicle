@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
 
@@ -20,7 +21,6 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     readonly Counter<int> _appendedEvents;
     readonly Counter<int> _duplicateEventSequenceNumbers;
     readonly Counter<int> _failedAppendedEvents;
-    readonly TagList _tags;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequenceMetrics"/>.
@@ -35,23 +35,25 @@ public class EventSequenceMetrics : IEventSequenceMetrics
         _microserviceId = microserviceId;
         _tenantId = tenantId;
 
-        _tags = new TagList(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[] {
-            new("event_sequence_id", _eventSequenceId.ToString()),
-            new("microservice_id", _microserviceId.ToString()),
-            new("tenant_id", _tenantId.ToString())
-        }));
-
         _appendedEvents = meter.CreateCounter<int>("cratis-event_sequences-appended-events", "Number of events appended to the event sequence");
         _duplicateEventSequenceNumbers = meter.CreateCounter<int>("cratis-event-sequences-duplicate-event-sequence-numbers", "Number of duplicate sequence numbers");
         _failedAppendedEvents = meter.CreateCounter<int>("cratis-event-sequences-failed-appended-events", "Number of events that failed to be appended to the event sequence");
     }
 
     /// <inheritdoc/>
-    public void AppendedEvent() => _appendedEvents.Add(1, _tags);
+    public void AppendedEvent(EventSourceId eventSourceId, string eventName) => _appendedEvents.Add(1, GetTagsFor(eventSourceId, eventName));
 
     /// <inheritdoc/>
-    public void DuplicateEventSequenceNumber() => _duplicateEventSequenceNumbers.Add(1, _tags);
+    public void DuplicateEventSequenceNumber(EventSourceId eventSourceId, string eventName) => _duplicateEventSequenceNumbers.Add(1, GetTagsFor(eventSourceId, eventName));
 
     /// <inheritdoc/>
-    public void FailedAppending() => _failedAppendedEvents.Add(1, _tags);
+    public void FailedAppending(EventSourceId eventSourceId, string eventName) => _failedAppendedEvents.Add(1, GetTagsFor(eventSourceId, eventName));
+
+    TagList GetTagsFor(EventSourceId eventSourceId, string eventName) => new(new ReadOnlySpan<KeyValuePair<string, object?>>(new KeyValuePair<string, object?>[] {
+        new("event_sequence_id", _eventSequenceId.ToString()),
+        new("microservice_id", _microserviceId.ToString()),
+        new("tenant_id", _tenantId.ToString()),
+        new("event_source_id", eventSourceId.ToString()),
+        new("event_name", eventName)
+    }));
 }

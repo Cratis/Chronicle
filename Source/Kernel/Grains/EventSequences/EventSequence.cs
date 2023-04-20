@@ -95,15 +95,17 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default)
     {
         var updateSequenceNumber = false;
+        var eventName = "[N/A]";
         try
         {
             var eventSchema = await _schemaStoreProvider().GetFor(eventType.Id, eventType.Generation);
+            eventName = eventSchema.Schema.GetDisplayName();
             _logger.Appending(
                 _microserviceAndTenant.MicroserviceId,
                 _microserviceAndTenant.TenantId,
                 _eventSequenceId,
                 eventType,
-                eventSchema.Schema.GetDisplayName(),
+                eventName,
                 eventSourceId,
                 State.SequenceNumber);
 
@@ -131,13 +133,13 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 
                     await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
 
-                    _metrics?.AppendedEvent();
+                    _metrics?.AppendedEvent(eventSourceId, eventName);
 
                     appending = false;
                 }
                 catch (DuplicateEventSequenceNumber)
                 {
-                    _metrics?.DuplicateEventSequenceNumber();
+                    _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
                     State.SequenceNumber++;
                     await WriteStateAsync();
                 }
@@ -146,7 +148,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         }
         catch (UnableToAppendToEventSequence ex)
         {
-            _metrics?.FailedAppending();
+            _metrics?.FailedAppending(eventSourceId, eventName);
             _logger.FailedAppending(
                 _microserviceAndTenant.MicroserviceId,
                 _microserviceAndTenant.TenantId,
