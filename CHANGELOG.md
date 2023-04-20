@@ -4,6 +4,7 @@
 
 - MicroserviceName introduced, optionally for now. This will in the future be required as we move configuration out of JSON into automatically configure.
 - Metrics for event sequences and connected clients supporting both ApplicationInsight and OpenTelemetry directly.
+- A way of influencing the model names with a `IModelNameConvention` for the automatic hookup of `IMongoCollection<>` and Projections. The convention is configured once and applies to all scenarios where a model name is used.
 
 ### Changed
 
