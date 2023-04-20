@@ -26,4 +26,11 @@ public static class TelemetryConfigurationExtensions
     /// <param name="telemetryConfig"><see cref="Telemetry"/> config to get from.</param>
     /// <returns><see cref="AppInsightsTelemetryOptions"/> instance.</returns>
     public static AppInsightsTelemetryOptions GetAppInsightsTelemetryOptions(this Telemetry telemetryConfig) => telemetryConfig.Options as AppInsightsTelemetryOptions ?? new AppInsightsTelemetryOptions();
+
+    /// <summary>
+    /// Get specific <see cref="OpenTelemetryOptions"/> from the options of <see cref="Telemetry"/>.
+    /// </summary>
+    /// <param name="telemetryConfig"><see cref="Telemetry"/> config to get from.</param>
+    /// <returns><see cref="OpenTelemetryOptions"/> instance.</returns>
+    public static OpenTelemetryOptions GetOpenTelemetryOptions(this Telemetry telemetryConfig) => telemetryConfig.Options as OpenTelemetryOptions ?? new OpenTelemetryOptions();
 }

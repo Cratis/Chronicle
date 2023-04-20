@@ -9,9 +9,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Strings;
 using Aksio.Cratis.Types;
-using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -25,6 +23,7 @@ public static class MongoDBReadModels
 {
     static readonly MethodInfo _getCollectionMethod = typeof(IMongoDatabase).GetMethod(nameof(IMongoDatabase.GetCollection), BindingFlags.Public | BindingFlags.Instance)!;
     static readonly ConcurrentDictionary<TenantId, IMongoDatabase> _databasesPerTenant = new();
+    static IModelNameConvention _modelNameConvention = new DefaultModelNameConvention();
 
     /// <summary>
     /// Add all services related to being able to use MongoDB for read models.
@@ -32,11 +31,15 @@ public static class MongoDBReadModels
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="types"><see cref="ITypes"/> for discovery.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
+    /// <param name="modelNameConvention">Optional type of the model name convention to use. If not specified it will use <see cref="DefaultModelNameConvention"/>.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default)
+    public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default, IModelNameConvention? modelNameConvention = default)
     {
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
         var logger = loggerFactory.CreateLogger("MongodBReadModels");
+
+        _modelNameConvention = modelNameConvention ?? _modelNameConvention;
+        services.AddSingleton<IModelNameConvention>(_modelNameConvention);
 
         services.AddTransient(sp =>
         {
@@ -71,8 +74,7 @@ public static class MongoDBReadModels
             return modelNameAttribute.Name;
         }
 
-        var modelName = readModelType.Name.Pluralize();
-        return modelName.ToCamelCase();
+        return _modelNameConvention.GetNameFor(readModelType);
     }
 
     static void RegisterMongoCollectionTypes(IServiceCollection services, IEnumerable<Type> readModelTypes, ILogger logger)
@@ -93,8 +95,8 @@ public static class MongoDBReadModels
 
     static async Task ConfigureReadModels(IServiceProvider serviceProvider)
     {
-        var storage = await serviceProvider.GetService<IMicroserviceConfiguration>()!.Storage();
-        var clientFactory = serviceProvider.GetService<IMongoDBClientFactory>()!;
+        var storage = await serviceProvider.GetRequiredService<IMicroserviceConfiguration>().Storage();
+        var clientFactory = serviceProvider.GetRequiredService<IMongoDBClientFactory>();
         foreach (var (tenant, config) in storage.Tenants)
         {
             var storageType = config.Get(WellKnownStorageTypes.ReadModels);

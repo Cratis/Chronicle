@@ -8,8 +8,6 @@ using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Strings;
-using Humanizer;
 
 namespace Aksio.Cratis.Projections;
 
@@ -28,11 +26,13 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
     /// Initializes a new instance of the <see cref="ProjectionBuilderFor{TModel}"/> class.
     /// </summary>
     /// <param name="identifier">The unique identifier for the projection.</param>
+    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public ProjectionBuilderFor(
         ProjectionId identifier,
+        IModelNameConvention modelNameConvention,
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions)
@@ -45,7 +45,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
         }
         else
         {
-            _modelName = typeof(TModel).Name.Pluralize().ToCamelCase();
+            _modelName = modelNameConvention.GetNameFor(typeof(TModel));
         }
     }
 

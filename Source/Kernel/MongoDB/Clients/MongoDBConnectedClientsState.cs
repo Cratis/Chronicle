@@ -32,7 +32,7 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
     /// <inheritdoc/>
     public IObservable<IEnumerable<ConnectedClient>> GetAllForMicroservice(MicroserviceId microserviceId)
     {
-        var clients = Collection.Find(_ => _.Id == microserviceId).SingleOrDefault()?.Clients ?? Array.Empty<ConnectedClient>();
+        var clients = GetClients(Collection.Find(_ => _.Id == microserviceId).SingleOrDefault());
         var observable = new BehaviorSubject<IEnumerable<ConnectedClient>>(clients);
         var cursor = Collection.Watch();
         _ = Task.Run(async () =>
@@ -51,7 +51,7 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
                     var clients = await Collection.FindAsync(_ => _.Id == microserviceId);
                     if (!observable.IsDisposed)
                     {
-                        observable.OnNext(clients.SingleOrDefault()?.Clients ?? Array.Empty<ConnectedClient>());
+                        observable.OnNext(GetClients(clients.SingleOrDefault()));
                     }
                 }
             }
@@ -63,4 +63,6 @@ public class MongoDBConnectedClientsState : IConnectedClientsState
 
         return observable;
     }
+
+    IEnumerable<ConnectedClient> GetClients(MongoDBConnectedClientsForMicroserviceState microservice) => microservice?.Clients.OrderBy(_ => _.ConnectionId.Value).AsEnumerable() ?? Array.Empty<ConnectedClient>();
 }
