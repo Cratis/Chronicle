@@ -6,10 +6,6 @@
 - Metrics for event sequences and connected clients supporting both ApplicationInsight and OpenTelemetry directly.
 - A way of influencing the model names with a `IModelNameConvention` for the automatic hookup of `IMongoCollection<>` and Projections. The convention is configured once and applies to all scenarios where a model name is used.
 
-### Changed
-
-- Describe the outwards facing code change
-
 ### Fixed
 
 - Removing custom scavenger job for cleaning up silos and instead configuring Orleans defunct silo expiration cleanup.
