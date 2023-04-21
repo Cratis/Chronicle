@@ -1,3 +1,16 @@
+# [v8.14.1] - 2023-4-20 [PR: #851](https://github.com/aksio-insurtech/Cratis/pull/851)
+
+## Summary
+
+Adds IComparable to ConceptAs<>. 
+
+> **Important note**: This release is marked as a patch but the release notes indicate a change. The implementation of `IComparable` for a `ConceptAs<>` is viewed by us as an oversight. Concepts should be encapsulating primitives and primitives are comparable. However, if you have been using it for other things than primitives you should consider changing these, they might just need to regular records. If you sill feel the type should be a concept, you will have to implement `IComparable`. 
+
+### Changed
+
+- Adds IComparable to the ConceptAs so that we can use concepts in features such as Ordering.  A concept uses the default ordering of the underlying type.  It is up to the consumer to determine if this has semantic meaning (e.g. comparison of GUIDs).
+
+
 # [v8.14.0] - 2023-4-20 [PR: #841](https://github.com/aksio-insurtech/Cratis/pull/841)
 
 ### Added
