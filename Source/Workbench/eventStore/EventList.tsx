@@ -63,12 +63,13 @@ export const EventList = (props: EventListProps) => {
     const fetchEvents = async () => {
         setPageState(old => ({ ...old, isLoading: true }));
         await refreshEvents(getAppendedEventsArguments());
+        console.log(events.data.totalCount);
         setPageState(old => ({ ...old, isLoading: false, data: events.data.items, total: events.data.totalCount }));
     };
 
     useEffect(() => {
         fetchEvents();
-    }, [pageState.pageNumber, pageState.pageSize]);
+    }, [pageState.pageNumber, pageState.pageSize, props]);
 
     props.registerRefreshEvents(fetchEvents);
 
@@ -226,23 +227,25 @@ export const EventList = (props: EventListProps) => {
         });
     };
 
+    const items = events.data.items ?? [];
+    const totalCount = events.data.totalCount ?? 0;
+
     return (
         <>
-            {((events.data.items && events.data.items.length > 0) &&
-                <DataGrid
-                    paginationMode='server'
-                    loading={pageState.isLoading}
-                    rowCount={events.data.totalCount}
-                    pageSizeOptions={[10, 25, 50, 100]}
-                    paginationModel={{ page: pageState.pageNumber, pageSize: pageState.pageSize }}
-                    columns={eventListColumns}
-                    filterMode='server'
-                    sortingMode='server'
-                    getRowId={(row) => row.metadata.sequenceNumber}
-                    onRowSelectionModelChange={eventTypeSelected}
-                    onPaginationModelChange={(params) => { setPageState(old => ({ ...old, ...{ pageNumber: params.page, pageSize: params.pageSize } })); }}
-                    rows={events.data.items}
-                />)}
+            <DataGrid
+                paginationMode='server'
+                loading={pageState.isLoading}
+                rowCount={totalCount}
+                pageSizeOptions={[10, 25, 50, 100]}
+                paginationModel={{ page: pageState.pageNumber, pageSize: pageState.pageSize }}
+                columns={eventListColumns}
+                filterMode='server'
+                sortingMode='server'
+                getRowId={(row) => row.metadata.sequenceNumber}
+                onRowSelectionModelChange={eventTypeSelected}
+                onPaginationModelChange={(params) => { setPageState(old => ({ ...old, ...{ pageNumber: params.page, pageSize: params.pageSize } })); }}
+                rows={items}
+            />
 
             <Snackbar open={snackBarState.open} autoHideDuration={6000} onClose={handleCloseSnackBar}
                 anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
