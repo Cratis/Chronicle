@@ -70,16 +70,6 @@ export const EventSequences = () => {
             <Stack direction='column' style={{ height: '100%' }}>
                 <Typography variant='h4'>Event sequences</Typography>
                 <Divider sx={{ mt: 1, mb: 3 }} />
-                {/* <Stack.Item>
-                    <Stack horizontal style={{ textAlign: 'center' }}>
-                        <Pivot linkFormat="links">
-                            <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" onRenderItemLink={pivotItemHeaderRenderer} />
-                            <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" onRenderItemLink={pivotItemHeaderRenderer} />
-                        </Pivot>
-                        <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
-                    </Stack>
-                </Stack.Item> */}
-                {/* <CommandBar items={commandBarItems} /> */}
                 <Toolbar>
                     <FormControl size='small' sx={{ m: 1, minWidth: 120 }}>
                         <InputLabel>Sequence</InputLabel>
