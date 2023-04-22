@@ -13,6 +13,7 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
+import { GenerationSchemasForType } from 'API/events/store/types/GenerationSchemasForType';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
@@ -21,6 +22,7 @@ import { useRouteParams } from './RouteParams';
 
 import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography, Divider, Grid, Box, TextField } from '@mui/material';
 import * as icons from '@mui/icons-material';
+import { EventDetails } from './EventDetails';
 
 export const EventSequences = () => {
     const { microserviceId } = useRouteParams();
@@ -45,6 +47,15 @@ export const EventSequences = () => {
         refreshEventsCallback.current = callback;
     }
 
+    const getGenerationalSchemasForTypeArguments = () => {
+        return {
+            microserviceId,
+            eventTypeId: selectedEventType!.identifier
+        };
+    };
+
+    const [schema, reloadGenerationalSchemas] = GenerationSchemasForType.use();
+
     useEffect(() => {
         if (eventSequences.data.length > 0) {
             setSelectedEventSequence(eventSequences.data[0]);
@@ -57,11 +68,15 @@ export const EventSequences = () => {
         }
     }, [tenants.data]);
 
-    const eventSelected = (item: any) => {
+    const eventSelected = (item: AppendedEvent) => {
         if (item !== selectedEvent) {
+            const eventType = eventTypes.data.find(_ => _.identifier == item.metadata.type.id);
             setSelectedEvent(item);
-
-            setSelectedEventType(eventTypes.data.find(_ => _.identifier == item.metadata.type.id));
+            setSelectedEventType(eventType);
+            reloadGenerationalSchemas({
+                microserviceId,
+                eventTypeId: eventType!.identifier
+            });
         }
     };
 
@@ -144,14 +159,16 @@ export const EventSequences = () => {
                                             <TextField label='Occurred' disabled
                                                 defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
                                         </FormControl>
-                                        {
+                                        <EventDetails event={selectedEvent} type={selectedEventType!} schema={schema.data} />
+
+                                        {/* {
                                             (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ =>
                                                 <FormControl key={_} size='small' sx={{ m: 1, minWidth: '90%' }}>
                                                     <TextField
                                                         label={_} disabled defaultValue={selectedEvent!.content[_]} />
                                                 </FormControl>)
                                         }
-
+ */}
                                     </Box>
                                 }
                             </Grid>

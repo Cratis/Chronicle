@@ -63,13 +63,12 @@ export const EventList = (props: EventListProps) => {
     const fetchEvents = async () => {
         setPageState(old => ({ ...old, isLoading: true }));
         await refreshEvents(getAppendedEventsArguments());
-        console.log(events.data.totalCount);
         setPageState(old => ({ ...old, isLoading: false, data: events.data.items, total: events.data.totalCount }));
     };
 
     useEffect(() => {
         fetchEvents();
-    }, [pageState.pageNumber, pageState.pageSize, props]);
+    }, [pageState.pageNumber, pageState.pageSize, props.eventSequenceId, props.microserviceId, props.tenantId]);
 
     props.registerRefreshEvents(fetchEvents);
 
