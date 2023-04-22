@@ -124,6 +124,10 @@ public class EventSequence : Controller
 
         var from = EventSequenceNumber.First + (pageNumber * pageSize);
         var tail = await _eventSequenceStorageProviderProvider().GetTailSequenceNumber(eventSequenceId);
+        if (tail == EventSequenceNumber.Unavailable)
+        {
+            return new(Enumerable.Empty<AppendedEventWithJsonAsContent>(), 0);
+        }
         var cursor = await _eventSequenceStorageProviderProvider().GetRange(eventSequenceId, from, from + (pageSize - 1));
         while (await cursor.MoveNext())
         {
