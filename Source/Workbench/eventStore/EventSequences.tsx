@@ -148,10 +148,8 @@ export const EventSequences = () => {
                                 {selectedEvent &&
                                     <Box>
                                         <Typography variant='h6'>{selectedEventType?.name}</Typography>
-                                        <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
-                                            <TextField label='Occurred' disabled
-                                                defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
-                                        </FormControl>
+                                        <Typography>Occurred {selectedEvent?.context.occurred.toLocaleString()}</Typography>
+
                                         <EventDetails event={selectedEvent} type={selectedEventType!} schemas={schema.data} />
 
                                         {/* {
