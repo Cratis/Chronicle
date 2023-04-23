@@ -6,6 +6,7 @@ import { Box, SvgIconProps, Typography, styled } from '@mui/material';
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 import * as icons from '@mui/icons-material';
+import { PropertyType, Schema } from './Schema';
 
 type StyledTreeItemProps = TreeItemProps & {
     labelIcon: React.ElementType<SvgIconProps>;
@@ -73,49 +74,74 @@ function StyledTreeItem(props: StyledTreeItemProps) {
 export interface EventDetailsProps {
     event: AppendedEvent;
     type: EventTypeInformation;
-    schema: any;
+    schemas: any[];
 }
 
-function getIconFor(value: any) {
-    if (value instanceof Date) {
-        return icons.DateRange;
-    } else if (typeof value == "number") {
-        return icons.Numbers;
-    } else if (typeof value == "string") {
-        return icons.TextFormat;
-    } else if (typeof value == "boolean") {
-        return icons.ToggleOn;
-    } else if (typeof value == "object") {
-        return icons.DataObject;
+function getIconFor(propertyPath: string, schema: Schema) {
+    const propertyType = schema.getPropertyType(propertyPath);
+    switch (propertyType) {
+        case PropertyType.String:
+            return icons.TextFormat;
+        case PropertyType.Byte:
+            return icons.Biotech;
+        case PropertyType.Number:
+            return icons.Numbers;
+        case PropertyType.Boolean:
+            return icons.ToggleOn;
+        case PropertyType.Date:
+            return icons.DateRange;
+        case PropertyType.Guid:
+            return icons.Info;
+        case PropertyType.Object:
+            return icons.DataObject;
+        case PropertyType.Enum:
+            return icons.ListAlt;
+        case PropertyType.Unknown:
+            return icons.QuestionMark;
     }
+
     return icons.QuestionMark;
 }
 
 
-const PropertiesFor = (props: { level: number, value: any }) => {
+const PropertiesFor = (props: { propertyPath: string, level: number, value: any, schema: Schema }) => {
     return (
         <>
             {
                 Object.keys(props.value).map((item, index) => {
-                    if (typeof props.value[item] === 'object') {
+                    const fullPropertyPath = props.propertyPath === '' ? item : `${props.propertyPath}.${item}`;
+                    const propertyType = props.schema.getPropertyType(fullPropertyPath);
+                    if (propertyType === PropertyType.Object) {
                         return (
                             <StyledTreeItem
                                 key={index}
                                 nodeId={index.toString()}
                                 labelText={item}
                                 labelIcon={icons.DataObject}>
-                                <PropertiesFor level={props.level + 1} value={props.value[item]} />
+                                <PropertiesFor
+                                    propertyPath={fullPropertyPath}
+                                    level={props.level + 1}
+                                    value={props.value[item]}
+                                    schema={props.schema} />
                             </StyledTreeItem>
                         );
                     } else {
+                        let value = props.value[item];
+
+                        if (propertyType == PropertyType.Enum) {
+                            value = props.schema.getEnumValuesAndNames(fullPropertyPath).find(_ => _.value == value)?.name || value;
+                        } else {
+                            value = value.toString();
+                        }
+
                         const key = `${props.level}-${index}`;
                         return (
                             <StyledTreeItem
                                 key={key}
                                 nodeId={key}
                                 labelText={item}
-                                labelIcon={getIconFor(props.value[item])}
-                                labelInfo={props.value[item].toString()} />
+                                labelIcon={getIconFor(fullPropertyPath, props.schema)}
+                                labelInfo={value} />
                         );
                     }
                 })
@@ -125,6 +151,10 @@ const PropertiesFor = (props: { level: number, value: any }) => {
 };
 
 export const EventDetails = (props: EventDetailsProps) => {
+    const schemaForGeneration = props.schemas.find(_ => _.generation == props.event.metadata.type.generation);
+    if (!schemaForGeneration) return (<></>);
+
+    const schema = new Schema(schemaForGeneration);
 
     return (
         <TreeView
@@ -133,7 +163,7 @@ export const EventDetails = (props: EventDetailsProps) => {
             defaultExpandIcon={<icons.ArrowRight />}
             defaultEndIcon={<div style={{ width: 24 }} />}
             sx={{ height: 264, flexGrow: 1, maxWidth: 700, overflowY: 'auto' }}>
-            <PropertiesFor level={0} value={props.event.content} />
+            <PropertiesFor propertyPath="" level={0} value={props.event.content} schema={schema} />
         </TreeView>
     );
 };
