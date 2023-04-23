@@ -47,13 +47,6 @@ export const EventSequences = () => {
         refreshEventsCallback.current = callback;
     }
 
-    const getGenerationalSchemasForTypeArguments = () => {
-        return {
-            microserviceId,
-            eventTypeId: selectedEventType!.identifier
-        };
-    };
-
     const [schema, reloadGenerationalSchemas] = GenerationSchemasForType.use();
 
     useEffect(() => {
@@ -159,7 +152,7 @@ export const EventSequences = () => {
                                             <TextField label='Occurred' disabled
                                                 defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
                                         </FormControl>
-                                        <EventDetails event={selectedEvent} type={selectedEventType!} schema={schema.data} />
+                                        <EventDetails event={selectedEvent} type={selectedEventType!} schemas={schema.data} />
 
                                         {/* {
                                             (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ =>
