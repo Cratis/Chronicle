@@ -51,12 +51,9 @@ public class RenderedCompactJsonFormatter : ITextFormatter
         output.Write(id.ToString("x8"));
         output.Write('"');
 
-        if (logEvent.Level != LogEventLevel.Information)
-        {
-            output.Write(",\"Level\":\"");
-            output.Write(Enum.GetName(typeof(LogEventLevel), logEvent.Level));
-            output.Write('\"');
-        }
+        output.Write(",\"Level\":\"");
+        output.Write(Enum.GetName(typeof(LogEventLevel), logEvent.Level));
+        output.Write('\"');
 
         if (logEvent.Exception != null)
         {
