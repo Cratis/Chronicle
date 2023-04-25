@@ -14,7 +14,9 @@ itself. This makes it possible to work without having to simulate the production
 This information is stored in a cookie called `.aksio-identity`. The content of this is a base64 encoded string containing the
 JSON structure returned by the backend to the ingress middleware.
 
-To use this, the Cratis application model provides a React context and a hook to make this more convenient to use.
+## Identity context
+
+To use the identity system you need to provide the identity context for your application.
 
 At the top level of your application, typically in your `App.tsx` file you would add the provider by doing the following:
 
@@ -29,6 +31,30 @@ export const App = () => {
     );
 };
 ```
+
+This context can then be used anywhere by consuming the React context directly:
+
+```typescript
+import { IdentityProviderContext } from '@aksio/cratis-applications-frontend/identity';
+
+export const SomeComponent = () => {
+    return (
+        <IdentityProviderContext.Consumer>
+            {({ details }) => {
+                const actualDetails = details as Identity;
+                return (
+                    <h1>{actualDetails.firstName} {actualDetails.firstName}</h1>
+                );
+            }}
+        </IdentityProviderContext.Consumer>
+    );
+};
+```
+
+> Note: As you can see, the `details` type will be of type `any` in the context. This means that if your type is
+> a specific type, you'll need to cast it to that type before using it.
+
+## useIdentity() hook
 
 Anywhere within your application you can then access the identity by adding using the `useIdentity()` hook:
 
@@ -60,6 +86,34 @@ type Identity = {
 
 export const Home = () => {
     const identity = useIdentity<Identity>();
+
+    return (
+        <h3>User: {identity.details.firstName} {identity.details.lastName}</h3>
+    );
+};
+```
+
+## Default value
+
+You can also provide a default value for the `details` property in the identity context.
+If you don't provide one, it will default to an empty object, `{}`.
+This is especially useful when working in local development and the cookie has not been provided
+
+The default value can be provided as an argument to the `useIdentity()` hook:
+
+```typescript
+import { useIdentity } from '@aksio/cratis-applications-frontend/identity';
+
+type Identity = {
+    firstName: string;
+    lastName: string;
+};
+
+export const Home = () => {
+    const identity = useIdentity<Identity>({
+        firstName: '[N/A]',
+        lastName: '[N/A]'
+    });
 
     return (
         <h3>User: {identity.details.firstName} {identity.details.lastName}</h3>
