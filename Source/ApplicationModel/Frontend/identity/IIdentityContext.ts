@@ -9,4 +9,9 @@ export interface IIdentityContext<TDetails = {}> {
      * The application specific details for the identity.
      */
     details: TDetails;
+
+    /**
+     * Whether the details are set.
+     */
+    isSet: boolean;
 }
