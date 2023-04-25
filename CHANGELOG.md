@@ -1,3 +1,10 @@
+# [v8.15.0] - 2023-4-25 [PR: #857](https://github.com/aksio-insurtech/Cratis/pull/857)
+
+### Added
+
+- Added support for optionally providing a default value for `useIdentity()` hook. Typically useful when a user is not logged in.
+
+
 # [v8.14.1] - 2023-4-20 [PR: #851](https://github.com/aksio-insurtech/Cratis/pull/851)
 
 ## Summary
