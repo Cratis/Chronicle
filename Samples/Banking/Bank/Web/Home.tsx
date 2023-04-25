@@ -7,7 +7,10 @@ import { useIdentity } from '@aksio/cratis-applications-frontend/identity';
 import { Identity } from './Identity';
 
 export const Home = () => {
-    const identity = useIdentity<Identity>();
+    const identity = useIdentity<Identity>({
+        firstName: 'Unknown',
+        lastName: 'Unknown'
+    });
 
     return (
         <div style={{ margin: '1rem' }} className={styles.home}>
