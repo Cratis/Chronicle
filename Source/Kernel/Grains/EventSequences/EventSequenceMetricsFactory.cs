@@ -20,5 +20,15 @@ public class EventSequenceMetricsFactory : IEventSequenceMetricsFactory
     public EventSequenceMetricsFactory(Meter meter) => _meter = meter;
 
     /// <inheritdoc/>
-    public IEventSequenceMetrics CreateFor(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId) => new EventSequenceMetrics(_meter, eventSequenceId, microserviceId, tenantId);
+    public IEventSequenceMetrics CreateFor(
+        EventSequenceId eventSequenceId,
+        MicroserviceId microserviceId,
+        TenantId tenantId,
+        Func<long> getAppendedEventsCount)
+        => new EventSequenceMetrics(
+            _meter,
+            eventSequenceId,
+            microserviceId,
+            tenantId,
+            getAppendedEventsCount);
 }
