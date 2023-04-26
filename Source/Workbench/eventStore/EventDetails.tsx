@@ -74,7 +74,7 @@ function StyledTreeItem(props: StyledTreeItemProps) {
 export interface EventDetailsProps {
     event: AppendedEvent;
     type: EventTypeInformation;
-    schemas: any[];
+    schema: any;
 }
 
 function getIconFor(propertyPath: string, schema: Schema) {
@@ -130,8 +130,11 @@ const PropertiesFor = (props: { propertyPath: string, level: number, value: any,
 
                         if (propertyType == PropertyType.Enum) {
                             value = props.schema.getEnumValuesAndNames(fullPropertyPath).find(_ => _.value == value)?.name || value;
+                        } else if (propertyType == PropertyType.Date) {
+                            value = new Date(value.toString()).toLocaleString();
                         } else {
                             value = value.toString();
+
                         }
 
                         const key = `${props.level}-${index}`;
@@ -151,18 +154,16 @@ const PropertiesFor = (props: { propertyPath: string, level: number, value: any,
 };
 
 export const EventDetails = (props: EventDetailsProps) => {
-    const schemaForGeneration = props.schemas.find(_ => _.generation == props.event.metadata.type.generation);
-    if (!schemaForGeneration) return (<></>);
+    if (!props.schema) return (<></>);
 
-    const schema = new Schema(schemaForGeneration);
+    const schema = new Schema(props.schema);
 
     return (
         <TreeView
-            defaultExpanded={['3']}
             defaultCollapseIcon={<icons.ArrowDropDown />}
             defaultExpandIcon={<icons.ArrowRight />}
             defaultEndIcon={<div style={{ width: 24 }} />}
-            sx={{ height: 264, flexGrow: 1, maxWidth: 700, overflowY: 'auto' }}>
+            sx={{ height: '100%', flexGrow: 1, maxWidth: 700, overflowY: 'auto' }}>
             <PropertiesFor propertyPath="" level={0} value={props.event.content} schema={schema} />
         </TreeView>
     );
