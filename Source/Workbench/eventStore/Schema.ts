@@ -21,13 +21,18 @@ export class Schema {
 
     readonly properties: any;
     constructor(readonly _schema: any) {
-        for (let type of this._schema.allOf) {
-            if (type['$ref']) {
-                type = this._schema.definitions[type['$ref'].replace('#/definitions/', '')];
-            }
+        if (_schema.properties) {
+            this.properties = _schema.properties;
+        }
+        if (this._schema.allOf) {
+            for (let type of this._schema.allOf) {
+                if (type['$ref']) {
+                    type = this._schema.definitions[type['$ref'].replace('#/definitions/', '')];
+                }
 
-            if (type.properties) {
-                this.properties = { ...this.properties, ...type.properties };
+                if (type.properties) {
+                    this.properties = { ...this.properties, ...type.properties };
+                }
             }
         }
     }
