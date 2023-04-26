@@ -12,6 +12,13 @@ namespace Aksio.Cratis.EventSequences;
 public interface IEventSequenceStorage
 {
     /// <summary>
+    /// Get count of events in an event sequence.
+    /// </summary>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to get count for.</param>
+    /// <returns>Total number of events.</returns>
+    Task<long> GetCount(EventSequenceId eventSequenceId);
+
+    /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to append to.</param>
