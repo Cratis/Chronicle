@@ -38,6 +38,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     MicroserviceAndTenant _microserviceAndTenant = MicroserviceAndTenant.NotSet;
     IAsyncStream<AppendedEvent>? _stream;
     IEventSequenceMetrics? _metrics;
+    long _appendedEventsCount;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventSequence"/>.
@@ -79,7 +80,13 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, streamNamespace);
 
-        _metrics = _metricsFactory.CreateFor(_eventSequenceId, _microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId);
+        _appendedEventsCount = await _eventSequenceStorageProvider().GetCount(_eventSequenceId);
+
+        _metrics = _metricsFactory.CreateFor(
+            _eventSequenceId,
+            _microserviceAndTenant.MicroserviceId,
+            _microserviceAndTenant.TenantId,
+            () => _appendedEventsCount);
 
         await base.OnActivateAsync();
     }
@@ -133,6 +140,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                     await _stream!.OnNextAsync(appendedEvent, new EventSequenceNumberToken(State.SequenceNumber));
 
                     _metrics?.AppendedEvent(eventSourceId, eventName);
+                    _appendedEventsCount++;
 
                     appending = false;
                 }
