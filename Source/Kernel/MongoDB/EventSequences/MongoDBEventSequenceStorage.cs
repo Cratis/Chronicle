@@ -58,6 +58,13 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     }
 
     /// <inheritdoc/>
+    public Task<long> GetCount(EventSequenceId eventSequenceId)
+    {
+        var collection = GetCollectionFor(eventSequenceId);
+        return collection.CountDocumentsAsync(FilterDefinition<Event>.Empty);
+    }
+
+    /// <inheritdoc/>
     public async Task Append(
         EventSequenceId eventSequenceId,
         EventSequenceNumber sequenceNumber,
