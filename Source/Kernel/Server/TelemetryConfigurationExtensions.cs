@@ -63,7 +63,8 @@ public static class TelemetryConfigurationExtensions
                         .AddMeter(meter.Name)
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
-                        .AddRuntimeInstrumentation();
+                        .AddRuntimeInstrumentation()
+                        .AddInMemoryObservableMetrics();
 
                     switch (telemetryConfig.Type)
                     {
