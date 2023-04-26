@@ -17,6 +17,7 @@ public interface IEventSequenceMetricsFactory
     /// <param name="eventSequenceId">Event sequence to create for.</param>
     /// <param name="microserviceId">Microservice to create for.</param>
     /// <param name="tenantId">Tenant to create for.</param>
+    /// <param name="getAppendedEventsCount">Callback for getting the total appended events count.</param>
     /// <returns><see cref="IEventSequenceMetrics"/> instance.</returns>
-    IEventSequenceMetrics CreateFor(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId);
+    IEventSequenceMetrics CreateFor(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, Func<long> getAppendedEventsCount);
 }
