@@ -5,6 +5,10 @@ we formalize these as their own types. This increases readability in the code an
 The type itself will then represent metadata that can be leveraged at runtime to reason about the code and also provide functionality such as
 authorization or validation rules based on the type.
 
+The encapsulation should only be for a single value. That means you shouldn't have more properties than a single value. This is due to how all
+the serializers work internally, they wouldn't know how to resolve anything but a single value. All serializers and converters converts back and
+forth from the primitive representation.
+
 When we do these formalization, there is an underlying base type that represents these called `ConceptAs<>`. With it we can handle cross cutting
 things like serialization of these types.
 
@@ -18,6 +22,14 @@ implementations for the common things we use to translate the concepts to its un
 ## Enums
 
 Enums are on their own already a domain concept and does not need further encapsulation.
+
+## Serialization
+
+Since `ConceptAs<>` is meant as encapsulations of primitives, single values and aims to be a way of getting type safety and compile-time checking.
+The encapsulation is however very inconvenient when used in data transport or saved in a data store, as it would by default become a container with
+a single property `Value` within it. To overcome this, there are serializers and converters provided that unwraps the inner value and also then
+knows how to create instances of a concept when getting it back into the code. These assume that the value is a single value, so if you were to
+add more values these would be completely ignored and lost.
 
 ## Creating a concept
 
