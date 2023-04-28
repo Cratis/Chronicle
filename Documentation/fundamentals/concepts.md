@@ -25,9 +25,7 @@ Enums are on their own already a domain concept and does not need further encaps
 
 ## Serialization
 
-Since `ConceptAs<>` is meant as encapsulations of primitives, single values and aims to be a way of getting type safety and compile-time checking.
-The encapsulation is however very inconvenient when used in data transport or saved in a data store, as it would by default become a container with
-a single property `Value` within it. To overcome this, there are serializers and converters provided that unwraps the inner value and also then
+Concepts using `ConceptAs<>` is meant as encapsulations of primitives, single values and aims to be a way of getting type safety and compile-time checking. The encapsulation is however very inconvenient when used in data transport or saved in a data store, as it would by default become a container with a single property `Value` within it. To overcome this, there are serializers and converters provided that unwraps the inner value and also then
 knows how to create instances of a concept when getting it back into the code. These assume that the value is a single value, so if you were to
 add more values these would be completely ignored and lost.
 
