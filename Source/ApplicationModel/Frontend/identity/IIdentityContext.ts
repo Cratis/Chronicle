@@ -14,4 +14,9 @@ export interface IIdentityContext<TDetails = {}> {
      * Whether the details are set.
      */
     isSet: boolean;
+
+    /**
+     * Refreshes the identity context.
+     */
+    refresh(): void;
 }
