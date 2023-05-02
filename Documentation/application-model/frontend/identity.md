@@ -54,6 +54,32 @@ export const SomeComponent = () => {
 > Note: As you can see, the `details` type will be of type `any` in the context. This means that if your type is
 > a specific type, you'll need to cast it to that type before using it.
 
+### Refreshing
+
+Sometimes you need to refresh the identity due to backend changes. On the `IIdentityContext` that represents
+the context you find a method called `refresh()`. Calling this will invalidate the cookie and also just call
+the backend to get the current identity details.
+
+```typescript
+import { IdentityProviderContext } from '@aksio/cratis-applications-frontend/identity';
+
+export const SomeComponent = () => {
+    return (
+        <IdentityProviderContext.Consumer>
+            {(identity) => {
+                const actualDetails = identity.details as Identity;
+                return (
+                    <h1>{actualDetails.firstName} {actualDetails.firstName}</h1>
+
+                    {/* Refresh button */}
+                    <button onClick={() => identity.refresh()}>Refresh identity</button>
+                );
+            }}
+        </IdentityProviderContext.Consumer>
+    );
+};
+```
+
 ## useIdentity() hook
 
 Anywhere within your application you can then access the identity by adding using the `useIdentity()` hook:
@@ -89,6 +115,31 @@ export const Home = () => {
 
     return (
         <h3>User: {identity.details.firstName} {identity.details.lastName}</h3>
+    );
+};
+```
+
+### Refreshing with hook
+
+Since the `useIdentity()` returns an instance of the `IIdentityContext`. So for refreshing with a hook, its easily
+accessible:
+
+```typescript
+import { useIdentity } from '@aksio/cratis-applications-frontend/identity';
+
+type Identity = {
+    firstName: string;
+    lastName: string;
+};
+
+export const Home = () => {
+    const identity = useIdentity<Identity>();
+
+    return (
+        <h3>User: {identity.details.firstName} {identity.details.lastName}</h3>
+
+        {/* Refresh button */}
+        <button onClick={() => identity.refresh()}>Refresh identity</button>
     );
 };
 ```

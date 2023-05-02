@@ -7,7 +7,8 @@ import { useState, useEffect } from 'react';
 
 const defaultIdentityContext: IIdentityContext = {
     details: {},
-    isSet: false
+    isSet: false,
+    refresh() { }
 };
 
 export const IdentityProviderContext = React.createContext<IIdentityContext>(defaultIdentityContext);
@@ -29,24 +30,34 @@ function getCookie(name: string) {
     return [];
 }
 
+function clearCookie(name: string) {
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+}
+
 export const IdentityProvider = (props: IdentityProviderProps) => {
     const [context, setContext] = useState<IIdentityContext>(defaultIdentityContext);
+    const refresh = () => {
+        clearCookie(cookieName);
+        fetch('/.aksio/me').then(async response => {
+            const json = await response.json();
+            setContext({
+                details: json,
+                isSet: true,
+                refresh
+            });
+        });
+    };
     const identityCookie = getCookie(cookieName);
     useEffect(() => {
         if (identityCookie.length == 2) {
             const json = atob(identityCookie[1]);
             setContext({
                 details: JSON.parse(json.toString()),
-                isSet: true
+                isSet: true,
+                refresh
             });
         } else {
-            fetch('/.aksio/me').then(async response => {
-                const json = await response.json();
-                setContext({
-                    details: json,
-                    isSet: true
-                });
-            });
+            refresh();
         }
     }, []);
 

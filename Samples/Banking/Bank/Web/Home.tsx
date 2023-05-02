@@ -18,6 +18,7 @@ export const Home = () => {
             This microservice comes with a default Aksio setup.<br />
             <br />
             <h3>User: {identity.details.firstName} {identity.details.lastName}</h3>
+            <button onClick={() => identity.refresh()}>Refresh identity</button>
             <h2>Projects</h2>
             <ul>
                 <li>Concepts - used for holding reusable domain concepts.</li>
