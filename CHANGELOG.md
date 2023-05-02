@@ -1,3 +1,11 @@
+# [v8.16.0] - 2023-5-2 [PR: #860](https://github.com/aksio-insurtech/Cratis/pull/860)
+
+### Added
+
+- Introducing a refresh method on the `IIdentityContext` returned from the `useIdentity()` or use the context directly. This enables you to refresh the identity if there are changes in the backend.
+
+
+
 # [v8.15.0] - 2023-4-25 [PR: #857](https://github.com/aksio-insurtech/Cratis/pull/857)
 
 ### Added
