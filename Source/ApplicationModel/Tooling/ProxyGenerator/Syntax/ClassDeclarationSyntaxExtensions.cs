@@ -37,9 +37,9 @@ public static class ClassDeclarationSyntaxExtensions
             parent = parent.Parent;
         }
 
-        var nameSpace = parent as NamespaceDeclarationSyntax;
-        Contract.Assert(nameSpace != null);
-        var stringBuilder = new StringBuilder().Append(nameSpace!.Name).Append(NamespaceClassDelimiter);
+        var @namespace = parent as NamespaceDeclarationSyntax;
+        Contract.Assert(@namespace != null);
+        var stringBuilder = new StringBuilder().Append(@namespace!.Name).Append(NamespaceClassDelimiter);
         items.Reverse();
         items.ForEach(i => stringBuilder.Append(i).Append(NestedClassDelimiter));
         stringBuilder.Append(source.Identifier.Text);
