@@ -14,6 +14,7 @@ type page = {
 const pages: page[] = [
     { name: 'Home', route: '/' },
     { name: 'Event Store', route: '/event-store' },
+    { name: 'Metrics', route: '/metrics' },
     { name: 'Clients', route: '/clients' },
     { name: 'Compliance', route: '/compliance' },
     { name: 'Configuration', route: '/configuration' }];
