@@ -24,10 +24,10 @@ public class Metrics : Controller
     {
         var metricsObservable = new ClientObservable<IEnumerable<MetricMeasurement>>();
 
-        MetricCollectionContentChanged contentChanged = () =>
+        void contentChanged()
         {
             metricsObservable.OnNext(_metrics.Measurements.OrderBy(_ => _.Name));
-        };
+        }
 
         _metrics.ContentChanged += contentChanged;
         metricsObservable.ClientDisconnected += () => _metrics.ContentChanged -= contentChanged;

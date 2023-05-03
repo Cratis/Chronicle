@@ -18,7 +18,6 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     readonly TenantId _tenantId;
     readonly Func<long> _getAppendedEventsCount;
     readonly Counter<int> _appendedEvents;
-    readonly ObservableCounter<long> _appendedEventsTotal;
     readonly Counter<int> _duplicateEventSequenceNumbers;
     readonly Counter<int> _failedAppendedEvents;
 
@@ -29,7 +28,7 @@ public class EventSequenceMetrics : IEventSequenceMetrics
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> the metrics is for.</param>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the metrics is for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the metrics is for.</param>
-    /// <param name="getAppendedEventsCount"></param>
+    /// <param name="getAppendedEventsCount">Callback for getting total events count.</param>
     public EventSequenceMetrics(
         Meter meter,
         EventSequenceId eventSequenceId,
@@ -42,7 +41,7 @@ public class EventSequenceMetrics : IEventSequenceMetrics
         _tenantId = tenantId;
         _getAppendedEventsCount = getAppendedEventsCount;
         _appendedEvents = meter.CreateCounter<int>("cratis-event_sequences-appended-events", "Number of events appended to the event sequence");
-        _appendedEventsTotal = meter.CreateObservableCounter("cratis-event-sequences-appended-events-total", GetTotalAppendedEvents, "Total number of events appended to the event sequence");
+        meter.CreateObservableCounter("cratis-event-sequences-appended-events-total", GetTotalAppendedEvents, "Total number of events appended to the event sequence");
         _duplicateEventSequenceNumbers = meter.CreateCounter<int>("cratis-event-sequences-duplicate-event-sequence-numbers", "Number of duplicate sequence numbers");
         _failedAppendedEvents = meter.CreateCounter<int>("cratis-event-sequences-failed-appended-events", "Number of events that failed to be appended to the event sequence");
     }
