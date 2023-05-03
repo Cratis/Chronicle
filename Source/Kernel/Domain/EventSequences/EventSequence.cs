@@ -4,6 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
+using Aksio.Cratis.Kernel.Grains.Workers;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -74,7 +75,8 @@ public class EventSequence : Controller
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        await eventSequence.Redact(redaction.SequenceNumber, redaction.Reason);
+        var worker = await eventSequence.Redact(redaction.SequenceNumber, redaction.Reason);
+        await worker.WaitForResult();
     }
 
     /// <summary>
@@ -94,10 +96,13 @@ public class EventSequence : Controller
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        await eventSequence.Redact(
+        var worker = await eventSequence.Redact(
             redaction.EventSourceId,
             redaction.Reason,
             redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray());
+        await worker.WaitForResult();
+
+        Console.WriteLine("Done");
     }
 
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>

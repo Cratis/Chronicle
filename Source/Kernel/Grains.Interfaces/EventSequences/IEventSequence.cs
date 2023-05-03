@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Grains.Workers;
 using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -53,8 +54,8 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
         /// <param name="reason">Reason for redacting.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason);
+    /// <returns>A <see cref="IWorker{TRequest, TResponse}"/>.</returns>
+    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSequenceNumber sequenceNumber, RedactionReason reason);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.
@@ -62,6 +63,6 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
     /// <param name="reason">Reason for redacting.</param>
     /// <param name="eventTypes">Optionally any specific event types.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes);
+    /// <returns>A <see cref="IWorker{TRequest, TResponse}"/>.</returns>
+    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes);
 }
