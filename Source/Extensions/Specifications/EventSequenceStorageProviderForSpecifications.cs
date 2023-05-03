@@ -115,4 +115,7 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
 
     /// <inheritdoc/>
     public Task<AppendedEvent> GetEventAt(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<long> GetCount(EventSequenceId eventSequenceId) => throw new NotImplementedException();
 }

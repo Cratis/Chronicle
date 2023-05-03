@@ -66,4 +66,25 @@ public class EventTypes : Controller
         var schemas = await _schemaStoreProvider().GetAllGenerationsForEventType(new(eventTypeId, 1));
         return schemas.Select(_ => JsonDocument.Parse(_.Schema.ToJson()));
     }
+
+    /// <summary>
+    /// Gets all event types with schemas.
+    /// </summary>
+    /// <param name="microserviceId">The <see cref="MicroserviceId"/> to get event types for.</param>
+    /// <returns>Collection of event types with schemas.</returns>
+    [HttpGet("schemas")]
+    public async Task<IEnumerable<EventTypeWithSchemas>> AllEventTypesWithSchemas([FromRoute] MicroserviceId microserviceId)
+    {
+        _executionContextManager.Establish(microserviceId);
+
+        var schemas = await _schemaStoreProvider().GetLatestForAllEventTypes();
+
+        return schemas.Select(_ =>
+            new EventTypeWithSchemas(
+                new EventTypeInformation(
+                    _.Type.Id.ToString(),
+                    _.Schema.GetDisplayName(),
+                    _.Schema.GetGeneration()),
+                new[] { JsonDocument.Parse(_.Schema.ToJson()) }));
+    }
 }

@@ -7,6 +7,7 @@ import { Configuration } from './configuration/Configuration';
 import { Clients } from './clients/Clients';
 import { Compliance } from './compliance/Compliance';
 import { EventStore } from './eventStore/EventStore';
+import { Metrics } from './metrics/Metrics';
 
 
 export const App = () => {
@@ -17,10 +18,11 @@ export const App = () => {
                 <Route path="/">
                     Home
                 </Route>
-                <Route path="/configuration/*" element={<Configuration />} />
+                <Route path="/event-store/*" element={<EventStore />} />
+                <Route path="/metrics/*" element={<Metrics />} />
                 <Route path="/clients/*" element={<Clients />} />
                 <Route path="/compliance/*" element={<Compliance />} />
-                <Route path="/event-store/*" element={<EventStore />} />
+                <Route path="/configuration/*" element={<Configuration />} />
             </Routes>
         </>
     );
