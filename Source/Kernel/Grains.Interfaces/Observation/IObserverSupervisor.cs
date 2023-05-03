@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Grains.Workers;
 using Aksio.Cratis.Observation;
 using Orleans;
 
@@ -13,6 +14,12 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public interface IObserverSupervisor : IGrainWithGuidCompoundKey
 {
+    /// <summary>
+    /// Get the event types that the observer can handle.
+    /// </summary>
+    /// <returns>Collection of <see cref="EventType"/> handled by the observer.</returns>
+    Task<IEnumerable<EventType>> GetEventTypes();
+
     /// <summary>
     /// Set metadata associated with the observer.
     /// </summary>
@@ -44,6 +51,14 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     Task Unsubscribe();
 
     /// <summary>
+    /// Handle an <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
+    /// <param name="ignoreSequenceNumber">Optionally set whether or not to ignore sequence number and force a handle. If set to true, it will not update sequence number either. Defaults to false.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Handle(AppendedEvent @event, bool ignoreSequenceNumber = false);
+
+    /// <summary>
     /// Rewind the observer.
     /// </summary>
     /// <returns>Awaitable task.</returns>
@@ -53,16 +68,16 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     /// Rewind the observer for a specific partition.
     /// </summary>
     /// <param name="partition">The partition to rewind.</param>
-    /// <returns>Awaitable task.</returns>
-    Task RewindPartition(EventSourceId partition);
+    /// <returns>A <see cref="IWorker{TRequest, TResult}"/>.</returns>
+    Task<IWorker<ReplayPartitionRequest, ReplayPartitionResponse>> RewindPartition(EventSourceId partition);
 
     /// <summary>
     /// Rewind the observer for a specific partition to a specific sequence number.
     /// </summary>
     /// <param name="partition">The partition to rewind.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to rewind to.</param>
-    /// <returns>Awaitable task.</returns>
-    Task RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber);
+    /// <returns>A <see cref="IWorker{TRequest, TResult}"/>.</returns>
+    Task<IWorker<ReplayPartitionRequest, ReplayPartitionResponse>> RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber);
 
     /// <summary>
     /// Try to resume the partition.

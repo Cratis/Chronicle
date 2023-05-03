@@ -61,7 +61,4 @@ internal static partial class ObserverSupervisorLogMessages
 
     [LoggerMessage(15, LogLevel.Information, "Ignoring rewinding for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'. The disconnect state is {DisconnectState} and subscription state is {SubscriptionState}")]
     internal static partial void IgnoringRewinding(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, bool disconnectState, bool subscriptionState);
-
-    [LoggerMessage(16, LogLevel.Information, "Rewinding partition {Partition} to {SequenceNumber} for observer {ObserverId} for microservice '{MicroserviceId}' on sequence '{EventSequenceId}' for tenant '{TenantId}'.")]
-    internal static partial void RewindingPartitionTo(this ILogger<ObserverSupervisor> logger, ObserverId observerId, MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId, EventSourceId partition, EventSequenceNumber sequenceNumber);
 }
