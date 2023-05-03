@@ -12,8 +12,6 @@ import { EventSequenceInformation } from 'API/events/store/sequences/EventSequen
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
-import { AllEventTypes } from 'API/events/store/types/AllEventTypes';
-import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { useEffect } from 'react';
@@ -21,6 +19,9 @@ import { useRouteParams } from './RouteParams';
 
 import { Button, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography, Divider, Grid, Box, TextField } from '@mui/material';
 import * as icons from '@mui/icons-material';
+import { EventDetails } from './EventDetails';
+import { AllEventTypesWithSchemas } from 'API/events/store/types/AllEventTypesWithSchemas';
+import { EventTypeWithSchemas } from 'API/events/store/types/EventTypeWithSchemas';
 
 export const EventSequences = () => {
     const { microserviceId } = useRouteParams();
@@ -34,16 +35,17 @@ export const EventSequences = () => {
     const [isFilterOpen, { toggle: toggleFilter }] = useBoolean(false);
 
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | undefined>(undefined);
-    const [selectedEventType, setSelectedEventType] = useState<EventTypeInformation | undefined>(undefined);
-
-    const [eventTypes, refreshEventTypes] = AllEventTypes.use({
-        microserviceId: microserviceId
-    });
+    const [selectedEventType, setSelectedEventType] = useState<EventTypeWithSchemas | undefined>(undefined);
 
     const refreshEventsCallback = useRef<() => void>();
     function registerRefreshEventsCallback(callback: () => void) {
         refreshEventsCallback.current = callback;
     }
+
+    const [eventTypes] = AllEventTypesWithSchemas.use({
+        microserviceId
+    });
+    const [schema, setSchema] = useState();
 
     useEffect(() => {
         if (eventSequences.data.length > 0) {
@@ -57,11 +59,12 @@ export const EventSequences = () => {
         }
     }, [tenants.data]);
 
-    const eventSelected = (item: any) => {
+    const eventSelected = (item: AppendedEvent) => {
         if (item !== selectedEvent) {
+            const eventType = eventTypes.data.find(_ => _.eventType.identifier == item.metadata.type.id);
             setSelectedEvent(item);
-
-            setSelectedEventType(eventTypes.data.find(_ => _.identifier == item.metadata.type.id));
+            setSelectedEventType(eventType);
+            setSchema(eventTypes.data.find(_ => _.eventType.identifier == item.metadata.type.id)?.schemas.find(_ => _.generation == item.metadata.type.generation));
         }
     };
 
@@ -70,16 +73,6 @@ export const EventSequences = () => {
             <Stack direction='column' style={{ height: '100%' }}>
                 <Typography variant='h4'>Event sequences</Typography>
                 <Divider sx={{ mt: 1, mb: 3 }} />
-                {/* <Stack.Item>
-                    <Stack horizontal style={{ textAlign: 'center' }}>
-                        <Pivot linkFormat="links">
-                            <PivotItem key="5c5af4ee-282a-456c-a53d-e3dee158a3be" headerText="Untitled" onRenderItemLink={pivotItemHeaderRenderer} />
-                            <PivotItem key="b7a5f0a3-82d3-4170-a1e7-36034d763008" headerText="Good old query" onRenderItemLink={pivotItemHeaderRenderer} />
-                        </Pivot>
-                        <IconButton iconProps={{ iconName: 'Add' }} title="Add query" />
-                    </Stack>
-                </Stack.Item> */}
-                {/* <CommandBar items={commandBarItems} /> */}
                 <Toolbar>
                     <FormControl size='small' sx={{ m: 1, minWidth: 120 }}>
                         <InputLabel>Sequence</InputLabel>
@@ -141,27 +134,27 @@ export const EventSequences = () => {
                                     eventSequenceId={selectedEventSequence.id}
                                     tenantId={selectedTenant!.id}
                                     microserviceId={microserviceId}
-                                    eventTypes={eventTypes.data} onEventSelected={eventSelected}
+                                    eventTypes={eventTypes.data.map(_ => _.eventType)} onEventSelected={eventSelected}
                                     onEventsRedacted={() => { }}
                                     sequenceNumber={selectedEventSequence!.id} />
                             </Grid>
 
-                            <Grid item xs={4} >
+                            <Grid item xs={4} sx={{ height: '100%' }}>
                                 {selectedEvent &&
-                                    <Box>
-                                        <Typography variant='h6'>{selectedEventType?.name}</Typography>
-                                        <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
-                                            <TextField label='Occurred' disabled
-                                                defaultValue={(selectedEvent?.context.occurred || new Date()).toISOString().toLocaleString()} />
-                                        </FormControl>
-                                        {
+                                    <Box sx={{ height: '100%' }}>
+                                        <Typography variant='h6'>{selectedEventType?.eventType.name}</Typography>
+                                        <Typography>Occurred {selectedEvent?.context.occurred.toLocaleString()}</Typography>
+
+                                        <EventDetails event={selectedEvent} type={selectedEventType!.eventType} schema={schema} />
+
+                                        {/* {
                                             (selectedEvent && selectedEvent.content) && Object.keys(selectedEvent.content).map(_ =>
                                                 <FormControl key={_} size='small' sx={{ m: 1, minWidth: '90%' }}>
                                                     <TextField
                                                         label={_} disabled defaultValue={selectedEvent!.content[_]} />
                                                 </FormControl>)
                                         }
-
+ */}
                                     </Box>
                                 }
                             </Grid>
