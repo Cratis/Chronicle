@@ -1,3 +1,20 @@
+# [v8.17.0] - 2023-5-3 [PR: #862](https://github.com/aksio-insurtech/Cratis/pull/862)
+
+### Added
+
+- Added metrics view in Workbench
+- Fixing event sequence view to update correctly
+- Making the details view of events more compact and also be recursive on complex types. Also showing correct data type in the form of an icon.
+- Added metrics for tocal count of events in a sequence, with tags.
+- Added a total number of events count - obervable counter.
+- Added in-memory metrics.
+
+### Fixed
+
+- Fixing redaction and the replay of affected observers to be asynchronous, background worker. (#802)
+
+
+
 # [v8.16.0] - 2023-5-2 [PR: #860](https://github.com/aksio-insurtech/Cratis/pull/860)
 
 ### Added
