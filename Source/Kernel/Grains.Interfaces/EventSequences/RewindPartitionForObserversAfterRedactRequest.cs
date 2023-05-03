@@ -16,7 +16,6 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// <param name="EventSourceId">The event source id of the redaction.</param>
 /// <param name="SequenceNumber">The sequence number to rewind to.</param>
 /// <param name="AffectedEventTypes">Affected event types.</param>
-/// <returns></returns>
 public record RewindPartitionForObserversAfterRedactRequest(
     MicroserviceId MicroserviceId,
     TenantId TenantId,

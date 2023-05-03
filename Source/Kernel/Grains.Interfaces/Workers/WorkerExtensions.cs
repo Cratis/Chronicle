@@ -15,7 +15,7 @@ public static class WorkerExtensions
     /// <param name="millisecondsBetweenPolls">Number of milliseconds between polls. Defaults to 100.</param>
     /// <typeparam name="TRequest">Type of request.</typeparam>
     /// <typeparam name="TResult">Type of result.</typeparam>
-    /// <returns>The result</returns>
+    /// <returns>The result.</returns>
     /// <remarks>
     /// If an exception is thrown in the worker, this will bubble up and be thrown from this method.
     /// </remarks>
