@@ -112,6 +112,9 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
     }
 
     /// <inheritdoc/>
+    public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(State.EventTypes);
+
+    /// <inheritdoc/>
     public async Task SetNameAndType(ObserverName name, ObserverType type)
     {
         State.Name = name;

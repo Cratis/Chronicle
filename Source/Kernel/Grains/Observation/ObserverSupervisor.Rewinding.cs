@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Grains.Workers;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
@@ -32,26 +33,23 @@ public partial class ObserverSupervisor
     }
 
     /// <inheritdoc/>
-    public async Task RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber)
+    public async Task<IWorker<ReplayPartitionRequest, ReplayPartitionResponse>> RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber)
     {
-        _logger.RewindingPartitionTo(_observerId, _microserviceId, _eventSequenceId, _tenantId, partition, sequenceNumber);
-        _rewindingPartition = true;
-        var nextEventSequenceNumber = State.NextEventSequenceNumber;
-        var events = await _eventSequenceStorageProvider().GetFromSequenceNumber(_eventSequenceId, sequenceNumber, partition, State.EventTypes);
-        while (await events.MoveNext())
-        {
-            foreach (var @event in events.Current)
-            {
-                await Handle(@event);
-            }
-        }
-        State.NextEventSequenceNumber = nextEventSequenceNumber;
-        await WriteStateAsync();
-        _rewindingPartition = false;
+        var worker = GrainFactory.GetGrain<IWorker<ReplayPartitionRequest, ReplayPartitionResponse>>(Guid.NewGuid());
+        await worker.Start(new(
+             _observerId,
+             _microserviceId,
+             _eventSequenceId,
+             _tenantId,
+             partition,
+             sequenceNumber,
+             State.EventTypes));
+
+        return worker;
     }
 
     /// <inheritdoc/>
-    public async Task RewindPartition(EventSourceId partition) => await RewindPartitionTo(partition, EventSequenceNumber.First);
+    public Task<IWorker<ReplayPartitionRequest, ReplayPartitionResponse>> RewindPartition(EventSourceId partition) => RewindPartitionTo(partition, EventSequenceNumber.First);
 
     async Task Replay()
     {

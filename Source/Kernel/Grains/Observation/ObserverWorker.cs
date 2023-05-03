@@ -15,10 +15,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// </summary>
 public abstract class ObserverWorker : Grain
 {
-#pragma warning disable CA1051, SA1600
-    // TODO: We will have to handle the rewinding as a worker grain.
-    protected bool _rewindingPartition;
-#pragma warning restore // CA1051
     readonly ILogger<ObserverWorker> _logger;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
@@ -137,8 +133,9 @@ public abstract class ObserverWorker : Grain
     /// Handle an <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event">The <see cref="AppendedEvent"/> to handle.</param>
+    /// <param name="ignoreSequenceNumber">Optionally set whether or not to ignore sequence number and force a handle. If set to true, it will not update sequence number either. Defaults to false.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Handle(AppendedEvent @event)
+    public async Task Handle(AppendedEvent @event, bool ignoreSequenceNumber = false)
     {
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
@@ -150,8 +147,7 @@ public abstract class ObserverWorker : Grain
                 return;
             }
 
-            // TODO: We will have to handle the rewinding as a worker grain.
-            if (@event.Metadata.SequenceNumber >= State.NextEventSequenceNumber || _rewindingPartition)
+            if (@event.Metadata.SequenceNumber >= State.NextEventSequenceNumber || ignoreSequenceNumber)
             {
                 if (!State.IsPartitionFailed(@event.Context.EventSourceId))
                 {
@@ -167,10 +163,14 @@ public abstract class ObserverWorker : Grain
                         return;
                     }
                 }
-                State.NextEventSequenceNumber = @event.Metadata.SequenceNumber.Next();
-                if (State.LastHandled < @event.Metadata.SequenceNumber)
+
+                if (!ignoreSequenceNumber)
                 {
-                    State.LastHandled = @event.Metadata.SequenceNumber;
+                    State.NextEventSequenceNumber = @event.Metadata.SequenceNumber.Next();
+                    if (State.LastHandled < @event.Metadata.SequenceNumber)
+                    {
+                        State.LastHandled = @event.Metadata.SequenceNumber;
+                    }
                 }
             }
         }
