@@ -10,5 +10,4 @@ namespace Aksio.Cratis.Kernel.Read.EventTypes;
 /// </summary>
 /// <param name="EventType">Event type.</param>
 /// <param name="Schemas">Collection of schemas.</param>
-/// <returns></returns>
 public record EventTypeWithSchemas(EventTypeInformation EventType, IEnumerable<JsonDocument> Schemas);

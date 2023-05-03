@@ -57,6 +57,13 @@ public abstract class Worker<TRequest, TResult> : Grain, IWorker<TRequest, TResu
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// The actual work to perform.
+    /// </summary>
+    /// <param name="request">Request.</param>
+    /// <returns>Result.</returns>
+    protected abstract Task<TResult> PerformWork(TRequest request);
+
     async Task HandlePerformWork(object state)
     {
         _startTimer?.Dispose();
@@ -77,6 +84,4 @@ public abstract class Worker<TRequest, TResult> : Grain, IWorker<TRequest, TResu
             _status = WorkerStatus.Failed;
         }
     }
-
-    protected abstract Task<TResult> PerformWork(TRequest request);
 }

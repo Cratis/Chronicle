@@ -8,5 +8,4 @@ namespace Aksio.Cratis.Kernel.Read.Metrics;
 /// </summary>
 /// <param name="Tag">Name of tag.</param>
 /// <param name="Value">Value of the tag.</param>
-/// <returns></returns>
 public record MetricMeasurementPointTag(string Tag, string Value);

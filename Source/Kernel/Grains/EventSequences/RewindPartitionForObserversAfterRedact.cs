@@ -3,12 +3,12 @@
 
 using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Grains.Workers;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
-using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 

@@ -4,12 +4,12 @@
 namespace Aksio.Cratis.Kernel.Grains.Workers;
 
 /// <summary>
-/// The status of a worker
+/// The status of a worker.
 /// </summary>
 public enum WorkerStatus
 {
     /// <summary>
-    /// Unknown state
+    /// Unknown state.
     /// </summary>
     Unknown = -1,
 
