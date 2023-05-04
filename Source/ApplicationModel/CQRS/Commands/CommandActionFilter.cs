@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using Aksio.Cratis.Applications.Validation;
 using Aksio.Cratis.Commands;
 using Aksio.Cratis.Execution;
@@ -38,6 +39,8 @@ public class CommandActionFilter : IAsyncActionFilter
             {
                 result = await next();
 
+                if (context.IsAspNetResult()) return;
+
                 if (result.Exception is not null)
                 {
                     var exception = result.Exception;
@@ -70,15 +73,15 @@ public class CommandActionFilter : IAsyncActionFilter
 
             if (!commandResult.IsAuthorized)
             {
-                context.HttpContext.Response.StatusCode = 401;   // Forbidden: https://www.rfc-editor.org/rfc/rfc9110.html#name-401-unauthorized
+                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;            // Forbidden: https://www.rfc-editor.org/rfc/rfc9110.html#name-401-unauthorized
             }
             else if (!commandResult.IsValid)
             {
-                context.HttpContext.Response.StatusCode = 409;   // Conflict: https://www.rfc-editor.org/rfc/rfc9110.html#name-409-conflict
+                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;             // Conflict: https://www.rfc-editor.org/rfc/rfc9110.html#name-409-conflict
             }
             else if (commandResult.HasExceptions)
             {
-                context.HttpContext.Response.StatusCode = 500;  // Internal Server error: https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error
+                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;  // Internal Server error: https://www.rfc-editor.org/rfc/rfc9110.html#name-500-internal-server-error
             }
 
             var actualResult = new ObjectResult(commandResult);
