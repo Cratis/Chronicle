@@ -2,7 +2,7 @@
 
 ### Added
 
-- Added attribute `[AspNetResult]` to let controllers skip the wrapping of results into a `CommandResult` or a `QueryResult`. (#862)
+- Added attribute `[AspNetResult]` to let controllers skip the wrapping of results into a `CommandResult` or a `QueryResult`. (#864)
 
 
 # [v8.17.0] - 2023-5-3 [PR: #862](https://github.com/aksio-insurtech/Cratis/pull/862)
