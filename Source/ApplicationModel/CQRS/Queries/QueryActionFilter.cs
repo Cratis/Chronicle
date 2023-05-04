@@ -49,6 +49,8 @@ public class QueryActionFilter : IAsyncActionFilter
             {
                 result = await next();
 
+                if (context.IsAspNetResult()) return;
+
                 if (result.Exception is not null)
                 {
                     var exception = result.Exception;
