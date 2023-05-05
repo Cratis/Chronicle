@@ -12,7 +12,7 @@ Internally, it is based on the following HTTP headers to be present.
 
 | Header | Description |
 | ------ | ----------- |
-| x-ms-client-principal | The token holding all the details, base64 encoded JWT token |
+| x-ms-client-principal | The token holding all the details, base64 encoded [Microsoft Client Principal Data definition](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=csharp#client-principal-data) |
 | x-ms-client-principal-id | The unique identifier from the identity provider for the identity |
 | x-ms-client-principal-name | The name of the identity, typically resolved from claims within the token |
 
@@ -20,8 +20,9 @@ Internally, it is based on the following HTTP headers to be present.
 > deals with the identity in the correct way. This can be achieved by creating the correct token and injecting it as request headers using
 > a browser extension. Read more [here](./generating-principal.md).
 
-The system in the application model leverages these header values and encapsulates it into what is called a `IdentityProviderContext` to make it more clear
-and you as an implementor of this don't have to deal with parsing the JWT tokens.
+The token in the `x-ms-client-principal` should be a base64 encoded [Microsoft Client Principal Data definition](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=csharp#client-principal-data).
+This is unwrapped by the application model and encapsulates it into what is called a `IdentityProviderContext` for you as a developer to consume in a type-safe
+manner.
 
 To support the identity details, one of your microservices in your application can implement the `IProvideIdentityDetails` interface
 found in the `Aksio.Cratis.ApplicationModel.Identity` namespace.
@@ -47,7 +48,7 @@ The `IdentityProviderContext` holds the following properties:
 | -------- | ----------- |
 | Id | The identity identifier specific from from the identity provider |
 | Name | The name of the identity |
-| Token | Parsed JWT token represented as a `JsonObject`|
+| Token | Parsed principal data definition represented as a `JsonObject`|
 | Claims | Collection of `KeyValuePair<string, string>` of the claims found in the token |
 
 The code then returns `IdentityDetails` which holds the following properties:
