@@ -5,7 +5,7 @@ The [backend part](./identity.md) of the identity system is relying on the follo
 
 | Header | Description |
 | ------ | ----------- |
-| x-ms-client-principal | The token holding all the details, base64 encoded JWT token |
+| x-ms-client-principal | The token holding all the details, base64 encoded [Microsoft Client Principal Data definition](https://learn.microsoft.com/en-us/azure/static-web-apps/user-information?tabs=csharp#client-principal-data) |
 | x-ms-client-principal-id | The unique identifier from the identity provider for the identity |
 | x-ms-client-principal-name | The name of the identity, typically resolved from claims within the token |
 
