@@ -46,7 +46,7 @@ public class Observers : Controller
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
         return _observerStorageProvider().GetAllObservers();
     }
@@ -62,7 +62,7 @@ public class Observers : Controller
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
-        _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
         var clientObservable = new ClientObservable<IEnumerable<ObserverState>>();
         var observable = _observersStateProvider().All;
