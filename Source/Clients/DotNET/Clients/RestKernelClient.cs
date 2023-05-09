@@ -139,7 +139,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         using var scope = _logger.BeginScope(metadataDictionary);
         _logger.PerformingCommand(route);
         ThrowIfClientIsDisconnected();
-        await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(30));
         return await PerformCommandInternal(route, command);
     }
 
@@ -152,7 +152,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         using var scope = _logger.BeginScope(metadataDictionary);
 
         _logger.PerformingQuery(route);
-        await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(30));
         ThrowIfClientIsDisconnected();
 
         var client = CreateReadHttpClient();
