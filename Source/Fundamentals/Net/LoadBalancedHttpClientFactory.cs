@@ -33,6 +33,7 @@ public class LoadBalancedHttpClientFactory : ILoadBalancedHttpClientFactory
         var next = _strategy.GetNext(endpointsAsArray.Length);
         var nextEndpoint = endpointsAsArray[next];
         var client = _httpClientFactory.CreateClient(name ?? Options.DefaultName);
+        client.Timeout = TimeSpan.FromSeconds(300);
         client.BaseAddress = nextEndpoint;
         return client;
     }
