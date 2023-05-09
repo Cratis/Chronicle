@@ -154,9 +154,8 @@ public abstract class RestKernelClient : IClient, IDisposable
         await _connectCompletion.Task.WaitAsync(TimeSpan.FromSeconds(10));
         ThrowIfClientIsDisconnected();
 
-        var client = CreateReadyHttpClient();
+        var client = CreateReadHttpClient();
         QueryResult result;
-
         if (queryString is not null)
         {
             var uri = QueryHelpers.AddQueryString(route, queryString!);
@@ -219,7 +218,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         return result!;
     }
 
-    HttpClient CreateReadyHttpClient()
+    HttpClient CreateReadHttpClient()
     {
         var client = CreateHttpClient();
         if (_executionContextManager.IsInContext)
