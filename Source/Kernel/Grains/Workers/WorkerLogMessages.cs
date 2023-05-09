@@ -13,6 +13,6 @@ internal static partial class WorkerLogMessages
     [LoggerMessage(1, LogLevel.Information, "Worker {Worker} completed")]
     internal static partial void WorkerCompleted(this ILogger logger, string worker);
 
-    [LoggerMessage(2, LogLevel.Information, "Worker {Worker} failed")]
+    [LoggerMessage(2, LogLevel.Error, "Worker {Worker} failed")]
     internal static partial void WorkerFailed(this ILogger logger, string worker, Exception exception);
 }
