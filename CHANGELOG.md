@@ -1,3 +1,15 @@
+# [v8.18.1] - 2023-5-9 [PR: #866](https://github.com/aksio-insurtech/Cratis/pull/866)
+
+### Added
+
+- Default timeout for client to kernel connections set to 5 minutes.
+
+### Fixed
+
+- Waiting for redaction to finish fixed. It wasn't waiting at all, while all the for doing so was in place.
+
+
+
 # [v8.18.0] - 2023-5-4 [PR: #865](https://github.com/aksio-insurtech/Cratis/pull/865)
 
 ### Added
