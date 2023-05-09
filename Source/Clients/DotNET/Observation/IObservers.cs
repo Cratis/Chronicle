@@ -22,4 +22,10 @@ public interface IObservers
     /// </summary>
     /// <returns>Collection of <see cref="ObserverInformation"/> holding all information about the observers.</returns>
     Task<IEnumerable<ObserverInformation>> GetAllObservers();
+
+    /// <summary>
+    /// Wait for all registered observers to become ready.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task WaitForObserversToBeReady();
 }

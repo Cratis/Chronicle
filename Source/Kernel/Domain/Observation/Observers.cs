@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
+using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
+using Aksio.Cratis.Tenants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -19,18 +22,30 @@ namespace Aksio.Cratis.Kernel.Domain.Observation;
 public class Observers : Controller
 {
     readonly IGrainFactory _grainFactory;
+    readonly ProviderFor<IObserverStorage> _observerStorageProvider;
+    readonly ITenants _tenants;
+    readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<Observers> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
+    /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
+    /// <param name="tenants"><see cref="ITenants"/> for getting tenants.</param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Observers(
         IGrainFactory grainFactory,
+        ProviderFor<IObserverStorage> observerStorageProvider,
+        ITenants tenants,
+        IExecutionContextManager executionContextManager,
         ILogger<Observers> logger)
     {
         _grainFactory = grainFactory;
+        _observerStorageProvider = observerStorageProvider;
+        _tenants = tenants;
+        _executionContextManager = executionContextManager;
         _logger = logger;
     }
 
@@ -56,6 +71,55 @@ public class Observers : Controller
         });
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Wait for all observers to become ready.
+    /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpGet("wait-for-observers")]
+    public Task WaitForObserversToBeReady([FromRoute] MicroserviceId microserviceId)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        _logger.WaitingForObserversToBeReady();
+
+        _ = Task.Run(async () =>
+        {
+            const int maxRetries = 30;
+            var retries = maxRetries;
+
+            while (true)
+            {
+                var observers = new List<ObserverInformation>();
+
+                foreach (var tenant in await _tenants.All())
+                {
+                    _executionContextManager.Establish(tenant.Id, _executionContextManager.Current.CorrelationId, microserviceId);
+                    observers.AddRange(await _observerStorageProvider().GetAllObservers());
+                }
+
+                if (observers.All(_ => _.RunningState == ObserverRunningState.Active))
+                {
+                    _logger.AllObserversAreActive();
+                    tcs.SetResult(true);
+                    break;
+                }
+
+                await Task.Delay(1000);
+
+                if (retries-- == 0)
+                {
+                    _logger.ReachedMaximumRetriesWaitingForObserversToBeReady(maxRetries);
+                    tcs.SetResult(false);
+                    break;
+                }
+
+                _logger.RetryWaitingForObserversToBeReady();
+            }
+        });
+
+        return tcs.Task;
     }
 
     /// <summary>
