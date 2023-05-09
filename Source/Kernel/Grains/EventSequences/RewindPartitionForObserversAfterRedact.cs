@@ -51,7 +51,7 @@ public class RewindPartitionForObserversAfterRedact : Worker<RewindPartitionForO
             var eventTypes = await observer.GetEventTypes();
             if (eventTypes.Any(_ => _.Id == GlobalEventTypes.Redaction))
             {
-                await observer.RewindPartitionTo(request.EventSourceId, request.SequenceNumber);
+                workers.Add(await observer.RewindPartitionTo(request.EventSourceId, request.SequenceNumber));
             }
         }
 
