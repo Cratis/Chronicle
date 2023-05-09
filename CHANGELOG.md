@@ -1,3 +1,11 @@
+# [v8.18.2] - 2023-5-9 [PR: #868](https://github.com/aksio-insurtech/Cratis/pull/868)
+
+### Fixed
+
+- Make sure to rewind observers that has different count of events than already registered. Typically if it was registered with 0 events and all of a sudden has events, this is a difference that was not caught before.
+- Making the REST based clients wait till all client lifecycle participants are ready before allowing commands and queries to be performed against the Kernel.
+
+
 # [v8.18.1] - 2023-5-9 [PR: #866](https://github.com/aksio-insurtech/Cratis/pull/866)
 
 ### Added
