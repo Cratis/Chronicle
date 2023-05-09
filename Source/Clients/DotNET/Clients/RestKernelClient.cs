@@ -107,8 +107,8 @@ public abstract class RestKernelClient : IClient, IDisposable
                 await _taskFactory.Delay(2000);
             }
 
-            await _clientLifecycle.Connected();
             _connectCompletion.SetResult(true);
+            await _clientLifecycle.Connected();
             _logger.KernelConnected();
 
             if (!Debugger.IsAttached)

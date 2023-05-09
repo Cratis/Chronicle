@@ -38,29 +38,18 @@ public class ClientLifecycle : IClientLifecycle
     /// <inheritdoc/>
     public async Task Connected()
     {
-        var tcs = new TaskCompletionSource<bool>();
-        var completedParticipants = new List<IParticipateInClientLifecycle>();
-
         IsConnected = true;
         await Parallel.ForEachAsync(_participants, async (participant, _) =>
         {
             try
             {
                 await new ValueTask(participant.ClientConnected());
-                completedParticipants.Add(participant);
-
-                if (completedParticipants.Count == _participants.Count())
-                {
-                    tcs.SetResult(true);
-                }
             }
             catch (Exception ex)
             {
                 _logger.ParticipantFailedDuringConnected(participant!.GetType().FullName ?? participant!.GetType().Name, ex);
             }
         });
-
-        await tcs.Task;
     }
 
     /// <inheritdoc/>
