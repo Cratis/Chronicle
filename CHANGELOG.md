@@ -1,3 +1,10 @@
+# [v8.18.3] - 2023-5-9 [PR: #870](https://github.com/aksio-insurtech/Cratis/pull/870)
+
+### Fixed
+
+- Reverting back from waiting till client lifecycle particpants are done, as this would create undesirable waiting during startup and doesn't meet the need.
+
+
 # [v8.18.2] - 2023-5-9 [PR: #868](https://github.com/aksio-insurtech/Cratis/pull/868)
 
 ### Fixed
