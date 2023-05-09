@@ -99,8 +99,6 @@ public class EventSequence : Controller
             redaction.Reason,
             redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray());
         await worker.WaitForResult();
-
-        Console.WriteLine("Done");
     }
 
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
