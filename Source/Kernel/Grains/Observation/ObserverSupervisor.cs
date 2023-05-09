@@ -235,7 +235,8 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) =>
         State.RunningState != ObserverRunningState.New &&
-        !State.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(eventTypes.OrderBy(_ => _.Id.Value));
+        (State.EventTypes.Count() != eventTypes.Count() ||
+        !eventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(State.EventTypes.OrderBy(_ => _.Id.Value)));
 
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {
