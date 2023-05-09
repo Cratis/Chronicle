@@ -38,8 +38,8 @@ public class ClientLifecycle : IClientLifecycle
     /// <inheritdoc/>
     public async Task Connected()
     {
-        var completedParticipants = new List<IParticipateInClientLifecycle>();
         var tcs = new TaskCompletionSource<bool>();
+        var completedParticipants = new List<IParticipateInClientLifecycle>();
 
         IsConnected = true;
         await Parallel.ForEachAsync(_participants, async (participant, _) =>
