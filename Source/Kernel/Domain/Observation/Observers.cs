@@ -76,55 +76,6 @@ public class Observers : Controller
     }
 
     /// <summary>
-    /// Wait for all observers to become ready.
-    /// </summary>
-    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
-    /// <returns>Awaitable task.</returns>
-    [HttpGet("wait-for-observers")]
-    public Task WaitForObserversToBeReady([FromRoute] MicroserviceId microserviceId)
-    {
-        var tcs = new TaskCompletionSource<bool>();
-        _logger.WaitingForObserversToBeReady();
-
-        _ = Task.Run(async () =>
-        {
-            const int maxRetries = 30;
-            var retries = maxRetries;
-
-            while (true)
-            {
-                var observers = new List<ObserverInformation>();
-
-                foreach (var tenant in await _tenants.All())
-                {
-                    _executionContextManager.Establish(tenant.Id, _executionContextManager.Current.CorrelationId, microserviceId);
-                    observers.AddRange(await _observerStorageProvider().GetAllObservers());
-                }
-
-                if (observers.All(_ => _.RunningState == ObserverRunningState.Active))
-                {
-                    _logger.AllObserversAreActive();
-                    tcs.SetResult(true);
-                    break;
-                }
-
-                await Task.Delay(1000);
-
-                if (retries-- == 0)
-                {
-                    _logger.ReachedMaximumRetriesWaitingForObserversToBeReady(maxRetries);
-                    tcs.SetResult(false);
-                    break;
-                }
-
-                _logger.RetryWaitingForObserversToBeReady();
-            }
-        });
-
-        return tcs.Task;
-    }
-
-    /// <summary>
     /// Rewind a specific observer for a microservice and tenant.
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observer is for.</param>
