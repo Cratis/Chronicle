@@ -36,6 +36,7 @@ public static class WebApplicationBuilderExtensions
 
             if (File.Exists(fileInfo.PhysicalPath))
             {
+                context.Response.ContentType = "text/html";
                 await context.Response.SendFileAsync(fileInfo);
             }
             else
