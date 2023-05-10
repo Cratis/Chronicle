@@ -1,3 +1,11 @@
+# [v8.18.4] - 2023-5-10 [PR: #871](https://github.com/aksio-insurtech/Cratis/pull/871)
+
+### Fixed
+
+- `RunAsSinglePageApplication()` now sets content type to `text/html` for the index file served.
+- Adjusting log level for observer workers.
+
+
 # [v8.18.3] - 2023-5-9 [PR: #870](https://github.com/aksio-insurtech/Cratis/pull/870)
 
 ### Fixed
