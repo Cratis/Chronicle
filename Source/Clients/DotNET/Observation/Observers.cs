@@ -49,12 +49,4 @@ public class Observers : IObservers
         var eventTypeIdentifiers = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_));
         return observers.Where(_ => _.EventTypes.Any(_ => eventTypeIdentifiers.Contains(_)));
     }
-
-    /// <inheritdoc/>
-    public async Task WaitForObserversToBeReady()
-    {
-        var microserviceId = _executionContextManager.Current.MicroserviceId;
-        var route = $"/api/events/store/{microserviceId}/observers/wait-for-observers";
-        await _client.PerformCommand(route);
-    }
 }
