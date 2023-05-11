@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
 using Aksio.Cratis.Types;
 
 #nullable disable
@@ -26,8 +25,7 @@ public static class ConceptFactory
         var genericArgumentType = GetPrimitiveTypeConceptIsBasedOn(type);
         value = TypeConversion.Convert(genericArgumentType, value);
         var instance = Activator.CreateInstance(type, value);
-        var valueProperty = type.GetTypeInfo().GetProperty(nameof(ConceptAs<string>.Value));
-        valueProperty.SetValue(instance, value, null);
+        ConceptMap.GetValuePropertyInfo(type).SetValue(instance, value, null);
         return instance;
     }
 
