@@ -6,6 +6,7 @@ using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using MongoDB.Driver;
 using Orleans.Runtime;
+using Aksio.Strings;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
@@ -36,8 +37,13 @@ public class ReplayStorageProvider : ObserverStorageProvider
         ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var state = actualGrainState.State;
-        var update = Builders<ObserverState>.Update
-            .Set(_ => _.NextEventSequenceNumber, state.NextEventSequenceNumber);
+
+        // Note: The reason we're not using the ObserverState directly is for memory and performance reasons
+        // it is faster to just store the next event sequence number directly in the document and less
+        // memory footprint than creating an update statement based on the state object.
+        var update = Builders<ObserverState>.Update.Set(
+            nameof(ObserverState.NextEventSequenceNumber).ToCamelCase(),
+            state.NextEventSequenceNumber);
 
         await Collection.UpdateOneAsync(
             _ => _.Id == key,
