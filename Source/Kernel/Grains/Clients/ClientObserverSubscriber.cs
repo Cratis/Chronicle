@@ -77,7 +77,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             using var httpClient = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
             httpClient.BaseAddress = connectedClient.ClientUri;
 
-            var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
+            using var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
             httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
             var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
             var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;

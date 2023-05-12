@@ -160,7 +160,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var updates = new List<UpdateOneModel<Event>>();
         var affectedEventTypes = new HashSet<EventType>();
 
-        var cursor = await GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First, eventSourceId, eventTypes);
+        using var cursor = await GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First, eventSourceId, eventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
