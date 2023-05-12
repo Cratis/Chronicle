@@ -35,7 +35,9 @@ public static class MongoDBReadModels
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default, IModelNameConvention? modelNameConvention = default)
     {
+#pragma warning disable CA2000 // Allow things to not be disposed
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
+#pragma warning restore CA2000
         var logger = loggerFactory.CreateLogger("MongodBReadModels");
 
         _modelNameConvention = modelNameConvention ?? _modelNameConvention;
