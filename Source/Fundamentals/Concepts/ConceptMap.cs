@@ -21,7 +21,7 @@ public static class ConceptMap
     /// <returns>The type of the <see cref="ConceptAs{T}"/> value.</returns>
     public static Type GetConceptValueType(Type type)
     {
-        if( _primitiveTypeCache.ContainsKey(type)) return _primitiveTypeCache[type];
+        if (_primitiveTypeCache.ContainsKey(type)) return _primitiveTypeCache[type];
 
         var primitiveType = GetPrimitiveType(type);
         _primitiveTypeCache.TryAdd(type, primitiveType);
@@ -35,7 +35,7 @@ public static class ConceptMap
     /// <returns><see cref="PropertyInfo"/> for the concept type.</returns>
     public static PropertyInfo GetValuePropertyInfo(Type type)
     {
-        if( _valuePropertyCache.ContainsKey(type)) return _valuePropertyCache[type];
+        if (_valuePropertyCache.ContainsKey(type)) return _valuePropertyCache[type];
 
         var valueProperty = type.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance);
         _valuePropertyCache.TryAdd(type, valueProperty!);
