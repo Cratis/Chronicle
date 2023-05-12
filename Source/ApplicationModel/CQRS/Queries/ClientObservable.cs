@@ -18,6 +18,9 @@ public class ClientObservable<T> : IClientObservable, IAsyncEnumerable<T>
 {
     readonly ReplaySubject<T> _subject = new();
 
+    /// <inheritdoc/>
+    public bool IsDisposed => _subject.IsDisposed;
+
     /// <summary>
     /// Gets or sets the callback that gets called when the client disconnects.
     /// </summary>
