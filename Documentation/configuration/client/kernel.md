@@ -1,6 +1,10 @@
 # Kernel
 
 The Cratis client can connect to the Kernel using the supported clustering modes of the Kernel.
+To configure the Cratis client you'll need a `cratis.json` file that sits next to your application
+binaries or within a folder called `config` next to your application binaries.
+The `cratis.json` file is an optional file, if it is not present it will assume default values
+which are typically what you're looking for when doing local development.
 
 Within the `cratis.json` file you should have a `kernel` key and object to holds its configuration:
 
@@ -16,11 +20,13 @@ The properties expected on the `kernel` object is as follows:
 {
     "kernel": {
         "type": "",                     // Type of cluster to connect to (single, static, azure-storage)
-        "advertisedClientEndpoint": "", // The endpoint for the client for the Kernel to call back to
+        "advertisedClientEndpoint": "", // The endpoint for the client for the Kernel to call back to in URI format (<scheme>://<host>:<port> e.g. http://localhost:5000)
         "options": {}                   // Options specific for the type of cluster configuration configured
     }
 }
 ```
+
+> Note: The `advertisedClientEndpoint` is
 
 ## Single cluster (local development)
 
