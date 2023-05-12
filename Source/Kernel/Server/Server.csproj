@@ -4,6 +4,7 @@
         <RootNamespace>Aksio.Cratis.Kernel.Server</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
+        <ServerGarbageCollection>true</ServerGarbageCollection>
     </PropertyGroup>
 
     <!-- 3rd party package references -->
