@@ -1,3 +1,20 @@
+# [v8.18.5] - 2023-5-12 [PR: #876](https://github.com/aksio-insurtech/Cratis/pull/876)
+
+### Fixed
+
+- Fixed a memory leak in the MongoDB extensions and the `Observe()` method. The leak was related to excessive MongoDB queries during `Watch()`. This caused a lot of unmanaged heap to be locked. This affects any clients using the `.Observe()` extension methods.
+- Fixed a memory leak in the MongoDB ObserverState watcher. The leak was related to excessive MongoDB queries during `Watch()`. This caused a lot of unmanaged heap to be locked. This affects the Kernel and workbench views watching observers.
+- Improved documentation on `cratis.json` for client configuration for clarity.
+- Caching calls to `.GetTypeInfo()` when used in the `ConceptMap`, should improve performance and GC collections.
+- Improved performance and memory usage when replaying by skipping serialization of the C# representation of the document. Instead it updates directly the only property it needs to (NextEventSequenceNumber).
+- Improving performance and memory usage for the `HasInterface()` method on `TypeExtensions` when looking for interface that has generic type. This now ignores the concrete generic type and looks at the generic type definition instead.
+- Improving memory usage for the `DefaultConventionModule` by swapping from in-place `Action` to local methods. This means less allocations and better on the GC and performance as well.
+- Improved memory and performance on the `ClientObservable` by serializing directly to UTF8 bytes instead of serializing to string and then converting to UTF8 bytes. This should put less pressure on the GC and improve performance as well.
+- Enabled CA2000 and CA2202 code analysis rules to catch when we forget to adher to the disposable pattern.
+- Fixed a couple of places where we had forgotten to dispose of disposables.
+
+
+
 # [v8.18.4] - 2023-5-10 [PR: #871](https://github.com/aksio-insurtech/Cratis/pull/871)
 
 ### Fixed
