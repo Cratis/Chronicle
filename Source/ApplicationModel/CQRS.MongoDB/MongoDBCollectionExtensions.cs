@@ -1,11 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Linq.Expressions;
 using System.Reflection;
 using Aksio.Cratis.Concepts;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Applications.Queries.MongoDB;
@@ -116,7 +114,7 @@ public static class MongoDBCollectionExtensions
 
         var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<TDocument>>().Match(filter);
 
-        var cursor = collection.Watch(pipeline, options);
+        var cursor = await collection.WatchAsync(pipeline, options);
         var idProperty = typeof(TDocument).GetProperty("Id", BindingFlags.Instance | BindingFlags.Public)!;
 
         _ = Task.Run(async () =>
