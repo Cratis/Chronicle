@@ -125,6 +125,12 @@ public static class MongoDBCollectionExtensions
             {
                 while (await cursor.MoveNextAsync())
                 {
+                    if (observable.IsDisposed)
+                    {
+                        cursor.Dispose();
+                        return;
+                    }
+
                     if (!cursor.Current.Any()) continue;
 
                     foreach (var changeDocument in cursor.Current)
