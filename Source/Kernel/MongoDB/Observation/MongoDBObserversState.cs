@@ -22,23 +22,22 @@ public class MongoDBObserversState : IObserversState
     {
         get
         {
-            var observable = new BehaviorSubject<IEnumerable<ObserverState>>(new ObserverState[0]);
             var observers = Collection.Find(_ => true).ToList();
-            observable.OnNext(observers);
-
+            var observable = new BehaviorSubject<IEnumerable<ObserverState>>(observers);
             var filter = Builders<ChangeStreamDocument<ObserverState>>.Filter.In(
                 new StringFieldDefinition<ChangeStreamDocument<ObserverState>, string>("operationType"),
                 new[] { "insert", "replace", "update" });
 
             var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<ObserverState>>().Match(filter);
 
-            var cursor = Collection.Watch(
-                pipeline,
-                new ChangeStreamOptions { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
             _ = Task.Run(async () =>
             {
                 try
                 {
+                    var cursor = await Collection.WatchAsync(
+                        pipeline,
+                        new ChangeStreamOptions { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
+
                     while (await cursor.MoveNextAsync())
                     {
                         if (observable.IsDisposed)
