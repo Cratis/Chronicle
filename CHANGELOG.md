@@ -1,3 +1,10 @@
+# [v8.18.6] - 2023-5-12 [PR: #878](https://github.com/aksio-insurtech/Cratis/pull/878)
+
+### Fixed
+
+- Bringing back `Expression` overloads for `Observe()` methods on the `MongoDBCollectionExtensions`. This was unintended in previous build, based on an assumption that the implicit operators for `FilterDefinition` would take care of the conversion.
+
+
 # [v8.18.5] - 2023-5-12 [PR: #876](https://github.com/aksio-insurtech/Cratis/pull/876)
 
 ### Fixed
