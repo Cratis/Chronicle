@@ -39,7 +39,7 @@ public static class MongoDBReadModels
         var logger = loggerFactory.CreateLogger("MongodBReadModels");
 
         _modelNameConvention = modelNameConvention ?? _modelNameConvention;
-        services.AddSingleton<IModelNameConvention>(_modelNameConvention);
+        services.AddSingleton(_modelNameConvention);
 
         services.AddTransient(sp =>
         {
