@@ -12,6 +12,11 @@ namespace Aksio.Cratis.Applications.Queries;
 public interface IClientObservable
 {
     /// <summary>
+    /// Gets whether or not the observable is disposed.
+    /// </summary>
+    bool IsDisposed { get; }
+
+    /// <summary>
     /// Handle the action context and result from the action.
     /// </summary>
     /// <param name="context"><see cref="ActionExecutingContext"/> to handle for.</param>

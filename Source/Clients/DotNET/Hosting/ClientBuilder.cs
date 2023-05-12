@@ -67,7 +67,9 @@ public class ClientBuilder : IClientBuilder
         ITypes? types = default,
         ILoggerFactory? loggerFactory = default)
     {
+#pragma warning disable CA2000 // Allow things to not be disposed
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
+#pragma warning restore CA2000
         var logger = loggerFactory.CreateLogger<ClientBuilder>()!;
         logger.Configuring();
 

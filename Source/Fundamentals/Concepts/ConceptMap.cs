@@ -11,7 +11,8 @@ namespace Aksio.Cratis.Concepts;
 /// </summary>
 public static class ConceptMap
 {
-    static readonly ConcurrentDictionary<Type, Type> _cache = new();
+    static readonly ConcurrentDictionary<Type, Type> _primitiveTypeCache = new();
+    static readonly ConcurrentDictionary<Type, PropertyInfo> _valuePropertyCache = new();
 
     /// <summary>
     /// Get the type of the value in a <see cref="ConceptAs{T}"/>.
@@ -20,7 +21,25 @@ public static class ConceptMap
     /// <returns>The type of the <see cref="ConceptAs{T}"/> value.</returns>
     public static Type GetConceptValueType(Type type)
     {
-        return _cache.GetOrAdd(type, GetPrimitiveType);
+        if (_primitiveTypeCache.ContainsKey(type)) return _primitiveTypeCache[type];
+
+        var primitiveType = GetPrimitiveType(type);
+        _primitiveTypeCache.TryAdd(type, primitiveType);
+        return primitiveType;
+    }
+
+    /// <summary>
+    /// Get the <see cref="PropertyInfo"/> for the value property in a <see cref="ConceptAs{T}"/>.
+    /// </summary>
+    /// <param name="type">Type to get for.</param>
+    /// <returns><see cref="PropertyInfo"/> for the concept type.</returns>
+    public static PropertyInfo GetValuePropertyInfo(Type type)
+    {
+        if (_valuePropertyCache.ContainsKey(type)) return _valuePropertyCache[type];
+
+        var valueProperty = type.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance);
+        _valuePropertyCache.TryAdd(type, valueProperty!);
+        return valueProperty!;
     }
 
     static Type GetPrimitiveType(Type type)

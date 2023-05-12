@@ -15,7 +15,7 @@ public class Encryption : IEncryption
     /// <inheritdoc/>
     public EncryptionKey GenerateKey()
     {
-        var rsa = RSA.Create(KeySize);
+        using var rsa = RSA.Create(KeySize);
         var privateKey = rsa.ExportRSAPrivateKey();
         var publicKey = rsa.ExportRSAPublicKey();
         return new(publicKey, privateKey);

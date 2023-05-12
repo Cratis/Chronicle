@@ -251,25 +251,23 @@ public static class TypeExtensions
     /// <returns>True if the type implements the interface, false if not.</returns>
     public static bool HasInterface(this Type type, Type interfaceType)
     {
+        bool DoesGenericParametersMatch(Type typeToCheck)
+        {
+            return typeToCheck.IsGenericType &&
+                interfaceType.GetTypeInfo().GetGenericTypeDefinition().Equals(typeToCheck.GetGenericTypeDefinition());
+        }
+
         if (interfaceType.IsGenericTypeDefinition)
         {
             return type.GetTypeInfo()
                         .ImplementedInterfaces
-                        .Count(t =>
-                        {
-                            if (t.IsGenericType &&
-                                interfaceType.GetTypeInfo().GenericTypeParameters.Length == t.GetGenericArguments().Length)
-                            {
-                                var genericType = interfaceType.MakeGenericType(t.GetGenericArguments());
-                                return t.Equals(genericType);
-                            }
-                            return false;
-                        }) == 1;
+                        .Count(DoesGenericParametersMatch) == 1;
         }
 
+        bool MatchesInterface(Type typeToCheck) => typeToCheck.Equals(interfaceType);
         return type.GetTypeInfo()
                     .ImplementedInterfaces
-                    .Count(t => t.Equals(interfaceType)) == 1;
+                    .Count(MatchesInterface) == 1;
     }
 
     /// <summary>

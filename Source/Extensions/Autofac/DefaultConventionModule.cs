@@ -27,21 +27,22 @@ public class DefaultConventionModule : Module
     /// <inheritdoc/>
     protected override void Load(ContainerBuilder builder)
     {
-        var conventionBasedTypes = ContainerBuilderExtensions.Types!.All.Where(_ =>
+        bool MatchesConvention(Type type)
         {
-            var interfaces = _.GetInterfaces();
+            var interfaces = type.GetInterfaces();
             if (interfaces.Length > 0)
             {
-                var conventionInterface = interfaces.SingleOrDefault(i => i.Namespace == _.Namespace && i.Name == $"I{_.Name}");
+                var conventionInterface = interfaces.SingleOrDefault(i => i.Namespace == type.Namespace && i.Name == $"I{type.Name}");
                 if (conventionInterface != default)
                 {
-                    return ContainerBuilderExtensions.Types!.All.Count(type => type.HasInterface(conventionInterface)) == 1;
+                    bool HasInterface(Type type) => type.HasInterface(conventionInterface);
+                    return ContainerBuilderExtensions.Types!.All.Count(HasInterface) == 1;
                 }
             }
             return false;
-        });
+        }
 
-        foreach (var conventionBasedType in conventionBasedTypes)
+        foreach (var conventionBasedType in ContainerBuilderExtensions.Types!.All.Where(MatchesConvention))
         {
             var interfaceToBind = conventionBasedType.GetInterfaces().Single(_ => _.Name == $"I{conventionBasedType.Name}");
             if (_services.Any(_ => _.ServiceType == interfaceToBind))

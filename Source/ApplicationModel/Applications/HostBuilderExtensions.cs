@@ -39,7 +39,9 @@ public static class HostBuilderExtensions
         MicroserviceName? microserviceName = default,
         Action<MvcOptions>? mvcOptionsDelegate = default)
     {
+#pragma warning disable CA2000 // Allow things to not be disposed
         var loggerFactory = builder.UseDefaultLogging();
+#pragma warning restore CA2000
         var logger = loggerFactory.CreateLogger("Aksio setup");
         logger.SettingUpDefaults();
 
