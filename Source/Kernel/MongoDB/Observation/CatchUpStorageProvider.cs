@@ -4,6 +4,7 @@
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
+using Aksio.Strings;
 using MongoDB.Driver;
 using Orleans.Runtime;
 
@@ -36,13 +37,17 @@ public class CatchUpStorageProvider : ObserverStorageProvider
         ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
         var state = actualGrainState.State;
+
+        // Note: The reason we're not using the ObserverState directly is for memory and performance reasons
+        // it is faster to just store the next event sequence number directly in the document and less
+        // memory footprint than creating an update statement based on the state object.
         var update = Builders<ObserverState>.Update
-            .Set(_ => _.NextEventSequenceNumber, state.NextEventSequenceNumber)
-            .Set(_ => _.LastHandled, state.LastHandled);
+            .Set(nameof(ObserverState.NextEventSequenceNumber).ToCamelCase(), state.NextEventSequenceNumber)
+            .Set(nameof(ObserverState.LastHandled).ToCamelCase(), state.LastHandled);
 
         await Collection.UpdateOneAsync(
             _ => _.Id == key,
             update,
-            new UpdateOptions { IsUpsert = true });
+            new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 }
