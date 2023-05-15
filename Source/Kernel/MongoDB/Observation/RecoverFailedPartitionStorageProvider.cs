@@ -49,7 +49,7 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
         ExecutionContextManager.Establish(partitionedObserverKey.TenantId, CorrelationId.New(), partitionedObserverKey.MicroserviceId);
 
         var key = GetKeyFrom(partitionedObserverKey, observerId);
-        await Collection.DeleteOneAsync(_ => _.Id == key);
+        await Collection.DeleteOneAsync(_ => _.Id == key).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -62,9 +62,9 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
         ExecutionContextManager.Establish(partitionedObserverKey.TenantId, CorrelationId.New(), partitionedObserverKey.MicroserviceId);
 
         var key = GetKeyFrom(partitionedObserverKey, observerId);
-        var cursor = await Collection.FindAsync(_ => _.Id == key);
+        var cursor = await Collection.FindAsync(_ => _.Id == key).ConfigureAwait(false);
 
-        actualGrainState.State = await cursor.FirstOrDefaultAsync() ?? new RecoverFailedPartitionState()
+        actualGrainState.State = await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new RecoverFailedPartitionState()
         {
             Id = key,
             ObserverId = observerId
@@ -84,14 +84,14 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
 
         if (!observerState.HasBeenInitialized())
         {
-            await Collection.DeleteOneAsync(_ => _.Id == key);
+            await Collection.DeleteOneAsync(_ => _.Id == key).ConfigureAwait(false);
         }
         else
         {
             await Collection.ReplaceOneAsync(
                 _ => _.Id == key,
                 observerState!,
-                new ReplaceOptions { IsUpsert = true });
+                new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
         }
     }
 

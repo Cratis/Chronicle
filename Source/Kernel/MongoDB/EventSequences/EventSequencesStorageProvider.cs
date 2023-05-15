@@ -46,16 +46,16 @@ public class EventSequencesStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
         var key = MicroserviceAndTenant.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
         var eventLogState = grainState.State as EventSequenceState;
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
-        return Collection.UpdateOneAsync(
+        await Collection.UpdateOneAsync(
             filter,
             Builders<EventSequenceState>.Update.Set(_ => _.SequenceNumber, eventLogState!.SequenceNumber),
-            new() { IsUpsert = true });
+            new() { IsUpsert = true }).ConfigureAwait(false);
     }
 }

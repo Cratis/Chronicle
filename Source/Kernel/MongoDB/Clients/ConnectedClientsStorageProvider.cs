@@ -35,8 +35,8 @@ public class ConnectedClientsStorageProvider : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<ConnectedClientsState>)!;
         var microserviceId = (MicroserviceId)grainId.GetGuidKey();
-        var cursor = await Collection.FindAsync(_ => _.Id == microserviceId);
-        var mongoState = await cursor.FirstOrDefaultAsync();
+        var cursor = await Collection.FindAsync(_ => _.Id == microserviceId).ConfigureAwait(false);
+        var mongoState = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
 
         actualGrainState.State = new ConnectedClientsState
         {
@@ -45,12 +45,12 @@ public class ConnectedClientsStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<ConnectedClientsState>)!;
         var microserviceId = (MicroserviceId)grainId.GetGuidKey();
         var state = actualGrainState.State;
         var mongoState = new MongoDBConnectedClientsForMicroserviceState(microserviceId, state.Clients);
-        return Collection.ReplaceOneAsync(_ => _.Id == microserviceId, mongoState, options: new ReplaceOptions { IsUpsert = true });
+        await Collection.ReplaceOneAsync(_ => _.Id == microserviceId, mongoState, options: new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 }

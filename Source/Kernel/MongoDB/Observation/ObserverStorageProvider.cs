@@ -60,7 +60,7 @@ public class ObserverStorageProvider : IGrainStorage
 
         ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
-        var failedPartitionsCursor = await RecoverFailedPartitionCollection.FindAsync(_ => _.ObserverId == observerId);
+        var failedPartitionsCursor = await RecoverFailedPartitionCollection.FindAsync(_ => _.ObserverId == observerId).ConfigureAwait(false);
         var failedPartitions = failedPartitionsCursor.ToList().Select(_ => new FailedPartition(
             _.Partition,
             _.CurrentError,
@@ -69,8 +69,8 @@ public class ObserverStorageProvider : IGrainStorage
             _.InitialPartitionFailedOn)).ToArray();
 
         var key = GetKeyFrom(observerKey, observerId);
-        var cursor = await Collection.FindAsync(_ => _.Id == key);
-        var state = await cursor.FirstOrDefaultAsync() ?? new ObserverState
+        var cursor = await Collection.FindAsync(_ => _.Id == key).ConfigureAwait(false);
+        var state = await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState
         {
             Id = key,
             EventSequenceId = eventSequenceId,
@@ -97,7 +97,7 @@ public class ObserverStorageProvider : IGrainStorage
         await Collection.ReplaceOneAsync(
             _ => _.Id == key,
             observerState!,
-            new ReplaceOptions { IsUpsert = true });
+            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
     /// <summary>

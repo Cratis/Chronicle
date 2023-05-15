@@ -34,8 +34,8 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<TenantConfigurationState>)!;
         var tenantId = (TenantId)grainId.GetGuidKey();
-        var cursor = await Collection.FindAsync(_ => _.Id == tenantId);
-        var state = await cursor.FirstOrDefaultAsync();
+        var cursor = await Collection.FindAsync(_ => _.Id == tenantId).ConfigureAwait(false);
+        var state = await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
         if (state is not null)
         {
             actualGrainState.State = new TenantConfigurationState(state.Configuration.ToDictionary(_ => _.Key, _ => _.Value));
@@ -55,6 +55,6 @@ public class TenantConfigurationStorageProvider : IGrainStorage
         await Collection.ReplaceOneAsync(
             _ => _.Id == tenantId,
             mongoDBState,
-            new ReplaceOptions { IsUpsert = true });
+            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 }
