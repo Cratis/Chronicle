@@ -49,6 +49,6 @@ public class ReplayStorageProvider : ObserverStorageProvider
         await Collection.UpdateOneAsync(
             _ => _.Id == key,
             update,
-            new UpdateOptions { IsUpsert = true });
+            new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 }
