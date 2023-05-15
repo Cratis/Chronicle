@@ -42,21 +42,21 @@ public class EventSequencesStorageProvider : IGrainStorage
         var key = MicroserviceAndTenant.Parse(keyAsString);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
-        var cursor = await Collection.FindAsync(filter);
-        grainState.State = await cursor.FirstOrDefaultAsync() ?? new EventSequenceState();
+        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
+        grainState.State = await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new EventSequenceState();
     }
 
     /// <inheritdoc/>
-    public Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
     {
         var eventSequenceId = grainReference.GetPrimaryKey(out var keyAsString);
         var key = MicroserviceAndTenant.Parse(keyAsString);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
         var eventLogState = grainState.State as EventSequenceState;
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
-        return Collection.UpdateOneAsync(
+        await Collection.UpdateOneAsync(
             filter,
             Builders<EventSequenceState>.Update.Set(_ => _.SequenceNumber, eventLogState!.SequenceNumber),
-            new() { IsUpsert = true });
+            new() { IsUpsert = true }).ConfigureAwait(false);
     }
 }
