@@ -29,9 +29,11 @@ import { CommandScope, CommandScopeContext, useCommandScope } from '@aksio/appli
 import { DebitAccountsList } from './DebitAccountsList';
 import 'reflect-metadata';
 import { AllAccountHoldersWithAccounts } from 'API/accountholders/AllAccountHoldersWithAccounts';
+import { useNavigate } from 'react-router-dom';
 
 
 export const DebitAccounts = () => {
+    const navigate = useNavigate();
     const [accounts] = AllAccounts.use();
     const [openDebitAccount, setOpenDebitAccountValues] = OpenDebitAccount.use();
     const [holdersWithAccounts] = AllAccountHoldersWithAccounts.use();
@@ -75,6 +77,10 @@ export const DebitAccounts = () => {
             await command.execute();
         }
     });
+
+    const navigateToLedger = () => {
+        navigate(`/accounts/debit/${selectedItem.id}/ledger`);
+    }
 
     const searchFor = (filter: string) => {
         if (filter && filter !== '') {
@@ -126,6 +132,16 @@ export const DebitAccounts = () => {
                 onClick: () => showWithdrawAmountDialog({ okTitle: 'Withdraw' })
             }
         );
+
+        commandBarItems.push(
+            {
+                key: 'ledger',
+                name: 'Ledger',
+                iconProps: { iconName: 'Money' },
+                onClick: navigateToLedger
+            }
+        );
+
     }
 
     const selection = useMemo(
