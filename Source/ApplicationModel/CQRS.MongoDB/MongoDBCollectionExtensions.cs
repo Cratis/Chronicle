@@ -39,8 +39,10 @@ public static class MongoDBCollectionExtensions
         FindOptions<TDocument, TDocument>? options = null)
     {
         filter ??= _ => true;
-        return await collection.Observe<TDocument, IEnumerable<TDocument>>(() => collection.FindAsync(filter, options), (cursor, observable) =>
-            observable.OnNext(cursor.ToList()));
+        return await collection.Observe<TDocument, IEnumerable<TDocument>>(
+            () => collection.FindAsync(filter, options),
+            filter,
+            (cursor, observable) => observable.OnNext(cursor.ToList()));
     }
 
     /// <summary>
@@ -59,6 +61,7 @@ public static class MongoDBCollectionExtensions
         filter ??= FilterDefinition<TDocument>.Empty;
         return await collection.Observe<TDocument, IEnumerable<TDocument>>(
             () => collection.FindAsync(filter, options),
+            filter,
             (documents, observable) => observable.OnNext(documents));
     }
 
@@ -76,7 +79,7 @@ public static class MongoDBCollectionExtensions
         FindOptions<TDocument, TDocument>? options = null)
     {
         filter ??= _ => true;
-        return await collection.ObserveSingle(() => collection.FindAsync(filter, options));
+        return await collection.ObserveSingle(() => collection.FindAsync(filter, options), filter);
     }
 
     /// <summary>
@@ -93,7 +96,7 @@ public static class MongoDBCollectionExtensions
         FindOptions<TDocument, TDocument>? options = null)
     {
         filter ??= FilterDefinition<TDocument>.Empty;
-        return await collection.ObserveSingle(() => collection.FindAsync(filter, options));
+        return await collection.ObserveSingle(() => collection.FindAsync(filter, options), filter);
     }
 
     /// <summary>
@@ -107,15 +110,17 @@ public static class MongoDBCollectionExtensions
     public static async Task<ClientObservable<TDocument>> ObserveById<TDocument, TId>(this IMongoCollection<TDocument> collection, TId id)
     {
         var filter = Builders<TDocument>.Filter.Eq(new StringFieldDefinition<TDocument, TId>("_id"), id);
-        return await collection.ObserveSingle(() => collection.FindAsync(filter));
+        return await collection.ObserveSingle(() => collection.FindAsync(filter), filter);
     }
 
     static async Task<ClientObservable<TDocument>> ObserveSingle<TDocument>(
          this IMongoCollection<TDocument> collection,
-         Func<Task<IAsyncCursor<TDocument>>> findCall)
+         Func<Task<IAsyncCursor<TDocument>>> findCall,
+         FilterDefinition<TDocument> filter)
     {
         return await collection.Observe<TDocument, TDocument>(
             findCall,
+            filter,
             (documents, observable) =>
             {
                 var result = documents.FirstOrDefault();
@@ -129,6 +134,7 @@ public static class MongoDBCollectionExtensions
     static async Task<ClientObservable<TResult>> Observe<TDocument, TResult>(
         this IMongoCollection<TDocument> collection,
         Func<Task<IAsyncCursor<TDocument>>> findCall,
+        FilterDefinition<TDocument> filter,
         Action<IEnumerable<TDocument>, ClientObservable<TResult>> onNext)
     {
         var observable = new ClientObservable<TResult>();
@@ -143,12 +149,16 @@ public static class MongoDBCollectionExtensions
             FullDocument = ChangeStreamFullDocumentOption.UpdateLookup
         };
 
-        // Todo: Get the filter definition in as argument and then add it to the pipeline
-        var filter = Builders<ChangeStreamDocument<TDocument>>.Filter.In(
-            new StringFieldDefinition<ChangeStreamDocument<TDocument>, string>("operationType"),
-            new[] { "insert", "replace", "update" });
+        var filterRendered = filter.Render(collection.DocumentSerializer, collection.Settings.SerializerRegistry);
+        PrefixKeys(filterRendered);
 
-        var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<TDocument>>().Match(filter);
+        var fullFilter = Builders<ChangeStreamDocument<TDocument>>.Filter.And(
+            filterRendered,
+            Builders<ChangeStreamDocument<TDocument>>.Filter.In(
+                new StringFieldDefinition<ChangeStreamDocument<TDocument>, string>("operationType"),
+                new[] { "insert", "replace", "update" }));
+
+        var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<TDocument>>().Match(fullFilter);
 
         var cursor = await collection.WatchAsync(pipeline, options);
         var idProperty = typeof(TDocument).GetProperty("Id", BindingFlags.Instance | BindingFlags.Public)!;
@@ -201,5 +211,34 @@ public static class MongoDBCollectionExtensions
         observable.ClientDisconnected = () => cursor.Dispose();
 
         return observable;
+    }
+
+    static void PrefixKeys(BsonDocument document)
+    {
+        foreach (var name in document.Names.ToArray())
+        {
+            var value = document[name];
+            if (!name.StartsWith('$'))
+            {
+                var index = document.IndexOfName(name);
+                document.InsertAt(index, new BsonElement($"fullDocument.{name}", value));
+                document.Remove(name);
+            }
+
+            if (value is BsonArray array)
+            {
+                foreach (var item in array)
+                {
+                    if (item is BsonDocument itemAsDocument)
+                    {
+                        PrefixKeys(itemAsDocument);
+                    }
+                }
+            }
+            else if (value is BsonDocument childAsDocument)
+            {
+                PrefixKeys(childAsDocument);
+            }
+        }
     }
 }
