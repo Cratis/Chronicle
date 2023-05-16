@@ -25,6 +25,7 @@ The convention supports the following optional parameters on the constructor:
 | --------- | ----------- | ------- |
 | segmentsToSkip | Number of segments in the namespace to skip. | 0 |
 | separator | Character to use for separating namespace segments. | - |
+| prefix | Optional prefix to prepend collection names with. | [empty] |
 
 ## Custom convention
 
