@@ -14,7 +14,7 @@ This release focuses on what we've seen as memory leakage. After heavy investiga
 
 - Optimized memory allocation in `ConceptConverter` by not reverting to `JsonSerializer` for values.
 - Using `.ConfigureAwait(false)` for MongoDB based Orleans Grain state providers. This seems to be best practice.
-- Fixing MongoDB extensions for observing with filters, it now uses the filter directly in the `Watch` and will only be notified of documents that match the filter.
+- Fixing MongoDB extensions for observing with filters, it now uses the filter directly in the `Watch` and will only be notified of documents that match the filter. (#877)
 
 
 
