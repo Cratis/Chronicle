@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { default as styles } from './App.module.scss';
 import { Navigation } from './Navigation';
 import { Home } from './Home';
+import { Ledger } from './Accounts/Debit/Ledger';
 import { DebitAccounts } from './Accounts/Debit/DebitAccounts';
 import { AccountHolders } from './AccountHolders/AccountHolders';
 import { IdentityProvider } from '@aksio/cratis-applications-frontend/identity';
@@ -21,6 +22,7 @@ export const App = () => {
                         <Routes>
                             <Route path="/" element={<Home />} />
                             <Route path="/accounts/debit" element={<DebitAccounts />} />
+                            <Route path="/accounts/debit/:id/ledger" element={<Ledger />} />
                             <Route path="/integration" element={<AccountHolders />} />
                         </Routes>
                     </div>
