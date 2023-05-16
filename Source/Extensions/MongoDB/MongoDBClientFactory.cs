@@ -44,9 +44,14 @@ public class MongoDBClientFactory : IMongoDBClientFactory
 
     void ClusterConfigurator(ClusterBuilder builder)
     {
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            builder
+                .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson()))
+                .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
+        }
+
         builder
-            .Subscribe<CommandStartedEvent>(command => _logger.CommandStarted(command.RequestId, command.CommandName, command.Command.ToJson()))
-            .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message))
-            .Subscribe<CommandSucceededEvent>(command => _logger.CommandSucceeded(command.RequestId, command.CommandName));
+            .Subscribe<CommandFailedEvent>(command => _logger.CommandFailed(command.RequestId, command.CommandName, command.Failure.Message));
     }
 }

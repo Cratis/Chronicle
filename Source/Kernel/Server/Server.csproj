@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
+        <OutputType>Exe</OutputType>
         <AssemblyName>Aksio.Cratis.Kernel.Server</AssemblyName>
         <RootNamespace>Aksio.Cratis.Kernel.Server</RootNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
-        <ServerGarbageCollection>true</ServerGarbageCollection>
+        <ServerGarbageCollection>false</ServerGarbageCollection>
     </PropertyGroup>
 
     <!-- 3rd party package references -->
