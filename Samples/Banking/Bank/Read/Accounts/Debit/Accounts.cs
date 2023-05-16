@@ -22,6 +22,9 @@ public class Accounts : Controller
         _accountsPerDayCollection = accountsPerDayCollection;
     }
 
+    [HttpGet("{accountId}")]
+    public Task<ClientObservable<DebitAccount>> SpecificDebitAccount([FromRoute] AccountId accountId) => _accountsCollection.ObserveById(accountId);
+
     [HttpGet]
     public Task<ClientObservable<IEnumerable<DebitAccount>>> AllAccounts()
     {

@@ -13,16 +13,19 @@ public class NamespacedModelNameConvention : IModelNameConvention
 {
     readonly int _segmentsToSkip;
     readonly char _separator;
+    readonly string _prefix;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NamespacedModelNameConvention"/> class.
     /// </summary>
     /// <param name="segmentsToSkip">Optionally number of segments in the namespace to skip. Defaults to 0.</param>
     /// <param name="separator">Optional separator character to use between namespace segments. Defaults to 0.</param>
-    public NamespacedModelNameConvention(int segmentsToSkip = 0, char separator = '-')
+    /// <param name="prefix">Optional prefix to prepend all collection names with.</param>
+    public NamespacedModelNameConvention(int segmentsToSkip = 0, char separator = '-', string prefix = "")
     {
         _segmentsToSkip = segmentsToSkip;
         _separator = separator;
+        _prefix = prefix;
     }
 
     /// <inheritdoc/>
@@ -30,6 +33,6 @@ public class NamespacedModelNameConvention : IModelNameConvention
     {
         var segments = type.Namespace?.Split('.') ?? Array.Empty<string>();
         var prefix = string.Join(_separator, segments.Skip(_segmentsToSkip).Select(_ => _.ToCamelCase()));
-        return $"{prefix}-{type.Name.Pluralize().ToCamelCase()}";
+        return $"{_prefix}{prefix}-{type.Name.Pluralize().ToCamelCase()}";
     }
 }
