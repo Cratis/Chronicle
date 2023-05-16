@@ -1,3 +1,23 @@
+# [v8.18.7] - 2023-5-16 [PR: #879](https://github.com/aksio-insurtech/Cratis/pull/879)
+
+# Summary
+
+This release focuses on what we've seen as memory leakage. After heavy investigation we're seeing that the use of server garbage collector, which is default for any ASP.NET Core based projects, is suboptimal. The Kernel on its own is serialization heavy, meaning that anything coming in our out of the Kernel is serialized. Serialization happens on multiple levels; database -> kernel, kernel -> clients and with Orleans its all serialization for every call being made. Serialization tends to allocate a lot of small objects, not noticable with little traffic as it would be collected even by the server GC pretty fast. But with load, this amounts up and the heap just grows. 
+
+[Microsoft documentation](https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/workstation-server-gc) recommends using a server GC in a multi-processor(core) environment. Our findings is that for a serialization heavy solution like the Cratis Kernel, this does not seem to be valid. Garbage collection happens has a too low priority and we end up eating more memory than needed.
+
+### Changed
+
+- Disabled server garbage collector for Kernel.
+
+### Fixed
+
+- Optimized memory allocation in `ConceptConverter` by not reverting to `JsonSerializer` for values.
+- Using `.ConfigureAwait(false)` for MongoDB based Orleans Grain state providers. This seems to be best practice.
+- Fixing MongoDB extensions for observing with filters, it now uses the filter directly in the `Watch` and will only be notified of documents that match the filter.
+
+
+
 # [v8.18.6] - 2023-5-12 [PR: #878](https://github.com/aksio-insurtech/Cratis/pull/878)
 
 ### Fixed
