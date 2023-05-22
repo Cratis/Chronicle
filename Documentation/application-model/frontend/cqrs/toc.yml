@@ -1,8 +1,0 @@
-- name: Commands
-  href: commands.md
-- name: Command Scope
-  href: command-scope.md
-- name: Queries
-  href: queries.md
-- name: Proxy Generation
-  href: proxy-generation.md
