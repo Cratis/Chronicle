@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Compliance;
+using Aksio.Compliance;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
+using Aksio.Json;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;
 using NJsonSchema;

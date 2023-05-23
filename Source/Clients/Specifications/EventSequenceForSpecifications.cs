@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
+using Aksio.Json;
 using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Specifications;

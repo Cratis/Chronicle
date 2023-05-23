@@ -4,7 +4,7 @@
 using System.Dynamic;
 using System.Text.RegularExpressions;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Aksio.Cratis.Schemas;
 using NJsonSchema;
 

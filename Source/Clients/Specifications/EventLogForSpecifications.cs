@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Json;
+using Aksio.Json;
 using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Specifications;

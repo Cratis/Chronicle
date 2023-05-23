@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Aksio.Cratis.Strings;
 using NJsonSchema;
 

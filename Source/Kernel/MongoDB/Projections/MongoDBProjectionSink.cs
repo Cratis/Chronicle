@@ -10,7 +10,7 @@ using Aksio.Cratis.Execution;
 using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Strings;
 using MongoDB.Bson;

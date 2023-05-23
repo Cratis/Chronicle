@@ -2623,7 +2623,7 @@ Represents the state used for failed observers.
 
 ```
 
-Defines a segment within a Aksio.Cratis.Properties.PropertyPath.
+Defines a segment within a Aksio.Properties.PropertyPath.
 
 ### Properties
 
@@ -3485,7 +3485,7 @@ Represents an encapsulation of a property in the system - used for accessing pro
 |---|---|---|---|---|
 |path|string¦null|false|none|Gets the full path of the property.|
 |segments|[[IPropertyPathSegment](#schemaipropertypathsegment)]¦null|false|read-only|Gets the segments the full property path consists of.|
-|lastSegment|[IPropertyPathSegment](#schemaipropertypathsegment)|false|none|Defines a segment within a Aksio.Cratis.Properties.PropertyPath.|
+|lastSegment|[IPropertyPathSegment](#schemaipropertypathsegment)|false|none|Defines a segment within a Aksio.Properties.PropertyPath.|
 |isRoot|boolean|false|read-only|Gets whether or not this is the root path.|
 |isSet|boolean|false|read-only|Gets whether or not the value is set.|
 

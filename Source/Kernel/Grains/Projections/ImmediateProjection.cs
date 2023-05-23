@@ -8,11 +8,11 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
+using Aksio.Json;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Orleans;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
 

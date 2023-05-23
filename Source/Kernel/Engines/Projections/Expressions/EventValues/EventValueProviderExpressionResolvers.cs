@@ -4,7 +4,7 @@
 using System.Collections;
 using System.Dynamic;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Types;

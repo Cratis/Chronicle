@@ -6,7 +6,7 @@ using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
+using Aksio.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;

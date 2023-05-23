@@ -289,3 +289,5 @@ dist
 
 wwwroot
 out
+
+.DS_Store

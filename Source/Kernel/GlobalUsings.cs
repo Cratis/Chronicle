@@ -3,5 +3,6 @@
 
 #pragma warning disable IDE0005, CS8019
 
-global using Aksio.Cratis.Concepts;
-global using ExecutionContext = Aksio.Cratis.Execution.ExecutionContext;
+global using Aksio.Concepts;
+global using Aksio.Execution;
+global using ExecutionContext = Aksio.Execution.ExecutionContext;

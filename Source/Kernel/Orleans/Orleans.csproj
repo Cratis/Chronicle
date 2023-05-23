@@ -5,15 +5,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
-        <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
-        <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
-        <PackageReference Include="System.Data.SqlClient" Version="$(SqlDataClient)" />
-        <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
+        <PackageReference Include="Aksio.Fundamentals"/>
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" />
+        <PackageReference Include="System.Data.SqlClient" />
+        <PackageReference Include="System.Net.NameResolution" />
     </ItemGroup>
 
 </Project>

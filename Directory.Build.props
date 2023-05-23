@@ -18,8 +18,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.Defaults" Version="$(AksioDefaults)" PrivateAssets="All" Condition="'$(PublishReadyToRun)' != 'true'" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
+        <PackageReference Include="Aksio.Defaults" PrivateAssets="All" Condition="'$(PublishReadyToRun)' != 'true'" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
     </ItemGroup>
 
     <ItemGroup>

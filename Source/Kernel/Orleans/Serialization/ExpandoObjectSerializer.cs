@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json;
-using Aksio.Cratis.Dynamic;
+using Aksio.Dynamic;
 using Orleans.Serialization;
 
 namespace Aksio.Cratis.Kernel.Orleans.Serialization;

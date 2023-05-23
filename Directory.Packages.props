@@ -1,0 +1,26 @@
+<Project>
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+        <Orleans>3.6.5</Orleans>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
+		<PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
+		<PackageVersion Include="Aksio.Fundamentals" Version="1.0.1" />
+        <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
+
+        <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
+        <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
+        <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
+        <PackageVersion Include="System.Data.SqlClient" Version="4.8.3" />
+        <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
+
+
+        <!-- Specifications -->
+		<PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
+		<PackageVersion Include="xunit" Version="2.4.2" />
+		<PackageVersion Include="xunit.runner.visualstudio" Version="2.4.2" />
+		<PackageVersion Include="moq" Version="4.18.4" />
+		<PackageVersion Include="Microsoft.NET.Test.SDK" Version="16.10.0" />
+	</ItemGroup>
+</Project>

@@ -4,12 +4,12 @@
 using System.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Json;
+using Aksio.Json;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Aksio.Cratis.Schemas;
 using NJsonSchema;
 

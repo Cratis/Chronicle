@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Aksio.Cratis.Strings;
 
 namespace Aksio.Cratis.Applications.Rules.for_Rules.when_projecting_to_rule;

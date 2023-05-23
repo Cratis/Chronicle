@@ -3,10 +3,10 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Compliance;
+using Aksio.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Json;
+using Aksio.Json;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
@@ -16,7 +16,7 @@ using Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Properties;
+using Aksio.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Specifications.Types;
 
