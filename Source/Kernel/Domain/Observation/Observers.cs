@@ -78,10 +78,10 @@ public class Observers : Controller
     /// <summary>
     /// Retry a specific partition for a microservice and tenant.
     /// </summary>
-    /// <param name="microserviceId"></param>
-    /// <param name="tenantId"></param>
-    /// <param name="observerId"></param>
-    /// <param name="partitionId"></param>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> the observer is for.</param>
+    /// <param name="tenantId"><see cref="TenantId"/> the observer is for.</param>
+    /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
+    /// <param name="partitionId"><see cref="EventSourceId">Partition</see> to retry.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("{observerId}/failed-partitions/{tenantId}/retry/{partitionId}")]
     public async Task RetryPartition(
