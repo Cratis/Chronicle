@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsTestProject>true</IsTestProject>
+        <Nullable>disable</Nullable>
+        <AssemblyName>Domain.Specs</AssemblyName>
+        <RootNamespace>Domain</RootNamespace>
+    </PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="../Domain/Domain.csproj" />
+	</ItemGroup>
+</Project>

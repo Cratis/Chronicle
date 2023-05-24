@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsTestProject>true</IsTestProject>
+        <Nullable>disable</Nullable>
+        <AssemblyName>Read.Specs</AssemblyName>
+        <RootNamespace>Read</RootNamespace>
+    </PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="../Read/Read.csproj" />
+	</ItemGroup>
+</Project>

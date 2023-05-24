@@ -1,12 +1,7 @@
 {
-    "name": "@aksio/cratis-workbench",
-    "type": "module",
+    "name": "sample",
     "version": "1.0.0",
-    "description": "",
     "private": true,
-    "author": "Aksio Insurtech",
-    "license": "MIT",
-    "engineStrict": true,
     "engines": {
         "node": ">= 16"
     },

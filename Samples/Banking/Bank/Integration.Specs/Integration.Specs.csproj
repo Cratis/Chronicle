@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsTestProject>true</IsTestProject>
+        <Nullable>disable</Nullable>
+        <AssemblyName>Integration.Specs</AssemblyName>
+        <RootNamespace>Integration</RootNamespace>
+    </PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="../Integration/Integration.csproj" />
+	</ItemGroup>
+</Project>
