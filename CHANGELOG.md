@@ -1,3 +1,12 @@
+# [v8.19.0] - 2023-5-24 [PR: #883](https://github.com/aksio-insurtech/Cratis/pull/883)
+
+### Added
+
+- Added the capability of retrying a failed partition. This is done by selecting a failed partition in the "failed partitions" view and then clicking the "Retry" button.
+
+<img width="547" alt="image" src="https://github.com/aksio-insurtech/Cratis/assets/134365/5fcd8720-0866-44f1-8cba-75389b53b21a">
+
+
 # [v8.18.7] - 2023-5-16 [PR: #879](https://github.com/aksio-insurtech/Cratis/pull/879)
 
 # Summary
