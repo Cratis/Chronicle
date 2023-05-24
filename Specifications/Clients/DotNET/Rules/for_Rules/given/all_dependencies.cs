@@ -8,7 +8,7 @@ using Aksio.Cratis.Schemas;
 using Aksio.Types;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Rules.for_Rules.given;
+namespace Aksio.Rules.for_Rules.given;
 
 public class all_dependencies : Specification
 {

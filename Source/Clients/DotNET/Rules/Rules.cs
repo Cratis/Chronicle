@@ -11,7 +11,7 @@ using Aksio.Schemas;
 using Aksio.Strings;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Rules;
+namespace Aksio.Rules;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRules"/>.

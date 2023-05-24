@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Rules.for_Rules.when_projecting_to_rule;
+namespace Aksio.Rules.for_Rules.when_projecting_to_rule;
 
 public class without_state : given.no_rules
 {

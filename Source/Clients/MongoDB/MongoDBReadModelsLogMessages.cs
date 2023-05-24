@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Hosting;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Holds the log messages for <see cref="MongoDBReadModels"/>.

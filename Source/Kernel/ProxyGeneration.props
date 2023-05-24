@@ -5,6 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aksio.Applications.ProxyGenerator" PrivateAssets="true" />
+        <PackageReference Include="Aksio.Applications.ProxyGenerator" PrivateAssets="all" />
     </ItemGroup>
 </Project>

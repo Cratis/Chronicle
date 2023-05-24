@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Rules.for_Rules;
+namespace Aksio.Rules.for_Rules;
 
 public class Rule : IRule
 {

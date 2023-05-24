@@ -3,18 +3,18 @@
 
 using System.Collections.Concurrent;
 using System.Reflection;
+using Aksio.Cratis;
 using Aksio.Cratis.Configuration;
 using Aksio.DependencyInversion;
-using Aksio.Cratis.Execution;
-using Aksio.Applications.MongoDB;
+using Aksio.Execution;
 using Aksio.Models;
+using Aksio.MongoDB;
 using Aksio.Reflection;
 using Aksio.Types;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Hosting;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Extension methods for configuring MongoDB based read models.
@@ -39,11 +39,11 @@ public static class MongoDBReadModels
         var logger = loggerFactory.CreateLogger("MongodBReadModels");
 
         _modelNameConvention = modelNameConvention ?? _modelNameConvention;
-        services.AddSingleton<IModelNameConvention>(_modelNameConvention);
+        services.AddSingleton(_modelNameConvention);
 
         services.AddTransient(sp =>
         {
-            var executionContext = sp.GetService<Execution.ExecutionContext>()!;
+            var executionContext = sp.GetService<Aksio.Execution.ExecutionContext>()!;
             lock (_databasesPerTenant)
             {
                 if (_databasesPerTenant.IsEmpty)

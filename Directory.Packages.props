@@ -8,6 +8,7 @@
 		<PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Fundamentals" Version="1.0.1" />
+		<PackageVersion Include="Aksio.MongoDB" Version="1.0.0" />
 		<PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
 		<PackageVersion Include="Aksio.Applications.MongoDB" Version="$(ApplicationModel)" />
 		<PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
@@ -18,10 +19,12 @@
         <PackageVersion Include="System.Data.SqlClient" Version="4.8.3" />
         <PackageVersion Include="System.Net.NameResolution" Version="4.3.0" />
 
-        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
         <PackageVersion Include="automapper" Version="10.1.1" />
         <PackageVersion Include="Azure.Data.Tables" Version="12.7.1"/>
         <PackageVersion Include="FluentValidation" Version="11.5.2"/>
+
+        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
 
         <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
@@ -37,7 +40,6 @@
         <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc9.14" NoWarn="NU5104" />
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.4.0" />
         <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.0.0-beta.10" NoWarn="NU5104" />
-
 
         <!-- Specifications -->
 		<PackageVersion Include="Aksio.Specifications" Version="2.0.1" />

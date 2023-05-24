@@ -44,7 +44,9 @@ public static class WebApplicationBuilderExtensions
         ITypes? types = default,
         Action<IClientBuilder>? configureDelegate = default)
     {
+        webApplicationBuilder.Services.AddRules();
         webApplicationBuilder.Host.UseCratis(microserviceId, types, configureDelegate);
+
         return webApplicationBuilder;
     }
 
@@ -56,7 +58,6 @@ public static class WebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
         app.UseExecutionContext();
-        app.AddCratisClient();
         app.ApplicationServices.GetRequiredService<IClient>();
         return app;
     }

@@ -6,7 +6,7 @@ using Aksio.Cratis.Projections;
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Aksio.Cratis.Rules;
+namespace Aksio.Rules;
 
 /// <summary>
 /// Represents a <see cref="AbstractValidator{T}"/> for business rules related to a command.

@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Rules.for_Rules.for_RuleAttribute;
+namespace Aksio.Rules.for_Rules.for_RuleAttribute;
 
 public class when_validating_without_model_key : given.a_validation_context
 {

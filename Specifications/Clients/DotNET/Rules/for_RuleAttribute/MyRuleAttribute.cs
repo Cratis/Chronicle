@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Aksio.Cratis.Rules.for_Rules.for_RuleAttribute;
+namespace Aksio.Rules.for_Rules.for_RuleAttribute;
 
 public class MyRuleAttribute : RuleAttribute
 {

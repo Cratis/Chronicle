@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Aksio.Cratis.Rules.for_Rules.for_RulesModelValidator;
+namespace Aksio.Rules.for_Rules.for_RulesModelValidator;
 
 public class when_validating_two_rule_sets_with_model_class_having_specific_key : given.two_rule_sets
 {
