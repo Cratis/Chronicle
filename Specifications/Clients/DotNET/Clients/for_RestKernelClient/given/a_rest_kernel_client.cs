@@ -4,10 +4,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Aksio.Cratis.Commands;
+using Aksio.Commands;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Tasks;
-using Aksio.Cratis.Timers;
+using Aksio.Tasks;
+using Aksio.Timers;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;

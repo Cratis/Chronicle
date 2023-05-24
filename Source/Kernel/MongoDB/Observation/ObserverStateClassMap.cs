@@ -3,7 +3,7 @@
 
 #nullable disable
 
-using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Applications.MongoDB;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using MongoDB.Bson.Serialization;
 

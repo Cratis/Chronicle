@@ -3,10 +3,9 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Compliance;
-using Aksio.Cratis.Execution;
 using Aksio.Json;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Schemas;
+using Aksio.Types;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Compliance;

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Schemas;
+using Aksio.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Events.Schemas.MongoDB;

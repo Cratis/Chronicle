@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Tasks;
-using Aksio.Cratis.Timers;
+using Aksio.Tasks;
+using Aksio.Timers;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;

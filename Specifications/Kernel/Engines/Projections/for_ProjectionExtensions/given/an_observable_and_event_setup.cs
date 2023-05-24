@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using System.Reactive.Subjects;
-using Aksio.Cratis.Changes;
+using Aksio.Changes;
 using Aksio.Cratis.EventSequences;
 using Aksio.Properties;
 

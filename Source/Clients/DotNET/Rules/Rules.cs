@@ -4,15 +4,14 @@
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Models;
+using Aksio.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Strings;
-using Aksio.Cratis.Types;
+using Aksio.Schemas;
+using Aksio.Strings;
+using Aksio.Types;
 
-namespace Aksio.Cratis.Applications.Rules;
+namespace Aksio.Cratis.Rules;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRules"/>.

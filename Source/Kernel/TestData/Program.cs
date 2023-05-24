@@ -7,7 +7,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Applications.MongoDB;
 using Aksio.Json;
 using Events.Accounts.Debit;
 using MongoDB.Bson;

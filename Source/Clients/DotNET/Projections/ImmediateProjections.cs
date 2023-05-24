@@ -6,12 +6,11 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Models;
+using Aksio.Schemas;
+using Aksio.Types;
 
 namespace Aksio.Cratis.Projections;
 

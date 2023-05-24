@@ -3,7 +3,7 @@
 
 using FluentValidation;
 
-namespace Aksio.Cratis.Applications.Rules;
+namespace Aksio.Cratis.Rules;
 
 /// <summary>
 /// Defines a rule builder for state on a <see cref="RulesFor{T,TC}"/>.

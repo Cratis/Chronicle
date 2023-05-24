@@ -3,12 +3,12 @@
 
 using System.Reflection;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Reflection;
+using Aksio.Reflection;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Aksio.Cratis.Applications.Rules;
+namespace Aksio.Cratis.Rules;
 
 /// <summary>
 /// Represents a <see cref="ObjectModelValidator"/> for <see cref="RulesFor{TSelf, TCommand}"/>.

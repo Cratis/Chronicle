@@ -3,8 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 
 namespace Aksio.Cratis.Events;
 

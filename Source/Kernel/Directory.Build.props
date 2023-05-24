@@ -1,10 +1,10 @@
 <Project>
+    <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props"/>
+
     <PropertyGroup>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
     </PropertyGroup>
-
-    <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props"/>
 
     <ItemGroup>
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.cs"/>

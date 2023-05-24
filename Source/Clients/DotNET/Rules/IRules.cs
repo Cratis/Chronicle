@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Applications.Rules;
+namespace Aksio.Cratis.Rules;
 
 /// <summary>
 /// Represents a system for working with <see cref="RulesFor{TSelf, TCommand}"/>.

@@ -4,9 +4,9 @@
 using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Reflection;
-using Aksio.Cratis.Changes;
+using Aksio.Changes;
 using Aksio.Properties;
-using Aksio.Cratis.Reflection;
+using Aksio.Reflection;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;

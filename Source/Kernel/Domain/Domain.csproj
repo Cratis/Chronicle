@@ -11,12 +11,12 @@
 	</ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Common/Common.csproj"/>
-        <ProjectReference Include="../Concepts/Concepts.csproj"/>
-        <ProjectReference Include="../Engines/Engines.csproj"/>
-        <ProjectReference Include="../Events/Events.csproj"/>
-        <ProjectReference Include="../Shared/Shared.csproj"/>
-        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj"/>
+        <ProjectReference Include="../Common/Common.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Engines/Engines.csproj" />
+        <ProjectReference Include="../Events/Events.csproj" />
+        <ProjectReference Include="../Shared/Shared.csproj" />
+        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
     </ItemGroup>
 
 </Project>

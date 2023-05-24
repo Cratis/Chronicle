@@ -2,16 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Collections;
+using Aksio.Collections;
 using Aksio.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.MongoDB;
-using Aksio.Cratis.Models;
+using Aksio.Models;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Schemas;
+using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
@@ -78,7 +76,6 @@ public class ClientBuilder : IClientBuilder
 
         services
             .AddHttpClient()
-            .AddMongoDBReadModels(types, loggerFactory: loggerFactory, modelNameConvention: _modelNameConvention)
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
             .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
 
@@ -102,7 +99,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
             .AddObservers(types);
 
         logger.ConfiguringCompliance();

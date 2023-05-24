@@ -1,8 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Execution;
+using Aksio.DependencyInversion;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Projections;
 using Microsoft.AspNetCore.Mvc;

@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;

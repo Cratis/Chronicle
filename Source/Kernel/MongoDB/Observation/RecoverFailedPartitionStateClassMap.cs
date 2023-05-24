@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #nullable disable
-using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Applications.MongoDB;
 using Aksio.Cratis.Kernel.Observation;
 using MongoDB.Bson.Serialization;
 

@@ -4,12 +4,12 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.DependencyInversion;
+using Aksio.DependencyInversion;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.MongoDB;
-using Aksio.Cratis.Models;
-using Aksio.Cratis.Reflection;
-using Aksio.Cratis.Types;
+using Aksio.Applications.MongoDB;
+using Aksio.Models;
+using Aksio.Reflection;
+using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;

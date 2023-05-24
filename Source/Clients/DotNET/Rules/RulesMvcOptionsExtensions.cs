@@ -1,8 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Applications;
-using Aksio.Cratis.Applications.Rules;
+using Aksio.Cratis;
+using Aksio.Cratis.Rules;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Microsoft.Extensions.DependencyInjection;

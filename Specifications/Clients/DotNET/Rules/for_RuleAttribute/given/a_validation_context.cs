@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Aksio.Cratis.Applications.Rules.for_Rules.for_RuleAttribute.given;
+namespace Aksio.Cratis.Rules.for_Rules.for_RuleAttribute.given;
 
 public class a_validation_context : Specification
 {

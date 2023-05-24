@@ -11,13 +11,16 @@
 	</ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aksio.Applications.CQRS" />
+        <PackageReference Include="Aksio.Applications.CQRS.MongoDB" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Common/Common.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Events/Events.csproj" />
         <ProjectReference Include="../Engines/Engines.csproj"/>
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
-        <ProjectReference Include="../../ApplicationModel/CQRS/CQRS.csproj"/>
-        <ProjectReference Include="../../ApplicationModel/CQRS.MongoDB/CQRS.MongoDB.csproj"/>
     </ItemGroup>
 </Project>

@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Applications.MongoDB;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Projections.Definitions;

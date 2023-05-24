@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Orleans.Serialization;
 using Orleans;
 using Orleans.Hosting;
@@ -31,7 +30,6 @@ public static class Program
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
             .UseAksio(
-                _ => _.InKernel(),
                 microserviceId: MicroserviceId.Kernel,
                 microserviceName: "Cratis Kernel")
             .UseOrleans(_ => _

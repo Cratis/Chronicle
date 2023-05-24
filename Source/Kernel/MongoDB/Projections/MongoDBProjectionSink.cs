@@ -4,19 +4,18 @@
 using System.Collections;
 using System.Dynamic;
 using System.Text;
-using Aksio.Cratis.Changes;
+using Aksio.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.MongoDB;
+using Aksio.Applications.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Properties;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Strings;
+using Aksio.Schemas;
+using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
-using IExpandoObjectConverter = Aksio.Cratis.Extensions.MongoDB.IExpandoObjectConverter;
+using IExpandoObjectConverter = Aksio.Applications.MongoDB.IExpandoObjectConverter;
 
 namespace Aksio.Cratis.Projections.MongoDB;
 

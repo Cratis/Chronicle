@@ -4,8 +4,7 @@
 using System.Reflection;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Observation;

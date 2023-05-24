@@ -3,12 +3,12 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Execution;
-using Aksio.Cratis.Models;
+using Aksio.Models;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Applications.Rules.for_Rules.given;
+namespace Aksio.Cratis.Rules.for_Rules.given;
 
 public class all_dependencies : Specification
 {

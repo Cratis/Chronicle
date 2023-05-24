@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Applications.Rules.for_Rules;
+namespace Aksio.Cratis.Rules.for_Rules;
 
 public class RuleWithInvalidDefineStateSignature : IRule
 {

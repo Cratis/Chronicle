@@ -3,6 +3,6 @@
 
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Applications.Rules.for_Rules.for_RulesModelValidator;
+namespace Aksio.Cratis.Rules.for_Rules.for_RulesModelValidator;
 
 public record ModelWithMultipleKeys([ModelKey] string Id, [ModelKey] string SecondId);

@@ -4,14 +4,13 @@
 using System.Text.Json;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Models;
+using Aksio.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Projections.Outbox;
-using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Schemas;
+using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.EventSequences.Outbox;

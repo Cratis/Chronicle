@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections.Definitions;
 
-namespace Aksio.Cratis.Applications.Rules.for_Rules;
+namespace Aksio.Cratis.Rules.for_Rules;
 
 public class when_getting_projection_definition_for_rule_second_time : given.one_rule_for_type
 {

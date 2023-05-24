@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Boot;
+using Aksio.Boot;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
+using Aksio.Schemas;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Schemas;

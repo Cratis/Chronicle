@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Models;
+using Aksio.Models;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Schemas;
+using Aksio.Schemas;
 
 namespace Aksio.Cratis.Integration;
 

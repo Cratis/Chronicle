@@ -3,10 +3,9 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Net;
-using Aksio.Cratis.Tasks;
-using Aksio.Cratis.Timers;
+using Aksio.Net;
+using Aksio.Tasks;
+using Aksio.Timers;
 using Azure.Data.Tables;
 using Microsoft.Extensions.Logging;
 

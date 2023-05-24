@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Aksio.Cratis.Changes;
+using Aksio.Changes;
 
 namespace Aksio.Cratis.Integration.for_ImportBuilderExtensions.given;
 

@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
-using Aksio.Cratis.Types;
+using Aksio.Execution;
+using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

@@ -5,7 +5,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace Aksio.Cratis.Applications.Rules.for_Rules.for_RulesModelValidator.given;
+namespace Aksio.Cratis.Rules.for_Rules.for_RulesModelValidator.given;
 
 public class two_rule_sets : Specification
 {

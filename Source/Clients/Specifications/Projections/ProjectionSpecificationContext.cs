@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Changes;
+using Aksio.Changes;
 using Aksio.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -14,7 +14,7 @@ using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
 using Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
-using Aksio.Cratis.Models;
+using Aksio.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Properties;
 using Aksio.Cratis.Schemas;

@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Properties;
-using Aksio.Cratis.Schemas;
+using Aksio.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;

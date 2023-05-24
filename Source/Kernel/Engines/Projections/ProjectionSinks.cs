@@ -3,7 +3,7 @@
 
 using System.Collections.Concurrent;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 

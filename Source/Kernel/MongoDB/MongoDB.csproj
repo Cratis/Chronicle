@@ -5,10 +5,13 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Aksio.Applications.MongoDB" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Common/Common.csproj" />
         <ProjectReference Include="../Engines/Engines.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="..\Grains\Grains.csproj" />
     </ItemGroup>
 </Project>
