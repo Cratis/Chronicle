@@ -20,7 +20,7 @@ import { Alert, AlertColor, Box, Grid, Snackbar } from '@mui/material';
 import { RedactEvent } from 'API/events/store/sequence/RedactEvent';
 import { RedactEvents } from 'API/events/store/sequence/RedactEvents';
 import { useRouteParams } from './RouteParams';
-import { ModalButtons, ModalResult, useModal } from '@aksio/cratis-mui';
+import { ModalButtons, ModalResult, useModal } from '@aksio/applications-mui';
 import RedactEventModal from './RedactEventModal';
 import GlobalEventTypes from '../GlobalEventTypes';
 import RedactEventsModal from './RedactEventsModal';

@@ -8,6 +8,7 @@
     "scripts": {
         "g:dev": "cd $INIT_CWD && tsc -b && vite serve",
         "g:preview": "cd $INIT_CWD && vite preview",
+        "g:web-build": "cd $INIT_CWD && tsc -b && vite build",
         "g:clean": "cd $INIT_CWD && tsc -b --clean",
         "g:build": "cd $INIT_CWD && tsc -b",
         "g:lint": "cd $INIT_CWD && eslint --cache . --ext .ts,.tsx --quiet --fix",
@@ -24,7 +25,8 @@
         "up": "node ./run-task-on-workspaces.js up"
     },
     "dependencies": {
-        "@aksio/applications": "0.0.9",
+        "@aksio/applications": "0.0.11",
+        "@aksio/applications-mui": "0.0.11",
         "@aksio/fundamentals": "1.0.0",
         "@aksio/typescript": "1.0.0",
         "@ctrl/tinycolor": "3.4.1",

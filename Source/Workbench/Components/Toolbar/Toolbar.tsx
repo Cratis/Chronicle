@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import React, { ReactElement } from 'react';
-import { default as styles } from './Toolbar.module.scss';
 import { IToolbarItemProps } from './IToolbarItemProps';
 import { ToolbarDirection } from './ToolbarDirection';
 import { ToolbarContext } from './ToolbarContext';
@@ -18,11 +17,11 @@ export const Toolbar = (props: IToolbarProps) => {
 
     return (
         <ToolbarContext.Provider value={{ direction }}>
-            <ul className={`${styles.toolbar} ${direction == ToolbarDirection.horizontal ? styles.horizontal : styles.vertical}`} style={props.style}>
+            <ul style={props.style}>
                 {
                     children.map((item, index) => {
                         return (
-                            <li key={index} className={styles.toolbarItem}>{item}</li>
+                            <li key={index}>{item}</li>
                         );
                     })}
             </ul>

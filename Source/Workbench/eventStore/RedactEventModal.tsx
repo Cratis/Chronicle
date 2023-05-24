@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AppendedEventWithJsonAsContent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
-import { IModalProps } from '@aksio/cratis-mui';
+import { IModalProps } from '@aksio/applications-mui';
 import { useState } from 'react';
 import { Box, TextField } from '@mui/material';
 

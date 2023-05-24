@@ -1,7 +1,11 @@
 {
     "name": "sample",
+    "type": "module",
     "version": "1.0.0",
+    "description": "",
     "private": true,
+    "author": "Aksio Insurtech",
+    "license": "MIT",
     "engines": {
         "node": ">= 16"
     },
@@ -10,7 +14,7 @@
         "preview": "yarn g:preview",
         "prepublish": "yarn g:build",
         "clean": "yarn g:clean",
-        "build": "yarn g:build",
+        "build": "yarn g:web-build",
         "lint": "yarn g:lint",
         "lint:ci": "yarn g:lint:ci",
         "test": "yarn g:test",

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ICalloutProps, IconButton, DirectionalHint, TooltipHost, ITooltipHostStyles, TooltipDelay } from '@fluentui/react';
-import { default as styles } from './ToolbarButton.module.scss';
 import { useId } from '@fluentui/react-hooks';
 import { ToolbarContext } from './ToolbarContext';
 import { ToolbarDirection } from './ToolbarDirection';
@@ -39,7 +38,6 @@ export const ToolbarButton = (props: IToolbarButtonProps) => {
                         styles={hostStyles}>
                         <IconButton iconProps={{ iconName: props.icon }}
                             label={props.tooltip}
-                            className={styles.button}
                             onClick={() => props.onClick?.()} />
                     </TooltipHost>
                 );

@@ -5,7 +5,7 @@ import { Route, Routes } from 'react-router-dom';
 import { Header } from './Header';
 import { Configuration } from './configuration/Configuration';
 import { Clients } from './clients/Clients';
-import { Compliance } from './compliance/Compliance';
+// import { Compliance } from './compliance/Compliance';
 import { EventStore } from './eventStore/EventStore';
 
 
@@ -19,7 +19,7 @@ export const App = () => {
                 </Route>
                 <Route path="/configuration/*" element={<Configuration />} />
                 <Route path="/clients/*" element={<Clients />} />
-                <Route path="/compliance/*" element={<Compliance />} />
+                {/* <Route path="/compliance/*" element={<Compliance />} /> */}
                 <Route path="/event-store/*" element={<EventStore />} />
             </Routes>
         </>

@@ -3,6 +3,7 @@
         <TargetFramework>net6.0</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
         <IsPackable>false</IsPackable>
+        <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;CS1591;IDE0060;RCS1163</NoWarn>
 
@@ -13,7 +14,7 @@
 
     <ItemGroup>
         <PackageReference Include="Aksio.Applications" />
-        <PackageReference Include="Aksio.Applications.ProxyGenerator" />
+        <PackageReference Include="Aksio.Applications.ProxyGenerator" PrivateAssets="all"/>
     </ItemGroup>
 
     <ItemGroup>

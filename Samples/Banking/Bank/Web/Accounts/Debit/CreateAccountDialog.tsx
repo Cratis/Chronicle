@@ -14,7 +14,7 @@ import {
     Checkbox,
 } from '@fluentui/react';
 
-import { IDialogProps, DialogResult } from '@aksio/cratis-applications-frontend/dialogs';
+import { IDialogProps, DialogResult } from '@aksio/applications/dialogs';
 
 const dialogContentProps: IDialogContentProps = {
     type: DialogType.normal,

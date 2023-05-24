@@ -8,7 +8,12 @@ import path from 'path';
 export default defineConfig({
     build: {
         outDir: './wwwroot',
-        assetsDir: ''
+        assetsDir: '',
+        rollupOptions: {
+            external: [
+                "@aksio/applications"
+            ]
+        }
     },
     plugins: [
         react(),
@@ -16,7 +21,7 @@ export default defineConfig({
             return {
                 root: viteConfig.root,
                 domain: 'cratis.io',
-                title: 'Cratis Workbench'
+                title: 'Cratis Sample'
             };
         })
     ],
@@ -36,5 +41,5 @@ export default defineConfig({
         alias: {
             'API': path.resolve('./API')
         }
-    }
+    },
 });

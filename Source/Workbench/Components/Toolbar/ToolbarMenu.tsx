@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ReactElement, useState, useRef } from 'react';
-import { default as styles } from './ToolbarMenu.module.scss';
 import { IToolbarItemProps } from './IToolbarItemProps';
 import { ToolbarButton } from './ToolbarButton';
 import { ToolbarContext } from './ToolbarContext';
 import { ToolbarDirection } from './ToolbarDirection';
-import { Guid } from '@aksio/cratis-fundamentals';
+import { Guid } from '@aksio/fundamentals';
 import { Toolbar } from './Toolbar';
 
 export interface IToolbarMenuProps {
@@ -48,7 +47,7 @@ export const ToolbarMenu = (props: IToolbarMenuProps) => {
                     {context => {
                         const direction = context.direction === ToolbarDirection.horizontal ? ToolbarDirection.vertical : ToolbarDirection.horizontal;
                         return (
-                            <div className={`${styles.toolbarMenu} ${context.direction === ToolbarDirection.horizontal ? styles.verticalMenu : styles.horizontalMenu}`} style={style}>
+                            <div style={style}>
                                 <Toolbar direction={direction} style={{margin:0}}>
                                     {props.children}
                                 </Toolbar>

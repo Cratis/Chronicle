@@ -1,18 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import {
-    Panel
-} from '@fluentui/react';
 import { useEffect, useState, useMemo } from 'react';
 import { AllFailedPartitions } from 'API/events/store/failed-partitions/AllFailedPartitions';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { RecoverFailedPartitionState } from 'API/events/store/failed-partitions/RecoverFailedPartitionState';
-import { useBoolean } from '@fluentui/react-hooks';
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
-import { QueryResultWithState } from '@aksio/cratis-applications-frontend/queries';
+import { QueryResultWithState } from '@aksio/applications/queries';
 import { useRouteParams } from './RouteParams';
 import { Box, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid';

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useMemo, useState, ReactElement, useEffect } from 'react';
-import { useDialog, DialogResult } from '@aksio/cratis-applications-frontend/dialogs';
+import { useDialog, DialogResult } from '@aksio/applications/dialogs';
 import { CreateAccountDialog, CreateAccountDialogResult } from './CreateAccountDialog';
 import { Guid } from '@aksio/fundamentals';
 
@@ -25,7 +25,7 @@ import { AllAccounts } from 'API/accounts/debit/AllAccounts';
 import { StartingWith } from 'API/accounts/debit/StartingWith';
 import { LatestTransactions } from 'API/accounts/debit/LatestTransactions';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
-import { CommandScope, CommandScopeContext, useCommandScope } from '@aksio/cratis-applications-frontend/commands';
+import { CommandScope, CommandScopeContext, useCommandScope } from '@aksio/applications/commands';
 import { DebitAccountsList } from './DebitAccountsList';
 import 'reflect-metadata';
 import { AllAccountHoldersWithAccounts } from 'API/accountholders/AllAccountHoldersWithAccounts';
