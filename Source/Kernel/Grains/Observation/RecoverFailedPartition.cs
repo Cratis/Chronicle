@@ -92,7 +92,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
         await SetSubscriberSubscription();
         await WriteStateAsync();
-        ScheduleNextTimer();
+        ScheduleNextTimer(true);
     }
 
     /// <inheritdoc/>
@@ -102,7 +102,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         State.Catchup(fromEvent);
         await SetSubscriberSubscription();
         await WriteStateAsync();
-        ScheduleNextTimer(isCatchup: true);
+        ScheduleNextTimer(isForced: true);
     }
 
     /// <inheritdoc/>
@@ -213,11 +213,11 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         }
     }
 
-    void ScheduleNextTimer(bool isCatchup = false)
+    void ScheduleNextTimer(bool isForced = false)
     {
         if (State.HasBeenInitialized())
         {
-            var nextAttempt = isCatchup ? TimeSpan.Zero : State.GetNextAttemptSchedule();
+            var nextAttempt = isForced ? TimeSpan.Zero : State.GetNextAttemptSchedule();
             _logger.ProcessingScheduled(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, nextAttempt, State.NextSequenceNumberToProcess);
             _timer = RegisterTimer(PerformRecovery, null, nextAttempt, TimeSpan.FromHours(1));
         }

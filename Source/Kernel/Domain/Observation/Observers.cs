@@ -76,6 +76,25 @@ public class Observers : Controller
     }
 
     /// <summary>
+    /// Retry a specific partition for a microservice and tenant.
+    /// </summary>
+    /// <param name="microserviceId"></param>
+    /// <param name="tenantId"></param>
+    /// <param name="observerId"></param>
+    /// <param name="partitionId"></param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("{observerId}/failed-partitions/{tenantId}/retry/{partitionId}")]
+    public async Task RetryPartition(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] TenantId tenantId,
+        [FromRoute] ObserverId observerId,
+        [FromRoute] EventSourceId partitionId)
+    {
+        var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        await observer.TryResumePartition(partitionId);
+    }
+
+    /// <summary>
     /// Rewind a specific observer for a microservice and tenant.
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observer is for.</param>

@@ -10,9 +10,11 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/applications/queries';
 import { useRouteParams } from './RouteParams';
-import { Box, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
-import { DataGrid, GridColDef, GridValueGetterParams } from '@mui/x-data-grid';
+import { Box, Button, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
+import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
 import { Label } from '@mui/icons-material';
+import * as icons from '@mui/icons-material';
+import { RetryPartition } from 'API/events/store/observers/RetryPartition';
 
 let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
@@ -62,12 +64,13 @@ const columns: GridColDef[] = [
 
 export const FailedPartitions = () => {
     const { microserviceId } = useRouteParams();
+    const [retryCommand, setRetryCommandValues] = RetryPartition.use();
 
     const [es] = AllEventSequences.use();
     eventSequences = es;
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
-    const [selectedItem, setSelectedItem] = useState<RecoverFailedPartitionState>();
+    const [selectedFailedPartition, setSelectedFailedPartition] = useState<RecoverFailedPartitionState>();
 
     const [failedPartitions] = AllFailedPartitions.use({
         microserviceId: microserviceId,
@@ -81,7 +84,14 @@ export const FailedPartitions = () => {
     }, [tenants.data]);
 
     const closePanel = () => {
-        setSelectedItem(undefined);
+        setSelectedFailedPartition(undefined);
+    };
+
+    const failedPartitionSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
+        const selectedItems = selectionModel.map(_ => failedPartitions.data.find(__ => __.id == _)) as RecoverFailedPartitionState[];
+        if (selectedItems.length > 0) {
+            setSelectedFailedPartition(selectedItems[0]);
+        }
     };
 
     return (
@@ -105,6 +115,20 @@ export const FailedPartitions = () => {
                             })}
                         </Select>
                     </FormControl>
+
+                    {selectedFailedPartition &&
+                        <Button
+                        startIcon={<icons.RestartAlt />}
+                        onClick={() => {
+                            setRetryCommandValues({
+                                observerId: selectedFailedPartition.observerId,
+                                microserviceId: microserviceId,
+                                tenantId: selectedTenant?.id,
+                                partitionId: selectedFailedPartition.partition,
+                            });
+                            retryCommand.execute();
+                        }}>Retry</Button>
+                    }
                 </Toolbar>
 
                 <Box sx={{ height: '100%', flex: 1 }}>
@@ -116,25 +140,26 @@ export const FailedPartitions = () => {
                                 sortingMode="client"
                                 getRowId={row => row.id}
                                 rows={failedPartitions.data}
+                                onRowSelectionModelChange={failedPartitionSelected}
                             />
                         </Grid>
                         <Grid item xs={4}>
                             <Box>
                                 <Typography variant='h5'>Details</Typography>
-                                {selectedItem &&
+                                {selectedFailedPartition &&
                                     <>
 
-                                        <Typography variant='h6'>{selectedItem?.observerName}</Typography>
+                                        <Typography variant='h6'>{selectedFailedPartition?.observerName}</Typography>
                                         <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
                                             <TextField label='Occurred' disabled
-                                                defaultValue={(selectedItem?.initialPartitionFailedOn || new Date()).toISOString().toLocaleString()} />
+                                                defaultValue={(selectedFailedPartition?.initialPartitionFailedOn || new Date()).toISOString().toLocaleString()} />
                                         </FormControl>
                                         <Label>Messages</Label>
                                         {
-                                            (selectedItem?.messages) && selectedItem.messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
+                                            (selectedFailedPartition?.messages) && selectedFailedPartition.messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
                                         }
                                         <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
-                                            <TextField label="Stack Trace" disabled defaultValue={selectedItem?.stackTrace} multiline title={selectedItem?.stackTrace.toString()} />
+                                            <TextField label="Stack Trace" disabled defaultValue={selectedFailedPartition?.stackTrace} multiline title={selectedFailedPartition?.stackTrace.toString()} />
                                         </FormControl>
                                     </>}
                             </Box>
