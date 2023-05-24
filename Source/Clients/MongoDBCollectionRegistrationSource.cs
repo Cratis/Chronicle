@@ -8,7 +8,7 @@ using Autofac.Builder;
 using Autofac.Core;
 using MongoDB.Driver;
 
-namespace Aksio.Applications.MongoDB;
+namespace Aksio.MongoDB;
 
 /// <summary>
 /// Represents a <see cref="IRegistrationSource"/> for automatically hooking up dependencies to <see cref="IMongoCollection{T}"/> that are not already registered.

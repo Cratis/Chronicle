@@ -6,7 +6,7 @@ using System.Dynamic;
 using System.Text;
 using Aksio.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Applications.MongoDB;
+using Aksio.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Properties;
@@ -15,7 +15,7 @@ using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
-using IExpandoObjectConverter = Aksio.Applications.MongoDB.IExpandoObjectConverter;
+using IExpandoObjectConverter = Aksio.MongoDB.IExpandoObjectConverter;
 
 namespace Aksio.Cratis.Projections.MongoDB;
 
