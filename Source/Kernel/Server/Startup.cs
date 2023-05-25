@@ -11,7 +11,6 @@ public class Startup
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddRules();
         services.AddHttpClient(ConnectedClients.ConnectedClientsHttpClient).ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
         {
             #pragma warning disable MA0039 // Allowing self-signed certificates for clients connecting to the Kernel
@@ -23,5 +22,6 @@ public class Startup
     {
         app.UseRouting();
         app.UseAksio();
+        app.UseCratis();
     }
 }

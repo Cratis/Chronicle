@@ -9,5 +9,6 @@ public class Startup
     {
         app.UseRouting();
         app.UseAksio();
+        app.UseCratis();
     }
 }

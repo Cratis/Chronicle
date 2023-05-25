@@ -16,8 +16,8 @@ const root = createRoot(document.getElementById('root')!);
 root.render(
     <BrowserRouter>
         <ThemeProvider theme={theme}>
-            <CssBaseline />
             <ModalProvider>
+                <CssBaseline />
                 <Paper elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <App />
                 </Paper>
