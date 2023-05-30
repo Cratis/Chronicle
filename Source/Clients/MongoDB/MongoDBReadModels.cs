@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using Aksio.Cratis;
 using Aksio.Cratis.Configuration;
-using Aksio.DependencyInversion;
+using Aksio.Cratis.MongoDB;
 using Aksio.Execution;
 using Aksio.Models;
 using Aksio.MongoDB;
@@ -29,14 +29,20 @@ public static class MongoDBReadModels
     /// Add all services related to being able to use MongoDB for read models.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="types"><see cref="ITypes"/> for discovery.</param>
-    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <param name="modelNameConvention">Optional type of the model name convention to use. If not specified it will use <see cref="DefaultModelNameConvention"/>.</param>
+    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
+    /// <param name="readModelTypeProvider">Optional <see cref="ICanProvideMongoDBReadModelTypes"/> for providing the read model types. Will default to <see cref="DefaultMongoDBReadModelTypesProvider"/>.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddMongoDBReadModels(this IServiceCollection services, ITypes types, ILoggerFactory? loggerFactory = default, IModelNameConvention? modelNameConvention = default)
+    public static IServiceCollection UseMongoDBReadModels(
+        this IServiceCollection services,
+        IModelNameConvention? modelNameConvention = default,
+        ILoggerFactory? loggerFactory = default,
+        ICanProvideMongoDBReadModelTypes? readModelTypeProvider = default)
     {
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
         var logger = loggerFactory.CreateLogger("MongodBReadModels");
+
+        readModelTypeProvider ??= new DefaultMongoDBReadModelTypesProvider(ProjectReferencedAssemblies.Instance);
 
         _modelNameConvention = modelNameConvention ?? _modelNameConvention;
         services.AddSingleton(_modelNameConvention);
@@ -54,9 +60,7 @@ public static class MongoDBReadModels
             return _databasesPerTenant[executionContext.TenantId];
         });
 
-        var readModelTypes = GetMongoCollections(types).ToList();
-        readModelTypes.AddRange(GetProvidersForMongoCollections(types, readModelTypes));
-
+        var readModelTypes = readModelTypeProvider.Provide();
         RegisterMongoCollectionTypes(services, readModelTypes, logger);
         return services;
     }
@@ -105,22 +109,4 @@ public static class MongoDBReadModels
             _databasesPerTenant[tenant] = client.GetDatabase(url.DatabaseName);
         }
     }
-
-    static IEnumerable<Type> GetMongoCollections(ITypes types) => types.All.SelectMany(_ => _
-            .GetConstructors().SelectMany(c => c.GetParameters())
-            .Where(_ =>
-                _.ParameterType.IsGenericType && IsMongoCollection(_.ParameterType)))
-            .Select(_ => _.ParameterType.GetGenericArguments()[0]);
-
-    static IEnumerable<Type> GetProvidersForMongoCollections(ITypes types, IEnumerable<Type> typesToSkip) => types.All.Except(typesToSkip).SelectMany(_ => _
-            .GetConstructors().SelectMany(c => c.GetParameters())
-            .Where(_ =>
-                _.ParameterType.IsGenericType &&
-                _.ParameterType.GetGenericArguments()[0].IsGenericType &&
-                IsProviderForMongoCollection(_.ParameterType)))
-            .Select(_ => _.ParameterType.GetGenericArguments()[0].GetGenericArguments()[0]);
-
-    static bool IsMongoCollection(Type type) => type.IsAssignableTo(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0]));
-
-    static bool IsProviderForMongoCollection(Type type) => type.IsAssignableTo(typeof(ProviderFor<>).MakeGenericType(typeof(IMongoCollection<>).MakeGenericType(type.GetGenericArguments()[0].GetGenericArguments()[0])));
 }
