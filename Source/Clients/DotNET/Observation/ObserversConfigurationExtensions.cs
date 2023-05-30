@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
-using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Observation;
@@ -16,11 +15,11 @@ public static class ObserversConfigurationExtensions
     /// Add observers to the service collection.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="types"><see cref="ITypes"/> for discoverability.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <returns>Continuation.</returns>
-    public static IServiceCollection AddObservers(this IServiceCollection services, ITypes types)
+    public static IServiceCollection AddObservers(this IServiceCollection services, IClientArtifactsProvider clientArtifacts)
     {
-        types.AllObservers().ForEach(_ => services.AddTransient(_));
+        clientArtifacts.Observers.ForEach(_ => services.AddTransient(_));
         return services;
     }
 }

@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Aksio.Reflection;
-using Aksio.Types;
 
 namespace Aksio.Cratis.Events;
 
@@ -20,10 +19,10 @@ public class EventTypes : IEventTypes
     /// <summary>
     /// /// Initializes a new instance of <see cref="EventTypes"/>.
     /// </summary>
-    /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
-    public EventTypes(ITypes types)
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
+    public EventTypes(IClientArtifactsProvider clientArtifacts)
     {
-        _typesByEventType = types.All
+        _typesByEventType = clientArtifacts.All
                         .Where(_ => _.HasAttribute<EventTypeAttribute>())
                         .ToDictionary(_ => _.GetCustomAttribute<EventTypeAttribute>()!.Type!, _ => _);
 

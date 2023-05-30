@@ -62,17 +62,14 @@ public class ClientBuilder : IClientBuilder
     public void Build(
         HostBuilderContext hostBuilderContext,
         IServiceCollection services,
-        ITypes? types = default,
+        IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
         var logger = loggerFactory.CreateLogger<ClientBuilder>()!;
         logger.Configuring();
 
-        if (types == default)
-        {
-            types = new Types.Types();
-        }
+        clientArtifacts ??= new DefaultClientArtifactsProvider(ProjectReferencedAssemblies.Instance);
 
         services
             .AddHttpClient()
@@ -88,10 +85,8 @@ public class ClientBuilder : IClientBuilder
         logger.ConfiguringServices();
         services
             .AddCratisClient()
-            .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
-            .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()
-            .AddSingleton(types)
+            .AddSingleton(clientArtifacts)
             .AddSingleton<IClientLifecycle, ClientLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
@@ -99,14 +94,14 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddObservers(types);
+            .AddObservers(clientArtifacts);
 
         logger.ConfiguringCompliance();
 
-        types.All.Where(_ =>
+        clientArtifacts.All.Where(_ =>
                     _ != typeof(ICanProvideComplianceMetadataForType) &&
                     _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
-        types.All.Where(_ =>
+        clientArtifacts.All.Where(_ =>
                     _ != typeof(ICanProvideComplianceMetadataForProperty) &&
                     _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
     }

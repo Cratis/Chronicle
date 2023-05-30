@@ -27,7 +27,7 @@ public class ImmediateProjections : IImmediateProjections
     }
 
     readonly IModelNameConvention _modelNameConvention;
-    readonly ITypes _types;
+    readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
@@ -40,7 +40,7 @@ public class ImmediateProjections : IImmediateProjections
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
     /// </summary>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
-    /// <param name="types"><see cref="ITypes"/> for finding types.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing projections.</param>
     /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
@@ -50,7 +50,7 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         IModelNameConvention modelNameConvention,
-        ITypes types,
+        IClientArtifactsProvider clientArtifacts,
         IServiceProvider serviceProvider,
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
@@ -60,7 +60,7 @@ public class ImmediateProjections : IImmediateProjections
         IExecutionContextManager executionContextManager)
     {
         _modelNameConvention = modelNameConvention;
-        _types = types;
+        _clientArtifacts = clientArtifacts;
         _serviceProvider = serviceProvider;
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
@@ -119,7 +119,7 @@ public class ImmediateProjections : IImmediateProjections
     {
         if (ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance is null)
         {
-            var projectionType = _types.FindSingle<IImmediateProjectionFor<TModel>>();
+            var projectionType = _clientArtifacts.FindSingle<IImmediateProjectionFor<TModel>>();
             if (projectionType is null)
             {
                 throw new MissingImmediateProjectionForModel(typeof(TModel));

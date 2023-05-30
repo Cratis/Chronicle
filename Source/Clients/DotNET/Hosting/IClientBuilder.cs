@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Models;
-using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -32,7 +31,7 @@ public interface IClientBuilder
     /// </summary>
     /// <param name="hostBuilderContext"><see cref="HostBuilderContext"/> we're building for.</param>
     /// <param name="services"><see cref="IServiceCollection"/> to register services for.</param>
-    /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
-    void Build(HostBuilderContext hostBuilderContext, IServiceCollection services, ITypes? types = default, ILoggerFactory? loggerFactory = default);
+    void Build(HostBuilderContext hostBuilderContext, IServiceCollection services, IClientArtifactsProvider? clientArtifacts = default, ILoggerFactory? loggerFactory = default);
 }

@@ -45,7 +45,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="client">The Cratis <see cref="IClient"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
-    /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
@@ -55,7 +55,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         IClient client,
         IExecutionContextManager executionContextManager,
         IEventTypes eventTypes,
-        ITypes types,
+        IClientArtifactsProvider clientArtifacts,
         IModelNameConvention modelNameConvention,
         IJsonSchemaGenerator schemaGenerator,
         IJsonProjectionSerializer projectionSerializer,
@@ -68,7 +68,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         _projectionSerializer = projectionSerializer;
         _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
-        _projections = FindAllProjectionDefinitions(eventTypes, types, schemaGenerator, jsonSerializerOptions);
+        _projections = FindAllProjectionDefinitions(eventTypes, clientArtifacts, schemaGenerator, jsonSerializerOptions);
     }
 
     /// <inheritdoc/>
@@ -101,10 +101,10 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
 
     IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
-        ITypes types,
+        IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions) =>
-        types.All
+        clientArtifacts.All
                 .Where(_ => _.HasInterface(typeof(IProjectionFor<>)))
                 .Select(_ =>
                 {

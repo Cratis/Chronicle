@@ -9,7 +9,7 @@ using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Schemas;
 using Aksio.Strings;
-using Aksio.Types;
+using Aksio.Cratis;
 
 namespace Aksio.Rules;
 
@@ -43,7 +43,7 @@ public class Rules : IRules
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> used for generating projection definitions.</param>
     /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
     /// <param name="immediateProjections"><see cref="IImmediateProjections"/> client.</param>
-    /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     public Rules(
         ExecutionContext executionContext,
         IModelNameConvention modelNameConvention,
@@ -51,9 +51,9 @@ public class Rules : IRules
         IJsonSchemaGenerator jsonSchemaGenerator,
         JsonSerializerOptions serializerOptions,
         IImmediateProjections immediateProjections,
-        ITypes types)
+        IClientArtifactsProvider clientArtifacts)
     {
-        var ruleTypes = types.All.Where(_ =>
+        var ruleTypes = clientArtifacts.All.Where(_ =>
             _.BaseType?.IsGenericType == true &&
             _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
 
