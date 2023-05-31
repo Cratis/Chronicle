@@ -53,11 +53,7 @@ public class Rules : IRules
         IImmediateProjections immediateProjections,
         IClientArtifactsProvider clientArtifacts)
     {
-        var ruleTypes = clientArtifacts.All.Where(_ =>
-            _.BaseType?.IsGenericType == true &&
-            _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
-
-        _rulesPerCommand = ruleTypes
+        _rulesPerCommand = clientArtifacts.Rules
             .GroupBy(_ => _.BaseType!.GetGenericArguments()[1])
             .ToDictionary(_ => _.Key, _ => _.ToArray().AsEnumerable());
         _executionContext = executionContext;

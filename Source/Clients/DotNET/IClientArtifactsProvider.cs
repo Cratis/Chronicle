@@ -24,6 +24,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> ImmediateProjections { get; }
 
     /// <summary>
+    /// Gets all the available outbox projection types.
+    /// </summary>
+    IEnumerable<Type> OutboxProjections { get; }
+
+    /// <summary>
     /// Gets all the available adapters types.
     /// </summary>
     IEnumerable<Type> Adapters { get; }
@@ -34,17 +39,27 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Observers { get; }
 
     /// <summary>
+    /// Gets all the available observer middleware types.
+    /// </summary>
+    IEnumerable<Type> ObserverMiddlewares { get; }
+
+    /// <summary>
     /// Gets all the available providers of compliance metadata for types.
     /// </summary>
-    IEnumerable<Type> ComplianceForTypesProviders { get; }
+    IEnumerable<Type> ComplianceForTypesProviders { get; }
 
     /// <summary>
     /// Gets all the available providers of compliance metadata for properties.
     /// </summary>
-    IEnumerable<Type> ComplianceForPropertiesProviders { get; }
+    IEnumerable<Type> ComplianceForPropertiesProviders { get; }
 
     /// <summary>
     /// Gets all the available rule types.
     /// </summary>
-    IEnumerable<Type> Rules { get; }
+    IEnumerable<Type> Rules { get; }
+
+    /// <summary>
+    /// Gets all the available event information provider types.
+    /// </summary>
+    IEnumerable<Type> AdditionalEventInformationProviders { get; }
 }

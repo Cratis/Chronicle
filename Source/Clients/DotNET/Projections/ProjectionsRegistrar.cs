@@ -104,8 +104,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions) =>
-        clientArtifacts.All
-                .Where(_ => _.HasInterface(typeof(IProjectionFor<>)))
+        clientArtifacts.Projections
                 .Select(_ =>
                 {
                     var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;

@@ -98,11 +98,7 @@ public class ClientBuilder : IClientBuilder
 
         logger.ConfiguringCompliance();
 
-        clientArtifacts.All.Where(_ =>
-                    _ != typeof(ICanProvideComplianceMetadataForType) &&
-                    _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
-        clientArtifacts.All.Where(_ =>
-                    _ != typeof(ICanProvideComplianceMetadataForProperty) &&
-                    _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
+        clientArtifacts.ComplianceForTypesProviders.ForEach(_ => services.AddTransient(_));
+        clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => services.AddTransient(_));
     }
 }

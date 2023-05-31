@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Reflection;
 
 namespace Aksio.Cratis.Events;
 
@@ -22,8 +21,7 @@ public class EventTypes : IEventTypes
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     public EventTypes(IClientArtifactsProvider clientArtifacts)
     {
-        _typesByEventType = clientArtifacts.All
-                        .Where(_ => _.HasAttribute<EventTypeAttribute>())
+        _typesByEventType = clientArtifacts.EventTypes
                         .ToDictionary(_ => _.GetCustomAttribute<EventTypeAttribute>()!.Type!, _ => _);
 
         All = _typesByEventType.Keys.ToArray();

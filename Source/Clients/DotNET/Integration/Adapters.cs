@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Types;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;
@@ -42,7 +41,7 @@ public class Adapters : IAdapters
     public async Task Initialize()
     {
         var adapterArtifactsGenericType = typeof(AdapterArtifacts<,>);
-        foreach (var adapterType in _clientArtifacts.FindMultiple(typeof(IAdapterFor<,>)))
+        foreach (var adapterType in _clientArtifacts.Adapters)
         {
             var adapterInterface = adapterType.GetInterface(typeof(IAdapterFor<,>).Name)!;
             var adapterArtifactsType = adapterArtifactsGenericType.MakeGenericType(adapterInterface.GenericTypeArguments);
