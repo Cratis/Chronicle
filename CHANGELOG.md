@@ -1,3 +1,11 @@
+# [v8.19.1] - 2023-5-31 [PR: #887](https://github.com/aksio-insurtech/Cratis/pull/887)
+
+### Fixed
+
+- Default details for `useIdentity()` should be optional, this was a breaking change from previous API that was not supposed to be breaking.
+
+
+
 # [v8.19.0] - 2023-5-24 [PR: #883](https://github.com/aksio-insurtech/Cratis/pull/883)
 
 ### Added
