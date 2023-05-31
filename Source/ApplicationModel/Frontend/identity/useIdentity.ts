@@ -10,7 +10,7 @@ import { IIdentityContext } from './IIdentityContext';
  * @param defaultDetails Optional default details to use if the context is not set.
  * @returns An identity context.
  */
-export function useIdentity<TDetails = {}>(defaultDetails: TDetails | undefined | null): IIdentityContext<TDetails> {
+export function useIdentity<TDetails = {}>(defaultDetails?: TDetails | undefined | null): IIdentityContext<TDetails> {
     const context = React.useContext(IdentityProviderContext) as IIdentityContext<TDetails>;
     if (context.isSet === false && defaultDetails !== undefined) {
         context.details = defaultDetails!;
