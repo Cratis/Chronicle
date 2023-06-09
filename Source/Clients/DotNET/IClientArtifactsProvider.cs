@@ -26,7 +26,7 @@ public interface IClientArtifactsProvider
     /// <summary>
     /// Gets all the available outbox projection types.
     /// </summary>
-    IEnumerable<Type> OutboxProjections { get; }
+    IEnumerable<Type> OutboxProjections { get; }
 
     /// <summary>
     /// Gets all the available adapters types.
@@ -41,7 +41,7 @@ public interface IClientArtifactsProvider
     /// <summary>
     /// Gets all the available observer middleware types.
     /// </summary>
-    IEnumerable<Type> ObserverMiddlewares { get; }
+    IEnumerable<Type> ObserverMiddlewares { get; }
 
     /// <summary>
     /// Gets all the available providers of compliance metadata for types.
