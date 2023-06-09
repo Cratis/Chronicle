@@ -5,9 +5,9 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Aksio.Changes;
-using Aksio.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Dynamic;
 using Aksio.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;

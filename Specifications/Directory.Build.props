@@ -1,5 +1,4 @@
 <Project>
-    <Import Project="$(MSBuildThisFileDirectory)../Versions.props"/>
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <IsTestProject>true</IsTestProject>

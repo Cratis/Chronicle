@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.DependencyInversion;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;

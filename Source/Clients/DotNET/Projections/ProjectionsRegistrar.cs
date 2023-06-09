@@ -8,9 +8,7 @@ using Aksio.Cratis.Events;
 using Aksio.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
-using Aksio.Reflection;
 using Aksio.Schemas;
-using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Projections;

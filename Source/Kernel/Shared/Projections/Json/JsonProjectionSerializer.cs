@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Json;
 using Aksio.Cratis.Projections.Definitions;
+using Aksio.Json;
 using Aksio.Properties;
 
 namespace Aksio.Cratis.Projections.Json;

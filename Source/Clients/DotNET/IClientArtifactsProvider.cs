@@ -5,7 +5,7 @@ namespace Aksio.Cratis;
 
 /// <summary>
 /// Defines a system that can provide the different client artifacts.
-/// /// </summary>
+/// </summary>
 public interface IClientArtifactsProvider
 {
     /// <summary>

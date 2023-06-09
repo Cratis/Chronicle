@@ -1,12 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.DependencyInversion;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
+using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans;
 

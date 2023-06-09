@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using System.Linq.Expressions;
-using Aksio.Concepts;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Projections.Expressions;
 using Aksio.Properties;

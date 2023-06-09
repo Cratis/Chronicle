@@ -10,7 +10,6 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Models;
 using Aksio.Schemas;
-using Aksio.Types;
 
 namespace Aksio.Cratis.Projections;
 

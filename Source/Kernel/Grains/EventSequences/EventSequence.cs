@@ -2,16 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
+using Aksio.DependencyInversion;
+using Aksio.Json;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;

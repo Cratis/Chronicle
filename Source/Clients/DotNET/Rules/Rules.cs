@@ -3,13 +3,13 @@
 
 using System.Reflection;
 using System.Text.Json;
+using Aksio.Cratis;
 using Aksio.Cratis.Events;
-using Aksio.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
+using Aksio.Models;
 using Aksio.Schemas;
 using Aksio.Strings;
-using Aksio.Cratis;
 
 namespace Aksio.Rules;
 

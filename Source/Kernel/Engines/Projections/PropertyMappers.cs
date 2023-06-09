@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Dynamic;
 using Aksio.Cratis.Events;
+using Aksio.Dynamic;
 using Aksio.Properties;
-using Aksio.Types;
 using Aksio.Schemas;
+using Aksio.Types;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;

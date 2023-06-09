@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Projections;
-using Aksio.Reflection;
-using Aksio.Schemas;
-using Aksio.Changes;
 using Aksio.Dynamic;
 using Aksio.Json;
+using Aksio.Reflection;
+using Aksio.Schemas;
 using Aksio.Types;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.InMemory;

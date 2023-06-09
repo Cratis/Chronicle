@@ -19,20 +19,6 @@ namespace Aksio.Cratis;
 /// </remarks>
 public class DefaultClientArtifactsProvider : IClientArtifactsProvider
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultClientArtifactsProvider"/> class.
-    /// </summary>
-    /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
-    public DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider)
-    {
-        EventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
-        ComplianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
-        ComplianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
-        Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
-        Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>))).ToArray();
-        Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-    }
-
     /// <inheritdoc/>
     public IEnumerable<Type> EventTypes { get; }
 
@@ -65,4 +51,18 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> AdditionalEventInformationProviders => throw new NotImplementedException();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultClientArtifactsProvider"/> class.
+    /// </summary>
+    /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
+    public DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider)
+    {
+        EventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
+        ComplianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
+        ComplianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
+        Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
+        Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>))).ToArray();
+        Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
+    }
 }
