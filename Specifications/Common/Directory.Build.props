@@ -10,17 +10,16 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="xunit" Version="2.4.2" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
-        <PackageReference Include="moq" Version="$(Moq)" />
+        <PackageReference Include="moq" />
 
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
-        <PackageReference Include="Machine.Specifications.Runner.VisualStudio" Version="2.10.2" />
-        <PackageReference Include="Aksio.Specifications" Version="2.0.1" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Aksio.Specifications" />
     </ItemGroup>
 
     <ItemGroup>

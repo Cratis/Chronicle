@@ -1,17 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="$(MSBuildThisFileDirectory)../../Versions.props"/>
     <PropertyGroup>
         <AssemblyName>Aksio.Cratis.Common.Specs</AssemblyName>
         <RootNamespace>Aksio.Cratis.Common</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Source/Fundamentals/Fundamentals.csproj"/>
         <ProjectReference Include="../../Source/Kernel/Orleans/Orleans.csproj"/>
-        <ProjectReference Include="../../Source/Extensions/Specifications/Specifications.csproj"/>
+        <ProjectReference Include="../../Source/Clients/Specifications/Specifications.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
     </ItemGroup>
 </Project>

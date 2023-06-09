@@ -30,6 +30,7 @@
         <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Server" Version="$(Orleans)" />
+        <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
 
         <PackageVersion Include="Microsoft.Orleans.OrleansTelemetryConsumers.AI" Version="$(Orleans)" />
         <PackageVersion Include="OrleansDashboard" Version="3.6.2" />
