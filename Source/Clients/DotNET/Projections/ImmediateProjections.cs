@@ -9,6 +9,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Models;
+using Aksio.Reflection;
 using Aksio.Schemas;
 
 namespace Aksio.Cratis.Projections;
@@ -118,7 +119,7 @@ public class ImmediateProjections : IImmediateProjections
     {
         if (ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance is null)
         {
-            var projectionType = _clientArtifacts.FindSingle<IImmediateProjectionFor<TModel>>();
+            var projectionType = _clientArtifacts.ImmediateProjections.Single(_ => _.HasInterface<IImmediateProjectionFor<TModel>>());
             if (projectionType is null)
             {
                 throw new MissingImmediateProjectionForModel(typeof(TModel));
