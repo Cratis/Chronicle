@@ -6,6 +6,7 @@ using Aksio.Cratis.Kernel.Orleans.Serialization;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
+using Aksio.Types;
 
 #pragma warning disable SA1600
 namespace Aksio.Cratis.Kernel.Server;
@@ -22,7 +23,7 @@ public static class Program
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-        Types.Types.AddAssemblyPrefixesToExclude("OpenTelemetry");
+        PackageReferencedAssemblies.AddAssemblyPrefixesToExclude("OpenTelemetry");
 
         return CreateHostBuilder(args).RunConsoleAsync();
     }
