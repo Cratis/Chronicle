@@ -74,7 +74,8 @@ public class ClientBuilder : IClientBuilder
         services
             .AddHttpClient()
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
-            .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
+            .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox)
+            .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention());
 
         if (_inKernel)
         {

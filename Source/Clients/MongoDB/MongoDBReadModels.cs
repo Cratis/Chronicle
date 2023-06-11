@@ -23,19 +23,16 @@ public static class MongoDBReadModels
 {
     static readonly MethodInfo _getCollectionMethod = typeof(IMongoDatabase).GetMethod(nameof(IMongoDatabase.GetCollection), BindingFlags.Public | BindingFlags.Instance)!;
     static readonly ConcurrentDictionary<TenantId, IMongoDatabase> _databasesPerTenant = new();
-    static IModelNameConvention _modelNameConvention = new DefaultModelNameConvention();
 
     /// <summary>
     /// Add all services related to being able to use MongoDB for read models.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
-    /// <param name="modelNameConvention">Optional type of the model name convention to use. If not specified it will use <see cref="DefaultModelNameConvention"/>.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <param name="readModelTypeProvider">Optional <see cref="ICanProvideMongoDBReadModelTypes"/> for providing the read model types. Will default to <see cref="DefaultMongoDBReadModelTypesProvider"/>.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection UseMongoDBReadModels(
         this IServiceCollection services,
-        IModelNameConvention? modelNameConvention = default,
         ILoggerFactory? loggerFactory = default,
         ICanProvideMongoDBReadModelTypes? readModelTypeProvider = default)
     {
@@ -43,9 +40,6 @@ public static class MongoDBReadModels
         var logger = loggerFactory.CreateLogger("MongodBReadModels");
 
         readModelTypeProvider ??= new DefaultMongoDBReadModelTypesProvider(ProjectReferencedAssemblies.Instance);
-
-        _modelNameConvention = modelNameConvention ?? _modelNameConvention;
-        services.AddSingleton(_modelNameConvention);
 
         services.AddTransient(sp =>
         {
@@ -65,12 +59,7 @@ public static class MongoDBReadModels
         return services;
     }
 
-    /// <summary>
-    /// Get the actual model name typically used as the collection name from a given read model type.
-    /// </summary>
-    /// <param name="readModelType">Type of read model to get for.</param>
-    /// <returns>Name of the read model.</returns>
-    public static string GetReadModelName(Type readModelType)
+    static string GetReadModelName(IModelNameConvention modelNameConvention, Type readModelType)
     {
         if (readModelType.HasAttribute<ModelNameAttribute>())
         {
@@ -78,14 +67,15 @@ public static class MongoDBReadModels
             return modelNameAttribute.Name;
         }
 
-        return _modelNameConvention.GetNameFor(readModelType);
+        return modelNameConvention.GetNameFor(readModelType);
     }
 
     static void RegisterMongoCollectionTypes(IServiceCollection services, IEnumerable<Type> readModelTypes, ILogger logger)
     {
+        var modelNameConvention = services.BuildServiceProvider().GetService<IModelNameConvention>() ?? new DefaultModelNameConvention();
         foreach (var readModelType in readModelTypes)
         {
-            var modelName = GetReadModelName(readModelType);
+            var modelName = GetReadModelName(modelNameConvention, readModelType);
 
             logger.AddingMongoDBCollectionBinding(readModelType, modelName);
             services.AddTransient(typeof(IMongoCollection<>).MakeGenericType(readModelType), (sp) =>
