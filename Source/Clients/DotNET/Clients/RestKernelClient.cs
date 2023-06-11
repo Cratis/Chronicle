@@ -155,18 +155,17 @@ public abstract class RestKernelClient : IClient, IDisposable
         ThrowIfClientIsDisconnected();
 
         var client = CreateReadyHttpClient();
-        HttpResponseMessage response;
+        QueryResult result;
 
         if (queryString is not null)
         {
             var uri = QueryHelpers.AddQueryString(route, queryString!);
-            response = await client.GetAsync(uri);
+            result = (await client.GetFromJsonAsync<QueryResult>(uri, options: _jsonSerializerOptions))!;
         }
         else
         {
-            response = await client.GetAsync(route);
+            result = (await client.GetFromJsonAsync<QueryResult>(route, options: _jsonSerializerOptions))!;
         }
-        var result = (await response.Content.ReadFromJsonAsync<QueryResult>(_jsonSerializerOptions))!;
         LogQueryResult(route, result);
         var element = (JsonElement)result.Data;
         var deserializedData = element.Deserialize<TResult>(_jsonSerializerOptions)!;
