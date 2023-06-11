@@ -42,12 +42,12 @@ public static class ClientServiceCollectionExtensions
             var taskFactory = _.GetRequiredService<ITaskFactory>();
             var timerFactory = _.GetRequiredService<ITimerFactory>();
 
-            var loadBalancedHttpClientFactory = loadBalancer.CreateHttpClientFactory(new RoundRobinLoadBalancerStrategy());
             if (configuration.Kernel.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
             {
                 throw new UnableToResolveClientUri();
             }
 
+            var loadBalancedHttpClientFactory = loadBalancer.CreateHttpClientFactory(new RoundRobinLoadBalancerStrategy());
             var clientEndpoint = configuration.Kernel.AdvertisedClientEndpoint ?? addresses!.GetFirstAddressAsUri();
             IClient client = configuration.Kernel.Type switch
             {
