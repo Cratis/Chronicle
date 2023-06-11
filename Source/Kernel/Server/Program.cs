@@ -30,10 +30,10 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
-            .UseCratis()
             .UseAksio(
                 microserviceId: MicroserviceId.Kernel,
                 microserviceName: "Cratis Kernel")
+            .UseCratis()
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
