@@ -5,7 +5,6 @@ using Aksio.Cratis;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Hosting;
 using Aksio.Execution;
-using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -59,7 +58,10 @@ public static class WebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
         app.UseExecutionContext();
-        app.ApplicationServices.GetRequiredService<IClient>();
+
+        var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+        appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<IClient>());
+
         return app;
     }
 }
