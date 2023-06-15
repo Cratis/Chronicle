@@ -26,14 +26,14 @@ export default defineConfig({
         })
     ],
     server: {
-        port: 9200,
+        port: 9100,
         proxy: {
             '/api': {
-                target: 'http://localhost:5200',
+                target: 'http://localhost:5100',
                 ws: true
             },
             '/swagger': {
-                target: 'http://localhost:5200'
+                target: 'http://localhost:5100'
             }
         }
     },

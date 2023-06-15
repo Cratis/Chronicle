@@ -30,6 +30,7 @@ public static class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
+            .UseMongoDB()
             .UseAksio(
                 microserviceId: MicroserviceId.Kernel,
                 microserviceName: "Cratis Kernel")
