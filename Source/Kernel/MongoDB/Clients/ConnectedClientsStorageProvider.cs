@@ -5,7 +5,6 @@ using Aksio.Cratis.Clients;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
-using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -29,26 +28,28 @@ public class ConnectedClientsStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState) => Task.CompletedTask;
+    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var microserviceId = (MicroserviceId)grainReference.GetPrimaryKey();
+        var actualGrainState = (grainState as IGrainState<ConnectedClientsState>)!;
+        var microserviceId = (MicroserviceId)grainId.GetGuidKey();
         var cursor = await Collection.FindAsync(_ => _.Id == microserviceId);
         var mongoState = await cursor.FirstOrDefaultAsync();
 
-        grainState.State = new ConnectedClientsState
+        actualGrainState.State = new ConnectedClientsState
         {
             Clients = new List<ConnectedClient>(mongoState?.Clients ?? Enumerable.Empty<ConnectedClient>())
         };
     }
 
     /// <inheritdoc/>
-    public Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var microserviceId = (MicroserviceId)grainReference.GetPrimaryKey();
-        var state = (grainState.State as ConnectedClientsState)!;
+        var actualGrainState = (grainState as IGrainState<ConnectedClientsState>)!;
+        var microserviceId = (MicroserviceId)grainId.GetGuidKey();
+        var state = actualGrainState.State;
         var mongoState = new MongoDBConnectedClientsForMicroserviceState(microserviceId, state.Clients);
         return Collection.ReplaceOneAsync(_ => _.Id == microserviceId, mongoState, options: new ReplaceOptions { IsUpsert = true });
     }

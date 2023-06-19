@@ -9,9 +9,7 @@
     <!-- 3rd party package references -->
     <ItemGroup>
         <PackageReference Include="Aksio.Applications" />
-
         <PackageReference Include="Microsoft.Orleans.Server" />
-        <PackageReference Include="Microsoft.Orleans.OrleansTelemetryConsumers.AI" />
         <PackageReference Include="OrleansDashboard" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />

@@ -34,7 +34,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
         _observerKey = ObserverKey.Parse(keyAsString);

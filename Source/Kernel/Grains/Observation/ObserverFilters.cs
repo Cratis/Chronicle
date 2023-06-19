@@ -29,26 +29,5 @@ public static class ObserverFilters
         }
         return eventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id));
     }
-
-    /// <summary>
-    /// Represents a filter for event types.
-    /// </summary>
-    /// <param name="streamIdentity">The stream identity.</param>
-    /// <param name="filterData">Data associated with the filter.</param>
-    /// <param name="item">Item to filter.</param>
-    /// <returns>True if its to be included, false if not.</returns>
-    public static bool EventTypesAndEventSourceIdFilter(IStreamIdentity streamIdentity, object filterData, object item)
-    {
-        var appendedEvent = (item as AppendedEvent)!;
-        var eventTypesAndEventSourceId = (filterData as EventTypesAndEventSourceId)!;
-
-        var shouldIncludeEventType =
-            eventTypesAndEventSourceId.EventTypes.Any(_ => _.Id.Equals(appendedEvent.Metadata.Type.Id)) ||
-            eventTypesAndEventSourceId.EventTypes.Length == 0;
-
-        return
-            appendedEvent.Context.EventSourceId == eventTypesAndEventSourceId.EventSourceId &&
-            shouldIncludeEventType;
-    }
 #pragma warning restore IDE0060
 }

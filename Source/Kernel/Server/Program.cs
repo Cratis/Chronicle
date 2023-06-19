@@ -4,8 +4,6 @@
 using System.Globalization;
 using Aksio.Cratis.Kernel.Orleans.Serialization;
 using Aksio.Types;
-using Orleans;
-using Orleans.Hosting;
 using Serilog;
 
 #pragma warning disable SA1600

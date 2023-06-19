@@ -33,16 +33,16 @@ public class UnableToAppendToEventSequence : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="UnableToAppendToEventSequence"/> class.
     /// </summary>
-    /// <param name="streamId">The stream that is failing.</param>
+    /// <param name="eventSequenceId">The stream that is failing.</param>
     /// <param name="microserviceId">For which microservice it is.</param>
     /// <param name="tenantId">For which tenant it is.</param>
     /// <param name="sequenceNumber">The sequence number that is failing.</param>
     /// <param name="eventSourceId">EventSource it is failing for.</param>
     /// <param name="innerException">The inner exception.</param>
-    public UnableToAppendToEventSequence(Guid streamId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Exception innerException)
-        : base($"Unable to append event at sequence {sequenceNumber} for event source {eventSourceId} on tenant {tenantId} in microservice {microserviceId} from stream {streamId}", innerException)
+    public UnableToAppendToEventSequence(EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Exception innerException)
+        : base($"Unable to append event at sequence {sequenceNumber} for event source {eventSourceId} on tenant {tenantId} in microservice {microserviceId} from event sequence {eventSequenceId}", innerException)
     {
-        StreamId = streamId;
+        StreamId = eventSequenceId;
         TenantId = tenantId;
         SequenceNumber = sequenceNumber;
         EventSourceId = eventSourceId;

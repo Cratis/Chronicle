@@ -55,7 +55,7 @@ public class Replay : ObserverWorker, IReplay
     protected override TenantId? SourceTenantId => _observerKey!.SourceTenantId;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _ = this.GetPrimaryKey(out var keyAsString);
         _observerKey = ObserverKey.Parse(keyAsString);

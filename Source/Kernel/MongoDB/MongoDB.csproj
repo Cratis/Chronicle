@@ -6,6 +6,9 @@
 
     <ItemGroup>
         <PackageReference Include="Aksio.MongoDB" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
+        <PackageReference Include="Microsoft.Orleans.Serialization" />
+        <PackageReference Include="Microsoft.Orleans.Reminders" />
     </ItemGroup>
 
     <ItemGroup>

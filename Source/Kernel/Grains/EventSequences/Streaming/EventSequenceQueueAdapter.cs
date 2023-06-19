@@ -6,6 +6,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.DependencyInversion;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -49,9 +50,9 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     public IQueueAdapterReceiver CreateReceiver(QueueId queueId) => CreateReceiverIfNotExists(queueId);
 
     /// <inheritdoc/>
-    public async Task QueueMessageBatchAsync<T>(Guid streamGuid, string streamNamespace, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
+    public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
-        var queueId = _mapper.GetQueueForStream(streamGuid, streamNamespace);
+        var queueId = _mapper.GetQueueForStream(streamId);
         CreateReceiverIfNotExists(queueId);
         if (!token.IsWarmUp())
         {
@@ -62,7 +63,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 try
                 {
                     await _eventSequenceStorageProvider().Append(
-                        streamGuid,
+                        streamId.Key,
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         appendedEvent.Metadata.Type,
@@ -74,11 +75,11 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 catch (Exception ex)
                 {
                     // Make sure we put all successful events on the stream for any subscribers to get.
-                    _receivers[queueId].AddAppendedEvent(streamGuid, streamNamespace, appendedEvents, requestContext);
-                    var microserviceAndTenant = MicroserviceAndTenant.Parse(streamNamespace);
+                    _receivers[queueId].AddAppendedEvent(streamId, appendedEvents, requestContext);
+                    var microserviceAndTenant = MicroserviceAndTenant.Parse(streamId.GetNamespace()!);
 
                     throw new UnableToAppendToEventSequence(
-                        streamGuid,
+                        streamId.Key,
                         microserviceAndTenant.MicroserviceId,
                         microserviceAndTenant.TenantId,
                         appendedEvent.Metadata.SequenceNumber,
@@ -88,7 +89,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
             }
         }
 
-        _receivers[queueId].AddAppendedEvent(streamGuid, streamNamespace, events.Cast<AppendedEvent>().ToArray(), requestContext);
+        _receivers[queueId].AddAppendedEvent(streamId, events.Cast<AppendedEvent>().ToArray(), requestContext);
     }
 
     IQueueAdapterReceiver CreateReceiverIfNotExists(QueueId queueId)

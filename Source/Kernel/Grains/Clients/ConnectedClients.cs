@@ -40,7 +40,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _metrics = _metricsFactory.Create(this.GetPrimaryKey());
         RegisterTimer(ReviseConnectedClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));

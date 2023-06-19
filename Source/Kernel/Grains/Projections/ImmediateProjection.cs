@@ -53,7 +53,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         this.GetPrimaryKey(out var keyAsString);
         _projectionKey = ImmediateProjectionKey.Parse(keyAsString);

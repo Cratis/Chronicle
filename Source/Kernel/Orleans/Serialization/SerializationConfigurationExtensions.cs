@@ -18,7 +18,8 @@ public static class SerializationConfigurationExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder ConfigureSerialization(this ISiloBuilder siloBuilder)
     {
-        siloBuilder.Configure<SerializationProviderOptions>(options => options.SerializationProviders.Add(typeof(ExpandoObjectSerializer)));
+        //throw new NotImplementedException();
+        // siloBuilder.Configure<SerializationProviderOptions>(options => options.SerializationProviders.Add(typeof(ExpandoObjectSerializer)));
         return siloBuilder;
     }
 }

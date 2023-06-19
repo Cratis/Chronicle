@@ -6,7 +6,7 @@
 
     <ItemGroup>
         <PackageReference Include="Aksio.Fundamentals"/>
-        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" />
         <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" />
         <PackageReference Include="System.Data.SqlClient" />

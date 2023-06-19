@@ -5,7 +5,6 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using MongoDB.Driver;
-using Orleans;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
@@ -27,15 +26,16 @@ public class CatchUpStorageProvider : ObserverStorageProvider
     }
 
     /// <inheritdoc/>
-    public override async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public override async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString);
+        var actualGrainState = (grainState as IGrainState<ObserverState>)!;
+        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
+        var observerKey = ObserverKey.Parse(observerKeyAsString!);
         var key = GetKeyFrom(observerKey, observerId);
 
         ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
-        var state = (ObserverState)grainState.State;
+        var state = actualGrainState.State;
         var update = Builders<ObserverState>.Update
             .Set(_ => _.NextEventSequenceNumber, state.NextEventSequenceNumber)
             .Set(_ => _.LastHandled, state.LastHandled);

@@ -48,7 +48,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _microserviceId = this.GetPrimaryKey(out var keyAsString);
         _key = ObserverSubscriberKey.Parse(keyAsString);

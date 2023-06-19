@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Newtonsoft.Json;
-using Orleans;
 using Orleans.Configuration;
 using Orleans.Runtime;
 using Orleans.Serialization;
@@ -33,18 +32,16 @@ public class MongoDBReminderTable : IReminderTable
     /// Initializes a new instance of the <see cref="MongoDBReminderTable"/> class.
     /// </summary>
     /// <param name="database"><see cref="IClusterDatabase"/> to keep state in.</param>
-    /// <param name="typeResolver"><see cref="ITypeResolver"/> to use for resolving types.</param>
-    /// <param name="grainFactory"><see cref="IGrainFactory"/> for resolving grains during serialization.</param>
     /// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
+    /// <param name="orleansJsonSerializerOptions"></param>
     /// <param name="logger">Logger for logging.</param>
     public MongoDBReminderTable(
         IClusterDatabase database,
-        ITypeResolver typeResolver,
-        IGrainFactory grainFactory,
         IOptions<ClusterOptions> clusterOptions,
+        IOptions<OrleansJsonSerializerOptions> orleansJsonSerializerOptions,
         ILogger<MongoDBReminderTable> logger)
     {
-        _serializerSettings = OrleansJsonSerializer.GetDefaultSerializerSettings(typeResolver, grainFactory);
+        _serializerSettings = orleansJsonSerializerOptions.Value.JsonSerializerSettings;
         _database = database;
         _clusterOptions = clusterOptions;
         _logger = logger;
@@ -54,12 +51,12 @@ public class MongoDBReminderTable : IReminderTable
     public Task Init() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task<ReminderEntry> ReadRow(GrainReference grainRef, string reminderName)
+    public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)
     {
-        var key = GetKeyFrom(grainRef, reminderName);
+        var key = GetKeyFrom(grainId, reminderName);
         var filter = GetKeyFilterFor(key);
 
-        _logger.ReadingSpecificReminderForGrain(grainRef.ToShortKeyString(), reminderName);
+        _logger.ReadingSpecificReminderForGrain(grainId.GetGuidKey().ToString(), reminderName);
 
         var result = await GetCollection().FindAsync(filter);
         var entries = result.ToList();
@@ -68,13 +65,13 @@ public class MongoDBReminderTable : IReminderTable
     }
 
     /// <inheritdoc/>
-    public async Task<ReminderTableData> ReadRows(GrainReference key)
+    public async Task<ReminderTableData> ReadRows(GrainId grainId)
     {
-        _logger.ReadingAllRemindersForGrain(key.ToShortKeyString());
+        _logger.ReadingAllRemindersForGrain(grainId.GetGuidKey().ToString());
 
         var filter = Builders<BsonDocument>.Filter.And(
             Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(ServiceIdProperty), _clusterOptions.Value.ServiceId),
-            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(GrainKeyProperty), key.ToShortKeyString()));
+            Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>(GrainKeyProperty), grainId.GetGuidKey().ToString()));
 
         var result = await GetCollection().FindAsync(filter);
         var entries = result.ToList().Select(Deserialize);
@@ -97,9 +94,9 @@ public class MongoDBReminderTable : IReminderTable
     }
 
     /// <inheritdoc/>
-    public async Task<bool> RemoveRow(GrainReference grainRef, string reminderName, string eTag)
+    public async Task<bool> RemoveRow(GrainId grainId, string reminderName, string eTag)
     {
-        var key = GetKeyFrom(grainRef, reminderName);
+        var key = GetKeyFrom(grainId, reminderName);
         try
         {
             var filter = Builders<BsonDocument>.Filter.And(
@@ -124,16 +121,16 @@ public class MongoDBReminderTable : IReminderTable
     /// <inheritdoc/>
     public async Task<string> UpsertRow(ReminderEntry entry)
     {
-        var key = GetKeyFrom(entry.GrainRef, entry.ReminderName);
+        var key = GetKeyFrom(entry.GrainId, entry.ReminderName);
         try
         {
             var json = JsonConvert.SerializeObject(entry, _serializerSettings);
             json = json.Replace("\"$", "\"__");
             var filter = GetKeyFilterFor(key);
             var bson = BsonDocument.Parse(json);
-            var hash = (long)entry.GrainRef.GetUniformHashCode();
+            var hash = (long)entry.GrainId.GetUniformHashCode();
             bson[ETagProperty] = "1"; // TODO: What do we do with ETag ??
-            bson[GrainKeyProperty] = entry.GrainRef.ToShortKeyString();
+            bson[GrainKeyProperty] = entry.GrainId.GetGuidKey().ToString();
             bson[GrainHashProperty] = hash;
             bson[ServiceIdProperty] = _clusterOptions.Value.ServiceId;
 
@@ -161,5 +158,5 @@ public class MongoDBReminderTable : IReminderTable
 
     FilterDefinition<BsonDocument> GetKeyFilterFor(string key) => Builders<BsonDocument>.Filter.Eq(new StringFieldDefinition<BsonDocument, string>("_id"), key);
 
-    string GetKeyFrom(GrainReference grainReference, string reminderName) => $"{grainReference.ToShortKeyString()} : {reminderName}";
+    string GetKeyFrom(GrainId grainId, string reminderName) => $"{grainId.GetGuidKey()} : {reminderName}";
 }

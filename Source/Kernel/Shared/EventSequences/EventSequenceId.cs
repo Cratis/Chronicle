@@ -42,6 +42,12 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public static implicit operator EventSequenceId(Guid id) => new(id);
 
     /// <summary>
+    /// Implicitly convert from bytes representing a <see cref="Guid"/> to <see cref="EventSequenceId"/>.
+    /// </summary>
+    /// <param name="bytes">Bytes to convert from.</param>
+    public static implicit operator EventSequenceId(ReadOnlyMemory<byte> bytes) => new(new Guid(bytes.Span));
+
+    /// <summary>
     /// Get whether or not this is the default log event sequence.
     /// </summary>
     public bool IsEventLog => this == Log;

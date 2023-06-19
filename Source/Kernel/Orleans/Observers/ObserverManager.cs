@@ -260,7 +260,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
         // Remove defunct observers.
         if (defunct?.Count > 0)
         {
-            _logger.Info(_loggerPrefix + ": Removing {0} defunct observers entries.", defunct.Count);
+            _logger.LogInformation(_loggerPrefix + ": Removing {0} defunct observers entries.", defunct.Count);
             foreach (var observer in defunct)
             {
                 _observers.TryRemove(observer, out var _);

@@ -4,6 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -31,17 +32,17 @@ public class EventSequenceQueueCache : IQueueCache
         {
             if (message is EventSequenceBatchContainer batchContainer)
             {
-                var microserviceAndTenant = (MicroserviceAndTenant)message.StreamNamespace;
+                var microserviceAndTenant = (MicroserviceAndTenant)message.StreamId.GetNamespace()!;
                 foreach (var (@event, _) in batchContainer.GetEvents<AppendedEvent>())
                 {
-                    _caches.GetFor(microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, (EventSequenceId)message.StreamGuid).Add(@event);
+                    _caches.GetFor(microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, (EventSequenceId)message.StreamId.Key).Add(@event);
                 }
             }
         }
     }
 
     /// <inheritdoc/>
-    public IQueueCacheCursor GetCacheCursor(IStreamIdentity streamIdentity, StreamSequenceToken token)
+    public IQueueCacheCursor GetCacheCursor(StreamId streamId, StreamSequenceToken token)
     {
         if (token is null)
         {
@@ -53,11 +54,11 @@ public class EventSequenceQueueCache : IQueueCache
             return new EmptyEventSequenceQueueCacheCursor();
         }
 
-        var microserviceAndTenant = (MicroserviceAndTenant)streamIdentity.Namespace;
+        var microserviceAndTenant = (MicroserviceAndTenant)streamId.GetNamespace()!;
         var cache = _caches.GetFor(
                 microserviceAndTenant.MicroserviceId,
                 microserviceAndTenant.TenantId,
-                (EventSequenceId)streamIdentity.Guid);
+                (EventSequenceId)streamId.Key);
 
         if (token.SequenceNumber < (long)cache.Head.Value)
         {
@@ -68,7 +69,7 @@ public class EventSequenceQueueCache : IQueueCache
             cache,
             microserviceAndTenant.MicroserviceId,
             microserviceAndTenant.TenantId,
-            (EventSequenceId)streamIdentity.Guid,
+            (EventSequenceId)streamId.Key,
             (ulong)token.SequenceNumber);
     }
 

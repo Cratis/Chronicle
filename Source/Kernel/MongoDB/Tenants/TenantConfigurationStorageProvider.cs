@@ -28,28 +28,29 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState) => Task.CompletedTask;
+    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var tenantId = (TenantId)grainReference.GetPrimaryKey();
+        var actualGrainState = (grainState as IGrainState<TenantConfigurationState>)!;
+        var tenantId = (TenantId)grainId.GetGuidKey();
         var cursor = await Collection.FindAsync(_ => _.Id == tenantId);
         var state = await cursor.FirstOrDefaultAsync();
         if (state is not null)
         {
-            grainState.State = new TenantConfigurationState(state.Configuration.ToDictionary(_ => _.Key, _ => _.Value));
+            actualGrainState.State = new TenantConfigurationState(state.Configuration.ToDictionary(_ => _.Key, _ => _.Value));
         }
         else
         {
-            grainState.State = TenantConfigurationState.Empty();
+            actualGrainState.State = TenantConfigurationState.Empty();
         }
     }
 
     /// <inheritdoc/>
-    public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var tenantId = (TenantId)grainReference.GetPrimaryKey();
+        var tenantId = (TenantId)grainId.GetGuidKey();
         var state = (grainState.State as TenantConfigurationState)!;
         var mongoDBState = new MongoDBTenantConfigurationState(tenantId, state.Select(_ => new MongoDBTenantConfigurationKeyValuePair(_.Key, _.Value)));
         await Collection.ReplaceOneAsync(

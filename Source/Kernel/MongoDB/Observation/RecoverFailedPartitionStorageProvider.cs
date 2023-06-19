@@ -42,10 +42,10 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public async Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
-        var partitionedObserverKey = PartitionedObserverKey.Parse(observerKeyAsString);
+        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
+        var partitionedObserverKey = PartitionedObserverKey.Parse(observerKeyAsString!);
 
         ExecutionContextManager.Establish(partitionedObserverKey.TenantId, CorrelationId.New(), partitionedObserverKey.MicroserviceId);
 
@@ -54,17 +54,18 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
-        var partitionedObserverKey = PartitionedObserverKey.Parse(observerKeyAsString);
+        var actualGrainState = (grainState as IGrainState<RecoverFailedPartitionState>)!;
+        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
+        var partitionedObserverKey = PartitionedObserverKey.Parse(observerKeyAsString!);
 
         ExecutionContextManager.Establish(partitionedObserverKey.TenantId, CorrelationId.New(), partitionedObserverKey.MicroserviceId);
 
         var key = GetKeyFrom(partitionedObserverKey, observerId);
         var cursor = await Collection.FindAsync(_ => _.Id == key);
 
-        grainState.State = await cursor.FirstOrDefaultAsync() ?? new RecoverFailedPartitionState()
+        actualGrainState.State = await cursor.FirstOrDefaultAsync() ?? new RecoverFailedPartitionState()
         {
             Id = key,
             ObserverId = observerId
@@ -72,10 +73,10 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public virtual async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public virtual async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var keyAsString);
-        var partitionKey = PartitionedObserverKey.Parse(keyAsString);
+        var observerId = grainId.GetGuidKey(out var keyAsString);
+        var partitionKey = PartitionedObserverKey.Parse(keyAsString!);
         ExecutionContextManager.Establish(partitionKey.TenantId, CorrelationId.New(), partitionKey.MicroserviceId);
 
         var observerState = (grainState.State as RecoverFailedPartitionState)!;

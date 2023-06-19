@@ -15,6 +15,7 @@ using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Providers;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -70,17 +71,17 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventSequenceId = this.GetPrimaryKey(out var streamNamespace);
         _microserviceAndTenant = MicroserviceAndTenant.Parse(streamNamespace);
-
-        var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, streamNamespace);
+        var streamId = StreamId.Create(_microserviceAndTenant, _eventSequenceId);
+        var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
+        _stream = streamProvider.GetStream<AppendedEvent>(streamId);
 
         _metrics = _metricsFactory.CreateFor(_eventSequenceId, _microserviceAndTenant.MicroserviceId, _microserviceAndTenant.TenantId);
 
-        await base.OnActivateAsync();
+        await base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>

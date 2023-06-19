@@ -47,7 +47,7 @@ public class Projections : Grain, IProjections
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _microserviceId = this.GetPrimaryKey();
         return Task.CompletedTask;

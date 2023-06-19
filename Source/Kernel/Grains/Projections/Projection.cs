@@ -52,7 +52,7 @@ public class Projection : Grain, IProjection
     }
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ProjectionKey.Parse(keyAsString);
