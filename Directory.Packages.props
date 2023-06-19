@@ -8,7 +8,7 @@
 		<PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Fundamentals" Version="1.3.1" />
-		<PackageVersion Include="Aksio.MongoDB" Version="1.0.3" />
+		<PackageVersion Include="Aksio.MongoDB" Version="1.0.4" />
 		<PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
 		<PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
 		<PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
