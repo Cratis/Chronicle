@@ -2,6 +2,7 @@
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props"/>
 
     <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
     </PropertyGroup>
