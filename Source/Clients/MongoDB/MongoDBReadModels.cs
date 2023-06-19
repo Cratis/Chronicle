@@ -5,9 +5,9 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using Aksio.Cratis;
 using Aksio.Cratis.Configuration;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.MongoDB;
 using Aksio.Execution;
-using Aksio.Models;
 using Aksio.MongoDB;
 using Aksio.Reflection;
 using Aksio.Types;
@@ -36,6 +36,7 @@ public static class MongoDBReadModels
         ILoggerFactory? loggerFactory = default,
         ICanProvideMongoDBReadModelTypes? readModelTypeProvider = default)
     {
+        #pragma warning disable CA2000 // Dispose objects before losing scope - Logger factory will be disposed when process exits
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
         var logger = loggerFactory.CreateLogger("MongodBReadModels");
 

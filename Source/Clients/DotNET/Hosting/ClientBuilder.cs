@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
-using Aksio.Compliance;
 using Aksio.Cratis.Clients;
+using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation;
-using Aksio.Models;
-using Aksio.Schemas;
+using Aksio.Cratis.Schemas;
 using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,6 +65,7 @@ public class ClientBuilder : IClientBuilder
         IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
+        #pragma warning disable CA2000 // Dispose objects before losing scope - Logger factory will be disposed when process exits
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
         var logger = loggerFactory.CreateLogger<ClientBuilder>()!;
         logger.Configuring();

@@ -4,7 +4,7 @@
 using Aksio.MongoDB;
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Compliance.MongoDB;
+namespace Aksio.Cratis.Compliance.MongoDB;
 
 /// <summary>
 /// Represents a class map for <see cref="EncryptionKeyForIdentifier"/>.

@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Configuration;
-using Aksio.Net;
+using Aksio.Cratis.Net;
 using Aksio.Tasks;
 using Aksio.Timers;
 using Microsoft.Extensions.Logging;

@@ -3,11 +3,11 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
-using Aksio.Json;
 using Microsoft.Extensions.Logging;
 using Orleans;
 

@@ -3,7 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
-using Aksio.Properties;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Projections.Definitions;
 

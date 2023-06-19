@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Compliance;
+using Aksio.Cratis.Compliance;
 
 namespace Aksio.Cratis.Kernel.Engines.Compliance;
 

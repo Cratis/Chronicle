@@ -4,20 +4,20 @@
 using System.Collections;
 using System.Dynamic;
 using System.Text;
-using Aksio.Changes;
+using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Properties;
-using Aksio.Schemas;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
+using Aksio.MongoDB;
 using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
-using IExpandoObjectConverter = Aksio.MongoDB.IExpandoObjectConverter;
 
-namespace Aksio.Cratis.Projections.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB.Projections;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 

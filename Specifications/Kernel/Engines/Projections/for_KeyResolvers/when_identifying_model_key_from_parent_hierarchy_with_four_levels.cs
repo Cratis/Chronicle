@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Dynamic;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.EventSequences;
-using Aksio.Properties;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.for_KeyResolvers;
 

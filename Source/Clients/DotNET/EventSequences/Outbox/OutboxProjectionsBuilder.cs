@@ -3,12 +3,12 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Outbox;
+using Aksio.Cratis.Schemas;
 using Aksio.Guids;
-using Aksio.Models;
-using Aksio.Schemas;
 
 namespace Aksio.Cratis.EventSequences.Outbox;
 

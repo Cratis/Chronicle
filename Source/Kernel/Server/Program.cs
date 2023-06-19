@@ -3,10 +3,10 @@
 
 using System.Globalization;
 using Aksio.Cratis.Kernel.Orleans.Serialization;
+using Aksio.Types;
 using Orleans;
 using Orleans.Hosting;
 using Serilog;
-using Aksio.Types;
 
 #pragma warning disable SA1600
 namespace Aksio.Cratis.Kernel.Server;

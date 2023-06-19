@@ -13,4 +13,8 @@
         <PackageReference Include="System.Net.NameResolution" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+    </ItemGroup>
+
 </Project>

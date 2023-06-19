@@ -23,6 +23,7 @@ public class Startup
     {
         app.UseRouting();
         app.UseAksio();
+        app.PerformBootProcedures();
         app.UseCratis();
     }
 }

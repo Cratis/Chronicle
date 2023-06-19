@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
-using Aksio.Schemas;
 using NJsonSchema;
 using Orleans;
 

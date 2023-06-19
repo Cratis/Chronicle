@@ -5,7 +5,7 @@
 
 using Aksio.Cratis.Kernel.Engines.Compliance;
 
-namespace Aksio.Compliance.MongoDB;
+namespace Aksio.Cratis.Compliance.MongoDB;
 
 /// <summary>
 /// Represents the stored version of an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.

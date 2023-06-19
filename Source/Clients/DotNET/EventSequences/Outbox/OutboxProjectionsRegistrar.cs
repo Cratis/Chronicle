@@ -4,12 +4,12 @@
 using System.Text.Json;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Projections.Outbox;
-using Aksio.Models;
-using Aksio.Schemas;
+using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

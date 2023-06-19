@@ -5,8 +5,8 @@ using System.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.ModelProperties;
-using Aksio.Properties;
-using Aksio.Schemas;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions;

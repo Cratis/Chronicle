@@ -4,11 +4,11 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Aksio.Changes;
+using Aksio.Cratis.Changes;
+using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Dynamic;
-using Aksio.Properties;
+using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 

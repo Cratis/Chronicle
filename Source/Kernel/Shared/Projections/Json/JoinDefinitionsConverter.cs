@@ -4,8 +4,8 @@
 using System.Text.Json.Serialization;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Properties;
 using Aksio.Json;
-using Aksio.Properties;
 
 namespace Aksio.Cratis.Projections.Json;
 

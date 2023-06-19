@@ -14,7 +14,7 @@ public static class RulesServiceCollectionExtensions
     /// <summary>
     /// Add CQRS setup.
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <returns><see cref="MvcOptions"/> for building continuation.</returns>
     public static IServiceCollection AddRules(this IServiceCollection services)
     {

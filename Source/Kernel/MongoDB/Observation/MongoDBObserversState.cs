@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Aksio.DependencyInversion;
 using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 

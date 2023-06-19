@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
-using Aksio.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.MongoDB;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB;

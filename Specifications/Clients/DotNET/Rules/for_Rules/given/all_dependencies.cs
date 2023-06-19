@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Execution;
-using Aksio.Models;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Schemas;
 using Aksio.Types;
 using NJsonSchema;

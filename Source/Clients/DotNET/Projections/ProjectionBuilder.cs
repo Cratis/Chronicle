@@ -6,11 +6,12 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Models;
-using Aksio.Properties;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Schemas;
 using Aksio.Reflection;
-using Aksio.Schemas;
 using Aksio.Strings;
 using Humanizer;
 

@@ -4,11 +4,10 @@
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Models;
-using Aksio.Schemas;
+using Aksio.Reflection;
 
 namespace Aksio.Cratis.Projections;
 

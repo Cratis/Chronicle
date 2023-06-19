@@ -1882,7 +1882,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Defines a segment within a Aksio.Properties.PropertyPath."
+        "description": "Defines a segment within a Aksio.Cratis.Properties.PropertyPath."
       },
       "ImmediateProjection": {
         "type": "object",

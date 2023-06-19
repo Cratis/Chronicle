@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.MongoDB;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
+using Aksio.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Projections.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB.Projections;
 
 /// <summary>
 /// Represents a <see cref="IProjectionDefinitionsStorage"/> for projection definitions in MongoDB.

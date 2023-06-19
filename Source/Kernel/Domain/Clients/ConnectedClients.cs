@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Kernel.Grains.Clients;
-using Aksio.Net;
+using Aksio.Cratis.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Orleans;

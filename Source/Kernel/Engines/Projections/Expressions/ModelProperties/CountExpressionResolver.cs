@@ -4,8 +4,8 @@
 using System.Dynamic;
 using System.Text.RegularExpressions;
 using Aksio.Cratis.Events;
-using Aksio.Properties;
-using Aksio.Schemas;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.ModelProperties;

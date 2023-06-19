@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Schemas;
+using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aksio.Cratis.Kernel.Read.EventTypes;

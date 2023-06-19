@@ -4,7 +4,6 @@
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
-using Aksio.Schemas;
 using MongoDB.Driver;
 using NJsonSchema;
 

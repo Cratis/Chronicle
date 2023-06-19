@@ -4,9 +4,9 @@
 using System.Collections;
 using System.Dynamic;
 using Aksio.Cratis.Events;
-using Aksio.Properties;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Schemas;
 using Aksio.Reflection;
-using Aksio.Schemas;
 using Aksio.Types;
 using NJsonSchema;
 

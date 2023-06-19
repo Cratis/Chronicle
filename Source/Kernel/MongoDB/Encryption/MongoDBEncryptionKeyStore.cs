@@ -5,7 +5,7 @@ using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 
-namespace Aksio.Compliance.MongoDB;
+namespace Aksio.Cratis.Compliance.MongoDB;
 
 /// <summary>
 /// Represents an implementation of <see cref="IEncryptionKeyStore"/> for MongoDB.

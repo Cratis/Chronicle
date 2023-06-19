@@ -3,8 +3,8 @@
 
 #nullable disable
 
-using Aksio.MongoDB;
 using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.MongoDB;
 using MongoDB.Bson.Serialization;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;

@@ -5,9 +5,9 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Properties;
-using Aksio.Reflection;
-using Aksio.Schemas;
+using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
+using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Projections;
 

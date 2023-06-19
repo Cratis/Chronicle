@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Infrastructure</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Infrastructure</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.Fundamentals" />
+        <PackageReference Include="NJsonSchema" />
+
+    </ItemGroup>
+</Project>

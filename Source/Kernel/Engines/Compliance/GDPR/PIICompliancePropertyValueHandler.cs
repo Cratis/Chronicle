@@ -3,7 +3,7 @@
 
 using System.Text;
 using System.Text.Json.Nodes;
-using Aksio.Compliance;
+using Aksio.Cratis.Compliance;
 
 namespace Aksio.Cratis.Kernel.Engines.Compliance.GDPR;
 

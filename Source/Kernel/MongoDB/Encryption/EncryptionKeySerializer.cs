@@ -4,7 +4,7 @@
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using MongoDB.Bson.Serialization;
 
-namespace Aksio.Compliance.MongoDB;
+namespace Aksio.Cratis.Compliance.MongoDB;
 
 /// <summary>
 /// Represents a <see cref="IBsonSerializer{T}"/> for handling serialization of <see cref="EncryptionKey"/>.

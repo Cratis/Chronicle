@@ -5,10 +5,10 @@ using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
-using Aksio.Models;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
-using Aksio.Schemas;
+using Aksio.Cratis.Schemas;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Projections;

@@ -3,11 +3,10 @@
 
 using System.Dynamic;
 using System.Text.Json;
-using Aksio.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Json;
 using Aksio.Cratis.Schemas;
+using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -25,7 +24,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     readonly ProviderFor<IEventConverter> _converterProvider;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly Json.IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<MongoDBEventSequenceStorage> _logger;
 
@@ -44,7 +43,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         ProviderFor<IEventConverter> converterProvider,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
         ProviderFor<ISchemaStore> schemaStoreProvider,
-        IExpandoObjectConverter expandoObjectConverter,
+        Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<MongoDBEventSequenceStorage> logger)
     {
@@ -152,7 +151,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var updates = new List<UpdateOneModel<Event>>();
         var affectedEventTypes = new HashSet<EventType>();
 
-        var cursor = await GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First, eventSourceId, eventTypes);
+        using var cursor = await GetFromSequenceNumber(eventSequenceId, EventSequenceNumber.First, eventSourceId, eventTypes);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)

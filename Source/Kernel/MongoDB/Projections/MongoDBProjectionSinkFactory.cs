@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.MongoDB;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Schemas;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Schemas;
+using Aksio.MongoDB;
 
-namespace Aksio.Cratis.Projections.MongoDB;
+namespace Aksio.Cratis.Kernel.MongoDB.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSinkFactory"/>.

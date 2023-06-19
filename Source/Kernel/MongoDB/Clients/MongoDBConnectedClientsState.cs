@@ -3,9 +3,9 @@
 
 using System.Reactive.Subjects;
 using Aksio.Cratis.Clients;
-using Aksio.DependencyInversion;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.MongoDB;
+using Aksio.DependencyInversion;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Clients;

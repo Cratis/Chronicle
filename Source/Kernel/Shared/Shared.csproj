@@ -7,4 +7,8 @@
     <ItemGroup>
         <PackageReference Include="Aksio.Fundamentals" />
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+    </ItemGroup>
 </Project>
