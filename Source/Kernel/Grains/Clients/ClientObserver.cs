@@ -6,7 +6,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 
