@@ -35,7 +35,7 @@ public class EventSequenceQueueCache : IQueueCache
                 var microserviceAndTenant = (MicroserviceAndTenant)message.StreamId.GetNamespace()!;
                 foreach (var (@event, _) in batchContainer.GetEvents<AppendedEvent>())
                 {
-                    _caches.GetFor(microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, (EventSequenceId)message.StreamId.Key).Add(@event);
+                    _caches.GetFor(microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, (EventSequenceId)message.StreamId.GetKeyAsString()).Add(@event);
                 }
             }
         }
@@ -58,7 +58,7 @@ public class EventSequenceQueueCache : IQueueCache
         var cache = _caches.GetFor(
                 microserviceAndTenant.MicroserviceId,
                 microserviceAndTenant.TenantId,
-                (EventSequenceId)streamId.Key);
+                (EventSequenceId)streamId.GetKeyAsString());
 
         if (token.SequenceNumber < (long)cache.Head.Value)
         {
@@ -69,7 +69,7 @@ public class EventSequenceQueueCache : IQueueCache
             cache,
             microserviceAndTenant.MicroserviceId,
             microserviceAndTenant.TenantId,
-            (EventSequenceId)streamId.Key,
+            (EventSequenceId)streamId.GetKeyAsString(),
             (ulong)token.SequenceNumber);
     }
 

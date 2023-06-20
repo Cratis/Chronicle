@@ -235,7 +235,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {
-        _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, (EventSequenceId)_stream!.StreamId.Key, _stream!.StreamId.GetNamespace()!);
+        _logger.SubscribingToStream(_observerId, _eventSequenceId, _microserviceId, _tenantId, (EventSequenceId)_stream!.StreamId.GetKeyAsString(), _stream!.StreamId.GetNamespace()!);
 
         // Get the next event sequence number for our event types and use as the next event sequence number
         _streamSubscription = await _stream!.SubscribeAsync(

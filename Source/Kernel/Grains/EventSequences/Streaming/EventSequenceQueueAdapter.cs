@@ -63,7 +63,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                 try
                 {
                     await _eventSequenceStorageProvider().Append(
-                        streamId.Key,
+                        streamId.GetKeyAsString(),
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         appendedEvent.Metadata.Type,
@@ -79,7 +79,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                     var microserviceAndTenant = MicroserviceAndTenant.Parse(streamId.GetNamespace()!);
 
                     throw new UnableToAppendToEventSequence(
-                        streamId.Key,
+                        streamId.GetKeyAsString(),
                         microserviceAndTenant.MicroserviceId,
                         microserviceAndTenant.TenantId,
                         appendedEvent.Metadata.SequenceNumber,
