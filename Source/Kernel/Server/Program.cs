@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using Aksio.Applications.Autofac;
 using Aksio.Cratis.Kernel.Orleans.Serialization;
 using Aksio.Types;
 using Serilog;
@@ -14,6 +15,9 @@ public static class Program
     public static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
+
+        SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude("Microsoft");
+        SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude("Orleans");
 
         // Force invariant culture for the Kernel
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
