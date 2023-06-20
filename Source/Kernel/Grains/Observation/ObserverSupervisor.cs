@@ -213,7 +213,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
             },
             null,
             TimeSpan.Zero,
-            TimeSpan.MaxValue);
+            TimeSpan.FromHours(1));
     }
 
     Task StartCatchup() => GrainFactory.GetGrain<ICatchUp>(_observerId, keyExtension: _observerKey).Start(CurrentSubscription);

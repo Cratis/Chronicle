@@ -76,7 +76,7 @@ public class Replay : ObserverWorker, IReplay
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         CurrentSubscription = subscription;
         _isRunning = true;
-        _timer = RegisterTimer(PerformReplay, null, TimeSpan.Zero, TimeSpan.MaxValue);
+        _timer = RegisterTimer(PerformReplay, null, TimeSpan.Zero, TimeSpan.FromHours(1));
     }
 
     /// <inheritdoc/>

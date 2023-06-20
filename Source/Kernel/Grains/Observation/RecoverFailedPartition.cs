@@ -220,7 +220,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         {
             var nextAttempt = isCatchup ? TimeSpan.Zero : State.GetNextAttemptSchedule();
             _logger.ProcessingScheduled(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, nextAttempt, State.NextSequenceNumberToProcess);
-            _timer = RegisterTimer(PerformRecovery, null, nextAttempt, TimeSpan.MaxValue);
+            _timer = RegisterTimer(PerformRecovery, null, nextAttempt, TimeSpan.FromHours(1));
         }
         _logger.ProcessingScheduleIgnored(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
     }
