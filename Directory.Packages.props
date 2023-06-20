@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>1.0.12</ApplicationModel>
+        <ApplicationModel>1.1.0</ApplicationModel>
         <Orleans>7.1.2</Orleans>
 	</PropertyGroup>
 	<ItemGroup>
@@ -33,6 +33,7 @@
         <PackageVersion Include="Microsoft.Orleans.Client" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Server" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Serialization" Version="$(Orleans)" />
+        <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
