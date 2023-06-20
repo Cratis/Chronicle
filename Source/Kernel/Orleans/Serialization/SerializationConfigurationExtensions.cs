@@ -28,8 +28,6 @@ public static class SerializationConfigurationExtensions
             (_.Namespace?.StartsWith("Aksio") ?? false),
             options));
 
-        //throw new NotImplementedException();
-        // siloBuilder.Configure<SerializationProviderOptions>(options => options.SerializationProviders.Add(typeof(ExpandoObjectSerializer)));
         return siloBuilder;
     }
 }
