@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
-using Aksio.Cratis.Kernel.Orleans.Serialization;
 using Aksio.Types;
 using Serilog;
 
