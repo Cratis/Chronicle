@@ -3,10 +3,12 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Projections.Json;
+using Aksio.Cratis.Properties;
 using Aksio.Json;
 using Orleans.Serialization;
 
-namespace Aksio.Cratis.Kernel.Orleans.Serialization;
+namespace Aksio.Cratis.Kernel.Server;
 
 /// <summary>
 /// Extension methods for configuring serialization.
@@ -22,6 +24,12 @@ public static class SerializationConfigurationExtensions
     {
         var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
         options.Converters.Add(new TypeJsonConverter());
+        options.Converters.Add(new PropertyPathJsonConverter());
+        options.Converters.Add(new PropertyPathChildrenDefinitionDictionaryJsonConverter());
+        options.Converters.Add(new PropertyExpressionDictionaryConverter());
+        options.Converters.Add(new FromDefinitionsConverter());
+        options.Converters.Add(new JoinDefinitionsConverter());
+
 
         siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(_ =>
             _ == typeof(JsonObject) ||

@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Aksio.Cratis.Kernel.Orleans.Serialization;
+namespace Aksio.Cratis.Kernel.Server;
 
 /// <summary>
 /// Represents a <see cref="JsonConverter{T}"/> that can convert <see cref="Type"/>.
