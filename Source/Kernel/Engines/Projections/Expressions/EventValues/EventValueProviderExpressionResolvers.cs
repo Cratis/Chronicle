@@ -3,6 +3,8 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
