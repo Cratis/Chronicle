@@ -15,8 +15,8 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
     readonly ILogger<ClientObserver> _logger;
-    readonly IExecutionContextManager _executionContextManager;
     ObserverId? _observerId;
+    readonly IExecutionContextManager _executionContextManager;
     ObserverKey? _observerKey;
 
     /// <summary>
@@ -48,7 +48,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         _logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var observer = GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
-        await connectedClients.SubscribeDisconnected(this);
+        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
         await observer.SetNameAndType(name, ObserverType.Client);
         var connectedClient = await connectedClients.GetConnectedClient(connectionId);
         await observer.Subscribe<IClientObserverSubscriber>(eventTypes, connectedClient);
