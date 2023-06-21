@@ -14,6 +14,7 @@ public static class Program
     public static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
+        PackageReferencedAssemblies.Instance.AddAssemblyPrefixesToExclude("OpenTelemetry");
 
         SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude("Microsoft");
         SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude("Orleans");
@@ -23,8 +24,6 @@ public static class Program
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
-
-        PackageReferencedAssemblies.Instance.AddAssemblyPrefixesToExclude("OpenTelemetry");
 
         return CreateHostBuilder(args).RunConsoleAsync();
     }
