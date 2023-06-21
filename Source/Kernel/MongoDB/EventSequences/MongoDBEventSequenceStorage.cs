@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
@@ -99,6 +100,8 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
                 eventSequenceId,
                 _executionContextManager.Current.MicroserviceId,
                 _executionContextManager.Current.TenantId);
+
+            throw new DuplicateEventSequenceNumber(sequenceNumber, eventSequenceId);
         }
         catch (Exception ex)
         {

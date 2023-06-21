@@ -75,10 +75,6 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     {
         _eventSequenceId = this.GetPrimaryKey(out var streamNamespace);
         _microserviceAndTenant = MicroserviceAndTenant.Parse(streamNamespace);
-        var g = Guid.NewGuid();
-        var s = StreamId.Create("blah", g);
-        var p = Guid.Parse(s.GetKeyAsString());
-        Console.WriteLine(p);
         var streamId = StreamId.Create(_microserviceAndTenant, (Guid)_eventSequenceId);
         var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
         _stream = streamProvider.GetStream<AppendedEvent>(streamId);
