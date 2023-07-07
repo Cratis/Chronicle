@@ -16,7 +16,7 @@ namespace Aksio.Cratis.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IClient"/> for usage inside a silo.
 /// </summary>
-public class InsideKernelClient : IClient
+public class InsideKernelClient : IClient, IDisposable
 {
     readonly SingleKernelClient _innerClient;
 
@@ -68,6 +68,9 @@ public class InsideKernelClient : IClient
             jsonSerializerOptions,
             singleKernelClientLogger);
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _innerClient.Dispose();
 
     /// <inheritdoc/>
     public Task Connect() => _innerClient.Connect();
