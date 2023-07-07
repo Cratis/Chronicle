@@ -10,7 +10,6 @@ using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.DependencyInversion;
-using Orleans;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;

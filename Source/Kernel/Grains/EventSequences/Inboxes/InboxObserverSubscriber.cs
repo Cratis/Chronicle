@@ -9,7 +9,6 @@ using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 

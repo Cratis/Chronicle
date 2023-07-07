@@ -38,7 +38,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
     where TAddress : notnull
     where TObserver : notnull
 {
-    class ObserverEntry
+    sealed class ObserverEntry
     {
         public TObserver Observer { get; set; }
         public DateTime LastSeen { get; set; }
@@ -260,7 +260,7 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
         // Remove defunct observers.
         if (defunct?.Count > 0)
         {
-            _logger.LogInformation(_loggerPrefix + ": Removing {0} defunct observers entries.", defunct.Count);
+            _logger.RemovingDefunctEntries(_loggerPrefix, defunct.Count);
             foreach (var observer in defunct)
             {
                 _observers.TryRemove(observer, out var _);

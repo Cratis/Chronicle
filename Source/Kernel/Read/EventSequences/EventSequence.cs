@@ -8,7 +8,6 @@ using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
-using Orleans;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 namespace Aksio.Cratis.Kernel.Read.EventSequences;

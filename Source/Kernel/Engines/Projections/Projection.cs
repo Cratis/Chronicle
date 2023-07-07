@@ -123,8 +123,9 @@ public class Projection : IProjection
     public void SetEventTypesWithKeyResolvers(IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver, IEnumerable<EventType> ownEventTypes)
     {
         EventTypesWithKeyResolver = eventTypesWithKeyResolver;
-        EventTypes = eventTypesWithKeyResolver.Select(_ => new EventType(_.EventType.Id, _.EventType.Generation)).ToArray();
-        _eventTypesToKeyResolver = eventTypesWithKeyResolver.ToDictionary(
+        var eventTypes = eventTypesWithKeyResolver.ToArray();
+        EventTypes = eventTypes.Select(_ => new EventType(_.EventType.Id, _.EventType.Generation)).ToArray();
+        _eventTypesToKeyResolver = eventTypes.ToDictionary(
             _ => new EventType(_.EventType.Id, _.EventType.Generation),
             _ => _.KeyResolver);
 

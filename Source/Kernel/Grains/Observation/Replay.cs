@@ -7,7 +7,6 @@ using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;

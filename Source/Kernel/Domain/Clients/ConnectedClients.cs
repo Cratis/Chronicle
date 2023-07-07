@@ -6,7 +6,6 @@ using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Domain.Clients;
 

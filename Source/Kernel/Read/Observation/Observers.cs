@@ -6,7 +6,6 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Read.Observation;
 

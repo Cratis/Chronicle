@@ -5,7 +5,6 @@ using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.Configuration;
 using Microsoft.AspNetCore.Mvc;
-using Orleans;
 using ApiMicroservice = Aksio.Cratis.Kernel.Read.Configuration.Microservices.Microservice;
 
 namespace Aksio.Cratis.Kernel.Read.Configuration.Microservices;

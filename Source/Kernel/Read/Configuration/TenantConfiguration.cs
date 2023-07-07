@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 using Microsoft.AspNetCore.Mvc;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Read.Configuration.Tenants;
 

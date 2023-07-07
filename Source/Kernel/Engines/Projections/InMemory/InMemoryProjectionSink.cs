@@ -63,10 +63,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             return Task.FromResult<ExpandoObject?>(collection.SingleOrDefault(kvp => _comparer.Equals(kvp.Key, keyValue, out _)).Value);
         }
 
-        if (collection.ContainsKey(keyValue))
-        {
-            return Task.FromResult<ExpandoObject?>(collection[keyValue]);
-        }
+        if (collection.TryGetValue(keyValue, out var value)) return Task.FromResult<ExpandoObject?>(value);
 
         return Task.FromResult<ExpandoObject?>(null);
     }

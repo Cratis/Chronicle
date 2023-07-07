@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Kernel.Configuration;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Configuration;
 

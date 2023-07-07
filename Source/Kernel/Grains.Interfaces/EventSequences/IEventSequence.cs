@@ -3,7 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 

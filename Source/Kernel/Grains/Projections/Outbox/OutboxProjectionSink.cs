@@ -12,7 +12,6 @@ using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Objects;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;
 

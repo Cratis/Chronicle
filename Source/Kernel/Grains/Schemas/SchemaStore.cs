@@ -5,7 +5,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using NJsonSchema;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Schemas;
 

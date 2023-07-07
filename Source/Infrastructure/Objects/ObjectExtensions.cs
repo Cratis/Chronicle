@@ -71,12 +71,8 @@ public static class ObjectExtensions
             currentPath += segment;
             parentInstance = currentInstance;
 
-            var currentPropertyInfo = currentType.GetProperties().SingleOrDefault(_ => _.Name == segment.Value || _.Name == segment.Value.ToPascalCase());
-            if (currentPropertyInfo is null)
-            {
-                throw new UnableToResolvePropertyPathOnType(currentType, propertyPath);
-            }
-
+            var currentPropertyInfo = currentType.GetProperties().SingleOrDefault(_ => _.Name == segment.Value || _.Name == segment.Value.ToPascalCase())
+                ?? throw new UnableToResolvePropertyPathOnType(currentType, propertyPath);
             currentInstance = currentPropertyInfo.GetValue(currentInstance);
             if (currentInstance is null)
             {

@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Kernel.Engines.Compliance;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Compliance.GDPR;
 

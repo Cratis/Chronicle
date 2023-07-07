@@ -63,9 +63,9 @@ public class JsonComplianceManager : IJsonComplianceManager
                 var propertySchema = schema.GetFlattenedProperties().Single(_ => _.Name == property);
                 foreach (var metadata in propertySchema.GetComplianceMetadata().Concat(complianceMetadataForContainer).DistinctBy(_ => _.metadataType))
                 {
-                    if (_propertyValueHandlers.ContainsKey(metadata.metadataType))
+                    if (_propertyValueHandlers.TryGetValue(metadata.metadataType, out var handler))
                     {
-                        json[property] = await action(_propertyValueHandlers[metadata.metadataType], identifier, value);
+                        json[property] = await action(handler, identifier, value);
                     }
                 }
 

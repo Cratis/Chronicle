@@ -4,7 +4,6 @@
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Kernel.Orleans.Observers;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;

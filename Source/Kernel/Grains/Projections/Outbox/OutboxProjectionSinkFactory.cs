@@ -5,7 +5,6 @@ using System.Text.Json;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;
 

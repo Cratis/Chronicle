@@ -6,7 +6,6 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.EventSequences.Inboxes;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 
