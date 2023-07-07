@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Properties;
 using Aksio.Json;
@@ -29,7 +30,7 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new PropertyExpressionDictionaryConverter());
         options.Converters.Add(new FromDefinitionsConverter());
         options.Converters.Add(new JoinDefinitionsConverter());
-
+        options.Converters.Add(new EventSequenceNumberTokenJsonConverter());
 
         siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(_ =>
             _ == typeof(JsonObject) ||
