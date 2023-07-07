@@ -2,7 +2,7 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
-        <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217;SA1310;CA1707</NoWarn>
+        <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217;SA1310;CA1707;AS0003</NoWarn>
 
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <IsPackable>true</IsPackable>
