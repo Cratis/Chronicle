@@ -32,9 +32,8 @@ public static class SerializationConfigurationExtensions
         options.Converters.Add(new JoinDefinitionsConverter());
         options.Converters.Add(new EventSequenceNumberTokenJsonConverter());
 
-        siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(_ =>
-            _ == typeof(JsonObject) ||
-            (_.Namespace?.StartsWith("Aksio") ?? false),
+        siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddJsonSerializer(
+            _ => _ == typeof(JsonObject) || (_.Namespace?.StartsWith("Aksio") ?? false),
             options));
 
         return siloBuilder;

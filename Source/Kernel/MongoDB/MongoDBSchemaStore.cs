@@ -97,9 +97,9 @@ public class MongoDBSchemaStore : ISchemaStore
     public Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
-        if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
+        if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.TryGetValue(generation, out var schema))
         {
-            return Task.FromResult(_schemasByTypeAndGeneration[type][generation]);
+            return Task.FromResult(schema);
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
@@ -119,7 +119,7 @@ public class MongoDBSchemaStore : ISchemaStore
     public Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
-        if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
+        if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.ContainsKey(generation))
         {
             return Task.FromResult(true);
         }

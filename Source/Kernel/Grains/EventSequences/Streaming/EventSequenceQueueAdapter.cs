@@ -56,6 +56,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
         CreateReceiverIfNotExists(queueId);
         if (!token.IsWarmUp())
         {
+            events = events.ToArray();
             var appendedEvents = new List<AppendedEvent>();
             foreach (var @event in events)
             {
@@ -94,9 +95,9 @@ public class EventSequenceQueueAdapter : IQueueAdapter
 
     IQueueAdapterReceiver CreateReceiverIfNotExists(QueueId queueId)
     {
-        if (_receivers.ContainsKey(queueId)) return _receivers[queueId];
+        if (_receivers.TryGetValue(queueId, out var receiver)) return receiver;
 
-        var receiver = new EventSequenceQueueAdapterReceiver();
+        receiver = new EventSequenceQueueAdapterReceiver();
         _receivers[queueId] = receiver;
         return receiver;
     }

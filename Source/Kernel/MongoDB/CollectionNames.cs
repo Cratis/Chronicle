@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
 

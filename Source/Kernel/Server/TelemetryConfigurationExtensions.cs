@@ -90,8 +90,8 @@ public static class TelemetryConfigurationExtensions
             {
                 case TelemetryTypes.AppInsights:
                     {
-                        var options = telemetryConfig.GetAppInsightsTelemetryOptions();
                         // builder.AddApplicationInsightsTelemetryConsumer(options.Key);
+                        var options = telemetryConfig.GetAppInsightsTelemetryOptions();
                     }
                     break;
             }

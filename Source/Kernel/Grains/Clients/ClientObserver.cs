@@ -15,8 +15,8 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
 {
     readonly ILogger<ClientObserver> _logger;
-    ObserverId? _observerId;
     readonly IExecutionContextManager _executionContextManager;
+    ObserverId? _observerId;
     ObserverKey? _observerKey;
 
     /// <summary>

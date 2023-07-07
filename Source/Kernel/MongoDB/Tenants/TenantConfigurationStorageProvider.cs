@@ -4,7 +4,6 @@
 using Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
-using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 

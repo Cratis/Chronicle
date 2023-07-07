@@ -33,7 +33,7 @@ public class MongoDBReminderTable : IReminderTable
     /// </summary>
     /// <param name="database"><see cref="IClusterDatabase"/> to keep state in.</param>
     /// <param name="clusterOptions">The <see cref="ClusterOptions"/>.</param>
-    /// <param name="orleansJsonSerializerOptions"></param>
+    /// <param name="orleansJsonSerializerOptions">The Orleans Json serializer options.</param>
     /// <param name="logger">Logger for logging.</param>
     public MongoDBReminderTable(
         IClusterDatabase database,

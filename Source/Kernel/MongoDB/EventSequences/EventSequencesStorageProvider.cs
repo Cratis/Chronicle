@@ -34,7 +34,7 @@ public class EventSequencesStorageProvider : IGrainStorage
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task ReadStateAsync<T>(string stateName, GrainId  grainId, IGrainState<T> grainState)
+    public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
         var eventSequenceId = grainId.GetGuidKey(out var keyAsString);

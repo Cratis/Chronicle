@@ -5,7 +5,6 @@ using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using MongoDB.Driver;
-using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
