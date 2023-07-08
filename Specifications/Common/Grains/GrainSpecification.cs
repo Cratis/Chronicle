@@ -20,13 +20,13 @@ public abstract class GrainSpecification<TState> : GrainSpecification
     protected TState most_recent_written_state;
     protected Type grain_type = typeof(Grain<TState>);
 
-        
+
     protected override void OnStateManagement()
     {
         state ??= new TState();
-        
-        var storageProperty = grain_type.GetField("storage", BindingFlags.FlattenHierarchy | 
-                                                             BindingFlags.Instance | 
+
+        var storageProperty = grain_type.GetField("storage", BindingFlags.FlattenHierarchy |
+                                                             BindingFlags.Instance |
                                                              BindingFlags.NonPublic);
 
         if (storageProperty is null)
@@ -48,7 +48,7 @@ public abstract class GrainSpecification<TState> : GrainSpecification
 
 public abstract class GrainSpecification : Specification
 {
-    protected Mock<IGrainIdentity> grain_identity;
+    protected GrainId grain_identity;
     protected Mock<IGrainRuntime> runtime;
     protected Mock<IServiceProvider> service_provider;
     protected Mock<IKeyedServiceCollection<string, IStreamProvider>> stream_provider_collection;
@@ -74,9 +74,9 @@ public abstract class GrainSpecification : Specification
     {
         grain = GetGrainInstance();
 
-        var identityField = typeof(Grain).GetField("Identity", BindingFlags.Instance | BindingFlags.NonPublic);
-        grain_identity = new Mock<IGrainIdentity>();
-        identityField.SetValue(grain, grain_identity.Object);
+        var identityField = typeof(Grain).GetField("GrainId", BindingFlags.Instance | BindingFlags.NonPublic);
+        grain_identity = new GrainId();
+        identityField.SetValue(grain, grain_identity);
 
         var runtimeProperty = typeof(Grain).GetProperty("Runtime", BindingFlags.Instance | BindingFlags.NonPublic);
         runtime = new Mock<IGrainRuntime>();
