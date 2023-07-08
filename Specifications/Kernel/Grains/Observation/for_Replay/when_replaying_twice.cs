@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans;
-
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Replay;
 
 public class when_replaying_twice : given.a_replay_with_two_pending_events

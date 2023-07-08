@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Orleans;
 using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -52,7 +51,6 @@ public abstract class GrainSpecification : Specification
     protected Mock<IGrainRuntime> runtime;
     protected Mock<IServiceProvider> service_provider;
     protected Mock<IKeyedServiceCollection<string, IStreamProvider>> stream_provider_collection;
-    protected Mock<IReminderRegistry> reminder_registry;
     protected Mock<ITimerRegistry> timer_registry;
     protected Mock<IGrainFactory> grain_factory;
     protected Grain grain;
@@ -85,9 +83,6 @@ public abstract class GrainSpecification : Specification
         grain_factory = new();
         runtime.SetupGet(_ => _.GrainFactory).Returns(grain_factory.Object);
 
-        reminder_registry = new();
-        runtime.SetupGet(_ => _.ReminderRegistry).Returns(reminder_registry.Object);
-
         timer_registry = new();
         runtime.SetupGet(_ => _.TimerRegistry).Returns(timer_registry.Object);
 
@@ -97,14 +92,11 @@ public abstract class GrainSpecification : Specification
         stream_provider_collection = new Mock<IKeyedServiceCollection<string, IStreamProvider>>();
         service_provider.Setup(_ => _.GetService(typeof(IKeyedServiceCollection<string, IStreamProvider>))).Returns(stream_provider_collection.Object);
 
-        var key = GrainKeyExtension;
-        grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(GrainId);
-
         OnStateManagement();
         OnBeforeGrainActivate();
 
         Orleans.GrainReferenceExtensions.GetReferenceOverride = (grain) => grain;
 
-        grain.OnActivateAsync();
+        grain.OnActivateAsync(CancellationToken.None);
     }
 }

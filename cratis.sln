@@ -63,6 +63,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans", "Specifications\K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Specifications\Kernel\Shared\Shared.csproj", "{E73FAA76-51D9-4193-9A61-1624D16D258A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB", "Specifications\Clients\MongoDB\MongoDB.csproj", "{83E1B901-6C11-4729-A075-B6EAF227B386}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -168,6 +170,10 @@ Global
 		{E73FAA76-51D9-4193-9A61-1624D16D258A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E73FAA76-51D9-4193-9A61-1624D16D258A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E73FAA76-51D9-4193-9A61-1624D16D258A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83E1B901-6C11-4729-A075-B6EAF227B386}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83E1B901-6C11-4729-A075-B6EAF227B386}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83E1B901-6C11-4729-A075-B6EAF227B386}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83E1B901-6C11-4729-A075-B6EAF227B386}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F1A70D86-CE4A-443C-B4F9-EEFBC3E896F3} = {216800F4-7820-46A5-A3AD-4FCE82927B8D}
