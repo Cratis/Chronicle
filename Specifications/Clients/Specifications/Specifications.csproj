@@ -5,6 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../../Source/Extensions/Specifications/Specifications.csproj"/>
+        <ProjectReference Include="../../../Source/Clients/Specifications/Specifications.csproj"/>
     </ItemGroup>
 </Project>

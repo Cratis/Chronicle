@@ -4,9 +4,9 @@
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Json;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Specifications.Types;
+using Aksio.Cratis.Json;
+using Aksio.Types;
 
 namespace Aksio.Cratis.Specifications;
 

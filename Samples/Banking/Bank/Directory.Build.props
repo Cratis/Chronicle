@@ -30,7 +30,7 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Source/Extensions/Specifications/Specifications.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Source/Clients/Specifications/Specifications.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">

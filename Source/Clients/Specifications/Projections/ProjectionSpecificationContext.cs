@@ -7,6 +7,7 @@ using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Json;
+using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
@@ -18,7 +19,7 @@ using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Specifications.Types;
+using Aksio.Types;
 
 namespace Aksio.Cratis.Specifications.Integration;
 

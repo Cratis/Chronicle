@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net7.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
         <NoWarn>$(NoWarn);CA1707;CA2252;CA2211;RCS1169;RCS1018;RCS1213;IDE0044;IDE0052;IDE1006;RCS1090;IDE0051;CA1051;CS8632;CS8618;RCS1225;CA1305;CA1001</NoWarn>
         <Nullable>disable</Nullable>
@@ -25,7 +25,7 @@
 
     <ItemGroup>
         <ProjectReference Include="$(MSBuildThisFileDirectory)/Common/Common.csproj"/>
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../Source/Extensions/Specifications/Specifications.csproj"/>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../Source/Clients/Specifications/Specifications.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
