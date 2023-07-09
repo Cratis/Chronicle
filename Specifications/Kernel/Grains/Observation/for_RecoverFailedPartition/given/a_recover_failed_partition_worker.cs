@@ -6,6 +6,7 @@ using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Specifications;
 using Aksio.Execution;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.given;
 
@@ -70,7 +71,7 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
             );
 
         timer_registry
-            .Setup(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
+            .Setup(_ => _.RegisterTimer(IsAny<IGrainContext>(), IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
             .Returns((Grain _, Func<object, Task> callback, object state, TimeSpan wait, TimeSpan repeat) =>
             {
                 timers.Add(new(wait, repeat));
