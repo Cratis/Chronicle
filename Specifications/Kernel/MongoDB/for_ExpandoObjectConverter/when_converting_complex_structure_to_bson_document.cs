@@ -3,7 +3,7 @@
 
 using MongoDB.Bson;
 
-namespace Aksio.MongoDB.for_ExpandoObjectConverter;
+namespace Aksio.Cratis.Kernel.MongoDB.for_ExpandoObjectConverter;
 
 public class when_converting_complex_structure_to_bson_document : given.an_expando_object_converter
 {
