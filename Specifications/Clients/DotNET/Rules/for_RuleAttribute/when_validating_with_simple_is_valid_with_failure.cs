@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Aksio.Rules.for_Rules.for_RuleAttribute;
+namespace Aksio.Cratis.Rules.for_Rules.for_RuleAttribute;
 
 public class when_validating_with_simple_is_valid_with_failure : given.a_validation_context
 {

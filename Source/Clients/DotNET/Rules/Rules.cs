@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
@@ -11,7 +10,7 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 using Aksio.Strings;
 
-namespace Aksio.Rules;
+namespace Aksio.Cratis.Rules;
 
 /// <summary>
 /// Represents an implementation of <see cref="IRules"/>.
@@ -31,7 +30,7 @@ public class Rules : IRules
 
     static Rules()
     {
-        _createProjectionMethod = typeof(Rules).GetMethod(nameof(Rules.CreateProjection), BindingFlags.NonPublic | BindingFlags.Instance)!;
+        _createProjectionMethod = typeof(Rules).GetMethod(nameof(CreateProjection), BindingFlags.NonPublic | BindingFlags.Instance)!;
     }
 
     /// <summary>

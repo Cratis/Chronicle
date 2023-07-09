@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.AspNetCore.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.AspNetCore</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Clients/AspNetCore/AspNetCore.csproj"/>
+    </ItemGroup>
+</Project>

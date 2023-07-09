@@ -6,7 +6,7 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Strings;
 
-namespace Aksio.Rules.for_Rules.when_projecting_to_rule;
+namespace Aksio.Cratis.Rules.for_Rules.when_projecting_to_rule;
 
 public class with_model_identifier : given.no_rules
 {

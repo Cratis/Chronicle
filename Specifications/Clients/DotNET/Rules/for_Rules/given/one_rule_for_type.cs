@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Rules.for_Rules.given;
+namespace Aksio.Cratis.Rules.for_Rules.given;
 
 public class one_rule_for_type : all_dependencies
 {
@@ -11,7 +11,7 @@ public class one_rule_for_type : all_dependencies
 
     void Establish()
     {
-        types.SetupGet(_ => _.All).Returns(new[] { typeof(RulesForTypeForRules) });
+        client_artifacts.SetupGet(_ => _.Rules).Returns(new[] { typeof(RulesForTypeForRules) });
 
         rules = new(
             execution_context,
@@ -20,6 +20,6 @@ public class one_rule_for_type : all_dependencies
             json_schema_generator.Object,
             json_serializer_options,
             immediate_projections.Object,
-            types.Object);
+            client_artifacts.Object);
     }
 }

@@ -17,10 +17,10 @@ public class one_adapter : all_dependencies
     {
         adapter = new Mock<IAdapterFor<Model, ExternalModel>>();
         var adapterType = adapter.Object.GetType();
-        types.Setup(_ => _.FindMultiple(typeof(IAdapterFor<,>))).Returns(new[] { adapterType });
+        client_artifacts.SetupGet(_ => _.Adapters).Returns(new[] { adapterType });
         service_provider.Setup(_ => _.GetService(adapterType)).Returns(adapter.Object);
         adapters = new(
-            types.Object,
+            client_artifacts.Object,
             service_provider.Object,
             projection_factory.Object,
             mapper_factory.Object);

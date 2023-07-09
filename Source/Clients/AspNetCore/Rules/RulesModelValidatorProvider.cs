@@ -1,11 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Rules;
+using Aksio.Cratis.Rules;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.AspNetCore.Rules;
+namespace Aksio.Cratis.AspNetCore.Rules;
 
 /// <summary>
 /// Represents a <see cref="IModelValidatorProvider"/> for business rules.

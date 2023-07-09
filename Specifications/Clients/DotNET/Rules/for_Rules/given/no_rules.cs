@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Rules.for_Rules.given;
+namespace Aksio.Cratis.Rules.for_Rules.given;
 
 public class no_rules : all_dependencies
 {
@@ -14,5 +14,5 @@ public class no_rules : all_dependencies
         json_schema_generator.Object,
         json_serializer_options,
         immediate_projections.Object,
-        types.Object);
+        client_artifacts.Object);
 }

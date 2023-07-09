@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using FluentValidation;
 
-namespace Aksio.Rules;
+namespace Aksio.Cratis.Rules;
 
 /// <summary>
 /// Represents validation rules for <see cref="IStateRuleBuilder{TState, TCommand, TProperty}"/>.

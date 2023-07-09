@@ -7,8 +7,8 @@ using Aksio.Cratis.EventSequences.Outbox;
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Rules;
 using Aksio.Reflection;
-using Aksio.Rules;
 using Aksio.Types;
 
 namespace Aksio.Cratis;
