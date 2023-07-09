@@ -75,7 +75,7 @@ public class a_catch_up_worker : GrainSpecification
 
         timer_registry
             .Setup(_ => _.RegisterTimer(IsAny<IGrainContext>(), IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
-            .Returns((Grain __, Func<object, Task> callback, object state, TimeSpan ___, TimeSpan ____) =>
+            .Returns((IGrainContext __, Func<object, Task> callback, object state, TimeSpan ___, TimeSpan ____) =>
             {
                 callback(state);
                 return Task.CompletedTask;

@@ -11,7 +11,7 @@ public class when_replaying_twice : given.a_replay_with_two_pending_events
     {
         timer_registry
             .Setup(_ => _.RegisterTimer(IsAny<IGrainContext>(), IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
-            .Returns((Grain __, Func<object, Task> _, object _____, TimeSpan ___, TimeSpan ____) => Task.CompletedTask);
+            .Returns((IGrainContext __, Func<object, Task> _, object _____, TimeSpan ___, TimeSpan ____) => Task.CompletedTask);
     }
 
     async Task Because()

@@ -79,8 +79,10 @@ public class an_observer_supervisor : GrainSpecification
         sequence_stream_provider = new();
         stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
 
+        var streamId = StreamId.Create(new MicroserviceAndTenant(microservice_id, tenant_id), event_sequence_id.Value);
         sequence_stream = new();
-        sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(event_sequence_id.Value)).Returns(sequence_stream.Object);
+        sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(streamId)).Returns(sequence_stream.Object);
+        sequence_stream.SetupGet(_ => _.StreamId).Returns(streamId);
 
         subscribed_tokens = new();
         subscription_handles = new();
