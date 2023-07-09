@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Reflection.for_ExpressionExtensions;
+namespace Aksio.Cratis.Reflection.for_ExpressionExtensions;
 
 public class when_getting_property_path_from_expression : Specification
 {

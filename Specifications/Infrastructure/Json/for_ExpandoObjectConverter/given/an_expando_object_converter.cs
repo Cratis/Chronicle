@@ -5,7 +5,7 @@ using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
-namespace Aksio.Json.for_ExpandoObjectConverter.given;
+namespace Aksio.Cratis.Json.for_ExpandoObjectConverter.given;
 
 public class an_expando_object_converter : Specification
 {

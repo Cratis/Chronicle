@@ -4,8 +4,9 @@
 using System.Dynamic;
 using System.Globalization;
 using System.Text.Json.Nodes;
+using Aksio.Json;
 
-namespace Aksio.Json.for_ExpandoObjectConverter;
+namespace Aksio.Cratis.Json.for_ExpandoObjectConverter;
 
 public class when_converting_complex_structure_to_json_object : given.an_expando_object_converter
 {
