@@ -18,6 +18,7 @@ public class a_connected_client : a_rest_kernel_client
         });
 
         await client.Connect();
+        await ping_occurred.Task;
     }
 
     protected virtual HttpResponseMessage GetMessageForRoute(string route) => not_found_message;

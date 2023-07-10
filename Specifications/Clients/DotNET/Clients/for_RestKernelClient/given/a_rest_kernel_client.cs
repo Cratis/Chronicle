@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Commands;
-using Aksio.Execution;
 using Aksio.Tasks;
 using Aksio.Timers;
 using Microsoft.Extensions.Logging;
@@ -38,6 +37,7 @@ public class a_rest_kernel_client : Specification
     protected MicroserviceId microservice_id;
     protected ConnectionId connection_id;
     protected Mock<ITimer> timer;
+    protected TaskCompletionSource<bool> ping_occurred;
 
     void Establish()
     {
@@ -66,6 +66,8 @@ public class a_rest_kernel_client : Specification
 
         client_lifecycle.SetupGet(_ => _.ConnectionId).Returns(connection_id);
 
+        ping_occurred = new();
+
         timer = new();
         timer_factory.Setup(_ =>
             _.Create(
@@ -75,6 +77,7 @@ public class a_rest_kernel_client : Specification
                 IsAny<object>())).Returns((TimerCallback callback, int _, int __, object? state) =>
                 {
                     callback(state);
+                    ping_occurred.SetResult(true);
                     return timer.Object;
                 });
 
