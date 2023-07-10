@@ -16,7 +16,7 @@ global using Aksio.Cratis.Observation;
 global using Aksio.Cratis.Projections;
 global using Aksio.Concepts;
 global using Aksio.Cratis.Models;
-global using Aksio.Rules;
+global using Aksio.Cratis.Rules;
 global using Aksio.Serialization;
 global using AutoMapper;
 global using FluentValidation;
