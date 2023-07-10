@@ -8,6 +8,27 @@ env:
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        default: '0.0.0'
+        type: string
+      release-notes:
+        description: 'Release notes'
+        required: true
+        default: 'No release notes'
+        type: string
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+        - info
+        - warning
+        - debug
   pull_request:
     types: [closed]
     branches:
