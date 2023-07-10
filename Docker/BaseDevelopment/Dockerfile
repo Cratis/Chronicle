@@ -4,7 +4,7 @@
 # Cratis Server
 # Build runtime image
 ####################################
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-focal
+FROM mcr.microsoft.com/dotnet/aspnet:7.0-alpine
 ARG VERSION
 
 RUN echo Version = ${VERSION}
