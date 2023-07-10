@@ -22,10 +22,19 @@ public class MongoDBObserversState : IObserversState
     {
         get
         {
+            var observable = new BehaviorSubject<IEnumerable<ObserverState>>(new ObserverState[0]);
             var observers = Collection.Find(_ => true).ToList();
-            var observable = new BehaviorSubject<IEnumerable<ObserverState>>(observers);
             observable.OnNext(observers);
-            var cursor = Collection.Watch();
+
+            var filter = Builders<ChangeStreamDocument<ObserverState>>.Filter.In(
+                new StringFieldDefinition<ChangeStreamDocument<ObserverState>, string>("operationType"),
+                new[] { "insert", "replace", "update" });
+
+            var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<ObserverState>>().Match(filter);
+
+            var cursor = Collection.Watch(
+                pipeline,
+                new ChangeStreamOptions { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
             _ = Task.Run(async () =>
             {
                 try
@@ -39,10 +48,23 @@ public class MongoDBObserversState : IObserversState
                         }
 
                         if (!cursor.Current.Any()) continue;
-                        var observers = await Collection.FindAsync(_ => true);
                         if (!observable.IsDisposed)
                         {
-                            observable.OnNext(observers.ToList());
+                            foreach (var changedObserver in cursor.Current.Select(_ => _.FullDocument))
+                            {
+                                var observer = observers.Find(_ => _.Id == changedObserver.Id);
+                                if (observer is not null)
+                                {
+                                    var index = observers.IndexOf(observer);
+                                    observers[index] = changedObserver;
+                                }
+                                else
+                                {
+                                    observers.Add(changedObserver);
+                                }
+                            }
+
+                            observable.OnNext(observers);
                         }
                     }
                 }
