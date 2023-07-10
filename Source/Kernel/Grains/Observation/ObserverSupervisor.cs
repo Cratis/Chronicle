@@ -232,10 +232,12 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
         }
     }
 
+#pragma warning disable CA1851 // Possible multiple enumerations of IEnumerable
     bool HasDefinitionChanged(IEnumerable<EventType> eventTypes) =>
         State.RunningState != ObserverRunningState.New &&
         (State.EventTypes.Count() != eventTypes.Count() ||
         !eventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(State.EventTypes.OrderBy(_ => _.Id.Value)));
+#pragma warning restore CA1851 // Possible multiple enumerations of IEnumerable
 
     async Task SubscribeStream(Func<AppendedEvent, Task> handler)
     {

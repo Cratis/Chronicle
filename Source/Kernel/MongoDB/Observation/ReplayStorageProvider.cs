@@ -4,9 +4,9 @@
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
+using Aksio.Strings;
 using MongoDB.Driver;
 using Orleans.Runtime;
-using Aksio.Strings;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
