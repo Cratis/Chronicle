@@ -16,7 +16,6 @@ const pages: page[] = [
     { name: 'Event Store', route: '/event-store' },
     { name: 'Metrics', route: '/metrics' },
     { name: 'Clients', route: '/clients' },
-    { name: 'Compliance', route: '/compliance' },
     { name: 'Configuration', route: '/configuration' }];
 
 export const Header = () => {
