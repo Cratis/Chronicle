@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Specifications;
-using Aksio.Execution;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.when_recovering;

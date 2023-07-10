@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
-using Aksio.Execution;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Streams;

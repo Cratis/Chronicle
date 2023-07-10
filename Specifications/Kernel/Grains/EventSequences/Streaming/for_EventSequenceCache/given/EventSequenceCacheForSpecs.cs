@@ -3,7 +3,6 @@
 
 using Aksio.DependencyInversion;
 using Aksio.Cratis.EventSequences;
-using Aksio.Execution;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
