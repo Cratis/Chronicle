@@ -15,18 +15,6 @@ public static class Program
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
         PackageReferencedAssemblies.Instance.AddAssemblyPrefixesToExclude(
-            "AutoMapper",
-            "Autofac",
-            "Azure",
-            "Elasticsearch",
-            "FluentValidation",
-            "Grpc",
-            "Handlebars",
-            "NJsonSchema",
-            "MongoDB",
-            "Orleans",
-            "Serilog",
-            "Swashbuckle",
             "OpenTelemetry");
 
         SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude(
