@@ -7,6 +7,6 @@ namespace Aksio.Cratis.Clients;
 
 internal static partial class InsideKernelClientLogMessages
 {
-    [LoggerMessage(0, LogLevel.Information, "Inside Kernel client connecting to kernel at {Endpoint}")]
-    internal static partial void ConnectingKernel(this ILogger<InsideKernelClient> logger, Uri endpoint);
+    [LoggerMessage(0, LogLevel.Information, "Inside Kernel client will be connected to kernel on {Endpoint}")]
+    internal static partial void InsideKernelConfigured(this ILogger<InsideKernelClient> logger, Uri endpoint);
 }

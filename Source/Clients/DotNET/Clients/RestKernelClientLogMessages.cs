@@ -48,4 +48,10 @@ internal static partial class RestKernelClientLogMessages
 
     [LoggerMessage(13, LogLevel.Information, "Client ping is not enabled, since the debugger is attached")]
     internal static partial void NoPing(this ILogger<RestKernelClient> logger);
+
+    [LoggerMessage(14, LogLevel.Information, "Attempting to connect")]
+    internal static partial void AttemptingConnect(this ILogger<RestKernelClient> logger);
+
+    [LoggerMessage(15, LogLevel.Error, "Error during connection")]
+    internal static partial void Error(this ILogger<RestKernelClient> logger, Exception exception);
 }

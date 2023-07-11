@@ -80,45 +80,53 @@ public abstract class RestKernelClient : IClient, IDisposable
     {
         _ = _taskFactory.Run(async () =>
         {
-            _logger.Connecting();
-
-            _timer?.Dispose();
-            _timer = null;
-
-            var attribute = typeof(SingleKernelClient).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-            var version = attribute?.InformationalVersion ?? "1.0.0";
-            var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached);
-
-            for (; ; )
+            try
             {
-                try
+                _logger.Connecting();
+
+                _timer?.Dispose();
+                _timer = null;
+
+                var attribute = typeof(SingleKernelClient).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+                var version = attribute?.InformationalVersion ?? "1.0.0";
+                var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached);
+
+                for (; ; )
                 {
-                    var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/connect/{ConnectionId}", info);
-                    if (result.IsSuccess)
+                    try
                     {
-                        break;
+                        _logger.AttemptingConnect();
+                        var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/connect/{ConnectionId}", info);
+                        if (result.IsSuccess)
+                        {
+                            break;
+                        }
                     }
+                    catch
+                    {
+                    }
+                    _logger.KernelUnavailable();
+                    await OnKernelUnavailable();
+                    await _taskFactory.Delay(2000);
                 }
-                catch
+
+                _connectCompletion.SetResult(true);
+                await _clientLifecycle.Connected();
+                _logger.KernelConnected();
+
+                if (!Debugger.IsAttached)
                 {
+                    _logger.SettingUpClientPing();
+                    _timer ??= _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
                 }
-                _logger.KernelUnavailable();
-                await OnKernelUnavailable();
-                await _taskFactory.Delay(2000);
+                else
+                {
+                    _logger.NoPing();
+                }
             }
-
-            _connectCompletion.SetResult(true);
-            await _clientLifecycle.Connected();
-            _logger.KernelConnected();
-
-            if (!Debugger.IsAttached)
+            catch (Exception ex)
             {
-                _logger.SettingUpClientPing();
-                _timer ??= _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
-            }
-            else
-            {
-                _logger.NoPing();
+                _logger.Error(ex);
             }
         });
 
