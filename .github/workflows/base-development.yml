@@ -1,6 +1,27 @@
 name: Base Development Image
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        default: '0.0.0'
+        type: string
+      release-notes:
+        description: 'Release notes'
+        required: true
+        default: 'No release notes'
+        type: string
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+        - info
+        - warning
+        - debug
   pull_request:
     types: [closed]
     branches:
@@ -26,6 +47,8 @@ jobs:
         with:
           user-name: "Aksio Build"
           user-email: "build@aksio.no"
+          version: ${{ github.event.inputs.version }}
+          release-notes: ${{ github.event.inputs.release-notes }}
 
   publish-docker:
     if: needs.release.outputs.publish == 'true'
