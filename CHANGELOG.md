@@ -1,3 +1,7 @@
+# [v9.0.0-beta.11] - 2023-7-11 [PR: #0]()
+
+No release notes
+
 # [v9.0.0-beta.10] - 2023-7-11 [PR: #0]()
 
 No release notes
