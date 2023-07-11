@@ -74,9 +74,11 @@ public class ClientBuilder : IClientBuilder
 
         services
             .AddHttpClient()
+            .AddSingleton(clientArtifacts)
+            .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention())
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
             .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox)
-            .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention());
+            .AddObservers(clientArtifacts);
 
         if (_inKernel)
         {
@@ -88,15 +90,13 @@ public class ClientBuilder : IClientBuilder
         services
             .AddCratisClient()
             .AddTransient<IEventStore, EventStore>()
-            .AddSingleton(clientArtifacts)
             .AddSingleton<IClientLifecycle, ClientLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
-            .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddObservers(clientArtifacts);
+            .AddSingleton<IExecutionContextManager, ExecutionContextManager>();
 
         logger.ConfiguringCompliance();
 
