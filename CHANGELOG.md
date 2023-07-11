@@ -1,3 +1,7 @@
+# [v9.0.0-beta.1] - 2023-7-11 [PR: #0]()
+
+No release notes
+
 # [v9.0.0] - 2023-7-11 [PR: #899](https://github.com/aksio-insurtech/Cratis/pull/899)
 
 ## Summary
