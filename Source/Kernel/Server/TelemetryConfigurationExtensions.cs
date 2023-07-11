@@ -86,16 +86,6 @@ public static class TelemetryConfigurationExtensions
                             break;
                     }
                 });
-
-            switch (telemetryConfig.Type)
-            {
-                case TelemetryTypes.AppInsights:
-                    {
-                        // builder.AddApplicationInsightsTelemetryConsumer(options.Key);
-                        var options = telemetryConfig.GetAppInsightsTelemetryOptions();
-                    }
-                    break;
-            }
         });
 
         return builder;
