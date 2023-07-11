@@ -103,7 +103,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
             var lastInstance = await _eventSequenceStorageProvider.GetLastInstanceFor(EventSequenceId.Outbox, eventType.Id, key.Value.ToString()!);
             return lastInstance.Content;
         }
-        catch
+        catch (MissingEvent)
         {
             return default;
         }
