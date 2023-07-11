@@ -28,19 +28,6 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v1
 
-      - uses: actions/cache@v3
-        id: yarn-cache
-        with:
-          path: |
-            .yarn/cache
-            **/node_modules
-            **/.eslintcache
-            **/yarn.lock
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
-
-      - name: Yarn install
-        run: yarn
-
       - name: Setup node v16
         uses: actions/setup-node@v3
         with:
@@ -52,9 +39,22 @@ jobs:
         with:
           dotnet-version: "7.0.305"
 
+      - uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: |
+            .yarn/cache
+            **/node_modules
+            **/.eslintcache
+            **/yarn.lock
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
+
       - name: Restore tooling
         working-directory: ./DocFX
         run: dotnet restore
+
+      - name: Yarn install
+        run: yarn
 
       - name: Build DocFX site
         working-directory: ./DocFX
