@@ -42,15 +42,6 @@ You can read more about the Kernel [here](./kernel/index.md).
 
 ## Client
 
-## Application Model
-
-The Application Model is an opinionated approach to application development. It offers an approach to [CQRS](https://en.wikipedia.org/wiki/Command%E2%80%93query_separation#Command_Query_Responsibility_Segregation)
-that is transparent to you as a developer allowing you to reuse the knowledge of working with ASP.NET Core API
-controllers. In addition to this it comes with a pre-configured ASP.NET Core pipeline setup for validation, tenancy,
-MongoDB extensions and automatic code generation of backend artifacts for consuming in frontend.
-
-You can read more about the Application Model [here](./application-model/index.md).
-
 ## Pillars
 
 ## Multi-tenancy

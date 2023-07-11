@@ -5,6 +5,8 @@
         <Orleans>7.1.2</Orleans>
 	</PropertyGroup>
 	<ItemGroup>
+        <PackageVersion Include="docfx.console" Version="2.59.3"/>
+
 		<PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Fundamentals" Version="1.3.4" />

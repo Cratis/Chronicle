@@ -4,24 +4,6 @@
             "src": [
                 {
                     "files": [
-                        "**/**.csproj"
-                    ],
-                    "exclude": [
-                        "**/obj/**",
-                        "**/bin/**",
-                        "Tooling/Templates/**"
-                    ],
-                    "cwd": "../Source/ApplicationModel"
-                }
-            ],
-            "dest": "api/application-model",
-            "disableGitFeatures": false,
-            "disableDefaultFilter": false
-        },
-        {
-            "src": [
-                {
-                    "files": [
                         "Clients/DotNET/DotNET.csproj"
                     ],
                     "exclude": [
@@ -49,23 +31,6 @@
                 }
             ],
             "dest": "api/clients/aspnetcore",
-            "disableGitFeatures": false,
-            "disableDefaultFilter": false
-        },
-        {
-            "src": [
-                {
-                    "files": [
-                        "Fundamentals/Fundamentals.csproj"
-                    ],
-                    "exclude": [
-                        "**/obj/**",
-                        "**/bin/**"
-                    ],
-                    "cwd": "../Source"
-                }
-            ],
-            "dest": "api/fundamentals",
             "disableGitFeatures": false,
             "disableDefaultFilter": false
         }

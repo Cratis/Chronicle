@@ -27,9 +27,6 @@ leakage between tenants. It also removes the need for having to remember to incl
 tenant in queries, which can be error prone. We consider tenancy to be a cross cutting
 concern and we want this to be applied as automatic and seamless as possible.
 
-Resources such as the [event store](./event-store.md) and [mongodb](../application-model/mongodb.md)
-comes pre-configured to be multi-tenant aware.
-
 ## How is a tenant resolved?
 
 In order for any of the cross cutting mechanisms to work, we need to know what tenant we're

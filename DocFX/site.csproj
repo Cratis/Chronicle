@@ -1,14 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="docfx.console" Version="2.59.3" GeneratePathProperty="true">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="docfx.console" GeneratePathProperty="true">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
 
-  <Target Name="docfx">
-    <Exec Command="mono $(Pkgdocfx_console)/tools/docfx.exe ./docfx.json --build"/>
-  </Target>
+    <Target Name="docfx">
+        <Exec Command="mono $(Pkgdocfx_console)/tools/docfx.exe ./docfx.json --build"/>
+    </Target>
 
 </Project>
