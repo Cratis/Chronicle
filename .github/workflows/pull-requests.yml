@@ -3,7 +3,7 @@ name: PR Prerelase
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   NUGET_SOURCE: https://nuget.pkg.github.com/aksio-insurtech/index.json
-  DOTNET_VERSION: "6.0.400"
+  DOTNET_VERSION: "7.0.8"
   KERNEL_CACHE: "kernel-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
