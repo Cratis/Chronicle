@@ -4,7 +4,7 @@
 #pragma warning disable CS8019
 
 global using Aksio.Specifications;
-global using Aksio.Specifications;
+global using Aksio.Cratis.Specifications;
 global using Moq;
 global using Xunit;
 global using static Moq.It;
