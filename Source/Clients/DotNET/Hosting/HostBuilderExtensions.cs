@@ -16,17 +16,17 @@ public static class HostBuilderExtensions
     /// Configures the <see cref="IClientBuilder"/> for a non-microservice oriented scenario.
     /// </summary>
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
-    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
     public static IHostBuilder UseCratis(
         this IHostBuilder hostBuilder,
-        IClientArtifactsProvider? clientArtifacts = default,
         Action<IClientBuilder>? configureDelegate = default,
+        IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
-        return hostBuilder.UseCratis(MicroserviceId.Unspecified, clientArtifacts, configureDelegate, loggerFactory);
+        return hostBuilder.UseCratis(MicroserviceId.Unspecified, configureDelegate, clientArtifacts, loggerFactory);
     }
 
     /// <summary>
@@ -34,15 +34,15 @@ public static class HostBuilderExtensions
     /// </summary>
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
     /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
-    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
     public static IHostBuilder UseCratis(
         this IHostBuilder hostBuilder,
         MicroserviceId microserviceId,
-        IClientArtifactsProvider? clientArtifacts = default,
         Action<IClientBuilder>? configureDelegate = default,
+        IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
         var clientBuilder = ClientBuilder.ForMicroservice(microserviceId);

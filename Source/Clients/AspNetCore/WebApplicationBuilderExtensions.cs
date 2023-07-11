@@ -45,7 +45,7 @@ public static class WebApplicationBuilderExtensions
         Action<IClientBuilder>? configureDelegate = default)
     {
         webApplicationBuilder.Services.AddRules();
-        webApplicationBuilder.Host.UseCratis(microserviceId, clientArtifacts, configureDelegate);
+        webApplicationBuilder.Host.UseCratis(microserviceId, configureDelegate, clientArtifacts);
 
         return webApplicationBuilder;
     }

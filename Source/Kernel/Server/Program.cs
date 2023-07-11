@@ -48,7 +48,7 @@ public static class Program
             .UseAksio(
                 microserviceId: MicroserviceId.Kernel,
                 microserviceName: "Cratis Kernel")
-            .UseCratis()
+            .UseCratis(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
