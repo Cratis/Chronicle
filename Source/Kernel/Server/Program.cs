@@ -14,10 +14,24 @@ public static class Program
     public static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
-        PackageReferencedAssemblies.Instance.AddAssemblyPrefixesToExclude("OpenTelemetry");
+        PackageReferencedAssemblies.Instance.AddAssemblyPrefixesToExclude(
+            "AutoMapper",
+            "Autofac",
+            "Azure",
+            "Elasticsearch",
+            "FluentValidation",
+            "Grpc",
+            "Handlebars",
+            "NJsonSchema",
+            "MongoDB",
+            "Orleans",
+            "Serilog",
+            "Swashbuckle",
+            "OpenTelemetry");
 
-        SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude("Microsoft");
-        SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude("Orleans");
+        SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude(
+            "Microsoft",
+            "Orleans");
 
         // Force invariant culture for the Kernel
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
