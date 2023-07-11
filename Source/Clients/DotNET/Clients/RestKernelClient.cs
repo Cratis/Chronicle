@@ -113,7 +113,12 @@ public abstract class RestKernelClient : IClient, IDisposable
 
             if (!Debugger.IsAttached)
             {
+                _logger.SettingUpClientPing();
                 _timer ??= _timerFactory.Create(_ => Ping().Wait(), 1000, 1000);
+            }
+            else
+            {
+                _logger.NoPing();
             }
         });
 

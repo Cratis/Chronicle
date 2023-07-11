@@ -42,4 +42,10 @@ internal static partial class RestKernelClientLogMessages
 
     [LoggerMessage(11, LogLevel.Information, "Connected to Cratis Kernel")]
     internal static partial void KernelConnected(this ILogger<RestKernelClient> logger);
+
+    [LoggerMessage(12, LogLevel.Information, "Setting up client ping")]
+    internal static partial void SettingUpClientPing(this ILogger<RestKernelClient> logger);
+
+    [LoggerMessage(13, LogLevel.Information, "Client ping is not enabled, since the debugger is attached")]
+    internal static partial void NoPing(this ILogger<RestKernelClient> logger);
 }
