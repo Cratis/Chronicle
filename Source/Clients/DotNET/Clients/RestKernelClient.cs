@@ -5,12 +5,11 @@ using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis.Commands;
+using Aksio.Commands;
 using Aksio.Cratis.Dynamic;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Queries;
-using Aksio.Cratis.Tasks;
-using Aksio.Cratis.Timers;
+using Aksio.Queries;
+using Aksio.Tasks;
+using Aksio.Timers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -156,18 +155,16 @@ public abstract class RestKernelClient : IClient, IDisposable
         ThrowIfClientIsDisconnected();
 
         var client = CreateReadHttpClient();
-        HttpResponseMessage response;
-
+        QueryResult result;
         if (queryString is not null)
         {
             var uri = QueryHelpers.AddQueryString(route, queryString!);
-            response = await client.GetAsync(uri);
+            result = (await client.GetFromJsonAsync<QueryResult>(uri, options: _jsonSerializerOptions))!;
         }
         else
         {
-            response = await client.GetAsync(route);
+            result = (await client.GetFromJsonAsync<QueryResult>(route, options: _jsonSerializerOptions))!;
         }
-        var result = (await response.Content.ReadFromJsonAsync<QueryResult>(_jsonSerializerOptions))!;
         LogQueryResult(route, result);
         var element = (JsonElement)result.Data;
         var deserializedData = element.Deserialize<TResult>(_jsonSerializerOptions)!;

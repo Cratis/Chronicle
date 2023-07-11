@@ -3,11 +3,9 @@
 
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 
@@ -35,7 +33,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerId = this.GetPrimaryKey(out var keyAsString);
         _observerKey = ObserverKey.Parse(keyAsString);
@@ -50,7 +48,7 @@ public class ClientObserver : Grain, IClientObserver, INotifyClientDisconnected
         _logger.Starting(_observerKey!.MicroserviceId, _observerId!, _observerKey!.EventSequenceId, _observerKey!.TenantId);
         var observer = GrainFactory.GetGrain<IObserverSupervisor>(_observerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
-        await connectedClients.SubscribeDisconnected(this);
+        await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
         await observer.SetNameAndType(name, ObserverType.Client);
         var connectedClient = await connectedClients.GetConnectedClient(connectionId);
         await observer.Subscribe<IClientObserverSubscriber>(eventTypes, connectedClient);

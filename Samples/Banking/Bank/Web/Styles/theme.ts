@@ -4,8 +4,6 @@
 import { createTheme, loadTheme } from '@fluentui/react/lib/Styling';
 import { initializeIcons } from '@fluentui/font-icons-mdl2';
 
-import './theme.scss';
-
 initializeIcons();
 
 const myTheme = createTheme({

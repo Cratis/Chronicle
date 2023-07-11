@@ -1,14 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
+using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
@@ -59,7 +57,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     }
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         State.ObserverId = this.GetPrimaryKey(out var keyAsString);
         _key = PartitionedObserverKey.Parse(keyAsString);
@@ -74,7 +72,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     }
 
     /// <inheritdoc/>
-    public override async Task OnDeactivateAsync()
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         _logger.Deactivating(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
         await WriteStateAsync();
@@ -221,7 +219,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         {
             var nextAttempt = isForced ? TimeSpan.Zero : State.GetNextAttemptSchedule();
             _logger.ProcessingScheduled(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, nextAttempt, State.NextSequenceNumberToProcess);
-            _timer = RegisterTimer(PerformRecovery, null, nextAttempt, TimeSpan.MaxValue);
+            _timer = RegisterTimer(PerformRecovery, null, nextAttempt, TimeSpan.FromHours(1));
         }
         _logger.ProcessingScheduleIgnored(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId);
     }

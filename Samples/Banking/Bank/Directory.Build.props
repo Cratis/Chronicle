@@ -1,8 +1,9 @@
 <Project>
-    <Import Project="$(MSBuildThisFileDirectory)../../../Directory.Build.props"/>
-
     <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>true</ImplicitUsings>
         <IsPackable>false</IsPackable>
+        <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;CS1591;IDE0060;RCS1163</NoWarn>
 
@@ -11,11 +12,13 @@
         <SpecProject>$([System.String]::Copy($(MSBuildProjectName)).Contains('.Specs'))</SpecProject>
     </PropertyGroup>
 
-    <Import Project="$(MSBuildThisFileDirectory)../../../Source/ApplicationModel/Tooling/ProxyGenerator/build/Aksio.Cratis.Applications.ProxyGenerator.props"/>
+    <ItemGroup>
+        <PackageReference Include="Aksio.Applications" />
+        <PackageReference Include="Aksio.Applications.ProxyGenerator" PrivateAssets="all"/>
+    </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Source/ApplicationModel/Applications/Applications.csproj" />
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Source/ApplicationModel/Tooling/ProxyGenerator/ProxyGenerator.csproj" OutputItemType="Analyzer" Private="true"/>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Source/Clients/DotNET/DotNET.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -27,7 +30,7 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Source/Extensions/Specifications/Specifications.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../../../Source/Clients/Specifications/Specifications.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
@@ -35,13 +38,13 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(SpecProject)' == 'true'">
-        <PackageReference Include="xunit" Version="$(xunit)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
-        <PackageReference Include="moq" Version="$(Moq)" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
+        <PackageReference Include="moq"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
     </ItemGroup>
 </Project>

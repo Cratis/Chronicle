@@ -11,9 +11,10 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = Host.CreateDefaultBuilder()
+                    .UseMongoDB()
                     .UseAksio(microserviceId: "00000000-0000-0000-0000-000000000000")
+                    .UseCratis()
                     .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
 
 var app = builder.Build();
-
 app.Run();

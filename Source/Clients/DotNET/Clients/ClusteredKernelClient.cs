@@ -2,10 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Net;
-using Aksio.Cratis.Tasks;
-using Aksio.Cratis.Timers;
+using Aksio.Tasks;
+using Aksio.Timers;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Clients;

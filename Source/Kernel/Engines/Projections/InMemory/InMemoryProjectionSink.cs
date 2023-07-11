@@ -5,11 +5,11 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Json;
+using Aksio.Reflection;
+using Aksio.Types;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 
@@ -63,10 +63,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
             return Task.FromResult<ExpandoObject?>(collection.SingleOrDefault(kvp => _comparer.Equals(kvp.Key, keyValue, out _)).Value);
         }
 
-        if (collection.ContainsKey(keyValue))
-        {
-            return Task.FromResult<ExpandoObject?>(collection[keyValue]);
-        }
+        if (collection.TryGetValue(keyValue, out var value)) return Task.FromResult<ExpandoObject?>(value);
 
         return Task.FromResult<ExpandoObject?>(null);
     }

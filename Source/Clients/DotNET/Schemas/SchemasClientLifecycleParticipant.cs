@@ -2,16 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Boot;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Schemas;
 
 /// <summary>
-/// Represents an implementation of <see cref="IPerformBootProcedure"/> for registering event schemas.
+/// Represents an implementation of <see cref="IParticipateInClientLifecycle"/> for registering event schemas.
 /// </summary>
 public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
 {

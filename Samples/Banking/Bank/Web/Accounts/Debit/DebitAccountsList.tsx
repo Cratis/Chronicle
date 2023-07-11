@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { CommandScopeContext, useCommandScope } from '@aksio/cratis-applications-frontend/commands';
+import { CommandScopeContext, useCommandScope } from '@aksio/applications/commands';
 import { DetailsList, IColumn, IObjectWithKey, Selection, TextField } from '@fluentui/react';
 import { DebitAccount } from 'API/accounts/debit/DebitAccount';
 import { SetDebitAccountName } from 'API/accounts/debit/SetDebitAccountName';

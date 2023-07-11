@@ -5,16 +5,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
-        <ProjectReference Include="../../Extensions/MongoDB/MongoDB.csproj" />
         <ProjectReference Include="../../Kernel/Shared/Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensions)" />
-      <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensions)" />
-      <PackageReference Include="Humanizer" Version="$(Humanizer)" />
-      <PackageReference Include="automapper" Version="10.1.1" />
-      <PackageReference Include="Azure.Data.Tables" Version="12.7.1"/>
+      <PackageReference Include="Microsoft.Extensions.Hosting" />
+      <PackageReference Include="automapper" />
+      <PackageReference Include="Azure.Data.Tables" />
+      <PackageReference Include="FluentValidation" />
     </ItemGroup>
 </Project>

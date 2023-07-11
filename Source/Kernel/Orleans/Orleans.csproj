@@ -5,15 +5,17 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj"/>
+        <PackageReference Include="Aksio.Fundamentals"/>
+        <PackageReference Include="Microsoft.Orleans.Server" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" />
+        <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" />
+        <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="System.Data.SqlClient" />
+        <PackageReference Include="System.Net.NameResolution" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="$(Orleans)" />
-        <PackageReference Include="Microsoft.Orleans.Clustering.AzureStorage" Version="$(Orleans)" />
-        <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="$(Orleans)" />
-        <PackageReference Include="System.Data.SqlClient" Version="$(SqlDataClient)" />
-        <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

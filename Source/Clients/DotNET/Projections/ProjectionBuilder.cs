@@ -11,7 +11,8 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Strings;
+using Aksio.Reflection;
+using Aksio.Strings;
 using Humanizer;
 
 namespace Aksio.Cratis.Projections;

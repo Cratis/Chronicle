@@ -1,17 +1,15 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Collections;
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Collections;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Extensions.MongoDB;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using HostBuilderContext = Microsoft.Extensions.Hosting.HostBuilderContext;
@@ -64,25 +62,21 @@ public class ClientBuilder : IClientBuilder
     public void Build(
         HostBuilderContext hostBuilderContext,
         IServiceCollection services,
-        ITypes? types = default,
+        IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
-#pragma warning disable CA2000 // Allow things to not be disposed
+        #pragma warning disable CA2000 // Dispose objects before losing scope - Logger factory will be disposed when process exits
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
-#pragma warning restore CA2000
         var logger = loggerFactory.CreateLogger<ClientBuilder>()!;
         logger.Configuring();
 
-        if (types == default)
-        {
-            types = new Types.Types();
-        }
+        clientArtifacts ??= new DefaultClientArtifactsProvider(ProjectReferencedAssemblies.Instance);
 
         services
             .AddHttpClient()
-            .AddMongoDBReadModels(types, loggerFactory: loggerFactory, modelNameConvention: _modelNameConvention)
             .AddTransient(sp => sp.GetService<IEventStore>()!.EventLog)
-            .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox);
+            .AddTransient(sp => sp.GetService<IEventStore>()!.Outbox)
+            .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention());
 
         if (_inKernel)
         {
@@ -93,10 +87,8 @@ public class ClientBuilder : IClientBuilder
         logger.ConfiguringServices();
         services
             .AddCratisClient()
-            .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>))
-            .AddTransient(typeof(IImplementationsOf<>), typeof(ImplementationsOf<>))
             .AddTransient<IEventStore, EventStore>()
-            .AddSingleton(types)
+            .AddSingleton(clientArtifacts)
             .AddSingleton<IClientLifecycle, ClientLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
@@ -104,16 +96,11 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IEventTypes, EventTypes>()
             .AddSingleton<IEventSerializer, EventSerializer>()
             .AddSingleton<IExecutionContextManager, ExecutionContextManager>()
-            .AddSingleton<IMongoDBClientFactory, MongoDBClientFactory>()
-            .AddObservers(types);
+            .AddObservers(clientArtifacts);
 
         logger.ConfiguringCompliance();
 
-        types.All.Where(_ =>
-                    _ != typeof(ICanProvideComplianceMetadataForType) &&
-                    _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ForEach(_ => services.AddTransient(_));
-        types.All.Where(_ =>
-                    _ != typeof(ICanProvideComplianceMetadataForProperty) &&
-                    _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ForEach(_ => services.AddTransient(_));
+        clientArtifacts.ComplianceForTypesProviders.ForEach(_ => services.AddTransient(_));
+        clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => services.AddTransient(_));
     }
 }

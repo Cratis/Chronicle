@@ -6,7 +6,7 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;

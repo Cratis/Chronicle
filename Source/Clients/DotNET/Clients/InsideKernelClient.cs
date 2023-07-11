@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Commands;
+using Aksio.Commands;
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Net;
-using Aksio.Cratis.Tasks;
-using Aksio.Cratis.Timers;
+using Aksio.Tasks;
+using Aksio.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Logging;
@@ -17,7 +16,7 @@ namespace Aksio.Cratis.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IClient"/> for usage inside a silo.
 /// </summary>
-public class InsideKernelClient : IClient
+public class InsideKernelClient : IClient, IDisposable
 {
     readonly SingleKernelClient _innerClient;
 
@@ -69,6 +68,9 @@ public class InsideKernelClient : IClient
             jsonSerializerOptions,
             singleKernelClientLogger);
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _innerClient.Dispose();
 
     /// <inheritdoc/>
     public Task Connect() => _innerClient.Connect();

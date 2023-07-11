@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Observation;
 
@@ -18,10 +17,13 @@ public class ObserverMiddlewares : IObserverMiddlewares
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverMiddlewares"/> class.
     /// </summary>
-    /// <param name="middlewares"><see cref="IInstancesOf{T}"/> of <see cref="IObserverMiddleware"/>.</param>
-    public ObserverMiddlewares(IInstancesOf<IObserverMiddleware> middlewares)
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for resolving instances.</param>
+    public ObserverMiddlewares(
+        IClientArtifactsProvider clientArtifacts,
+        IServiceProvider serviceProvider)
     {
-        _all = middlewares.ToArray();
+        _all = clientArtifacts.ObserverMiddlewares.Select(_ => (serviceProvider.GetRequiredService(_) as IObserverMiddleware)!).ToArray();
     }
 
     /// <inheritdoc/>

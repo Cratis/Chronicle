@@ -1,10 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
         <AssemblyName>Aksio.Cratis.Kernel.Shared</AssemblyName>
         <RootNamespace>Aksio.Cratis</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Fundamentals/Fundamentals.csproj" />
+        <PackageReference Include="Aksio.Fundamentals" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 </Project>

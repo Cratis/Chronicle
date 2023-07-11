@@ -3,7 +3,6 @@
 
 using System.Diagnostics.Metrics;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 

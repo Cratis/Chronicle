@@ -3,7 +3,7 @@
 
 using System.Collections.Concurrent;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Types;
+using Aksio.Types;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 
@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections;
 /// </summary>
 public class ProjectionSinks : IProjectionSinks
 {
-    record Key(ProjectionSinkTypeId TypeId, Model Model);
+    sealed record Key(ProjectionSinkTypeId TypeId, Model Model);
 
     readonly IDictionary<ProjectionSinkTypeId, IProjectionSinkFactory> _factories;
     readonly ConcurrentDictionary<Key, IProjectionSink> _stores = new();
@@ -31,7 +31,7 @@ public class ProjectionSinks : IProjectionSinks
     {
         ThrowIfUnknownProjectionResultStore(typeId);
         var key = new Key(typeId, model);
-        if (_stores.ContainsKey(key)) return _stores[key];
+        if (_stores.TryGetValue(key, out var store)) return store;
         return _stores[key] = _factories[typeId].CreateFor(model);
     }
 

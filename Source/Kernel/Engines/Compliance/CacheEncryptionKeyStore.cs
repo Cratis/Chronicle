@@ -32,10 +32,7 @@ public class CacheEncryptionKeyStore : IEncryptionKeyStore
     /// <inheritdoc/>
     public async Task<EncryptionKey> GetFor(EncryptionKeyIdentifier identifier)
     {
-        if (_keys.ContainsKey(identifier))
-        {
-            return _keys[identifier];
-        }
+        if (_keys.TryGetValue(identifier, out var key)) return key;
 
         return _keys[identifier] = await _actualKeyStore.GetFor(identifier);
     }

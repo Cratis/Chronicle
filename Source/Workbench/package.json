@@ -11,25 +11,30 @@
         "node": ">= 16"
     },
     "scripts": {
-        "build": "tsc -b && vite build",
-        "dev": "tsc -b && vite serve",
-        "preview": "vite preview",
-        "clean": "tsc -b --clean",
-        "lint": "eslint '**/*.{ts,tsx}' --quiet --fix",
-        "lint:ci": "eslint '**/*.{ts,tsx}' --quiet",
-        "ci": "yarn clean && yarn lint:ci && yarn build",
-        "up": "ncu -u \\!'@aksio/*'"
+        "dev": "yarn g:dev",
+        "preview": "yarn g:preview",
+        "prepublish": "yarn g:build",
+        "clean": "yarn g:clean",
+        "build": "yarn g:web-build",
+        "lint": "yarn g:lint",
+        "lint:ci": "yarn g:lint:ci",
+        "test": "yarn g:test",
+        "ci": "yarn g:ci",
+        "up": "yarn g:up"
     },
     "dependencies": {
-        "@aksio/cratis-applications-frontend": "1.0.0",
-        "@aksio/cratis-fluentui": "1.0.0",
-        "@aksio/cratis-fundamentals": "1.0.0",
-        "@aksio/cratis-mui": "1.0.0",
-        "@aksio/cratis-react": "1.0.0",
+        "@aksio/applications": "1.0.4",
+        "@aksio/applications-mui": "1.0.4",
+        "@aksio/fundamentals": "1.0.7",
+        "@aksio/typescript": "1.0.0",
         "@ctrl/tinycolor": "3.4.1",
         "@emotion/react": "^11.10.6",
         "@emotion/styled": "^11.10.6",
+        "@fluentui/font-icons-mdl2": "8.4.10",
+        "@fluentui/react": "8.92.0",
         "@fluentui/react-experiments": "8.8.23",
+        "@fluentui/react-hooks": "8.6.9",
+        "@fluentui/react-icons": "2.0.179",
         "@monaco-editor/react": "4.4.5",
         "@mui/icons-material": "^5.11.11",
         "@mui/lab": "^5.0.0-alpha.122",
@@ -37,13 +42,9 @@
         "@mui/x-data-grid": "^6.0.1",
         "d3": "7.4.4",
         "echarts": "5.3.2",
-        "handlebars": "4.7.7"
-    },
-    "devDependencies": {
-        "@aksio/cratis-webpack": "1.0.0",
-        "@vitejs/plugin-react": "^3.1.0",
-        "vite": "^4.1.4",
-        "vite-plugin-ejs": "^1.6.4",
-        "vite-plugin-html": "^3.2.0"
+        "handlebars": "4.7.7",
+        "react": "18.2.0",
+        "react-dom": "18.2.0",
+        "react-router-dom": "6.3.0"
     }
 }

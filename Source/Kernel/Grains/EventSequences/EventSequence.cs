@@ -2,18 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Aksio.Cratis.Schemas;
+using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Providers;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -66,13 +65,13 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventSequenceId = this.GetPrimaryKey(out var streamNamespace);
         _microserviceAndTenant = MicroserviceAndTenant.Parse(streamNamespace);
-
-        var streamProvider = GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
-        _stream = streamProvider.GetStream<AppendedEvent>(_eventSequenceId, streamNamespace);
+        var streamId = StreamId.Create(_microserviceAndTenant, (Guid)_eventSequenceId);
+        var streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
+        _stream = streamProvider.GetStream<AppendedEvent>(streamId);
 
         _appendedEventsCount = await _eventSequenceStorageProvider().GetCount(_eventSequenceId);
 
@@ -82,7 +81,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             _microserviceAndTenant.TenantId,
             () => _appendedEventsCount);
 
-        await base.OnActivateAsync();
+        await base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>

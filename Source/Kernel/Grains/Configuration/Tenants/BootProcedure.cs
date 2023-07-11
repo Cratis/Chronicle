@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Boot;
 using Aksio.Cratis.Kernel.Configuration;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Configuration.Tenants;
 

@@ -4,7 +4,6 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 

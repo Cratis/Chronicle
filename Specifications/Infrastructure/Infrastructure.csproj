@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Infrastructure.Specs</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Infrastructure</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Infrastructure/Infrastructure.csproj"/>
+    </ItemGroup>
+</Project>

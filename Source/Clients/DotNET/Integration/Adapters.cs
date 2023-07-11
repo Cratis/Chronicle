@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;
@@ -15,7 +13,7 @@ namespace Aksio.Cratis.Integration;
 public class Adapters : IAdapters
 {
     readonly Dictionary<AdapterKey, object> _artifacts = new();
-    readonly ITypes _types;
+    readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
     readonly IAdapterProjectionFactory _adapterProjectionFactory;
     readonly IAdapterMapperFactory _adapterMapperFactory;
@@ -23,17 +21,17 @@ public class Adapters : IAdapters
     /// <summary>
     /// Initializes a new instance of the <see cref="Adapters"/> class.
     /// </summary>
-    /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances from the IoC container.</param>
     /// <param name="adapterProjectionFactory"><see cref="IAdapterProjectionFactory"/> for creating projections for adapters.</param>
     /// <param name="adapterMapperFactory"><see cref="IAdapterMapperFactory"/> for creating mappers for adapters.</param>
     public Adapters(
-        ITypes types,
+        IClientArtifactsProvider clientArtifacts,
         IServiceProvider serviceProvider,
         IAdapterProjectionFactory adapterProjectionFactory,
         IAdapterMapperFactory adapterMapperFactory)
     {
-        _types = types;
+        _clientArtifacts = clientArtifacts;
         _serviceProvider = serviceProvider;
         _adapterProjectionFactory = adapterProjectionFactory;
         _adapterMapperFactory = adapterMapperFactory;
@@ -43,7 +41,7 @@ public class Adapters : IAdapters
     public async Task Initialize()
     {
         var adapterArtifactsGenericType = typeof(AdapterArtifacts<,>);
-        foreach (var adapterType in _types.FindMultiple(typeof(IAdapterFor<,>)))
+        foreach (var adapterType in _clientArtifacts.Adapters)
         {
             var adapterInterface = adapterType.GetInterface(typeof(IAdapterFor<,>).Name)!;
             var adapterArtifactsType = adapterArtifactsGenericType.MakeGenericType(adapterInterface.GenericTypeArguments);

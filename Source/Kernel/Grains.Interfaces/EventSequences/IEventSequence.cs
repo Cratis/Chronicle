@@ -4,7 +4,6 @@
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Workers;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 

@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
-	<ItemGroup>
-        <ProjectReference Include="../Events.Bank/Events.Bank.csproj" />
-	</ItemGroup>
-</Project>

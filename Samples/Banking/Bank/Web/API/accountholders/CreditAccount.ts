@@ -2,8 +2,8 @@
  *  **DO NOT EDIT** - This file is an automatically generated file.
  *--------------------------------------------------------------------------------------------*/
 
-import { field } from '@aksio/cratis-fundamentals';
-import { derivedType } from '@aksio/cratis-fundamentals';
+import { field } from '@aksio/fundamentals';
+import { derivedType } from '@aksio/fundamentals';
 
 import { AccountType } from './AccountType';
 

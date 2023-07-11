@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Orleans.Observers;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
@@ -41,7 +39,7 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _metrics = _metricsFactory.Create(this.GetPrimaryKey());
         RegisterTimer(ReviseConnectedClients, null!, TimeSpan.Zero, TimeSpan.FromSeconds(1));

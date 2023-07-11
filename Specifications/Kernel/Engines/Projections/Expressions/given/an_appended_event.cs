@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Strings;
+using Aksio.Strings;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.given;
 

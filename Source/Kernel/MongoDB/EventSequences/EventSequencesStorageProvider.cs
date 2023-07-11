@@ -1,11 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
+using Aksio.DependencyInversion;
 using MongoDB.Driver;
-using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -33,24 +31,25 @@ public class EventSequencesStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState) => Task.CompletedTask;
+    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var eventSequenceId = grainReference.GetPrimaryKey(out var keyAsString);
-        var key = MicroserviceAndTenant.Parse(keyAsString);
+        var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
+        var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
+        var key = MicroserviceAndTenant.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);
-        var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        grainState.State = await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new EventSequenceState();
+        var cursor = await Collection.FindAsync(filter);
+        actualGrainState.State = await cursor.FirstOrDefaultAsync() ?? new EventSequenceState();
     }
 
     /// <inheritdoc/>
-    public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var eventSequenceId = grainReference.GetPrimaryKey(out var keyAsString);
-        var key = MicroserviceAndTenant.Parse(keyAsString);
+        var eventSequenceId = grainId.GetGuidKey(out var keyAsString);
+        var key = MicroserviceAndTenant.Parse(keyAsString!);
         _executionContextManager.Establish(key.TenantId, CorrelationId.New(), key.MicroserviceId);
         var eventLogState = grainState.State as EventSequenceState;
         var filter = Builders<EventSequenceState>.Filter.Eq(new StringFieldDefinition<EventSequenceState, Guid>("_id"), eventSequenceId);

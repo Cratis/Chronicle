@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Specifications;
 using Microsoft.Extensions.Logging;
-using Orleans;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.given;
 
@@ -71,8 +70,8 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
             );
 
         timer_registry
-            .Setup(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
-            .Returns((Grain _, Func<object, Task> callback, object state, TimeSpan wait, TimeSpan repeat) =>
+            .Setup(_ => _.RegisterTimer(IsAny<IGrainContext>(), IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
+            .Returns((IGrainContext _, Func<object, Task> callback, object state, TimeSpan wait, TimeSpan repeat) =>
             {
                 timers.Add(new(wait, repeat));
                 callback(state);

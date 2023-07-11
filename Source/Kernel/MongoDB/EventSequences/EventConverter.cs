@@ -3,8 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Schemas;
 
@@ -18,7 +16,7 @@ public class EventConverter : IEventConverter
     readonly ISchemaStore _schemaStore;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly Json.IExpandoObjectConverter _expandoObjectConverter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
@@ -31,7 +29,7 @@ public class EventConverter : IEventConverter
         ISchemaStore schemaStore,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManager,
-        IExpandoObjectConverter expandoObjectConverter)
+        Json.IExpandoObjectConverter expandoObjectConverter)
     {
         _schemaStore = schemaStore;
         _executionContextManager = executionContextManager;

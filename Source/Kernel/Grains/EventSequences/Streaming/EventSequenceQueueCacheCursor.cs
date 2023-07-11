@@ -3,9 +3,9 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.Execution;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -61,11 +61,13 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
             }
 
             var @event = _current.Event;
+            var streamId = StreamId.Create(
+                new MicroserviceAndTenant(_microserviceId, _tenantId),
+                _eventSequenceId.Value.ToString());
+
             return new EventSequenceBatchContainer(
                 new[] { @event },
-                _eventSequenceId,
-                _microserviceId,
-                _tenantId,
+                streamId,
                 new Dictionary<string, object>
                 {
                     { RequestContextKeys.MicroserviceId, _microserviceId },

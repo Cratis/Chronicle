@@ -3,10 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Specifications;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Replay.given;
@@ -75,8 +73,8 @@ public class a_replay_worker : GrainSpecification
             .Returns(() => Task.FromResult<IEventCursor>(new EventCursorForSpecifications(events)));
 
         timer_registry
-            .Setup(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
-            .Returns((Grain __, Func<object, Task> callback, object state, TimeSpan ___, TimeSpan ____) =>
+            .Setup(_ => _.RegisterTimer(IsAny<IGrainContext>(), IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
+            .Returns((IGrainContext __, Func<object, Task> callback, object state, TimeSpan ___, TimeSpan ____) =>
             {
                 callback(state);
                 return Task.CompletedTask;

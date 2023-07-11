@@ -21,4 +21,7 @@ internal static partial class ObserverManagerLogMessages
 
     [LoggerMessage(3, LogLevel.Debug, "{Prefix}: Removing defunct entry for {Address}. {Count} total subscribers after remove.")]
     internal static partial void RemovingDefunctEntry(this ILogger logger, string prefix, object address, int count);
+
+    [LoggerMessage(4, LogLevel.Debug, "{Prefix}: Removing {Count} defunct entries observer entries.")]
+    internal static partial void RemovingDefunctEntries(this ILogger logger, string prefix, int count);
 }

@@ -30,7 +30,6 @@ public class Accounts : Controller
     {
         return _accountsCollection.Observe();
     }
-
     [HttpGet("starting-with")]
     public async Task<IEnumerable<DebitAccount>> StartingWith([FromQuery] string? filter)
     {

@@ -1,13 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Strings;
+using Aksio.DependencyInversion;
+using Aksio.Strings;
 using MongoDB.Driver;
-using Orleans;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
@@ -29,15 +27,16 @@ public class ReplayStorageProvider : ObserverStorageProvider
     }
 
     /// <inheritdoc/>
-    public override async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public override async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString);
+        var actualGrainState = (grainState as IGrainState<ObserverState>)!;
+        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
+        var observerKey = ObserverKey.Parse(observerKeyAsString!);
         var key = GetKeyFrom(observerKey, observerId);
 
         ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 
-        var state = (ObserverState)grainState.State;
+        var state = actualGrainState.State;
 
         // Note: The reason we're not using the ObserverState directly is for memory and performance reasons
         // it is faster to just store the next event sequence number directly in the document and less

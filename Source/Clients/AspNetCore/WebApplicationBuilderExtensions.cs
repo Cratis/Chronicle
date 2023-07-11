@@ -1,10 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis;
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Hosting;
-using Aksio.Cratis.Types;
+using Aksio.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -19,15 +19,15 @@ public static class WebApplicationBuilderExtensions
     /// Configures the <see cref="IClientBuilder"/> for a non-microservice oriented scenario.
     /// </summary>
     /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
-    /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
     public static WebApplicationBuilder UseCratis(
         this WebApplicationBuilder webApplicationBuilder,
-        ITypes? types = default,
+        IClientArtifactsProvider? clientArtifacts = default,
         Action<IClientBuilder>? configureDelegate = null)
     {
-        return webApplicationBuilder.UseCratis(MicroserviceId.Unspecified, types, configureDelegate);
+        return webApplicationBuilder.UseCratis(MicroserviceId.Unspecified, clientArtifacts, configureDelegate);
     }
 
     /// <summary>
@@ -35,16 +35,18 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
     /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
-    /// <param name="types">Optional <see cref="ITypes"/> for type discovery.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
     public static WebApplicationBuilder UseCratis(
         this WebApplicationBuilder webApplicationBuilder,
         MicroserviceId microserviceId,
-        ITypes? types = default,
+        IClientArtifactsProvider? clientArtifacts = default,
         Action<IClientBuilder>? configureDelegate = default)
     {
-        webApplicationBuilder.Host.UseCratis(microserviceId, types, configureDelegate);
+        webApplicationBuilder.Services.AddRules();
+        webApplicationBuilder.Host.UseCratis(microserviceId, clientArtifacts, configureDelegate);
+
         return webApplicationBuilder;
     }
 
@@ -56,8 +58,10 @@ public static class WebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
         app.UseExecutionContext();
-        app.AddCratisClient();
-        app.ApplicationServices.GetRequiredService<IClient>();
+
+        var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+        appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<IClient>());
+
         return app;
     }
 }

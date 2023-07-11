@@ -3,21 +3,21 @@
 
 #pragma warning disable CS8019
 
-global using Aksio.Cratis.Applications.Commands;
-global using Aksio.Cratis.Applications.ModelBinding;
-global using Aksio.Cratis.Applications.Queries;
-global using Aksio.Cratis.Applications.Queries.MongoDB;
-global using Aksio.Cratis.Applications.Rules;
-global using Aksio.Cratis.Applications.Validation;
-global using Aksio.Cratis.Concepts;
+global using Aksio.Applications.Commands;
+global using Aksio.Applications.ModelBinding;
+global using Aksio.Applications.Queries;
+global using Aksio.Applications.Queries.MongoDB;
+global using Aksio.Applications.Validation;
 global using Aksio.Cratis.Events;
 global using Aksio.Cratis.EventSequences;
 global using Aksio.Cratis.EventSequences.Outbox;
 global using Aksio.Cratis.Integration;
-global using Aksio.Cratis.Models;
 global using Aksio.Cratis.Observation;
 global using Aksio.Cratis.Projections;
-global using Aksio.Cratis.Serialization;
+global using Aksio.Concepts;
+global using Aksio.Cratis.Models;
+global using Aksio.Cratis.Rules;
+global using Aksio.Serialization;
 global using AutoMapper;
 global using FluentValidation;
 global using Microsoft.AspNetCore.Mvc;

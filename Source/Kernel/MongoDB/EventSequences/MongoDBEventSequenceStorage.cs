@@ -3,12 +3,11 @@
 
 using System.Dynamic;
 using System.Text.Json;
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Schemas;
+using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -26,7 +25,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     readonly ProviderFor<IEventConverter> _converterProvider;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
+    readonly Json.IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<MongoDBEventSequenceStorage> _logger;
 
@@ -45,7 +44,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         ProviderFor<IEventConverter> converterProvider,
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
         ProviderFor<ISchemaStore> schemaStoreProvider,
-        IExpandoObjectConverter expandoObjectConverter,
+        Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<MongoDBEventSequenceStorage> logger)
     {
@@ -108,6 +107,8 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
                 eventSequenceId,
                 _executionContextManager.Current.MicroserviceId,
                 _executionContextManager.Current.TenantId);
+
+            throw new DuplicateEventSequenceNumber(sequenceNumber, eventSequenceId);
         }
         catch (Exception ex)
         {

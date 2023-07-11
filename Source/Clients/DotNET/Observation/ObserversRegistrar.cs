@@ -4,8 +4,6 @@
 using System.Reflection;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Observation;
@@ -29,7 +27,7 @@ public class ObserversRegistrar : IObserversRegistrar
     /// <param name="middlewares"><see cref="IObserverMiddlewares"/> to call.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
-    /// <param name="types"><see cref="ITypes"/> for type discovery.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="client"><see cref="IClient"/> for working with kernel.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ObserversRegistrar(
@@ -38,11 +36,11 @@ public class ObserversRegistrar : IObserversRegistrar
         IObserverMiddlewares middlewares,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
-        ITypes types,
+        IClientArtifactsProvider clientArtifacts,
         IClient client,
         ILogger<ObserversRegistrar> logger)
     {
-        _handlers = types.AllObservers()
+        _handlers = clientArtifacts.Observers
                             .ToDictionary(
                                 _ => _,
                                 _ =>

@@ -3,8 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Execution;
-using Aksio.Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Events;
 
@@ -14,21 +13,25 @@ namespace Aksio.Cratis.Events;
 [Singleton]
 public class EventSerializer : IEventSerializer
 {
-    readonly IInstancesOf<ICanProvideAdditionalEventInformation> _additionalEventInformationProviders;
+    readonly IClientArtifactsProvider _clientArtifacts;
+    readonly IServiceProvider _serviceProvider;
     readonly JsonSerializerOptions _serializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSerializer"/> class.
     /// </summary>
-    /// <param name="additionalEventInformationProviders">Providers of additional event information.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for resolving instances.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
     public EventSerializer(
-        IInstancesOf<ICanProvideAdditionalEventInformation> additionalEventInformationProviders,
+        IClientArtifactsProvider clientArtifacts,
+        IServiceProvider serviceProvider,
         IEventTypes eventTypes,
         JsonSerializerOptions serializerOptions)
     {
-        _additionalEventInformationProviders = additionalEventInformationProviders;
+        _clientArtifacts = clientArtifacts;
+        _serviceProvider = serviceProvider;
         _serializerOptions = new JsonSerializerOptions(serializerOptions)
         {
             Converters =
@@ -45,10 +48,13 @@ public class EventSerializer : IEventSerializer
     public async Task<JsonObject> Serialize(object @event)
     {
         var eventAsJson = (JsonSerializer.SerializeToNode(@event, _serializerOptions) as JsonObject)!;
-        foreach (var provider in _additionalEventInformationProviders)
+
+        foreach (var providerType in _clientArtifacts.AdditionalEventInformationProviders)
         {
+            var provider = (_serviceProvider.GetRequiredService(providerType) as ICanProvideAdditionalEventInformation)!;
             await provider.ProvideFor(eventAsJson);
         }
+
         return eventAsJson;
     }
 }

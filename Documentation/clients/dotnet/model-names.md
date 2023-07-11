@@ -38,7 +38,7 @@ string GetNameFor(Type type);
 
 ```csharp
 using Aksio.Cratis.Models;
-using Aksio.Cratis.Strings;
+using Aksio.Strings;
 using Humanizer;
 
 public class MyModelNameConvention : IModelNameConvention

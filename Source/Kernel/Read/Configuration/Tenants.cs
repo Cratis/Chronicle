@@ -4,7 +4,6 @@
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.Configuration;
 using Microsoft.AspNetCore.Mvc;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Read.Configuration.Tenants;
 

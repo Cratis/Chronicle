@@ -1,9 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Execution;
 using Microsoft.Extensions.Logging;
-using Orleans;
+using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Workers.given;
 
@@ -33,8 +32,8 @@ public class a_worker : GrainSpecification
     void Establish()
     {
         timer_registry
-            .Setup(_ => _.RegisterTimer(grain, IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
-            .Returns((Grain __, Func<object, Task> callback, object state, TimeSpan ___, TimeSpan ____) =>
+            .Setup(_ => _.RegisterTimer(IsAny<IGrainContext>(), IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))
+            .Returns((IGrainContext __, Func<object, Task> callback, object state, TimeSpan ___, TimeSpan ____) =>
             {
                 callback(state);
                 return Task.CompletedTask;

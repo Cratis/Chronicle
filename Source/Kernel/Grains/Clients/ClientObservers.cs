@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using TenantsConfig = Aksio.Cratis.Kernel.Configuration.Tenants;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;

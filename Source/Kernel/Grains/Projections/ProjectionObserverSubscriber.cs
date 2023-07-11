@@ -1,9 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
@@ -11,7 +9,7 @@ using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
-using Orleans;
+using Aksio.DependencyInversion;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
@@ -58,14 +56,14 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync()
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _projectionId = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
         _microserviceId = key.MicroserviceId;
         _tenantId = key.TenantId;
         var projection = GrainFactory.GetGrain<IProjection>(_projectionId, new ProjectionKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
-        await projection.SubscribeDefinitionsChanged(this);
+        await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
 
         await HandleDefinitionsAndInstances();
     }

@@ -1,9 +1,8 @@
 <Project>
-    <Import Project="$(MSBuildThisFileDirectory)../Versions.props"/>
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net7.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
-        <NoWarn>$(NoWarn);CA1707;CA2252;CA2211;RCS1169;RCS1018;RCS1213;IDE0044;IDE0052;IDE1006;RCS1090;IDE0051;CA1051;CS8632;CS8618;RCS1225;CA1305;CA1001;CA2201</NoWarn>
+        <NoWarn>$(NoWarn);CA1707;CA2252;CA2211;RCS1169;RCS1018;RCS1213;IDE0044;IDE0052;IDE1006;RCS1090;IDE0051;CA1051;CS8632;CS8618;RCS1225;CA1305;CA1001;CA2201;CA1852;RCS1163</NoWarn>
         <Nullable>disable</Nullable>
 
         <IsPackable>false</IsPackable>
@@ -11,22 +10,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="xunit" Version="$(xunit)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.2">
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" >
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
-        <PackageReference Include="moq" Version="$(Moq)" />
-        <PackageReference Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)"/>
+        <PackageReference Include="moq" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost"/>
 
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
-        <PackageReference Include="Aksio.Specifications" Version="$(AksioSpecifications)" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Aksio.Specifications" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="$(MSBuildThisFileDirectory)/Common/Common.csproj"/>
-        <ProjectReference Include="$(MSBuildThisFileDirectory)../Source/Extensions/Specifications/Specifications.csproj"/>
+        <ProjectReference Include="$(MSBuildThisFileDirectory)../Source/Clients/Specifications/Specifications.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

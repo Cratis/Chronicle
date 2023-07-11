@@ -3,7 +3,7 @@
 
 using System.Collections.Concurrent;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
@@ -41,17 +41,16 @@ public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
     /// <summary>
     /// Add an appended event to the receivers queue.
     /// </summary>
-    /// <param name="streamGuid">The <see cref="Guid"/> identifying the stream.</param>
-    /// <param name="microserviceAndTenant">The <see cref="MicroserviceAndTenant"/> the stream belongs to.</param>
+    /// <param name="streamId">The <see cref="StreamId"/> identifying the stream.</param>
     /// <param name="events"><see cref="AppendedEvent">Events</see> to add.</param>
     /// <param name="requestContext">The request context.</param>
-    public void AddAppendedEvent(Guid streamGuid, MicroserviceAndTenant microserviceAndTenant, IEnumerable<AppendedEvent> events, IDictionary<string, object> requestContext)
+    public void AddAppendedEvent(StreamId streamId, IEnumerable<AppendedEvent> events, IDictionary<string, object> requestContext)
     {
         if (!events.Any())
         {
             return;
         }
 
-        _eventBatches.Add(new EventSequenceBatchContainer(events, streamGuid, microserviceAndTenant.MicroserviceId, microserviceAndTenant.TenantId, requestContext));
+        _eventBatches.Add(new EventSequenceBatchContainer(events, streamId, requestContext));
     }
 }

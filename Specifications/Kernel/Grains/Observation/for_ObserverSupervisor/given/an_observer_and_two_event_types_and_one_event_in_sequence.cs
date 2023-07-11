@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.Execution;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_ObserverSupervisor.given;
 

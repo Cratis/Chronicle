@@ -3,10 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.EventSequences;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Runtime;
 using Orleans.Streams;
 
@@ -80,8 +78,10 @@ public class an_observer_supervisor : GrainSpecification
         sequence_stream_provider = new();
         stream_provider_collection.Setup(_ => _.GetService(service_provider.Object, WellKnownProviders.EventSequenceStreamProvider)).Returns(sequence_stream_provider.Object);
 
+        var streamId = StreamId.Create(new MicroserviceAndTenant(microservice_id, tenant_id), event_sequence_id.Value);
         sequence_stream = new();
-        sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(event_sequence_id.Value, new MicroserviceAndTenant(microservice_id, tenant_id))).Returns(sequence_stream.Object);
+        sequence_stream_provider.Setup(_ => _.GetStream<AppendedEvent>(streamId)).Returns(sequence_stream.Object);
+        sequence_stream.SetupGet(_ => _.StreamId).Returns(streamId);
 
         subscribed_tokens = new();
         subscription_handles = new();
@@ -96,8 +96,8 @@ public class an_observer_supervisor : GrainSpecification
         subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
         grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), observer_id, IsAny<string>())).Returns(subscriber.Object);
 
-        sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<StreamFilterPredicate>(), IsAny<object>()))
-            .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, StreamFilterPredicate __, object ___) =>
+        sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<string>()))
+            .Returns((IAsyncObserver<AppendedEvent> observer, StreamSequenceToken token, string __) =>
             {
                 var subscription = new Mock<StreamSubscriptionHandle<AppendedEvent>>();
                 subscription_handles.Add(subscription);

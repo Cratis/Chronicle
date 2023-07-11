@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
-using Orleans;
 using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -20,13 +20,13 @@ public abstract class GrainSpecification<TState> : GrainSpecification
     protected TState most_recent_written_state;
     protected Type grain_type = typeof(Grain<TState>);
 
-        
+
     protected override void OnStateManagement()
     {
         state ??= new TState();
-        
-        var storageProperty = grain_type.GetField("storage", BindingFlags.FlattenHierarchy | 
-                                                             BindingFlags.Instance | 
+
+        var storageProperty = grain_type.GetField("storage", BindingFlags.FlattenHierarchy |
+                                                             BindingFlags.Instance |
                                                              BindingFlags.NonPublic);
 
         if (storageProperty is null)
@@ -48,11 +48,10 @@ public abstract class GrainSpecification<TState> : GrainSpecification
 
 public abstract class GrainSpecification : Specification
 {
-    protected Mock<IGrainIdentity> grain_identity;
     protected Mock<IGrainRuntime> runtime;
+    protected Mock<IGrainContext> grain_context;
     protected Mock<IServiceProvider> service_provider;
     protected Mock<IKeyedServiceCollection<string, IStreamProvider>> stream_provider_collection;
-    protected Mock<IReminderRegistry> reminder_registry;
     protected Mock<ITimerRegistry> timer_registry;
     protected Mock<IGrainFactory> grain_factory;
     protected Grain grain;
@@ -73,38 +72,45 @@ public abstract class GrainSpecification : Specification
     void Establish()
     {
         grain = GetGrainInstance();
+        grain_context = new();
+        grain_context.SetupGet(_ => _.GrainId).Returns(() =>
+        {
+            var grainType = grain.GetType().FullName;
+            var grainTypeBytes = Encoding.UTF8.GetBytes(grainType);
+            var grainIdentifier = GrainId.ToString().Replace("-", "");
+            if (!string.IsNullOrEmpty(GrainKeyExtension))
+            {
+                grainIdentifier = $"{grainIdentifier}+{GrainKeyExtension}";
+            }
+            var grainIdentifierBytes = Encoding.UTF8.GetBytes(grainIdentifier);
+            return new GrainId(new GrainType(grainTypeBytes), new IdSpan(grainIdentifierBytes));
+        });
+        service_provider = new Mock<IServiceProvider>();
+        grain_context.SetupGet(_ => _.ActivationServices).Returns(service_provider.Object);
 
-        var identityField = typeof(Grain).GetField("Identity", BindingFlags.Instance | BindingFlags.NonPublic);
-        grain_identity = new Mock<IGrainIdentity>();
-        identityField.SetValue(grain, grain_identity.Object);
-
-        var runtimeProperty = typeof(Grain).GetProperty("Runtime", BindingFlags.Instance | BindingFlags.NonPublic);
         runtime = new Mock<IGrainRuntime>();
-        runtimeProperty.SetValue(grain, runtime.Object);
+        service_provider.Setup(_ => _.GetService(typeof(IGrainRuntime))).Returns(runtime.Object);
+
+        var runtimeField = typeof(Grain).GetFields(BindingFlags.Instance | BindingFlags.NonPublic).Single(_ => _.FieldType == typeof(IGrainRuntime));
+        runtimeField.SetValue(grain, runtime.Object);
+
+        var grainContextProperty = typeof(Grain).GetProperty("GrainContext", BindingFlags.Instance | BindingFlags.NonPublic);
+        grainContextProperty.SetValue(grain, grain_context.Object);
 
         grain_factory = new();
         runtime.SetupGet(_ => _.GrainFactory).Returns(grain_factory.Object);
 
-        reminder_registry = new();
-        runtime.SetupGet(_ => _.ReminderRegistry).Returns(reminder_registry.Object);
-
         timer_registry = new();
         runtime.SetupGet(_ => _.TimerRegistry).Returns(timer_registry.Object);
-
-        service_provider = new Mock<IServiceProvider>();
-        runtime.SetupGet(_ => _.ServiceProvider).Returns(service_provider.Object);
 
         stream_provider_collection = new Mock<IKeyedServiceCollection<string, IStreamProvider>>();
         service_provider.Setup(_ => _.GetService(typeof(IKeyedServiceCollection<string, IStreamProvider>))).Returns(stream_provider_collection.Object);
 
-        var key = GrainKeyExtension;
-        grain_identity.Setup(_ => _.GetPrimaryKey(out key)).Returns(GrainId);
-
         OnStateManagement();
         OnBeforeGrainActivate();
 
-        Orleans.GrainReferenceExtensions.GetReferenceOverride = (grain) => grain;
+        GrainReferenceExtensions.GetReferenceOverride = (grain) => grain;
 
-        grain.OnActivateAsync();
+        grain.OnActivateAsync(CancellationToken.None);
     }
 }

@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Aksio.Configuration;
 using Aksio.Cratis.Configuration;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Net;
-using Aksio.Cratis.Tasks;
-using Aksio.Cratis.Timers;
+using Aksio.Tasks;
+using Aksio.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,12 +42,12 @@ public static class ClientServiceCollectionExtensions
             var taskFactory = _.GetRequiredService<ITaskFactory>();
             var timerFactory = _.GetRequiredService<ITimerFactory>();
 
-            var loadBalancedHttpClientFactory = loadBalancer.CreateHttpClientFactory(new RoundRobinLoadBalancerStrategy());
             if (configuration.Kernel.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
             {
                 throw new UnableToResolveClientUri();
             }
 
+            var loadBalancedHttpClientFactory = loadBalancer.CreateHttpClientFactory(new RoundRobinLoadBalancerStrategy());
             var clientEndpoint = configuration.Kernel.AdvertisedClientEndpoint ?? addresses!.GetFirstAddressAsUri();
             IClient client = configuration.Kernel.Type switch
             {

@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Observation;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 

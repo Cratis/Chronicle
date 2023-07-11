@@ -1,14 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
+using Aksio.DependencyInversion;
 using MongoDB.Driver;
-using Orleans;
 using Orleans.Runtime;
 using Orleans.Storage;
 
@@ -50,13 +48,14 @@ public class ObserverStorageProvider : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState) => Task.CompletedTask;
+    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var observerId = (ObserverId)grainReference.GetPrimaryKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString);
+        var actualGrainState = (grainState as IGrainState<ObserverState>)!;
+        var observerId = (ObserverId)grainId.GetGuidKey(out var observerKeyAsString);
+        var observerKey = ObserverKey.Parse(observerKeyAsString!);
         var eventSequenceId = observerKey.EventSequenceId;
 
         ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
@@ -81,14 +80,14 @@ public class ObserverStorageProvider : IGrainStorage
             RunningState = ObserverRunningState.New
         };
         state.FailedPartitions = failedPartitions;
-        grainState.State = state;
+        actualGrainState.State = state;
     }
 
     /// <inheritdoc/>
-    public virtual async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+    public virtual async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var observerId = grainReference.GetPrimaryKey(out var observerKeyAsString);
-        var observerKey = ObserverKey.Parse(observerKeyAsString);
+        var observerId = grainId.GetGuidKey(out var observerKeyAsString);
+        var observerKey = ObserverKey.Parse(observerKeyAsString!);
         var eventSequenceId = observerKey.EventSequenceId;
         ExecutionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
 

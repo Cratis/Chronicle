@@ -4,16 +4,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Aksio.Commands;
 using Aksio.Cratis.Clients;
-using Aksio.Cratis.Commands;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 
@@ -49,7 +47,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
@@ -71,29 +69,32 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             _eventSequenceId,
             @event.Context.SequenceNumber);
 
-        var connectedClient = context.Metadata as ConnectedClient;
-        if (connectedClient is not null)
+        if (context.Metadata is JsonElement connectedClientJsonObject)
         {
-            using var httpClient = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
-            httpClient.BaseAddress = connectedClient.ClientUri;
-
-            using var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
-            httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
-            var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
-            var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
-            var state = ObserverSubscriberState.Ok;
-
-            if (response.StatusCode == HttpStatusCode.NotFound)
+            var connectedClient = connectedClientJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions);
+            if (connectedClient is not null)
             {
-                await ConnectedClients.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
-                state = ObserverSubscriberState.Disconnected;
-            }
-            else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
-            {
-                state = ObserverSubscriberState.Failed;
-            }
+                using var httpClient = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
+                httpClient.BaseAddress = connectedClient.ClientUri;
 
-            return new ObserverSubscriberResult(state, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
+                using var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
+                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
+                var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
+                var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
+                var state = ObserverSubscriberState.Ok;
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    await ConnectedClients.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
+                    state = ObserverSubscriberState.Disconnected;
+                }
+                else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
+                {
+                    state = ObserverSubscriberState.Failed;
+                }
+
+                return new ObserverSubscriberResult(state, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
+            }
         }
 
         return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);

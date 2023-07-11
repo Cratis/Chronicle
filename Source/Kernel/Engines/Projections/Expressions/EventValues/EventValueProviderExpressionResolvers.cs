@@ -5,9 +5,9 @@ using System.Collections;
 using System.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Reflection;
+using Aksio.Types;
 using NJsonSchema;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;

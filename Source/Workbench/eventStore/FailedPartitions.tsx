@@ -8,7 +8,7 @@ import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { RecoverFailedPartitionState } from 'API/events/store/failed-partitions/RecoverFailedPartitionState';
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
-import { QueryResultWithState } from '@aksio/cratis-applications-frontend/queries';
+import { QueryResultWithState } from '@aksio/applications/queries';
 import { useRouteParams } from './RouteParams';
 import { Box, Button, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';

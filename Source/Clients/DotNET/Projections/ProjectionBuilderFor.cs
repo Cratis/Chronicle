@@ -6,8 +6,8 @@ using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
+using Aksio.Reflection;
 
 namespace Aksio.Cratis.Projections;
 

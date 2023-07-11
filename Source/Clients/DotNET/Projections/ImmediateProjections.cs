@@ -6,12 +6,11 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Clients;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Schemas;
-using Aksio.Cratis.Types;
+using Aksio.Reflection;
 
 namespace Aksio.Cratis.Projections;
 
@@ -28,7 +27,7 @@ public class ImmediateProjections : IImmediateProjections
     }
 
     readonly IModelNameConvention _modelNameConvention;
-    readonly ITypes _types;
+    readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _schemaGenerator;
@@ -41,7 +40,7 @@ public class ImmediateProjections : IImmediateProjections
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
     /// </summary>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
-    /// <param name="types"><see cref="ITypes"/> for finding types.</param>
+    /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing projections.</param>
     /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
@@ -51,7 +50,7 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         IModelNameConvention modelNameConvention,
-        ITypes types,
+        IClientArtifactsProvider clientArtifacts,
         IServiceProvider serviceProvider,
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
@@ -61,7 +60,7 @@ public class ImmediateProjections : IImmediateProjections
         IExecutionContextManager executionContextManager)
     {
         _modelNameConvention = modelNameConvention;
-        _types = types;
+        _clientArtifacts = clientArtifacts;
         _serviceProvider = serviceProvider;
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
@@ -120,11 +119,8 @@ public class ImmediateProjections : IImmediateProjections
     {
         if (ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance is null)
         {
-            var projectionType = _types.FindSingle<IImmediateProjectionFor<TModel>>();
-            if (projectionType is null)
-            {
-                throw new MissingImmediateProjectionForModel(typeof(TModel));
-            }
+            var projectionType = _clientArtifacts.ImmediateProjections.Single(_ => _.HasInterface<IImmediateProjectionFor<TModel>>())
+                ?? throw new MissingImmediateProjectionForModel(typeof(TModel));
 
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance = (_serviceProvider.GetService(projectionType) as IImmediateProjectionFor<TModel>)!;
             var builder = new ProjectionBuilderFor<TModel>(

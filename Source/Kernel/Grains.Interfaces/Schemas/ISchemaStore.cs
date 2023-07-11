@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Events;
 using NJsonSchema;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Schemas;
 

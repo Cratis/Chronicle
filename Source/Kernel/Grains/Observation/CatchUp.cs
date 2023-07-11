@@ -1,14 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
+using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
@@ -56,7 +54,7 @@ public class CatchUp : ObserverWorker, ICatchUp
     protected override TenantId? SourceTenantId => _observerKey!.SourceTenantId;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _ = this.GetPrimaryKey(out var keyAsString);
         _observerKey = ObserverKey.Parse(keyAsString);
@@ -77,7 +75,7 @@ public class CatchUp : ObserverWorker, ICatchUp
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         CurrentSubscription = subscription;
         _isRunning = true;
-        _timer = RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.MaxValue);
+        _timer = RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.FromHours(1));
     }
 
     /// <inheritdoc/>

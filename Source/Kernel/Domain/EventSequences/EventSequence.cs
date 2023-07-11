@@ -3,10 +3,8 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Microsoft.AspNetCore.Mvc;
-using Orleans;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 #pragma warning disable SA1600, IDE0060

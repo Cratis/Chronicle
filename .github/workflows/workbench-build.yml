@@ -1,0 +1,45 @@
+name: Workbench Build
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "Source/Workbench/**"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Source/Workbench/**"
+
+jobs:
+  node-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup node v16
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          registry-url: "https://registry.npmjs.org"
+
+      - uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: |
+            .yarn/cache
+            **/node_modules
+            **/.eslintcache
+            **/yarn.lock
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
+
+      - name: Yarn install
+        run: yarn
+
+      - name: Build JS/TS
+        run: |
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          yarn ci

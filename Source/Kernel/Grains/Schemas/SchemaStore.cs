@@ -1,11 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.DependencyInversion;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Schemas;
+using Aksio.DependencyInversion;
 using NJsonSchema;
-using Orleans;
 
 namespace Aksio.Cratis.Kernel.Grains.Schemas;
 

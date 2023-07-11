@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Execution;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
@@ -98,9 +97,9 @@ public class MongoDBSchemaStore : ISchemaStore
     public Task<EventSchema> GetFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
-        if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
+        if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.TryGetValue(generation, out var schema))
         {
-            return Task.FromResult(_schemasByTypeAndGeneration[type][generation]);
+            return Task.FromResult(schema);
         }
 
         var filter = GetFilterForSpecificSchema(type, generation);
@@ -120,7 +119,7 @@ public class MongoDBSchemaStore : ISchemaStore
     public Task<bool> HasFor(EventTypeId type, EventGeneration? generation = default)
     {
         generation ??= EventGeneration.First;
-        if (_schemasByTypeAndGeneration.ContainsKey(type) && _schemasByTypeAndGeneration[type].ContainsKey(generation))
+        if (_schemasByTypeAndGeneration.TryGetValue(type, out var generationalSchemas) && generationalSchemas.ContainsKey(generation))
         {
             return Task.FromResult(true);
         }
