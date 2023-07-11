@@ -51,6 +51,7 @@ public class InsideKernelClient : IClient, IDisposable
     {
         var addresses = server.Features.Get<IServerAddressesFeature>();
         var endpoint = addresses!.GetFirstAddressAsUri();
+        endpoint = new Uri($"http://localhost:{endpoint.Port}");
         logger.ConnectingKernel(endpoint);
 
         var options = new SingleKernelOptions
