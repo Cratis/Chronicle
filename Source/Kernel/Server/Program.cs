@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
-using Aksio.Types;
 using Serilog;
 
 #pragma warning disable SA1600
@@ -14,9 +13,6 @@ public static class Program
     public static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += UnhandledExceptions;
-        PackageReferencedAssemblies.Instance.AddAssemblyPrefixesToExclude(
-            "OpenTelemetry");
-
         SelfBindingRegistrationSource.AddNamespaceStartsWithToExclude(
             "Microsoft",
             "Orleans");
