@@ -6,6 +6,7 @@ using System.Text.Json;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
@@ -299,7 +300,10 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
         var collection = GetCollectionFor(eventSequenceId);
-        var @event = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).Single();
+        var @event = collection
+            .Find(filter)
+            .SortByDescending(_ => _.SequenceNumber).Limit(1).SingleOrDefault()
+            ?? throw new MissingEvent(eventSequenceId, eventTypeId, eventSourceId);
         return await _converterProvider().ToAppendedEvent(@event);
     }
 
