@@ -26,7 +26,7 @@ public static class HostBuilderExtensions
         IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
-        return hostBuilder.UseCratis(MicroserviceId.Unspecified, configureDelegate, clientArtifacts, loggerFactory);
+        return hostBuilder.UseCratis(MicroserviceId.Unspecified, MicroserviceName.Unspecified, configureDelegate, clientArtifacts, loggerFactory);
     }
 
     /// <summary>
@@ -34,6 +34,7 @@ public static class HostBuilderExtensions
     /// </summary>
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
     /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
+    /// <param name="microserviceName">The <see cref="MicroserviceName"/> for the microservice.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
@@ -41,11 +42,12 @@ public static class HostBuilderExtensions
     public static IHostBuilder UseCratis(
         this IHostBuilder hostBuilder,
         MicroserviceId microserviceId,
+        MicroserviceName microserviceName,
         Action<IClientBuilder>? configureDelegate = default,
         IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
-        var clientBuilder = ClientBuilder.ForMicroservice(microserviceId);
+        var clientBuilder = ClientBuilder.ForMicroservice(microserviceId, microserviceName);
         configureDelegate?.Invoke(clientBuilder);
         hostBuilder.ConfigureServices((context, services) => clientBuilder.Build(context, services, clientArtifacts, loggerFactory));
         return hostBuilder;

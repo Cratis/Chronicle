@@ -28,19 +28,22 @@ public class ClientBuilder : IClientBuilder
     /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
     /// </summary>
     /// <param name="microserviceId">Microservice identifier.</param>
-    public ClientBuilder(MicroserviceId microserviceId)
+    /// <param name="microserviceName">The <see cref="MicroserviceName"/> for the microservice.</param>
+    public ClientBuilder(MicroserviceId microserviceId, MicroserviceName microserviceName)
     {
         ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
+        ExecutionContextManager.SetGlobalMicroserviceName(microserviceName);
     }
 
     /// <summary>
     /// Start configuring <see cref="IClientBuilder"/> for a specific <see cref="MicroserviceId"/>.
     /// </summary>
-    /// <param name="id"><see cref="MicroserviceId"/>.</param>
+    /// <param name="id">The <see cref="MicroserviceId"/>.</param>
+    /// <param name="name">The <see cref="MicroserviceName"/>.</param>
     /// <returns><see cref="IClientBuilder"/> to build.</returns>
-    public static IClientBuilder ForMicroservice(MicroserviceId id)
+    public static IClientBuilder ForMicroservice(MicroserviceId id, MicroserviceName name)
     {
-        return new ClientBuilder(id);
+        return new ClientBuilder(id, name);
     }
 
     /// <inheritdoc/>
