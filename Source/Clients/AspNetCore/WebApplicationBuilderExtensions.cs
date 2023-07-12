@@ -27,7 +27,7 @@ public static class WebApplicationBuilderExtensions
         IClientArtifactsProvider? clientArtifacts = default,
         Action<IClientBuilder>? configureDelegate = null)
     {
-        return webApplicationBuilder.UseCratis(MicroserviceId.Unspecified, clientArtifacts, configureDelegate);
+        return webApplicationBuilder.UseCratis(MicroserviceId.Unspecified, MicroserviceName.Unspecified, clientArtifacts, configureDelegate);
     }
 
     /// <summary>
@@ -35,17 +35,19 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     /// <param name="webApplicationBuilder"><see cref="WebApplicationBuilder"/> to build on.</param>
     /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
+    /// <param name="microserviceName">The <see cref="MicroserviceName"/> for the microservice.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
     public static WebApplicationBuilder UseCratis(
         this WebApplicationBuilder webApplicationBuilder,
         MicroserviceId microserviceId,
+        MicroserviceName microserviceName,
         IClientArtifactsProvider? clientArtifacts = default,
         Action<IClientBuilder>? configureDelegate = default)
     {
         webApplicationBuilder.Services.AddRules();
-        webApplicationBuilder.Host.UseCratis(microserviceId, configureDelegate, clientArtifacts);
+        webApplicationBuilder.Host.UseCratis(microserviceId, microserviceName, configureDelegate, clientArtifacts);
 
         return webApplicationBuilder;
     }
