@@ -142,7 +142,7 @@ public static class ClientServiceCollectionExtensions
     {
         switch (configuration.Kernel.Type)
         {
-            case ClusterTypes.Single: logger.UsingSingleKernelClient(); break;
+            case ClusterTypes.Single: logger.UsingSingleKernelClient(configuration.Kernel.GetSingleKernelOptions().Endpoint); break;
             case ClusterTypes.Static: logger.UsingStaticClusterKernelClient(); break;
             case ClusterTypes.AzureStorage: logger.UsingOrleansAzureStorageKernelClient(); break;
         }

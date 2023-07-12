@@ -10,8 +10,8 @@ internal static partial class ClientServiceCollectionExtensionsLogMessages
     [LoggerMessage(0, LogLevel.Information, "Connecting to Cratis Kernel")]
     internal static partial void ConnectingToKernel(this ILogger logger);
 
-    [LoggerMessage(1, LogLevel.Information, "Using single kernel client")]
-    internal static partial void UsingSingleKernelClient(this ILogger logger);
+    [LoggerMessage(1, LogLevel.Information, "Using single kernel client @ '{Endpoint}'")]
+    internal static partial void UsingSingleKernelClient(this ILogger logger, Uri endpoint);
 
     [LoggerMessage(2, LogLevel.Information, "Using static clustered kernel client")]
     internal static partial void UsingStaticClusterKernelClient(this ILogger logger);
