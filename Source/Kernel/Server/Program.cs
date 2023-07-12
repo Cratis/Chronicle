@@ -29,10 +29,11 @@ public static class Program
     public static IHostBuilder CreateHostBuilder(string[] args) =>
          Host.CreateDefaultBuilder(args)
             .UseMongoDB()
-            .UseAksio(
+            .UseAksio()
+            .UseCratis(
                 microserviceId: MicroserviceId.Kernel,
-                microserviceName: "Cratis Kernel")
-            .UseCratis(_ => _.InKernel())
+                microserviceName: "Cratis Kernel",
+                configureDelegate: _ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
