@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>1.1.6</ApplicationModel>
+        <ApplicationModel>1.1.7</ApplicationModel>
         <Orleans>7.1.2</Orleans>
 	</PropertyGroup>
 	<ItemGroup>
