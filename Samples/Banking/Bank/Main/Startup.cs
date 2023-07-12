@@ -10,7 +10,7 @@ public class Startup
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        services.UseMongoDBReadModels();
+        services.AddMongoDBReadModels();
     }
 
     public void Configure(IApplicationBuilder app)

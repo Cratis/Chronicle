@@ -24,7 +24,7 @@ public class when_adding_read_models_from_provider : Specification
         types.Setup(_ => _.Provide()).Returns(new[] { typeof(ReadModel) });
     }
 
-    void Because() => service_collection.Object.UseMongoDBReadModels(readModelTypeProvider: types.Object);
+    void Because() => service_collection.Object.AddMongoDBReadModels(readModelTypeProvider: types.Object);
 
     [Fact] void should_register_collection_provider() => service_descriptor.ServiceType.ShouldEqual(typeof(IMongoCollection<ReadModel>));
 }

@@ -31,7 +31,7 @@ public static class MongoDBReadModels
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <param name="readModelTypeProvider">Optional <see cref="ICanProvideMongoDBReadModelTypes"/> for providing the read model types. Will default to <see cref="DefaultMongoDBReadModelTypesProvider"/>.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection UseMongoDBReadModels(
+    public static IServiceCollection AddMongoDBReadModels(
         this IServiceCollection services,
         ILoggerFactory? loggerFactory = default,
         ICanProvideMongoDBReadModelTypes? readModelTypeProvider = default)
