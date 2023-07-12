@@ -7,7 +7,7 @@ import { AllEventTypes, AllEventTypesArguments } from 'API/events/store/types/Al
 import { GenerationSchemasForType } from 'API/events/store/types/GenerationSchemasForType';
 import { useRouteParams } from './RouteParams';
 import { DataGrid, GridColDef, GridRowSelectionModel, GridCallbackDetails } from '@mui/x-data-grid';
-import { Box, Divider, Grid, Stack, Tab, Tabs, Typography  } from '@mui/material';
+import { Box, Divider, Grid, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { EventTypeInformation } from '../API/events/store/types/EventTypeInformation';
 
 interface TabPanelProps {
@@ -100,7 +100,6 @@ export const EventTypes = () => {
     };
 
     return (
-
         <Stack direction="column" style={{ height: '100%' }}>
             <Typography variant='h4'>Event types</Typography>
             <Divider sx={{ mt: 1, mb: 3 }} />
@@ -114,7 +113,6 @@ export const EventTypes = () => {
                         onRowSelectionModelChange={eventTypeSelected}
                         rows={eventTypes.data}
                     />
-
                 </Grid>
 
                 <Grid item xs={4} >
@@ -159,40 +157,6 @@ export const EventTypes = () => {
                             );
                         })}
                     </Box>
-
-
-                    {/* <Pivot linkFormat="tabs" defaultSelectedKey="2">
-                        {generationalSchemas.data.map((schema: EventTypeSchema) => {
-                            const properties = Object.keys(schema.properties || []).map(_ => {
-                                let type = schema.properties[_].type;
-                                if (Array.isArray(type)) {
-                                    type = type[0];
-                                }
-
-                                return {
-                                    name: _,
-                                    type
-                                };
-                            });
-                            return (
-
-                                <PivotItem key={schema.generation} headerText={schema.generation.toString()}>
-                                    <Box sx={{ height: 400 }}>
-                                        <DataGrid
-                                            columns={eventSchemaColumns}
-                                            filterMode="client"
-                                            sortingMode="client"
-                                            getRowId={(row) => row.name}
-                                            onRowSelectionModelChange={eventTypeSelected}
-                                            rows={properties}
-                                        />
-                                    </Box>
-
-                                </PivotItem>
-                            );
-                        })}
-                    </Pivot> */}
-
                 </Grid>
             </Grid>
         </Stack>);
