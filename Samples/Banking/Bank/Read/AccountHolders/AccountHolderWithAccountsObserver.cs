@@ -21,11 +21,16 @@ public class AccountHolderWithAccountsObserver
         _immediateProjections = immediateProjections;
     }
 
-    public Task AccountHolderRegistered(AccountHolderRegistered @event, EventContext context)
+    public async Task AccountHolderRegistered(AccountHolderRegistered @event, EventContext context)
     {
         var customerId = (AccountHolderId)context.EventSourceId;
         var model = new AccountHolderWithAccounts(customerId, @event.FirstName, @event.LastName, new());
-        return _collection.ReplaceOneAsync(_ => _.Id == customerId, model, new ReplaceOptions { IsUpsert = true });
+        await _collection.UpdateOneAsync(
+            _ => _.Id == customerId,
+            Builders<AccountHolderWithAccounts>.Update
+                .Set(_ => _.FirstName, @event.FirstName)
+                .Set(_ => _.LastName, @event.LastName),
+            new UpdateOptions { IsUpsert = true });
     }
 
     public async Task CreditAccountOpened(CreditAccountOpened @event, EventContext context)
