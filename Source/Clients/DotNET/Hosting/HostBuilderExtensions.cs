@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis;
-using Aksio.Cratis.Hosting;
+using Aksio.Cratis.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Extensions.Hosting;
@@ -13,7 +13,7 @@ namespace Microsoft.Extensions.Hosting;
 public static class HostBuilderExtensions
 {
     /// <summary>
-    /// Configures the <see cref="IClientBuilder"/> for a non-microservice oriented scenario.
+    /// Configures the <see cref="IClientBuilder{TClientBuilder, TClient}"/> for a non-microservice oriented scenario.
     /// </summary>
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
     /// <param name="configureDelegate">Optional delegate used to configure the Cratis client.</param>
@@ -22,7 +22,7 @@ public static class HostBuilderExtensions
     /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
     public static IHostBuilder UseCratis(
         this IHostBuilder hostBuilder,
-        Action<IClientBuilder>? configureDelegate = default,
+        Action<IClientBuilder<IMultiTenantClientBuilder, IMultiTenantClient>>? configureDelegate = default,
         IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
@@ -30,7 +30,7 @@ public static class HostBuilderExtensions
     }
 
     /// <summary>
-    /// Configures the <see cref="IClientBuilder"/> for a microservice oriented scenario.
+    /// Configures the <see cref="IClientBuilder{TClientBuilder, TClient}"/> for a microservice oriented scenario.
     /// </summary>
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
     /// <param name="microserviceId">The unique <see cref="MicroserviceId"/> for the microservice.</param>
@@ -43,13 +43,13 @@ public static class HostBuilderExtensions
         this IHostBuilder hostBuilder,
         MicroserviceId microserviceId,
         MicroserviceName microserviceName,
-        Action<IClientBuilder>? configureDelegate = default,
+        Action<IClientBuilder<IMultiTenantClientBuilder, IMultiTenantClient>>? configureDelegate = default,
         IClientArtifactsProvider? clientArtifacts = default,
         ILoggerFactory? loggerFactory = default)
     {
-        var clientBuilder = ClientBuilder.ForMicroservice(microserviceId, microserviceName);
+        var clientBuilder = ClientBuilder.MultiTenanted().ForMicroservice(microserviceId, microserviceName);
         configureDelegate?.Invoke(clientBuilder);
-        hostBuilder.ConfigureServices((context, services) => clientBuilder.Build(context, services, clientArtifacts, loggerFactory));
+        hostBuilder.ConfigureServices((context, services) => clientBuilder.Build(services, clientArtifacts, loggerFactory));
         return hostBuilder;
     }
 }

@@ -19,6 +19,8 @@ namespace Aksio.Cratis.Clients;
 /// </summary>
 public static class ClientServiceCollectionExtensions
 {
+    static IClient? _client;
+
     /// <summary>
     /// Add the Cratis Kernel client.
     /// </summary>
@@ -28,6 +30,8 @@ public static class ClientServiceCollectionExtensions
     {
         services.AddSingleton(_ =>
         {
+            if (_client is not null) return _client;
+
             var httpClientFactory = _.GetRequiredService<IHttpClientFactory>();
             var configuration = _.GetService<ClientConfiguration>() ?? new ClientConfiguration();
             var loadBalancer = _.GetService<ILoadBalancer>() ?? new LoadBalancer(httpClientFactory);
@@ -35,13 +39,12 @@ public static class ClientServiceCollectionExtensions
             serializerOptions = new JsonSerializerOptions(serializerOptions);
             var orleansAzureTableClientLogger = _.GetRequiredService<ILogger<OrleansAzureTableStoreKernelClient>>();
             var logger = _.GetRequiredService<ILogger<SingleKernelClient>>();
-            var server = _.GetRequiredService<IServer>();
-            var addresses = server.Features.Get<IServerAddressesFeature>();
             var clientLifecycle = _.GetRequiredService<IClientLifecycle>();
             var executionContextManager = _.GetRequiredService<IExecutionContextManager>();
             var taskFactory = _.GetRequiredService<ITaskFactory>();
             var timerFactory = _.GetRequiredService<ITimerFactory>();
-
+            var server = _.GetRequiredService<IServer>();
+            var addresses = server.Features.Get<IServerAddressesFeature>();
             if (configuration.Kernel.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
             {
                 throw new UnableToResolveClientUri();
@@ -92,6 +95,8 @@ public static class ClientServiceCollectionExtensions
             LogClientType(configuration, logger);
 
             client.Connect().Wait();
+
+            _client = client;
 
             return client;
         });

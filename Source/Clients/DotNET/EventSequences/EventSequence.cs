@@ -12,6 +12,7 @@ namespace Aksio.Cratis.EventSequences;
 /// </summary>
 public class EventSequence : IEventSequence
 {
+    readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
@@ -22,6 +23,7 @@ public class EventSequence : IEventSequence
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
+    /// <param name="tenantId"><see cref="TenantId"/> the sequence is for.</param>
     /// <param name="eventSequenceId">The event sequence it represents.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
@@ -29,6 +31,7 @@ public class EventSequence : IEventSequence
     /// <param name="observerRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequence(
+        TenantId tenantId,
         EventSequenceId eventSequenceId,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
@@ -36,6 +39,7 @@ public class EventSequence : IEventSequence
         IObserversRegistrar observerRegistrar,
         IExecutionContextManager executionContextManager)
     {
+        _tenantId = tenantId;
         _eventSequenceId = eventSequenceId;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
@@ -108,5 +112,5 @@ public class EventSequence : IEventSequence
         await _client.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
     }
 
-    string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_executionContextManager.Current.TenantId}/sequence/{_eventSequenceId}";
+    string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_tenantId}/sequence/{_eventSequenceId}";
 }

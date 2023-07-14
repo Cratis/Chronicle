@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Hosting;
+namespace Aksio.Cratis;
 
 /// <summary>
 /// Holds log messages for <see cref="ClientBuilder"/>.
