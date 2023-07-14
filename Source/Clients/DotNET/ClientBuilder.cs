@@ -55,6 +55,8 @@ public abstract class ClientBuilder<TActual, TClient> : IClientBuilder<TActual, 
     /// <inheritdoc/>
     public TActual ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName)
     {
+        ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
+        ExecutionContextManager.SetGlobalMicroserviceName(microserviceName);
         _microserviceId = microserviceId;
         _microserviceName = microserviceName;
         return (this as TActual)!;
