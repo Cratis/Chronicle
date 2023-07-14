@@ -10,10 +10,12 @@ using MongoDB.Driver;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
+#pragma warning disable AS0010, AS0013
+
 /// <summary>
 /// Represents an adapter for <see cref="IMongoCollection{T}"/> to overcome shortcomings of open generic service registrations with the default ServiceCollection registrations.
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">Type of model.</typeparam>
 /// <remarks>
 /// With the default registrations in ServiceCollection, it is not possible to register an open generic service with a factory that resolves the type arguments from a context.
 /// The factory is represented as a <see cref="Func{TServiceProvider, TResult}"/> giving you the <see cref="IServiceProvider"/> and not the context with the service being resolved which would enable us
@@ -39,7 +41,7 @@ public class MongoCollectionAdapter<T> : IMongoCollection<T>
         _collection = _database.GetCollection<T>(GetReadModelName(typeof(T)));
     }
 
-#pragma warning disable CS0618, CS8625
+#pragma warning disable CS0618, CS8625, SA1600, SA1127
     public CollectionNamespace CollectionNamespace => _collection.CollectionNamespace;
     public IMongoDatabase Database => _collection.Database;
     public IBsonSerializer<T> DocumentSerializer => _collection.DocumentSerializer;

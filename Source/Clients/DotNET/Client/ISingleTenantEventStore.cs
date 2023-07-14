@@ -13,4 +13,3 @@ public interface ISingleTenantEventStore
     /// </summary>
     IEventSequences Sequences { get; }
 }
-

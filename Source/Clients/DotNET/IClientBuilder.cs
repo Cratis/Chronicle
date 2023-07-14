@@ -42,5 +42,6 @@ public interface IClientBuilder<TActual, TClient>
     /// <param name="services">Optional <see cref="IServiceCollection"/> to register services for. Will create its own service collection if none is specified.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts. Will default to <see cref="DefaultClientArtifactsProvider"/>.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
+    /// <returns>The actual client.</returns>
     TClient Build(IServiceCollection? services = default, IClientArtifactsProvider? clientArtifacts = default, ILoggerFactory? loggerFactory = default);
 }

@@ -9,7 +9,6 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
-using Aksio.DependencyInversion;
 using Aksio.Json;
 using Aksio.Tasks;
 using Aksio.Timers;
@@ -23,6 +22,7 @@ namespace Aksio.Cratis;
 /// <summary>
 /// Represents the starting point for creating a Cratis client.
 /// </summary>
+#pragma warning disable RCS1102, CA1052
 public class ClientBuilder
 {
     /// <summary>
@@ -41,13 +41,16 @@ public class ClientBuilder
 /// <summary>
 /// Represents an implementation of <see cref="IClientBuilder{TActual, TClient}"/>.
 /// </summary>
+/// <typeparam name="TActual">Type of the actual client builder.</typeparam>
+/// <typeparam name="TClient">Type of client it builds.</typeparam>
 public abstract class ClientBuilder<TActual, TClient> : IClientBuilder<TActual, TClient>
     where TActual : class, IClientBuilder<TActual, TClient>
 {
-    bool _inKernel;
+#pragma warning disable SA1600, CA1051
     protected IModelNameConvention? _modelNameConvention;
     protected MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     protected MicroserviceName _microserviceName = MicroserviceName.Unspecified;
+    bool _inKernel;
 
     /// <inheritdoc/>
     public TActual ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName)
@@ -71,8 +74,6 @@ public abstract class ClientBuilder<TActual, TClient> : IClientBuilder<TActual, 
         _modelNameConvention = convention;
         return (this as TActual)!;
     }
-
-    protected abstract TClient BuildActual(IServiceCollection services, IClientArtifactsProvider clientArtifacts, ILoggerFactory loggerFactory);
 
     /// <inheritdoc/>
     public TClient Build(
@@ -126,4 +127,6 @@ public abstract class ClientBuilder<TActual, TClient> : IClientBuilder<TActual, 
 
         return BuildActual(services, clientArtifacts, loggerFactory);
     }
+
+    protected abstract TClient BuildActual(IServiceCollection services, IClientArtifactsProvider clientArtifacts, ILoggerFactory loggerFactory);
 }
