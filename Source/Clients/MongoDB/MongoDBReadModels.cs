@@ -46,6 +46,7 @@ public static class MongoDBReadModels
         });
 
         services.AddTransient(typeof(IMongoCollection<>), typeof(MongoCollectionAdapter<>));
+
         return services;
     }
 
