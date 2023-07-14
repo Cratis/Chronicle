@@ -41,6 +41,19 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "build basic sample",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "--no-restore",
+                "${workspaceFolder}/Samples/Basic/Basic.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "Client and server",
             "group": {
                 "kind": "build",

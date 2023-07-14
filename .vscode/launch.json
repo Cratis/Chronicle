@@ -90,6 +90,19 @@
                 "ASPNETCORE_ENVIRONMENT": "Development"
             }
         },
+        {
+            "name": ".NET Core Launch (Basic sample)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build basic sample",
+            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net7.0/Basic.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Samples/Basic",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
 
         {
             "name": ".NET Core Attach",
