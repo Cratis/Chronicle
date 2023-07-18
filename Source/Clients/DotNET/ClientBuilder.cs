@@ -74,13 +74,15 @@ public class ClientBuilder : IClientBuilder
     public IClientBuilder MultiTenanted()
     {
         _isMultiTenanted = true;
+        Services.Configure<ClientOptions>(options => options.IsMultiTenanted = true);
         return this;
     }
 
     /// <inheritdoc/>
     public IClientBuilder InKernel()
     {
-        ExecutionContextManager.SetKernelMode();
+        ExecutionContextManager.SetGlobalMicroserviceId(MicroserviceId.Kernel);
+        ExecutionContextManager.SetGlobalMicroserviceName("Cratis Kernel");
         _inKernel = true;
         return this;
     }
@@ -103,6 +105,8 @@ public class ClientBuilder : IClientBuilder
     public void Build()
     {
         _logger.Configuring();
+
+        var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
 
         var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(ProjectReferencedAssemblies.Instance);
 
@@ -142,11 +146,11 @@ public class ClientBuilder : IClientBuilder
         clientArtifacts.ComplianceForTypesProviders.ForEach(_ => Services.AddTransient(_));
         clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => Services.AddTransient(_));
 
-        var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
         if (_inKernel)
         {
             _logger.UsingInsideKernelClient();
             ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
+            ExecutionContextManager.SetKernelMode();
             Services.AddSingleton<IConnection, InsideKernelConnection>();
         }
         else if (options.Value.Kernel.SingleKernelOptions is not null)
