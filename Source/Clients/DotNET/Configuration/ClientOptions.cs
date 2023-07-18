@@ -21,6 +21,11 @@ public class ClientOptions
     public MicroserviceName MicroserviceName { get; set; } = MicroserviceName.Unspecified;
 
     /// <summary>
+    /// Gets or sets whether or not the client is multi-tenanted.
+    /// </summary>
+    public bool IsMultiTenanted { get; set; }
+
+    /// <summary>
     /// Gets the Kernel connectivity configuration.
     /// </summary>
     public KernelConnectivity Kernel { get; set; } = new();
