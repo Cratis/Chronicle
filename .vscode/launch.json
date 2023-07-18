@@ -95,7 +95,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build basic sample",
-            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net7.0/Basic.dll",
+            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Samples/Basic",
             "stopAtEntry": false,
