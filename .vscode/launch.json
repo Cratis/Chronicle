@@ -131,6 +131,13 @@
                 ".NET Core Launch (Server - not just my code)",
                 ".NET Core Launch (Bank Sample - not just my code)"
             ]
+        },
+        {
+            "name": "Server and Basic",
+            "configurations": [
+                ".NET Core Launch (Server)",
+                ".NET Core Launch (Basic sample)"
+            ]
         }
     ]
 }
