@@ -1,27 +1,27 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Integration;
 
 /// <summary>
-/// Represents a <see cref="IParticipateInClientLifecycle"/> for handling <see cref="IAdapters"/>.
+/// Represents a <see cref="IParticipateInConnectionLifecycle"/> for handling <see cref="IAdapters"/>.
 /// </summary>
-public class AdaptersClientLifecycleParticipant : IParticipateInClientLifecycle
+public class AdaptersConnectionLifecycleParticipant : IParticipateInConnectionLifecycle
 {
     readonly IAdapters _adapters;
-    readonly ILogger<AdaptersClientLifecycleParticipant> _logger;
+    readonly ILogger<AdaptersConnectionLifecycleParticipant> _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AdaptersClientLifecycleParticipant"/> class.
+    /// Initializes a new instance of the <see cref="AdaptersConnectionLifecycleParticipant"/> class.
     /// </summary>
     /// <param name="adapters"><see cref="IAdapters"/> to work with.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public AdaptersClientLifecycleParticipant(
+    public AdaptersConnectionLifecycleParticipant(
         IAdapters adapters,
-        ILogger<AdaptersClientLifecycleParticipant> logger)
+        ILogger<AdaptersConnectionLifecycleParticipant> logger)
     {
         _adapters = adapters;
         _logger = logger;

@@ -4,7 +4,7 @@
 using Aksio.Queries;
 using Aksio.Validation;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
 /// Represents a query result with the data result typed.

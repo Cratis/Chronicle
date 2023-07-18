@@ -3,9 +3,9 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
-internal static partial class ClientLifecycleLogMessages
+internal static partial class ConnectionLifecycleLogMessages
 {
     [LoggerMessage(1, LogLevel.Error, "During the connected lifecycle event, the participant '{Participant}' failed")]
     internal static partial void ParticipantFailedDuringConnected(this ILogger<ConnectionLifecycle> logger, string participant, Exception exception);

@@ -3,12 +3,12 @@
 
 using Aksio.Commands;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
 /// Represents a connection.
 /// </summary>
-public interface IClient
+public interface IConnection
 {
     /// <summary>
     /// Gets the unique <see cref="ConnectionId"/> for the client.

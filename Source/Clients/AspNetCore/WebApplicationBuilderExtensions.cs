@@ -38,7 +38,7 @@ public static class WebApplicationBuilderExtensions
         app.UseExecutionContext();
 
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<ICratisClient>().Connect().Wait());
+        appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait());
 
         return app;
     }

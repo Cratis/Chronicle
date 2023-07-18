@@ -9,44 +9,44 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClient"/> for a single instance.
+/// Represents an implementation of <see cref="IConnection"/> for a single instance.
 /// </summary>
-public class SingleKernelClient : RestKernelClient
+public class SingleKernelConnection : RestKernelConnection
 {
     readonly IHttpClientFactory _httpClientFactory;
-    readonly IOptions<ClientConfiguration> _options;
+    readonly IOptions<ClientOptions> _options;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SingleKernelClient"/> class.
+    /// Initializes a new instance of the <see cref="SingleKernelConnection"/> class.
     /// </summary>
-    /// <param name="options">The <see cref="ClientConfiguration"/>.</param>
+    /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core server.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="clientLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public SingleKernelClient(
-        IOptions<ClientConfiguration> options,
+    public SingleKernelConnection(
+        IOptions<ClientOptions> options,
         IServer server,
         IHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        IConnectionLifecycle clientLifecycle,
+        IConnectionLifecycle connectionLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<RestKernelClient> logger) : base(
+        ILogger<RestKernelConnection> logger) : base(
             options,
             server,
             taskFactory,
             timerFactory,
             executionContextManager,
-            clientLifecycle,
+            connectionLifecycle,
             jsonSerializerOptions,
             logger)
     {

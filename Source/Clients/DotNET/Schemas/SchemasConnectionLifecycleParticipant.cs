@@ -2,36 +2,36 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Schemas;
 
 /// <summary>
-/// Represents an implementation of <see cref="IParticipateInClientLifecycle"/> for registering event schemas.
+/// Represents an implementation of <see cref="IParticipateInConnectionLifecycle"/> for registering event schemas.
 /// </summary>
-public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
+public class SchemasConnectionLifecycleParticipant : IParticipateInConnectionLifecycle
 {
     readonly IEnumerable<EventTypeRegistration> _definitions;
-    readonly IClient _client;
+    readonly IConnection _connection;
     readonly IEventTypes _eventTypes;
-    readonly ILogger<SchemasClientLifecycleParticipant> _logger;
+    readonly ILogger<SchemasConnectionLifecycleParticipant> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Schemas"/> class.
     /// </summary>
-    /// <param name="client">The Kernel <see cref="IClient"/>.</param>
+    /// <param name="connection">The Kernel <see cref="IConnection"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for event types.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public SchemasClientLifecycleParticipant(
-        IClient client,
+    public SchemasConnectionLifecycleParticipant(
+        IConnection connection,
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
-        ILogger<SchemasClientLifecycleParticipant> logger)
+        ILogger<SchemasConnectionLifecycleParticipant> logger)
     {
-        _client = client;
+        _connection = connection;
         _eventTypes = eventTypes;
         _logger = logger;
         _definitions = eventTypes.All.Select(_ =>
@@ -49,7 +49,7 @@ public class SchemasClientLifecycleParticipant : IParticipateInClientLifecycle
     {
         _logger.RegisterEventTypes();
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/types";
-        await _client.PerformCommand(route, new RegisterEventTypes(_definitions));
+        await _connection.PerformCommand(route, new RegisterEventTypes(_definitions));
     }
 
     /// <inheritdoc/>

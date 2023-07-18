@@ -8,7 +8,7 @@ namespace Aksio.Configuration;
 /// <summary>
 /// Represents the client configuration.
 /// </summary>
-public class ClientConfiguration
+public class ClientOptions
 {
     /// <summary>
     /// Gets or sets the <see cref="MicroserviceId"/> for the client.

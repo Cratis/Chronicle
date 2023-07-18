@@ -3,10 +3,10 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 internal static partial class InsideKernelClientLogMessages
 {
     [LoggerMessage(0, LogLevel.Information, "Inside Kernel client will be connected to kernel on {Endpoint}")]
-    internal static partial void InsideKernelConfigured(this ILogger<InsideKernelClient> logger, Uri endpoint);
+    internal static partial void InsideKernelConfigured(this ILogger<InsideKernelConnection> logger, Uri endpoint);
 }

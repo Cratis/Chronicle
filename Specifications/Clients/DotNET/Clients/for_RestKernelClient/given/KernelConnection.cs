@@ -2,30 +2,36 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Aksio.Configuration;
+using Aksio.Cratis.Connections;
 using Aksio.Tasks;
 using Aksio.Timers;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
 
-public class KernelClient : RestKernelClient
+public class KernelConnection : RestKernelConnection
 {
     internal readonly Mock<HttpClient> http_client;
     internal bool should_connect = true;
 
-    public KernelClient(
+    public KernelConnection(
+        IOptions<ClientOptions> options,
+        IServer server,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        Uri clientEndpoint,
-        IClientLifecycle clientLifecycle,
+        IConnectionLifecycle connectionLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<RestKernelClient> logger) : base(
+        ILogger<RestKernelConnection> logger) : base(
+            options,
+            server,
             taskFactory,
             timerFactory,
             executionContextManager,
-            clientEndpoint,
-            clientLifecycle,
+            connectionLifecycle,
             jsonSerializerOptions,
             logger)
     {

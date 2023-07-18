@@ -4,7 +4,7 @@
 using Azure;
 using Azure.Data.Tables;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
 /// Represents the silo info found in Azure Storage.

@@ -13,14 +13,14 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClient"/> for usage inside a silo.
+/// Represents an implementation of <see cref="IConnection"/> for usage inside a silo.
 /// </summary>
-public class InsideKernelClient : IClient, IDisposable
+public class InsideKernelConnection : IConnection, IDisposable
 {
-    readonly SingleKernelClient _innerClient;
+    readonly SingleKernelConnection _innerClient;
 
     /// <inheritdoc/>
     public bool IsConnected => _innerClient.IsConnected;
@@ -29,29 +29,29 @@ public class InsideKernelClient : IClient, IDisposable
     public ConnectionId ConnectionId => _innerClient.ConnectionId;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InsideKernelClient"/> class.
+    /// Initializes a new instance of the <see cref="InsideKernelConnection"/> class.
     /// </summary>
-    /// <param name="options">The <see cref="ClientConfiguration"/>.</param>
+    /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core <see cref="IServer"/>.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="clientLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="singleKernelClientLogger"><see cref="ILogger"/> for single kernel client logging.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public InsideKernelClient(
-        IOptions<ClientConfiguration> options,
+    public InsideKernelConnection(
+        IOptions<ClientOptions> options,
         IServer server,
         IHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        IConnectionLifecycle clientLifecycle,
+        IConnectionLifecycle connectionLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<SingleKernelClient> singleKernelClientLogger,
-        ILogger<InsideKernelClient> logger)
+        ILogger<SingleKernelConnection> singleKernelClientLogger,
+        ILogger<InsideKernelConnection> logger)
     {
         var addresses = server.Features.Get<IServerAddressesFeature>();
         var endpoint = addresses!.GetFirstAddressAsUri();
@@ -70,7 +70,7 @@ public class InsideKernelClient : IClient, IDisposable
             taskFactory,
             timerFactory,
             executionContextManager,
-            clientLifecycle,
+            connectionLifecycle,
             jsonSerializerOptions,
             singleKernelClientLogger);
     }

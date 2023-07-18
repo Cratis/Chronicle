@@ -10,50 +10,54 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
-/// Represents a <see cref="IClient"/> for a clustered Kernel.
+/// Represents a <see cref="IConnection"/> for a clustered Kernel.
 /// </summary>
-public class StaticClusteredKernelClient : ClusteredKernelClient
+public abstract class ClusteredKernelClient : RestKernelConnection
 {
-    readonly IOptions<ClientConfiguration> _options;
+    readonly ILoadBalancedHttpClientFactory _httpClientFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClusteredKernelClient"/> class.
     /// </summary>
-    /// <param name="options">The <see cref="ClientConfiguration"/>.</param>
+    /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core server.</param>
     /// <param name="httpClientFactory">The <see cref="ILoadBalancedHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="clientLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public StaticClusteredKernelClient(
-        IOptions<ClientConfiguration> options,
+    protected ClusteredKernelClient(
+        IOptions<ClientOptions> options,
         IServer server,
         ILoadBalancedHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        IConnectionLifecycle clientLifecycle,
+        IConnectionLifecycle connectionLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<RestKernelClient> logger) : base(
+        ILogger<RestKernelConnection> logger) : base(
             options,
             server,
-            httpClientFactory,
             taskFactory,
             timerFactory,
             executionContextManager,
-            clientLifecycle,
+            connectionLifecycle,
             jsonSerializerOptions,
             logger)
     {
-        _options = options;
+        _httpClientFactory = httpClientFactory;
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<Uri> Endpoints => _options.Value.Kernel.StaticClusterOptions?.Endpoints ?? Enumerable.Empty<Uri>();
+    protected override HttpClient CreateHttpClient() => _httpClientFactory.Create(Endpoints);
+
+    /// <summary>
+    /// Gets the endpoints to use for connecting to Kernel.
+    /// </summary>
+    protected abstract IEnumerable<Uri> Endpoints { get; }
 }

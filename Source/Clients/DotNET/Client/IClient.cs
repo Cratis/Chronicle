@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Client;
 /// <summary>
 /// Defines the client for Cratis.
 /// </summary>
-public interface ICratisClient
+public interface IClient
 {
     /// <summary>
     /// Connect to Cratis kernel.

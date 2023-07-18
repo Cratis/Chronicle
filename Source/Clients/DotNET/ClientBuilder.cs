@@ -4,8 +4,8 @@
 using Aksio.Collections;
 using Aksio.Configuration;
 using Aksio.Cratis.Client;
-using Aksio.Cratis.Clients;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Outbox;
 using Aksio.Cratis.Integration;
@@ -34,9 +34,9 @@ public class ClientBuilder : IClientBuilder
     protected readonly ILogger<ClientBuilder> _logger;
     protected IClientArtifactsProvider? _clientArtifactsProvider;
     protected IModelNameConvention? _modelNameConvention;
+    readonly OptionsBuilder<ClientOptions> _optionsBuilder;
     bool _inKernel;
     bool _isMultiTenanted;
-    readonly OptionsBuilder<ClientConfiguration> _optionsBuilder;
 
     /// <inheritdoc/>
     public IServiceCollection Services { get; }
@@ -50,7 +50,7 @@ public class ClientBuilder : IClientBuilder
         IServiceCollection services,
         ILogger<ClientBuilder> logger)
     {
-        _optionsBuilder = services.AddOptions<ClientConfiguration>();
+        _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
         _optionsBuilder.BindConfiguration("cratis")
             .ValidateDataAnnotations()
@@ -126,10 +126,10 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ITaskFactory, TaskFactory>()
             .AddSingleton<ITimerFactory, TimerFactory>()
             .AddSingleton<OutboxProjectionsRegistrar>()
-            .AddSingleton<AdaptersClientLifecycleParticipant>()
-            .AddSingleton<ObserversClientLifecycleParticipant>()
+            .AddSingleton<AdaptersConnectionLifecycleParticipant>()
+            .AddSingleton<ObserversConnectionLifecycleParticipant>()
             .AddSingleton<ProjectionsRegistrar>()
-            .AddSingleton<SchemasClientLifecycleParticipant>()
+            .AddSingleton<SchemasConnectionLifecycleParticipant>()
             .AddSingleton<IJsonProjectionSerializer, JsonProjectionSerializer>()
             .AddSingleton<IAdapters, Adapters>()
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
@@ -146,25 +146,25 @@ public class ClientBuilder : IClientBuilder
         {
             _logger.UsingInsideKernelClient();
             ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
-            Services.AddSingleton<IClient, InsideKernelClient>();
+            Services.AddSingleton<IConnection, InsideKernelConnection>();
         }
         else
         {
-            var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientConfiguration>>();
+            var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
             if (options.Value.Kernel.SingleKernelOptions is not null)
             {
                 _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernelOptions.Endpoint);
-                Services.AddSingleton<IClient, SingleKernelClient>();
+                Services.AddSingleton<IConnection, SingleKernelConnection>();
             }
             else if (options.Value.Kernel.StaticClusterOptions is not null)
             {
                 _logger.UsingStaticClusterKernelClient();
-                Services.AddSingleton<IClient, StaticClusteredKernelClient>();
+                Services.AddSingleton<IConnection, StaticClusteredKernelConnection>();
             }
             else if (options.Value.Kernel.AzureStorageClusterOptions is not null)
             {
                 _logger.UsingOrleansAzureStorageKernelClient();
-                Services.AddSingleton<IClient, OrleansAzureTableStoreKernelClient>();
+                Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
             }
         }
 
@@ -172,7 +172,7 @@ public class ClientBuilder : IClientBuilder
         {
             Services.AddSingleton<IMultiTenantEventSequences, MultiTenantEventSequences>();
             Services.AddSingleton<IMultiTenantEventStore, MultiTenantEventStore>();
-            Services.AddSingleton<ICratisClient, MultiTenantClient>();
+            Services.AddSingleton<IClient, MultiTenantClient>();
             Services.AddTransient(sp =>
             {
                 var tenantId = ExecutionContextManager.GetCurrent().TenantId;
@@ -189,7 +189,7 @@ public class ClientBuilder : IClientBuilder
             Services.AddSingleton(TenantId.NotSet);
             Services.AddSingleton<IEventSequences, Client.EventSequences>();
             Services.AddSingleton<ISingleTenantEventStore, SingleTenantEventStore>();
-            Services.AddSingleton<ICratisClient, SingleTenantClient>();
+            Services.AddSingleton<IClient, SingleTenantClient>();
             Services.AddSingleton(sp => sp.GetRequiredService<IEventSequences>().EventLog);
             Services.AddSingleton(sp => sp.GetRequiredService<IEventSequences>().Outbox);
         }

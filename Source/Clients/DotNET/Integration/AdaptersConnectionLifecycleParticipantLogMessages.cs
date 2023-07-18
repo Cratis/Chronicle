@@ -5,8 +5,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Integration;
 
-internal static partial class AdaptersClientLifecycleParticipantLogMessages
+internal static partial class AdaptersConnectionLifecycleParticipantLogMessages
 {
     [LoggerMessage(1, LogLevel.Information, "Registering adapters")]
-    internal static partial void RegisterAdapters(this ILogger<AdaptersClientLifecycleParticipant> logger);
+    internal static partial void RegisterAdapters(this ILogger<AdaptersConnectionLifecycleParticipant> logger);
 }

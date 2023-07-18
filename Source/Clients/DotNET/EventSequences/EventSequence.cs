@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
 
@@ -16,7 +16,7 @@ public class EventSequence : IEventSequence
     readonly EventSequenceId _eventSequenceId;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
-    readonly IClient _client;
+    readonly IConnection _connection;
     readonly IObserversRegistrar _observerRegistrar;
     readonly IExecutionContextManager _executionContextManager;
 
@@ -27,7 +27,7 @@ public class EventSequence : IEventSequence
     /// <param name="eventSequenceId">The event sequence it represents.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
-    /// <param name="client"><see cref="IClient"/> for getting connections.</param>
+    /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
     /// <param name="observerRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequence(
@@ -35,7 +35,7 @@ public class EventSequence : IEventSequence
         EventSequenceId eventSequenceId,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
-        IClient client,
+        IConnection connection,
         IObserversRegistrar observerRegistrar,
         IExecutionContextManager executionContextManager)
     {
@@ -43,7 +43,7 @@ public class EventSequence : IEventSequence
         _eventSequenceId = eventSequenceId;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
-        _client = client;
+        _connection = connection;
         _observerRegistrar = observerRegistrar;
         _executionContextManager = executionContextManager;
     }
@@ -52,7 +52,7 @@ public class EventSequence : IEventSequence
     public async Task<EventSequenceNumber> GetNextSequenceNumber()
     {
         var route = $"{GetBaseRoute()}/next-sequence-number";
-        var result = await _client.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
+        var result = await _connection.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
         return result.Data;
     }
 
@@ -60,7 +60,7 @@ public class EventSequence : IEventSequence
     public async Task<EventSequenceNumber> GetTailSequenceNumber()
     {
         var route = $"{GetBaseRoute()}/tail-sequence-number";
-        var result = await _client.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
+        var result = await _connection.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
         return result.Data;
     }
 
@@ -69,7 +69,7 @@ public class EventSequence : IEventSequence
     {
         var observer = _observerRegistrar.GetByType(type);
         var route = $"{GetBaseRoute()}/tail-sequence-number/observer/{observer.ObserverId}";
-        var result = await _client.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
+        var result = await _connection.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
         return result.Data;
     }
 
@@ -82,7 +82,7 @@ public class EventSequence : IEventSequence
         var serializedEvent = await _eventSerializer.Serialize(@event);
         var payload = new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
         var route = GetBaseRoute();
-        await _client.PerformCommand(
+        await _connection.PerformCommand(
             route,
             payload,
             new
@@ -100,7 +100,7 @@ public class EventSequence : IEventSequence
         reason ??= RedactionReason.Unknown;
         var payload = new RedactEvent(sequenceNumber, reason);
         var route = $"{GetBaseRoute()}/redact-event";
-        await _client.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
+        await _connection.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
     }
 
     /// <inheritdoc/>
@@ -110,7 +110,7 @@ public class EventSequence : IEventSequence
         var eventTypeIds = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_).Id).ToArray();
         var payload = new RedactEvents(eventSourceId, reason, eventTypeIds);
         var route = $"{GetBaseRoute()}/redact-events";
-        await _client.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
+        await _connection.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
     }
 
     string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_tenantId}/sequence/{_eventSequenceId}";

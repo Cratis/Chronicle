@@ -19,56 +19,56 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
-/// Represents a base implementation of <see cref="IClient"/> for REST based clients.
+/// Represents a base implementation of <see cref="IConnection"/> for REST based clients.
 /// </summary>
-public abstract class RestKernelClient : IClient, IDisposable
+public abstract class RestKernelConnection : IConnection, IDisposable
 {
     readonly ITaskFactory _taskFactory;
     readonly ITimerFactory _timerFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly Uri _clientEndpoint;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IConnectionLifecycle _clientLifecycle;
-    readonly ILogger<RestKernelClient> _logger;
+    readonly IConnectionLifecycle _connectionLifecycle;
+    readonly ILogger<RestKernelConnection> _logger;
     readonly MicroserviceId _microserviceId;
     TaskCompletionSource<bool> _connectCompletion;
     ITimer? _timer;
 
     /// <inheritdoc/>
-    public bool IsConnected => _clientLifecycle.IsConnected;
+    public bool IsConnected => _connectionLifecycle.IsConnected;
 
     /// <inheritdoc/>
-    public ConnectionId ConnectionId => _clientLifecycle.ConnectionId;
+    public ConnectionId ConnectionId => _connectionLifecycle.ConnectionId;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RestKernelClient"/> class.
+    /// Initializes a new instance of the <see cref="RestKernelConnection"/> class.
     /// </summary>
-    /// <param name="options">The <see cref="ClientConfiguration"/>.</param>
+    /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core server.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="clientLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    protected RestKernelClient(
-        IOptions<ClientConfiguration> options,
+    protected RestKernelConnection(
+        IOptions<ClientOptions> options,
         IServer server,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        IConnectionLifecycle clientLifecycle,
+        IConnectionLifecycle connectionLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<RestKernelClient> logger)
+        ILogger<RestKernelConnection> logger)
     {
         _taskFactory = taskFactory;
         _timerFactory = timerFactory;
         _executionContextManager = executionContextManager;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _clientLifecycle = clientLifecycle;
+        _connectionLifecycle = connectionLifecycle;
         _logger = logger;
         _microserviceId = ExecutionContextManager.GlobalMicroserviceId;
         _connectCompletion = new TaskCompletionSource<bool>();
@@ -101,7 +101,7 @@ public abstract class RestKernelClient : IClient, IDisposable
                 _timer?.Dispose();
                 _timer = null;
 
-                var attribute = typeof(SingleKernelClient).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+                var attribute = typeof(SingleKernelConnection).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
                 var version = attribute?.InformationalVersion ?? "1.0.0";
                 var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached);
 
@@ -125,7 +125,7 @@ public abstract class RestKernelClient : IClient, IDisposable
                 }
 
                 _connectCompletion.SetResult(true);
-                await _clientLifecycle.Connected();
+                await _connectionLifecycle.Connected();
                 _logger.KernelConnected();
 
                 if (!Debugger.IsAttached)
@@ -271,7 +271,7 @@ public abstract class RestKernelClient : IClient, IDisposable
         if (failed)
         {
             _logger.KernelDisconnected();
-            await _clientLifecycle.Disconnected();
+            await _connectionLifecycle.Disconnected();
             await OnDisconnected();
 
             _connectCompletion.TrySetCanceled();

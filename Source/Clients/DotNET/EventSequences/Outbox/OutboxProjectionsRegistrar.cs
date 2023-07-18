@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
@@ -16,11 +16,11 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.EventSequences.Outbox;
 
 /// <summary>
-/// Represents an implementation of <see cref="IParticipateInClientLifecycle"/> for handling registrations of outbox projections with the Kernel.
+/// Represents an implementation of <see cref="IParticipateInConnectionLifecycle"/> for handling registrations of outbox projections with the Kernel.
 /// </summary>
-public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
+public class OutboxProjectionsRegistrar : IParticipateInConnectionLifecycle
 {
-    readonly IClient _client;
+    readonly IConnection _connection;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<OutboxProjectionsRegistrar> _logger;
@@ -29,7 +29,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxProjectionsRegistrar"/> class.
     /// </summary>
-    /// <param name="client">The Cratis <see cref="IClient"/>.</param>
+    /// <param name="connection">The Cratis <see cref="IConnection"/>.</param>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for projections.</param>
@@ -39,7 +39,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public OutboxProjectionsRegistrar(
-        IClient client,
+        IConnection connection,
         IModelNameConvention modelNameConvention,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
@@ -49,7 +49,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<OutboxProjectionsRegistrar> logger)
     {
-        _client = client;
+        _connection = connection;
         _projectionSerializer = projectionSerializer;
         _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
@@ -85,7 +85,7 @@ public class OutboxProjectionsRegistrar : IParticipateInClientLifecycle
         }).ToArray();
 
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections";
-        await _client.PerformCommand(route, new RegisterProjections(registrations));
+        await _connection.PerformCommand(route, new RegisterProjections(registrations));
     }
 
     /// <inheritdoc/>

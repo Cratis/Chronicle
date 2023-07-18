@@ -1,22 +1,32 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
-/// Defines an interface for systems that want to participate in the lifecycle of the client.
+/// Defines a system for the lifecycle of the client.
 /// </summary>
-public interface IParticipateInClientLifecycle
+public interface IConnectionLifecycle
 {
+    /// <summary>
+    /// Gets whether or not the client is connected.
+    /// </summary>
+    bool IsConnected { get; }
+
+    /// <summary>
+    /// Gets the current connection identifier.
+    /// </summary>
+    ConnectionId ConnectionId { get; }
+
     /// <summary>
     /// Called when the client gets connected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task ClientConnected();
+    Task Connected();
 
     /// <summary>
     /// Called when the client is disconnected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task ClientDisconnected();
+    Task Disconnected();
 }

@@ -3,7 +3,7 @@
 
 using System.Reflection;
 using System.Text.Json;
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
@@ -14,9 +14,9 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IParticipateInClientLifecycle"/> for handling registrations of projections with the Kernel.
+/// Represents an implementation of <see cref="IParticipateInConnectionLifecycle"/> for handling registrations of projections with the Kernel.
 /// </summary>
-public class ProjectionsRegistrar : IParticipateInClientLifecycle
+public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
 {
     static class ProjectionDefinitionCreator<TModel>
     {
@@ -30,7 +30,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     }
 
     readonly IEnumerable<ProjectionDefinition> _projections;
-    readonly IClient _client;
+    readonly IConnection _connection;
     readonly IExecutionContextManager _executionContextManager;
     readonly IModelNameConvention _modelNameConvention;
     readonly IJsonProjectionSerializer _projectionSerializer;
@@ -40,7 +40,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="client">The Cratis <see cref="IClient"/>.</param>
+    /// <param name="connection">The Cratis <see cref="IConnection"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
@@ -50,7 +50,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ProjectionsRegistrar(
-        IClient client,
+        IConnection connection,
         IExecutionContextManager executionContextManager,
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
@@ -60,7 +60,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<ProjectionsRegistrar> logger)
     {
-        _client = client;
+        _connection = connection;
         _executionContextManager = executionContextManager;
         _modelNameConvention = modelNameConvention;
         _projectionSerializer = projectionSerializer;
@@ -91,7 +91,7 @@ public class ProjectionsRegistrar : IParticipateInClientLifecycle
         });
 
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections";
-        await _client.PerformCommand(route, new RegisterProjections(registrations));
+        await _connection.PerformCommand(route, new RegisterProjections(registrations));
     }
 
     /// <inheritdoc/>

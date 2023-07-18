@@ -4,7 +4,7 @@
 using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IConnectionLifecycle"/>.
@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Clients;
 [Singleton]
 public class ConnectionLifecycle : IConnectionLifecycle
 {
-    readonly IInstancesOf<IParticipateInClientLifecycle> _participants;
+    readonly IInstancesOf<IParticipateInConnectionLifecycle> _participants;
     readonly ILogger<ConnectionLifecycle> _logger;
 
     /// <inheritdoc/>
@@ -27,7 +27,7 @@ public class ConnectionLifecycle : IConnectionLifecycle
     /// <param name="participants">The participants of the client lifecycle.</param>
     /// <param name="logger">Logger for logging.</param>
     public ConnectionLifecycle(
-        IInstancesOf<IParticipateInClientLifecycle> participants,
+        IInstancesOf<IParticipateInConnectionLifecycle> participants,
         ILogger<ConnectionLifecycle> logger)
     {
         _participants = participants;

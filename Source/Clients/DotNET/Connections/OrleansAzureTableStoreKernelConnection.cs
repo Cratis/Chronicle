@@ -11,48 +11,48 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients;
+namespace Aksio.Cratis.Connections;
 
 /// <summary>
 /// Represents a <see cref="ClusteredKernelClient"/> for Orleans Azure Table store cluster info.
 /// </summary>
-public class OrleansAzureTableStoreKernelClient : ClusteredKernelClient
+public class OrleansAzureTableStoreKernelConnection : ClusteredKernelClient
 {
-    readonly IOptions<ClientConfiguration> _options;
-    readonly ILogger<OrleansAzureTableStoreKernelClient> _clientLogger;
+    readonly IOptions<ClientOptions> _options;
+    readonly ILogger<OrleansAzureTableStoreKernelConnection> _clientLogger;
     IEnumerable<Uri> _endpoints = Enumerable.Empty<Uri>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClusteredKernelClient"/> class.
     /// </summary>
-    /// <param name="options">The <see cref="ClientConfiguration"/>.</param>
+    /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core <see cref="IServer"/>.</param>
     /// <param name="httpClientFactory">The <see cref="ILoadBalancedHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="clientLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="clientLogger">The <see cref="ILogger"/> for this client.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public OrleansAzureTableStoreKernelClient(
-        IOptions<ClientConfiguration> options,
+    public OrleansAzureTableStoreKernelConnection(
+        IOptions<ClientOptions> options,
         IServer server,
         ILoadBalancedHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        IConnectionLifecycle clientLifecycle,
+        IConnectionLifecycle connectionLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
-        ILogger<OrleansAzureTableStoreKernelClient> clientLogger,
-        ILogger<RestKernelClient> logger) : base(
+        ILogger<OrleansAzureTableStoreKernelConnection> clientLogger,
+        ILogger<RestKernelConnection> logger) : base(
             options,
             server,
             httpClientFactory,
             taskFactory,
             timerFactory,
             executionContextManager,
-            clientLifecycle,
+            connectionLifecycle,
             jsonSerializerOptions,
             logger)
     {
