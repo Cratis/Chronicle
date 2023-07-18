@@ -77,6 +77,7 @@ public class EventSequence : IEventSequence
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
         var eventTypeClr = @event.GetType();
+        ThrowIfUnknownEventType(eventTypeClr);
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
         var serializedEvent = await _eventSerializer.Serialize(@event);
         var payload = new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
@@ -113,4 +114,12 @@ public class EventSequence : IEventSequence
     }
 
     string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_tenantId}/sequence/{_eventSequenceId}";
+
+    void ThrowIfUnknownEventType(Type eventTypeClr)
+    {
+        if (!_eventTypes.HasFor(eventTypeClr))
+        {
+            throw new UnknownEventType(eventTypeClr);
+        }
+    }
 }
