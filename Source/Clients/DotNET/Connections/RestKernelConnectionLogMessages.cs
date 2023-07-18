@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Connections;
 
-internal static partial class RestKernelClientLogMessages
+internal static partial class RestKernelConnectionLogMessages
 {
     [LoggerMessage(0, LogLevel.Trace, "Connecting to Cratis Kernel")]
     internal static partial void Connecting(this ILogger<RestKernelConnection> logger);
