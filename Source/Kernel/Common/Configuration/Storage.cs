@@ -28,6 +28,23 @@ public class Storage
     /// <param name="tenants">Tenants the Kernel needs to support.</param>
     public void ConfigureKernelMicroservice(IEnumerable<string> tenants)
     {
+        // Todo: This is a temporary solution until we have automatic configuration of storage based on Microservice, Tenant and the upcoming Module concept
+        Microservices[MicroserviceId.Unspecified] = new()
+        {
+            Shared = new StorageTypes
+            {
+                ["eventStore"] = Cluster,
+            },
+            Tenants = new()
+        };
+
+        Microservices[MicroserviceId.Unspecified].Tenants[TenantId.NotSet.ToString()] = new StorageTypes
+        {
+            ["readModels"] = Cluster,
+            ["eventStore"] = Cluster
+        };
+
+
         Microservices[MicroserviceId.Kernel] = new()
         {
             Shared = new StorageTypes
@@ -39,6 +56,7 @@ public class Storage
 
         foreach (var tenant in tenants)
         {
+            Microservices[MicroserviceId.Unspecified].Tenants[tenant] =
             Microservices[MicroserviceId.Kernel].Tenants[tenant] = new StorageTypes
             {
                 ["readModels"] = Cluster,

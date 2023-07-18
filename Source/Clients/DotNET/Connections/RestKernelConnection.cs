@@ -26,6 +26,7 @@ namespace Aksio.Cratis.Connections;
 /// </summary>
 public abstract class RestKernelConnection : IConnection, IDisposable
 {
+    readonly IOptions<ClientOptions> _options;
     readonly ITaskFactory _taskFactory;
     readonly ITimerFactory _timerFactory;
     readonly IExecutionContextManager _executionContextManager;
@@ -64,6 +65,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<RestKernelConnection> logger)
     {
+        _options = options;
         _taskFactory = taskFactory;
         _timerFactory = timerFactory;
         _executionContextManager = executionContextManager;
@@ -250,7 +252,8 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         var client = CreateHttpClient();
         if (_executionContextManager.IsInContext)
         {
-            client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _executionContextManager.Current.TenantId.ToString());
+            var tenantId = _options.Value.IsMultiTenanted ? _executionContextManager.Current.TenantId : TenantId.NotSet;
+            client.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, tenantId.ToString());
         }
         return client;
     }
