@@ -18,4 +18,16 @@ internal static partial class ClientBuilderLogMessages
 
     [LoggerMessage(2, LogLevel.Information, "Configuring compliance")]
     internal static partial void ConfiguringCompliance(this ILogger logger);
+
+    [LoggerMessage(3, LogLevel.Information, "Using single kernel client @ '{Endpoint}'")]
+    internal static partial void UsingSingleKernelClient(this ILogger logger, Uri endpoint);
+
+    [LoggerMessage(4, LogLevel.Information, "Using static clustered kernel client")]
+    internal static partial void UsingStaticClusterKernelClient(this ILogger logger);
+
+    [LoggerMessage(5, LogLevel.Information, "Using Orleans Azure storage based clustered kernel client")]
+    internal static partial void UsingOrleansAzureStorageKernelClient(this ILogger logger);
+
+    [LoggerMessage(6, LogLevel.Information, "Using Inside Kernel client")]
+    internal static partial void UsingInsideKernelClient(this ILogger logger);
 }

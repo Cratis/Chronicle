@@ -4,8 +4,13 @@
 namespace Aksio.Cratis.Client;
 
 /// <summary>
-/// Defines the builder for building a <see cref="IMultiTenantClient"/>.
+/// Defines the client for Cratis.
 /// </summary>
-public interface IMultiTenantClientBuilder : IClientBuilder<IMultiTenantClientBuilder, IMultiTenantClient>
+public interface ICratisClient
 {
+    /// <summary>
+    /// Connect to Cratis kernel.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Connect();
 }

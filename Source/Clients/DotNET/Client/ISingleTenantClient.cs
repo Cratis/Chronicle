@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Client;
 /// <summary>
 /// Defines a single tenant client.
 /// </summary>
-public interface ISingleTenantClient
+public interface ISingleTenantClient : ICratisClient
 {
     /// <summary>
     /// Gets the <see cref="ISingleTenantEventStore"/>.

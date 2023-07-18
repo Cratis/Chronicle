@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Commands;
+using Aksio.Configuration;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Net;
 using Aksio.Tasks;
@@ -10,6 +11,7 @@ using Aksio.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aksio.Cratis.Clients;
 
@@ -29,22 +31,24 @@ public class InsideKernelClient : IClient, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="InsideKernelClient"/> class.
     /// </summary>
+    /// <param name="options">The <see cref="ClientConfiguration"/>.</param>
     /// <param name="server">The ASP.NET Core <see cref="IServer"/>.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="clientLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="singleKernelClientLogger"><see cref="ILogger"/> for single kernel client logging.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public InsideKernelClient(
+        IOptions<ClientConfiguration> options,
         IServer server,
         IHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        IClientLifecycle clientLifecycle,
+        IConnectionLifecycle clientLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<SingleKernelClient> singleKernelClientLogger,
         ILogger<InsideKernelClient> logger)
@@ -54,17 +58,18 @@ public class InsideKernelClient : IClient, IDisposable
         endpoint = new Uri($"http://127.0.0.1:{endpoint.Port}");
         logger.InsideKernelConfigured(endpoint);
 
-        var options = new SingleKernelOptions
+        options.Value.Kernel.SingleKernelOptions = new SingleKernelOptions
         {
             Endpoint = endpoint
         };
+        options.Value.Kernel.AdvertisedClientEndpoint = endpoint;
         _innerClient = new(
-            httpClientFactory,
             options,
+            server,
+            httpClientFactory,
             taskFactory,
             timerFactory,
             executionContextManager,
-            endpoint,
             clientLifecycle,
             jsonSerializerOptions,
             singleKernelClientLogger);

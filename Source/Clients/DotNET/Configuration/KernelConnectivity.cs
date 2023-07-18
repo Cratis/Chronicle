@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Configuration;
-
 namespace Aksio.Cratis.Configuration;
 
 /// <summary>
@@ -11,15 +9,19 @@ namespace Aksio.Cratis.Configuration;
 public class KernelConnectivity
 {
     /// <summary>
-    /// Gets the <see cref="ClusterTypes"/> to use.
+    /// Gets or sets the <see cref="SingleKernelOptions"/> to use.
     /// </summary>
-    public string Type { get; init; } = ClusterTypes.Single;
+    public SingleKernelOptions? SingleKernelOptions { get; set; }
 
     /// <summary>
-    /// Gets all the servers that make up the cluster to connect to.
+    /// Gets or sets the <see cref="StaticClusterOptions"/> to use.
     /// </summary>
-    [ConfigurationValueResolver(typeof(ClusterOptionsValueResolver))]
-    public object Options { get; init; } = new SingleKernelOptions();
+    public StaticClusterOptions? StaticClusterOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <see cref="AzureStorageClusterOptions"/> to use.
+    /// </summary>
+    public AzureStorageClusterOptions? AzureStorageClusterOptions { get; set; }
 
     /// <summary>
     /// Gets the advertised client endpoint.
@@ -28,5 +30,5 @@ public class KernelConnectivity
     /// If this endpoint is not explicitly configured, it will attempt to resolve it based on the ASP.NET Core configuration and
     /// current running solution.
     /// </remarks>
-    public Uri? AdvertisedClientEndpoint { get; init; }
+    public Uri? AdvertisedClientEndpoint { get; set; }
 }

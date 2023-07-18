@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Client;
 /// <summary>
 /// Defines a multi tenant client.
 /// </summary>
-public interface IMultiTenantClient
+public interface IMultiTenantClient : ICratisClient
 {
     /// <summary>
     /// Gets the <see cref="IMultiTenantEventStore"/>.

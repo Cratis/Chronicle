@@ -6,13 +6,18 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Commands;
+using Aksio.Configuration;
 using Aksio.Cratis.Dynamic;
+using Aksio.Cratis.Net;
 using Aksio.Queries;
 using Aksio.Tasks;
 using Aksio.Timers;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aksio.Cratis.Clients;
 
@@ -26,7 +31,7 @@ public abstract class RestKernelClient : IClient, IDisposable
     readonly IExecutionContextManager _executionContextManager;
     readonly Uri _clientEndpoint;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IClientLifecycle _clientLifecycle;
+    readonly IConnectionLifecycle _clientLifecycle;
     readonly ILogger<RestKernelClient> _logger;
     readonly MicroserviceId _microserviceId;
     TaskCompletionSource<bool> _connectCompletion;
@@ -41,31 +46,40 @@ public abstract class RestKernelClient : IClient, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="RestKernelClient"/> class.
     /// </summary>
+    /// <param name="options">The <see cref="ClientConfiguration"/>.</param>
+    /// <param name="server">The ASP.NET Core server.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="clientEndpoint">The client endpoint.</param>
-    /// <param name="clientLifecycle"><see cref="IClientLifecycle"/> for communicating lifecycle events outside.</param>
+    /// <param name="clientLifecycle"><see cref="IConnectionLifecycle"/> for communicating lifecycle events outside.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     protected RestKernelClient(
+        IOptions<ClientConfiguration> options,
+        IServer server,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
-        Uri clientEndpoint,
-        IClientLifecycle clientLifecycle,
+        IConnectionLifecycle clientLifecycle,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<RestKernelClient> logger)
     {
         _taskFactory = taskFactory;
         _timerFactory = timerFactory;
         _executionContextManager = executionContextManager;
-        _clientEndpoint = clientEndpoint;
         _jsonSerializerOptions = jsonSerializerOptions;
         _clientLifecycle = clientLifecycle;
         _logger = logger;
         _microserviceId = ExecutionContextManager.GlobalMicroserviceId;
         _connectCompletion = new TaskCompletionSource<bool>();
+
+        var addresses = server.Features.Get<IServerAddressesFeature>();
+        if (options.Value.Kernel.AdvertisedClientEndpoint is null && addresses!.Addresses.Count == 0)
+        {
+            throw new UnableToResolveClientUri();
+        }
+
+        _clientEndpoint = options.Value.Kernel.AdvertisedClientEndpoint ?? addresses!.GetFirstAddressAsUri();
     }
 
     /// <inheritdoc/>

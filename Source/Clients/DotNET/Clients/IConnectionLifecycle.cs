@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Clients;
 /// <summary>
 /// Defines a system for the lifecycle of the client.
 /// </summary>
-public interface IClientLifecycle
+public interface IConnectionLifecycle
 {
     /// <summary>
     /// Gets whether or not the client is connected.

@@ -7,13 +7,13 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Clients;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientLifecycle"/>.
+/// Represents an implementation of <see cref="IConnectionLifecycle"/>.
 /// </summary>
 [Singleton]
-public class ClientLifecycle : IClientLifecycle
+public class ConnectionLifecycle : IConnectionLifecycle
 {
     readonly IInstancesOf<IParticipateInClientLifecycle> _participants;
-    readonly ILogger<ClientLifecycle> _logger;
+    readonly ILogger<ConnectionLifecycle> _logger;
 
     /// <inheritdoc/>
     public bool IsConnected { get; private set; }
@@ -22,13 +22,13 @@ public class ClientLifecycle : IClientLifecycle
     public ConnectionId ConnectionId { get; private set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ClientLifecycle"/>.
+    /// Initializes a new instance of the <see cref="ConnectionLifecycle"/>.
     /// </summary>
     /// <param name="participants">The participants of the client lifecycle.</param>
     /// <param name="logger">Logger for logging.</param>
-    public ClientLifecycle(
+    public ConnectionLifecycle(
         IInstancesOf<IParticipateInClientLifecycle> participants,
-        ILogger<ClientLifecycle> logger)
+        ILogger<ConnectionLifecycle> logger)
     {
         _participants = participants;
         _logger = logger;

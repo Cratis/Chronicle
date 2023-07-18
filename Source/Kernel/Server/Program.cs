@@ -30,10 +30,7 @@ public static class Program
          Host.CreateDefaultBuilder(args)
             .UseMongoDB()
             .UseAksio()
-            .UseCratis(
-                microserviceId: MicroserviceId.Kernel,
-                microserviceName: "Cratis Kernel",
-                configureDelegate: _ => _.InKernel())
+            .UseCratis(_ => _.InKernel())
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
