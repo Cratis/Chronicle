@@ -10,7 +10,7 @@ namespace Aksio.Cratis;
 /// <summary>
 /// Extension methods for configuring the client.
 /// </summary>
-public static class ClientBuilderExtensions
+public static class KernelConnectivityClientBuilderExtensions
 {
     /// <summary>
     /// Configure the client to use a single kernel.
@@ -39,7 +39,10 @@ public static class ClientBuilderExtensions
     {
         builder.Services.Configure<ClientOptions>(_ =>
         {
-            var options = _.Kernel.StaticClusterOptions ?? new StaticClusterOptions();
+            var options = _.Kernel.StaticClusterOptions ?? new StaticClusterOptions
+            {
+                Endpoints = Enumerable.Empty<Uri>()
+            };
             configure?.Invoke(options);
         });
 
@@ -56,7 +59,14 @@ public static class ClientBuilderExtensions
     {
         builder.Services.Configure<ClientOptions>(_ =>
         {
-            var options = _.Kernel.AzureStorageClusterOptions ?? new AzureStorageClusterOptions();
+            var options = _.Kernel.AzureStorageClusterOptions ?? new AzureStorageClusterOptions
+            {
+                TableName = AzureStorageClusterOptions.DEFAULT_TABLE_NAME,
+                ConnectionString = string.Empty,
+                Port = 80,
+                Secure = false
+            };
+
             configure?.Invoke(options);
         });
 

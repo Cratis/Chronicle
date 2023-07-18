@@ -8,8 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.UseCratis();
 //builder.UseCratis(_ => _.MultiTenanted());
-builder.UseCratis(_ => _.MultiTenanted());
 var app = builder.Build();
 app.UseCratis();
 

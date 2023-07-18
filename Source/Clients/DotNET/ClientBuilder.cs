@@ -142,30 +142,27 @@ public class ClientBuilder : IClientBuilder
         clientArtifacts.ComplianceForTypesProviders.ForEach(_ => Services.AddTransient(_));
         clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => Services.AddTransient(_));
 
+        var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
         if (_inKernel)
         {
             _logger.UsingInsideKernelClient();
             ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
             Services.AddSingleton<IConnection, InsideKernelConnection>();
         }
-        else
+        else if (options.Value.Kernel.SingleKernelOptions is not null)
         {
-            var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
-            if (options.Value.Kernel.SingleKernelOptions is not null)
-            {
-                _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernelOptions.Endpoint);
-                Services.AddSingleton<IConnection, SingleKernelConnection>();
-            }
-            else if (options.Value.Kernel.StaticClusterOptions is not null)
-            {
-                _logger.UsingStaticClusterKernelClient();
-                Services.AddSingleton<IConnection, StaticClusteredKernelConnection>();
-            }
-            else if (options.Value.Kernel.AzureStorageClusterOptions is not null)
-            {
-                _logger.UsingOrleansAzureStorageKernelClient();
-                Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
-            }
+            _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernelOptions.Endpoint);
+            Services.AddSingleton<IConnection, SingleKernelConnection>();
+        }
+        else if (options.Value.Kernel.StaticClusterOptions is not null)
+        {
+            _logger.UsingStaticClusterKernelClient();
+            Services.AddSingleton<IConnection, StaticClusteredKernelConnection>();
+        }
+        else if (options.Value.Kernel.AzureStorageClusterOptions is not null)
+        {
+            _logger.UsingOrleansAzureStorageKernelClient();
+            Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
         }
 
         if (_isMultiTenanted)
