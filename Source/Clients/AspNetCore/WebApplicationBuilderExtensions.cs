@@ -3,6 +3,7 @@
 
 using Aksio.Cratis;
 using Aksio.Cratis.Client;
+using Aksio.Cratis.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -23,6 +24,7 @@ public static class WebApplicationBuilderExtensions
         this WebApplicationBuilder webApplicationBuilder,
         Action<IClientBuilder>? configureDelegate = default)
     {
+        webApplicationBuilder.Services.AddTransient<ClientObservers>();
         webApplicationBuilder.Services.AddRules();
         webApplicationBuilder.Host.UseCratis(configureDelegate);
         return webApplicationBuilder;
@@ -36,6 +38,9 @@ public static class WebApplicationBuilderExtensions
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
         app.UseExecutionContext();
+
+        app.UseRouting();
+        app.UseEndpoints(endpoints => endpoints.MapClientObservers());
 
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait());
