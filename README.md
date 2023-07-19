@@ -36,8 +36,7 @@ If you prefer to browse the code in VSCode, you can do so by clicking [here](htt
 Make sure you have the following installed:
 
 - [Docker](https://www.docker.com/products/docker-desktop)
-- [.NET Core 6](https://dotnet.microsoft.com/download/dotnet/6.0)
-- [Node JS version 16](https://nodejs.org/)
+- [.NET Core 7](https://dotnet.microsoft.com/download/dotnet/7.0)
 
 The sample consists of a backend and a frontend.
 Navigate to the [Bank Sample](./Samples/Banking/Bank) folder.
@@ -54,6 +53,7 @@ This will bring up the Cratis Kernel and expose the following ports:
 | ---- | ----------- |
 | 27017 | MongoDB - used for events and projection results |
 | 8080 | Workbench and API for kernel |
+| 8081 | Orleans Dashboard |
 | 11111 | Clustering port |
 | 30000 | Client to Kernel connectivity |
 
