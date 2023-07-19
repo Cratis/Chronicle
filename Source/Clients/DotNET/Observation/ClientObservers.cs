@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Observation;
@@ -10,8 +9,7 @@ namespace Aksio.Cratis.Observation;
 /// <summary>
 /// Represents a controller for receiving events from the kernel.
 /// </summary>
-[Route("/.cratis/observers")]
-public class ClientObservers : Controller
+public class ClientObservers
 {
     readonly IObserversRegistrar _observers;
     readonly ILogger<ClientObservers> _logger;
@@ -35,10 +33,9 @@ public class ClientObservers : Controller
     /// <param name="observerId">The <see cref="ObserverId"/> of the observer it is for.</param>
     /// <param name="event">The <see cref="AppendedEvent"/>.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{observerId}")]
     public async Task OnNext(
-        [FromRoute] ObserverId observerId,
-        [FromBody] AppendedEvent @event)
+        ObserverId observerId,
+        AppendedEvent @event)
     {
         _logger.EventReceived(@event.Metadata.Type.Id, observerId);
         var handler = _observers.GetById(observerId);

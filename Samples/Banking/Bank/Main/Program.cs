@@ -13,9 +13,9 @@ CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 var builder = Host.CreateDefaultBuilder()
                     .UseMongoDB()
                     .UseAksio()
-                    .UseCratis(
-                        microserviceId: "00000000-0000-0000-0000-000000000000",
-                        microserviceName: "Bank")
+                    .UseCratis(_ => _
+                        .MultiTenanted()
+                        .ForMicroservice("eaf02867-79b9-4967-be67-3e93cee7c601", "Bank"))
                     .ConfigureWebHostDefaults(_ => _.UseStartup<Startup>());
 
 var app = builder.Build();

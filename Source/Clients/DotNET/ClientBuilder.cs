@@ -2,12 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
+using Aksio.Configuration;
 using Aksio.Cratis.Client;
-using Aksio.Cratis.Clients;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences.Outbox;
+using Aksio.Cratis.Integration;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation;
+using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;
 using Aksio.Tasks;
@@ -15,92 +20,107 @@ using Aksio.Timers;
 using Aksio.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TaskFactory = Aksio.Tasks.TaskFactory;
 
 namespace Aksio.Cratis;
 
 /// <summary>
-/// Represents the starting point for creating a Cratis client.
+/// Represents an implementation of <see cref="IClientBuilder"/>.
 /// </summary>
-#pragma warning disable RCS1102, CA1052
-public class ClientBuilder
-{
-    /// <summary>
-    /// Start configuring <see cref="ISingleTenantClientBuilder"/> for a single tenanted client.
-    /// </summary>
-    /// <returns><see cref="ISingleTenantClientBuilder"/> to build.</returns>
-    public static ISingleTenantClientBuilder SingleTenanted() => new SingleTenantClientBuilder();
-
-    /// <summary>
-    /// Start configuring <see cref="IMultiTenantClientBuilder"/> for a single tenanted client.
-    /// </summary>
-    /// <returns><see cref="ISingleTenantClientBuilder"/> to build.</returns>
-    public static IMultiTenantClientBuilder MultiTenanted() => new MultiTenantClientBuilder();
-}
-
-/// <summary>
-/// Represents an implementation of <see cref="IClientBuilder{TActual, TClient}"/>.
-/// </summary>
-/// <typeparam name="TActual">Type of the actual client builder.</typeparam>
-/// <typeparam name="TClient">Type of client it builds.</typeparam>
-public abstract class ClientBuilder<TActual, TClient> : IClientBuilder<TActual, TClient>
-    where TActual : class, IClientBuilder<TActual, TClient>
+public class ClientBuilder : IClientBuilder
 {
 #pragma warning disable SA1600, CA1051
+    protected readonly ILogger<ClientBuilder> _logger;
+    protected IClientArtifactsProvider? _clientArtifactsProvider;
     protected IModelNameConvention? _modelNameConvention;
-    protected MicroserviceId _microserviceId = MicroserviceId.Unspecified;
-    protected MicroserviceName _microserviceName = MicroserviceName.Unspecified;
+    readonly OptionsBuilder<ClientOptions> _optionsBuilder;
     bool _inKernel;
+    bool _isMultiTenanted;
 
     /// <inheritdoc/>
-    public TActual ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName)
+    public IServiceCollection Services { get; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to register services with.</param>
+    /// <param name="logger">Logger for logging.</param>
+    public ClientBuilder(
+        IServiceCollection services,
+        ILogger<ClientBuilder> logger)
+    {
+        _optionsBuilder = services.AddOptions<ClientOptions>();
+        SetDefaultOptions();
+        _optionsBuilder.BindConfiguration("cratis")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        Services = services;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName)
     {
         ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
         ExecutionContextManager.SetGlobalMicroserviceName(microserviceName);
-        _microserviceId = microserviceId;
-        _microserviceName = microserviceName;
-        return (this as TActual)!;
+
+        _optionsBuilder.Configure(options =>
+        {
+            options.MicroserviceId = microserviceId;
+            options.MicroserviceName = microserviceName;
+        });
+        return this;
     }
 
     /// <inheritdoc/>
-    public TActual InKernel()
+    public IClientBuilder MultiTenanted()
     {
-        ExecutionContextManager.SetKernelMode();
-        _inKernel = true;
-        return (this as TActual)!;
+        _isMultiTenanted = true;
+        Services.Configure<ClientOptions>(options => options.IsMultiTenanted = true);
+        return this;
     }
 
     /// <inheritdoc/>
-    public TActual UseModelNameConvention(IModelNameConvention convention)
+    public IClientBuilder InKernel()
+    {
+        ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
+        _inKernel = true;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder UseModelNameConvention(IModelNameConvention convention)
     {
         _modelNameConvention = convention;
-        return (this as TActual)!;
+        return this;
     }
 
     /// <inheritdoc/>
-    public TClient Build(
-        IServiceCollection? services = default,
-        IClientArtifactsProvider? clientArtifacts = default,
-        ILoggerFactory? loggerFactory = default)
+    public IClientBuilder UseClientArtifacts(IClientArtifactsProvider clientArtifactsProvider)
     {
-        services ??= new ServiceCollection();
+        _clientArtifactsProvider = clientArtifactsProvider;
+        return this;
+    }
 
-#pragma warning disable CA2000 // Dispose objects before losing scope - Logger factory will be disposed when process exits
-        loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
-        var logger = loggerFactory.CreateLogger<ClientBuilder>()!;
-        logger.Configuring();
+    /// <inheritdoc/>
+    public void Build()
+    {
+        _logger.Configuring();
 
-        clientArtifacts ??= new DefaultClientArtifactsProvider(ProjectReferencedAssemblies.Instance);
+        var options = Services.BuildServiceProvider().GetRequiredService<IOptions<ClientOptions>>();
 
-        logger.ConfiguringServices();
+        var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(ProjectReferencedAssemblies.Instance);
 
-        services
+        _logger.ConfiguringServices();
+
+        Services
             .AddHttpClient()
             .AddSingleton(clientArtifacts)
             .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention())
             .AddObservers(clientArtifacts)
             .AddSingleton(Globals.JsonSerializerOptions)
-            .AddSingleton<IClientLifecycle, ClientLifecycle>()
+            .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IObserversRegistrar, ObserversRegistrar>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
@@ -111,24 +131,84 @@ public abstract class ClientBuilder<TActual, TClient> : IClientBuilder<TActual, 
             .AddSingleton<ITypes>(Types.Types.Instance)
             .AddSingleton<ITaskFactory, TaskFactory>()
             .AddSingleton<ITimerFactory, TimerFactory>()
+            .AddSingleton<OutboxProjectionsRegistrar>()
+            .AddSingleton<AdaptersConnectionLifecycleParticipant>()
+            .AddSingleton<ObserversConnectionLifecycleParticipant>()
+            .AddSingleton<ProjectionsRegistrar>()
+            .AddSingleton<SchemasConnectionLifecycleParticipant>()
+            .AddSingleton<IJsonProjectionSerializer, JsonProjectionSerializer>()
+            .AddSingleton<IAdapters, Adapters>()
+            .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
+            .AddSingleton<IAdapterMapperFactory, AdapterMapperFactory>()
+            .AddSingleton<IImmediateProjections, ImmediateProjections>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
-        logger.ConfiguringCompliance();
+        _logger.ConfiguringCompliance();
 
-        clientArtifacts.ComplianceForTypesProviders.ForEach(_ => services.AddTransient(_));
-        clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => services.AddTransient(_));
+        clientArtifacts.ComplianceForTypesProviders.ForEach(_ => Services.AddTransient(_));
+        clientArtifacts.ComplianceForPropertiesProviders.ForEach(_ => Services.AddTransient(_));
 
         if (_inKernel)
         {
-            services.AddCratisInsideSiloClient();
+            _logger.UsingInsideKernelClient();
+            ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
+            ExecutionContextManager.SetKernelMode();
+            Services.AddSingleton<IConnection, InsideKernelConnection>();
+        }
+        else if (options.Value.Kernel.SingleKernelOptions is not null)
+        {
+            _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernelOptions.Endpoint);
+            Services.AddSingleton<IConnection, SingleKernelConnection>();
+        }
+        else if (options.Value.Kernel.StaticClusterOptions is not null)
+        {
+            _logger.UsingStaticClusterKernelClient();
+            Services.AddSingleton<IConnection, StaticClusteredKernelConnection>();
+        }
+        else if (options.Value.Kernel.AzureStorageClusterOptions is not null)
+        {
+            _logger.UsingOrleansAzureStorageKernelClient();
+            Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
+        }
+
+        if (_isMultiTenanted)
+        {
+            Services.AddSingleton<IMultiTenantEventSequences, MultiTenantEventSequences>();
+            Services.AddSingleton<IMultiTenantEventStore, MultiTenantEventStore>();
+            Services.AddSingleton<IClient, MultiTenantClient>();
+            Services.AddTransient(sp =>
+            {
+                var tenantId = ExecutionContextManager.GetCurrent().TenantId;
+                return sp.GetRequiredService<IMultiTenantEventSequences>().ForTenant(tenantId).EventLog;
+            });
+            Services.AddTransient(sp =>
+            {
+                var tenantId = ExecutionContextManager.GetCurrent().TenantId;
+                return sp.GetRequiredService<IMultiTenantEventSequences>().ForTenant(tenantId).Outbox;
+            });
         }
         else
         {
-            services.AddCratisClient();
+            Services.AddSingleton(TenantId.NotSet);
+            Services.AddSingleton<IEventSequences, Client.EventSequences>();
+            Services.AddSingleton<ISingleTenantEventStore, SingleTenantEventStore>();
+            Services.AddSingleton<IClient, SingleTenantClient>();
+            Services.AddSingleton(sp => sp.GetRequiredService<IEventSequences>().EventLog);
+            Services.AddSingleton(sp => sp.GetRequiredService<IEventSequences>().Outbox);
         }
-
-        return BuildActual(services, clientArtifacts, loggerFactory);
     }
 
-    protected abstract TClient BuildActual(IServiceCollection services, IClientArtifactsProvider clientArtifacts, ILoggerFactory loggerFactory);
+    void SetDefaultOptions()
+    {
+        _optionsBuilder
+            .Configure(options =>
+            {
+                options.MicroserviceId = MicroserviceId.Unspecified;
+                options.MicroserviceName = MicroserviceName.Unspecified;
+                options.Kernel = new()
+                {
+                    SingleKernelOptions = new()
+                };
+            });
+    }
 }

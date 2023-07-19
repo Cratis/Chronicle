@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Observation;
 public class ObserversRegistrar : IObserversRegistrar
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly IClient _client;
+    readonly IConnection _connection;
     readonly ILogger<ObserversRegistrar> _logger;
     readonly IDictionary<Type, ObserverHandler> _handlers;
 
@@ -28,7 +28,7 @@ public class ObserversRegistrar : IObserversRegistrar
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    /// <param name="client"><see cref="IClient"/> for working with kernel.</param>
+    /// <param name="connection"><see cref="IConnection"/> for working with kernel.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ObserversRegistrar(
         IExecutionContextManager executionContextManager,
@@ -37,7 +37,7 @@ public class ObserversRegistrar : IObserversRegistrar
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         IClientArtifactsProvider clientArtifacts,
-        IClient client,
+        IConnection connection,
         ILogger<ObserversRegistrar> logger)
     {
         _handlers = clientArtifacts.Observers
@@ -55,7 +55,7 @@ public class ObserversRegistrar : IObserversRegistrar
                                         eventSerializer);
                                 });
         _executionContextManager = executionContextManager;
-        _client = client;
+        _connection = connection;
         _logger = logger;
     }
 
@@ -99,13 +99,13 @@ public class ObserversRegistrar : IObserversRegistrar
         }
 
         var microserviceId = _executionContextManager.Current.MicroserviceId;
-        var route = $"/api/events/store/{microserviceId}/observers/register/{_client.ConnectionId}";
+        var route = $"/api/events/store/{microserviceId}/observers/register/{_connection.ConnectionId}";
         var registrations = _handlers.Values.Select(_ => new ClientObserverRegistration(
             _.ObserverId,
             _.Name,
             _.EventSequenceId,
             _.EventTypes));
-        await _client.PerformCommand(route, registrations);
+        await _connection.PerformCommand(route, registrations);
     }
 
     void ThrowIfTypeIsNotAnObserver(Type observerType)

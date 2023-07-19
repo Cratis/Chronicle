@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.MongoDB;
 using Aksio.DependencyInversion;

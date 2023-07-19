@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Observation;
 
@@ -12,22 +12,22 @@ namespace Aksio.Cratis.Observation;
 /// </summary>
 public class Observers : IObservers
 {
-    readonly IClient _client;
+    readonly IConnection _connection;
     readonly IEventTypes _eventTypes;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
-    /// <param name="client"><see cref="IClient"/> for getting connections.</param>
+    /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public Observers(
-        IClient client,
+        IConnection connection,
         IEventTypes eventTypes,
         IExecutionContextManager executionContextManager)
     {
-        _client = client;
+        _connection = connection;
         _eventTypes = eventTypes;
         _executionContextManager = executionContextManager;
     }
@@ -38,7 +38,7 @@ public class Observers : IObservers
         var tenantId = _executionContextManager.Current.TenantId;
         var microserviceId = _executionContextManager.Current.MicroserviceId;
         var route = $"/api/events/store/{microserviceId}/{tenantId}/observers";
-        var result = await _client.PerformQuery<IEnumerable<ObserverInformation>>(route);
+        var result = await _connection.PerformQuery<IEnumerable<ObserverInformation>>(route);
         return result.Data;
     }
 

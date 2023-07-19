@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Models;
@@ -34,7 +34,7 @@ public class ImmediateProjections : IImmediateProjections
     readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IJsonProjectionSerializer _projectionSerializer;
-    readonly IClient _client;
+    readonly IConnection _connection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
@@ -46,7 +46,7 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="projectionSerializer">The <see cref="IJsonProjectionSerializer"/> for serializing projection definitions.</param>
-    /// <param name="client">The <see cref="IClient"/> for connecting to the kernel.</param>
+    /// <param name="connection">The <see cref="IConnection"/> for connecting to the kernel.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         IModelNameConvention modelNameConvention,
@@ -56,7 +56,7 @@ public class ImmediateProjections : IImmediateProjections
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
         IJsonProjectionSerializer projectionSerializer,
-        IClient client,
+        IConnection connection,
         IExecutionContextManager executionContextManager)
     {
         _modelNameConvention = modelNameConvention;
@@ -66,7 +66,7 @@ public class ImmediateProjections : IImmediateProjections
         _schemaGenerator = schemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
         _projectionSerializer = projectionSerializer;
-        _client = client;
+        _connection = connection;
         _executionContextManager = executionContextManager;
     }
 
@@ -110,7 +110,7 @@ public class ImmediateProjections : IImmediateProjections
 
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
 
-        var result = await _client.PerformCommand(route, immediateProjection);
+        var result = await _connection.PerformCommand(route, immediateProjection);
         var element = (JsonElement)result.Response!;
         return element.Deserialize<ImmediateProjectionResult>(_jsonSerializerOptions)!;
     }

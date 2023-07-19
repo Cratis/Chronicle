@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 
 namespace Aksio.Cratis.Tenants;
 
@@ -10,21 +10,21 @@ namespace Aksio.Cratis.Tenants;
 /// </summary>
 public class Tenants : ITenants
 {
-    readonly IClient _client;
+    readonly IConnection _connection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Tenants"/> class.
     /// </summary>
-    /// <param name="client">The Cratis <see cref="IClient"/>.</param>
-    public Tenants(IClient client)
+    /// <param name="connection">The Cratis <see cref="IConnection"/>.</param>
+    public Tenants(IConnection connection)
     {
-        _client = client;
+        _connection = connection;
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Tenant>> All()
     {
-        var result = await _client.PerformQuery<IEnumerable<Tenant>>("/api/configuration/tenants");
+        var result = await _connection.PerformQuery<IEnumerable<Tenant>>("/api/configuration/tenants");
         return result.Data;
     }
 }

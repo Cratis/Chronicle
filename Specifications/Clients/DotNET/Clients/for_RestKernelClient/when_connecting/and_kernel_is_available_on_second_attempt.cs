@@ -17,5 +17,5 @@ public class and_kernel_is_available_on_second_attempt : given.a_rest_kernel_cli
 
     async Task Because() => await client.Connect();
 
-    [Fact] void client_should_notify_client_lifecycle_about_being_connected() => client_lifecycle.Verify(_ => _.Connected(), Once);
+    [Fact] void client_should_notify_client_lifecycle_about_being_connected() => connection_lifecycle.Verify(_ => _.Connected(), Once);
 }

@@ -5,9 +5,15 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Commands;
+using Aksio.Configuration;
+using Aksio.Cratis.Connections;
 using Aksio.Tasks;
 using Aksio.Timers;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
 
@@ -27,11 +33,16 @@ public class a_rest_kernel_client : Specification
     };
 
     protected HttpResponseMessage not_found_message => new(HttpStatusCode.NotFound);
+    protected Mock<IOptions<ClientOptions>> options;
+    protected ClientOptions options_instance;
+    protected Mock<IServer> server;
+    protected Mock<IFeatureCollection> features;
+    protected Mock<IServerAddressesFeature> server_addresses;
     protected Mock<ITaskFactory> task_factory;
     protected Mock<ITimerFactory> timer_factory;
     protected Mock<IExecutionContextManager> execution_context_manager;
-    protected Mock<IClientLifecycle> client_lifecycle;
-    protected KernelClient client;
+    protected Mock<IConnectionLifecycle> connection_lifecycle;
+    protected KernelConnection client;
     protected ExecutionContext execution_context;
 
     protected MicroserviceId microservice_id;
@@ -48,10 +59,20 @@ public class a_rest_kernel_client : Specification
         connect_route = $"/api/clients/{microservice_id}/connect/{connection_id}";
         ping_route = $"/api/clients/{microservice_id}/ping/{connection_id}";
 
+        options = new();
+        options_instance = new();
+        options.SetupGet(_ => _.Value).Returns(options_instance);
+        server = new();
+        features = new();
+        server.SetupGet(_ => _.Features).Returns(features.Object);
+        server_addresses = new();
+        features.Setup(_ => _.Get<IServerAddressesFeature>()).Returns(server_addresses.Object);
+        server_addresses.SetupGet(_ => _.Addresses).Returns(new[] { "http://localhost:5000" });
+
         task_factory = new();
         timer_factory = new();
         execution_context_manager = new();
-        client_lifecycle = new();
+        connection_lifecycle = new();
 
         task_factory.Setup(_ => _.Run(IsAny<Func<Task>>())).Returns((Func<Task> function) =>
         {
@@ -64,7 +85,7 @@ public class a_rest_kernel_client : Specification
         execution_context = new(microservice_id, TenantId.NotSet, CorrelationId.New(), CausationId.System, CausedBy.System);
         execution_context_manager.SetupGet(_ => _.Current).Returns(execution_context);
 
-        client_lifecycle.SetupGet(_ => _.ConnectionId).Returns(connection_id);
+        connection_lifecycle.SetupGet(_ => _.ConnectionId).Returns(connection_id);
 
         ping_occurred = new();
 
@@ -82,12 +103,13 @@ public class a_rest_kernel_client : Specification
                 });
 
         client = new(
+            options.Object,
+            server.Object,
             task_factory.Object,
             timer_factory.Object,
             execution_context_manager.Object,
-            new Uri("https://www.somewhere.com"),
-            client_lifecycle.Object,
+            connection_lifecycle.Object,
             new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase },
-            Mock.Of<ILogger<RestKernelClient>>());
+            Mock.Of<ILogger<RestKernelConnection>>());
     }
 }

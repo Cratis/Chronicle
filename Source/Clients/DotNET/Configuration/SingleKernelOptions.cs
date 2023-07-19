@@ -11,5 +11,5 @@ public class SingleKernelOptions
     /// <summary>
     /// Gets the endpoint.
     /// </summary>
-    public Uri Endpoint { get; init; } = new Uri("http://localhost:8080");
+    public Uri Endpoint { get; set; } = new Uri("http://localhost:8080");
 }

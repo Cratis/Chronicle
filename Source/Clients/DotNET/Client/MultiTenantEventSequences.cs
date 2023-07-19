@@ -2,11 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
-using Aksio.DependencyInversion;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Client;
 
@@ -16,7 +14,8 @@ namespace Aksio.Cratis.Client;
 public class MultiTenantEventSequences : IMultiTenantEventSequences
 {
     readonly ConcurrentDictionary<TenantId, IEventSequences> _sequences = new();
-    readonly ProviderFor<IServiceProvider> _serviceProvider;
+    readonly IConnection _connection;
+    readonly IObserversRegistrar _observersRegistrar;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
     readonly IExecutionContextManager _executionContextManager;
@@ -24,17 +23,20 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleTenantEventStore"/> class.
     /// </summary>
-    /// <param name="serviceProvider">Provider for <see cref="IServiceProvider"/> for resolving services.</param>
+    /// <param name="connection">The <see cref="IConnection"/> to use.</param>
+    /// <param name="observersRegistrar"><see cref="IObserversRegistrar"/> to use.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public MultiTenantEventSequences(
-        ProviderFor<IServiceProvider> serviceProvider,
+        IConnection connection,
+        IObserversRegistrar observersRegistrar,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         IExecutionContextManager executionContextManager)
     {
-        _serviceProvider = serviceProvider;
+        _connection = connection;
+        _observersRegistrar = observersRegistrar;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
         _executionContextManager = executionContextManager;
@@ -49,8 +51,8 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
                 tenantId,
                 _eventTypes,
                 _eventSerializer,
-                _serviceProvider().GetRequiredService<IClient>(),
-                _serviceProvider().GetRequiredService<IObserversRegistrar>(),
+                _connection,
+                _observersRegistrar,
                 _executionContextManager);
             _sequences.TryAdd(tenantId, sequences);
         }

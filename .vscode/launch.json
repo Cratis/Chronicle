@@ -95,7 +95,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build basic sample",
-            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net7.0/Basic.dll",
+            "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Samples/Basic",
             "stopAtEntry": false,
@@ -130,6 +130,13 @@
             "configurations": [
                 ".NET Core Launch (Server - not just my code)",
                 ".NET Core Launch (Bank Sample - not just my code)"
+            ]
+        },
+        {
+            "name": "Server and Basic",
+            "configurations": [
+                ".NET Core Launch (Server)",
+                ".NET Core Launch (Basic sample)"
             ]
         }
     ]

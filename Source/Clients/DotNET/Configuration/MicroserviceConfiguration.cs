@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Clients;
+using Aksio.Cratis.Connections;
 
 namespace Aksio.Cratis.Configuration;
 
@@ -10,22 +10,22 @@ namespace Aksio.Cratis.Configuration;
 /// </summary>
 public class MicroserviceConfiguration : IMicroserviceConfiguration
 {
-    readonly IClient _client;
+    readonly IConnection _connection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MicroserviceConfiguration"/> class.
     /// </summary>
-    /// <param name="client"><see cref="IClient"/> for connecting to Kernel.</param>
-    public MicroserviceConfiguration(IClient client)
+    /// <param name="connection"><see cref="IConnection"/> for connecting to Kernel.</param>
+    public MicroserviceConfiguration(IConnection connection)
     {
-        _client = client;
+        _connection = connection;
     }
 
     /// <inheritdoc/>
     public async Task<StorageForMicroservice> Storage()
     {
         var route = $"/api/configuration/microservices/{ExecutionContextManager.GlobalMicroserviceId}/storage";
-        var result = await _client.PerformQuery<StorageForMicroservice>(route);
+        var result = await _connection.PerformQuery<StorageForMicroservice>(route);
         return result.Data;
     }
 }
