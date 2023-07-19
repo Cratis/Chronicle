@@ -16,7 +16,7 @@ app.UseCratis();
 app.MapGet("/", () =>
 {
     var eventLog = app.Services.GetRequiredService<IEventLog>();
-    eventLog.Append("49b9727f-64da-4d5d-bb52-8a3fc77f6a81", new MyEvent());
+    eventLog.Append(Guid.NewGuid().ToString(), new MyEvent());
 });
 
 app.Run();
