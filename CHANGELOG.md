@@ -1,127 +1,35 @@
-# [v9.0.0] - 2023-7-19 [PR: #0]()
 
-No release notes
-
-# [v9.0.0-beta.23] - 2023-7-14 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.22] - 2023-7-14 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.21] - 2023-7-14 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.20] - 2023-7-12 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.19] - 2023-7-12 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.18] - 2023-7-12 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.16] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.15] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.14] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.13] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.12] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.11] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.10] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.9] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.8] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.7] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.5] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.4] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.3] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.2] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0-beta.1] - 2023-7-11 [PR: #0]()
-
-No release notes
-
-# [v9.0.0] - 2023-7-11 [PR: #899](https://github.com/aksio-insurtech/Cratis/pull/899)
+# [v9.0.0] - 2023-7-19
 
 ## Summary
 
-Summary of the PR here. The GitHub release description is created from this comment so keep it nice and descriptive.
-Remember to remove sections that you don't need or use.
-If it does not make sense to have a summary, you can take that out as well.
+This is a new major release of Cratis. Primarily this release is about structure and making Cratis much more focused.
+After version 9 the Cratis repository only contains the Cratis Kernel, the Workbench and clients for working with Cratis.
+
+For this to be possible, we had to split the repository into 4 parts. That resulted in taking out a lot of non Cratis related
+code and put it into the following repositories:
+
+https://github.com/aksio-insurtech/Fundamentals
+https://github.com/aksio-insurtech/ApplicationModel
+https://github.com/aksio-insurtech/MongoDB
+
+From a Cratis usage perspective only the startup and configuration has changed.
+Usage is just as it was before. The REST API surface of the Kernel is also the same, meaning that
+pre 9 clients can connect to version 9 of the kernel and also clients with version 9 can connect to a version 8.
+Keep in mind though that new features are planned for 9 that will break this compatibility in a future version.
 
 ### Added
 
-- Describe the added features
+- Possibility to configure Cratis client from `appsettings.json` or by programatically configure the `IOptions<ClientOptions>`.
+- Upgraded Kernel to .NET 7
+- Upgraded Microsoft Orleans to version 7
+- It is now possible to use a minimal API approach for setting up the client. Look at the **Basic** sample for more details and also getting started guides.
 
 ### Changed
 
-- Describe the outwards facing code change
-
-### Fixed
-
-- Describe the fix and the bug
-
-### Removed
-
-- Describe what was removed and why
-
-### Security
-
-- Describe the security issue and the fix
-
-### Deprecated
-
-- Describe the part of the code being deprecated and why
-
+- `.UseCratis()` for the `HostBuilder` or `IServiceCollection` is now relying on a fluent interface for configuring the different parts to it, so you no longer pass it anything but the optional delegate for configuring the client.
+- If you're using a `Startup` class for your ASP.NET Core setup, you now need to call `.UseCratis()` extension method on the `IApplicationBuilder`. This will connect the client.
+- MongoDB is now optional from a client perspective, a new package called `Aksio.Cratis.MongoDB` can be added. To use its functionality of automatically hooking up multi-tenanted `IMongoCollection<>` bindings you simply add a `.AddMongoDBReadModels()` when you configure your `IServiceCollection`.
 
 # [v8.15.0] - 2023-4-25 [PR: #857](https://github.com/aksio-insurtech/Cratis/pull/857)
 
@@ -134,9 +42,9 @@ If it does not make sense to have a summary, you can take that out as well.
 
 ## Summary
 
-Adds IComparable to ConceptAs<>. 
+Adds IComparable to ConceptAs<>.
 
-> **Important note**: This release is marked as a patch but the release notes indicate a change. The implementation of `IComparable` for a `ConceptAs<>` is viewed by us as an oversight. Concepts should be encapsulating primitives and primitives are comparable. However, if you have been using it for other things than primitives you should consider changing these, they might just need to regular records. If you sill feel the type should be a concept, you will have to implement `IComparable`. 
+> **Important note**: This release is marked as a patch but the release notes indicate a change. The implementation of `IComparable` for a `ConceptAs<>` is viewed by us as an oversight. Concepts should be encapsulating primitives and primitives are comparable. However, if you have been using it for other things than primitives you should consider changing these, they might just need to regular records. If you sill feel the type should be a concept, you will have to implement `IComparable`.
 
 ### Changed
 
@@ -330,7 +238,7 @@ Usage:
 
 ### Fixed
 
-- Added missing API endpoint for getting tail sequence number for a specific observer. 
+- Added missing API endpoint for getting tail sequence number for a specific observer.
 
 
 # [v8.10.2] - 2023-3-27 [PR: #810](https://github.com/aksio-insurtech/Cratis/pull/810)
@@ -529,7 +437,7 @@ Usage:
 
 ### Fixed
 
-- Fixing projections check for if it has changes to return true if it has changes and not the opposite as it was. 
+- Fixing projections check for if it has changes to return true if it has changes and not the opposite as it was.
 
 
 # [v8.5.0] - 2023-2-20 [PR: #754](https://github.com/aksio-insurtech/Cratis/pull/754)
