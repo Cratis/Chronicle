@@ -44,7 +44,6 @@ public class Storage
             ["eventStore"] = Cluster
         };
 
-
         Microservices[MicroserviceId.Kernel] = new()
         {
             Shared = new StorageTypes

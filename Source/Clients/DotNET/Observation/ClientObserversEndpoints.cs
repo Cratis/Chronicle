@@ -20,7 +20,7 @@ public static class ClientObserversEndpoints
     /// <summary>
     /// Maps the endpoints for the client observers.
     /// </summary>
-    /// <param name="endpoints"></param>
+    /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to extend.</param>
     public static void MapClientObservers(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/.cratis/observers/{observerId}", async (HttpContext context) =>
