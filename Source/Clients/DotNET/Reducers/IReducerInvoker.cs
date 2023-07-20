@@ -11,6 +11,11 @@ namespace Aksio.Cratis.Reducers;
 public interface IReducerInvoker
 {
     /// <summary>
+    /// Gets the event types the reducer is for.
+    /// </summary>
+    IEnumerable<EventType> EventTypes { get; }
+
+    /// <summary>
     /// Invoke the reducer for an event.
     /// </summary>
     /// <param name="eventContent">Content of the event.</param>

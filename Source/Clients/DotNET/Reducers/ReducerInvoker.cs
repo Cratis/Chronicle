@@ -19,6 +19,7 @@ public class ReducerInvoker : IReducerInvoker
     readonly Type _targetType;
     readonly Type _readModelType;
 
+    /// <inheritdoc/>
     public IEnumerable<EventType> EventTypes => _reduceMethodsByEventType.Keys;
 
     /// <summary>
