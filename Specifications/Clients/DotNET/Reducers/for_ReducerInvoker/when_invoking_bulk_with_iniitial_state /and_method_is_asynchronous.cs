@@ -21,7 +21,7 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
         };
     }
 
-    async Task Because() => result = (await invoker.InvokeBulk(events_and_contexts, initial) as ReadModel)!;
+    async Task Because() => result = (await invoker.Invoke(events_and_contexts, initial) as ReadModel)!;
 
     [Fact] void should_only_create_one_instance_of_the_reducer() => service_provider.Verify(_ => _.GetService(typeof(AsyncReducer)), Once);
     [Fact] void should_pass_the_events_and_contexts() => reducer.ReceivedEventsAndContexts.ShouldEqual(events_and_contexts);

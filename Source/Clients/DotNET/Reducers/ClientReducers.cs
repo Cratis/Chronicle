@@ -11,16 +11,16 @@ namespace Aksio.Cratis.Reducers;
 /// </summary>
 public class ClientReducers
 {
-    readonly IReducersRegistry _reducers;
+    readonly IReducersRegistrar _reducers;
     readonly ILogger<ClientReducers> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientReducers"/> class.
     /// </summary>
-    /// <param name="reducers">The <see cref="IReducersRegistry"/> in the system</param>
+    /// <param name="reducers">The <see cref="IReducersRegistrar"/> in the system</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientReducers(
-        IReducersRegistry reducers,
+        IReducersRegistrar reducers,
         ILogger<ClientReducers> logger)
     {
         _reducers = reducers;
@@ -31,19 +31,19 @@ public class ClientReducers
     /// Called for events to be handled.
     /// </summary>
     /// <param name="reducerId">The <see cref="ReducerId"/> of the reducer it is for.</param>
-    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
+    /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
     /// <param name="initial">The initial state.</param>
     /// <returns>Reduced result.</returns>
     public async Task<object> OnNext(
         ReducerId reducerId,
-        AppendedEvent @event,
+        IEnumerable<AppendedEvent> events,
         object? initial)
     {
-        _logger.EventReceived(@event.Metadata.Type.Id, reducerId);
+        _logger.EventsReceived(events.Count(), reducerId);
         var handler = _reducers.GetById(reducerId);
         if (handler is not null)
         {
-            return await handler.OnNext(@event, initial);
+            return await handler.OnNext(events, initial);
         }
 
         _logger.UnknownReducer(reducerId);

@@ -40,7 +40,9 @@ public static class WebApplicationBuilderExtensions
         app.UseExecutionContext();
 
         app.UseRouting();
-        app.UseEndpoints(endpoints => endpoints.MapClientObservers());
+        app.UseEndpoints(endpoints => endpoints
+            .MapClientObservers()
+            .MapClientReducers());
 
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait());

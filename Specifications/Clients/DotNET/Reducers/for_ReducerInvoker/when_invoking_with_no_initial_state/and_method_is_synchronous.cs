@@ -15,7 +15,7 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
         event_context = new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System);
     }
 
-    async Task Because() => result = await invoker.Invoke(@event, null, event_context);
+    async Task Because() => result = await invoker.Invoke(new EventAndContext[] { new(@event, event_context) }, null);
 
     [Fact] void should_pass_the_event() => reducer.ReceivedEvents.First().ShouldEqual(@event);
     [Fact] void should_pass_no_read_model() => reducer.ReceivedReadModels.First().ShouldBeNull();

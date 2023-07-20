@@ -32,18 +32,10 @@ public interface IReducerHandler
     IEnumerable<EventType> EventTypes { get; }
 
     /// <summary>
-    /// Handle next event.
-    /// </summary>
-    /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
-    /// <param name="initial">Initial read model value.</param>
-    /// <returns>Reduced read model.</returns>
-    Task<object> OnNext(AppendedEvent @event, object? initial);
-
-    /// <summary>
     /// Handle next events as bulk.
     /// </summary>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>
     /// <param name="initial">Initial read model value.</param>
     /// <returns>Reduced read model.</returns>
-    Task<object> OnNextBulk(IEnumerable<AppendedEvent> events, object? initial);
+    Task<object> OnNext(IEnumerable<AppendedEvent> events, object? initial);
 }

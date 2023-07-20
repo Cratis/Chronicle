@@ -6,8 +6,14 @@ namespace Aksio.Cratis.Reducers;
 /// <summary>
 /// Defines a system that can register reducers.
 /// </summary>
-public interface IReducersRegistry
+public interface IReducersRegistrar
 {
+    /// <summary>
+    /// Initialize the registrar.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Initialize();
+
     /// <summary>
     /// Get all registered reducers by its identifier.
     /// </summary>

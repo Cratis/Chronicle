@@ -53,19 +53,15 @@ public class ReducerHandler : IReducerHandler
     }
 
     /// <inheritdoc/>
-    public async Task<object> OnNext(AppendedEvent @event, object? initial) =>
-        await OnNextBulk(new[] { @event }, initial);
-
-    /// <inheritdoc/>
-    public async Task<object> OnNextBulk(IEnumerable<AppendedEvent> events, object? initial)
+    public async Task<object> OnNext(IEnumerable<AppendedEvent> events, object? initial)
     {
-        foreach (var @event in events)
+        var tasks = events.Select(async @event =>
         {
             var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
             var content = await _eventSerializer.Deserialize(eventType, @event.Content);
-            initial = await _reducerInvoker.Invoke(content, initial, @event.Context);
-        }
-
-        return initial!;
+            return new EventAndContext(@event, @event.Context);
+        });
+        var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);
+        return await _reducerInvoker.Invoke(eventAndContexts, initial);
     }
 }

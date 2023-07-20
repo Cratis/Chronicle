@@ -3,64 +3,62 @@
 
 using System.Net;
 using Aksio.Commands;
-using Aksio.Cratis.Events;
 using Aksio.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aksio.Cratis.Observation;
+namespace Aksio.Cratis.Reducers;
 
 /// <summary>
-/// Represents the endpoints for the client observers.
+/// Represents the endpoints for the client reducers.
 /// </summary>
-public static class ClientObserversEndpoints
+public static class ClientReducersEndpoints
 {
     /// <summary>
-    /// Maps the endpoints for the client observers.
+    /// Maps the endpoints for the client reducers.
     /// </summary>
     /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to extend.</param>
-    public static IEndpointRouteBuilder MapClientObservers(this IEndpointRouteBuilder endpoints)
+    public static IEndpointRouteBuilder MapClientReducers(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/.cratis/observers/{observerId}", async (HttpContext context) =>
+        endpoints.MapPost("/.cratis/reducers/{reducerId}", async (HttpContext context) =>
         {
-            if (context.GetRouteValue("observerId") is not string observerIdAsString)
+            if (context.GetRouteValue("reducerId") is not string reducerIdAsString)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
 
-            ObserverId observerId;
+            ReducerId reducerId;
             try
             {
-                observerId = (ObserverId)observerIdAsString;
+                reducerId = (ReducerId)reducerIdAsString;
             }
             catch
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
-
-            var @event = await context.Request.ReadFromJsonAsync<AppendedEvent>(Globals.JsonSerializerOptions);
-            if (@event is null)
+            var reduce = await context.Request.ReadFromJsonAsync<Reduce>(Globals.JsonSerializerOptions);
+            if (reduce is null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
 
-            CommandResult result;
-            var observers = context.RequestServices.GetRequiredService<ClientObservers>();
+            CommandResult commandResult;
+            var reducers = context.RequestServices.GetRequiredService<ClientReducers>();
             try
             {
-                await observers.OnNext(observerId, @event);
+                var result = await reducers.OnNext(reducerId, reduce.Events, reduce.InitialState);
 
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
-                result = CommandResult.Success;
+                commandResult = new CommandResult { Response = result };
             }
             catch (Exception ex)
             {
-                result = new CommandResult
+                commandResult = new CommandResult
                 {
                     ExceptionMessages = ex.GetAllMessages(),
                     ExceptionStackTrace = ex.StackTrace ?? string.Empty
@@ -68,7 +66,7 @@ public static class ClientObserversEndpoints
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             }
 
-            await context.Response.WriteAsJsonAsync(result, Globals.JsonSerializerOptions);
+            await context.Response.WriteAsJsonAsync(commandResult, Globals.JsonSerializerOptions);
         });
 
         return endpoints;

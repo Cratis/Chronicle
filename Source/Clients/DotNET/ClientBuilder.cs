@@ -13,6 +13,7 @@ using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Json;
+using Aksio.Cratis.Reducers;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;
 using Aksio.Tasks;
@@ -123,6 +124,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IObserversRegistrar, ObserversRegistrar>()
+            .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
             .AddSingleton<IEventTypes, EventTypes>()
@@ -134,8 +136,9 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<OutboxProjectionsRegistrar>()
             .AddSingleton<AdaptersConnectionLifecycleParticipant>()
             .AddSingleton<ObserversConnectionLifecycleParticipant>()
-            .AddSingleton<ProjectionsRegistrar>()
             .AddSingleton<SchemasConnectionLifecycleParticipant>()
+            .AddSingleton<RegistrarsConnectionLifecycleParticipant>()
+            .AddSingleton<ProjectionsRegistrar>()
             .AddSingleton<IJsonProjectionSerializer, JsonProjectionSerializer>()
             .AddSingleton<IAdapters, Adapters>()
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()

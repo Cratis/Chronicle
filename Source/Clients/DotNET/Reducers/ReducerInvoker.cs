@@ -45,11 +45,7 @@ public class ReducerInvoker : IReducerInvoker
     }
 
     /// <inheritdoc/>
-    public Task<object> Invoke(object eventContent, object? initialReadModelContent, EventContext eventContext) =>
-        InvokeBulk(new[] { new EventAndContext(eventContent, eventContext) }, initialReadModelContent);
-
-    /// <inheritdoc/>
-    public Task<object> InvokeBulk(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
+    public Task<object> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
         var actualReducer = _serviceProvider.GetRequiredService(_targetType);
 

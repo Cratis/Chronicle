@@ -16,15 +16,6 @@ public interface IReducerInvoker
     IEnumerable<EventType> EventTypes { get; }
 
     /// <summary>
-    /// Invoke the reducer for an event.
-    /// </summary>
-    /// <param name="eventContent">Content of the event.</param>
-    /// <param name="initialReadModelContent">The initial state of the read model, can be null.</param>
-    /// <param name="eventContext">Context of the event.</param>
-    /// <returns>The reduced read model.</returns>
-    Task<object> Invoke(object eventContent, object? initialReadModelContent, EventContext eventContext);
-
-    /// <summary>
     /// Invoke the reducer for a set of events.
     /// </summary>
     /// <param name="eventsAndContexts">The events to reduce from.</param>
@@ -33,5 +24,5 @@ public interface IReducerInvoker
     /// <remarks>
     /// This is to be used for events that all have a key the same as the read model.
     /// </remarks>
-    Task<object> InvokeBulk(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent);
+    Task<object> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent);
 }
