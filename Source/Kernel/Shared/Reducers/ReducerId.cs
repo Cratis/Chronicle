@@ -3,6 +3,10 @@
 
 namespace Aksio.Cratis.Reducers;
 
+/// <summary>
+/// Represents the unique identifier of a reducer.
+/// </summary>
+/// <param name="value">The actual value.</param>
 public record ReducerId(Guid value) : ConceptAs<Guid>(value)
 {
     /// <summary>

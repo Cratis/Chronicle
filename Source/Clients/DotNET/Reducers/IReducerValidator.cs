@@ -4,13 +4,13 @@
 namespace Aksio.Cratis.Reducers;
 
 /// <summary>
-/// Defines a reducer.
+/// Defines a validator for reducers.
 /// </summary>
-/// <typeparam name="TModel"></typeparam>
-public interface IReducer<TModel>
+public interface IReducerValidator
 {
     /// <summary>
-    /// Gets the <see cref="ReducerId"/> for the reducer.
+    /// Validate a reducer type.
     /// </summary>
-    ReducerId Id { get; }
+    /// <param name="reducerType">Type of <see cref="IReducerFor{T}"/>.</param>
+    void Validate(Type reducerType);
 }
