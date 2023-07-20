@@ -21,8 +21,8 @@ public static class ReducerMethodInfoExtensions
     /// <remarks>
     /// The following are considered valid reducer method signatures:
     /// <![CDATA[
-    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? current, EventContext context)
-    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? current)
+    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? initial, EventContext context)
+    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? initial)
     /// TReadModel {MethodName}(TEvent event, TReadModel? current, EventContext context)
     /// TReadModel {MethodName}(TEvent event, TReadModel? current)
     /// ]]>
