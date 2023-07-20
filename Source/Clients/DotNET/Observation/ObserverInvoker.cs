@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Aksio.Cratis.Events;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Observation;
 
@@ -42,7 +43,7 @@ public class ObserverInvoker : IObserverInvoker
     /// <inheritdoc/>
     public async Task Invoke(object content, EventContext eventContext)
     {
-        var actualObserver = _serviceProvider.GetService(_targetType);
+        var actualObserver = _serviceProvider.GetRequiredService(_targetType);
         var eventType = _eventTypes.GetEventTypeFor(content.GetType());
 
         if (_methodsByEventTypeId.ContainsKey(eventType))
