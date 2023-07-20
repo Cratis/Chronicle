@@ -3,18 +3,18 @@
 
 namespace Aksio.Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method;
 
-public class and_signature_is_a_valid_synchronous_method_without_context : Specification
+public class and_signature_is_a_valid_synchronous_method_without_context_but_read_model_is_not_nullable : Specification
 {
     class MyReducer : IReducerFor<ReadModel>
     {
         public ReducerId Id => "55753433-5bbd-4a79-91b6-7b6231c52183";
 
-        public ReadModel Something(ValidEvent @event, ReadModel? current) => current;
+        public ReadModel Something(ValidEvent @event, ReadModel current) => current;
     }
 
     bool result;
 
     void Because() => result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel));
 
-    [Fact] void should_be_considered_a_reducer_method() => result.ShouldBeTrue();
+    [Fact] void should_not_be_considered_a_reducer_method() => result.ShouldBeFalse();
 }

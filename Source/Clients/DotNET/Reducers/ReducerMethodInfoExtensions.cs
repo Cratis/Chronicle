@@ -21,10 +21,10 @@ public static class ReducerMethodInfoExtensions
     /// <remarks>
     /// The following are considered valid reducer method signatures:
     /// <![CDATA[
-    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel current, EventContext context)
-    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel current)
-    /// TReadModel {MethodName}(TEvent event, TReadModel current, EventContext context)
-    /// TReadModel {MethodName}(TEvent event, TReadModel current)
+    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? current, EventContext context)
+    /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? current)
+    /// TReadModel {MethodName}(TEvent event, TReadModel? current, EventContext context)
+    /// TReadModel {MethodName}(TEvent event, TReadModel? current)
     /// ]]>
     /// </remarks>
     public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType)
@@ -38,7 +38,10 @@ public static class ReducerMethodInfoExtensions
 
         if (parameters.Length > 3) return false;
 
-        if (parameters.Length >= 2 && parameters[0].ParameterType.HasAttribute<EventTypeAttribute>() && parameters[1].ParameterType.Equals(readModelType))
+        if (parameters.Length >= 2 &&
+            parameters[0].ParameterType.HasAttribute<EventTypeAttribute>() &&
+            parameters[1].ParameterType.Equals(readModelType) &&
+            parameters[1].GetCustomAttributes().Any(_ => _.GetType().FullName == "System.Runtime.CompilerServices.NullableAttribute"))
         {
             if (parameters.Length == 3)
             {
