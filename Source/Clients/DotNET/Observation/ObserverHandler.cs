@@ -26,7 +26,7 @@ public class ObserverHandler
     public ObserverName Name { get; }
 
     /// <summary>
-    /// Gets the event log for the observer.
+    /// Gets the event sequence the observer is observing.
     /// </summary>
     public EventSequenceId EventSequenceId { get; }
 
@@ -40,10 +40,10 @@ public class ObserverHandler
     /// </summary>
     /// <param name="observerId">Unique identifier.</param>
     /// <param name="name">Name of the observer.</param>
-    /// <param name="eventSequenceId">Event log identifier.</param>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the observer is for.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
     /// <param name="observerInvoker">The actual invoker.</param>
-    /// <param name="eventSerializer">The serializer to use.</param>
+    /// <param name="eventSerializer">The event serializer to use.</param>
     public ObserverHandler(
         ObserverId observerId,
         ObserverName name,
@@ -68,10 +68,7 @@ public class ObserverHandler
     public async Task OnNext(AppendedEvent @event)
     {
         var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
-
-        // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
-        var json = await _eventSerializer.Serialize(@event.Content);
-        var content = await _eventSerializer.Deserialize(eventType, json);
+        var content = await _eventSerializer.Deserialize(eventType, @event.Content);
         await _observerInvoker.Invoke(content, @event.Context);
     }
 }
