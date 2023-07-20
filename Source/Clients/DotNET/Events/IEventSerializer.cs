@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json.Nodes;
 
 namespace Aksio.Cratis.Events;
@@ -24,4 +25,12 @@ public interface IEventSerializer
     /// <param name="json">JSON to deserialize.</param>
     /// <returns>Deserialized instance.</returns>
     Task<object> Deserialize(Type type, JsonObject json);
+
+    /// <summary>
+    /// Deserialize a JSON representation of an event to a specific type.
+    /// </summary>
+    /// <param name="type">Type to deserialize to.</param>
+    /// <param name="expandoObject">Object to deserialize.</param>
+    /// <returns>Deserialized instance.</returns>
+    Task<object> Deserialize(Type type, ExpandoObject expandoObject);
 }
