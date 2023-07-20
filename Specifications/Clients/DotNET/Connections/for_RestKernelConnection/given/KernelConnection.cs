@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
+namespace Aksio.Cratis.Clients.for_RestKernelConnection.given;
 
 public class KernelConnection : RestKernelConnection
 {

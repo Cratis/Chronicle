@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Clients.for_RestKernelClient.when_connected;
+namespace Aksio.Cratis.Clients.for_RestKernelConnection.when_connected;
 
 public class and_kernel_returns_error : given.a_connected_client
 {
