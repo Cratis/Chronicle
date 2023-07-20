@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
-/// Represents a controller for receiving events from the kernel.
+/// Represents the endpoint called for receiving events from the kernel.
 /// </summary>
 public class ClientObservers
 {
@@ -28,7 +28,7 @@ public class ClientObservers
     }
 
     /// <summary>
-    /// Action that is called for events to be handled.
+    /// Called for events to be handled.
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> of the observer it is for.</param>
     /// <param name="event">The <see cref="AppendedEvent"/>.</param>
