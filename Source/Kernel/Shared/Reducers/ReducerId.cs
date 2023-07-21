@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Observation;
+
 namespace Aksio.Cratis.Reducers;
 
 /// <summary>
@@ -25,4 +27,16 @@ public record ReducerId(Guid value) : ConceptAs<Guid>(value)
     /// </summary>
     /// <param name="id"><see cref="Guid"/> to convert from.</param>
     public static implicit operator ReducerId(Guid id) => new(id);
+
+    /// <summary>
+    /// Implicitly convert from <see cref="ReducerId"/> to <see cref="ObserverId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="ReducerId"/> to convert from.</param>
+    public static implicit operator ObserverId(ReducerId id) => new(id.Value);
+
+    /// <summary>
+    /// Implicitly convert from <see cref="ObserverId"/> to <see cref="ReducerId"/>.
+    /// </summary>
+    /// <param name="id"><see cref="ObserverId"/> to convert from.</param>
+    public static implicit operator ReducerId(ObserverId id) => new(id.Value);
 }

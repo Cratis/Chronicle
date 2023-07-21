@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Reducers;
 
@@ -19,7 +20,7 @@ public class ReducerHandler : IReducerHandler
     public ReducerId ReducerId { get; }
 
     /// <inheritdoc/>
-    public ReducerName Name { get; }
+    public ObserverName Name { get; }
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId { get; }
@@ -41,7 +42,7 @@ public class ReducerHandler : IReducerHandler
     /// <param name="eventSerializer">The event serializer to use.</param>
     public ReducerHandler(
         ReducerId reducerId,
-        ReducerName name,
+        ObserverName name,
         EventSequenceId eventSequenceId,
         IEventTypes eventTypes,
         IReducerInvoker reducerInvoker,

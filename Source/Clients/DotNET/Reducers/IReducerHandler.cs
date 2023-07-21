@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Reducers;
 
@@ -19,7 +20,7 @@ public interface IReducerHandler
     /// <summary>
     /// Gets the name of the reducer.
     /// </summary>
-    ReducerName Name { get; }
+    ObserverName Name { get; }
 
     /// <summary>
     /// Gets the event sequence the reducer is reducing from.

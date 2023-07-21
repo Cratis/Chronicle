@@ -94,7 +94,7 @@ public class ReducersRegistrar : IReducersRegistrar
         var microserviceId = _executionContextManager.Current.MicroserviceId;
         var route = $"/api/events/store/{microserviceId}/reducers/register/{_connection.ConnectionId}";
 
-        var registrations = _handlers.Values.Select(_ => new ClientReducersRegistration(
+        var registrations = _handlers.Values.Select(_ => new ClientReducerRegistration(
              _.ReducerId,
              _.Name,
              _.EventSequenceId,
