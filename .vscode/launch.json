@@ -30,6 +30,12 @@
             "justMyCode": false,
             "requireExactSource": false,
             "symbolOptions": {
+                "moduleFilter": {
+                    "mode": "loadOnlyIncluded",
+                    "includedModules": [
+                        "Aksio.*.dll"
+                    ]
+                },
                 "searchPaths": [],
                 "searchMicrosoftSymbolServer": false,
                 "searchNuGetOrgSymbolServer": true
@@ -53,6 +59,12 @@
             "justMyCode": false,
             "requireExactSource": false,
             "symbolOptions": {
+                "moduleFilter": {
+                    "mode": "loadOnlyIncluded",
+                    "includedModules": [
+                        "Aksio.*.dll"
+                    ]
+                },
                 "searchPaths": [],
                 "searchMicrosoftSymbolServer": false,
                 "searchNuGetOrgSymbolServer": true
