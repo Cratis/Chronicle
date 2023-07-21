@@ -63,7 +63,7 @@ public class ReducerHandler : IReducerHandler
         {
             var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
             var content = await _eventSerializer.Deserialize(eventType, @event.Content);
-            return new EventAndContext(@event, @event.Context);
+            return new EventAndContext(content, @event.Context);
         });
         var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);
         return await _reducerInvoker.Invoke(eventAndContexts, initial);
