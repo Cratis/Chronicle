@@ -6,7 +6,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 internal static partial class ClientObserverSubscriberLogMessages
 {

@@ -6,7 +6,7 @@ using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 using TenantsConfig = Aksio.Cratis.Kernel.Configuration.Tenants;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObservers"/>.

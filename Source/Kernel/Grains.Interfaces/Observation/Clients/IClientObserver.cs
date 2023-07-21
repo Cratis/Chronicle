@@ -5,7 +5,7 @@ using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Defines a client observer.

@@ -8,12 +8,12 @@ using Aksio.Commands;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObserverSubscriber"/>.
@@ -28,7 +28,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
-    IConnectedClients ConnectedClients => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
+    IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
@@ -74,7 +74,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
             var connectedClient = connectedClientJsonObject.Deserialize<ConnectedClient>(_jsonSerializerOptions);
             if (connectedClient is not null)
             {
-                using var httpClient = _httpClientFactory.CreateClient(Clients.ConnectedClients.ConnectedClientsHttpClient);
+                using var httpClient = _httpClientFactory.CreateClient(ConnectedClients.ConnectedClientsHttpClient);
                 httpClient.BaseAddress = connectedClient.ClientUri;
 
                 using var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
@@ -85,7 +85,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
-                    await ConnectedClients.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
+                    await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
                     state = ObserverSubscriberState.Disconnected;
                 }
                 else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)

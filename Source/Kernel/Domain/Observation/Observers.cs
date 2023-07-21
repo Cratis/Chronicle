@@ -4,8 +4,8 @@
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Grains.Observation.Clients;
 using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;

@@ -3,11 +3,11 @@
 
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Grains.Observation;
+using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
-namespace Aksio.Cratis.Kernel.Grains.Clients;
+namespace Aksio.Cratis.Kernel.Grains.Observation.Clients;
 
 /// <summary>
 /// Represents an implementation of <see cref="IClientObserver"/>.
