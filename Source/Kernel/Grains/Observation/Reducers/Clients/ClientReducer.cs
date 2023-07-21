@@ -49,7 +49,7 @@ public class ClientReducer : Grain, IClientReducer, INotifyClientDisconnected
         var observer = GrainFactory.GetGrain<IObserverSupervisor>(_reducerId!, _observerKey!);
         var connectedClients = GrainFactory.GetGrain<IConnectedClients>(_observerKey!.MicroserviceId);
         await connectedClients.SubscribeDisconnected(this.AsReference<INotifyClientDisconnected>());
-        await observer.SetNameAndType(name, ObserverType.Client);
+        await observer.SetNameAndType(name, ObserverType.Reducer);
         var connectedClient = await connectedClients.GetConnectedClient(connectionId);
         await observer.Subscribe<IClientReducerSubscriber>(eventTypes.Select(_ => _.EventType).ToArray(), connectedClient);
     }

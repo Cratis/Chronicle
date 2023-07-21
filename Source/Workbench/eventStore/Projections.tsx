@@ -17,14 +17,12 @@ const columns: GridColDef[] = [
     {
         headerName: 'Name',
         field: 'name',
-        width: 700,
-        resizable: true
+        width: 700
     },
     {
         headerName: 'Model Name',
         field: 'modelName',
-        width: 400,
-        resizable: true
+        width: 400
     },
 ];
 

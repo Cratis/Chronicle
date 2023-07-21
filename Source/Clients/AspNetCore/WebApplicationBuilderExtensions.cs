@@ -25,7 +25,6 @@ public static class WebApplicationBuilderExtensions
         this WebApplicationBuilder webApplicationBuilder,
         Action<IClientBuilder>? configureDelegate = default)
     {
-        webApplicationBuilder.Services.AddTransient<ClientObservers>();
         webApplicationBuilder.Services.AddRules();
         webApplicationBuilder.Host.UseCratis(configureDelegate);
         return webApplicationBuilder;

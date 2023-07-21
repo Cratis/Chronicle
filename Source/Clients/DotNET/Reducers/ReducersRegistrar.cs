@@ -76,7 +76,7 @@ public class ReducersRegistrar : IReducersRegistrar
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetById(ReducerId id) => throw new NotImplementedException();
+    public IReducerHandler GetById(ReducerId id) => _handlers.Values.SingleOrDefault(_ => _.ReducerId == id)!;
 
     /// <inheritdoc/>
     public async Task Initialize()

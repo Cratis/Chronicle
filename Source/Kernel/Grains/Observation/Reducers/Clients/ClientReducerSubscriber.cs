@@ -10,6 +10,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
+using Aksio.Cratis.Reducers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 
@@ -77,11 +78,17 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 using var httpClient = _httpClientFactory.CreateClient(ConnectedClients.ConnectedClientsHttpClient);
                 httpClient.BaseAddress = connectedClient.ClientUri;
 
-                using var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
+                // Get the current state from the sink
+                var reduce = new Reduce(new[] { @event }, null);
+
+                using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
                 httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
                 var response = await httpClient.PostAsync($"/.cratis/reducers/{_observerId}", jsonContent);
                 var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
                 var state = ObserverSubscriberState.Ok;
+
+                // Compare existing to new state and create a change set
+                // On OK, apply changes to sink
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {

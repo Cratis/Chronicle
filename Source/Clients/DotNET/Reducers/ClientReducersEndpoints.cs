@@ -40,8 +40,19 @@ public static class ClientReducersEndpoints
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
-            var reduce = await context.Request.ReadFromJsonAsync<Reduce>(Globals.JsonSerializerOptions);
-            if (reduce is null)
+
+            Reduce? reduce;
+
+            try
+            {
+                reduce = await context.Request.ReadFromJsonAsync<Reduce>(Globals.JsonSerializerOptions);
+                if (reduce is null)
+                {
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return;
+                }
+            }
+            catch
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
