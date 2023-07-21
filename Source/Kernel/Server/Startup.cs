@@ -22,8 +22,9 @@ public class Startup
     public void Configure(IApplicationBuilder app)
     {
         app.UseRouting();
+        app.UseWebSockets();
+        app.UseCratis();
         app.UseAksio();
         app.PerformBootProcedures();
-        app.UseCratis();
     }
 }
