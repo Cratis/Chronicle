@@ -10,6 +10,9 @@
     "microservices": {
         "eaf02867-79b9-4967-be67-3e93cee7c601": {
             "name": "Bank"
+        },
+        "cd51c091-3bba-4608-87a8-93da1f88c4dd": {
+            "name": "Basic Sample"
         }
     },
     "cluster": {
@@ -48,6 +51,26 @@
                         "eventStore": {
                             "type": "MongoDB",
                             "connectionDetails": "mongodb://localhost:27017/bank-dev-event-store"
+                        }
+                    }
+                }
+            },
+            "cd51c091-3bba-4608-87a8-93da1f88c4dd": {
+                "shared": {
+                    "eventStore": {
+                        "type": "MongoDB",
+                        "connectionDetails": "mongodb://localhost:27017/basic-event-store-shared"
+                    }
+                },
+                "tenants": {
+                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/basic-dev-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/basic-dev-event-store"
                         }
                     }
                 }
