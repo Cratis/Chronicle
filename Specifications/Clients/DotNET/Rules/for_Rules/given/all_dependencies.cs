@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Rules.for_Rules.given;
 public class all_dependencies : Specification
 {
     protected Mock<IEventTypes> event_types;
-    protected Mock<IModelNameConvention> model_name_convention;
+    protected Mock<IModelNameResolver> model_name_resolver;
     protected Mock<IJsonSchemaGenerator> json_schema_generator;
     protected Mock<IClientArtifactsProvider> client_artifacts;
     protected Mock<IImmediateProjections> immediate_projections;
@@ -21,7 +21,7 @@ public class all_dependencies : Specification
     void Establish()
     {
         event_types = new();
-        model_name_convention = new();
+        model_name_resolver = new();
         client_artifacts = new();
         immediate_projections = new();
         json_schema_generator = new();
