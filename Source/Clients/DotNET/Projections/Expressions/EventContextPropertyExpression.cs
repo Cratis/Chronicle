@@ -19,5 +19,5 @@ public class EventContextPropertyExpression : IEventValueExpression
     public EventContextPropertyExpression(PropertyPath propertyPath) => _propertyPath = propertyPath;
 
     /// <inheritdoc/>
-    public string Build() => $"$eventContext({_propertyPath})";
+    public PropertyExpression Build() => $"$eventContext({_propertyPath})";
 }

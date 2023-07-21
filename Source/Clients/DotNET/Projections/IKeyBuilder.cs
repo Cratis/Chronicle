@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Projections.Definitions;
+
 namespace Aksio.Cratis.Projections;
 
 /// <summary>
@@ -12,5 +14,5 @@ public interface IKeyBuilder
     /// Builds the expression.
     /// </summary>
     /// <returns>The expression built.</returns>
-    string Build();
+    PropertyExpression Build();
 }

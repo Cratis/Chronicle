@@ -29,7 +29,7 @@ public class CompositeKeyBuilder<TKeyType, TEvent> : ICompositeKeyBuilder<TKeyTy
     }
 
     /// <inheritdoc/>
-    public string Build()
+    public PropertyExpression Build()
     {
         var expressionBuilder = new StringBuilder();
         expressionBuilder

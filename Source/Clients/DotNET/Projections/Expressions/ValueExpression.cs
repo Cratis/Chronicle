@@ -22,5 +22,5 @@ public class ValueExpression : IEventValueExpression
     public ValueExpression(string value) => _value = value;
 
     /// <inheritdoc/>
-    public string Build() => $"$value({_value})";
+    public PropertyExpression Build() => $"$value({_value})";
 }

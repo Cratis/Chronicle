@@ -11,4 +11,4 @@ namespace Aksio.Cratis.Projections.Definitions;
 /// <param name="On">The property representing the model property one is joining on.</param>
 /// <param name="Properties">Properties and expressions for each property.</param>
 /// <param name="Key">Key expression, represents the key to use for identifying the model instance.</param>
-public record JoinDefinition(PropertyPath On, IDictionary<PropertyPath, string> Properties, string Key);
+public record JoinDefinition(PropertyPath On, IDictionary<PropertyPath, string> Properties, PropertyExpression Key);

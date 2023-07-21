@@ -9,8 +9,4 @@ namespace Aksio.Cratis.Reducers;
 /// <typeparam name="TReadModel"></typeparam>
 public interface IReducerFor<TReadModel>
 {
-    /// <summary>
-    /// Gets the <see cref="ReducerId"/> for the reducer.
-    /// </summary>
-    ReducerId Id { get; }
 }

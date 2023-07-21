@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Reducers.Validators;
 using Aksio.Reflection;
 
 namespace Aksio.Cratis.Reducers;
@@ -10,7 +11,7 @@ namespace Aksio.Cratis.Reducers;
 /// <summary>
 /// Extension methods for identifying a <see cref="MethodInfo"/> as reducer method.
 /// </summary>
-public static class ReducerMethodInfoExtensions
+public static class ReducerExtensionMethods
 {
     /// <summary>
     /// Check if a <see cref="MethodInfo"/> is a reducer method.
@@ -54,5 +55,18 @@ public static class ReducerMethodInfoExtensions
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Get the type of the read model for a reducer.
+    /// </summary>
+    /// <param name="type">Reducer type to get for.</param>
+    /// <returns>Type of read model.</returns>
+    public static Type GetReadModelType(this Type type)
+    {
+        TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
+        var interfaces = type.GetInterfaces();
+        var reducerInterface = interfaces.Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReducerFor<>));
+        return reducerInterface.GetGenericArguments()[0];
     }
 }

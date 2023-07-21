@@ -17,10 +17,12 @@ public class ReducerInvoker : IReducerInvoker
     readonly IServiceProvider _serviceProvider;
     readonly IEventTypes _eventTypes;
     readonly Type _targetType;
-    readonly Type _readModelType;
 
     /// <inheritdoc/>
     public IEnumerable<EventType> EventTypes => _reduceMethodsByEventType.Keys;
+
+    /// <inheritdoc/>
+    public Type ReadModelType { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
@@ -38,7 +40,7 @@ public class ReducerInvoker : IReducerInvoker
         _serviceProvider = serviceProvider;
         _eventTypes = eventTypes;
         _targetType = targetType;
-        _readModelType = readModelType;
+        ReadModelType = readModelType;
         _reduceMethodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                                         .Where(_ => _.IsReducerMethod(readModelType))
                                         .ToDictionary(_ => eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
@@ -68,13 +70,13 @@ public class ReducerInvoker : IReducerInvoker
                     returnValue = method.Invoke(actualReducer, new object[] { eventAndContext.Event, initialReadModelContent! })!;
                 }
 
-                if (returnValue.GetType() == _readModelType)
+                if (returnValue.GetType() == ReadModelType)
                 {
                     initialReadModelContent = returnValue;
                 }
                 else
                 {
-                    initialReadModelContent = _getResultMethod.GetGenericMethodDefinition().MakeGenericMethod(_readModelType).Invoke(this, new[] { returnValue });
+                    initialReadModelContent = _getResultMethod.GetGenericMethodDefinition().MakeGenericMethod(ReadModelType).Invoke(this, new[] { returnValue });
                 }
             }
         }

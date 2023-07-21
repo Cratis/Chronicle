@@ -30,7 +30,7 @@ public class OutboxProjectionsRegistrar : IParticipateInConnectionLifecycle
     /// Initializes a new instance of the <see cref="OutboxProjectionsRegistrar"/> class.
     /// </summary>
     /// <param name="connection">The Cratis <see cref="IConnection"/>.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for projections.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
@@ -40,7 +40,7 @@ public class OutboxProjectionsRegistrar : IParticipateInConnectionLifecycle
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public OutboxProjectionsRegistrar(
         IConnection connection,
-        IModelNameConvention modelNameConvention,
+        IModelNameResolver modelNameResolver,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
         IClientArtifactsProvider clientArtifacts,
@@ -56,7 +56,7 @@ public class OutboxProjectionsRegistrar : IParticipateInConnectionLifecycle
         _outboxProjectionsDefinitions = clientArtifacts.OutboxProjections.Select(projectionsType =>
         {
             var projections = (serviceProvider.GetRequiredService(projectionsType) as IOutboxProjections)!;
-            var builder = new OutboxProjectionsBuilder(modelNameConvention, eventTypes, jsonSchemaGenerator, projections.Identifier, jsonSerializerOptions);
+            var builder = new OutboxProjectionsBuilder(modelNameResolver, eventTypes, jsonSchemaGenerator, projections.Identifier, jsonSerializerOptions);
             projections.Define(builder);
             return builder.Build();
         }).ToArray();

@@ -27,6 +27,9 @@ public class ReducerHandler : IReducerHandler
     /// <inheritdoc/>
     public IEnumerable<EventType> EventTypes => _reducerInvoker.EventTypes;
 
+    /// <inheritdoc/>
+    public Type ReadModelType => _reducerInvoker.ReadModelType;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerHandler"/> class.
     /// </summary>

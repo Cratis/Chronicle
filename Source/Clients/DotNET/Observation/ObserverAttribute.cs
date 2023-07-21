@@ -12,19 +12,19 @@ namespace Aksio.Cratis.Observation;
 public sealed class ObserverAttribute : Attribute
 {
     /// <summary>
-    /// Gets the unique identifier for an observer.
+    /// Gets the unique identifier for the observer.
     /// </summary>
     public ObserverId ObserverId { get; }
 
     /// <summary>
-    /// Gets the unique identifier for an event log.
+    /// Gets the unique identifier for an event sequence.
     /// </summary>
     public EventSequenceId EventSequenceId { get; } = EventSequenceId.Log;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ObserverAttribute"/>.
     /// </summary>
-    /// <param name="observerIdAsString">Unique identifier as string.</param>
+    /// <param name="observerIdAsString"><see cref="ObserverId"/> represented as string. Must be a valid Guid.</param>
     /// <param name="inbox">Whether or not to observe inbox. If false, it will observe the default event log.</param>
     public ObserverAttribute(string observerIdAsString, bool inbox = false)
     {

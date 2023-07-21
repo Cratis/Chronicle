@@ -21,6 +21,7 @@ public class ReducerValidator : IReducerValidator
         + Must implement IReducerFor<T>
         + Shouldn't allow for multiple implementations of the IReducer interface for different read models
 
+        - Must have a `[Reducer("id")]` attribute
         - String keys need to match property names on the event / context
         - Composite keys need to match property names on the event
         - Types need to match between the different key definitions (can't have mixed key types)

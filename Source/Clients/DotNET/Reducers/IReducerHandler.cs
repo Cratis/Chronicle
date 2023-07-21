@@ -32,6 +32,11 @@ public interface IReducerHandler
     IEnumerable<EventType> EventTypes { get; }
 
     /// <summary>
+    /// Gets the type of the read model.
+    /// </summary>
+    Type ReadModelType { get; }
+
+    /// <summary>
     /// Handle next events as bulk.
     /// </summary>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to handle.</param>

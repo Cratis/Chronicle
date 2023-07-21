@@ -7,6 +7,7 @@ using Aksio.Cratis.EventSequences.Outbox;
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Reducers;
 using Aksio.Cratis.Rules;
 using Aksio.Reflection;
 using Aksio.Types;
@@ -40,6 +41,9 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
     public IEnumerable<Type> Observers { get; }
 
     /// <inheritdoc/>
+    public IEnumerable<Type> Reducers { get; }
+
+    /// <inheritdoc/>
     public IEnumerable<Type> ObserverMiddlewares { get; }
 
     /// <inheritdoc/>
@@ -71,6 +75,7 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
         OutboxProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IOutboxProjections))).ToArray();
         Observers = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<ObserverAttribute>()).ToArray();
         ObserverMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IObserverMiddleware))).ToArray();
+        Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
         AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
     }
 }

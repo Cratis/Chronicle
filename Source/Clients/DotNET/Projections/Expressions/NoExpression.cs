@@ -9,5 +9,5 @@ namespace Aksio.Cratis.Projections.Expressions;
 public class NoExpression : IEventValueExpression
 {
     /// <inheritdoc/>
-    public string Build() => string.Empty;
+    public PropertyExpression Build() => string.Empty;
 }

@@ -22,7 +22,7 @@ public class Rules : IRules
     readonly IDictionary<Type, IEnumerable<Type>> _rulesPerCommand;
     readonly Dictionary<RuleId, ProjectionDefinition> _projectionDefinitionsPerRule = new();
     readonly ExecutionContext _executionContext;
-    readonly IModelNameConvention _modelNameConvention;
+    readonly IModelNameResolver _modelNameResolver;
     readonly IEventTypes _eventTypes;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly JsonSerializerOptions _serializerOptions;
@@ -37,7 +37,7 @@ public class Rules : IRules
     /// Initializes a new instance of the <see cref="Rules"/> class.
     /// </summary>
     /// <param name="executionContext">Current <see cref="ExecutionContext"/>.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> used for generating projection definitions.</param>
     /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
@@ -45,7 +45,7 @@ public class Rules : IRules
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     public Rules(
         ExecutionContext executionContext,
-        IModelNameConvention modelNameConvention,
+        IModelNameResolver modelNameResolver,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
         JsonSerializerOptions serializerOptions,
@@ -56,7 +56,7 @@ public class Rules : IRules
             .GroupBy(_ => _.BaseType!.GetGenericArguments()[1])
             .ToDictionary(_ => _.Key, _ => _.ToArray().AsEnumerable());
         _executionContext = executionContext;
-        _modelNameConvention = modelNameConvention;
+        _modelNameResolver = modelNameResolver;
         _eventTypes = eventTypes;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _serializerOptions = serializerOptions;
@@ -118,7 +118,7 @@ public class Rules : IRules
 
     ProjectionDefinition CreateProjection<TTarget>(IRule rule)
     {
-        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _modelNameConvention, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
+        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _modelNameResolver, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
 
         var ruleType = typeof(TTarget);
         var defineStateMethod = ruleType.GetMethod("DefineState", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);

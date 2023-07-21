@@ -20,10 +20,10 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
 {
     static class ProjectionDefinitionCreator<TModel>
     {
-        public static ProjectionDefinition CreateAndDefine(Type type, IModelNameConvention modelNameConvention, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator, JsonSerializerOptions jsonSerializerOptions)
+        public static ProjectionDefinition CreateAndDefine(Type type, IModelNameResolver modelNameResolver, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator, JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (Activator.CreateInstance(type) as IProjectionFor<TModel>)!;
-            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameResolver, eventTypes, schemaGenerator, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }
@@ -32,7 +32,7 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
     readonly IEnumerable<ProjectionDefinition> _projections;
     readonly IConnection _connection;
     readonly IExecutionContextManager _executionContextManager;
-    readonly IModelNameConvention _modelNameConvention;
+    readonly IModelNameResolver _modelNameResolver;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<ProjectionsRegistrar> _logger;
@@ -44,7 +44,7 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
@@ -54,7 +54,7 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
         IExecutionContextManager executionContextManager,
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
-        IModelNameConvention modelNameConvention,
+        IModelNameResolver modelNameResolver,
         IJsonSchemaGenerator schemaGenerator,
         IJsonProjectionSerializer projectionSerializer,
         JsonSerializerOptions jsonSerializerOptions,
@@ -62,7 +62,7 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
     {
         _connection = connection;
         _executionContextManager = executionContextManager;
-        _modelNameConvention = modelNameConvention;
+        _modelNameResolver = modelNameResolver;
         _projectionSerializer = projectionSerializer;
         _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
@@ -108,6 +108,6 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
                     var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
                     var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
                     var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                    return (method.Invoke(null, new object[] { _, _modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions }) as ProjectionDefinition)!;
+                    return (method.Invoke(null, new object[] { _, _modelNameResolver, eventTypes, schemaGenerator, jsonSerializerOptions }) as ProjectionDefinition)!;
                 }).ToArray();
 }

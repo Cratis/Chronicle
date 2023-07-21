@@ -4,6 +4,7 @@
 using Aksio.Cratis;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Observation;
+using Aksio.Cratis.Reducers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

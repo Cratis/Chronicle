@@ -16,6 +16,11 @@ public interface IReducerInvoker
     IEnumerable<EventType> EventTypes { get; }
 
     /// <summary>
+    /// Gets the type of the read model.
+    /// </summary>
+    Type ReadModelType { get; }
+
+    /// <summary>
     /// Invoke the reducer for a set of events.
     /// </summary>
     /// <param name="eventsAndContexts">The events to reduce from.</param>

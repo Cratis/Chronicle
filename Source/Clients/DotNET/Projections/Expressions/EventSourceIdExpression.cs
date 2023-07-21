@@ -9,5 +9,5 @@ namespace Aksio.Cratis.Projections.Expressions;
 public class EventSourceIdExpression : IEventValueExpression
 {
     /// <inheritdoc/>
-    public string Build() => "$eventSourceId";
+    public PropertyExpression Build() => "$eventSourceId";
 }

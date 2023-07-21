@@ -12,5 +12,5 @@ public interface IEventValueExpression
     /// Builds the expression.
     /// </summary>
     /// <returns>The expression built.</returns>
-    string Build();
+    PropertyExpression Build();
 }
