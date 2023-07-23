@@ -17,7 +17,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
 {
     readonly IProjectionSinks _projectionSinks;
     readonly IEventSequenceStorage _eventProvider;
-    readonly IObjectsComparer _objectsComparer;
+    readonly IObjectComparer _objectComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ITypeFormats _typeFormats;
     readonly ILoggerFactory _loggerFactory;
@@ -27,21 +27,21 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// </summary>
     /// <param name="projectionSinks"><see cref="IProjectionSinks"/> in the system.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> in the system.</param>
-    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public ProjectionPipelineFactory(
         IProjectionSinks projectionSinks,
         IEventSequenceStorage eventProvider,
-        IObjectsComparer objectsComparer,
+        IObjectComparer objectComparer,
         IChangesetStorage changesetStorage,
         ITypeFormats typeFormats,
         ILoggerFactory loggerFactory)
     {
         _projectionSinks = projectionSinks;
         _eventProvider = eventProvider;
-        _objectsComparer = objectsComparer;
+        _objectComparer = objectComparer;
         _changesetStorage = changesetStorage;
         _typeFormats = typeFormats;
         _loggerFactory = loggerFactory;
@@ -61,7 +61,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
             projection,
             _eventProvider,
             sink,
-            _objectsComparer,
+            _objectComparer,
             _changesetStorage,
             _typeFormats,
             _loggerFactory.CreateLogger<ProjectionPipeline>());

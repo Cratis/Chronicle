@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 /// </summary>
 public class ProjectionPipeline : IProjectionPipeline
 {
-    readonly IObjectsComparer _objectsComparer;
+    readonly IObjectComparer _objectComparer;
     readonly IChangesetStorage _changesetStorage;
     readonly ITypeFormats _typeFormats;
     readonly ILogger<ProjectionPipeline> _logger;
@@ -36,7 +36,7 @@ public class ProjectionPipeline : IProjectionPipeline
     /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> to use.</param>
     /// <param name="sink"><see cref="IProjectionSink"/> to use.</param>
-    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> for comparing objects.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
@@ -44,14 +44,14 @@ public class ProjectionPipeline : IProjectionPipeline
         IProjection projection,
         IEventSequenceStorage eventProvider,
         IProjectionSink sink,
-        IObjectsComparer objectsComparer,
+        IObjectComparer objectComparer,
         IChangesetStorage changesetStorage,
         ITypeFormats typeFormats,
         ILogger<ProjectionPipeline> logger)
     {
         _eventProvider = eventProvider;
         Sink = sink;
-        _objectsComparer = objectsComparer;
+        _objectComparer = objectComparer;
         _changesetStorage = changesetStorage;
         _typeFormats = typeFormats;
         Projection = projection;
@@ -75,7 +75,7 @@ public class ProjectionPipeline : IProjectionPipeline
         _logger.GettingInitialValues(@event.Metadata.SequenceNumber);
         var initialState = await Sink.FindOrDefault(key, isReplaying);
         initialState ??= Projection.InitialModelState;
-        var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, initialState);
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset);
         await HandleEventFor(Projection, context);
         if (changeset.HasChanges)

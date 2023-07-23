@@ -22,7 +22,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 public class ImmediateProjection : Grain, IImmediateProjection
 {
     readonly IProjectionFactory _projectionFactory;
-    readonly IObjectsComparer _objectsComparer;
+    readonly IObjectComparer _objectComparer;
     readonly IEventSequenceStorage _eventProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
@@ -33,19 +33,19 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// Initializes a new instance of the <see cref="ImmediateProjection"/> class.
     /// </summary>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
-    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public ImmediateProjection(
         IProjectionFactory projectionFactory,
-        IObjectsComparer objectsComparer,
+        IObjectComparer objectComparer,
         IEventSequenceStorage eventProvider,
         IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager)
     {
         _projectionFactory = projectionFactory;
-        _objectsComparer = objectsComparer;
+        _objectComparer = objectComparer;
         _eventProvider = eventProvider;
         _expandoObjectConverter = expandoObjectConverter;
         _executionContextManager = executionContextManager;
@@ -89,7 +89,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
             foreach (var @event in cursor.Current)
             {
-                var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, state);
+                var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, state);
                 var keyResolver = _projection.GetKeyResolverFor(@event.Metadata.Type);
                 var key = await keyResolver(_eventProvider!, @event);
                 var context = new ProjectionEventContext(key, @event, changeset);

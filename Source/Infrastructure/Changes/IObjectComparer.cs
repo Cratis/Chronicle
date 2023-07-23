@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Changes;
 /// <summary>
 /// Defines a system for comparing objects.
 /// </summary>
-public interface IObjectsComparer
+public interface IObjectComparer
 {
     /// <summary>
     /// Compare two objects and get any differences in any properties.

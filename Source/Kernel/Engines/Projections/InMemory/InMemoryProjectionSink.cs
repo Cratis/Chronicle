@@ -22,7 +22,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
     readonly Model _model;
     readonly ITypeFormats _typeFormats;
-    readonly IObjectsComparer _comparer;
+    readonly IObjectComparer _comparer;
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -41,11 +41,11 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     /// </summary>
     /// <param name="model">The target <see cref="Model"/>.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-    /// <param name="comparer"><see cref="IObjectsComparer"/> used for complex comparisons of objects.</param>
+    /// <param name="comparer"><see cref="IObjectComparer"/> used for complex comparisons of objects.</param>
     public InMemoryProjectionSink(
         Model model,
         ITypeFormats typeFormats,
-        IObjectsComparer comparer)
+        IObjectComparer comparer)
     {
         _model = model;
         _typeFormats = typeFormats;

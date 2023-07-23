@@ -13,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
 {
     readonly ITypeFormats _typeFormats;
-    readonly IObjectsComparer _comparer;
+    readonly IObjectComparer _comparer;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.InMemory;
@@ -22,8 +22,8 @@ public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
     /// Initializes a new instance of the <see cref="InMemoryProjectionSinkFactory"/> class.
     /// </summary>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-    /// <param name="comparer"><see cref="IObjectsComparer"/> used for complex comparisons of objects.</param>
-    public InMemoryProjectionSinkFactory(ITypeFormats typeFormats, IObjectsComparer comparer)
+    /// <param name="comparer"><see cref="IObjectComparer"/> used for complex comparisons of objects.</param>
+    public InMemoryProjectionSinkFactory(ITypeFormats typeFormats, IObjectComparer comparer)
     {
         _typeFormats = typeFormats;
         _comparer = comparer;

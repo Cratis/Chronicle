@@ -11,9 +11,9 @@ using Aksio.Reflection;
 namespace Aksio.Cratis.Changes;
 
 /// <summary>
-/// Represents an implementation of <see cref="IObjectsComparer"/>.
+/// Represents an implementation of <see cref="IObjectComparer"/>.
 /// </summary>
-public class ObjectsComparer : IObjectsComparer
+public class ObjectComparer : IObjectComparer
 {
     /// <inheritdoc/>
     public bool Equals(object? left, object? right, out IEnumerable<PropertyDifference> differences)
