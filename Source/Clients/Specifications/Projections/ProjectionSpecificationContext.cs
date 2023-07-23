@@ -76,15 +76,15 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             new EventSequenceStorageProviderForSpecifications(_eventLog));
         _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
 
-        var objectsComparer = new ObjectsComparer();
+        var objectComparer = new ObjectComparer();
 
         _eventSequenceStorage = new EventSequenceStorageProviderForSpecifications(_eventLog);
-        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats, objectsComparer);
+        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats, objectComparer);
         _pipeline = new ProjectionPipeline(
             _projection,
             _eventSequenceStorage,
             _sink,
-            objectsComparer,
+            objectComparer,
             new NullChangesetStorage(),
             typeFormats,
             new NullLogger<ProjectionPipeline>());

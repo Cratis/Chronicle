@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Integration;
 /// </summary>
 public class Importer : IImporter
 {
-    readonly IObjectsComparer _objectsComparer;
+    readonly IObjectComparer _objectComparer;
     readonly IAdapters _adapters;
     readonly IEventLog _eventLog;
     readonly IEventOutbox _eventOutbox;
@@ -20,16 +20,16 @@ public class Importer : IImporter
     /// Initializes a new instance of the <see cref="Importer"/> class.
     /// </summary>
     /// <param name="adapters"><see cref="IAdapters"/> for getting <see cref="AdapterFor{TModel, TExternalModel}"/> instances.</param>
-    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventLog"><see cref="IEventSequence"/> for appending events.</param>
     /// <param name="eventOutbox"><see cref="IEventSequence"/> for appending public events.</param>
     public Importer(
         IAdapters adapters,
-        IObjectsComparer objectsComparer,
+        IObjectComparer objectComparer,
         IEventLog eventLog,
         IEventOutbox eventOutbox)
     {
-        _objectsComparer = objectsComparer;
+        _objectComparer = objectComparer;
         _adapters = adapters;
         _eventLog = eventLog;
         _eventOutbox = eventOutbox;
@@ -41,6 +41,6 @@ public class Importer : IImporter
         var adapter = _adapters.GetFor<TModel, TExternalModel>();
         var projection = _adapters.GetProjectionFor<TModel, TExternalModel>();
         var mapper = _adapters.GetMapperFor<TModel, TExternalModel>();
-        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectsComparer, _eventLog, _eventOutbox);
+        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectComparer, _eventLog, _eventOutbox);
     }
 }
