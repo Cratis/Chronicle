@@ -1,15 +1,21 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aksio.Commands;
+using Aksio.Cratis.Changes;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
+using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reducers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
@@ -23,6 +29,9 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
 {
     readonly ILogger<ClientReducerSubscriber> _logger;
     readonly IHttpClientFactory _httpClientFactory;
+    readonly IObjectComparer _objectComparer;
+    readonly IProjectionSink _projectionSink;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
     ObserverId _observerId = ObserverId.Unspecified;
@@ -36,14 +45,23 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     /// </summary>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing changes applied.</param>
+    /// <param name="projectionSink"></param>
+    /// <param name="expandoObjectConverter"></param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     public ClientReducerSubscriber(
         ILogger<ClientReducerSubscriber> logger,
         IHttpClientFactory httpClientFactory,
+        IObjectComparer objectComparer,
+        IProjectionSink projectionSink,
+        IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _objectComparer = objectComparer;
+        _projectionSink = projectionSink;
+        _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
 
@@ -79,7 +97,14 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 httpClient.BaseAddress = connectedClient.ClientUri;
 
                 // Get the current state from the sink
-                var reduce = new Reduce(new[] { @event }, null);
+                var isReplaying = @event.Context.ObservationState.HasFlag(EventObservationState.Replay);
+
+                // Resolve key through key resolvers
+                var key = new Key(@event.Context.EventSourceId, ArrayIndexers.NoIndexers);
+                var initial = await _projectionSink.FindOrDefault(key, isReplaying);
+
+                var initialAsJson = _expandoObjectConverter.ToJsonObject(initial, null!);
+                var reduce = new Reduce(new[] { @event }, initialAsJson);
 
                 using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
                 httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
@@ -87,8 +112,18 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
                 var state = ObserverSubscriberState.Ok;
 
+                // Convert command result to ExpandoObject
+                var responseAsJson = commandResult.Response as JsonObject;
+                var reduced = _expandoObjectConverter.ToExpandoObject(responseAsJson!, null!);
+
                 // Compare existing to new state and create a change set
                 // On OK, apply changes to sink
+                var changeset = new Changeset<ExpandoObject, ExpandoObject>(_objectComparer, reduced, initial);
+                if (!_objectComparer.Equals(initial, reduced, out var differences))
+                {
+                    changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
+                }
+                _projectionSink.Apply(key, changeset);
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {

@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Changes;
 public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
 {
     readonly List<Change> _changes = new();
-    readonly IObjectsComparer _comparer;
+    readonly IObjectComparer _comparer;
 
     /// <inheritdoc/>
     public TSource Incoming { get; }
@@ -34,10 +34,10 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     /// <summary>
     /// Initializes a new instance of <see cref="Changeset{TSource, TTarget}"/>.
     /// </summary>
-    /// <param name="comparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
+    /// <param name="comparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="incoming"><see cref="Incoming"/> that the <see cref="Changeset{TSource, TTarget}"/> is for.</param>
     /// <param name="initialState">The initial state before any changes are applied.</param>
-    public Changeset(IObjectsComparer comparer, TSource incoming, TTarget initialState)
+    public Changeset(IObjectComparer comparer, TSource incoming, TTarget initialState)
     {
         _comparer = comparer;
         Incoming = incoming;
