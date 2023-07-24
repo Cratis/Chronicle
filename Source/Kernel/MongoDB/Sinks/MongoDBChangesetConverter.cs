@@ -104,18 +104,18 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
 
         foreach (var propertyDifference in propertiesChanged.Differences)
         {
-            var property = _converter.ToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
-            allArrayFilters.AddRange(property.ArrayFilters);
+            var (property, arrayFilters) = _converter.ToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+            allArrayFilters.AddRange(arrayFilters);
 
             var value = _converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);
 
             if (updateBuilder != default)
             {
-                updateBuilder = updateBuilder.Set(property.Property, value);
+                updateBuilder = updateBuilder.Set(property, value);
             }
             else
             {
-                updateBuilder = updateDefinitionBuilder.Set(property.Property, value);
+                updateBuilder = updateDefinitionBuilder.Set(property, value);
             }
         }
 
@@ -137,27 +137,27 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
 
         childrenProperty += segments[^1].Value;
         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
-        var property = _converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
-        arrayFiltersForDocument.AddRange(property.ArrayFilters);
+        var (property, arrayFilters) = _converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
+        arrayFiltersForDocument.AddRange(arrayFilters);
 
         if (updateBuilder is not null)
         {
-            updateBuilder = updateBuilder.Push(property.Property, document);
+            updateBuilder = updateBuilder.Push(property, document);
         }
         else
         {
-            updateBuilder = updateDefinitionBuilder.Push(property.Property, document);
+            updateBuilder = updateDefinitionBuilder.Push(property, document);
         }
     }
 
 void BuildJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined)
     {
-        var property = _converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+        var (property, _) = _converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
 
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
 
-        var filter = Builders<BsonDocument>.Filter.Eq(property.Property, joined.Key);
+        var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
 
         var collection = _collections.GetCollection(isReplaying);
 
