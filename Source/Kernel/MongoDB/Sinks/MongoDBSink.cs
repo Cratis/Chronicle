@@ -4,14 +4,12 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
-using Aksio.MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
@@ -26,12 +24,9 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 public class MongoDBSink : ISink, IDisposable
 {
     readonly Model _model;
-    readonly IExecutionContextManager _executionContextManager;
-    readonly IMongoDBClientFactory _clientFactory;
-    readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly Storage _configuration;
-    readonly IMongoDatabase _database;
     readonly IMongoDBConverter _converter;
+    readonly IMongoDBSinkCollections _collections;
+    readonly IExpandoObjectConverter _expandoObjectConverter;
 
     /// <inheritdoc/>
     public SinkTypeName Name => "MongoDB";
@@ -39,38 +34,30 @@ public class MongoDBSink : ISink, IDisposable
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
-    string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSink"/> class.
     /// </summary>
-    /// <param name="model"><see cref="Model"/> the store is for.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
-    /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
-    /// <param name="mongoDBConverterFactory"><see cref="IMongoDBConverterFactory"/> for creating converters.</param>
+    /// <param name="model">The <see cref="Model"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
+    /// <param name="collections"></param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public MongoDBSink(
         Model model,
-        IExecutionContextManager executionContextManager,
-        IMongoDBClientFactory clientFactory,
-        IMongoDBConverterFactory mongoDBConverterFactory,
-        IExpandoObjectConverter expandoObjectConverter,
-        Storage configuration)
+        IMongoDBConverter converter,
+        IMongoDBSinkCollections collections,
+        IExpandoObjectConverter expandoObjectConverter)
     {
-        _model = model;
-        _executionContextManager = executionContextManager;
-        _clientFactory = clientFactory;
         _expandoObjectConverter = expandoObjectConverter;
-        _configuration = configuration;
-        _converter = mongoDBConverterFactory.CreateFor(model);
-        _database = GetDatabase();
+        _model = model;
+        _converter = converter;
+        _collections = collections;
     }
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)
     {
-        var collection = GetCollection(isReplaying);
+        var collection = _collections.GetCollection(isReplaying);
 
         var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key)));
         var instance = result.SingleOrDefault();
@@ -90,7 +77,7 @@ public class MongoDBSink : ISink, IDisposable
         var hasChanges = false;
 
         var filter = Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key));
-        var collection = GetCollection(isReplaying);
+        var collection = _collections.GetCollection(isReplaying);
 
         if (changeset.HasBeenRemoved())
         {
@@ -116,54 +103,13 @@ public class MongoDBSink : ISink, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task BeginReplay()
-    {
-        await PrepareInitialRun(true);
-    }
+    public Task PrepareInitialRun(bool isReplaying) => _collections.PrepareInitialRun(isReplaying);
 
     /// <inheritdoc/>
-    public async Task EndReplay()
-    {
-        var rewindName = ReplayCollectionName;
-        var rewoundCollectionsPrefix = $"{_model.Name}-";
-        var collectionNames = (await _database.ListCollectionNamesAsync()).ToList();
-        var nextCollectionSequenceNumber = 1;
-        var rewoundCollectionNames = collectionNames.Where(_ => _.StartsWith(rewoundCollectionsPrefix, StringComparison.InvariantCulture)).ToArray();
-        if (rewoundCollectionNames.Length > 0)
-        {
-            nextCollectionSequenceNumber = rewoundCollectionNames
-                .Select(_ =>
-                {
-                    var postfix = _.Substring(rewoundCollectionsPrefix.Length);
-                    if (int.TryParse(postfix, out var value))
-                    {
-                        return value;
-                    }
-                    return -1;
-                })
-                .Where(_ => _ >= 0)
-                .OrderByDescending(_ => _)
-                .First() + 1;
-        }
-        var oldCollectionName = $"{rewoundCollectionsPrefix}{nextCollectionSequenceNumber}";
-
-        if (collectionNames.Contains(_model.Name))
-        {
-            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
-        }
-
-        if (collectionNames.Contains(rewindName))
-        {
-            await _database.RenameCollectionAsync(rewindName, _model.Name);
-        }
-    }
+    public Task BeginReplay() => _collections.BeginReplay();
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun(bool isReplaying)
-    {
-        var collection = GetCollection(isReplaying);
-        return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-    }
+    public Task EndReplay() => _collections.EndReplay();
 
     /// <inheritdoc/>
     public void Dispose()
@@ -253,7 +199,7 @@ public class MongoDBSink : ISink, IDisposable
                         var serializedKey = _converter.ToBsonValue(key.Value);
                         var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
 
-                        var collection = GetCollection(isReplaying);
+                        var collection = _collections.GetCollection(isReplaying);
 
                         var joinArrayFiltersForDocument = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
                         ApplyActualChanges(key, joined.Changes, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, isReplaying).Wait();
@@ -283,16 +229,4 @@ public class MongoDBSink : ISink, IDisposable
         return Task.WhenAll(joinTasks);
     }
 
-    IMongoDatabase GetDatabase()
-    {
-        // TODO: Improve this! - Perhaps create a read model repository wrapper that caches per tenant.
-        var executionContext = _executionContextManager.Current;
-        var tenantId = executionContext.TenantId.ToString()!;
-        var readModelsConfig = _configuration.Microservices.Get(executionContext.MicroserviceId).Tenants[tenantId].Get(WellKnownStorageTypes.ReadModels);
-        var url = new MongoUrl(readModelsConfig.ConnectionDetails.ToString());
-        var client = _clientFactory.Create(url);
-        return client.GetDatabase(url.DatabaseName);
-    }
-
-    IMongoCollection<BsonDocument> GetCollection(bool isReplaying) => isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
 }
