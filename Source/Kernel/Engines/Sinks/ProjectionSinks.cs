@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Sinks;
 using Aksio.Types;
 
 namespace Aksio.Cratis.Kernel.Engines.Sinks;
@@ -12,10 +13,10 @@ namespace Aksio.Cratis.Kernel.Engines.Sinks;
 /// </summary>
 public class ProjectionSinks : IProjectionSinks
 {
-    sealed record Key(ProjectionSinkTypeId TypeId, Model Model);
+    sealed record Key(SinkTypeId TypeId, Model Model);
 
-    readonly IDictionary<ProjectionSinkTypeId, IProjectionSinkFactory> _factories;
-    readonly ConcurrentDictionary<Key, IProjectionSink> _stores = new();
+    readonly IDictionary<SinkTypeId, IProjectionSinkFactory> _factories;
+    readonly ConcurrentDictionary<Key, ISink> _stores = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionSinks"/> class.
@@ -27,7 +28,7 @@ public class ProjectionSinks : IProjectionSinks
     }
 
     /// <inheritdoc/>
-    public IProjectionSink GetForTypeAndModel(ProjectionSinkTypeId typeId, Model model)
+    public ISink GetForTypeAndModel(SinkTypeId typeId, Model model)
     {
         ThrowIfUnknownProjectionResultStore(typeId);
         var key = new Key(typeId, model);
@@ -36,9 +37,9 @@ public class ProjectionSinks : IProjectionSinks
     }
 
     /// <inheritdoc/>
-    public bool HasType(ProjectionSinkTypeId typeId) => _factories.ContainsKey(typeId);
+    public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
 
-    void ThrowIfUnknownProjectionResultStore(ProjectionSinkTypeId typeId)
+    void ThrowIfUnknownProjectionResultStore(SinkTypeId typeId)
     {
         if (!HasType(typeId)) throw new UnknownProjectionSink(typeId);
     }

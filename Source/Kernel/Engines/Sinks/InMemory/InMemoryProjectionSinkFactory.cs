@@ -4,6 +4,7 @@
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 
@@ -16,7 +17,7 @@ public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
     readonly IObjectComparer _comparer;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.InMemory;
+    public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemoryProjectionSinkFactory"/> class.
@@ -30,5 +31,5 @@ public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
     }
 
     /// <inheritdoc/>
-    public IProjectionSink CreateFor(Model model) => new InMemoryProjectionSink(model, _typeFormats, _comparer);
+    public ISink CreateFor(Model model) => new InMemoryProjectionSink(model, _typeFormats, _comparer);
 }

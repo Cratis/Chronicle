@@ -12,6 +12,7 @@ using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 using Aksio.MongoDB;
 using Aksio.Strings;
 using MongoDB.Bson;
@@ -23,9 +24,9 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in MongoDB.
+/// Represents an implementation of <see cref="ISink"/> for working with projections in MongoDB.
 /// </summary>
-public class MongoDBProjectionSink : IProjectionSink, IDisposable
+public class MongoDBProjectionSink : ISink, IDisposable
 {
     readonly Model _model;
     readonly IExecutionContextManager _executionContextManager;
@@ -39,7 +40,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     public ProjectionSinkTypeName Name => "MongoDB";
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
+    public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     string ReplayCollectionName => $"replay-{_model.Name}";
 

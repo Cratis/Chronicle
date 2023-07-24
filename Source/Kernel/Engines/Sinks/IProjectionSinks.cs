@@ -2,26 +2,27 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
-/// Defines a system for working with available <see cref="IProjectionSink">projection sinks</see>.
+/// Defines a system for working with available <see cref="ISink">projection sinks</see>.
 /// </summary>
 public interface IProjectionSinks
 {
     /// <summary>
-    /// Check if there is a <see cref="IProjectionSink"/> of a specific <see cref="ProjectionSinkTypeId"/> registered in the system.
+    /// Check if there is a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/> registered in the system.
     /// </summary>
-    /// <param name="typeId"><see cref="ProjectionSinkTypeId"/> to check for.</param>
+    /// <param name="typeId"><see cref="SinkTypeId"/> to check for.</param>
     /// <returns>True if it exists, false if not.</returns>
-    bool HasType(ProjectionSinkTypeId typeId);
+    bool HasType(SinkTypeId typeId);
 
     /// <summary>
-    /// Get a <see cref="IProjectionSink"/> of a specific <see cref="ProjectionSinkTypeId"/>.
+    /// Get a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/>.
     /// </summary>
-    /// <param name="typeId"><see cref="ProjectionSinkTypeId"/> to get for.</param>
+    /// <param name="typeId"><see cref="SinkTypeId"/> to get for.</param>
     /// <param name="model"><see cref="Model"/> to get for.</param>
-    /// <returns><see cref="IProjectionSink"/> instance.</returns>
-    IProjectionSink GetForTypeAndModel(ProjectionSinkTypeId typeId, Model model);
+    /// <returns><see cref="ISink"/> instance.</returns>
+    ISink GetForTypeAndModel(SinkTypeId typeId, Model model);
 }

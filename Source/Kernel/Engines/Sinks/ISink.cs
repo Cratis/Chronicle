@@ -5,19 +5,19 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Projections;
+using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
 /// Defines the storage for read models.
 /// </summary>
-public interface IProjectionSink
+public interface ISink
 {
     /// <summary>
-    /// Gets the <see cref="ProjectionSinkTypeId"/> that identifies the store.
+    /// Gets the <see cref="SinkTypeId"/> that identifies the store.
     /// </summary>
-    ProjectionSinkTypeId TypeId { get; }
+    SinkTypeId TypeId { get; }
 
     /// <summary>
     /// Gets the display friendly <see cref="ProjectionSinkTypeName"/>.

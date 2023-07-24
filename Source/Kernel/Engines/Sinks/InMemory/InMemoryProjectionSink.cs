@@ -8,6 +8,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 using Aksio.Json;
 using Aksio.Reflection;
 using Aksio.Types;
@@ -15,9 +16,9 @@ using Aksio.Types;
 namespace Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in memory.
+/// Represents an implementation of <see cref="ISink"/> for working with projections in memory.
 /// </summary>
-public class InMemoryProjectionSink : IProjectionSink, IDisposable
+public class InMemoryProjectionSink : ISink, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = new();
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
@@ -27,7 +28,7 @@ public class InMemoryProjectionSink : IProjectionSink, IDisposable
     bool _isReplaying;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.InMemory;
+    public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "InMemory";

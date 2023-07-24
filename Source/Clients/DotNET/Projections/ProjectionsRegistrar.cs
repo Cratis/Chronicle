@@ -9,6 +9,7 @@ using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Projections;
@@ -82,7 +83,7 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
                 {
                     new ProjectionSinkDefinition(
                             "12358239-a120-4392-96d4-2b48271b904c",
-                            WellKnownProjectionSinkTypes.MongoDB)
+                            WellKnownSinkTypes.MongoDB)
                 });
             var serializedPipeline = JsonSerializer.SerializeToNode(pipeline, _jsonSerializerOptions)!;
             return new ProjectionRegistration(

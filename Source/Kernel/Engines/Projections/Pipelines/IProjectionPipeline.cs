@@ -17,9 +17,9 @@ public interface IProjectionPipeline
     IProjection Projection { get; }
 
     /// <summary>
-    /// Gets the <see cref="IProjectionSink">sink</see> to use for output.
+    /// Gets the <see cref="ISink">sink</see> to use for output.
     /// </summary>
-    IProjectionSink Sink { get; }
+    ISink Sink { get; }
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

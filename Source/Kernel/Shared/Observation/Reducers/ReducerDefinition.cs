@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Observation.Reducers;
 
@@ -22,4 +22,4 @@ public record ReducerDefinition(
     EventSequenceId EventSequenceId,
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
     ModelDefinition ReadModel,
-    ProjectionSinkTypeId SinkTypeId);
+    SinkTypeId SinkTypeId);

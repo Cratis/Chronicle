@@ -6,13 +6,13 @@ using Aksio.Cratis.Projections;
 namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
-/// Represents a friendly name for a type of <see cref="IProjectionSink"/>.
+/// Represents a friendly name for a type of <see cref="ISink"/>.
 /// </summary>
 /// <param name="Value">Underlying value.</param>
 public record ProjectionSinkTypeName(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
-    /// Implicitly convert from <see cref="string"/>  to <see cref="ProjectionSinkTypeId"/>.
+    /// Implicitly convert from <see cref="string"/>  to <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="value">String value to convert from.</param>
     public static implicit operator ProjectionSinkTypeName(string value) => new(value);

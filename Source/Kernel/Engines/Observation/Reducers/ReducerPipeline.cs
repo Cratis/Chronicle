@@ -22,7 +22,7 @@ public class ReducerPipeline : IReducerPipeline
     public Model ReadModel { get; }
 
     /// <inheritdoc/>
-    public IProjectionSink Sink { get; }
+    public ISink Sink { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerPipeline"/> class.
@@ -32,7 +32,7 @@ public class ReducerPipeline : IReducerPipeline
     /// /// <param name="objectComparer"></param>
     public ReducerPipeline(
         Model readModel,
-        IProjectionSink sink,
+        ISink sink,
         IObjectComparer objectComparer)
     {
         ReadModel = readModel;

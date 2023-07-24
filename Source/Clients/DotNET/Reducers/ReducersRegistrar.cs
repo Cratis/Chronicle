@@ -6,9 +6,9 @@ using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation.Reducers;
-using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Reducers;
@@ -103,7 +103,7 @@ public class ReducersRegistrar : IReducersRegistrar
              new ModelDefinition(
                  _modelNameResolver.GetNameFor(_.ReadModelType),
                  _jsonSchemaGenerator.Generate(_.ReadModelType).ToJson()),
-                 WellKnownProjectionSinkTypes.MongoDB
+                 WellKnownSinkTypes.MongoDB
              )).ToArray();
 
         await _connection.PerformCommand(route, registrations);

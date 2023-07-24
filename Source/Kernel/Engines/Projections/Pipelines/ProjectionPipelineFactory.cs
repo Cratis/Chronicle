@@ -51,7 +51,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
     /// <inheritdoc/>
     public IProjectionPipeline CreateFrom(IProjection projection, ProjectionPipelineDefinition definition)
     {
-        IProjectionSink sink = default!;
+        ISink sink = default!;
         if (definition.Sinks.Any())
         {
             var sinkDefinition = definition.Sinks.First();

@@ -13,13 +13,14 @@ using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Objects;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionSink"/> for projecting to the event outbox, MongoDB based.
+/// Represents an implementation of <see cref="ISink"/> for projecting to the event outbox, MongoDB based.
 /// </summary>
-public class OutboxProjectionSink : IProjectionSink, IDisposable
+public class OutboxProjectionSink : ISink, IDisposable
 {
     readonly Model _model;
     readonly IEventSequenceStorage _eventSequenceStorageProvider;
@@ -29,7 +30,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
     bool _replaying;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.Outbox;
+    public SinkTypeId TypeId => WellKnownSinkTypes.Outbox;
 
     /// <inheritdoc/>
     public ProjectionSinkTypeName Name => "MongoDB Outbox";

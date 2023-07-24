@@ -10,6 +10,7 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Projections.Outbox;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -75,7 +76,7 @@ public class OutboxProjectionsRegistrar : IParticipateInConnectionLifecycle
                 {
                     new ProjectionSinkDefinition(
                         "06ec7e41-4424-4eb3-8dd0-defb45bc055e",
-                        WellKnownProjectionSinkTypes.Outbox)
+                        WellKnownSinkTypes.Outbox)
                 });
             var serializedPipeline = JsonSerializer.SerializeToNode(pipeline, _jsonSerializerOptions)!;
 

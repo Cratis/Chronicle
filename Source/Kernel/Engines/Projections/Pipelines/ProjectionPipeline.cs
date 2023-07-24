@@ -29,14 +29,14 @@ public class ProjectionPipeline : IProjectionPipeline
     public IProjection Projection { get; }
 
     /// <inheritdoc/>
-    public IProjectionSink Sink { get; }
+    public ISink Sink { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
     /// </summary>
     /// <param name="projection">The <see cref="IProjection"/> the pipeline is for.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> to use.</param>
-    /// <param name="sink"><see cref="IProjectionSink"/> to use.</param>
+    /// <param name="sink"><see cref="ISink"/> to use.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
     /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
@@ -44,7 +44,7 @@ public class ProjectionPipeline : IProjectionPipeline
     public ProjectionPipeline(
         IProjection projection,
         IEventSequenceStorage eventProvider,
-        IProjectionSink sink,
+        ISink sink,
         IObjectComparer objectComparer,
         IChangesetStorage changesetStorage,
         ITypeFormats typeFormats,

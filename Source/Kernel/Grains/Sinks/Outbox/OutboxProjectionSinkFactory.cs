@@ -5,6 +5,7 @@ using System.Text.Json;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
 
@@ -19,7 +20,7 @@ public class OutboxProjectionSinkFactory : IProjectionSinkFactory
     readonly IGrainFactory _grainFactory;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.Outbox;
+    public SinkTypeId TypeId => WellKnownSinkTypes.Outbox;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxProjectionSinkFactory"/> class.
@@ -41,7 +42,7 @@ public class OutboxProjectionSinkFactory : IProjectionSinkFactory
     }
 
     /// <inheritdoc/>
-    public IProjectionSink CreateFor(Model model) =>
+    public ISink CreateFor(Model model) =>
         new OutboxProjectionSink(
             model,
             _eventSequenceStorageProvider,

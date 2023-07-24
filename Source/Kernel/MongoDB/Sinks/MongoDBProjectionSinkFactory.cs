@@ -6,6 +6,7 @@ using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Sinks;
 using Aksio.MongoDB;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
@@ -22,7 +23,7 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
     readonly Storage _configuration;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
+    public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <summary>
     /// /// Initializes a new instance of the <see cref="MongoDBProjectionSinkFactory"/> class.
@@ -47,7 +48,7 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
     }
 
     /// <inheritdoc/>
-    public IProjectionSink CreateFor(Model model) =>
+    public ISink CreateFor(Model model) =>
         new MongoDBProjectionSink(
             model,
             _executionContextManager,
