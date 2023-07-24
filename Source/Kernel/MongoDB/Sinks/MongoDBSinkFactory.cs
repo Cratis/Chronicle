@@ -58,13 +58,18 @@ public class MongoDBSinkFactory : ISinkFactory
         var client = _clientFactory.Create(url);
         var database = client.GetDatabase(url.DatabaseName);
 
-        return new MongoDBSink(
-            model,
-            new MongoDBConverter(
+        var mongoDBConverter = new MongoDBConverter(
                 _expandoObjectConverter,
                 _typeFormats,
-                model),
-            new MongoDBSinkCollections(database, model),
+                model);
+        var collections = new MongoDBSinkCollections(database, model);
+        var changesetConverter = new MongoDBChangesetConverter(model, mongoDBConverter, collections, _expandoObjectConverter);
+
+        return new MongoDBSink(
+            model,
+            mongoDBConverter,
+            collections,
+            changesetConverter,
             _expandoObjectConverter);
     }
 }
