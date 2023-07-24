@@ -26,7 +26,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in MongoDB.
 /// </summary>
-public class MongoDBProjectionSink : ISink, IDisposable
+public class MongoDBSink : ISink, IDisposable
 {
     readonly Model _model;
     readonly IExecutionContextManager _executionContextManager;
@@ -45,7 +45,7 @@ public class MongoDBProjectionSink : ISink, IDisposable
     string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBProjectionSink"/> class.
+    /// Initializes a new instance of the <see cref="MongoDBSink"/> class.
     /// </summary>
     /// <param name="model"><see cref="Model"/> the store is for.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
@@ -53,7 +53,7 @@ public class MongoDBProjectionSink : ISink, IDisposable
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-    public MongoDBProjectionSink(
+    public MongoDBSink(
         Model model,
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,

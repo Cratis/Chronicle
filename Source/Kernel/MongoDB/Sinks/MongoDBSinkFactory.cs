@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 /// <summary>
 /// Represents an implementation of <see cref="ISinkFactory"/>.
 /// </summary>
-public class MongoDBProjectionSinkFactory : ISinkFactory
+public class MongoDBSinkFactory : ISinkFactory
 {
     readonly IMongoDBClientFactory _clientFactory;
     readonly IExpandoObjectConverter _expandoObjectConverter;
@@ -26,14 +26,14 @@ public class MongoDBProjectionSinkFactory : ISinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <summary>
-    /// /// Initializes a new instance of the <see cref="MongoDBProjectionSinkFactory"/> class.
+    /// /// Initializes a new instance of the <see cref="MongoDBSinkFactory"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> to use.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
-    public MongoDBProjectionSinkFactory(
+    public MongoDBSinkFactory(
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
         IExpandoObjectConverter expandoObjectConverter,
@@ -49,7 +49,7 @@ public class MongoDBProjectionSinkFactory : ISinkFactory
 
     /// <inheritdoc/>
     public ISink CreateFor(Model model) =>
-        new MongoDBProjectionSink(
+        new MongoDBSink(
             model,
             _executionContextManager,
             _clientFactory,
