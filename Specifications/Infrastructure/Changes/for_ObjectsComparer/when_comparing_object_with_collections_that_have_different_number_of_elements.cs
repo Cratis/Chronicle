@@ -3,7 +3,7 @@
 
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Changes.for_ObjectsComparer;
+namespace Aksio.Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_collections_that_have_different_number_of_elements : given.an_object_comparer
 {

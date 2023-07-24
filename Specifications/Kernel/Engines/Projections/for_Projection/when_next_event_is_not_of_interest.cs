@@ -13,7 +13,7 @@ public class when_next_event_is_not_of_interest : given.a_projection
     bool observed;
     AppendedEvent @event;
     Changeset<AppendedEvent, ExpandoObject> changeset;
-    Mock<IObjectsComparer> objects_comparer;
+    Mock<IObjectComparer> objects_comparer;
 
     void Establish()
     {

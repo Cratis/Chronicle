@@ -54,6 +54,9 @@ public class ObjectComparer : IObjectComparer
 
     void CompareDictionaryValues(IDictionary<string, object> left, IDictionary<string, object> right, PropertyPath currentPropertyPath, List<PropertyDifference> differences)
     {
+        left ??= new Dictionary<string, object>();
+        right ??= new Dictionary<string, object>();
+
         var keys = left.Keys.ToList();
         keys.AddRange(right.Keys);
 

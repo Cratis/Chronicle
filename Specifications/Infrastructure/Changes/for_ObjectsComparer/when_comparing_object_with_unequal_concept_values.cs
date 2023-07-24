@@ -4,7 +4,7 @@
 using Aksio.Concepts;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Changes.for_ObjectsComparer;
+namespace Aksio.Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_unequal_concept_values : given.an_object_comparer
 {
