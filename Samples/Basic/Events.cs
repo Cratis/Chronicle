@@ -1,14 +1,22 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Concepts;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Reducers;
 
 namespace Basic;
 
-public record PersonId(Guid Value) : EventTypeId(Value);
+public record CartId(Guid Value) : ConceptAs<Guid>(Value)
+{
+    public static implicit operator CartId(Guid value) => new(value);
 
-public record MaterialId(Guid Value) : EventTypeId(Value);
+    public static implicit operator CartId(EventSourceId value) => new(Guid.Parse(value.Value));
+}
+
+public record PersonId(Guid Value) : ConceptAs<Guid>(Value);
+
+public record MaterialId(Guid Value) : ConceptAs<Guid>(Value);
 
 [EventType("cf3a0eef-42a6-44e9-9d1c-3d48c22cafc0")]
 public record MyEvent();
@@ -24,39 +32,42 @@ public record QuantityAdjustedForItemInCart(PersonId PersonId, MaterialId Materi
 
 public record CartItem(MaterialId MaterialId, int Quantity);
 
-public record Cart(IEnumerable<CartItem> Items);
+public record Cart(CartId Id, IEnumerable<CartItem> Items);
 
 public record EventKeyContext<TEvent>(TEvent Event, EventContext EventContext);
 
 [Reducer("ff449077-0adb-4c5c-90e6-15631cd9e2b1")]
 public class CartReducer : IReducerFor<Cart>
 {
-    public Task<Cart> On(ItemAddedToCart @event, Cart? initial)
+    public Task<Cart> On(ItemAddedToCart @event, Cart? initial, EventContext context)
     {
-        initial ??= new Cart(Array.Empty<CartItem>());
+        initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
         {
-            Items = initial.Items.Append(new CartItem(@event.MaterialId, @event.Quantity))
+            Items = initial.Items?.Append(new CartItem(@event.MaterialId, @event.Quantity)) ??
+                new[] { new CartItem(@event.MaterialId, @event.Quantity) }
         });
     }
 
-    public Task<Cart> On(ItemRemovedFromCart @event, Cart? initial)
+    public Task<Cart> On(ItemRemovedFromCart @event, Cart? initial, EventContext context)
     {
-        initial ??= new Cart(Array.Empty<CartItem>());
+        initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
         {
-            Items = initial.Items.Where(_ => _.MaterialId != @event.MaterialId).ToArray()
+            Items = initial.Items?.Where(_ => _.MaterialId != @event.MaterialId).ToArray() ??
+                Array.Empty<CartItem>()
         });
     }
 
-  public Task<Cart> On(QuantityAdjustedForItemInCart @event, Cart? initial)
+    public Task<Cart> On(QuantityAdjustedForItemInCart @event, Cart? initial, EventContext context)
     {
-        initial ??= new Cart(Array.Empty<CartItem>());
+        initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
         {
             Items = initial.Items.Select(item => item.MaterialId == @event.MaterialId ? new CartItem(item.MaterialId, @event.Quantity) : item).ToArray()
         });
-    }}
+    }
+}
 
 /*
 Client
