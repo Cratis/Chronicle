@@ -6,7 +6,7 @@ using Aksio.Cratis.Compliance.MongoDB;
 using Aksio.Cratis.Events.Schemas.MongoDB;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Compliance;
-using Aksio.Cratis.Kernel.Engines.Projections.Changes;
+using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;

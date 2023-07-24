@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Engines.Projections.Changes;
+using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;

@@ -5,7 +5,7 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Changes;
+namespace Aksio.Cratis.Kernel.Engines.Changes;
 
 /// <summary>
 /// Defines the storage mechanism for changesets. Typically used for debugging purposes to see what changes has occurred.

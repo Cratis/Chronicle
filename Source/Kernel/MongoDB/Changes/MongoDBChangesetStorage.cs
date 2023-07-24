@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Engines.Projections.Changes;
+using Aksio.Cratis.Kernel.Engines.Changes;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Projections;
 

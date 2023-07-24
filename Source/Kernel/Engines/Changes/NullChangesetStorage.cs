@@ -5,7 +5,7 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.Changes;
+namespace Aksio.Cratis.Kernel.Engines.Changes;
 
 /// <summary>
 /// Represents a null <see cref="IChangesetStorage"/> that does nothing.
