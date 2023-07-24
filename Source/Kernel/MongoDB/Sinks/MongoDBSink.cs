@@ -1,9 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections;
 using System.Dynamic;
-using System.Text;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Configuration;
@@ -14,7 +12,6 @@ using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 using Aksio.MongoDB;
-using Aksio.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
@@ -32,9 +29,9 @@ public class MongoDBSink : ISink, IDisposable
     readonly IExecutionContextManager _executionContextManager;
     readonly IMongoDBClientFactory _clientFactory;
     readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ITypeFormats _typeFormats;
     readonly Storage _configuration;
     readonly IMongoDatabase _database;
+    readonly IMongoDBConverter _converter;
 
     /// <inheritdoc/>
     public SinkTypeName Name => "MongoDB";
@@ -50,23 +47,23 @@ public class MongoDBSink : ISink, IDisposable
     /// <param name="model"><see cref="Model"/> the store is for.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/>.</param>
+    /// <param name="mongoDBConverterFactory"><see cref="IMongoDBConverterFactory"/> for creating converters.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public MongoDBSink(
         Model model,
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
+        IMongoDBConverterFactory mongoDBConverterFactory,
         IExpandoObjectConverter expandoObjectConverter,
-        ITypeFormats typeFormats,
         Storage configuration)
     {
         _model = model;
         _executionContextManager = executionContextManager;
         _clientFactory = clientFactory;
         _expandoObjectConverter = expandoObjectConverter;
-        _typeFormats = typeFormats;
         _configuration = configuration;
+        _converter = mongoDBConverterFactory.CreateFor(model);
         _database = GetDatabase();
     }
 
@@ -75,7 +72,7 @@ public class MongoDBSink : ISink, IDisposable
     {
         var collection = GetCollection(isReplaying);
 
-        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key)));
+        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key)));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
@@ -92,7 +89,7 @@ public class MongoDBSink : ISink, IDisposable
         UpdateDefinition<BsonDocument>? updateBuilder = default;
         var hasChanges = false;
 
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key));
+        var filter = Builders<BsonDocument>.Filter.Eq("_id", _converter.ToBsonValue(key));
         var collection = GetCollection(isReplaying);
 
         if (changeset.HasBeenRemoved())
@@ -195,10 +192,10 @@ public class MongoDBSink : ISink, IDisposable
 
                         foreach (var propertyDifference in propertiesChanged.Differences)
                         {
-                            var (property, arrayFilters) = ConvertToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
+                            var (property, arrayFilters) = _converter.ToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
                             allArrayFilters.AddRange(arrayFilters);
 
-                            var value = ConvertToBsonValueForKnownTargetProperty(propertyDifference.Changed, propertyDifference.PropertyPath);
+                            var value = _converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);
 
                             if (updateBuilder != default)
                             {
@@ -230,7 +227,7 @@ public class MongoDBSink : ISink, IDisposable
 
                         childrenProperty += segments[^1].Value;
                         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
-                        var (property, arrayFilters) = ConvertToMongoDBProperty(childrenProperty, arrayIndexers);
+                        var (property, arrayFilters) = _converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
                         arrayFiltersForDocument.AddRange(arrayFilters);
 
                         if (updateBuilder is not null)
@@ -248,12 +245,12 @@ public class MongoDBSink : ISink, IDisposable
 
                 case Joined joined:
                     {
-                        var (property, arrayFilters) = ConvertToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
+                        var (property, arrayFilters) = _converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
 
                         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
                         var hasJoinChanges = false;
 
-                        var serializedKey = GetBsonValueFrom(key.Value);
+                        var serializedKey = _converter.ToBsonValue(key.Value);
                         var filter = Builders<BsonDocument>.Filter.Eq(property, joined.Key);
 
                         var collection = GetCollection(isReplaying);
@@ -263,7 +260,6 @@ public class MongoDBSink : ISink, IDisposable
 
                         if (hasJoinChanges)
                         {
-                            // var rendered = joinUpdateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
                             joinTasks.Add(collection.UpdateOneAsync(
                                 filter,
                                 joinUpdateBuilder,
@@ -287,146 +283,6 @@ public class MongoDBSink : ISink, IDisposable
         return Task.WhenAll(joinTasks);
     }
 
-    BsonValue ConvertKeyToBsonValue(Key key)
-    {
-        var bsonValue = key.Value is ExpandoObject ?
-                _expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, _model.Schema.GetSchemaForPropertyPath("id")) :
-                ConvertToBsonValueForKnownTargetProperty(key.Value, "id");
-
-        // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
-        if (bsonValue == BsonNull.Value)
-        {
-            return new BsonString(key.Value.ToString());
-        }
-
-        return bsonValue;
-    }
-
-    BsonValue ConvertToBsonValueForKnownTargetProperty(object? input, PropertyPath property)
-    {
-        BsonValue value = BsonNull.Value;
-        var schemaProperty = _model.Schema.GetSchemaPropertyForPropertyPath(property);
-        if (schemaProperty is not null)
-        {
-            return ConvertToBsonValue(input, schemaProperty);
-        }
-
-        return value;
-    }
-
-    BsonValue ConvertToBsonValue(object? input, JsonSchemaProperty schemaProperty)
-    {
-        if (_typeFormats.IsKnown(schemaProperty.Format))
-        {
-            var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
-            return input.ToBsonValue(targetType);
-        }
-
-        if (input is IEnumerable enumerable)
-        {
-            var items = new List<BsonValue>();
-            foreach (var item in enumerable)
-            {
-                if (item is ExpandoObject itemAsExpandoObject)
-                {
-                    items.Add(_expandoObjectConverter.ToBsonDocument(itemAsExpandoObject, schemaProperty.Item));
-                }
-                else
-                {
-                    items.Add(ConvertToBsonValue(item, schemaProperty));
-                }
-            }
-            return new BsonArray(items);
-        }
-
-        var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
-        if (value == BsonNull.Value && input is ExpandoObject expandoObject)
-        {
-            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
-        }
-
-        return value;
-    }
-
-    BsonValue GetBsonValueFrom(object value)
-    {
-        if (value is ExpandoObject expandoObject)
-        {
-            var expandoObjectAsDictionary = expandoObject as IDictionary<string, object>;
-            var document = new BsonDocument();
-
-            foreach (var kvp in expandoObjectAsDictionary)
-            {
-                document[GetNameForPropertyInBsonDocument(kvp.Key)] = GetBsonValueFrom(kvp.Value);
-            }
-
-            return document;
-        }
-
-        var bsonValue = value.ToBsonValue();
-        if (bsonValue == BsonNull.Value && value is IEnumerable enumerable)
-        {
-            var array = new BsonArray();
-
-            foreach (var item in enumerable)
-            {
-                array.Add(GetBsonValueFrom(item));
-            }
-
-            return array;
-        }
-
-        return bsonValue;
-    }
-
-    (string Property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters) ConvertToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
-    {
-        var arrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
-        var propertyBuilder = new StringBuilder();
-        var currentPropertyPath = new PropertyPath(string.Empty);
-
-        foreach (var segment in propertyPath.Segments)
-        {
-            if (propertyBuilder.Length > 0)
-            {
-                propertyBuilder.Append('.');
-            }
-
-            currentPropertyPath += segment;
-            switch (segment)
-            {
-                case PropertyName:
-                    {
-                        propertyBuilder.Append(segment.Value);
-                    }
-                    break;
-
-                case ArrayProperty:
-                    {
-                        var collectionIdentifier = currentPropertyPath.LastSegment.Value.ToCamelCase();
-                        if (arrayIndexers.HasFor(currentPropertyPath))
-                        {
-                            var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
-                            propertyBuilder.AppendFormat("{0}.$[{1}]", segment.Value, collectionIdentifier);
-                            var filter = new ExpandoObject();
-                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{arrayIndexer.IdentifierProperty}", arrayIndexer.Identifier);
-                            var document = GetBsonValueFrom(filter) as BsonDocument;
-                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(document));
-                        }
-                        else
-                        {
-                            propertyBuilder.Append(segment.Value);
-                        }
-                    }
-                    break;
-            }
-        }
-
-        var property = propertyBuilder.ToString();
-        if (property == "id") property = "_id";
-        return (Property: property, ArrayFilters: arrayFilters.ToArray());
-    }
-
     IMongoDatabase GetDatabase()
     {
         // TODO: Improve this! - Perhaps create a read model repository wrapper that caches per tenant.
@@ -439,13 +295,4 @@ public class MongoDBSink : ISink, IDisposable
     }
 
     IMongoCollection<BsonDocument> GetCollection(bool isReplaying) => isReplaying ? _database.GetCollection<BsonDocument>(ReplayCollectionName) : _database.GetCollection<BsonDocument>(_model.Name);
-
-    string GetNameForPropertyInBsonDocument(string name)
-    {
-        if (name == "id")
-        {
-            return "_id";
-        }
-        return name;
-    }
 }

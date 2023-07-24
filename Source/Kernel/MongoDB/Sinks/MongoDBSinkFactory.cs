@@ -5,7 +5,6 @@ using System.Dynamic;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 using Aksio.MongoDB;
 
@@ -17,8 +16,8 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 public class MongoDBSinkFactory : ISinkFactory
 {
     readonly IMongoDBClientFactory _clientFactory;
+    readonly IMongoDBConverterFactory _mongoDBConverterFactory;
     readonly IExpandoObjectConverter _expandoObjectConverter;
-    readonly ITypeFormats _typeFormats;
     readonly IExecutionContextManager _executionContextManager;
     readonly Storage _configuration;
 
@@ -30,20 +29,20 @@ public class MongoDBSinkFactory : ISinkFactory
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with execution context.</param>
     /// <param name="clientFactory"><see cref="IMongoDBClientFactory"/> to use.</param>
+    /// <param name="mongoDBConverterFactory"><see cref="IMongoDBConverterFactory"/> for creating converters.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
-    /// <param name="typeFormats">The <see cref="ITypeFormats"/> for looking up actual types.</param>
     /// <param name="configuration"><see cref="Storage"/> configuration.</param>
     public MongoDBSinkFactory(
         IExecutionContextManager executionContextManager,
         IMongoDBClientFactory clientFactory,
+        IMongoDBConverterFactory mongoDBConverterFactory,
         IExpandoObjectConverter expandoObjectConverter,
-        ITypeFormats typeFormats,
         Storage configuration)
     {
         _executionContextManager = executionContextManager;
         _clientFactory = clientFactory;
+        _mongoDBConverterFactory = mongoDBConverterFactory;
         _expandoObjectConverter = expandoObjectConverter;
-        _typeFormats = typeFormats;
         _configuration = configuration;
     }
 
@@ -53,7 +52,7 @@ public class MongoDBSinkFactory : ISinkFactory
             model,
             _executionContextManager,
             _clientFactory,
+            _mongoDBConverterFactory,
             _expandoObjectConverter,
-            _typeFormats,
             _configuration);
 }
