@@ -15,7 +15,7 @@ public class when_getting_for_model_and_external_model : Specification
     Mock<IAdapterFor<Model, ExternalModel>> adapter;
     Mock<IAdapterProjectionFor<Model>> projection;
     Mock<IMapper> mapper;
-    Mock<IObjectsComparer> objects_comparer;
+    Mock<IObjectComparer> objects_comparer;
 
     Importer importer;
 

@@ -11,7 +11,7 @@ public class no_changes : all_dependencies_for<SomeEvent>
     protected Model initial;
     protected ExternalModel incoming;
     protected ImportOperations<Model, ExternalModel> operations;
-    protected Mock<IObjectsComparer> objects_comparer;
+    protected Mock<IObjectComparer> objects_comparer;
 
     void Establish()
     {

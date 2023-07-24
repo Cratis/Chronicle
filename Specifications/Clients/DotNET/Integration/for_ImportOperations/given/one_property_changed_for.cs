@@ -12,7 +12,7 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
     protected Model mapped;
     protected ExternalModel incoming;
     protected ImportOperations<Model, ExternalModel> operations;
-    protected Mock<IObjectsComparer> objects_comparer;
+    protected Mock<IObjectComparer> objects_comparer;
 
     void Establish()
     {
