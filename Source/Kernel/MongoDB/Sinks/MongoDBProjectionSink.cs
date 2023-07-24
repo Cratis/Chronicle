@@ -8,6 +8,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
@@ -17,7 +18,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Projections;
+namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
 

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Changes;
-using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.Cratis.Projections;
 using NJsonSchema;

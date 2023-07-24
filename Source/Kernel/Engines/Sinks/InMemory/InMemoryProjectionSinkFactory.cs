@@ -5,7 +5,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.InMemory;
+namespace Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSinkFactory"/> for <see cref="InMemoryProjectionSink"/>.

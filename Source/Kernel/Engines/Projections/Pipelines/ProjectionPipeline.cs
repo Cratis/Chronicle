@@ -6,6 +6,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
+using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Types;

@@ -4,12 +4,13 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections;
+namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
-/// Defines the storage for <see cref="IProjection">projections</see>.
+/// Defines the storage for read models.
 /// </summary>
 public interface IProjectionSink
 {

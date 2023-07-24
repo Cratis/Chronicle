@@ -5,13 +5,14 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;
 using Aksio.Reflection;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.InMemory;
+namespace Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSink"/> for working with projections in memory.

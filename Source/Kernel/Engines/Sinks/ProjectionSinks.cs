@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using Aksio.Cratis.Projections;
 using Aksio.Types;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections;
+namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSinkFactory"/>.

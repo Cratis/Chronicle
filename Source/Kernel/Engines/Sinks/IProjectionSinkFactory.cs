@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections;
+namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
 /// Defines a factory that can create instances of <see cref="IProjectionSink"/> for a specific <see cref="ProjectionSinkTypeId"/>.

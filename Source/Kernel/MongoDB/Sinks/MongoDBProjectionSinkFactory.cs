@@ -3,12 +3,12 @@
 
 using System.Dynamic;
 using Aksio.Cratis.Kernel.Configuration;
-using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 using Aksio.MongoDB;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Projections;
+namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSinkFactory"/>.

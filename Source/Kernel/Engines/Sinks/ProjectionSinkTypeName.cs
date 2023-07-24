@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections;
+namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
 /// Represents a friendly name for a type of <see cref="IProjectionSink"/>.

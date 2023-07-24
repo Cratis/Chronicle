@@ -3,10 +3,10 @@
 
 using System.Text.Json;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;
+namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
 
 /// <summary>
 /// Represents a <see cref="IProjectionSinkFactory"/> for creating <see cref="OutboxProjectionSink"/> instances.

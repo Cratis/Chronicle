@@ -8,12 +8,13 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Objects;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Schemas;
 
-namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;
+namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSink"/> for projecting to the event outbox, MongoDB based.

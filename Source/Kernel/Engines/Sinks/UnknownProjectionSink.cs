@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections;
+namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
 /// Exception that gets thrown when an unknown <see cref="IProjectionSink"/> is used.
