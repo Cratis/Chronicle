@@ -5,6 +5,7 @@ using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
+using Aksio.Cratis.Observation.Reducers;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
@@ -94,7 +95,7 @@ public class ReducersRegistrar : IReducersRegistrar
         var microserviceId = _executionContextManager.Current.MicroserviceId;
         var route = $"/api/events/store/{microserviceId}/reducers/register/{_connection.ConnectionId}";
 
-        var registrations = _handlers.Values.Select(_ => new ClientReducerRegistration(
+        var registrations = _handlers.Values.Select(_ => new ReducerDefinition(
              _.ReducerId,
              _.Name,
              _.EventSequenceId,

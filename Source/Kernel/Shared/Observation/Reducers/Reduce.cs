@@ -4,7 +4,7 @@
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Reducers;
+namespace Aksio.Cratis.Observation.Reducers;
 
 /// <summary>
 /// Represents the payload for a reduce operation.

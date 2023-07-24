@@ -4,7 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Projections;
 
-namespace Aksio.Cratis.Reducers;
+namespace Aksio.Cratis.Observation.Reducers;
 
 /// <summary>
 /// Represents the definition of an event type with key.

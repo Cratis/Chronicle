@@ -3,8 +3,7 @@
 
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
-using Aksio.Cratis.Observation;
-using Aksio.Cratis.Reducers;
+using Aksio.Cratis.Observation.Reducers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -37,20 +36,20 @@ public class Reducers : Controller
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> to register with.</param>
-    /// <param name="registrations">Collection of <see cref="ClientObserverRegistration"/>.</param>
+    /// <param name="definitions">Collection of <see cref="ReducerDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("register/{connectionId}")]
     public Task Register(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] ConnectionId connectionId,
-        [FromBody] IEnumerable<ClientReducerRegistration> registrations)
+        [FromBody] IEnumerable<ReducerDefinition> definitions)
     {
         _logger.RegisterReducers();
 
         _ = Task.Run(() =>
         {
             var observers = _grainFactory.GetGrain<IClientReducers>(microserviceId);
-            return observers.Register(connectionId, registrations);
+            return observers.Register(connectionId, definitions);
         });
 
         return Task.CompletedTask;

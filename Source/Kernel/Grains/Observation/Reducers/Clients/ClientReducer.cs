@@ -4,7 +4,7 @@
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Reducers;
+using Aksio.Cratis.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;

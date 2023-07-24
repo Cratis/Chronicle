@@ -7,16 +7,15 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Commands;
-using Aksio.Cratis.Changes;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Properties;
-using Aksio.Cratis.Reducers;
+using Aksio.Cratis.Observation.Reducers;
+using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 
@@ -29,15 +28,17 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
 {
     readonly ILogger<ClientReducerSubscriber> _logger;
     readonly IHttpClientFactory _httpClientFactory;
-    readonly IObjectComparer _objectComparer;
-    readonly IProjectionSink _projectionSink;
+    readonly IExecutionContextManager _executionContextManager;
+    readonly ProviderFor<IReducerPipelineDefinitions> _reducerPipelineDefinitionsProvider;
+    readonly IReducerPipelineFactory _reducerPipelineFactory;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     MicroserviceId _microserviceId = MicroserviceId.Unspecified;
-    ObserverId _observerId = ObserverId.Unspecified;
+    ReducerId _reducerId = ObserverId.Unspecified;
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
+    IReducerPipeline? _pipeline;
     IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
 
     /// <summary>
@@ -45,43 +46,49 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     /// </summary>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> for connecting to the client.</param>
-    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing changes applied.</param>
-    /// <param name="projectionSink"></param>
-    /// <param name="expandoObjectConverter"></param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="reducerPipelineDefinitionsProvider"><see cref="IReducerPipelineDefinitions"/> to get pipeline definitions from.</param>
+    /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating instances of <see cref="IReducerPipeline"/>.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and <see cref="ExpandoObject"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     public ClientReducerSubscriber(
         ILogger<ClientReducerSubscriber> logger,
         IHttpClientFactory httpClientFactory,
-        IObjectComparer objectComparer,
-        IProjectionSink projectionSink,
+        IExecutionContextManager executionContextManager,
+        ProviderFor<IReducerPipelineDefinitions> reducerPipelineDefinitionsProvider,
+        IReducerPipelineFactory reducerPipelineFactory,
         IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
-        _objectComparer = objectComparer;
-        _projectionSink = projectionSink;
+        _executionContextManager = executionContextManager;
+        _reducerPipelineDefinitionsProvider = reducerPipelineDefinitionsProvider;
+        _reducerPipelineFactory = reducerPipelineFactory;
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var id = this.GetPrimaryKey(out var keyAsString);
         var key = ObserverSubscriberKey.Parse(keyAsString);
         _microserviceId = key.MicroserviceId;
-        _observerId = id;
+        _reducerId = id;
         _tenantId = key.TenantId;
         _eventSequenceId = key.EventSequenceId;
-        return Task.CompletedTask;
+
+        _executionContextManager.Establish(_tenantId, _executionContextManager.Current.CorrelationId, _microserviceId);
+        var definition = await _reducerPipelineDefinitionsProvider().GetFor(_reducerId);
+        _pipeline = await _reducerPipelineFactory.CreateFrom(definition);
     }
 
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
     {
         _logger.EventReceived(
-            _observerId.Value,
+            _reducerId.Value,
             _microserviceId,
             _tenantId,
             @event.Metadata.Type.Id,
@@ -95,45 +102,39 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
             {
                 using var httpClient = _httpClientFactory.CreateClient(ConnectedClients.ConnectedClientsHttpClient);
                 httpClient.BaseAddress = connectedClient.ClientUri;
-
-                // Get the current state from the sink
-                var isReplaying = @event.Context.ObservationState.HasFlag(EventObservationState.Replay);
-
-                // Resolve key through key resolvers
-                var key = new Key(@event.Context.EventSourceId, ArrayIndexers.NoIndexers);
-                var initial = await _projectionSink.FindOrDefault(key, isReplaying);
-
-                var initialAsJson = _expandoObjectConverter.ToJsonObject(initial, null!);
-                var reduce = new Reduce(new[] { @event }, initialAsJson);
-
-                using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
-                httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
-                var response = await httpClient.PostAsync($"/.cratis/reducers/{_observerId}", jsonContent);
-                var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
                 var state = ObserverSubscriberState.Ok;
+                var commandResult = CommandResult.Success;
 
-                // Convert command result to ExpandoObject
-                var responseAsJson = commandResult.Response as JsonObject;
-                var reduced = _expandoObjectConverter.ToExpandoObject(responseAsJson!, null!);
+                await (_pipeline?.Handle(@event, async (_, initial) =>
+                {
+                    var reduce = new Reduce(
+                        new[] { @event },
+                        initial is not null ?
+                            _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) :
+                            null);
+                    using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
+                    httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
+                    var response = await httpClient.PostAsync($"/.cratis/reducers/{_reducerId}", jsonContent);
+                    commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
 
-                // Compare existing to new state and create a change set
-                // On OK, apply changes to sink
-                var changeset = new Changeset<ExpandoObject, ExpandoObject>(_objectComparer, reduced, initial);
-                if (!_objectComparer.Equals(initial, reduced, out var differences))
-                {
-                    changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
-                }
-                _projectionSink.Apply(key, changeset);
+                    if (response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
+                        state = ObserverSubscriberState.Disconnected;
+                    }
+                    else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
+                    {
+                        state = ObserverSubscriberState.Failed;
+                    }
 
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    await ConnectedClientsGrain.OnClientDisconnected(connectedClient.ConnectionId, "Client not found");
-                    state = ObserverSubscriberState.Disconnected;
-                }
-                else if (response.StatusCode != HttpStatusCode.OK || !commandResult.IsSuccess)
-                {
-                    state = ObserverSubscriberState.Failed;
-                }
+                    if (commandResult.Response is not null && commandResult.Response is JsonElement jsonElement)
+                    {
+                        var responseAsJson = JsonObject.Create(jsonElement);
+                        return _expandoObjectConverter.ToExpandoObject(responseAsJson!, _pipeline.ReadModel.Schema);
+                    }
+
+                    return new ExpandoObject();
+                }) ?? Task.CompletedTask);
 
                 return new ObserverSubscriberResult(state, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
             }

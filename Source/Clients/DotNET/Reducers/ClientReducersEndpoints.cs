@@ -3,6 +3,7 @@
 
 using System.Net;
 using Aksio.Commands;
+using Aksio.Cratis.Observation.Reducers;
 using Aksio.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

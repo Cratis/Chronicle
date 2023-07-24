@@ -320,20 +320,27 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             return input.ToBsonValue(targetType);
         }
 
-        var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
-        if (value == BsonNull.Value && input is ExpandoObject expandoObject)
-        {
-            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
-        }
-
-        if (value == BsonNull.Value && value is IEnumerable enumerable)
+        if (input is IEnumerable enumerable)
         {
             var items = new List<BsonValue>();
             foreach (var item in enumerable)
             {
-                items.Add(ConvertToBsonValue(item, schemaProperty));
+                if (item is ExpandoObject itemAsExpandoObject)
+                {
+                    items.Add(_expandoObjectConverter.ToBsonDocument(itemAsExpandoObject, schemaProperty.Item));
+                }
+                else
+                {
+                    items.Add(ConvertToBsonValue(item, schemaProperty));
+                }
             }
             return new BsonArray(items);
+        }
+
+        var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
+        if (value == BsonNull.Value && input is ExpandoObject expandoObject)
+        {
+            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
         }
 
         return value;
@@ -413,7 +420,9 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             }
         }
 
-        return (Property: propertyBuilder.ToString(), ArrayFilters: arrayFilters.ToArray());
+        var property = propertyBuilder.ToString();
+        if (property == "id") property = "_id";
+        return (Property: property, ArrayFilters: arrayFilters.ToArray());
     }
 
     IMongoDatabase GetDatabase()
