@@ -10,7 +10,7 @@ using Aksio.Cratis.Sinks;
 namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
-/// Defines the storage for read models.
+/// Defines the storage for changes after events has been observed.
 /// </summary>
 public interface ISink
 {
@@ -20,9 +20,9 @@ public interface ISink
     SinkTypeId TypeId { get; }
 
     /// <summary>
-    /// Gets the display friendly <see cref="ProjectionSinkTypeName"/>.
+    /// Gets the display friendly <see cref="SinkTypeName"/>.
     /// </summary>
-    ProjectionSinkTypeName Name { get; }
+    SinkTypeName Name { get; }
 
     /// <summary>
     /// Find a model by key, or return an empty object if not found.

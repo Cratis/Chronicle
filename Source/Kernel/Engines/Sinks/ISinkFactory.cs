@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Engines.Sinks;
 /// <summary>
 /// Defines a factory that can create instances of <see cref="ISink"/> for a specific <see cref="SinkTypeId"/>.
 /// </summary>
-public interface IProjectionSinkFactory
+public interface ISinkFactory
 {
     /// <summary>
     /// Gets the <see cref="SinkTypeId"/> that identifies the type of store the factory supports.

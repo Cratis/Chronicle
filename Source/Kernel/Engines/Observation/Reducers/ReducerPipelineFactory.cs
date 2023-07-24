@@ -14,16 +14,16 @@ namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 /// </summary>
 public class ReducerPipelineFactory : IReducerPipelineFactory
 {
-    readonly IProjectionSinks _projectionSinks;
+    readonly ISinks _projectionSinks;
     readonly IObjectComparer _objectComparer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerPipelineFactory"/> class.
     /// </summary>
-    /// <param name="projectionSinks"><see cref="IProjectionSinks"/> in the system.</param>
+    /// <param name="projectionSinks"><see cref="ISinks"/> in the system.</param>
     /// <param name="objectComparer"></param>
     public ReducerPipelineFactory(
-        IProjectionSinks projectionSinks,
+        ISinks projectionSinks,
         IObjectComparer objectComparer)
     {
         _projectionSinks = projectionSinks;

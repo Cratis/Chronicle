@@ -12,9 +12,9 @@ using Aksio.MongoDB;
 namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionSinkFactory"/>.
+/// Represents an implementation of <see cref="ISinkFactory"/>.
 /// </summary>
-public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
+public class MongoDBProjectionSinkFactory : ISinkFactory
 {
     readonly IMongoDBClientFactory _clientFactory;
     readonly IExpandoObjectConverter _expandoObjectConverter;

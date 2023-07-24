@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Engines.Sinks;
 /// <summary>
 /// Defines a system for working with available <see cref="ISink">projection sinks</see>.
 /// </summary>
-public interface IProjectionSinks
+public interface ISinks
 {
     /// <summary>
     /// Check if there is a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/> registered in the system.

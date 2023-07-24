@@ -9,20 +9,20 @@ using Aksio.Types;
 namespace Aksio.Cratis.Kernel.Engines.Sinks;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionSinkFactory"/>.
+/// Represents an implementation of <see cref="ISinkFactory"/>.
 /// </summary>
-public class ProjectionSinks : IProjectionSinks
+public class Sinks : ISinks
 {
     sealed record Key(SinkTypeId TypeId, Model Model);
 
-    readonly IDictionary<SinkTypeId, IProjectionSinkFactory> _factories;
+    readonly IDictionary<SinkTypeId, ISinkFactory> _factories;
     readonly ConcurrentDictionary<Key, ISink> _stores = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ProjectionSinks"/> class.
+    /// Initializes a new instance of the <see cref="Sinks"/> class.
     /// </summary>
-    /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="IProjectionSinkFactory"/>.</param>
-    public ProjectionSinks(IInstancesOf<IProjectionSinkFactory> stores)
+    /// <param name="stores"><see cref="IInstancesOf{T}"/> of <see cref="ISinkFactory"/>.</param>
+    public Sinks(IInstancesOf<ISinkFactory> stores)
     {
         _factories = stores.ToDictionary(_ => _.TypeId, _ => _);
     }
@@ -41,6 +41,6 @@ public class ProjectionSinks : IProjectionSinks
 
     void ThrowIfUnknownProjectionResultStore(SinkTypeId typeId)
     {
-        if (!HasType(typeId)) throw new UnknownProjectionSink(typeId);
+        if (!HasType(typeId)) throw new UnknownSink(typeId);
     }
 }

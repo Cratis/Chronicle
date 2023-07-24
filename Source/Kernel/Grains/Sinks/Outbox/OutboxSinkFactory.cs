@@ -10,9 +10,9 @@ using Aksio.Cratis.Sinks;
 namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
 
 /// <summary>
-/// Represents a <see cref="IProjectionSinkFactory"/> for creating <see cref="OutboxProjectionSink"/> instances.
+/// Represents a <see cref="ISinkFactory"/> for creating <see cref="OutboxSink"/> instances.
 /// </summary>
-public class OutboxProjectionSinkFactory : IProjectionSinkFactory
+public class OutboxSinkFactory : ISinkFactory
 {
     readonly IEventSequenceStorage _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
@@ -23,13 +23,13 @@ public class OutboxProjectionSinkFactory : IProjectionSinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.Outbox;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OutboxProjectionSinkFactory"/> class.
+    /// Initializes a new instance of the <see cref="OutboxSinkFactory"/> class.
     /// </summary>
     /// <param name="eventSequenceStorageProvider">The <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonSerializerOptions">The global serialization options.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public OutboxProjectionSinkFactory(
+    public OutboxSinkFactory(
         IEventSequenceStorage eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,
         JsonSerializerOptions jsonSerializerOptions,
@@ -43,7 +43,7 @@ public class OutboxProjectionSinkFactory : IProjectionSinkFactory
 
     /// <inheritdoc/>
     public ISink CreateFor(Model model) =>
-        new OutboxProjectionSink(
+        new OutboxSink(
             model,
             _eventSequenceStorageProvider,
             _executionContextManager,

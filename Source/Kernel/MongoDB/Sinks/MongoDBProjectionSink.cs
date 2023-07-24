@@ -37,7 +37,7 @@ public class MongoDBProjectionSink : ISink, IDisposable
     readonly IMongoDatabase _database;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeName Name => "MongoDB";
+    public SinkTypeName Name => "MongoDB";
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;

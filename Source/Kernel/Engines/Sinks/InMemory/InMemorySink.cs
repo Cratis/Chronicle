@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in memory.
 /// </summary>
-public class InMemoryProjectionSink : ISink, IDisposable
+public class InMemorySink : ISink, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = new();
     readonly Dictionary<object, ExpandoObject> _rewindCollection = new();
@@ -31,7 +31,7 @@ public class InMemoryProjectionSink : ISink, IDisposable
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeName Name => "InMemory";
+    public SinkTypeName Name => "InMemory";
 
     /// <summary>
     /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
@@ -39,12 +39,12 @@ public class InMemoryProjectionSink : ISink, IDisposable
     public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryProjectionSink"/> class.
+    /// Initializes a new instance of the <see cref="InMemorySink"/> class.
     /// </summary>
     /// <param name="model">The target <see cref="Model"/>.</param>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
     /// <param name="comparer"><see cref="IObjectComparer"/> used for complex comparisons of objects.</param>
-    public InMemoryProjectionSink(
+    public InMemorySink(
         Model model,
         ITypeFormats typeFormats,
         IObjectComparer comparer)

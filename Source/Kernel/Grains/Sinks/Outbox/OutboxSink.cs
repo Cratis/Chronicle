@@ -20,7 +20,7 @@ namespace Aksio.Cratis.Kernel.Grains.Sinks.Outbox;
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for projecting to the event outbox, MongoDB based.
 /// </summary>
-public class OutboxProjectionSink : ISink, IDisposable
+public class OutboxSink : ISink, IDisposable
 {
     readonly Model _model;
     readonly IEventSequenceStorage _eventSequenceStorageProvider;
@@ -33,17 +33,17 @@ public class OutboxProjectionSink : ISink, IDisposable
     public SinkTypeId TypeId => WellKnownSinkTypes.Outbox;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeName Name => "MongoDB Outbox";
+    public SinkTypeName Name => "MongoDB Outbox";
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OutboxProjectionSink"/> class.
+    /// Initializes a new instance of the <see cref="OutboxSink"/> class.
     /// </summary>
     /// <param name="model"><see cref="Model"/> the sink is for.</param>
     /// <param name="eventSequenceStorageProvider">The <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonSerializerOptions">The global serialization options.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
-    public OutboxProjectionSink(
+    public OutboxSink(
         Model model,
         IEventSequenceStorage eventSequenceStorageProvider,
         IExecutionContextManager executionContextManager,

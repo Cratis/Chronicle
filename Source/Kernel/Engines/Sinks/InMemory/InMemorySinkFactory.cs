@@ -9,9 +9,9 @@ using Aksio.Cratis.Sinks;
 namespace Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionSinkFactory"/> for <see cref="InMemoryProjectionSink"/>.
+/// Represents an implementation of <see cref="ISinkFactory"/> for <see cref="InMemorySink"/>.
 /// </summary>
-public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
+public class InMemorySinkFactory : ISinkFactory
 {
     readonly ITypeFormats _typeFormats;
     readonly IObjectComparer _comparer;
@@ -20,16 +20,16 @@ public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryProjectionSinkFactory"/> class.
+    /// Initializes a new instance of the <see cref="InMemorySinkFactory"/> class.
     /// </summary>
     /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
     /// <param name="comparer"><see cref="IObjectComparer"/> used for complex comparisons of objects.</param>
-    public InMemoryProjectionSinkFactory(ITypeFormats typeFormats, IObjectComparer comparer)
+    public InMemorySinkFactory(ITypeFormats typeFormats, IObjectComparer comparer)
     {
         _typeFormats = typeFormats;
         _comparer = comparer;
     }
 
     /// <inheritdoc/>
-    public ISink CreateFor(Model model) => new InMemoryProjectionSink(model, _typeFormats, _comparer);
+    public ISink CreateFor(Model model) => new InMemorySink(model, _typeFormats, _comparer);
 }
