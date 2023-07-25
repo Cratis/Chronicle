@@ -6,7 +6,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Commands;
-using Aksio.Configuration;
+using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Net;
 using Aksio.Queries;
