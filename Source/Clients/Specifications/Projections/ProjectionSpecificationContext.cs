@@ -7,13 +7,13 @@ using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+using Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
@@ -40,7 +40,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     readonly IProjection _projection;
     readonly IEventSequenceStorage _eventSequenceStorage;
     readonly IProjectionPipeline _pipeline;
-    readonly InMemoryProjectionSink _sink;
+    readonly InMemorySink _sink;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionSpecificationContext{TModel}"/> class.
@@ -79,7 +79,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var objectComparer = new ObjectComparer();
 
         _eventSequenceStorage = new EventSequenceStorageProviderForSpecifications(_eventLog);
-        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats, objectComparer);
+        _sink = new InMemorySink(_projection.Model, typeFormats, objectComparer);
         _pipeline = new ProjectionPipeline(
             _projection,
             _eventSequenceStorage,
