@@ -81,7 +81,7 @@ public class OrleansAzureTableStoreKernelConnection : ClusteredKernelClient
 
     void RefreshSilos()
     {
-        var options = _options.Value.Kernel.AzureStorageClusterOptions!;
+        var options = _options.Value.Kernel.AzureStorageCluster!;
         _clientLogger.GettingSilosFromStorage();
         var client = new TableClient(
             options.ConnectionString,

@@ -55,5 +55,5 @@ public class StaticClusteredKernelConnection : ClusteredKernelClient
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<Uri> Endpoints => _options.Value.Kernel.StaticClusterOptions?.Endpoints ?? Enumerable.Empty<Uri>();
+    protected override IEnumerable<Uri> Endpoints => _options.Value.Kernel.StaticCluster?.Endpoints ?? Enumerable.Empty<Uri>();
 }

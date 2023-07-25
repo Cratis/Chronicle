@@ -10,6 +10,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Outbox;
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Models;
+using Aksio.Cratis.Net;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Json;
@@ -141,6 +142,8 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
             .AddSingleton<IAdapterMapperFactory, AdapterMapperFactory>()
             .AddSingleton<IImmediateProjections, ImmediateProjections>()
+            .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
+            .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
         _logger.ConfiguringCompliance();
@@ -155,20 +158,20 @@ public class ClientBuilder : IClientBuilder
             ExecutionContextManager.SetKernelMode();
             Services.AddSingleton<IConnection, InsideKernelConnection>();
         }
-        else if (options.Value.Kernel.SingleKernelOptions is not null)
+        else if (options.Value.Kernel.AzureStorageCluster is not null)
         {
-            _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernelOptions.Endpoint);
-            Services.AddSingleton<IConnection, SingleKernelConnection>();
+            _logger.UsingOrleansAzureStorageKernelClient();
+            Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
         }
-        else if (options.Value.Kernel.StaticClusterOptions is not null)
+        else if (options.Value.Kernel.StaticCluster is not null)
         {
             _logger.UsingStaticClusterKernelClient();
             Services.AddSingleton<IConnection, StaticClusteredKernelConnection>();
         }
-        else if (options.Value.Kernel.AzureStorageClusterOptions is not null)
+        else if (options.Value.Kernel.SingleKernel is not null)
         {
-            _logger.UsingOrleansAzureStorageKernelClient();
-            Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
+            _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernel.Endpoint);
+            Services.AddSingleton<IConnection, SingleKernelConnection>();
         }
 
         if (_isMultiTenanted)
@@ -207,7 +210,7 @@ public class ClientBuilder : IClientBuilder
                 options.MicroserviceName = MicroserviceName.Unspecified;
                 options.Kernel = new()
                 {
-                    SingleKernelOptions = new()
+                    SingleKernel = new()
                 };
             });
     }

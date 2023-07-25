@@ -58,7 +58,7 @@ public class SingleKernelConnection : RestKernelConnection
     protected override HttpClient CreateHttpClient()
     {
         var client = _httpClientFactory.CreateClient();
-        client.BaseAddress = _options.Value.Kernel.SingleKernelOptions?.Endpoint;
+        client.BaseAddress = _options.Value.Kernel.SingleKernel?.Endpoint;
         return client;
     }
 }

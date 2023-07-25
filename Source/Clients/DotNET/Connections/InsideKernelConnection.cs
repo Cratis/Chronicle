@@ -58,7 +58,7 @@ public class InsideKernelConnection : IConnection, IDisposable
         endpoint = new Uri($"http://127.0.0.1:{endpoint.Port}");
         logger.InsideKernelConfigured(endpoint);
 
-        options.Value.Kernel.SingleKernelOptions = new SingleKernelOptions
+        options.Value.Kernel.SingleKernel = new SingleKernelOptions
         {
             Endpoint = endpoint
         };
