@@ -1,3 +1,10 @@
+# [v11.0.1] - 2023-7-25 [PR: #907](https://github.com/aksio-insurtech/Cratis/pull/907)
+
+### Fixed
+
+- Removing current subscription information from the Observer state being stored, as this has only an in-memory value.
+
+
 
 # [v9.0.0] - 2023-7-19
 
