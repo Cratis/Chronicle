@@ -1,3 +1,10 @@
+# [v9.0.2] - 2023-7-25 [PR: #908](https://github.com/aksio-insurtech/Cratis/pull/908)
+
+### Fixed
+
+- The `ClientOptions` type was in the wrong namespace, fixed to be in `Aksio.Cratis.Configuration` as expected.
+
+
 # [v9.0.1] - 2023-7-25 [PR: #0]()
 
 No release notes
