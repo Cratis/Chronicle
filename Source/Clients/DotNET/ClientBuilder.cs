@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
-using Aksio.Configuration;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Outbox;
