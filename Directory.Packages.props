@@ -1,20 +1,20 @@
 <Project>
-	<PropertyGroup>
-		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <ApplicationModel>1.1.12</ApplicationModel>
         <Orleans>7.1.2</Orleans>
-	</PropertyGroup>
-	<ItemGroup>
+    </PropertyGroup>
+    <ItemGroup>
         <PackageVersion Include="docfx.console" Version="2.59.3"/>
 
-		<PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
-		<PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
-		<PackageVersion Include="Aksio.Fundamentals" Version="1.3.10" />
-		<PackageVersion Include="Aksio.MongoDB" Version="1.0.18" />
-		<PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
-		<PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
-		<PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
-		<PackageVersion Include="Aksio.Applications.ProxyGenerator" Version="$(ApplicationModel)" />
+        <PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
+        <PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
+        <PackageVersion Include="Aksio.Fundamentals" Version="1.3.10" />
+        <PackageVersion Include="Aksio.MongoDB" Version="1.0.18" />
+        <PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
+        <PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
+        <PackageVersion Include="Aksio.Applications.CQRS.MongoDB" Version="$(ApplicationModel)" />
+        <PackageVersion Include="Aksio.Applications.ProxyGenerator" Version="$(ApplicationModel)" />
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
 
         <PackageVersion Include="NJsonSchema" Version="10.9.0" />
@@ -53,10 +53,10 @@
         <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.5.0-alpha.2" NoWarn="NU5104" />
 
         <!-- Specifications -->
-		<PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
-		<PackageVersion Include="xunit" Version="2.4.2" />
-		<PackageVersion Include="xunit.runner.visualstudio" Version="2.4.2" />
-		<PackageVersion Include="moq" Version="4.18.4" />
-		<PackageVersion Include="Microsoft.NET.Test.SDK" Version="16.10.0" />
-	</ItemGroup>
+        <PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
+        <PackageVersion Include="xunit" Version="2.4.2" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.2" />
+        <PackageVersion Include="moq" Version="4.18.4" />
+        <PackageVersion Include="Microsoft.NET.Test.SDK" Version="16.10.0" />
+    </ItemGroup>
 </Project>
