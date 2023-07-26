@@ -23,9 +23,9 @@
         "up": "yarn g:up"
     },
     "dependencies": {
-        "@aksio/applications": "1.0.4",
-        "@aksio/applications-mui": "1.0.4",
-        "@aksio/fundamentals": "1.0.7",
+        "@aksio/applications": "1.1.14",
+        "@aksio/applications-mui": "1.1.14",
+        "@aksio/fundamentals": "1.3.10",
         "@aksio/typescript": "1.0.0",
         "@ctrl/tinycolor": "3.4.1",
         "@emotion/react": "11.11.1",
