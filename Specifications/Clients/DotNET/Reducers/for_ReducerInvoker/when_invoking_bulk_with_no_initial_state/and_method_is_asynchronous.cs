@@ -6,6 +6,7 @@ namespace Aksio.Cratis.Reducers.for_ReducerInvoker.when_invoking_bulk_with_no_in
 public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReducer>
 {
     IEnumerable<EventAndContext> events_and_contexts;
+    InternalReduceResult reduce_result;
     ReadModel result;
 
     void Establish()
@@ -19,7 +20,11 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
         };
     }
 
-    async Task Because() => result = (await invoker.Invoke(events_and_contexts, null) as ReadModel)!;
+    async Task Because()
+    {
+        reduce_result = (await invoker.Invoke(events_and_contexts, null))!;
+        result = reduce_result.State as ReadModel;
+    }
 
     [Fact] void should_only_create_one_instance_of_the_reducer() => service_provider.Verify(_ => _.GetService(typeof(AsyncReducer)), Once);
     [Fact] void should_pass_the_events_and_contexts() => reducer.ReceivedEventsAndContexts.ShouldEqual(events_and_contexts);

@@ -12,9 +12,11 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Observation.Reducers;
+using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Observation.Reducers;
+using Aksio.Cratis.Properties;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
@@ -85,15 +87,18 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        _logger.EventReceived(
-            _reducerId.Value,
-            _microserviceId,
-            _tenantId,
-            @event.Metadata.Type.Id,
-            _eventSequenceId,
-            @event.Context.SequenceNumber);
+        foreach (var @event in events)
+        {
+            _logger.EventReceived(
+                _reducerId.Value,
+                _microserviceId,
+                _tenantId,
+                @event.Metadata.Type.Id,
+                _eventSequenceId,
+                @event.Context.SequenceNumber);
+        }
 
         if (context.Metadata is JsonElement connectedClientJsonObject)
         {
@@ -105,10 +110,16 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 var state = ObserverSubscriberState.Ok;
                 var commandResult = CommandResult.Success;
 
-                await (_pipeline?.Handle(@event, async (_, initial) =>
+                var firstEvent = events.First();
+                var reducerContext = new ReducerContext(
+                    events,
+                    new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers),
+                    firstEvent.Context.ObservationState.HasFlag(EventObservationState.Replay));
+
+                await (_pipeline?.Handle(reducerContext, async (_, initial) =>
                 {
                     var reduce = new Reduce(
-                        new[] { @event },
+                        events,
                         initial is not null ?
                             _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) :
                             null);
@@ -136,10 +147,10 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                     return new ExpandoObject();
                 }) ?? Task.CompletedTask);
 
-                return new ObserverSubscriberResult(state, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
+                return new ObserverSubscriberResult(state, EventSequenceNumber.Unavailable, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
             }
         }
 
-        return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);
+        return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
     }
 }

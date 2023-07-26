@@ -22,7 +22,7 @@ public class ReducerInvoker : IReducerInvoker
     public IEnumerable<EventType> EventTypes => _reduceMethodsByEventType.Keys;
 
     /// <inheritdoc/>
-    public Type ReadModelType { get; }
+    public Type ReadModelType { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
@@ -47,41 +47,59 @@ public class ReducerInvoker : IReducerInvoker
     }
 
     /// <inheritdoc/>
-    public Task<object> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
+    public Task<InternalReduceResult> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
         var actualReducer = _serviceProvider.GetRequiredService(_targetType);
+
+        EventAndContext? lastSuccessfulObservedEventAndContext = default;
 
         foreach (var eventAndContext in eventsAndContexts)
         {
             var eventType = _eventTypes.GetEventTypeFor(eventAndContext.Event.GetType());
             object returnValue = null!;
 
-            if (_reduceMethodsByEventType.ContainsKey(eventType))
+            try
             {
-                var method = _reduceMethodsByEventType[eventType];
-                var parameters = method.GetParameters();
+                if (_reduceMethodsByEventType.ContainsKey(eventType))
+                {
+                    var method = _reduceMethodsByEventType[eventType];
+                    var parameters = method.GetParameters();
 
-                if (parameters.Length == 3)
-                {
-                    returnValue = method.Invoke(actualReducer, new object[] { eventAndContext.Event, initialReadModelContent!, eventAndContext.Context })!;
-                }
-                else
-                {
-                    returnValue = method.Invoke(actualReducer, new object[] { eventAndContext.Event, initialReadModelContent! })!;
-                }
+                    if (parameters.Length == 3)
+                    {
+                        returnValue = method.Invoke(actualReducer, new object[] { eventAndContext.Event, initialReadModelContent!, eventAndContext.Context })!;
+                    }
+                    else
+                    {
+                        returnValue = method.Invoke(actualReducer, new object[] { eventAndContext.Event, initialReadModelContent! })!;
+                    }
 
-                if (returnValue.GetType() == ReadModelType)
-                {
-                    initialReadModelContent = returnValue;
+                    if (returnValue.GetType() == ReadModelType)
+                    {
+                        initialReadModelContent = returnValue;
+                    }
+                    else
+                    {
+                        initialReadModelContent = _getResultMethod.GetGenericMethodDefinition().MakeGenericMethod(ReadModelType).Invoke(this, new[] { returnValue });
+                    }
+
+                    lastSuccessfulObservedEventAndContext = eventAndContext;
                 }
-                else
-                {
-                    initialReadModelContent = _getResultMethod.GetGenericMethodDefinition().MakeGenericMethod(ReadModelType).Invoke(this, new[] { returnValue });
-                }
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult(
+                        new InternalReduceResult(
+                            initialReadModelContent,
+                            lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                            ex));
             }
         }
 
-        return Task.FromResult(initialReadModelContent!);
+        return Task.FromResult(
+            new InternalReduceResult(
+                initialReadModelContent,
+                lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable));
     }
 
     TReadModel GetResult<TReadModel>(Task<TReadModel> task) => task.GetAwaiter().GetResult();

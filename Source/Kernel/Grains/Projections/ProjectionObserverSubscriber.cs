@@ -75,22 +75,32 @@ public class ProjectionObserverSubscriber : Grain, IProjectionObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
         if (_pipeline is null)
         {
-            return ObserverSubscriberResult.Disconnected;
+            return ObserverSubscriberResult.Disconnected(EventSequenceNumber.Unavailable);
         }
+
+        AppendedEvent? lastSuccessfullyObservedEvent = default;
 
         try
         {
-            _executionContextManager.Establish(_tenantId, @event.Context.CorrelationId, _microserviceId);
-            await _pipeline.Handle(@event);
+            _executionContextManager.Establish(_tenantId, events.First().Context.CorrelationId, _microserviceId);
+            foreach (var @event in events)
+            {
+                await _pipeline.Handle(@event);
+                lastSuccessfullyObservedEvent = @event;
+            }
             return ObserverSubscriberResult.Ok;
         }
         catch (Exception ex)
         {
-            return new(ObserverSubscriberState.Failed, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+            return new(
+                ObserverSubscriberState.Failed,
+                lastSuccessfullyObservedEvent?.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                ex.GetAllMessages(),
+                ex.StackTrace ?? string.Empty);
         }
     }
 

@@ -41,7 +41,7 @@ public class ClientReducers
     /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
     /// <param name="initialAsJson">The initial state.</param>
     /// <returns>Reduced result.</returns>
-    public async Task<object> OnNext(
+    public async Task<InternalReduceResult> OnNext(
         ReducerId reducerId,
         IEnumerable<AppendedEvent> events,
         JsonObject? initialAsJson)
@@ -57,6 +57,6 @@ public class ClientReducers
         }
 
         _logger.UnknownReducer(reducerId);
-        return initialAsJson!;
+        return new(initialAsJson, EventSequenceNumber.Unavailable);
     }
 }

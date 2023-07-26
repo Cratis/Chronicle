@@ -6,8 +6,9 @@ namespace Aksio.Cratis.Reducers.for_ReducerInvoker.when_invoking_bulk_with_initi
 public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer>
 {
     IEnumerable<EventAndContext> events_and_contexts;
-    ReadModel result;
     ReadModel initial;
+    InternalReduceResult reduce_result;
+    ReadModel result;
 
     void Establish()
     {
@@ -21,7 +22,12 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
         };
     }
 
-    async Task Because() => result = (await invoker.Invoke(events_and_contexts, initial) as ReadModel)!;
+    async Task Because()
+    {
+        reduce_result = (await invoker.Invoke(events_and_contexts, initial))!;
+        result = reduce_result.State as ReadModel;
+    }
+
 
     [Fact] void should_only_create_one_instance_of_the_reducer() => service_provider.Verify(_ => _.GetService(typeof(SyncReducer)), Once);
     [Fact] void should_pass_the_events_and_contexts() => reducer.ReceivedEventsAndContexts.ShouldEqual(events_and_contexts);

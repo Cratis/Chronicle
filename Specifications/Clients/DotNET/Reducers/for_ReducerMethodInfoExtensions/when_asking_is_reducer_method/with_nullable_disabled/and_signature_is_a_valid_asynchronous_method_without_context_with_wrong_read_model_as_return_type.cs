@@ -3,15 +3,15 @@
 
 using Aksio.Cratis.Observation.Reducers;
 
-namespace Aksio.Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method;
+namespace Aksio.Cratis.Reducers.for_ReducerMethodInfoExtensions.when_asking_is_reducer_method.with_nullable_disabled;
 
-public class and_method_is_not_reducer_method : Specification
+public class and_signature_is_a_valid_asynchronous_method_without_context_with_wrong_read_model_as_return_type : Specification
 {
     class MyReducer : IReducerFor<ReadModel>
     {
         public ReducerId Id => "55753433-5bbd-4a79-91b6-7b6231c52183";
 
-        public void Something() { }
+        public Task<object> Something(ValidEvent @event, ReadModel current) => Task.FromResult<object>(null!);
     }
 
     bool result;

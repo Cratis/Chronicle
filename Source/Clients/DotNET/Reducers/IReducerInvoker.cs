@@ -29,5 +29,5 @@ public interface IReducerInvoker
     /// <remarks>
     /// This is to be used for events that all have a key the same as the read model.
     /// </remarks>
-    Task<object> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent);
+    Task<InternalReduceResult> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent);
 }

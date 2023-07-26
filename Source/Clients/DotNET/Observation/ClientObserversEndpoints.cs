@@ -42,8 +42,8 @@ public static class ClientObserversEndpoints
                 return;
             }
 
-            var @event = await context.Request.ReadFromJsonAsync<AppendedEvent>(Globals.JsonSerializerOptions);
-            if (@event is null)
+            var events = await context.Request.ReadFromJsonAsync<IEnumerable<AppendedEvent>>(Globals.JsonSerializerOptions);
+            if (events is null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
@@ -51,19 +51,22 @@ public static class ClientObserversEndpoints
 
             CommandResult result;
             var observers = context.RequestServices.GetRequiredService<ClientObservers>();
+            var lastSuccessfullyObservedEvent = await observers.OnNext(observerId, events);
             try
             {
-                await observers.OnNext(observerId, @event);
-
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
-                result = CommandResult.Success;
+                result = new CommandResult
+                {
+                    Response = lastSuccessfullyObservedEvent
+                };
             }
             catch (Exception ex)
             {
                 result = new CommandResult
                 {
                     ExceptionMessages = ex.GetAllMessages(),
-                    ExceptionStackTrace = ex.StackTrace ?? string.Empty
+                    ExceptionStackTrace = ex.StackTrace ?? string.Empty,
+                    Response = lastSuccessfullyObservedEvent
                 };
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             }

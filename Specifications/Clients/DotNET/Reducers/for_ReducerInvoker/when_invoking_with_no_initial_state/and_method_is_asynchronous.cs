@@ -7,7 +7,7 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
 {
     ValidEvent @event;
     EventContext event_context;
-    object result;
+    InternalReduceResult reduce_result;
 
     void Establish()
     {
@@ -15,10 +15,10 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
         event_context = new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System);
     }
 
-    async Task Because() => result = await invoker.Invoke(new EventAndContext[] { new(@event, event_context) }, null);
+    async Task Because() => reduce_result = (await invoker.Invoke(new EventAndContext[] { new(@event, event_context) }, null))!;
 
     [Fact] void should_pass_the_event() => reducer.ReceivedEvents.First().ShouldEqual(@event);
     [Fact] void should_pass_no_read_model() => reducer.ReceivedReadModels.First().ShouldBeNull();
     [Fact] void should_pass_the_event_context() => reducer.ReceivedEventContexts.First().ShouldEqual(event_context);
-    [Fact] void should_return_the_read_model() => result.ShouldEqual(reducer.ReturnedReadModel);
+    [Fact] void should_return_the_read_model() => reduce_result.State.ShouldEqual(reducer.ReturnedReadModel);
 }

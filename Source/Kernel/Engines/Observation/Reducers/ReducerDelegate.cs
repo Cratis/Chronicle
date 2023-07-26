@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 /// <summary>
 /// Represents the reducer delegate.
 /// </summary>
-/// <param name="event"><see cref="AppendedEvent"/> to reduce from.</param>
+/// <param name="events">Collection of <see cref="AppendedEvent"/> to reduce from.</param>
 /// <param name="initialState">The initial state.</param>
 /// <returns>The reduced state.</returns>
-public delegate Task<ExpandoObject> ReducerDelegate(AppendedEvent @event, ExpandoObject? initialState);
+public delegate Task<ExpandoObject> ReducerDelegate(IEnumerable<AppendedEvent> events, ExpandoObject? initialState);

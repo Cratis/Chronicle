@@ -4,10 +4,8 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Sinks;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 
@@ -41,19 +39,17 @@ public class ReducerPipeline : IReducerPipeline
     }
 
     /// <inheritdoc/>
-    public async Task Handle(AppendedEvent @event, ReducerDelegate reducer)
+    public async Task Handle(ReducerContext context, ReducerDelegate reducer)
     {
-        var isReplaying = @event.Context.ObservationState.HasFlag(EventObservationState.Replay);
-        var key = new Key(@event.Context.EventSourceId, ArrayIndexers.NoIndexers);
-        var initial = await Sink.FindOrDefault(key, isReplaying);
+        var initial = await Sink.FindOrDefault(context.Key, context.IsReplaying);
 
-        var reduced = await reducer(@event, initial);
+        var reduced = await reducer(context.Events, initial);
 
-        var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, initial ?? new ExpandoObject());
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, context.Events.First(), initial ?? new ExpandoObject());
         if (!_objectComparer.Equals(initial, reduced, out var differences))
         {
             changeset.Add(new PropertiesChanged<ExpandoObject>(null!, differences));
         }
-        await Sink.ApplyChanges(key, changeset, isReplaying);
+        await Sink.ApplyChanges(context.Key, changeset, context.IsReplaying);
     }
 }

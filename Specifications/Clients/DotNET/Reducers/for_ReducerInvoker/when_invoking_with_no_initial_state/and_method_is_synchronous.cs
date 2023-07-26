@@ -7,7 +7,7 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
 {
     ValidEvent @event;
     EventContext event_context;
-    object result;
+    InternalReduceResult result;
 
     void Establish()
     {
@@ -20,5 +20,5 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
     [Fact] void should_pass_the_event() => reducer.ReceivedEvents.First().ShouldEqual(@event);
     [Fact] void should_pass_no_read_model() => reducer.ReceivedReadModels.First().ShouldBeNull();
     [Fact] void should_pass_the_event_context() => reducer.ReceivedEventContexts.First().ShouldEqual(event_context);
-    [Fact] void should_return_the_read_model() => result.ShouldEqual(reducer.ReturnedReadModel);
+    [Fact] void should_return_the_read_model() => result.State.ShouldEqual(reducer.ReturnedReadModel);
 }

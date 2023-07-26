@@ -8,6 +8,8 @@ using Aksio.Reflection;
 
 namespace Aksio.Cratis.Reducers;
 
+#nullable disable
+
 /// <summary>
 /// Extension methods for identifying a <see cref="MethodInfo"/> as reducer method.
 /// </summary>
@@ -41,9 +43,13 @@ public static class ReducerExtensionMethods
 
         if (parameters.Length >= 2 &&
             parameters[0].ParameterType.HasAttribute<EventTypeAttribute>() &&
-            parameters[1].ParameterType.Equals(readModelType) &&
-            parameters[1].GetCustomAttributes().Any(_ => _.GetType().FullName == "System.Runtime.CompilerServices.NullableAttribute"))
+            parameters[1].ParameterType.Equals(readModelType))
         {
+            if (methodInfo.DeclaringType.IsNullableContext() && !parameters[1].IsNullableReferenceType())
+            {
+                return false;
+            }
+
             if (parameters.Length == 3)
             {
                 if (parameters[2].ParameterType == typeof(EventContext)) return true;
@@ -69,4 +75,20 @@ public static class ReducerExtensionMethods
         var reducerInterface = interfaces.Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReducerFor<>));
         return reducerInterface.GetGenericArguments()[0];
     }
+
+    /// <summary>
+    /// Check whether or not a type is in a nullable context.
+    /// </summary>
+    /// <param name="type">Type to check.</param>
+    /// <returns>True if it is in a nullable context, false if not.</returns>
+    public static bool IsNullableContext(this Type type) =>
+        type.GetCustomAttributes().Any(_ => _.GetType().FullName == "System.Runtime.CompilerServices.NullableContextAttribute");
+
+    /// <summary>
+    /// Check whether or not a member that implements <see cref="ICustomAttributeProvider"/> is a nullable reference type.
+    /// </summary>
+    /// <param name="member">Member that implements <see cref="ICustomAttributeProvider"/> to check.</param>
+    /// <returns>True if it nullable, false if not.</returns>
+    public static bool IsNullableReferenceType(this ICustomAttributeProvider member) =>
+        member.GetCustomAttributes(false).Any(_ => _.GetType().FullName == "System.Runtime.CompilerServices.NullableAttribute");
 }

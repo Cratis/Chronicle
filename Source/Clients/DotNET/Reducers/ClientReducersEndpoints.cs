@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using System.Text.Json;
 using Aksio.Commands;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.Json;
@@ -65,15 +66,31 @@ public static class ClientReducersEndpoints
             {
                 var result = await reducers.OnNext(reducerId, reduce.Events, reduce.InitialState);
 
-                context.Response.StatusCode = (int)HttpStatusCode.OK;
-                commandResult = new CommandResult { Response = result };
+                var stateAsJson = JsonSerializer.SerializeToNode(result.State, Globals.JsonSerializerOptions)?.AsObject();
+                var reduceResult = new ReduceResult(stateAsJson, result.LastSuccessfullyObservedEvent);
+
+                context.Response.StatusCode = result.IsSuccess ? (int)HttpStatusCode.OK : (int)HttpStatusCode.InternalServerError;
+                if (!result.IsSuccess)
+                {
+                    commandResult = new CommandResult
+                    {
+                        ExceptionMessages = result.Error!.GetAllMessages(),
+                        ExceptionStackTrace = result.Error!.StackTrace ?? string.Empty,
+                        Response = reduceResult
+                    };
+                }
+                else
+                {
+                    commandResult = new CommandResult { Response = reduceResult };
+                }
             }
             catch (Exception ex)
             {
                 commandResult = new CommandResult
                 {
                     ExceptionMessages = ex.GetAllMessages(),
-                    ExceptionStackTrace = ex.StackTrace ?? string.Empty
+                    ExceptionStackTrace = ex.StackTrace ?? string.Empty,
+                    Response = new ReduceResult(reduce.InitialState, Events.EventSequenceNumber.Unavailable)
                 };
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             }

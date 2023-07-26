@@ -59,15 +59,18 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context)
+    public async Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        _logger.EventReceived(
-            _observerId,
-            _microserviceId,
-            _tenantId,
-            @event.Metadata.Type.Id,
-            _eventSequenceId,
-            @event.Context.SequenceNumber);
+        foreach (var @event in events)
+        {
+            _logger.EventReceived(
+                _observerId,
+                _microserviceId,
+                _tenantId,
+                @event.Metadata.Type.Id,
+                _eventSequenceId,
+                @event.Context.SequenceNumber);
+        }
 
         if (context.Metadata is JsonElement connectedClientJsonObject)
         {
@@ -77,11 +80,12 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
                 using var httpClient = _httpClientFactory.CreateClient(ConnectedClients.ConnectedClientsHttpClient);
                 httpClient.BaseAddress = connectedClient.ClientUri;
 
-                using var jsonContent = JsonContent.Create(@event, options: _jsonSerializerOptions);
+                using var jsonContent = JsonContent.Create(events, options: _jsonSerializerOptions);
                 httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
                 var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
                 var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
                 var state = ObserverSubscriberState.Ok;
+                var lastSuccessfullyObservedEvent = (EventSequenceNumber)(ulong)commandResult.Response!;
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
@@ -93,10 +97,10 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
                     state = ObserverSubscriberState.Failed;
                 }
 
-                return new ObserverSubscriberResult(state, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
+                return new ObserverSubscriberResult(state, lastSuccessfullyObservedEvent, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
             }
         }
 
-        return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, Enumerable.Empty<string>(), string.Empty);
+        return new ObserverSubscriberResult(ObserverSubscriberState.Disconnected, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
     }
 }

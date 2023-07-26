@@ -23,6 +23,7 @@ public class ReducerValidator : IReducerValidator
         + Shouldn't allow for multiple implementations of the IReducer interface for different read models
         + Must have a `[Reducer("id")]` attribute
 
+        - If type is in nullable context, check if reducer methods use nullable for state, if not - error
         - Unique reducer ids
         - String keys need to match property names on the event / context
         - Composite keys need to match property names on the event
