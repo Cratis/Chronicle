@@ -3,10 +3,10 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Engines.Projections;
+namespace Aksio.Cratis.Kernel.Engines.Keys;
 
 /// <summary>
-/// Represents the key typically coming from a <see cref="KeyResolver"/>.
+/// Represents the key coming from an event.
 /// </summary>
 /// <param name="Value">The actual key value.</param>
 /// <param name="ArrayIndexers">Any array indexers.</param>
