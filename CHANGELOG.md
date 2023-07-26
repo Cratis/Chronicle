@@ -1,28 +1,13 @@
-# [v9.0.2] - 2023-7-25 [PR: #909](https://github.com/aksio-insurtech/Cratis/pull/909)
-
-### Fixed
-
-
-
-
 # [v9.0.2] - 2023-7-25 [PR: #908](https://github.com/aksio-insurtech/Cratis/pull/908)
 
 ### Fixed
 
 - The `ClientOptions` type was in the wrong namespace, fixed to be in `Aksio.Cratis.Configuration` as expected.
 
-
 # [v9.0.1] - 2023-7-25 [PR: #0]()
 
-No release notes
-
-# [v11.0.1] - 2023-7-25 [PR: #907](https://github.com/aksio-insurtech/Cratis/pull/907)
-
-### Fixed
-
+- Fixing `ClientBuilder` to use the `SingleKernelOptions` as a fallback only if none of the other options are set.
 - Removing current subscription information from the Observer state being stored, as this has only an in-memory value.
-
-
 
 # [v9.0.0] - 2023-7-19
 
