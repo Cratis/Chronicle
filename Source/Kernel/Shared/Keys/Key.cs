@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Kernel.Engines.Keys;
+namespace Aksio.Cratis.Kernel.Keys;
 
 /// <summary>
 /// Represents the key coming from an event.

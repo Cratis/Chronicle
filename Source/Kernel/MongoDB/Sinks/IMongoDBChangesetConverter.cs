@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Engines.Keys;
+using Aksio.Cratis.Kernel.Keys;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
