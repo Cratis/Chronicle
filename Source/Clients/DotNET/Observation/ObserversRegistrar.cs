@@ -30,6 +30,7 @@ public class ObserversRegistrar : IObserversRegistrar
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="connection"><see cref="IConnection"/> for working with kernel.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="invokerLogger">Logger for invoker.</param>
     public ObserversRegistrar(
         IExecutionContextManager executionContextManager,
         IServiceProvider serviceProvider,
@@ -38,20 +39,21 @@ public class ObserversRegistrar : IObserversRegistrar
         IEventSerializer eventSerializer,
         IClientArtifactsProvider clientArtifacts,
         IConnection connection,
-        ILogger<ObserversRegistrar> logger)
+        ILogger<ObserversRegistrar> logger,
+        ILogger<ObserverInvoker> invokerLogger)
     {
         _handlers = clientArtifacts.Observers
                             .ToDictionary(
                                 _ => _,
-                                _ =>
+                                observerType =>
                                 {
-                                    var observer = _.GetCustomAttribute<ObserverAttribute>()!;
+                                    var observer = observerType.GetCustomAttribute<ObserverAttribute>()!;
                                     return new ObserverHandler(
                                         observer.ObserverId,
-                                        _.FullName ?? $"{_.Namespace}.{_.Name}",
+                                        observerType.FullName ?? $"{observerType.Namespace}.{observerType.Name}",
                                         observer.EventSequenceId,
                                         eventTypes,
-                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, _),
+                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, observerType, invokerLogger),
                                         eventSerializer);
                                 });
         _executionContextManager = executionContextManager;
