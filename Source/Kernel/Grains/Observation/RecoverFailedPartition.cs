@@ -90,8 +90,8 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId);
         State.InitializeError(_observerKey, observerName, _subscriberKey, fromEvent, eventTypes, messages, stackTrace);
         _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
-        await SetSubscriberSubscription();
         await WriteStateAsync();
+        await SetSubscriberSubscription();
         ScheduleNextTimer(true);
     }
 
@@ -100,8 +100,8 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     {
         _logger.CatchupRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
         State.Catchup(fromEvent);
-        await SetSubscriberSubscription();
         await WriteStateAsync();
+        await SetSubscriberSubscription();
         ScheduleNextTimer(isForced: true);
     }
 
