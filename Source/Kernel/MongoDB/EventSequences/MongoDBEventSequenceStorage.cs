@@ -7,7 +7,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
-using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Kernel.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;

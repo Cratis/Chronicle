@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Keys;
+using Aksio.Cratis.Kernel.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 

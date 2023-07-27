@@ -4,7 +4,6 @@
 using Aksio.Applications.Autofac;
 using Aksio.Cratis.Compliance.MongoDB;
 using Aksio.Cratis.Events.Schemas.MongoDB;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
@@ -16,6 +15,7 @@ using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Projections;
 using Aksio.Cratis.Kernel.Observation;
 using Autofac;
+using Aksio.Cratis.Kernel.EventSequences;
 
 namespace Aksio.Cratis.Kernel.Server;
 

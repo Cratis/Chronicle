@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Schemas;
+namespace Aksio.Cratis.Kernel.Schemas;
 
 /// <summary>
 /// Defines the store for event schemas.

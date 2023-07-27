@@ -8,6 +8,7 @@ using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Workers;
+using Aksio.Cratis.Kernel.Schemas;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;

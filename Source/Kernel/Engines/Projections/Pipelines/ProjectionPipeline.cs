@@ -4,10 +4,10 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Keys;
 using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Types;

@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 
-namespace Aksio.Cratis.EventSequences;
+namespace Aksio.Cratis.Kernel.EventSequences;
 
 /// <summary>
 /// Exception that gets thrown when the storage mechanism is not able to append the event to the event sequence.
