@@ -4,45 +4,32 @@
 
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/applications/commands';
 import { Validator } from '@aksio/applications/validation';
-import { EventType } from '../sequence/EventType';
 import Handlebars from 'handlebars';
 
-const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}');
+const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}/append-many');
 
-export interface IAppend {
+export interface IAppendMany {
     microserviceId?: string;
     eventSequenceId?: string;
     tenantId?: string;
-    eventSourceId?: string;
-    eventType?: EventType;
-    content?: any;
-    validFrom?: Date;
 }
 
-export class AppendValidator extends CommandValidator {
+export class AppendManyValidator extends CommandValidator {
     readonly properties: CommandPropertyValidators = {
         microserviceId: new Validator(),
         eventSequenceId: new Validator(),
         tenantId: new Validator(),
-        eventSourceId: new Validator(),
-        eventType: new Validator(),
-        content: new Validator(),
-        validFrom: new Validator(),
     };
 }
 
-export class Append extends Command<IAppend> implements IAppend {
-    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}';
+export class AppendMany extends Command<IAppendMany> implements IAppendMany {
+    readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}/append-many';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly validation: CommandValidator = new AppendValidator();
+    readonly validation: CommandValidator = new AppendManyValidator();
 
     private _microserviceId!: string;
     private _eventSequenceId!: string;
     private _tenantId!: string;
-    private _eventSourceId!: string;
-    private _eventType!: EventType;
-    private _content!: any;
-    private _validFrom!: Date;
 
     constructor() {
         super(Object, false);
@@ -61,10 +48,6 @@ export class Append extends Command<IAppend> implements IAppend {
             'microserviceId',
             'eventSequenceId',
             'tenantId',
-            'eventSourceId',
-            'eventType',
-            'content',
-            'validFrom',
         ];
     }
 
@@ -92,40 +75,8 @@ export class Append extends Command<IAppend> implements IAppend {
         this._tenantId = value;
         this.propertyChanged('tenantId');
     }
-    get eventSourceId(): string {
-        return this._eventSourceId;
-    }
 
-    set eventSourceId(value: string) {
-        this._eventSourceId = value;
-        this.propertyChanged('eventSourceId');
-    }
-    get eventType(): EventType {
-        return this._eventType;
-    }
-
-    set eventType(value: EventType) {
-        this._eventType = value;
-        this.propertyChanged('eventType');
-    }
-    get content(): any {
-        return this._content;
-    }
-
-    set content(value: any) {
-        this._content = value;
-        this.propertyChanged('content');
-    }
-    get validFrom(): Date {
-        return this._validFrom;
-    }
-
-    set validFrom(value: Date) {
-        this._validFrom = value;
-        this.propertyChanged('validFrom');
-    }
-
-    static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>, ClearCommandValues] {
-        return useCommand<Append, IAppend>(Append, initialValues);
+    static use(initialValues?: IAppendMany): [AppendMany, SetCommandValues<IAppendMany>, ClearCommandValues] {
+        return useCommand<AppendMany, IAppendMany>(AppendMany, initialValues);
     }
 }

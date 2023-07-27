@@ -41,6 +41,24 @@ public class EventOutboxForSpecifications : IEventOutbox
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default) => _sequence.Append(eventSourceId, @event);
 
     /// <inheritdoc/>
+    public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
+    {
+        foreach( var @event in events )
+        {
+            await _sequence.Append(eventSourceId, @event);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events)
+    {
+        foreach( var @event in events )
+        {
+            await _sequence.Append(eventSourceId, @event.Event, @event.ValidFrom);
+        }
+    }
+
+    /// <inheritdoc/>
     public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = null) => throw new NotImplementedException();
 
     /// <inheritdoc/>

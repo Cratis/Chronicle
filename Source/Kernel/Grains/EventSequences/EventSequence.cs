@@ -181,7 +181,16 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, string content, DateTimeOffset? validFrom = default)
+    public async Task AppendMany(IEnumerable<EventToAppend> events)
+    {
+        foreach (var @event in events)
+        {
+            await Append(@event.EventSourceId, @event.EventType, @event.Content, @event.ValidFrom);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default)
     {
         _logger.Compensating(
             _microserviceAndTenant.MicroserviceId,

@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Microsoft.AspNetCore.Mvc;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -53,7 +54,28 @@ public class EventSequence : Controller
         await eventSequence.Append(
             eventToAppend.EventSourceId,
             eventToAppend.EventType,
-            eventToAppend.Content);
+            eventToAppend.Content,
+            eventToAppend.ValidFrom);
+    }
+
+    /// <summary>
+    /// Appends an event to the event log.
+    /// </summary>
+    /// <param name="microserviceId">The microservice to append for.</param>
+    /// <param name="eventSequenceId">The event sequence to append to.</param>
+    /// <param name="tenantId">The tenant to append to.</param>
+    /// <param name="eventsToAppend">The payload with the details about the events to append.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("append-many")]
+    public async Task AppendMany(
+        [FromRoute] MicroserviceId microserviceId,
+        [FromRoute] EventSequenceId eventSequenceId,
+        [FromRoute] TenantId tenantId,
+        [FromBody] IEnumerable<AppendEvent> eventsToAppend)
+    {
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
+        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
+        await eventSequence.AppendMany(eventsToAppend.Select(_ => new EventToAppend(_.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray());
     }
 
     /// <summary>

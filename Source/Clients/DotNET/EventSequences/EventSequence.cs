@@ -76,12 +76,8 @@ public class EventSequence : IEventSequence
     /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
-        var eventTypeClr = @event.GetType();
-        ThrowIfUnknownEventType(eventTypeClr);
-        var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-        var serializedEvent = await _eventSerializer.Serialize(@event);
-        var payload = new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
         var route = GetBaseRoute();
+        var payload = await CreateAppendEvent(eventSourceId, @event, validFrom);
         await _connection.PerformCommand(
             route,
             payload,
@@ -89,8 +85,27 @@ public class EventSequence : IEventSequence
             {
                 EventSequenceId = _eventSequenceId,
                 EventSourceId = eventSourceId,
-                EventType = eventType,
-                EventTypeClrName = eventTypeClr.FullName
+                payload.EventType
+            });
+    }
+
+    /// <inheritdoc/>
+    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) =>
+        AppendMany(eventSourceId, events.Select(_ => new EventAndValidFrom(_, null)).ToArray());
+
+    /// <inheritdoc/>
+    public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events)
+    {
+        var tasks = events.Select(_ => CreateAppendEvent(eventSourceId, _.Event, _.ValidFrom));
+        var payload = Task.WhenAll(tasks.ToArray());
+        var route = $"{GetBaseRoute()}/many";
+        await _connection.PerformCommand(
+            route,
+            payload,
+            new
+            {
+                EventSequenceId = _eventSequenceId,
+                EventSourceId = eventSourceId,
             });
     }
 
@@ -114,6 +129,15 @@ public class EventSequence : IEventSequence
     }
 
     string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_tenantId}/sequence/{_eventSequenceId}";
+
+    async Task<AppendEvent> CreateAppendEvent(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default)
+    {
+        var eventTypeClr = @event.GetType();
+        ThrowIfUnknownEventType(eventTypeClr);
+        var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
+        var serializedEvent = await _eventSerializer.Serialize(@event);
+        return new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
+    }
 
     void ThrowIfUnknownEventType(Type eventTypeClr)
     {
