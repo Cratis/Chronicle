@@ -15,7 +15,7 @@ public interface IObserverKeyIndex
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observer is for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observer is for.</param>
-    /// <returns></returns>
+    /// <returns>All the <see cref="IObserverKeys"/>.</returns>
     Task<IObserverKeys> GetKeysFor(MicroserviceId microserviceId, TenantId tenantId);
 
     /// <summary>
@@ -26,4 +26,10 @@ public interface IObserverKeyIndex
     /// <param name="key"><see cref="Key"/> to add.</param>
     /// <returns>Awaitable task.</returns>
     Task Add(MicroserviceId microserviceId, TenantId tenantId, Key key);
+
+    /// <summary>
+    /// Rebuild the index.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Rebuild();
 }
