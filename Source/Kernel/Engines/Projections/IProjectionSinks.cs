@@ -20,8 +20,9 @@ public interface IProjectionSinks
     /// <summary>
     /// Get a <see cref="IProjectionSink"/> of a specific <see cref="ProjectionSinkTypeId"/>.
     /// </summary>
+    /// <param name="projectionId"><see cref="ProjectionId"/> to get for.</param>
     /// <param name="typeId"><see cref="ProjectionSinkTypeId"/> to get for.</param>
     /// <param name="model"><see cref="Model"/> to get for.</param>
     /// <returns><see cref="IProjectionSink"/> instance.</returns>
-    IProjectionSink GetForTypeAndModel(ProjectionSinkTypeId typeId, Model model);
+    IProjectionSink GetForTypeAndModel(ProjectionId projectionId, ProjectionSinkTypeId typeId, Model model);
 }
