@@ -38,6 +38,6 @@ public interface IProjectionManager
     /// </summary>
     /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> to register.</param>
     /// <param name="pipelineDefinition"><see cref="ProjectionPipelineDefinition"/> to register.</param>
-    /// <returns>Awaitable task</returns>
+    /// <returns>Awaitable task.</returns>
     Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition);
 }

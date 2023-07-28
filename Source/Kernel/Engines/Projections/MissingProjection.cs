@@ -14,5 +14,7 @@ public class MissingProjection : Exception
     /// Initializes a new instance of the <see cref="MissingProjection"/> class.
     /// </summary>
     /// <param name="id">The <see cref="ProjectionId"/> for the missing projection.</param>
-    public MissingProjection(ProjectionId id) : base($"Missing projection with id {id.Value}") { }
+    public MissingProjection(ProjectionId id) : base($"Missing projection with id {id.Value}")
+    {
+    }
 }

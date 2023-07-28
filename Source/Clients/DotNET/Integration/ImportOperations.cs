@@ -83,7 +83,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
 
         var publicEventsToAppend = eventsToAppend.Where(_ => _.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false).ToArray();
 
-        if (!publicEventsToAppend.Any()) return;
+        if (publicEventsToAppend.Length == 0) return;
         await _eventOutbox.AppendMany(eventSourceId!, publicEventsToAppend);
     }
 
