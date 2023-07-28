@@ -68,6 +68,9 @@ public class Projections : Grain, IProjections
             {
                 foreach (var tenant in _tenants.GetTenantIds())
                 {
+                    var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
+                    await _projectionManager().Register(projectionDefinition, pipeline);
+
                     var key = new ProjectionKey(_microserviceId, tenant, EventSequenceId.Log);
                     await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
                 }
