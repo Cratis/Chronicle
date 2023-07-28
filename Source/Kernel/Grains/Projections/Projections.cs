@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
+using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
@@ -18,6 +19,7 @@ public class Projections : Grain, IProjections
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
     readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitions;
+    readonly ProviderFor<IProjectionManager> _projectionManager;
     readonly IExecutionContextManager _executionContextManager;
     readonly Tenants _tenants;
     readonly ILogger<Projections> _logger;
@@ -28,18 +30,21 @@ public class Projections : Grain, IProjections
     /// </summary>
     /// <param name="projectionDefinitions">Provider for the <see cref="IProjectionDefinitions"/> to use.</param>
     /// <param name="projectionPipelineDefinitions">Provider for the <see cref="IProjectionPipelineDefinitions"/> to use.</param>
+    /// <param name="projectionManager">Provider for the <see cref="IProjectionManager"/> to use.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="tenants">All configured tenants.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Projections(
         ProviderFor<IProjectionDefinitions> projectionDefinitions,
         ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitions,
+        ProviderFor<IProjectionManager> projectionManager,
         IExecutionContextManager executionContextManager,
         Tenants tenants,
         ILogger<Projections> logger)
     {
         _projectionDefinitions = projectionDefinitions;
         _projectionPipelineDefinitions = projectionPipelineDefinitions;
+        _projectionManager = projectionManager;
         _executionContextManager = executionContextManager;
         _tenants = tenants;
         _logger = logger;
@@ -81,6 +86,8 @@ public class Projections : Grain, IProjections
             _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
             var projectionDefinitions = _projectionDefinitions();
             var projectionPipelineDefinitions = _projectionPipelineDefinitions();
+
+            await _projectionManager().Register(projectionDefinition, pipelineDefinition);
 
             var isNew = !await projectionDefinitions.HasFor(projectionDefinition.Identifier);
             var hasChanged = await projectionDefinitions.HasChanged(projectionDefinition);
