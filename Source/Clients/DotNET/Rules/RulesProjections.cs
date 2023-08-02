@@ -17,6 +17,11 @@ namespace Aksio.Cratis.Rules;
 [Singleton]
 public class RulesProjections : IRulesProjections
 {
+    sealed class RulesClass : RulesFor<RulesClass, object>
+    {
+        public override RuleId Identifier => throw new NotImplementedException();
+    }
+
     readonly IEventTypes _eventTypes;
     readonly IModelNameConvention _modelNameConvention;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
@@ -56,15 +61,28 @@ public class RulesProjections : IRulesProjections
     /// <inheritdoc/>
     public IEnumerable<ProjectionDefinition> All => _projectionDefinitionsPerRuleId.Values;
 
+    public bool HasFor(RuleId ruleId) => _projectionDefinitionsPerRuleId.ContainsKey(ruleId);
+
     /// <inheritdoc/>
-    public ProjectionDefinition GetFor(RuleId ruleId) => _projectionDefinitionsPerRuleId[ruleId];
+    public ProjectionDefinition GetFor(RuleId ruleId)
+    {
+        ThrowIfMissingProjectionForRule(ruleId);
+
+        return _projectionDefinitionsPerRuleId[ruleId];
+    }
+
+    void ThrowIfMissingProjectionForRule(RuleId ruleId)
+    {
+        if (!HasFor(ruleId)) throw new MissingProjectionForRule(ruleId);
+    }
 
     ProjectionDefinition CreateProjection<TTarget>(IRule rule)
     {
         var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _modelNameConvention, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
 
         var ruleType = typeof(TTarget);
-        var defineStateMethod = ruleType.GetMethod("DefineState", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        var defineStateMethod = ruleType.GetMethod(nameof(RulesClass.DefineState), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         if (defineStateMethod is not null)
         {
             var parameters = defineStateMethod.GetParameters();
