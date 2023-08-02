@@ -16,16 +16,19 @@ public class Rules : IRules
 {
     readonly IDictionary<Type, IEnumerable<Type>> _rulesPerCommand;
     readonly JsonSerializerOptions _serializerOptions;
+    readonly IRulesProjections _rulesProjections;
     readonly IImmediateProjections _immediateProjections;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Rules"/> class.
     /// </summary>
     /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
+    /// <param name="rulesProjections">All <see cref="IRulesProjections"/>.</param>
     /// <param name="immediateProjections"><see cref="IImmediateProjections"/> client.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     public Rules(
         JsonSerializerOptions serializerOptions,
+        IRulesProjections rulesProjections,
         IImmediateProjections immediateProjections,
         IClientArtifactsProvider clientArtifacts)
     {
@@ -33,6 +36,7 @@ public class Rules : IRules
             .GroupBy(_ => _.BaseType!.GetGenericArguments()[1])
             .ToDictionary(_ => _.Key, _ => _.ToArray().AsEnumerable());
         _serializerOptions = serializerOptions;
+        _rulesProjections = rulesProjections;
         _immediateProjections = immediateProjections;
     }
 
@@ -45,6 +49,8 @@ public class Rules : IRules
     /// <inheritdoc/>
     public void ProjectTo(IRule rule, object? modelIdentifier = default)
     {
+        if (!_rulesProjections.HasFor(rule.Identifier)) return;
+
         var result = _immediateProjections.GetInstanceById(
             rule.Identifier.Value,
             modelIdentifier is null ? ModelKey.Unspecified : modelIdentifier.ToString()!).GetAwaiter().GetResult();
