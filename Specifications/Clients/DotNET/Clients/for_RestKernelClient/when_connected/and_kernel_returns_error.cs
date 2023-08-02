@@ -3,10 +3,11 @@
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.when_connected;
 
-public class and_kernel_returns_error : given.a_connected_client
+public class and_kernel_returns_error : given.a_connected_connection
 {
     protected override HttpResponseMessage GetMessageForRoute(string route)
     {
+        Console.WriteLine($"and_kernel_returns_error: {route}");
         if (route == ping_route)
         {
             client.should_connect = false;

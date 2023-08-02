@@ -17,7 +17,7 @@ using Microsoft.Extensions.Options;
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
 
-public class a_rest_kernel_client : Specification
+public class a_rest_kernel_connection : Specification
 {
     protected string connect_route;
     protected string ping_route;

@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.when_connected;
 
-public class and_kernel_becomes_unavailable : given.a_connected_client
+public class and_kernel_becomes_unavailable : given.a_connected_connection
 {
     bool has_failed_once;
 
@@ -17,6 +17,8 @@ public class and_kernel_becomes_unavailable : given.a_connected_client
 
         return success_message;
     }
+
+    void Establish() => has_failed_once = false;
 
     [Fact] void client_should_notify_client_lifecycle_about_being_disconnected() => connection_lifecycle.Verify(_ => _.Disconnected(), Once);
 }

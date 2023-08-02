@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
 
-public class a_connected_client : a_rest_kernel_client
+public class a_connected_connection : a_rest_kernel_connection
 {
     async Task Establish()
     {
