@@ -76,8 +76,7 @@ public class Projections : Controller
             immediateProjection.EventSequenceId,
             immediateProjection.ModelKey);
 
-        var projectionDefinition = _projectionSerializer.Deserialize(immediateProjection.Projection);
         var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
-        return await projection.GetModelInstance(projectionDefinition);
+        return await projection.GetModelInstance(immediateProjection.ProjectionId);
     }
 }

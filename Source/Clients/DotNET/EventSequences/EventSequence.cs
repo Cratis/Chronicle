@@ -97,8 +97,8 @@ public class EventSequence : IEventSequence
     public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events)
     {
         var tasks = events.Select(_ => CreateAppendEvent(eventSourceId, _.Event, _.ValidFrom));
-        var payload = Task.WhenAll(tasks.ToArray());
-        var route = $"{GetBaseRoute()}/many";
+        var payload = await Task.WhenAll(tasks.ToArray());
+        var route = $"{GetBaseRoute()}/append-many";
         await _connection.PerformCommand(
             route,
             payload,

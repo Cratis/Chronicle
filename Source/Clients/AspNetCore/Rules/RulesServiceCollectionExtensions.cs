@@ -21,7 +21,7 @@ public static class RulesServiceCollectionExtensions
         services.Configure<MvcOptions>(options =>
         {
             var serviceProvider = services.BuildServiceProvider();
-            options.ModelValidatorProviders.Add(new RulesModelValidatorProvider(serviceProvider));
+            options.ModelValidatorProviders.Add(new RulesModelValidatorProvider());
         });
 
         return services;

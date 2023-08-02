@@ -12,19 +12,9 @@ namespace Aksio.Cratis.AspNetCore.Rules;
 /// </summary>
 public class RulesModelValidatorProvider : IModelValidatorProvider
 {
-    readonly IServiceProvider _serviceProvider;
     IRules? _rules;
 
-    IRules Rules => _rules ??= _serviceProvider.GetService<IRules>()!;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="RulesModelValidatorProvider"/> class.
-    /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instance of the rules.</param>
-    public RulesModelValidatorProvider(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
-    }
+    IRules Rules => _rules ??= GlobalInstances.ServiceProvider.GetRequiredService<IRules>();
 
     /// <inheritdoc/>
     public void CreateValidators(ModelValidatorProviderContext context)
@@ -32,7 +22,7 @@ public class RulesModelValidatorProvider : IModelValidatorProvider
         if (Rules.HasFor(context.ModelMetadata.ModelType))
         {
             var ruleTypes = Rules.GetFor(context.ModelMetadata.ModelType);
-            var rules = ruleTypes.Select(ruleType => (_serviceProvider.GetService(ruleType) as IRule)!).ToArray();
+            var rules = ruleTypes.Select(ruleType => (GlobalInstances.ServiceProvider.GetService(ruleType) as IRule)!).ToArray();
 
             var validator = new RuleModelValidator(rules, Rules);
 

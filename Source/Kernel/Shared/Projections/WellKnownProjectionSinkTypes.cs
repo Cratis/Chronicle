@@ -11,6 +11,11 @@ public static class WellKnownProjectionSinkTypes
     /// <summary>
     /// Gets the identifier of the InMemory projection sink.
     /// </summary>
+    public static readonly ProjectionSinkTypeId Null = "00000000-0000-0000-0000-000000000000";
+
+    /// <summary>
+    /// Gets the identifier of the InMemory projection sink.
+    /// </summary>
     public static readonly ProjectionSinkTypeId InMemory = "8a23995d-da0b-4c4c-818b-f97992f26bbf";
 
     /// <summary>

@@ -23,7 +23,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitions;
     readonly ProviderFor<IProjectionPipelineDefinitions> _projectionPipelineDefinitions;
-    readonly ProviderFor<IProjectionManager> _projectionManager;
+    readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IClusterClient _clusterClient;
     readonly Tenants _tenants;
@@ -36,7 +36,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// </summary>
     /// <param name="projectionDefinitions">Provider for the <see cref="IProjectionDefinitions"/> to use.</param>
     /// <param name="projectionPipelineDefinitions">Provider for the <see cref="IProjectionPipelineDefinitions"/> to use.</param>
-    /// <param name="projectionManager">Provider for the <see cref="IProjectionManager"/> to use.</param>
+    /// <param name="projectionManagerProvider">Provider for the <see cref="IProjectionManager"/> to use.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
     /// <param name="tenants">All configured tenants.</param>
@@ -45,7 +45,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     public Projections(
         ProviderFor<IProjectionDefinitions> projectionDefinitions,
         ProviderFor<IProjectionPipelineDefinitions> projectionPipelineDefinitions,
-        ProviderFor<IProjectionManager> projectionManager,
+        ProviderFor<IProjectionManager> projectionManagerProvider,
         IExecutionContextManager executionContextManager,
         IClusterClient clusterClient,
         Tenants tenants,
@@ -54,7 +54,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     {
         _projectionDefinitions = projectionDefinitions;
         _projectionPipelineDefinitions = projectionPipelineDefinitions;
-        _projectionManager = projectionManager;
+        _projectionManagerProvider = projectionManagerProvider;
         _executionContextManager = executionContextManager;
         _clusterClient = clusterClient;
         _tenants = tenants;
@@ -78,7 +78,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
                     {
                         _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
                         var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
-                        await _projectionManager().Register(projectionDefinition, pipeline);
+                        await _projectionManagerProvider().Register(projectionDefinition, pipeline);
 
                         var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
                         await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
@@ -156,20 +156,23 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         foreach (var tenant in _tenants.GetTenantIds())
         {
             _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
-            await _projectionManager().Register(projectionDefinition, pipelineDefinition);
+            await _projectionManagerProvider().Register(projectionDefinition, pipelineDefinition);
 
-            var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
-            var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
-            await projection.Ensure();
-            await projection.RefreshDefinition();
-            if (isNew)
+            if (projectionDefinition.IsActive)
             {
-                _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
-            }
-            else
-            {
-                _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
-                await projection.Rewind();
+                var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
+                var projection = GrainFactory.GetGrain<IProjection>(projectionDefinition.Identifier, key);
+                await projection.Ensure();
+                await projection.RefreshDefinition();
+                if (isNew)
+                {
+                    _logger.ProjectionIsNew(projectionDefinition.Identifier, projectionDefinition.Name);
+                }
+                else
+                {
+                    _logger.ProjectionHasChanged(projectionDefinition.Identifier, projectionDefinition.Name);
+                    await projection.Rewind();
+                }
             }
         }
     }
