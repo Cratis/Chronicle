@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
 
 namespace Aksio.Cratis.Specifications.Integration;
 
@@ -13,6 +14,9 @@ namespace Aksio.Cratis.Specifications.Integration;
 public class SpecificationAdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>, IDisposable
 {
     readonly ProjectionSpecificationContext<TModel> _context;
+
+    /// <inheritdoc/>
+    public ProjectionDefinition Definition => _context.Definition;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SpecificationAdapterProjectionFor{TModel}"/> class.

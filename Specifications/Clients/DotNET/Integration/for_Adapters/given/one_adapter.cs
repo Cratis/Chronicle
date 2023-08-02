@@ -13,17 +13,12 @@ public class one_adapter : all_dependencies
     protected Mock<IAdapterProjectionFor<Model>> adapter_projection;
     protected Mock<IMapper> mapper;
 
-    async Task Establish()
+    void Establish()
     {
         adapter = new Mock<IAdapterFor<Model, ExternalModel>>();
         var adapterType = adapter.Object.GetType();
         client_artifacts.SetupGet(_ => _.Adapters).Returns(new[] { adapterType });
         service_provider.Setup(_ => _.GetService(adapterType)).Returns(adapter.Object);
-        adapters = new(
-            client_artifacts.Object,
-            service_provider.Object,
-            projection_factory.Object,
-            mapper_factory.Object);
 
         mapper = new();
         mapper_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(mapper.Object);
@@ -31,6 +26,10 @@ public class one_adapter : all_dependencies
         adapter_projection = new();
         projection_factory.Setup(_ => _.CreateFor(adapter.Object)).Returns(Task.FromResult(adapter_projection.Object));
 
-        await adapters.Initialize();
+        adapters = new(
+            client_artifacts.Object,
+            service_provider.Object,
+            projection_factory.Object,
+            mapper_factory.Object);
     }
 }

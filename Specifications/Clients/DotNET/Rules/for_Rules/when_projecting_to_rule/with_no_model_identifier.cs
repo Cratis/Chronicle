@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Strings;
 
@@ -20,6 +19,8 @@ public class with_no_model_identifier : given.no_rules
     void Establish()
     {
         rule = new();
+        rules_projections.Setup(_ => _.HasFor(rule.Identifier)).Returns(true);
+
         var jsonObject = new JsonObject
         {
             [nameof(RuleWithState.FirstStateValue).ToCamelCase()] = first_state_value,
@@ -32,7 +33,7 @@ public class with_no_model_identifier : given.no_rules
         };
 
         immediate_projections
-            .Setup(_ => _.GetInstanceById(IsAny<ModelKey>(), IsAny<ProjectionDefinition>()))
+            .Setup(_ => _.GetInstanceById(rule.Identifier.Value, IsAny<ModelKey>()))
             .Returns(Task.FromResult(new ImmediateProjectionResult(jsonObject, Enumerable.Empty<PropertyPath>(), 0)));
     }
 

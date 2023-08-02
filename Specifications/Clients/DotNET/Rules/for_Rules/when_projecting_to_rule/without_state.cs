@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections.Definitions;
-
 namespace Aksio.Cratis.Rules.for_Rules.when_projecting_to_rule;
 
 public class without_state : given.no_rules
@@ -17,5 +15,5 @@ public class without_state : given.no_rules
 
     void Because() => rules.ProjectTo(rule, model_identifier);
 
-    [Fact] void should_not_get_instance_from_immediate_projection() => immediate_projections.Verify(_ => _.GetInstanceById(IsAny<ModelKey>(), IsAny<ProjectionDefinition>()), Never);
+    [Fact] void should_not_get_instance_from_immediate_projection() => immediate_projections.Verify(_ => _.GetInstanceById(rule.Identifier.Value, IsAny<ModelKey>()), Never);
 }
