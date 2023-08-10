@@ -19,6 +19,7 @@ public class when_registering : given.a_projection_manager_without_any_projectio
             "SomeProjection",
             new ModelDefinition("Some Model", "{}"),
             false,
+            false,
             new JsonObject(),
             new Dictionary<EventType, FromDefinition>(),
             new Dictionary<EventType, JoinDefinition>(),

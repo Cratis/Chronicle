@@ -22,6 +22,7 @@ public class a_projection_manager_with_one_registered_projection : a_projection_
             "SomeProjection",
             new ModelDefinition("Some Model", "{}"),
             false,
+            false,
             new JsonObject(),
             new Dictionary<EventType, FromDefinition>(),
             new Dictionary<EventType, JoinDefinition>(),
