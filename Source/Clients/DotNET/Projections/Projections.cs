@@ -1,22 +1,20 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Integration;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Rules;
 using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IClientProjectionDefinitions"/>.
+/// Represents an implementation of <see cref="IProjections"/>.
 /// </summary>
-[Singleton]
-public class ClientProjectionDefinitions : IClientProjectionDefinitions
+public class Projections : IProjections
 {
     static class ProjectionDefinitionCreator<TModel>
     {
@@ -29,44 +27,32 @@ public class ClientProjectionDefinitions : IClientProjectionDefinitions
         }
     }
 
-    readonly List<ProjectionDefinition> _projections = new();
-    readonly IModelNameConvention _modelNameConvention;
-
     /// <inheritdoc/>
-    public IEnumerable<ProjectionDefinition> All => _projections;
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ClientProjectionDefinitions"/> class.
+    /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
-    /// <param name="immediateProjections">All the <see cref="IImmediateProjections"/>.</param>
-    /// <param name="rulesProjections"><see cref="IRulesProjections"/> for getting projection definitions related to rules.</param>
-    /// <param name="adapters"><see cref="IAdapters"/> for getting adapters projection definitions.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-    public ClientProjectionDefinitions(
-        IImmediateProjections immediateProjections,
-        IRulesProjections rulesProjections,
-        IAdapters adapters,
+    public Projections(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
         IModelNameConvention modelNameConvention,
         JsonSerializerOptions jsonSerializerOptions)
     {
-        _modelNameConvention = modelNameConvention;
-        _projections.AddRange(FindAllProjectionDefinitions(eventTypes, clientArtifacts, schemaGenerator, jsonSerializerOptions));
-        _projections.AddRange(immediateProjections.Definitions);
-        _projections.AddRange(adapters.Definitions);
-        _projections.AddRange(rulesProjections.All);
+        Definitions = FindAllProjectionDefinitions(eventTypes, clientArtifacts, schemaGenerator, modelNameConvention, jsonSerializerOptions).ToImmutableList();
     }
 
     IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
+        IModelNameConvention modelNameConvention,
         JsonSerializerOptions jsonSerializerOptions) =>
         clientArtifacts.Projections
                 .Select(_ =>
@@ -74,6 +60,6 @@ public class ClientProjectionDefinitions : IClientProjectionDefinitions
                     var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
                     var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
                     var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                    return (method.Invoke(null, new object[] { _, _modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions }) as ProjectionDefinition)!;
+                    return (method.Invoke(null, new object[] { _, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions }) as ProjectionDefinition)!;
                 }).ToArray();
 }

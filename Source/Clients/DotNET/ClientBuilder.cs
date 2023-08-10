@@ -146,7 +146,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
             .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
             .AddSingleton<ITenantConfiguration, TenantConfiguration>()
-            .AddSingleton<IClientProjectionDefinitions, ClientProjectionDefinitions>()
+            .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
             .AddSingleton<IRules, Rules.Rules>()
             .AddTransient<ClientObservers>()

@@ -15,7 +15,7 @@ namespace Aksio.Cratis.Projections;
 public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
 {
     readonly IConnection _connection;
-    readonly IClientProjectionDefinitions _projectionDefinitions;
+    readonly IClientProjections _projectionDefinitions;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly ILogger<ProjectionsRegistrar> _logger;
@@ -24,13 +24,13 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
     /// <param name="connection">The Cratis <see cref="IConnection"/>.</param>
-    /// <param name="projectionDefinitions">The <see cref="IClientProjectionDefinitions"/>.</param>
+    /// <param name="projectionDefinitions">The <see cref="IClientProjections"/>.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ProjectionsRegistrar(
         IConnection connection,
-        IClientProjectionDefinitions projectionDefinitions,
+        IClientProjections projectionDefinitions,
         IJsonProjectionSerializer projectionSerializer,
         JsonSerializerOptions jsonSerializerOptions,
         ILogger<ProjectionsRegistrar> logger)
@@ -47,7 +47,7 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
     {
         _logger.RegisterProjections();
 
-        var registrations = _projectionDefinitions.All.Select(projection =>
+        var registrations = _projectionDefinitions.Definitions.Select(projection =>
         {
             var pipeline = new ProjectionPipelineDefinition(
                 projection.Identifier,
