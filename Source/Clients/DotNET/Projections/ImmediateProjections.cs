@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Collections;
@@ -38,7 +39,7 @@ public class ImmediateProjections : IImmediateProjections
     readonly List<ProjectionDefinition> _definitions = new();
 
     /// <inheritdoc/>
-    public IEnumerable<ProjectionDefinition> Definitions => _definitions;
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
@@ -81,6 +82,7 @@ public class ImmediateProjections : IImmediateProjections
                 .MakeGenericMethod(immediateProjectionType.GetGenericArguments()[0])!
                 .Invoke(this, null);
         });
+        Definitions = _definitions.ToImmutableList();
     }
 
     /// <inheritdoc/>

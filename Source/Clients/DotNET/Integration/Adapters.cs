@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using Aksio.Cratis.Projections.Definitions;
 using AutoMapper;
@@ -18,10 +19,9 @@ public class Adapters : IAdapters
     readonly IServiceProvider _serviceProvider;
     readonly IAdapterProjectionFactory _adapterProjectionFactory;
     readonly IAdapterMapperFactory _adapterMapperFactory;
-    readonly List<ProjectionDefinition> _projectionDefinitions = new();
 
     /// <inheritdoc/>
-    public IEnumerable<ProjectionDefinition> Definitions => _projectionDefinitions;
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Adapters"/> class.
@@ -40,7 +40,7 @@ public class Adapters : IAdapters
         _serviceProvider = serviceProvider;
         _adapterProjectionFactory = adapterProjectionFactory;
         _adapterMapperFactory = adapterMapperFactory;
-        Initialize().GetAwaiter().GetResult();
+        Definitions = Initialize().GetAwaiter().GetResult().ToImmutableList();
     }
 
     /// <inheritdoc/>
@@ -61,8 +61,9 @@ public class Adapters : IAdapters
         return GetArtifactsFor<TModel, TExternalModel>().Mapper!;
     }
 
-    async Task Initialize()
+    async Task<IEnumerable<ProjectionDefinition>> Initialize()
     {
+        var projectionDefinitions = new List<ProjectionDefinition>();
         var adapterArtifactsGenericType = typeof(AdapterArtifacts<,>);
         foreach (var adapterType in _clientArtifacts.Adapters)
         {
@@ -75,10 +76,12 @@ public class Adapters : IAdapters
 
             var projection = adapterArtifactsType.GetProperty(nameof(AdapterArtifacts<object, object>.Projection))!.GetValue(artifacts);
             var projectionDefinition = projection!.GetType().GetProperty(nameof(IAdapterProjectionFor<object>.Definition))!.GetValue(projection) as ProjectionDefinition;
-            _projectionDefinitions.Add(projectionDefinition!);
+            projectionDefinitions.Add(projectionDefinition!);
 
             _artifacts[key] = artifacts!;
         }
+
+        return projectionDefinitions;
     }
 
     AdapterArtifacts<TModel, TExternalModel> GetArtifactsFor<TModel, TExternalModel>()

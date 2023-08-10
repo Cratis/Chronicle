@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Projections.Definitions;
 
@@ -14,7 +15,7 @@ public interface IImmediateProjections
     /// <summary>
     /// Gets all the definitions.
     /// </summary>
-    IEnumerable<ProjectionDefinition> Definitions { get; }
+    IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Get an instance by a specific <see cref="ModelKey"/> and type.

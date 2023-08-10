@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Projections.Definitions;
 
 namespace Aksio.Cratis.Rules;
@@ -14,7 +15,7 @@ public interface IRulesProjections
     /// Gets all the projection definitions.
     /// </summary>
     /// <value>Collection of <see cref="ProjectionDefinition"/>.</value>
-    IEnumerable<ProjectionDefinition> All { get; }
+    IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Check if there are any projections for a specific <see cref="RuleId"/>.

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Events;
@@ -29,12 +30,12 @@ public class RulesProjections : IRulesProjections
     readonly Dictionary<RuleId, ProjectionDefinition> _projectionDefinitionsPerRuleId;
 
     /// <inheritdoc/>
-    public IEnumerable<ProjectionDefinition> All => _projectionDefinitionsPerRuleId.Values;
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RulesProjections"/> class.
     /// </summary>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for gettings instances.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
@@ -59,6 +60,8 @@ public class RulesProjections : IRulesProjections
             var rule = serviceProvider.GetService(ruleType);
             return (createProjectionMethod!.MakeGenericMethod(ruleType).Invoke(this, new[] { rule }) as ProjectionDefinition)!;
         }).ToDictionary(_ => (RuleId)_.Identifier.Value, _ => _);
+
+        Definitions = _projectionDefinitionsPerRuleId.Values.ToImmutableList();
     }
 
     /// <inheritdoc/>
