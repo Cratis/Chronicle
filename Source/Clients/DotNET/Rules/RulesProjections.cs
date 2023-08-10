@@ -28,6 +28,9 @@ public class RulesProjections : IRulesProjections
     readonly JsonSerializerOptions _serializerOptions;
     readonly Dictionary<RuleId, ProjectionDefinition> _projectionDefinitionsPerRuleId;
 
+    /// <inheritdoc/>
+    public IEnumerable<ProjectionDefinition> All => _projectionDefinitionsPerRuleId.Values;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RulesProjections"/> class.
     /// </summary>
@@ -59,8 +62,6 @@ public class RulesProjections : IRulesProjections
     }
 
     /// <inheritdoc/>
-    public IEnumerable<ProjectionDefinition> All => _projectionDefinitionsPerRuleId.Values;
-
     public bool HasFor(RuleId ruleId) => _projectionDefinitionsPerRuleId.ContainsKey(ruleId);
 
     /// <inheritdoc/>

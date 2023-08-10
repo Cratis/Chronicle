@@ -10,6 +10,7 @@ public class a_connected_connection : a_rest_kernel_connection
         client.http_client.Setup(_ => _.SendAsync(IsAny<HttpRequestMessage>(), CancellationToken.None)).Returns((HttpRequestMessage message, CancellationToken _) =>
         {
             var route = message.RequestUri.ToString();
+
             if ( route == connect_route)
             {
                 return Task.FromResult(success_message);

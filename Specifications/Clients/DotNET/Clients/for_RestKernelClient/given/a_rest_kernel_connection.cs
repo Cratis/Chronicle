@@ -53,7 +53,6 @@ public class a_rest_kernel_connection : Specification
     void Establish()
     {
         microservice_id = Guid.NewGuid();
-        ExecutionContextManager.SetGlobalMicroserviceId(microservice_id);
         connection_id = ConnectionId.New();
 
         connect_route = $"/api/clients/{microservice_id}/connect/{connection_id}";

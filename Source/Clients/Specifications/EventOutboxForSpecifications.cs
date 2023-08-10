@@ -43,7 +43,7 @@ public class EventOutboxForSpecifications : IEventOutbox
     /// <inheritdoc/>
     public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events)
     {
-        foreach( var @event in events )
+        foreach (var @event in events)
         {
             await _sequence.Append(eventSourceId, @event);
         }
@@ -52,7 +52,7 @@ public class EventOutboxForSpecifications : IEventOutbox
     /// <inheritdoc/>
     public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events)
     {
-        foreach( var @event in events )
+        foreach (var @event in events)
         {
             await _sequence.Append(eventSourceId, @event.Event, @event.ValidFrom);
         }

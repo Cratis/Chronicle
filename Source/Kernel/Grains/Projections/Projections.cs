@@ -123,6 +123,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         }
     }
 
+    /// <inheritdoc/>
     public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription) => streamSubscription.Attach<ProjectionChanged>(OnProjectionChanged, OnError);
 
     async Task OnProjectionChanged(ProjectionChanged changed)

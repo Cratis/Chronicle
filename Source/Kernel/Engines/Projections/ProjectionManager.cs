@@ -22,7 +22,7 @@ public class ProjectionManager : IProjectionManager
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionManager"/> class.
     /// </summary>
-    /// <param name="executionContextManager"></param>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> to use.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> to use.</param>
     public ProjectionManager(

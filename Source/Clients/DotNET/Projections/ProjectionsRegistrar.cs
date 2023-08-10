@@ -24,7 +24,7 @@ public class ProjectionsRegistrar : IParticipateInConnectionLifecycle
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
     /// <param name="connection">The Cratis <see cref="IConnection"/>.</param>
-    /// <param name="projectionDefinitions"></param>
+    /// <param name="projectionDefinitions">The <see cref="IClientProjectionDefinitions"/>.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for serializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>

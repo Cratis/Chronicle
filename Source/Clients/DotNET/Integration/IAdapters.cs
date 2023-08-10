@@ -39,5 +39,4 @@ public interface IAdapters
     /// <typeparam name="TExternalModel">Type of external model.</typeparam>
     /// <returns><see cref="IMapper"/> instance.</returns>
     IMapper GetMapperFor<TModel, TExternalModel>();
-
 }
