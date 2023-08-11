@@ -8,6 +8,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Projections;
 
@@ -18,9 +19,15 @@ public class Projections : IProjections
 {
     static class ProjectionDefinitionCreator<TModel>
     {
-        public static ProjectionDefinition CreateAndDefine(Type type, IModelNameConvention modelNameConvention, IEventTypes eventTypes, IJsonSchemaGenerator schemaGenerator, JsonSerializerOptions jsonSerializerOptions)
+        public static ProjectionDefinition CreateAndDefine(
+            Type type,
+            IModelNameConvention modelNameConvention,
+            IEventTypes eventTypes,
+            IJsonSchemaGenerator schemaGenerator,
+            IServiceProvider serviceProvider,
+            JsonSerializerOptions jsonSerializerOptions)
         {
-            var instance = (Activator.CreateInstance(type) as IProjectionFor<TModel>)!;
+            var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TModel>)!;
             var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
@@ -37,15 +44,23 @@ public class Projections : IProjections
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public Projections(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
         IModelNameConvention modelNameConvention,
+        IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions)
     {
-        Definitions = FindAllProjectionDefinitions(eventTypes, clientArtifacts, schemaGenerator, modelNameConvention, jsonSerializerOptions).ToImmutableList();
+        Definitions = FindAllProjectionDefinitions(
+            eventTypes,
+            clientArtifacts,
+            schemaGenerator,
+            modelNameConvention,
+            serviceProvider,
+            jsonSerializerOptions).ToImmutableList();
     }
 
     IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
@@ -53,6 +68,7 @@ public class Projections : IProjections
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
         IModelNameConvention modelNameConvention,
+        IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions) =>
         clientArtifacts.Projections
                 .Select(_ =>
@@ -60,6 +76,14 @@ public class Projections : IProjections
                     var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
                     var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
                     var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                    return (method.Invoke(null, new object[] { _, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions }) as ProjectionDefinition)!;
+                    return (method.Invoke(null, new object[]
+                    {
+                        _,
+                        modelNameConvention,
+                        eventTypes,
+                        schemaGenerator,
+                        serviceProvider,
+                        jsonSerializerOptions
+                    }) as ProjectionDefinition)!;
                 }).ToArray();
 }
