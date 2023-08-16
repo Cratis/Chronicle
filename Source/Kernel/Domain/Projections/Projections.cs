@@ -8,6 +8,7 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Microsoft.AspNetCore.Mvc;
 using ImmediateProjectionResult = Aksio.Cratis.Kernel.Grains.Projections.ImmediateProjectionResult;
+using IProjections = Aksio.Cratis.Kernel.Grains.Projections.IProjections;
 
 namespace Aksio.Cratis.Kernel.Domain.Projections;
 
