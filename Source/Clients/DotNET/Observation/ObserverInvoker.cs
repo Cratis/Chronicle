@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.Logging;
 
