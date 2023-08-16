@@ -1,3 +1,26 @@
+# [v9.1.0] - 2023-8-16 [PR: #912](https://github.com/aksio-insurtech/Cratis/pull/912)
+
+### Added
+
+- Adding support for appending many events at a time.
+- Centralized all projections and registering all; integration adapters, immediate projections and rule based.
+- Added persistence for all types of projections.
+- Introducing the concept of active vs non active projections. Active projections will automatically observe an event sequence, while an inactive (passive) will not. Immediate projections, rules or adapters fall into the category of passive projections.
+- Making it possible to use any projections for immediate projection by specifying the projection identifier you want to use.
+
+### Fixed
+
+- Added missing logging for when an observer invocation fails on the client.
+- Adding service registration for `ITenantConfiguration` to the client builder.
+- Fixing so that `ValidFrom` information is included on the Kernel receiver side when appending.
+- Optimizing performance for `Importer` by using the new `AppendMany` API.
+- A bug in the Kernel causing failed partition information not to be written to the event store immediately.
+- Projection sinks are now only created once per projection and sink type.
+- The engine representation of a Projection and its Pipeline is now managed by a manager and created only once per node.
+- Changed internal implementation of how we keep projections and pipeline definitions in sync across multiple silos when changed. Leveraging Broadcast channels.
+
+
+
 # [v9.0.2] - 2023-7-25 [PR: #908](https://github.com/aksio-insurtech/Cratis/pull/908)
 
 ### Fixed
