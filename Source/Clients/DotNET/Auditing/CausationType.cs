@@ -7,16 +7,15 @@ namespace Aksio.Cratis.Auditing;
 /// Represents a causation type.
 /// </summary>
 /// <param name="Name">String representing the name of the type.</param>
-/// <param name="IsReusable">Whether or not instances of a causation can be reused if properties are equal.</param>
-public record CausationType(string Name, bool IsReusable = false)
+public record CausationType(string Name) : ConceptAs<string>(Name)
 {
     /// <summary>
     /// Represents the root causation type.
     /// </summary>
-    public static readonly CausationType Root = new("Root", true);
+    public static readonly CausationType Root = new("Root");
 
     /// <summary>
     /// Represents the unknown causation type.
     /// </summary>
-    public static readonly CausationType Unknown = new("Unknown", true);
+    public static readonly CausationType Unknown = new("Unknown");
 }
