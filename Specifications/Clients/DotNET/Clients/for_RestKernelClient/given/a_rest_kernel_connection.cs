@@ -17,7 +17,7 @@ using Microsoft.Extensions.Options;
 
 namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
 
-public class a_rest_kernel_client : Specification
+public class a_rest_kernel_connection : Specification
 {
     protected string connect_route;
     protected string ping_route;
@@ -53,7 +53,6 @@ public class a_rest_kernel_client : Specification
     void Establish()
     {
         microservice_id = Guid.NewGuid();
-        ExecutionContextManager.SetGlobalMicroserviceId(microservice_id);
         connection_id = ConnectionId.New();
 
         connect_route = $"/api/clients/{microservice_id}/connect/{connection_id}";

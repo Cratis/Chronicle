@@ -10,9 +10,10 @@ namespace Aksio.Cratis.Kernel.Engines.Projections;
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionSinkFactory"/>.
 /// </summary>
+[Singleton]
 public class ProjectionSinks : IProjectionSinks
 {
-    sealed record Key(ProjectionSinkTypeId TypeId, Model Model);
+    sealed record Key(ProjectionSinkTypeId TypeId, ProjectionId ProjectionId);
 
     readonly IDictionary<ProjectionSinkTypeId, IProjectionSinkFactory> _factories;
     readonly ConcurrentDictionary<Key, IProjectionSink> _stores = new();
@@ -27,10 +28,10 @@ public class ProjectionSinks : IProjectionSinks
     }
 
     /// <inheritdoc/>
-    public IProjectionSink GetForTypeAndModel(ProjectionSinkTypeId typeId, Model model)
+    public IProjectionSink GetForTypeAndModel(ProjectionId projectionId, ProjectionSinkTypeId typeId, Model model)
     {
         ThrowIfUnknownProjectionResultStore(typeId);
-        var key = new Key(typeId, model);
+        var key = new Key(typeId, projectionId);
         if (_stores.TryGetValue(key, out var store)) return store;
         return _stores[key] = _factories[typeId].CreateFor(model);
     }

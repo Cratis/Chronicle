@@ -34,7 +34,6 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IConnectionLifecycle _connectionLifecycle;
     readonly ILogger<RestKernelConnection> _logger;
-    readonly MicroserviceId _microserviceId;
     TaskCompletionSource<bool> _connectCompletion;
     ITimer? _timer;
 
@@ -43,6 +42,8 @@ public abstract class RestKernelConnection : IConnection, IDisposable
 
     /// <inheritdoc/>
     public ConnectionId ConnectionId => _connectionLifecycle.ConnectionId;
+
+    MicroserviceId MicroserviceId => _executionContextManager.Current.MicroserviceId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RestKernelConnection"/> class.
@@ -72,7 +73,6 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         _jsonSerializerOptions = jsonSerializerOptions;
         _connectionLifecycle = connectionLifecycle;
         _logger = logger;
-        _microserviceId = ExecutionContextManager.GlobalMicroserviceId;
         _connectCompletion = new TaskCompletionSource<bool>();
 
         var addresses = server.Features.Get<IServerAddressesFeature>();
@@ -112,7 +112,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
                     try
                     {
                         _logger.AttemptingConnect();
-                        var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/connect/{ConnectionId}", info);
+                        var result = await PerformCommandInternal($"/api/clients/{MicroserviceId}/connect/{ConnectionId}", info);
                         if (result.IsSuccess)
                         {
                             break;
@@ -155,7 +155,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         _timer?.Dispose();
         _timer = null;
 
-        await PerformCommandInternal($"/api/clients/{_microserviceId}/disconnect/{ConnectionId}");
+        await PerformCommandInternal($"/api/clients/{MicroserviceId}/disconnect/{ConnectionId}");
     }
 
     /// <inheritdoc/>
@@ -263,7 +263,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         bool failed;
         try
         {
-            var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/ping/{ConnectionId}", logResult: false);
+            var result = await PerformCommandInternal($"/api/clients/{MicroserviceId}/ping/{ConnectionId}", logResult: false);
             failed = !result.IsSuccess;
         }
         catch

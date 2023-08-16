@@ -23,8 +23,9 @@ public static class HostBuilderExtensions
         Action<IClientBuilder>? configureDelegate = default,
         ILoggerFactory? loggerFactory = default)
     {
-        #pragma warning disable CA2000
+#pragma warning disable CA2000
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
+
         hostBuilder.ConfigureServices((context, services) =>
         {
             var clientBuilder = new ClientBuilder(services, loggerFactory.CreateLogger<ClientBuilder>());

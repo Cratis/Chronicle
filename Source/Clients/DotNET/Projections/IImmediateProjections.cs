@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Projections.Definitions;
 
@@ -12,19 +13,31 @@ namespace Aksio.Cratis.Projections;
 public interface IImmediateProjections
 {
     /// <summary>
-    /// Get an instance by a specific <see cref="ModelKey"/> and specific <see cref="ProjectionDefinition"/>.
+    /// Gets all the definitions.
     /// </summary>
-    /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
-    /// <param name="projectionDefinition"><see cref="ProjectionDefinition"/> defining the projection.</param>
-    /// <returns>An instance for the id as a <see cref="JsonNode"/>..</returns>
-    Task<ImmediateProjectionResult> GetInstanceById(ModelKey modelKey, ProjectionDefinition projectionDefinition);
+    IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
-    /// Get an instance by a specific <see cref="ModelKey"/>.
+    /// Get an instance by a specific <see cref="ModelKey"/> and type.
+    /// </summary>
+    /// <param name="modelType">Type of model the projection is for.</param>
+    /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
+    /// <returns>An instance for the id as a <see cref="JsonNode"/>..</returns>
+    Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey);
+
+    /// <summary>
+    /// Get an instance by a specific <see cref="ModelKey"/> and type specified as generic parameter.
     /// </summary>
     /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
-    /// <param name="projectionDefinition">Optional <see cref="ProjectionDefinition"/> defining the projection.</param>
     /// <typeparam name="TModel">Type of model.</typeparam>
     /// <returns>An instance for the id.</returns>
-    Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey, ProjectionDefinition? projectionDefinition = default);
+    Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey);
+
+    /// <summary>
+    /// Get an instance by a specific <see cref="ModelKey"/> for a specific <see cref="ProjectionId"/>.
+    /// </summary>
+    /// <param name="identifier"><see cref="ProjectionId"/> to get for.</param>
+    /// <param name="modelKey"><see cref="ModelKey"/> to get instance for.</param>
+    /// <returns>An instance for the id.</returns>
+    Task<ImmediateProjectionResult> GetInstanceById(ProjectionId identifier, ModelKey modelKey);
 }

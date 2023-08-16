@@ -95,5 +95,6 @@
         "upserted",
         "Upserting",
         "Xunit"
-    ]
+    ],
+    "dotnet.defaultSolution": "cratis.sln"
 }

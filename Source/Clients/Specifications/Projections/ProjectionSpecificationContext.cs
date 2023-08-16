@@ -16,6 +16,7 @@ using Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;
@@ -36,6 +37,11 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 
     /// <inheritdoc/>
     public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _eventLog.AppendedEvents;
+
+    /// <summary>
+    /// Gets the <see cref="ProjectionDefinition"/> for the projection.
+    /// </summary>
+    public ProjectionDefinition Definition { get; }
 
     readonly IProjection _projection;
     readonly IEventSequenceStorage _eventSequenceStorage;
@@ -60,7 +66,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 
         var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new DefaultModelNameConvention(), new EventTypesForSpecifications(), schemaGenerator, Globals.JsonSerializerOptions);
         defineProjection(builder);
-        var projectionDefinition = builder.Build();
+        Definition = builder.Build();
 
         var eventValueProviderExpressionResolvers = new EventValueProviderExpressionResolvers(typeFormats);
 
@@ -69,7 +75,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             new KeyExpressionResolvers(eventValueProviderExpressionResolvers),
             new ExpandoObjectConverter(typeFormats),
             new EventSequenceStorageProviderForSpecifications(_eventLog));
-        _projection = factory.CreateFrom(projectionDefinition).GetAwaiter().GetResult();
+        _projection = factory.CreateFrom(Definition).GetAwaiter().GetResult();
 
         var objectsComparer = new ObjectsComparer();
 

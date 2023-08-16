@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Projections;
 public record ProjectionSinkTypeId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
+    /// Gets the <see cref="ProjectionSinkTypeId"/> that represents a null sink.
+    /// </summary>
+    public static readonly ProjectionSinkTypeId Null = new(Guid.Empty);
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ProjectionSinkTypeId"/>.
     /// </summary>
     /// <param name="value">String value to convert from.</param>

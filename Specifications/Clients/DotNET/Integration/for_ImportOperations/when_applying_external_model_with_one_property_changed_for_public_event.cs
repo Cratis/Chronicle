@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
+using Aksio.Cratis.EventSequences;
 
 namespace Aksio.Cratis.Integration.for_ImportOperations;
 
@@ -18,17 +18,23 @@ public class when_applying_external_model_with_one_property_changed_for_public_e
     void Establish()
     {
         event_log
-            .Setup(_ => _.Append(IsAny<EventSourceId>(), IsAny<object>(), IsAny<DateTimeOffset>()))
-            .Callback((EventSourceId _, object @event, DateTimeOffset? validFrom) =>
+            .Setup(_ => _.AppendMany(IsAny<EventSourceId>(), IsAny<IEnumerable<EventAndValidFrom>>()))
+            .Callback((EventSourceId _, IEnumerable<EventAndValidFrom> events) =>
             {
+                var eventAndValidFrom = events.First();
+                var @event = eventAndValidFrom.Event;
+                var validFrom = eventAndValidFrom.ValidFrom;
                 event_appended_to_event_log = (@event as SomePublicEvent)!;
                 event_log_valid_from = validFrom;
             });
 
         event_outbox
-            .Setup(_ => _.Append(IsAny<EventSourceId>(), IsAny<object>(), IsAny<DateTimeOffset>()))
-            .Callback((EventSourceId _, object @event, DateTimeOffset? validFrom) =>
+            .Setup(_ => _.AppendMany(IsAny<EventSourceId>(), IsAny<IEnumerable<EventAndValidFrom>>()))
+            .Callback((EventSourceId _, IEnumerable<EventAndValidFrom> events) =>
             {
+                var eventAndValidFrom = events.First();
+                var @event = eventAndValidFrom.Event;
+                var validFrom = eventAndValidFrom.ValidFrom;
                 event_appended_to_outbox = (@event as SomePublicEvent)!;
                 outbox_valid_from = validFrom;
             });

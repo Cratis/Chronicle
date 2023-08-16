@@ -73,7 +73,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     {
         var collection = GetCollection(isReplaying);
 
-        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key)));
+        var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", ConvertKeyToBsonValue(key))).ConfigureAwait(false);
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
@@ -95,7 +95,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
         if (changeset.HasBeenRemoved())
         {
-            await collection.DeleteOneAsync(filter);
+            await collection.DeleteOneAsync(filter).ConfigureAwait(false);
             return;
         }
 
@@ -113,7 +113,7 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
             {
                 IsUpsert = true,
                 ArrayFilters = distinctArrayFilters
-            });
+            }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -150,20 +150,20 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
 
         if (collectionNames.Contains(_model.Name))
         {
-            await _database.RenameCollectionAsync(_model.Name, oldCollectionName);
+            await _database.RenameCollectionAsync(_model.Name, oldCollectionName).ConfigureAwait(false);
         }
 
         if (collectionNames.Contains(rewindName))
         {
-            await _database.RenameCollectionAsync(rewindName, _model.Name);
+            await _database.RenameCollectionAsync(rewindName, _model.Name).ConfigureAwait(false);
         }
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun(bool isReplaying)
+    public async Task PrepareInitialRun(bool isReplaying)
     {
         var collection = GetCollection(isReplaying);
-        return collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
+        await collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -262,14 +262,16 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
                         if (hasJoinChanges)
                         {
                             // var rendered = joinUpdateBuilder!.Render(BsonSerializer.LookupSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry);
-                            joinTasks.Add(collection.UpdateOneAsync(
+                            var task = collection.UpdateOneAsync(
                                 filter,
                                 joinUpdateBuilder,
                                 new UpdateOptions
                                 {
                                     IsUpsert = false,
                                     ArrayFilters = joinArrayFiltersForDocument.ToArray()
-                                }));
+                                });
+                            task.ConfigureAwait(false);
+                            joinTasks.Add(task);
                         }
                     }
                     break;

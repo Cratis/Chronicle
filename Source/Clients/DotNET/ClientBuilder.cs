@@ -14,7 +14,9 @@ using Aksio.Cratis.Net;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Json;
+using Aksio.Cratis.Rules;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Tenants;
 using Aksio.Json;
 using Aksio.Tasks;
 using Aksio.Timers;
@@ -133,7 +135,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ITaskFactory, TaskFactory>()
             .AddSingleton<ITimerFactory, TimerFactory>()
             .AddSingleton<OutboxProjectionsRegistrar>()
-            .AddSingleton<AdaptersConnectionLifecycleParticipant>()
             .AddSingleton<ObserversConnectionLifecycleParticipant>()
             .AddSingleton<ProjectionsRegistrar>()
             .AddSingleton<SchemasConnectionLifecycleParticipant>()
@@ -144,6 +145,11 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IImmediateProjections, ImmediateProjections>()
             .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
             .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
+            .AddSingleton<ITenantConfiguration, TenantConfiguration>()
+            .AddSingleton<IClientProjections, ClientProjections>()
+            .AddSingleton<IRulesProjections, RulesProjections>()
+            .AddSingleton<IRules, Rules.Rules>()
+            .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
         _logger.ConfiguringCompliance();

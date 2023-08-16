@@ -14,4 +14,5 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 /// <param name="EventSourceId">The <see cref="EventSourceId"/>.</param>
 /// <param name="EventType">The <see cref="EventType"/> to append.</param>
 /// <param name="Content">The content of the event represented as <see cref="JsonObject"/>.</param>
-public record AppendEvent(EventSourceId EventSourceId, EventType EventType, JsonObject Content);
+/// <param name="ValidFrom">Optional valid from.</param>
+public record AppendEvent(EventSourceId EventSourceId, EventType EventType, JsonObject Content, DateTimeOffset? ValidFrom);

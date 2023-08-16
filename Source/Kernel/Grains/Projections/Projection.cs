@@ -20,7 +20,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 public class Projection : Grain, IProjection
 {
     readonly ProviderFor<IProjectionDefinitions> _projectionDefinitionsProvider;
-    readonly IProjectionFactory _projectionFactory;
+    readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
     EngineProjection? _projection;
@@ -34,17 +34,17 @@ public class Projection : Grain, IProjection
     /// Initializes a new instance of the <see cref="Projection"/> class.
     /// </summary>
     /// <param name="projectionDefinitionsProvider"><see cref="IProjectionDefinitions"/>.</param>
-    /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
+    /// <param name="projectionManagerProvider"><see cref="IProjectionManager"/> for working with engine projections.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public Projection(
         ProviderFor<IProjectionDefinitions> projectionDefinitionsProvider,
-        IProjectionFactory projectionFactory,
+        ProviderFor<IProjectionManager> projectionManagerProvider,
         IExecutionContextManager executionContextManager,
         ILogger<Projection> logger)
     {
         _projectionDefinitionsProvider = projectionDefinitionsProvider;
-        _projectionFactory = projectionFactory;
+        _projectionManagerProvider = projectionManagerProvider;
         _executionContextManager = executionContextManager;
         _projectionId = ProjectionId.NotSet;
         _definitionObservers = new(TimeSpan.FromMinutes(1), logger, "ProjectionDefinitionObservers");
@@ -83,7 +83,7 @@ public class Projection : Grain, IProjection
         _executionContextManager.Establish(_tenantId!, CorrelationId.New(), _microserviceId);
 
         _definition = await _projectionDefinitionsProvider().GetFor(_projectionId);
-        _projection = await _projectionFactory.CreateFrom(_definition);
+        _projection = _projectionManagerProvider().Get(_definition!.Identifier);
         _definitionObservers.Notify(_ => _.OnProjectionDefinitionsChanged());
     }
 

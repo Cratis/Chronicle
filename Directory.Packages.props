@@ -41,6 +41,7 @@
         <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
+        <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
 
         <PackageVersion Include="OrleansDashboard" Version="7.2.1" />

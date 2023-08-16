@@ -76,15 +76,15 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         var context = new ImportContext<TModel, TExternalModel>(initialProjectionResult, changeset, new EventsToAppend());
         _importContexts.OnNext(context);
 
-        foreach (var @event in context.Events)
-        {
-            await _eventLog.Append(eventSourceId!, @event.Event, @event.ValidFrom);
+        if (!context.Events.Any()) return;
 
-            if (@event.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false)
-            {
-                await _eventOutbox.Append(eventSourceId!, @event.Event, @event.ValidFrom);
-            }
-        }
+        var eventsToAppend = context.Events.Select(_ => new EventAndValidFrom(_.Event, _.ValidFrom)).ToArray();
+        await _eventLog.AppendMany(eventSourceId!, eventsToAppend);
+
+        var publicEventsToAppend = eventsToAppend.Where(_ => _.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false).ToArray();
+
+        if (publicEventsToAppend.Length == 0) return;
+        await _eventOutbox.AppendMany(eventSourceId!, publicEventsToAppend);
     }
 
     /// <inheritdoc/>

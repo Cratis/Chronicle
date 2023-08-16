@@ -8,14 +8,13 @@ namespace Aksio.Cratis.AspNetCore.Rules.for_RulesModelValidatorProvider.given;
 public class one_rule_for_type : Specification
 {
     protected RulesModelValidatorProvider provider;
-    protected Mock<IServiceProvider> service_provider;
     protected Mock<IRules> rules;
+    protected Mock<IServiceProvider> service_provider;
 
     void Establish()
     {
         rules = new();
         service_provider = new();
-        service_provider.Setup(_ => _.GetService(typeof(IRules))).Returns(rules.Object);
-        provider = new(service_provider.Object);
+        provider = new(rules.Object, service_provider.Object);
     }
 }

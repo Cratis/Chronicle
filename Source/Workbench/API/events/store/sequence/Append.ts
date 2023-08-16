@@ -16,6 +16,7 @@ export interface IAppend {
     eventSourceId?: string;
     eventType?: EventType;
     content?: any;
+    validFrom?: Date;
 }
 
 export class AppendValidator extends CommandValidator {
@@ -26,6 +27,7 @@ export class AppendValidator extends CommandValidator {
         eventSourceId: new Validator(),
         eventType: new Validator(),
         content: new Validator(),
+        validFrom: new Validator(),
     };
 }
 
@@ -40,6 +42,7 @@ export class Append extends Command<IAppend> implements IAppend {
     private _eventSourceId!: string;
     private _eventType!: EventType;
     private _content!: any;
+    private _validFrom!: Date;
 
     constructor() {
         super(Object, false);
@@ -61,6 +64,7 @@ export class Append extends Command<IAppend> implements IAppend {
             'eventSourceId',
             'eventType',
             'content',
+            'validFrom',
         ];
     }
 
@@ -111,6 +115,14 @@ export class Append extends Command<IAppend> implements IAppend {
     set content(value: any) {
         this._content = value;
         this.propertyChanged('content');
+    }
+    get validFrom(): Date {
+        return this._validFrom;
+    }
+
+    set validFrom(value: Date) {
+        this._validFrom = value;
+        this.propertyChanged('validFrom');
     }
 
     static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>, ClearCommandValues] {

@@ -26,4 +26,4 @@ public record ChildrenDefinition(
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
     AllDefinition All,
-    RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, true, InitialModelState, From, Join, Children, All, RemovedWith);
+    RemovedWithDefinition? RemovedWith) : ProjectionDefinition(Guid.Empty, string.Empty, Model, true, false, InitialModelState, From, Join, Children, All, RemovedWith);

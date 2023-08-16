@@ -21,6 +21,12 @@ const columns: GridColDef[] = [
         resizable: true
     },
     {
+        headerName: 'Active',
+        field: 'isActive',
+        width: 400,
+        resizable: true
+    },
+    {
         headerName: 'Model Name',
         field: 'modelName',
         width: 400,

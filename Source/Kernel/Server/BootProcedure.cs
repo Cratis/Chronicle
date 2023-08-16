@@ -49,7 +49,7 @@ public class BootProcedure : IPerformBootProcedure
                 var schemaStore = _serviceProvider.GetService<Schemas.ISchemaStore>()!;
                 schemaStore.Populate().Wait();
 
-                var projections = _grainFactory.GetGrain<IProjections>((MicroserviceId)microserviceId);
+                var projections = _grainFactory.GetGrain<IProjections>(0);
                 projections.Rehydrate().Wait();
 
                 foreach (var outbox in microservice.Inbox.FromOutboxes)

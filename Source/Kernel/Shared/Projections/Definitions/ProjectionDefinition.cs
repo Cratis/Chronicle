@@ -13,6 +13,7 @@ namespace Aksio.Cratis.Projections.Definitions;
 /// <param name="Identifier"><see cref="ProjectionId">Identifier</see> of the projection.</param>
 /// <param name="Name">Friendly display name of the projection.</param>
 /// <param name="Model">The target <see cref="ModelDefinition"/>.</param>
+/// <param name="IsActive">Whether or not the projection is an actively observing projection.</param>
 /// <param name="IsRewindable">Whether or not the projection is rewindable.</param>
 /// <param name="InitialModelState">The initial state to use for new instances of the model.</param>
 /// <param name="From">All the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.</param>
@@ -24,6 +25,7 @@ public record ProjectionDefinition(
     ProjectionId Identifier,
     ProjectionName Name,
     ModelDefinition Model,
+    bool IsActive,
     bool IsRewindable,
     JsonObject InitialModelState,
     IDictionary<EventType, FromDefinition> From,

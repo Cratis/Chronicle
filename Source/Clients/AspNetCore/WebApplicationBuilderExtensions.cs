@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis;
+using Aksio.Cratis.AspNetCore;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +25,6 @@ public static class WebApplicationBuilderExtensions
         this WebApplicationBuilder webApplicationBuilder,
         Action<IClientBuilder>? configureDelegate = default)
     {
-        webApplicationBuilder.Services.AddTransient<ClientObservers>();
         webApplicationBuilder.Services.AddRules();
         webApplicationBuilder.Host.UseCratis(configureDelegate);
         return webApplicationBuilder;
@@ -43,7 +43,11 @@ public static class WebApplicationBuilderExtensions
         app.UseEndpoints(endpoints => endpoints.MapClientObservers());
 
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait());
+        appLifetime.ApplicationStarted.Register(() =>
+        {
+            GlobalInstances.ServiceProvider = app.ApplicationServices;
+            app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait();
+        });
 
         return app;
     }
