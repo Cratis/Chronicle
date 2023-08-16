@@ -48,6 +48,7 @@ public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
                 correlationId ?? CorrelationId.New(),
                 causationId ?? "[n/a]",
                 causedBy ?? CausedBy.System);
+
             return true;
         }
 

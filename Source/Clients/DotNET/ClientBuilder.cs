@@ -1,7 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Collections;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Configuration;
@@ -33,6 +35,9 @@ namespace Aksio.Cratis;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
+    const string _versionMetadataKey = "SoftwareVersion";
+    const string _commitMetadataKey = "SoftwareCommit";
+
 #pragma warning disable SA1600, CA1051
     protected readonly ILogger<ClientBuilder> _logger;
     protected IClientArtifactsProvider? _clientArtifactsProvider;
@@ -40,6 +45,9 @@ public class ClientBuilder : IClientBuilder
     readonly OptionsBuilder<ClientOptions> _optionsBuilder;
     bool _inKernel;
     bool _isMultiTenanted;
+    string _version = "0.0.0";
+    string _commit = "[N/A]";
+    Dictionary<string, string> _metadata = new();
 
     /// <inheritdoc/>
     public IServiceCollection Services { get; }
@@ -73,6 +81,21 @@ public class ClientBuilder : IClientBuilder
             options.MicroserviceId = microserviceId;
             options.MicroserviceName = microserviceName;
         });
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder WithSoftwareVersion(string version, string commit)
+    {
+        _metadata[_versionMetadataKey] = version;
+        _metadata[_commitMetadataKey] = commit;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder WithMetadata(string key, string value)
+    {
+        _metadata[key] = value;
         return this;
     }
 
@@ -117,6 +140,8 @@ public class ClientBuilder : IClientBuilder
 
         _logger.ConfiguringServices();
 
+        CausationManager.DefineRoot(_metadata.ToImmutableDictionary());
+
         Services
             .AddHttpClient()
             .AddSingleton(clientArtifacts)
@@ -148,6 +173,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ITenantConfiguration, TenantConfiguration>()
             .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
+            .AddSingleton<ICausationManager, CausationManager>()
             .AddSingleton<IRules, Rules.Rules>()
             .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));

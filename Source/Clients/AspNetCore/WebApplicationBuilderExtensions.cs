@@ -37,6 +37,7 @@ public static class WebApplicationBuilderExtensions
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
+        app.UseCausation();
         app.UseExecutionContext();
 
         app.UseRouting();

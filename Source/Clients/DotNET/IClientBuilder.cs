@@ -33,6 +33,30 @@ public interface IClientBuilder
     IClientBuilder ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName);
 
     /// <summary>
+    /// Configure the version of the software running.
+    /// </summary>
+    /// <param name="version">The string representing the version of the running process.</param>
+    /// <param name="commit">The string representing commit identifier from the source code control of the running process.</param>
+    /// <returns>The builder to build.</returns>
+    /// <remarks>
+    /// Relevant operations done by the client will be tagged with this information.
+    /// Example of this is when appending events, the version will be used in the event context and stored.
+    /// </remarks>
+    IClientBuilder WithSoftwareVersion(string version, string commit);
+
+    /// <summary>
+    /// Configure any metadata to associate with the client.
+    /// </summary>
+    /// <param name="key">Key of the metadata.</param>
+    /// <param name="value">Value belonging to the metadata.</param>
+    /// <returns>The builder to build.</returns>
+    /// <remarks>
+    /// Relevant operations done by the client will be tagged with this information.
+    /// Example of this is when appending events, the version will be used in the event context and stored.
+    /// </remarks>
+    IClientBuilder WithMetadata(string key, string value);
+
+    /// <summary>
     /// Instruct the builder that the client is within the kernel.
     /// </summary>
     /// <returns>Builder for continuation.</returns>
