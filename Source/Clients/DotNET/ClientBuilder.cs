@@ -61,6 +61,10 @@ public class ClientBuilder : IClientBuilder
     {
         _metadata[_versionMetadataKey] = "0.0.0";
         _metadata[_commitMetadataKey] = "[N/A]";
+        _metadata["OS"] = Environment.OSVersion.ToString();
+        _metadata["MachineName"] = Environment.MachineName;
+        _metadata["Process"] = Environment.ProcessPath ?? string.Empty;
+
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
         _optionsBuilder.BindConfiguration("cratis")
