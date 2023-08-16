@@ -30,7 +30,6 @@ public class ProjectionManager : IProjectionManager
         IProjectionFactory projectionFactory,
         IProjectionPipelineFactory projectionPipelineFactory)
     {
-        Console.WriteLine($"{executionContextManager.Current.TenantId} - {executionContextManager.Current.MicroserviceId}");
         _projectionFactory = projectionFactory;
         _projectionPipelineFactory = projectionPipelineFactory;
     }
