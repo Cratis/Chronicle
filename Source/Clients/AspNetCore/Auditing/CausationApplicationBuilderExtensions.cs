@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Aksio.Collections;
 using Aksio.Cratis.Auditing;
 using Aksio.Execution;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,9 @@ namespace Microsoft.AspNetCore.Builder;
 /// </summary>
 public static class CausationApplicationBuilderExtensions
 {
+    /// <summary>
+    /// The causation type for ASP.NET requests.
+    /// </summary>
     public static readonly CausationType CausationType = new("ASP.NET Request");
 
     /// <summary>
@@ -25,9 +29,17 @@ public static class CausationApplicationBuilderExtensions
         app.Use(async (context, next) =>
         {
             var causationManager = context.RequestServices.GetRequiredService<ICausationManager>();
-
-            causationManager.Add(CausationType,
-                ImmutableDictionary<string, string>.Empty);
+            var properties = new Dictionary<string, string>
+                {
+                    { "route", context.Request.Path },
+                    { "method", context.Request.Method },
+                    { "host", context.Request.Host.Value },
+                    { "protocol", context.Request.Protocol },
+                    { "scheme", context.Request.Scheme },
+                    { "query", context.Request.QueryString.ToString() },
+                };
+            context.Request.RouteValues.ForEach(_ => properties.Add($"route-value:{_.Key}", _.Value?.ToString() ?? string.Empty));
+            causationManager.Add(CausationType, properties.ToImmutableDictionary());
 
             await next.Invoke();
         });
