@@ -42,6 +42,7 @@ public class CausationManager : ICausationManager
 
 // Kernel decides if a causation is unique or not if causation type is reusable or not
 // Capture time of causation
+// Server needs to keep track of parent causation - and prepend it to the causation chain, typically when calling out to observers we want to keep the causation from the event that triggered the observer
 
 // Causation types:
 // - Base - running process:
