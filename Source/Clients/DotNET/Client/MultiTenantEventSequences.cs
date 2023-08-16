@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
@@ -18,6 +19,7 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
     readonly IObserversRegistrar _observersRegistrar;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
+    readonly ICausationManager _causationManager;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
@@ -27,18 +29,21 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
     /// <param name="observersRegistrar"><see cref="IObserversRegistrar"/> to use.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
+    /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public MultiTenantEventSequences(
         IConnection connection,
         IObserversRegistrar observersRegistrar,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
+        ICausationManager causationManager,
         IExecutionContextManager executionContextManager)
     {
         _connection = connection;
         _observersRegistrar = observersRegistrar;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
+        _causationManager = causationManager;
         _executionContextManager = executionContextManager;
     }
 
@@ -53,6 +58,7 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
                 _eventSerializer,
                 _connection,
                 _observersRegistrar,
+                _causationManager,
                 _executionContextManager);
             _sequences.TryAdd(tenantId, sequences);
         }

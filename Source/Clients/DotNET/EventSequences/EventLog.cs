@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
@@ -20,6 +21,7 @@ public class EventLog : EventSequence, IEventLog
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
     /// <param name="observersRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
+    /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventLog(
         TenantId tenantId,
@@ -27,6 +29,7 @@ public class EventLog : EventSequence, IEventLog
         IEventSerializer eventSerializer,
         IConnection connection,
         IObserversRegistrar observersRegistrar,
+        ICausationManager causationManager,
         IExecutionContextManager executionContextManager) : base(
             tenantId,
             EventSequenceId.Log,
@@ -34,6 +37,7 @@ public class EventLog : EventSequence, IEventLog
             eventSerializer,
             connection,
             observersRegistrar,
+            causationManager,
             executionContextManager)
     {
     }

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
@@ -18,6 +19,7 @@ public class EventSequence : IEventSequence
     readonly IEventSerializer _eventSerializer;
     readonly IConnection _connection;
     readonly IObserversRegistrar _observerRegistrar;
+    readonly ICausationManager _causationManager;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
@@ -29,6 +31,7 @@ public class EventSequence : IEventSequence
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
     /// <param name="observerRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
+    /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequence(
         TenantId tenantId,
@@ -37,6 +40,7 @@ public class EventSequence : IEventSequence
         IEventSerializer eventSerializer,
         IConnection connection,
         IObserversRegistrar observerRegistrar,
+        ICausationManager causationManager,
         IExecutionContextManager executionContextManager)
     {
         _tenantId = tenantId;
@@ -45,6 +49,7 @@ public class EventSequence : IEventSequence
         _eventSerializer = eventSerializer;
         _connection = connection;
         _observerRegistrar = observerRegistrar;
+        _causationManager = causationManager;
         _executionContextManager = executionContextManager;
     }
 
@@ -77,7 +82,11 @@ public class EventSequence : IEventSequence
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
         var route = GetBaseRoute();
-        var payload = await CreateAppendEvent(eventSourceId, @event, validFrom);
+        var payload = await CreateAppendEvent(
+            eventSourceId,
+            @event,
+            _causationManager.GetCurrentChain(),
+            validFrom);
         await _connection.PerformCommand(
             route,
             payload,
@@ -96,7 +105,11 @@ public class EventSequence : IEventSequence
     /// <inheritdoc/>
     public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events)
     {
-        var tasks = events.Select(_ => CreateAppendEvent(eventSourceId, _.Event, _.ValidFrom));
+        var tasks = events.Select(_ => CreateAppendEvent(
+            eventSourceId,
+            _.Event,
+            _causationManager.GetCurrentChain(),
+            _.ValidFrom));
         var payload = await Task.WhenAll(tasks.ToArray());
         var route = $"{GetBaseRoute()}/append-many";
         await _connection.PerformCommand(
@@ -130,13 +143,22 @@ public class EventSequence : IEventSequence
 
     string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_tenantId}/sequence/{_eventSequenceId}";
 
-    async Task<AppendEvent> CreateAppendEvent(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default)
+    async Task<AppendEvent> CreateAppendEvent(
+        EventSourceId eventSourceId,
+        object @event,
+        IEnumerable<Causation> causation,
+        DateTimeOffset? validFrom = default)
     {
         var eventTypeClr = @event.GetType();
         ThrowIfUnknownEventType(eventTypeClr);
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
         var serializedEvent = await _eventSerializer.Serialize(@event);
-        return new AppendEvent(eventSourceId, eventType, serializedEvent, validFrom);
+        return new AppendEvent(
+            eventSourceId,
+            eventType,
+            serializedEvent,
+            causation,
+            validFrom);
     }
 
     void ThrowIfUnknownEventType(Type eventTypeClr)

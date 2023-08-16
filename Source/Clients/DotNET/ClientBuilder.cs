@@ -45,8 +45,6 @@ public class ClientBuilder : IClientBuilder
     readonly OptionsBuilder<ClientOptions> _optionsBuilder;
     bool _inKernel;
     bool _isMultiTenanted;
-    string _version = "0.0.0";
-    string _commit = "[N/A]";
     Dictionary<string, string> _metadata = new();
 
     /// <inheritdoc/>
@@ -61,6 +59,8 @@ public class ClientBuilder : IClientBuilder
         IServiceCollection services,
         ILogger<ClientBuilder> logger)
     {
+        _metadata[_versionMetadataKey] = "0.0.0";
+        _metadata[_commitMetadataKey] = "[N/A]";
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
         _optionsBuilder.BindConfiguration("cratis")
