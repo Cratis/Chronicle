@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Integration;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Microsoft.AspNetCore.Mvc;
@@ -55,6 +56,7 @@ public class EventSequence : Controller
             eventToAppend.EventSourceId,
             eventToAppend.EventType,
             eventToAppend.Content,
+            eventToAppend.Causation,
             eventToAppend.ValidFrom);
     }
 
@@ -71,11 +73,12 @@ public class EventSequence : Controller
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] TenantId tenantId,
-        [FromBody] IEnumerable<AppendEvent> eventsToAppend)
+        [FromBody] AppendManyEvents eventsToAppend)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        await eventSequence.AppendMany(eventsToAppend.Select(_ => new EventToAppend(_.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray());
+        var events = eventsToAppend.Events.Select(_ => new Grains.EventSequences.EventToAppend(eventsToAppend.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray();
+        await eventSequence.AppendMany(events, eventsToAppend.Causation);
     }
 
     /// <summary>

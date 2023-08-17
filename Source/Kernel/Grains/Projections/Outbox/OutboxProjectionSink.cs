@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Immutable;
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
 using System.Text.Json;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
@@ -20,6 +23,11 @@ namespace Aksio.Cratis.Kernel.Grains.Projections.Outbox;
 /// </summary>
 public class OutboxProjectionSink : IProjectionSink, IDisposable
 {
+    /// <summary>
+    /// The <see cref="CausationType"/> for the sink.
+    /// </summary>
+    public static readonly CausationType CausationType = new("Outbox Projection Sink");
+
     readonly Model _model;
     readonly IEventSequenceStorage _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
@@ -75,7 +83,22 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
             keyExtension: _executionContextManager.Current.ToMicroserviceAndTenant());
 
         var stateAsJson = JsonSerializer.SerializeToNode(state, _jsonSerializerOptions);
-        await outbox.Append(key.Value.ToString()!, eventType, stateAsJson!.AsObject());
+
+        var causation = new Causation(
+                    DateTimeOffset.UtcNow,
+                    CausationType,
+                    new Dictionary<string, string>()
+                    {
+                        { "key", key.ToString() },
+                        { "event", eventType.Id.ToString() },
+                        { "eventSequence", EventSequenceId.Outbox.ToString() }
+                    });
+
+        await outbox.Append(
+            key.Value.ToString()!,
+            eventType,
+            stateAsJson!.AsObject(),
+            new Causation[] { causation });
     }
 
     /// <inheritdoc/>

@@ -22,7 +22,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// <summary>
     /// The causation type for client observer.
     /// </summary>
-    public static readonly CausationType CausationType = new("Import Operations");
+    public static readonly CausationType CausationType = new("Import Operation");
 
     /// <summary>
     /// The causation adapter id property.

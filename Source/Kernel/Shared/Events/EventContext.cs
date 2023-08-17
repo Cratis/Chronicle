@@ -25,7 +25,7 @@ public record EventContext(
     DateTimeOffset ValidFrom,
     TenantId TenantId,
     CorrelationId CorrelationId,
-    IImmutableList<Causation> Causation,
+    IEnumerable<Causation> Causation,
     CausedBy CausedBy,
     EventObservationState ObservationState = EventObservationState.Initial)
 {

@@ -68,6 +68,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         appendedEvent.Metadata.Type,
+                        appendedEvent.Context.Causation,
                         appendedEvent.Context.ValidFrom,
                         appendedEvent.Content);
 

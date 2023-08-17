@@ -1,7 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
@@ -91,7 +93,12 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     public Task<EventSequenceNumber> GetTailSequenceNumber() => Task.FromResult(State.SequenceNumber - 1);
 
     /// <inheritdoc/>
-    public async Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default)
+    public async Task Append(
+        EventSourceId eventSourceId,
+        EventType eventType,
+        JsonObject content,
+        IEnumerable<Causation> causation,
+        DateTimeOffset? validFrom = default)
     {
         var updateSequenceNumber = false;
         var eventName = "[N/A]";
@@ -126,7 +133,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
                             validFrom ?? DateTimeOffset.MinValue,
                             _microserviceAndTenant.TenantId,
                             _executionContextManager.Current.CorrelationId,
-                            _executionContextManager.Current.CausationId,
+                            causation,
                             _executionContextManager.Current.CausedBy),
                         compliantEventAsExpandoObject);
 
@@ -181,11 +188,11 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     }
 
     /// <inheritdoc/>
-    public async Task AppendMany(IEnumerable<EventToAppend> events)
+    public async Task AppendMany(IEnumerable<EventToAppend> events, IEnumerable<Causation> causation)
     {
         foreach (var @event in events)
         {
-            await Append(@event.EventSourceId, @event.EventType, @event.Content, @event.ValidFrom);
+            await Append(@event.EventSourceId, @event.EventType, @event.Content, causation, @event.ValidFrom);
         }
     }
 

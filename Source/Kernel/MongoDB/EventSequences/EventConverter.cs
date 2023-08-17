@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
@@ -49,7 +50,15 @@ public class EventConverter : IEventConverter
 
         return new AppendedEvent(
             new(@event.SequenceNumber, eventType),
-            new(@event.EventSourceId, @event.SequenceNumber, @event.Occurred, @event.ValidFrom, _executionContextManager.Current.TenantId, @event.CorrelationId, @event.CausationId, @event.CausedBy),
+            new(
+                @event.EventSourceId,
+                @event.SequenceNumber,
+                @event.Occurred,
+                @event.ValidFrom,
+                _executionContextManager.Current.TenantId,
+                @event.CorrelationId,
+                @event.Causation,
+                @event.CausedBy),
             releasedContentAsExpandoObject);
     }
 }

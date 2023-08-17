@@ -20,7 +20,7 @@ public class RulesProjections : IRulesProjections
 {
     sealed class RulesClass : RulesFor<RulesClass, object>
     {
-        public override RuleId Identifier => throw new NotImplementedException();
+        public override RuleId Identifier => Guid.Empty;
     }
 
     readonly IEventTypes _eventTypes;

@@ -3,8 +3,9 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Events;
+namespace Aksio.Cratis.EventSequences;
 
 /// <summary>
 /// Represents the payload for appending an event.

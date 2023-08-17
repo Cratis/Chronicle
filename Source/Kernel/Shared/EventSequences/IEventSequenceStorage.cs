@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.EventSequences;
@@ -25,10 +26,11 @@ public interface IEventSequenceStorage
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, DateTimeOffset validFrom, ExpandoObject content);
+    Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, IEnumerable<Causation> causation, DateTimeOffset validFrom, ExpandoObject content);
 
     /// <summary>
     /// Compensate a single event to the event store.
@@ -36,10 +38,11 @@ public interface IEventSequenceStorage
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> representing the event sequence to append to.</param>
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <param name="content">The content of the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, DateTimeOffset validFrom, ExpandoObject content);
+    Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, IEnumerable<Causation> causation, DateTimeOffset validFrom, ExpandoObject content);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

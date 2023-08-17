@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Workers;
 
@@ -30,16 +31,18 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
     /// <param name="content">The JSON payload of the event.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default);
+    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, IEnumerable<Causation> causation, DateTimeOffset? validFrom = default);
 
     /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="events">Collection of <see cref="EventToAppend">events</see> to append.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task AppendMany(IEnumerable<EventToAppend> events);
+    Task AppendMany(IEnumerable<EventToAppend> events, IEnumerable<Causation> causation);
 
     /// <summary>
     /// Compensate a specific event in the event store.

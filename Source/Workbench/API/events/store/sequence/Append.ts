@@ -5,6 +5,7 @@
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/applications/commands';
 import { Validator } from '@aksio/applications/validation';
 import { EventType } from '../sequence/EventType';
+import { Causation } from '../sequence/Causation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}');
@@ -16,6 +17,7 @@ export interface IAppend {
     eventSourceId?: string;
     eventType?: EventType;
     content?: any;
+    causation?: Causation[];
     validFrom?: Date;
 }
 
@@ -27,6 +29,7 @@ export class AppendValidator extends CommandValidator {
         eventSourceId: new Validator(),
         eventType: new Validator(),
         content: new Validator(),
+        causation: new Validator(),
         validFrom: new Validator(),
     };
 }
@@ -42,6 +45,7 @@ export class Append extends Command<IAppend> implements IAppend {
     private _eventSourceId!: string;
     private _eventType!: EventType;
     private _content!: any;
+    private _causation!: Causation[];
     private _validFrom!: Date;
 
     constructor() {
@@ -64,6 +68,7 @@ export class Append extends Command<IAppend> implements IAppend {
             'eventSourceId',
             'eventType',
             'content',
+            'causation',
             'validFrom',
         ];
     }
@@ -115,6 +120,14 @@ export class Append extends Command<IAppend> implements IAppend {
     set content(value: any) {
         this._content = value;
         this.propertyChanged('content');
+    }
+    get causation(): Causation[] {
+        return this._causation;
+    }
+
+    set causation(value: Causation[]) {
+        this._causation = value;
+        this.propertyChanged('causation');
     }
     get validFrom(): Date {
         return this._validFrom;

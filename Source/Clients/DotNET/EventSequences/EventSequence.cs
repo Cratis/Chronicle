@@ -105,12 +105,11 @@ public class EventSequence : IEventSequence
     /// <inheritdoc/>
     public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events)
     {
-        var tasks = events.Select(_ => CreateAppendEvent(
-            eventSourceId,
+        var tasks = events.Select(_ => CreateEventToAppend(
             _.Event,
-            _causationManager.GetCurrentChain(),
             _.ValidFrom));
-        var payload = await Task.WhenAll(tasks.ToArray());
+        var eventsToAppend = await Task.WhenAll(tasks.ToArray());
+        var payload = new AppendManyEvents(eventSourceId, eventsToAppend, _causationManager.GetCurrentChain());
         var route = $"{GetBaseRoute()}/append-many";
         await _connection.PerformCommand(
             route,
@@ -159,6 +158,15 @@ public class EventSequence : IEventSequence
             serializedEvent,
             causation,
             validFrom);
+    }
+
+    async Task<EventToAppend> CreateEventToAppend(object @event, DateTimeOffset? validFrom = default)
+    {
+        var eventTypeClr = @event.GetType();
+        ThrowIfUnknownEventType(eventTypeClr);
+        var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
+        var serializedEvent = await _eventSerializer.Serialize(@event);
+        return new EventToAppend(eventType, serializedEvent, validFrom);
     }
 
     void ThrowIfUnknownEventType(Type eventTypeClr)

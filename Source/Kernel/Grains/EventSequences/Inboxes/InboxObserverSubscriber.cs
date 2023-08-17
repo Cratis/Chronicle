@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
@@ -9,6 +11,7 @@ using Aksio.Cratis.Observation;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 
@@ -87,7 +90,12 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
             _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);
 
             var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
-            await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, content!);
+            var causation = new Causation(DateTimeOffset.UtcNow, "Inbox", ImmutableDictionary<string, string>.Empty);
+            await _inboxEventSequence!.Append(
+                @event.Context.EventSourceId,
+                @event.Metadata.Type,
+                content!,
+                new Causation[] { causation });
             return ObserverSubscriberResult.Ok;
         }
         catch (Exception ex)

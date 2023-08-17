@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.EventSequences;
@@ -71,6 +72,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSequenceNumber sequenceNumber,
         EventSourceId eventSourceId,
         EventType eventType,
+        IEnumerable<Causation> causation,
         DateTimeOffset validFrom,
         ExpandoObject content)
     {
@@ -87,7 +89,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
             var @event = new Event(
                 sequenceNumber,
                 _executionContextManager.Current.CorrelationId,
-                _executionContextManager.Current.CausationId,
+                causation,
                 _executionContextManager.Current.CausedBy,
                 eventType.Id,
                 DateTimeOffset.UtcNow,
@@ -128,11 +130,15 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSequenceId eventSequenceId,
         EventSequenceNumber sequenceNumber,
         EventType eventType,
+        IEnumerable<Causation> causation,
         DateTimeOffset validFrom,
         ExpandoObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public async Task<AppendedEvent> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason)
+    public async Task<AppendedEvent> Redact(
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber sequenceNumber,
+        RedactionReason reason)
     {
         _logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = GetCollectionFor(eventSequenceId);
