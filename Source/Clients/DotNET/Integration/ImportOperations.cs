@@ -24,6 +24,21 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// </summary>
     public static readonly CausationType CausationType = new("Import Operations");
 
+    /// <summary>
+    /// The causation adapter id property.
+    /// </summary>
+    public const string CausationAdapterIdProperty = "AdapterId";
+
+    /// <summary>
+    /// The causation adapter type property.
+    /// </summary>
+    public const string CausationAdapterTypeProperty = "AdapterType";
+
+    /// <summary>
+    /// The causation key property.
+    /// </summary>
+    public const string CausationKeyProperty = "Key";
+
     readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
     readonly IObjectsComparer _objectsComparer;
     readonly IEventSequence _eventLog;
@@ -76,9 +91,9 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
 
         _causationManager.Add(CausationType, new Dictionary<string, string>
         {
-            { "AdapterId", Adapter.Identifier.ToString() },
-            { "AdapterType", Adapter.GetType().AssemblyQualifiedName! },
-            { "Key", keyValue.ToString()! }
+            { CausationAdapterIdProperty, Adapter.Identifier.ToString() },
+            { CausationAdapterTypeProperty, Adapter.GetType().AssemblyQualifiedName! },
+            { CausationKeyProperty, keyValue.ToString()! }
         });
 
         var eventSourceId = keyValue;
