@@ -47,30 +47,3 @@ public class CausationManager : ICausationManager
         _root = new Causation(DateTimeOffset.UtcNow, CausationType.Root, properties.ToImmutableDictionary());
     }
 }
-
-
-// Kernel decides if a causation is unique or not if causation type is reusable or not
-// Capture time of causation
-// Server needs to keep track of parent causation - and prepend it to the causation chain, typically when calling out to observers we want to keep the causation from the event that triggered the observer
-
-// Causation types:
-// - Base - running process:
-//   - IP address
-//   - Hostname
-//   - Software version
-//   - Process name
-//   - Environment
-// - ASP.NET Controller action
-//   - Controller name
-//   - Route values
-//   - Query string
-//   - Form values
-//   - Headers
-// - Observers
-//   - Observer Id
-//   - Observer name
-//   - Method name
-//   - Event type observed
-// - Adapters
-//   - Adapter Id
-//   - Adapter name
