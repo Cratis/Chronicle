@@ -14,4 +14,4 @@ namespace Aksio.Cratis.Auditing;
 public record Causation(
     DateTimeOffset Occurred,
     CausationType Type,
-    IImmutableDictionary<string, string> Properties);
+    IDictionary<string, string> Properties);

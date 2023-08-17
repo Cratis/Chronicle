@@ -144,7 +144,7 @@ public class ClientBuilder : IClientBuilder
 
         _logger.ConfiguringServices();
 
-        CausationManager.DefineRoot(_metadata.ToImmutableDictionary());
+        CausationManager.DefineRoot(_metadata);
 
         Services
             .AddHttpClient()

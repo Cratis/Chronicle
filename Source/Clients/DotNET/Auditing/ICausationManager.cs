@@ -23,7 +23,7 @@ public interface ICausationManager
     /// <summary>
     /// Adds a causation.
     /// </summary>
-    /// <param name="Type">Type to add.</param>
+    /// <param name="type">Type to add.</param>
     /// <param name="properties">Properties associated with the causation.</param>
-    void Add(CausationType Type, IDictionary<string, string> properties);
+    void Add(CausationType type, IDictionary<string, string> properties);
 }
