@@ -25,5 +25,5 @@ public interface ICausationManager
     /// </summary>
     /// <param name="Type">Type to add.</param>
     /// <param name="properties">Properties associated with the causation.</param>
-    void Add(CausationType Type, IImmutableDictionary<string, string> properties);
+    void Add(CausationType Type, IDictionary<string, string> properties);
 }

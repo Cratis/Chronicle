@@ -15,10 +15,7 @@ public class CausationManager : ICausationManager
     public Causation Root => _root;
 
     /// <inheritdoc/>
-    public IImmutableList<Causation> GetCurrentChain() => _current.Value?.ToImmutableList() ?? ImmutableList<Causation>.Empty;
-
-    /// <inheritdoc/>
-    public void Add(CausationType Type, IImmutableDictionary<string, string> properties)
+    public IImmutableList<Causation> GetCurrentChain()
     {
         _current.Value ??= new();
         if (_current.Value.Count == 0)
@@ -26,16 +23,28 @@ public class CausationManager : ICausationManager
             _current.Value.Add(_root);
         }
 
-        _current.Value.Add(new Causation(DateTimeOffset.UtcNow, Type, properties));
+        return _current.Value.ToImmutableList();
+    }
+
+    /// <inheritdoc/>
+    public void Add(CausationType Type, IDictionary<string, string> properties)
+    {
+        _current.Value ??= new();
+        if (_current.Value.Count == 0)
+        {
+            _current.Value.Add(_root);
+        }
+
+        _current.Value.Add(new Causation(DateTimeOffset.UtcNow, Type, properties.ToImmutableDictionary()));
     }
 
     /// <summary>
     /// Defines the root causation for the current process.
     /// </summary>
     /// <param name="properties">Properties associated with the root causation.</param>
-    internal static void DefineRoot(IImmutableDictionary<string, string> properties)
+    internal static void DefineRoot(IDictionary<string, string> properties)
     {
-        _root = new Causation(DateTimeOffset.UtcNow, CausationType.Root, properties);
+        _root = new Causation(DateTimeOffset.UtcNow, CausationType.Root, properties.ToImmutableDictionary());
     }
 }
 
