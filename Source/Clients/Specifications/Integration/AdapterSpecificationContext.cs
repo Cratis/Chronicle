@@ -4,6 +4,7 @@
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Integration;
+using Aksio.Cratis.Specifications.Auditing;
 using Aksio.Specifications;
 
 namespace Aksio.Cratis.Specifications.Integration;
@@ -55,7 +56,8 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog
             mapper,
             objectsComparer,
             EventLog,
-            EventOutbox);
+            EventOutbox,
+            new NullCausationManager());
     }
 
     /// <inheritdoc/>
