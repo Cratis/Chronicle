@@ -9,9 +9,9 @@ namespace Aksio.Cratis.Auditing;
 /// Represents a causation instance.
 /// </summary>
 /// <param name="Occurred">When it occurred.</param>
-/// <param name="CausationType">Type of causation.</param>
+/// <param name="Type">Type of causation.</param>
 /// <param name="Properties">Any properties associated with the causation.</param>
 public record Causation(
     DateTimeOffset Occurred,
-    CausationType CausationType,
+    CausationType Type,
     IImmutableDictionary<string, string> Properties);
