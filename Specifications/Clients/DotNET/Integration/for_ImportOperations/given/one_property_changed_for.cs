@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Properties;
 
@@ -13,8 +12,6 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
     protected Model mapped;
     protected ExternalModel incoming;
     protected ImportOperations<Model, ExternalModel> operations;
-    protected Mock<IObjectsComparer> objects_comparer;
-    protected Mock<ICausationManager> causation_manager;
 
     void Establish()
     {
@@ -36,8 +33,6 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
                 };
                 return false;
             });
-
-        causation_manager = new();
 
         operations = new(
             adapter.Object,
