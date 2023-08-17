@@ -87,7 +87,7 @@ public class ObserverHandler
             { "EventTypeGeneration", @event.Metadata.Type.Generation.ToString() },
             { "EventSequenceId", EventSequenceId.ToString() },
             { "EventSequenceNumber", @event.Metadata.SequenceNumber.ToString() }
-        }.ToImmutableDictionary());
+        });
 
         // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
         var json = await _eventSerializer.Serialize(@event.Content);

@@ -39,7 +39,7 @@ public static class CausationApplicationBuilderExtensions
                     { "query", context.Request.QueryString.ToString() },
                 };
             context.Request.RouteValues.ForEach(_ => properties.Add($"route-value:{_.Key}", _.Value?.ToString() ?? string.Empty));
-            causationManager.Add(CausationType, properties.ToImmutableDictionary());
+            causationManager.Add(CausationType, properties);
 
             await next.Invoke();
         });

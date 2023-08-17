@@ -79,7 +79,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
             { "AdapterId", Adapter.Identifier.ToString() },
             { "AdapterType", Adapter.GetType().AssemblyQualifiedName! },
             { "Key", keyValue.ToString()! }
-        }.ToImmutableDictionary());
+        });
 
         var eventSourceId = keyValue;
         eventSourceId ??= new(keyValue.ToString()!);
