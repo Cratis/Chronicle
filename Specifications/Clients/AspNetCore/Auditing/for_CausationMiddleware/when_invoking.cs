@@ -1,13 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
 namespace Aksio.Cratis.AspNetCore.Auditing.for_CausationMiddleware;
 
-public class when_invoking : Specification
+public class when_invoking : given.a_causation_middleware
 {
     const string route = "/some/route";
     const string method = "POST";
@@ -21,22 +20,9 @@ public class when_invoking : Specification
     const string second_route_value_key = "second";
     const string second_route_value_value = "second-value";
 
-    Mock<ICausationManager> causation_manager;
-
-    CausationMiddleware middleware;
-
-    Mock<HttpContext> http_context;
-    Mock<HttpRequest> http_request;
-
-    IDictionary<string, string> causation_properties;
 
     void Establish()
     {
-        causation_manager = new();
-        middleware = new(causation_manager.Object, _ => Task.CompletedTask);
-        http_context = new();
-        http_request = new();
-        http_context.Setup(_ => _.Request).Returns(http_request.Object);
         http_request.SetupGet(_ => _.Path).Returns(route);
         http_request.SetupGet(_ => _.Method).Returns(method);
         http_request.SetupGet(_ => _.Host).Returns(new HostString(host));
@@ -48,10 +34,6 @@ public class when_invoking : Specification
             { first_route_value_key, first_route_value_value },
             { second_route_value_key, second_route_value_value }
         }));
-
-        causation_manager
-            .Setup(_ => _.Add(CausationMiddleware.CausationType, IsAny<IDictionary<string, string>>()))
-            .Callback((CausationType _, IDictionary<string, string> properties) => causation_properties = properties);
     }
 
     async Task Because() => await middleware.InvokeAsync(http_context.Object);

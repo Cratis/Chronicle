@@ -50,7 +50,7 @@ public class CausationMiddleware
     /// <summary>
     /// The causation property prefix for route values.
     /// </summary>
-    public const string CausationRouteValuePrefix = "route-value:";
+    public const string CausationRouteValuePrefix = "route-value";
 
     readonly RequestDelegate _next;
     readonly ICausationManager _causationManager;
@@ -73,7 +73,9 @@ public class CausationMiddleware
     /// <returns>Awaitable task.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
-        var properties = new Dictionary<string, string>
+        if (!context.Request.Path.StartsWithSegments("/.cratis"))
+        {
+            var properties = new Dictionary<string, string>
                 {
                     { CausationRouteProperty, context.Request.Path },
                     { CausationMethodProperty, context.Request.Method },
@@ -82,8 +84,9 @@ public class CausationMiddleware
                     { CausationSchemeProperty, context.Request.Scheme },
                     { CausationQueryProperty, context.Request.QueryString.ToString() },
                 };
-        context.Request.RouteValues.ForEach(_ => properties.Add($"{CausationRouteValuePrefix}:{_.Key}", _.Value?.ToString() ?? string.Empty));
-        _causationManager.Add(CausationType, properties);
+            context.Request.RouteValues.ForEach(_ => properties.Add($"{CausationRouteValuePrefix}:{_.Key}", _.Value?.ToString() ?? string.Empty));
+            _causationManager.Add(CausationType, properties);
+        }
 
         await _next(context);
     }
