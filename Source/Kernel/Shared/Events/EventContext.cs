@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Aksio.Cratis.Auditing;
+
 namespace Aksio.Cratis.Events;
 
 /// <summary>
@@ -12,7 +15,7 @@ namespace Aksio.Cratis.Events;
 /// <param name="ValidFrom"><see cref="DateTimeOffset">When</see> event is considered valid from.</param>
 /// <param name="TenantId">The <see cref="TenantId"/> the event was appended to.</param>
 /// <param name="CorrelationId">The <see cref="CorrelationId"/> for the event.</param>
-/// <param name="CausationId">The <see cref="CausationId"/> for what caused the event.</param>
+/// <param name="Causation">A collection of <see cref="Causation"/> for what caused the event.</param>
 /// <param name="CausedBy">Identity of what caused the event.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 public record EventContext(
@@ -22,7 +25,7 @@ public record EventContext(
     DateTimeOffset ValidFrom,
     TenantId TenantId,
     CorrelationId CorrelationId,
-    CausationId CausationId,
+    IImmutableList<Causation> Causation,
     CausedBy CausedBy,
     EventObservationState ObservationState = EventObservationState.Initial)
 {
@@ -49,7 +52,7 @@ public record EventContext(
             validFrom ?? DateTimeOffset.MinValue,
             TenantId.Development,
             CorrelationId.New(),
-            CausationId.System,
+            ImmutableList<Causation>.Empty,
             CausedBy.System);
     }
 
@@ -66,5 +69,5 @@ public record EventContext(
     /// <param name="desiredState">The desired state.</param>
     /// <returns>A new copy with the desired state set.</returns>
     public EventContext WithState(EventObservationState desiredState) =>
-        new(EventSourceId, SequenceNumber, Occurred, ValidFrom, TenantId, CorrelationId, CausationId, CausedBy, desiredState);
+        new(EventSourceId, SequenceNumber, Occurred, ValidFrom, TenantId, CorrelationId, Causation, CausedBy, desiredState);
 }
