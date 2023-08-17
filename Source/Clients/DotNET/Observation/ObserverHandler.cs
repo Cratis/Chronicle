@@ -18,6 +18,31 @@ public class ObserverHandler
     /// </summary>
     public static readonly CausationType CausationType = new("Client Observer");
 
+    /// <summary>
+    /// The observer id causation property.
+    /// </summary>
+    public const string CausationObserverIdProperty = "ObserverId";
+
+    /// <summary>
+    /// The event type causation property.
+    /// </summary>
+    public const string CausationEventTypeIdProperty = "EventTypeId";
+
+    /// <summary>
+    /// The event type generation causation property.
+    /// </summary>
+    public const string CausationEventTypeGenerationProperty = "EventTypeGeneration";
+
+    /// <summary>
+    /// The event sequence id causation property.
+    /// </summary>
+    public const string CausationEventSequenceIdProperty = "EventSequenceId";
+
+    /// <summary>
+    /// The event sequence number causation property.
+    /// </summary>
+    public const string CausationEventSequenceNumberProperty = "EventSequenceNumber";
+
     readonly IEventTypes _eventTypes;
     readonly IObserverInvoker _observerInvoker;
     readonly ICausationManager _causationManager;
@@ -82,11 +107,11 @@ public class ObserverHandler
 
         _causationManager.Add(CausationType, new Dictionary<string, string>
         {
-            { "ObserverId", ObserverId.ToString() },
-            { "EventTypeId", @event.Metadata.Type.Id.ToString() },
-            { "EventTypeGeneration", @event.Metadata.Type.Generation.ToString() },
-            { "EventSequenceId", EventSequenceId.ToString() },
-            { "EventSequenceNumber", @event.Metadata.SequenceNumber.ToString() }
+            { CausationObserverIdProperty, ObserverId.ToString() },
+            { CausationEventTypeIdProperty, @event.Metadata.Type.Id.ToString() },
+            { CausationEventTypeGenerationProperty, @event.Metadata.Type.Generation.ToString() },
+            { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
+            { CausationEventSequenceNumberProperty, @event.Metadata.SequenceNumber.ToString() }
         });
 
         // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
