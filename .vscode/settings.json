@@ -59,6 +59,7 @@
         "Brotli",
         "Bson",
         "camelcase",
+        "causations",
         "changesets",
         "Cratis",
         "datetime",
