@@ -6,6 +6,6 @@
 global using Aksio.Concepts;
 global using Aksio.Execution;
 global using ExecutionContext = Aksio.Execution.ExecutionContext;
-using System.Runtime.CompilerServices;
 
+using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Aksio.Cratis.Specs")]
