@@ -33,19 +33,15 @@ public class ExecutionContextIncomingCallFilter : IIncomingGrainCallFilter
         var microserviceId = RequestContext.Get(RequestContextKeys.MicroserviceId) as MicroserviceId;
         var tenantId = RequestContext.Get(RequestContextKeys.TenantId) as TenantId;
         var correlationId = RequestContext.Get(RequestContextKeys.CorrelationId) as CorrelationId;
-        var causedBy = RequestContext.Get(RequestContextKeys.CausedBy) as CausedBy;
 
         if (microserviceId is not null
             || tenantId is not null
-            || correlationId is not null
-            || causedBy is not null)
+            || correlationId is not null)
         {
             context = new ExecutionContext(
                 microserviceId ?? MicroserviceId.Unspecified,
                 tenantId ?? TenantId.NotSet,
-                correlationId ?? CorrelationId.New(),
-                "[n/a]",
-                causedBy ?? CausedBy.System);
+                correlationId ?? CorrelationId.New());
 
             return true;
         }

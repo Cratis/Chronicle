@@ -34,7 +34,6 @@ public class ExecutionContextOutgoingCallFilter : IOutgoingGrainCallFilter
             _requestContextManager.Set(RequestContextKeys.MicroserviceId, executionContext.MicroserviceId);
             _requestContextManager.Set(RequestContextKeys.TenantId, executionContext.TenantId);
             _requestContextManager.Set(RequestContextKeys.CorrelationId, executionContext.CorrelationId);
-            _requestContextManager.Set(RequestContextKeys.CausedBy, executionContext.CausedBy);
         }
         else
         {
