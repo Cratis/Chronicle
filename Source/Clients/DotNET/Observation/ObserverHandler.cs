@@ -26,22 +26,22 @@ public class ObserverHandler
     /// <summary>
     /// The event type causation property.
     /// </summary>
-    public const string CausationEventTypeIdProperty = "EventTypeId";
+    public const string CausationEventTypeIdProperty = "eventTypeId";
 
     /// <summary>
     /// The event type generation causation property.
     /// </summary>
-    public const string CausationEventTypeGenerationProperty = "EventTypeGeneration";
+    public const string CausationEventTypeGenerationProperty = "eventTypeGeneration";
 
     /// <summary>
     /// The event sequence id causation property.
     /// </summary>
-    public const string CausationEventSequenceIdProperty = "EventSequenceId";
+    public const string CausationEventSequenceIdProperty = "eventSequenceId";
 
     /// <summary>
     /// The event sequence number causation property.
     /// </summary>
-    public const string CausationEventSequenceNumberProperty = "EventSequenceNumber";
+    public const string CausationEventSequenceNumberProperty = "eventSequenceNumber";
 
     readonly IEventTypes _eventTypes;
     readonly IObserverInvoker _observerInvoker;
