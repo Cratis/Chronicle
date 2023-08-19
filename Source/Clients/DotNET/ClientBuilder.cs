@@ -35,8 +35,9 @@ namespace Aksio.Cratis;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
-    const string _versionMetadataKey = "SoftwareVersion";
-    const string _commitMetadataKey = "SoftwareCommit";
+    const string _versionMetadataKey = "softwareVersion";
+    const string _commitMetadataKey = "softwareCommit";
+    const string _programIdentifierMetadataKey = "programIdentifier";
 
 #pragma warning disable SA1600, CA1051
     protected readonly ILogger<ClientBuilder> _logger;
@@ -46,6 +47,7 @@ public class ClientBuilder : IClientBuilder
     bool _inKernel;
     bool _isMultiTenanted;
     Dictionary<string, string> _metadata = new();
+    Type _causedByIdentityProviderType;
 
     /// <inheritdoc/>
     public IServiceCollection Services { get; }
@@ -61,9 +63,11 @@ public class ClientBuilder : IClientBuilder
     {
         _metadata[_versionMetadataKey] = "0.0.0";
         _metadata[_commitMetadataKey] = "[N/A]";
-        _metadata["OS"] = Environment.OSVersion.ToString();
-        _metadata["MachineName"] = Environment.MachineName;
-        _metadata["Process"] = Environment.ProcessPath ?? string.Empty;
+        _metadata[_programIdentifierMetadataKey] = "[N/A]";
+        _metadata["os"] = Environment.OSVersion.ToString();
+        _metadata["machineName"] = Environment.MachineName;
+        _metadata["process"] = Environment.ProcessPath ?? string.Empty;
+        _causedByIdentityProviderType = typeof(NullCausedByIdentityProvider);
 
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
@@ -104,6 +108,13 @@ public class ClientBuilder : IClientBuilder
     }
 
     /// <inheritdoc/>
+    public IClientBuilder IdentifiedAs(string name)
+    {
+        _metadata[_programIdentifierMetadataKey] = name;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IClientBuilder MultiTenanted()
     {
         _isMultiTenanted = true;
@@ -116,6 +127,13 @@ public class ClientBuilder : IClientBuilder
     {
         ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
         _inKernel = true;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder UseCausedByIdentityProvider<T>() where T : ICausedByIdentityProvider
+    {
+        _causedByIdentityProviderType = typeof(T);
         return this;
     }
 
