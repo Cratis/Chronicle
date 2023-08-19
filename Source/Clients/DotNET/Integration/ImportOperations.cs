@@ -27,12 +27,12 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// <summary>
     /// The causation adapter id property.
     /// </summary>
-    public const string CausationAdapterIdProperty = "AdapterId";
+    public const string CausationAdapterIdProperty = "adapterId";
 
     /// <summary>
     /// The causation adapter type property.
     /// </summary>
-    public const string CausationAdapterTypeProperty = "AdapterType";
+    public const string CausationAdapterTypeProperty = "adapterType";
 
     /// <summary>
     /// The causation key property.
