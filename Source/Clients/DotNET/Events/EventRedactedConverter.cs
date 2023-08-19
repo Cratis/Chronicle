@@ -32,8 +32,8 @@ public class EventRedactedConverter : JsonConverter<EventRedacted>
             content.Reason,
             eventType,
             content.Occurred,
-            content.CausationId,
             content.CorrelationId,
+            content.Causation,
             content.CausedBy);
     }
 
@@ -44,8 +44,8 @@ public class EventRedactedConverter : JsonConverter<EventRedacted>
              value.Reason,
              _eventTypes.GetEventTypeFor(value.OriginalEventType).Id,
              value.Occurred,
-             value.CausationId,
              value.CorrelationId,
+             value.Causation,
              value.CausedBy);
 
         JsonSerializer.Serialize(writer, content, options);

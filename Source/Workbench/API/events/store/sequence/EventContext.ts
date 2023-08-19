@@ -5,6 +5,7 @@
 import { field } from '@aksio/fundamentals';
 
 import { Causation } from './Causation';
+import { CausedBy } from './CausedBy';
 import { EventObservationState } from './EventObservationState';
 
 export class EventContext {
@@ -30,8 +31,8 @@ export class EventContext {
     @field(Causation, true)
     causation!: Causation[];
 
-    @field(String)
-    causedBy!: string;
+    @field(CausedBy)
+    causedBy!: CausedBy;
 
     @field(Number)
     observationState!: EventObservationState;

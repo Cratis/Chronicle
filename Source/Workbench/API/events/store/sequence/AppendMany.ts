@@ -4,8 +4,9 @@
 
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/applications/commands';
 import { Validator } from '@aksio/applications/validation';
-import { EventToAppend } from '../sequence/EventToAppend';
-import { Causation } from '../sequence/Causation';
+import { EventToAppend } from './EventToAppend';
+import { Causation } from './Causation';
+import { CausedBy } from './CausedBy';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}/append-many');
@@ -17,6 +18,7 @@ export interface IAppendMany {
     eventSourceId?: string;
     events?: EventToAppend[];
     causation?: Causation[];
+    causedBy?: CausedBy;
 }
 
 export class AppendManyValidator extends CommandValidator {
@@ -27,6 +29,7 @@ export class AppendManyValidator extends CommandValidator {
         eventSourceId: new Validator(),
         events: new Validator(),
         causation: new Validator(),
+        causedBy: new Validator(),
     };
 }
 
@@ -41,6 +44,7 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
     private _eventSourceId!: string;
     private _events!: EventToAppend[];
     private _causation!: Causation[];
+    private _causedBy!: CausedBy;
 
     constructor() {
         super(Object, false);
@@ -62,6 +66,7 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
             'eventSourceId',
             'events',
             'causation',
+            'causedBy',
         ];
     }
 
@@ -112,6 +117,14 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
     set causation(value: Causation[]) {
         this._causation = value;
         this.propertyChanged('causation');
+    }
+    get causedBy(): CausedBy {
+        return this._causedBy;
+    }
+
+    set causedBy(value: CausedBy) {
+        this._causedBy = value;
+        this.propertyChanged('causedBy');
     }
 
     static use(initialValues?: IAppendMany): [AppendMany, SetCommandValues<IAppendMany>, ClearCommandValues] {

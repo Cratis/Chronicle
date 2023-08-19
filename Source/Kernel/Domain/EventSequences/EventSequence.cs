@@ -57,6 +57,7 @@ public class EventSequence : Controller
             eventToAppend.EventType,
             eventToAppend.Content,
             eventToAppend.Causation,
+            eventToAppend.CausedBy,
             eventToAppend.ValidFrom);
     }
 
@@ -78,7 +79,7 @@ public class EventSequence : Controller
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         var events = eventsToAppend.Events.Select(_ => new Grains.EventSequences.EventToAppend(eventsToAppend.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray();
-        await eventSequence.AppendMany(events, eventsToAppend.Causation);
+        await eventSequence.AppendMany(events, eventsToAppend.Causation, eventsToAppend.CausedBy);
     }
 
     /// <summary>
@@ -98,7 +99,11 @@ public class EventSequence : Controller
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        var worker = await eventSequence.Redact(redaction.SequenceNumber, redaction.Reason);
+        var worker = await eventSequence.Redact(
+            redaction.SequenceNumber,
+            redaction.Reason,
+            redaction.Causation,
+            redaction.CausedBy);
         await worker.WaitForResult();
     }
 
@@ -122,7 +127,9 @@ public class EventSequence : Controller
         var worker = await eventSequence.Redact(
             redaction.EventSourceId,
             redaction.Reason,
-            redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray());
+            redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray(),
+            redaction.Causation,
+            redaction.CausedBy);
         await worker.WaitForResult();
     }
 

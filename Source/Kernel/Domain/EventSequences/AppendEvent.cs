@@ -16,5 +16,12 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 /// <param name="EventType">The <see cref="EventType"/> to append.</param>
 /// <param name="Content">The content of the event represented as <see cref="JsonObject"/>.</param>
 /// <param name="Causation">Collection of <see cref="Causation"/>.</param>
+/// <param name="CausedBy"><see cref="CausedBy"/> to identify the person, system or service that caused the event.</param>
 /// <param name="ValidFrom">Optional valid from.</param>
-public record AppendEvent(EventSourceId EventSourceId, EventType EventType, JsonObject Content, IEnumerable<Causation> Causation, DateTimeOffset? ValidFrom);
+public record AppendEvent(
+    EventSourceId EventSourceId,
+    EventType EventType,
+    JsonObject Content,
+    IEnumerable<Causation> Causation,
+    CausedBy CausedBy,
+    DateTimeOffset? ValidFrom);

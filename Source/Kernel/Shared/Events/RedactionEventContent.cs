@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
+
 namespace Aksio.Cratis.Events;
 
 /// <summary>
@@ -9,13 +11,13 @@ namespace Aksio.Cratis.Events;
 /// <param name="Reason">The reason for redaction.</param>
 /// <param name="OriginalEventType">The original type the redaction is for.</param>
 /// <param name="Occurred">The time the redaction occurred.</param>
-/// <param name="CausationId">The unique identifier of the cause.</param>
 /// <param name="CorrelationId">The unique identifier used to correlation.</param>
+/// <param name="Causation">A collection of <see cref="Causation"/> for what caused the redaction.</param>
 /// <param name="CausedBy">Who or what caused the event.</param>
 public record RedactionEventContent(
     RedactionReason Reason,
     EventTypeId OriginalEventType,
     DateTimeOffset Occurred,
-    CausationId CausationId,
     CorrelationId CorrelationId,
-    CausedBy CausedBy);
+    IEnumerable<Causation> Causation,
+    IEnumerable<CausedById> CausedBy);

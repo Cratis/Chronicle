@@ -95,7 +95,8 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
                 @event.Context.EventSourceId,
                 @event.Metadata.Type,
                 content!,
-                new Causation[] { causation });
+                new Causation[] { causation },
+                CausedBy.System);
             return ObserverSubscriberResult.Ok;
         }
         catch (Exception ex)

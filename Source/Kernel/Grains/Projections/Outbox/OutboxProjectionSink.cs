@@ -98,7 +98,8 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
             key.Value.ToString()!,
             eventType,
             stateAsJson!.AsObject(),
-            new Causation[] { causation });
+            new Causation[] { causation },
+            CausedBy.System);
     }
 
     /// <inheritdoc/>
