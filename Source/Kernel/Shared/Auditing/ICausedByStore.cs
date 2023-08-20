@@ -10,6 +10,12 @@ namespace Aksio.Cratis.Auditing;
 public interface ICausedByStore
 {
     /// <summary>
+    /// Populate the caused by store.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Populate();
+
+    /// <summary>
     /// Check if a <see cref="CausedBy"/> exists for a given <see cref="CausedById"/>.
     /// </summary>
     /// <param name="causedById"><see cref="CausedById"/> to check.</param>

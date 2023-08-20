@@ -46,8 +46,11 @@ public class BootProcedure : IPerformBootProcedure
             foreach (var (microserviceId, microservice) in _configuration.Microservices)
             {
                 _executionContextManager.Establish(microserviceId);
-                var schemaStore = _serviceProvider.GetService<Schemas.ISchemaStore>()!;
+                var schemaStore = _serviceProvider.GetRequiredService<Schemas.ISchemaStore>()!;
                 schemaStore.Populate().Wait();
+
+                var causedByStore = _serviceProvider.GetRequiredService<Auditing.ICausedByStore>()!;
+                causedByStore.Populate().Wait();
 
                 var projections = _grainFactory.GetGrain<IProjections>(0);
                 projections.Rehydrate().Wait();
