@@ -4,7 +4,7 @@
 using Aksio.Cratis.Schemas;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Events.Schemas.MongoDB;
+namespace Aksio.Cratis.Events.MongoDB.Schemas;
 
 /// <summary>
 /// Extension methods for working with <see cref="EventSchema"/>.

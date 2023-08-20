@@ -4,7 +4,7 @@
 using Aksio.Cratis.Schemas;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Aksio.Cratis.Events.Schemas.MongoDB;
+namespace Aksio.Cratis.Events.MongoDB.Schemas;
 
 /// <summary>
 /// Represents the <see cref="EventSchema"/> for MongoDB storage purpose.

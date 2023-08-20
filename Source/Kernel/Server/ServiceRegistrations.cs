@@ -3,7 +3,7 @@
 
 using Aksio.Applications.Autofac;
 using Aksio.Cratis.Compliance.MongoDB;
-using Aksio.Cratis.Events.Schemas.MongoDB;
+using Aksio.Cratis.Events.MongoDB.Schemas;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
