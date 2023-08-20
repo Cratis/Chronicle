@@ -45,4 +45,9 @@ public static class CollectionNames
     /// The collection that holds schemas.
     /// </summary>
     public const string FailedPartitions = "failed-partitions";
+
+    /// <summary>
+    /// The collection that holds identities.
+    /// </summary>
+    public const string Identities = "identities";
 }
