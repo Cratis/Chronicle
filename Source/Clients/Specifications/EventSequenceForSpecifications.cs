@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Schemas;
 using Aksio.Execution;
