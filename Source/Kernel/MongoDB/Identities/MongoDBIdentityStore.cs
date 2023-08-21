@@ -16,9 +16,9 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities;
 public class MongoDBIdentityStore : IIdentityStore
 {
     readonly ITenantDatabase _database;
-    Dictionary<IdentityId, Identity> _causedBy = new();
-    Dictionary<string, IdentityId> _causedByIdsBySubject = new();
-    Dictionary<string, IdentityId> _causedByIdsByUserName = new();
+    Dictionary<IdentityId, Identity> _identitiesByIdentityId = new();
+    Dictionary<string, IdentityId> _identityIdsBySubject = new();
+    Dictionary<string, IdentityId> _identityIdsByUserName = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBIdentityStore"/> class.
@@ -33,17 +33,17 @@ public class MongoDBIdentityStore : IIdentityStore
     public async Task Populate()
     {
         var result = await GetCollection().FindAsync(_ => true);
-        var allCausedBy = await result.ToListAsync();
-        _causedBy = allCausedBy.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
-        _causedByIdsBySubject = _causedBy.ToDictionary(_ => _.Value.Subject, _ => _.Key);
-        _causedByIdsByUserName = _causedBy.ToDictionary(_ => _.Value.UserName, _ => _.Key);
+        var allIdentities = await result.ToListAsync();
+        _identitiesByIdentityId = allIdentities.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
+        _identityIdsBySubject = _identitiesByIdentityId.ToDictionary(_ => _.Value.Subject, _ => _.Key);
+        _identityIdsByUserName = _identitiesByIdentityId.ToDictionary(_ => _.Value.UserName, _ => _.Key);
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<IdentityId>> GetChainFor(Identity causedBy)
+    public async Task<IImmutableList<IdentityId>> GetChainFor(Identity identity)
     {
         var chain = new List<IdentityId>();
-        Identity? current = causedBy;
+        Identity? current = identity;
         while (current is not null)
         {
             chain.Add(await GetSingleFor(current));
@@ -61,66 +61,74 @@ public class MongoDBIdentityStore : IIdentityStore
         Identity? previous = null;
         for (var chainIndex = chainArray.Length - 1; chainIndex >= 0; chainIndex--)
         {
-            var causedById = chainArray[chainIndex];
-            current = await GetSingleFor(causedById) with { OnBehalfOf = previous };
+            var identityId = chainArray[chainIndex];
+            current = await GetSingleFor(identityId) with { OnBehalfOf = previous };
         }
 
         return current;
     }
 
     /// <inheritdoc/>
-    public async Task<Identity> GetSingleFor(IdentityId causedById)
+    public async Task<Identity> GetSingleFor(IdentityId identityId)
     {
-        if (!await HasFor(causedById))
+        if (!await HasFor(identityId))
         {
-            throw new UnknownIdentityIdentifier(causedById);
+            throw new UnknownIdentityIdentifier(identityId);
         }
 
-        return _causedBy[causedById];
+        return _identitiesByIdentityId[identityId];
     }
 
     /// <inheritdoc/>
-    public async Task<IdentityId> GetSingleFor(Identity causedBy)
+    public async Task<IdentityId> GetSingleFor(Identity identity)
     {
-        if (TryGetSingleFor(causedBy, out var causedById)) return causedById;
+        if (TryGetSingleFor(identity, out var identityId)) return identityId;
         await Populate();
-        if (TryGetSingleFor(causedBy, out causedById)) return causedById;
+        if (TryGetSingleFor(identity, out identityId)) return identityId;
 
-        causedById = Guid.NewGuid();
-        _causedByIdsByUserName[causedBy.UserName] = causedById;
-        _causedBy[causedById] = causedBy;
-        return causedById;
+        identityId = IdentityId.New();
+        _identityIdsByUserName[identity.UserName] = identityId;
+        _identitiesByIdentityId[identityId] = identity;
+
+        await GetCollection().InsertOneAsync(new MongoDBIdentity
+        {
+            Id = identityId,
+            Name = identity.Name,
+            Subject = identity.Subject,
+            UserName = identity.UserName
+        });
+        return identityId;
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(IdentityId causedById)
+    public async Task<bool> HasFor(IdentityId identityId)
     {
-        if (_causedBy.ContainsKey(causedById)) return true;
+        if (_identitiesByIdentityId.ContainsKey(identityId)) return true;
 
         await Populate();
 
-        return _causedBy.ContainsKey(causedById);
+        return _identitiesByIdentityId.ContainsKey(identityId);
     }
 
-    bool TryGetSingleFor(Identity causedBy, out IdentityId causedById)
+    bool TryGetSingleFor(Identity identity, out IdentityId identityId)
     {
-        if (!string.IsNullOrEmpty(causedBy.Subject))
+        if (!string.IsNullOrEmpty(identity.Subject))
         {
-            if (_causedByIdsBySubject.ContainsKey(causedBy.Subject))
+            if (_identityIdsBySubject.ContainsKey(identity.Subject))
             {
-                causedById = _causedByIdsBySubject[causedBy.Subject];
+                identityId = _identityIdsBySubject[identity.Subject];
                 return true;
             }
         }
-        else if (!string.IsNullOrEmpty(causedBy.UserName))
+        else if (!string.IsNullOrEmpty(identity.UserName))
         {
-            if (_causedByIdsByUserName.ContainsKey(causedBy.UserName))
+            if (_identityIdsByUserName.ContainsKey(identity.UserName))
             {
-                causedById = _causedByIdsByUserName[causedBy.UserName];
+                identityId = _identityIdsByUserName[identity.UserName];
                 return true;
             }
         }
-        causedById = Guid.Empty;
+        identityId = Guid.Empty;
 
         return false;
     }
