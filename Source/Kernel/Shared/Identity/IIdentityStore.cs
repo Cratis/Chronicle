@@ -23,11 +23,11 @@ public interface IIdentityStore
     Task<bool> HasFor(IdentityId identityId);
 
     /// <summary>
-    /// Get a <see cref="Identity"/> for a given <see cref="IdentityId"/>.
+    /// Get the chain of <see cref="IdentityId"/> for a given <see cref="Identity"/>.
     /// </summary>
-    /// <param name="identityId"><see cref="IdentityId"/> to get for.</param>
-    /// <returns><see cref="Identity"/> instance.</returns>
-    Task<Identity> GetSingleFor(IdentityId identityId);
+    /// <param name="identity"><see cref="Identity"/> to get for.</param>
+    /// <returns>Collection representing a chain of <see cref="IdentityId"/>.</returns>
+    Task<IImmutableList<IdentityId>> GetFor(Identity identity);
 
     /// <summary>
     /// Get a <see cref="Identity"/> for a given <see cref="IdentityId"/>.
@@ -47,9 +47,9 @@ public interface IIdentityStore
     Task<IdentityId> GetSingleFor(Identity identity);
 
     /// <summary>
-    /// Get the chain of <see cref="IdentityId"/> for a given <see cref="Identity"/>.
+    /// Get a <see cref="Identity"/> for a given <see cref="IdentityId"/>.
     /// </summary>
-    /// <param name="identity"><see cref="Identity"/> to get for.</param>
-    /// <returns>Collection representing a chain of <see cref="IdentityId"/>.</returns>
-    Task<IImmutableList<IdentityId>> GetChainFor(Identity identity);
+    /// <param name="identityId"><see cref="IdentityId"/> to get for.</param>
+    /// <returns><see cref="Identity"/> instance.</returns>
+    Task<Identity> GetSingleFor(IdentityId identityId);
 }

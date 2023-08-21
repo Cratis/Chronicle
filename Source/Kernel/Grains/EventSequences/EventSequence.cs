@@ -28,7 +28,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<IIdentityStore> _causedByStoreProvider;
+    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
     readonly IEventSequenceMetricsFactory _metricsFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManagerProvider;
@@ -45,7 +45,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="causedByStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
+    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
     /// <param name="metricsFactory">Factory for creating metrics.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
@@ -54,7 +54,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     public EventSequence(
         ProviderFor<ISchemaStore> schemaStoreProvider,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<IIdentityStore> causedByStoreProvider,
+        ProviderFor<IIdentityStore> identityStoreProvider,
         IEventSequenceMetricsFactory metricsFactory,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManagerProvider,
@@ -63,7 +63,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     {
         _schemaStoreProvider = schemaStoreProvider;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
-        _causedByStoreProvider = causedByStoreProvider;
+        _identityStoreProvider = identityStoreProvider;
         _metricsFactory = metricsFactory;
         _executionContextManager = executionContextManager;
         _jsonComplianceManagerProvider = jsonComplianceManagerProvider;
@@ -248,7 +248,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             sequenceNumber,
             reason,
             causation,
-            await _causedByStoreProvider().GetChainFor(causedBy));
+            await _identityStoreProvider().GetFor(causedBy));
         return await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, sequenceNumber, new[] { affectedEvent.Metadata.Type });
     }
 
@@ -273,7 +273,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             reason,
             eventTypes,
             causation,
-            await _causedByStoreProvider().GetChainFor(causedBy));
+            await _identityStoreProvider().GetFor(causedBy));
         return await RewindPartitionForAffectedObservers(eventSourceId, EventSequenceNumber.First, affectedEventTypes);
     }
 

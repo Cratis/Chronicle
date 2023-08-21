@@ -18,7 +18,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 public class EventConverter : IEventConverter
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
-    readonly ProviderFor<IIdentityStore> _causedByStoreProvider;
+    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
     readonly Json.IExpandoObjectConverter _expandoObjectConverter;
@@ -27,19 +27,19 @@ public class EventConverter : IEventConverter
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
-    /// <param name="causedByStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
+    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     public EventConverter(
         ProviderFor<ISchemaStore> schemaStoreProvider,
-        ProviderFor<IIdentityStore> causedByStoreProvider,
+        ProviderFor<IIdentityStore> identityStoreProvider,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter)
     {
         _schemaStoreProvider = schemaStoreProvider;
-        _causedByStoreProvider = causedByStoreProvider;
+        _identityStoreProvider = identityStoreProvider;
         _executionContextManager = executionContextManager;
         _jsonComplianceManager = jsonComplianceManager;
         _expandoObjectConverter = expandoObjectConverter;
@@ -65,7 +65,7 @@ public class EventConverter : IEventConverter
                 _executionContextManager.Current.TenantId,
                 @event.CorrelationId,
                 @event.Causation,
-                await _causedByStoreProvider().GetFor(@event.CausedBy)),
+                await _identityStoreProvider().GetFor(@event.CausedBy)),
             releasedContentAsExpandoObject);
     }
 }

@@ -50,8 +50,8 @@ public class BootProcedure : IPerformBootProcedure
                 var schemaStore = _serviceProvider.GetRequiredService<Schemas.ISchemaStore>()!;
                 schemaStore.Populate().Wait();
 
-                var causedByStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
-                causedByStore.Populate().Wait();
+                var identityStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
+                identityStore.Populate().Wait();
 
                 var projections = _grainFactory.GetGrain<IProjections>(0);
                 projections.Rehydrate().Wait();

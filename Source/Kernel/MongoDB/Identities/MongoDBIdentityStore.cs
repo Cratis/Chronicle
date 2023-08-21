@@ -40,7 +40,7 @@ public class MongoDBIdentityStore : IIdentityStore
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<IdentityId>> GetChainFor(Identity identity)
+    public async Task<IImmutableList<IdentityId>> GetFor(Identity identity)
     {
         var chain = new List<IdentityId>();
         Identity? current = identity;
@@ -63,6 +63,7 @@ public class MongoDBIdentityStore : IIdentityStore
         {
             var identityId = chainArray[chainIndex];
             current = await GetSingleFor(identityId) with { OnBehalfOf = previous };
+            previous = current;
         }
 
         return current;
