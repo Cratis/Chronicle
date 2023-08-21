@@ -23,5 +23,5 @@ public record Identity(string Subject, string Name, string UserName = "", Identi
     /// <summary>
     /// The identity used when the system is the cause.
     /// </summary>
-    public static readonly Identity System = new("[System]", "[System]");
+    public static readonly Identity System = new("5d032c92-9d5e-41eb-947a-ee5314ed0032", "[System]");
 }
