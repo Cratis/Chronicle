@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_CatchUp.given;
 
@@ -28,13 +30,13 @@ public class a_catch_up_worker_with_two_pending_events : a_catch_up_worker
         first_event_source_id = Guid.NewGuid();
         first_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First, event_types.ToArray()[0]),
-            new(first_event_source_id, EventSequenceNumber.First, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(first_event_source_id, EventSequenceNumber.First, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System),
             new ExpandoObject());
 
         second_event_source_id = Guid.NewGuid();
         second_appended_event = new AppendedEvent(
             new(EventSequenceNumber.First + 1, event_types.ToArray()[0]),
-            new(second_event_source_id, EventSequenceNumber.First + 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(second_event_source_id, EventSequenceNumber.First + 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System),
             new ExpandoObject());
     }
 

@@ -5,8 +5,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Commands;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
+using Aksio.Cratis.Identities;
 using Aksio.Tasks;
 using Aksio.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -81,7 +83,7 @@ public class a_rest_kernel_connection : Specification
 
         task_factory.Setup(_ => _.Delay(IsAny<int>())).Returns(Task.CompletedTask);
 
-        execution_context = new(microservice_id, TenantId.NotSet, CorrelationId.New(), CausationId.System, CausedBy.System);
+        execution_context = new(microservice_id, TenantId.NotSet, CorrelationId.New());
         execution_context_manager.SetupGet(_ => _.Current).Returns(execution_context);
 
         connection_lifecycle.SetupGet(_ => _.ConnectionId).Returns(connection_id);

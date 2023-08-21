@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Observation.for_ObserverHandler;
 
@@ -25,7 +26,7 @@ public class when_handling_on_next : given.an_observer_handler
         appended_event = new(
             new(0,
             new(Guid.NewGuid(), 1)),
-            new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, Guid.NewGuid(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid()),
+            new(Guid.NewGuid(), 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, Guid.NewGuid(), Guid.NewGuid().ToString(), Enumerable.Empty<Causation>(), Identity.NotSet),
             new ExpandoObject());
 
         event_types.Setup(_ => _.GetClrTypeFor(appended_event.Metadata.Type.Id)).Returns(typeof(SomeEvent));

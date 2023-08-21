@@ -26,8 +26,6 @@ public class all_dependencies : Specification
         execution_context = new(
             "1ca3e772-4e18-47b1-8f7b-c697b2c8ee8f",
             TenantId.Development,
-            CorrelationId.New(),
-            CausationId.System,
-            CausedBy.System);
+            CorrelationId.New());
     }
 }
