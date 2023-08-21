@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 
 #pragma warning disable SA1600, IDE0060
@@ -20,4 +21,4 @@ public record AppendManyEvents(
     EventSourceId EventSourceId,
     IEnumerable<EventToAppend> Events,
     IEnumerable<Causation> Causation,
-    CausedBy CausedBy);
+    Identity CausedBy);

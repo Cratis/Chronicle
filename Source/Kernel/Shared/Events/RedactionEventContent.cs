@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Events;
 
@@ -20,4 +21,4 @@ public record RedactionEventContent(
     DateTimeOffset Occurred,
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
-    IEnumerable<CausedById> CausedBy);
+    IEnumerable<IdentityId> CausedBy);

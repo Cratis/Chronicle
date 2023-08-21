@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.DependencyInversion;
 using Orleans.Runtime;
@@ -21,7 +22,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
 
     readonly IStreamQueueMapper _mapper;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<ICausedByStore> _causedByStoreProvider;
+    readonly ProviderFor<IIdentityStore> _causedByStoreProvider;
 
     /// <inheritdoc/>
     public string Name { get; }
@@ -38,12 +39,12 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="causedByStoreProvider">Provider for <see cref="ICausedByStore"/>.</param>
+    /// <param name="causedByStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
     public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<ICausedByStore> causedByStoreProvider)
+        ProviderFor<IIdentityStore> causedByStoreProvider)
     {
         Name = name;
         _mapper = mapper;

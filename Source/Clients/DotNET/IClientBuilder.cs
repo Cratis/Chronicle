@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -53,11 +54,11 @@ public interface IClientBuilder
     IClientBuilder IdentifiedAs(string name);
 
     /// <summary>
-    /// Specify the specific <see cref="ICausedByIdentityProvider"/> to use.
+    /// Specify the specific <see cref="IIdentityProvider"/> to use.
     /// </summary>
-    /// <typeparam name="T">Type of <see cref="ICausedByIdentityProvider"/>.</typeparam>
+    /// <typeparam name="T">Type of <see cref="IIdentityProvider"/>.</typeparam>
     /// <returns>The builder to build.</returns>
-    IClientBuilder UseCausedByIdentityProvider<T>() where T : ICausedByIdentityProvider;
+    IClientBuilder UseIdentityProvider<T>() where T : IIdentityProvider;
 
     /// <summary>
     /// Configure any metadata to associate with the client.

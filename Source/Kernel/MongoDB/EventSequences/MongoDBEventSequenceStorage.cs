@@ -6,6 +6,7 @@ using System.Text.Json;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Schemas;
@@ -73,7 +74,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSourceId eventSourceId,
         EventType eventType,
         IEnumerable<Causation> causation,
-        IEnumerable<CausedById> causedByChain,
+        IEnumerable<IdentityId> causedByChain,
         DateTimeOffset validFrom,
         ExpandoObject content)
     {
@@ -132,7 +133,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         IEnumerable<Causation> causation,
-        IEnumerable<CausedById> causedByChain,
+        IEnumerable<IdentityId> causedByChain,
         DateTimeOffset validFrom,
         ExpandoObject content) => throw new NotImplementedException();
 
@@ -142,7 +143,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSequenceNumber sequenceNumber,
         RedactionReason reason,
         IEnumerable<Causation> causation,
-        IEnumerable<CausedById> causedByChain)
+        IEnumerable<IdentityId> causedByChain)
     {
         _logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = GetCollectionFor(eventSequenceId);
@@ -167,7 +168,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         RedactionReason reason,
         IEnumerable<EventType>? eventTypes,
         IEnumerable<Causation> causation,
-        IEnumerable<CausedById> causedByChain)
+        IEnumerable<IdentityId> causedByChain)
     {
         _logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? Enumerable.Empty<EventType>());
         var collection = GetCollectionFor(eventSequenceId);
@@ -406,7 +407,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         AppendedEvent @event,
         RedactionReason reason,
         IEnumerable<Causation> causation,
-        IEnumerable<CausedById> causedById)
+        IEnumerable<IdentityId> causedById)
     {
         var executionContext = _executionContextManager.Current;
         var content = new RedactionEventContent(

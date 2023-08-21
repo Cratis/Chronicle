@@ -10,6 +10,7 @@ using Aksio.Cratis.Changes;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Objects;
@@ -99,7 +100,7 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
             eventType,
             stateAsJson!.AsObject(),
             new Causation[] { causation },
-            CausedBy.System);
+            Identity.System);
     }
 
     /// <inheritdoc/>

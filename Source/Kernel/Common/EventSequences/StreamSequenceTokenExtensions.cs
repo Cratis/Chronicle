@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Dynamic;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.EventSequences;
@@ -38,7 +39,7 @@ public static class StreamSequenceTokenExtensions
                 TenantId.NotSet,
                 CorrelationId.New(),
                 ImmutableList<Causation>.Empty,
-                CausedBy.System,
+                Identity.System,
                 EventObservationState.Initial),
             new ExpandoObject());
         await stream!.OnNextAsync(@event, new EventSequenceNumberToken());

@@ -3,12 +3,12 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Auditing;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities;
 
 /// <summary>
 /// Represents a MongoDB representation of an identity.
 /// </summary>
-public class Identity
+public class MongoDBIdentity
 {
     /// <summary>
     /// Gets or sets the unique identifier.

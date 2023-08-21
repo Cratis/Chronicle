@@ -6,7 +6,7 @@ import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCo
 import { Validator } from '@aksio/applications/validation';
 import { EventToAppend } from './EventToAppend';
 import { Causation } from './Causation';
-import { CausedBy } from './CausedBy';
+import { Identity } from './Identity';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}/append-many');
@@ -18,7 +18,7 @@ export interface IAppendMany {
     eventSourceId?: string;
     events?: EventToAppend[];
     causation?: Causation[];
-    causedBy?: CausedBy;
+    causedBy?: Identity;
 }
 
 export class AppendManyValidator extends CommandValidator {
@@ -44,7 +44,7 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
     private _eventSourceId!: string;
     private _events!: EventToAppend[];
     private _causation!: Causation[];
-    private _causedBy!: CausedBy;
+    private _causedBy!: Identity;
 
     constructor() {
         super(Object, false);
@@ -118,11 +118,11 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
         this._causation = value;
         this.propertyChanged('causation');
     }
-    get causedBy(): CausedBy {
+    get causedBy(): Identity {
         return this._causedBy;
     }
 
-    set causedBy(value: CausedBy) {
+    set causedBy(value: Identity) {
         this._causedBy = value;
         this.propertyChanged('causedBy');
     }

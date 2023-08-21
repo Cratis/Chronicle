@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Observation;
@@ -96,7 +97,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
                 @event.Metadata.Type,
                 content!,
                 new Causation[] { causation },
-                CausedBy.System);
+                Identity.System);
             return ObserverSubscriberResult.Ok;
         }
         catch (Exception ex)

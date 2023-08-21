@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
@@ -17,7 +18,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 public class EventConverter : IEventConverter
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
-    readonly ProviderFor<ICausedByStore> _causedByStoreProvider;
+    readonly ProviderFor<IIdentityStore> _causedByStoreProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManager;
     readonly Json.IExpandoObjectConverter _expandoObjectConverter;
@@ -26,13 +27,13 @@ public class EventConverter : IEventConverter
     /// Initializes a new instance of the <see cref="EventConverter"/> class.
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
-    /// <param name="causedByStoreProvider">Provider for <see cref="ICausedByStore"/>.</param>
+    /// <param name="causedByStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
     public EventConverter(
         ProviderFor<ISchemaStore> schemaStoreProvider,
-        ProviderFor<ICausedByStore> causedByStoreProvider,
+        ProviderFor<IIdentityStore> causedByStoreProvider,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter)

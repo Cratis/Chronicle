@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using MongoDB.Bson;
 
 #nullable disable
@@ -26,7 +27,7 @@ public record Event(
     EventSequenceNumber SequenceNumber,
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
-    IEnumerable<CausedById> CausedBy,
+    IEnumerable<IdentityId> CausedBy,
     EventTypeId Type,
     DateTimeOffset Occurred,
     DateTimeOffset ValidFrom,

@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 
 #pragma warning disable SA1600, IDE0060
 
@@ -23,5 +24,5 @@ public record AppendEvent(
     EventType EventType,
     JsonObject Content,
     IEnumerable<Causation> Causation,
-    CausedBy CausedBy,
+    Identity CausedBy,
     DateTimeOffset? ValidFrom);

@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Streams;
@@ -18,19 +19,19 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
     readonly IStreamQueueMapper _mapper;
     readonly string _name;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<ICausedByStore> _causedByStoreProvider;
+    readonly ProviderFor<IIdentityStore> _causedByStoreProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
     /// <param name="name">Name of stream.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="causedByStoreProvider">Provider for <see cref="ICausedByStore"/>.</param>
+    /// <param name="causedByStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
     /// <param name="caches">All the <see cref="IEventSequenceCaches"/>.</param>
     public EventSequenceQueueAdapterFactory(
         string name,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<ICausedByStore> causedByStoreProvider,
+        ProviderFor<IIdentityStore> causedByStoreProvider,
         IEventSequenceCaches caches)
     {
         _mapper = new HashRingBasedStreamQueueMapper(new(), name);
@@ -51,7 +52,7 @@ public class EventSequenceQueueAdapterFactory : IQueueAdapterFactory
         return new(
             name,
             serviceProvider.GetRequiredService<ProviderFor<IEventSequenceStorage>>(),
-            serviceProvider.GetRequiredService<ProviderFor<ICausedByStore>>(),
+            serviceProvider.GetRequiredService<ProviderFor<IIdentityStore>>(),
             serviceProvider.GetRequiredService<IEventSequenceCaches>());
     }
 

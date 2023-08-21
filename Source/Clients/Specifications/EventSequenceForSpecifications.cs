@@ -65,7 +65,7 @@ public class EventSequenceForSpecifications
                 TenantId.Development,
                 CorrelationId.New(),
                 ImmutableList<Causation>.Empty,
-                CausedBy.System),
+                Identity.System),
             eventAsExpando,
             @event));
         _sequenceNumber++;

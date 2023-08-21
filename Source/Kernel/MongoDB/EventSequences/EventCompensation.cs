@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using MongoDB.Bson;
 
 #nullable disable
@@ -21,7 +22,7 @@ namespace Aksio.Cratis.Kernel.MongoDB;
 public record EventCompensation(
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
-    CausedById CausedBy,
+    IdentityId CausedBy,
     DateTimeOffset Occurred,
     DateTimeOffset ValidFrom,
     Dictionary<EventGeneration, BsonDocument> Content);

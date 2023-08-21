@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.EventSequences;
@@ -27,7 +28,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ProviderFor<ICausedByStore> _causedByStoreProvider;
+    readonly ProviderFor<IIdentityStore> _causedByStoreProvider;
     readonly IEventSequenceMetricsFactory _metricsFactory;
     readonly IExecutionContextManager _executionContextManager;
     readonly IJsonComplianceManager _jsonComplianceManagerProvider;
@@ -44,7 +45,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     /// </summary>
     /// <param name="schemaStoreProvider">Provider for <see cref="ISchemaStore"/> for event schemas.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
-    /// <param name="causedByStoreProvider">Provider for <see cref="ICausedByStore"/>.</param>
+    /// <param name="causedByStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
     /// <param name="metricsFactory">Factory for creating metrics.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
@@ -53,7 +54,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     public EventSequence(
         ProviderFor<ISchemaStore> schemaStoreProvider,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ProviderFor<ICausedByStore> causedByStoreProvider,
+        ProviderFor<IIdentityStore> causedByStoreProvider,
         IEventSequenceMetricsFactory metricsFactory,
         IExecutionContextManager executionContextManager,
         IJsonComplianceManager jsonComplianceManagerProvider,
@@ -102,7 +103,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         EventType eventType,
         JsonObject content,
         IEnumerable<Causation> causation,
-        CausedBy causedBy,
+        Identity causedBy,
         DateTimeOffset? validFrom = default)
     {
         var updateSequenceNumber = false;
@@ -196,7 +197,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
     public async Task AppendMany(
         IEnumerable<EventToAppend> events,
         IEnumerable<Causation> causation,
-        CausedBy causedBy)
+        Identity causedBy)
     {
         foreach (var @event in events)
         {
@@ -216,7 +217,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         EventType eventType,
         JsonObject content,
         IEnumerable<Causation> causation,
-        CausedBy causedBy,
+        Identity causedBy,
         DateTimeOffset? validFrom = default)
     {
         _logger.Compensating(
@@ -234,7 +235,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         EventSequenceNumber sequenceNumber,
         RedactionReason reason,
         IEnumerable<Causation> causation,
-        CausedBy causedBy)
+        Identity causedBy)
     {
         _logger.Redacting(
             _microserviceAndTenant.MicroserviceId,
@@ -257,7 +258,7 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
         RedactionReason reason,
         IEnumerable<EventType> eventTypes,
         IEnumerable<Causation> causation,
-        CausedBy causedBy)
+        Identity causedBy)
     {
         _logger.RedactingMultiple(
             _microserviceAndTenant.MicroserviceId,

@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Events;
 
@@ -26,7 +27,7 @@ public record EventContext(
     TenantId TenantId,
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
-    CausedBy CausedBy,
+    Identity CausedBy,
     EventObservationState ObservationState = EventObservationState.Initial)
 {
     /// <summary>
@@ -53,7 +54,7 @@ public record EventContext(
             TenantId.Development,
             CorrelationId.New(),
             ImmutableList<Causation>.Empty,
-            CausedBy.NotSet);
+            Identity.NotSet);
     }
 
     /// <summary>

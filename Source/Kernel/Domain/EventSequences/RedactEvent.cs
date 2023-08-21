@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 
@@ -17,4 +18,4 @@ public record RedactEvent(
     EventSequenceNumber SequenceNumber,
     RedactionReason Reason,
     IEnumerable<Causation> Causation,
-    CausedBy CausedBy);
+    Identity CausedBy);

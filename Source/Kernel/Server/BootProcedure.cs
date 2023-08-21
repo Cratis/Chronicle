@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Boot;
 using Aksio.Cratis.EventSequences.Inboxes;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.Projections;
@@ -49,7 +50,7 @@ public class BootProcedure : IPerformBootProcedure
                 var schemaStore = _serviceProvider.GetRequiredService<Schemas.ISchemaStore>()!;
                 schemaStore.Populate().Wait();
 
-                var causedByStore = _serviceProvider.GetRequiredService<Auditing.ICausedByStore>()!;
+                var causedByStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
                 causedByStore.Populate().Wait();
 
                 var projections = _grainFactory.GetGrain<IProjections>(0);

@@ -10,6 +10,7 @@ using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Outbox;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Net;
@@ -67,7 +68,7 @@ public class ClientBuilder : IClientBuilder
         _metadata["os"] = Environment.OSVersion.ToString();
         _metadata["machineName"] = Environment.MachineName;
         _metadata["process"] = Environment.ProcessPath ?? string.Empty;
-        _causedByIdentityProviderType = typeof(NullCausedByIdentityProvider);
+        _causedByIdentityProviderType = typeof(NullIdentityProvider);
 
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
@@ -131,7 +132,7 @@ public class ClientBuilder : IClientBuilder
     }
 
     /// <inheritdoc/>
-    public IClientBuilder UseCausedByIdentityProvider<T>() where T : ICausedByIdentityProvider
+    public IClientBuilder UseIdentityProvider<T>() where T : IIdentityProvider
     {
         _causedByIdentityProviderType = typeof(T);
         return this;

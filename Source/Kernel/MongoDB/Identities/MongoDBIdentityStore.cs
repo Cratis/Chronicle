@@ -3,27 +3,28 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Auditing;
+namespace Aksio.Cratis.Kernel.MongoDB.Identities;
 
 /// <summary>
-/// Represents an implementation of <see cref="ICausedByStore"/> using MongoDB.
+/// Represents an implementation of <see cref="IIdentityStore"/> using MongoDB.
 /// </summary>
 [SingletonPerTenant]
-public class MongoDBCausedByStore : ICausedByStore
+public class MongoDBIdentityStore : IIdentityStore
 {
     readonly ITenantDatabase _database;
-    Dictionary<CausedById, CausedBy> _causedBy = new();
-    Dictionary<string, CausedById> _causedByIdsBySubject = new();
-    Dictionary<string, CausedById> _causedByIdsByUserName = new();
+    Dictionary<IdentityId, Identity> _causedBy = new();
+    Dictionary<string, IdentityId> _causedByIdsBySubject = new();
+    Dictionary<string, IdentityId> _causedByIdsByUserName = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBCausedByStore"/> class.
+    /// Initializes a new instance of the <see cref="MongoDBIdentityStore"/> class.
     /// </summary>
     /// <param name="database">The database for the current tenant.</param>
-    public MongoDBCausedByStore(ITenantDatabase database)
+    public MongoDBIdentityStore(ITenantDatabase database)
     {
         _database = database;
     }
@@ -33,16 +34,16 @@ public class MongoDBCausedByStore : ICausedByStore
     {
         var result = await GetCollection().FindAsync(_ => true);
         var allCausedBy = await result.ToListAsync();
-        _causedBy = allCausedBy.ToDictionary(_ => (CausedById)_.Id, _ => new CausedBy(_.Subject, _.Name, _.UserName));
+        _causedBy = allCausedBy.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
         _causedByIdsBySubject = _causedBy.ToDictionary(_ => _.Value.Subject, _ => _.Key);
         _causedByIdsByUserName = _causedBy.ToDictionary(_ => _.Value.UserName, _ => _.Key);
     }
 
     /// <inheritdoc/>
-    public async Task<IImmutableList<CausedById>> GetChainFor(CausedBy causedBy)
+    public async Task<IImmutableList<IdentityId>> GetChainFor(Identity causedBy)
     {
-        var chain = new List<CausedById>();
-        CausedBy? current = causedBy;
+        var chain = new List<IdentityId>();
+        Identity? current = causedBy;
         while (current is not null)
         {
             chain.Add(await GetSingleFor(current));
@@ -53,11 +54,11 @@ public class MongoDBCausedByStore : ICausedByStore
     }
 
     /// <inheritdoc/>
-    public async Task<CausedBy> GetFor(IEnumerable<CausedById> chain)
+    public async Task<Identity> GetFor(IEnumerable<IdentityId> chain)
     {
         var chainArray = chain.ToArray();
-        CausedBy current = CausedBy.NotSet;
-        CausedBy? previous = null;
+        var current = Identity.NotSet;
+        Identity? previous = null;
         for (var chainIndex = chainArray.Length - 1; chainIndex >= 0; chainIndex--)
         {
             var causedById = chainArray[chainIndex];
@@ -68,18 +69,18 @@ public class MongoDBCausedByStore : ICausedByStore
     }
 
     /// <inheritdoc/>
-    public async Task<CausedBy> GetSingleFor(CausedById causedById)
+    public async Task<Identity> GetSingleFor(IdentityId causedById)
     {
         if (!await HasFor(causedById))
         {
-            throw new UnknownCausedByIdentifier(causedById);
+            throw new UnknownIdentityIdentifier(causedById);
         }
 
         return _causedBy[causedById];
     }
 
     /// <inheritdoc/>
-    public async Task<CausedById> GetSingleFor(CausedBy causedBy)
+    public async Task<IdentityId> GetSingleFor(Identity causedBy)
     {
         if (TryGetSingleFor(causedBy, out var causedById)) return causedById;
         await Populate();
@@ -92,7 +93,7 @@ public class MongoDBCausedByStore : ICausedByStore
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(CausedById causedById)
+    public async Task<bool> HasFor(IdentityId causedById)
     {
         if (_causedBy.ContainsKey(causedById)) return true;
 
@@ -101,7 +102,7 @@ public class MongoDBCausedByStore : ICausedByStore
         return _causedBy.ContainsKey(causedById);
     }
 
-    bool TryGetSingleFor(CausedBy causedBy, out CausedById causedById)
+    bool TryGetSingleFor(Identity causedBy, out IdentityId causedById)
     {
         if (!string.IsNullOrEmpty(causedBy.Subject))
         {
@@ -124,5 +125,5 @@ public class MongoDBCausedByStore : ICausedByStore
         return false;
     }
 
-    IMongoCollection<Identity> GetCollection() => _database.GetCollection<Identity>(CollectionNames.Identities);
+    IMongoCollection<MongoDBIdentity> GetCollection() => _database.GetCollection<MongoDBIdentity>(CollectionNames.Identities);
 }
