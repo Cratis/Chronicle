@@ -17,7 +17,7 @@ public class and_they_already_exists : given.two_identities_registered
         top_level_identity = new Identity(first_identity_from_database.Subject, first_identity_from_database.Name, first_identity_from_database.UserName, behalf_of_identity);
     }
 
-    async Task Because() => identities = await store.GetChainFor(top_level_identity);
+    async Task Because() => identities = await store.GetFor(top_level_identity);
 
     [Fact] void should_return_two_identities() => identities.Count().ShouldEqual(2);
     [Fact] void should_not_insert_the_identity() => inserted_identities.Count.ShouldEqual(0);

@@ -17,7 +17,7 @@ public class and_they_do_not_exist : given.no_identities_registered
         top_level_identity = new("Some subject", "Some name", "Some user name", behalf_of_identity);
     }
 
-    async Task Because() => identities = await store.GetChainFor(top_level_identity);
+    async Task Because() => identities = await store.GetFor(top_level_identity);
 
     [Fact] void should_return_two_identities() => identities.Count().ShouldEqual(2);
     [Fact] void should_insert_two_identities() => inserted_identities.Count.ShouldEqual(2);
