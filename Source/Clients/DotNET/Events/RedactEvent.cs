@@ -18,4 +18,3 @@ public record RedactEvent(
     RedactionReason Reason,
     IEnumerable<Causation> Causation,
     Identity CausedBy);
-
