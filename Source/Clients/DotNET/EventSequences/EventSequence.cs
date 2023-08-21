@@ -4,6 +4,7 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.EventSequences;
@@ -20,6 +21,7 @@ public class EventSequence : IEventSequence
     readonly IConnection _connection;
     readonly IObserversRegistrar _observerRegistrar;
     readonly ICausationManager _causationManager;
+    readonly IIdentityProvider _identityProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
@@ -32,6 +34,7 @@ public class EventSequence : IEventSequence
     /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
     /// <param name="observerRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
+    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequence(
         TenantId tenantId,
@@ -41,6 +44,7 @@ public class EventSequence : IEventSequence
         IConnection connection,
         IObserversRegistrar observerRegistrar,
         ICausationManager causationManager,
+        IIdentityProvider identityProvider,
         IExecutionContextManager executionContextManager)
     {
         _tenantId = tenantId;
@@ -50,6 +54,7 @@ public class EventSequence : IEventSequence
         _connection = connection;
         _observerRegistrar = observerRegistrar;
         _causationManager = causationManager;
+        _identityProvider = identityProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -86,6 +91,7 @@ public class EventSequence : IEventSequence
             eventSourceId,
             @event,
             _causationManager.GetCurrentChain(),
+            _identityProvider.GetCurrent(),
             validFrom);
         await _connection.PerformCommand(
             route,
@@ -109,7 +115,11 @@ public class EventSequence : IEventSequence
             _.Event,
             _.ValidFrom));
         var eventsToAppend = await Task.WhenAll(tasks.ToArray());
-        var payload = new AppendManyEvents(eventSourceId, eventsToAppend, _causationManager.GetCurrentChain());
+        var payload = new AppendManyEvents(
+            eventSourceId,
+            eventsToAppend,
+            _causationManager.GetCurrentChain(),
+            _identityProvider.GetCurrent());
         var route = $"{GetBaseRoute()}/append-many";
         await _connection.PerformCommand(
             route,
@@ -125,7 +135,11 @@ public class EventSequence : IEventSequence
     public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = default)
     {
         reason ??= RedactionReason.Unknown;
-        var payload = new RedactEvent(sequenceNumber, reason);
+        var payload = new RedactEvent(
+            sequenceNumber,
+            reason,
+            _causationManager.GetCurrentChain(),
+            _identityProvider.GetCurrent());
         var route = $"{GetBaseRoute()}/redact-event";
         await _connection.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
     }
@@ -135,7 +149,12 @@ public class EventSequence : IEventSequence
     {
         reason ??= RedactionReason.Unknown;
         var eventTypeIds = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_).Id).ToArray();
-        var payload = new RedactEvents(eventSourceId, reason, eventTypeIds);
+        var payload = new RedactEvents(
+            eventSourceId,
+            reason,
+            eventTypeIds,
+            _causationManager.GetCurrentChain(),
+            _identityProvider.GetCurrent());
         var route = $"{GetBaseRoute()}/redact-events";
         await _connection.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
     }
@@ -146,6 +165,7 @@ public class EventSequence : IEventSequence
         EventSourceId eventSourceId,
         object @event,
         IEnumerable<Causation> causation,
+        Identity identity,
         DateTimeOffset? validFrom = default)
     {
         var eventTypeClr = @event.GetType();
@@ -157,6 +177,7 @@ public class EventSequence : IEventSequence
             eventType,
             serializedEvent,
             causation,
+            identity,
             validFrom);
     }
 

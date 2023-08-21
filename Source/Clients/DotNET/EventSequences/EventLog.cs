@@ -4,6 +4,7 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.EventSequences;
@@ -22,14 +23,16 @@ public class EventLog : EventSequence, IEventLog
     /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
     /// <param name="observersRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
+    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public EventLog(
+   public EventLog(
         TenantId tenantId,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         IConnection connection,
         IObserversRegistrar observersRegistrar,
         ICausationManager causationManager,
+        IIdentityProvider identityProvider,
         IExecutionContextManager executionContextManager) : base(
             tenantId,
             EventSequenceId.Log,
@@ -38,6 +41,7 @@ public class EventLog : EventSequence, IEventLog
             connection,
             observersRegistrar,
             causationManager,
+            identityProvider,
             executionContextManager)
     {
     }

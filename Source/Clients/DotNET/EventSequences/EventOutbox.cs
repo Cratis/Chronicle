@@ -4,6 +4,7 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.EventSequences;
@@ -21,7 +22,8 @@ public class EventOutbox : EventSequence, IEventOutbox
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
     /// <param name="observersRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
-    /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>///
+    /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
+    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventOutbox(
         TenantId tenantId,
@@ -30,6 +32,7 @@ public class EventOutbox : EventSequence, IEventOutbox
         IConnection connection,
         IObserversRegistrar observersRegistrar,
         ICausationManager causationManager,
+        IIdentityProvider identityProvider,
         IExecutionContextManager executionContextManager) : base(
             tenantId,
             EventSequenceId.Outbox,
@@ -38,6 +41,7 @@ public class EventOutbox : EventSequence, IEventOutbox
             connection,
             observersRegistrar,
             causationManager,
+            identityProvider,
             executionContextManager)
     {
     }

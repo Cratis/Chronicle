@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.EventSequences;
 
@@ -12,4 +13,9 @@ namespace Aksio.Cratis.EventSequences;
 /// <param name="EventSourceId">The <see cref="EventSourceId"/> to append to.</param>
 /// <param name="Events">The events to append.</param>
 /// <param name="Causation">Collection of <see cref="Causation"/>.</param>
-public record AppendManyEvents(EventSourceId EventSourceId, IEnumerable<EventToAppend> Events, IEnumerable<Causation> Causation);
+/// <param name="CausedBy"><see cref="CausedBy"/> to identify the person, system or service that caused the event.</param>
+public record AppendManyEvents(
+    EventSourceId EventSourceId,
+    IEnumerable<EventToAppend> Events,
+    IEnumerable<Causation> Causation,
+    Identity CausedBy);

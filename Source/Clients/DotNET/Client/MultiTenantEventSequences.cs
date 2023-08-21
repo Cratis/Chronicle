@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.Client;
@@ -20,6 +21,7 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
+    readonly IIdentityProvider _identityProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
@@ -30,6 +32,7 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
+    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public MultiTenantEventSequences(
         IConnection connection,
@@ -37,6 +40,7 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
+        IIdentityProvider identityProvider,
         IExecutionContextManager executionContextManager)
     {
         _connection = connection;
@@ -44,6 +48,7 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
+        _identityProvider = identityProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -59,6 +64,7 @@ public class MultiTenantEventSequences : IMultiTenantEventSequences
                 _connection,
                 _observersRegistrar,
                 _causationManager,
+                _identityProvider,
                 _executionContextManager);
             _sequences.TryAdd(tenantId, sequences);
         }
