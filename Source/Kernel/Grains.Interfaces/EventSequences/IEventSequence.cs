@@ -53,9 +53,9 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to compensate.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to compensate.</param>
     /// <param name="content">The JSON payload of the event.</param>
-    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedBy">The person, system or service that caused the compensation, defined by <see cref="Identity"/>.</param>
+    /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     /// <remarks>
     /// The type of the event has to be the same as the original event at the sequence number.

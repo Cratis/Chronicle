@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Applications.Autofac;
-using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Compliance.MongoDB;
 using Aksio.Cratis.Events.MongoDB.Schemas;
 using Aksio.Cratis.EventSequences;

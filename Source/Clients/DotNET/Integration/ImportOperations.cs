@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using System.Reactive.Subjects;
 using System.Reflection;
 using Aksio.Cratis.Auditing;
@@ -20,11 +19,6 @@ namespace Aksio.Cratis.Integration;
 public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel, TExternalModel>
 {
     /// <summary>
-    /// The causation type for client observer.
-    /// </summary>
-    public static readonly CausationType CausationType = new("Import Operation");
-
-    /// <summary>
     /// The causation adapter id property.
     /// </summary>
     public const string CausationAdapterIdProperty = "adapterId";
@@ -38,6 +32,11 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// The causation key property.
     /// </summary>
     public const string CausationKeyProperty = "Key";
+
+    /// <summary>
+    /// The causation type for client observer.
+    /// </summary>
+    public static readonly CausationType CausationType = new("Import Operation");
 
     readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
     readonly IObjectsComparer _objectsComparer;

@@ -18,6 +18,7 @@ public interface ICausationManager
     /// <summary>
     /// Gets the current causation.
     /// </summary>
+    /// <returns>A collection of <see cref="Causation"/>.</returns>
     IImmutableList<Causation> GetCurrentChain();
 
     /// <summary>

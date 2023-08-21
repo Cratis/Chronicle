@@ -16,6 +16,5 @@ public interface ITenantDatabase
     /// <param name="collectionName">Optional name of collection.</param>
     /// <typeparam name="T">Type of document.</typeparam>
     /// <returns><see cref="IMongoCollection{T}"/> instance.</returns>
-
     IMongoCollection<T> GetCollection<T>(string? collectionName = null);
 }

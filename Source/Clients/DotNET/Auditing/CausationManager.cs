@@ -5,11 +5,14 @@ using System.Collections.Immutable;
 
 namespace Aksio.Cratis.Auditing;
 
+/// <summary>
+/// Represents an implementation of <see cref="ICausationManager"/>.
+/// </summary>
 public class CausationManager : ICausationManager
 {
     static Causation _root = new(DateTimeOffset.UtcNow, CausationType.Unknown, ImmutableDictionary<string, string>.Empty);
 
-    AsyncLocal<List<Causation>> _current = new();
+    readonly AsyncLocal<List<Causation>> _current = new();
 
     /// <inheritdoc/>
     public Causation Root => _root;
@@ -27,7 +30,7 @@ public class CausationManager : ICausationManager
     }
 
     /// <inheritdoc/>
-    public void Add(CausationType Type, IDictionary<string, string> properties)
+    public void Add(CausationType type, IDictionary<string, string> properties)
     {
         _current.Value ??= new();
         if (_current.Value.Count == 0)
@@ -35,7 +38,7 @@ public class CausationManager : ICausationManager
             _current.Value.Add(_root);
         }
 
-        _current.Value.Add(new Causation(DateTimeOffset.UtcNow, Type, properties.ToImmutableDictionary()));
+        _current.Value.Add(new Causation(DateTimeOffset.UtcNow, type, properties.ToImmutableDictionary()));
     }
 
     /// <summary>

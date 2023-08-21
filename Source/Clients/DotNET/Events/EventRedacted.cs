@@ -12,8 +12,8 @@ namespace Aksio.Cratis.Events;
 /// <param name="Reason">The reason for redaction.</param>
 /// <param name="OriginalEventType">The original type the redaction is for.</param>
 /// <param name="Occurred">The time the redaction occurred.</param>
-/// <param name="Causation">The chain of causation.</param>
 /// <param name="CorrelationId">The unique identifier used to correlation.</param>
+/// <param name="Causation">The chain of causation.</param>
 /// <param name="CausedBy">Who or what caused the event.</param>
 [EventType(GlobalEventTypes.Redaction)]
 public record EventRedacted(

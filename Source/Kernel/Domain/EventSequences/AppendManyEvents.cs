@@ -4,7 +4,6 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Identities;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
 
 #pragma warning disable SA1600, IDE0060
 

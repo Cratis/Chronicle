@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -13,11 +12,6 @@ namespace Aksio.Cratis.Observation;
 /// </summary>
 public class ObserverHandler
 {
-    /// <summary>
-    /// The causation type for client observer.
-    /// </summary>
-    public static readonly CausationType CausationType = new("Client Observer");
-
     /// <summary>
     /// The observer id causation property.
     /// </summary>
@@ -42,6 +36,11 @@ public class ObserverHandler
     /// The event sequence number causation property.
     /// </summary>
     public const string CausationEventSequenceNumberProperty = "eventSequenceNumber";
+
+    /// <summary>
+    /// The causation type for client observer.
+    /// </summary>
+    public static readonly CausationType CausationType = new("Client Observer");
 
     readonly IEventTypes _eventTypes;
     readonly IObserverInvoker _observerInvoker;

@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Aksio.Collections;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Client;
@@ -36,19 +35,20 @@ namespace Aksio.Cratis;
 /// </summary>
 public class ClientBuilder : IClientBuilder
 {
-    const string _versionMetadataKey = "softwareVersion";
-    const string _commitMetadataKey = "softwareCommit";
-    const string _programIdentifierMetadataKey = "programIdentifier";
-
 #pragma warning disable SA1600, CA1051
     protected readonly ILogger<ClientBuilder> _logger;
     protected IClientArtifactsProvider? _clientArtifactsProvider;
     protected IModelNameConvention? _modelNameConvention;
+
+    const string VersionMetadataKey = "softwareVersion";
+    const string CommitMetadataKey = "softwareCommit";
+    const string ProgramIdentifierMetadataKey = "programIdentifier";
+
     readonly OptionsBuilder<ClientOptions> _optionsBuilder;
+    readonly Dictionary<string, string> _metadata = new();
     bool _inKernel;
     bool _isMultiTenanted;
-    Dictionary<string, string> _metadata = new();
-    Type _causedByIdentityProviderType;
+    Type _identityProviderType;
 
     /// <inheritdoc/>
     public IServiceCollection Services { get; }
@@ -62,13 +62,13 @@ public class ClientBuilder : IClientBuilder
         IServiceCollection services,
         ILogger<ClientBuilder> logger)
     {
-        _metadata[_versionMetadataKey] = "0.0.0";
-        _metadata[_commitMetadataKey] = "[N/A]";
-        _metadata[_programIdentifierMetadataKey] = "[N/A]";
+        _metadata[VersionMetadataKey] = "0.0.0";
+        _metadata[CommitMetadataKey] = "[N/A]";
+        _metadata[ProgramIdentifierMetadataKey] = "[N/A]";
         _metadata["os"] = Environment.OSVersion.ToString();
         _metadata["machineName"] = Environment.MachineName;
         _metadata["process"] = Environment.ProcessPath ?? string.Empty;
-        _causedByIdentityProviderType = typeof(NullIdentityProvider);
+        _identityProviderType = typeof(NullIdentityProvider);
 
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
@@ -96,8 +96,8 @@ public class ClientBuilder : IClientBuilder
     /// <inheritdoc/>
     public IClientBuilder WithSoftwareVersion(string version, string commit)
     {
-        _metadata[_versionMetadataKey] = version;
-        _metadata[_commitMetadataKey] = commit;
+        _metadata[VersionMetadataKey] = version;
+        _metadata[CommitMetadataKey] = commit;
         return this;
     }
 
@@ -111,7 +111,7 @@ public class ClientBuilder : IClientBuilder
     /// <inheritdoc/>
     public IClientBuilder IdentifiedAs(string name)
     {
-        _metadata[_programIdentifierMetadataKey] = name;
+        _metadata[ProgramIdentifierMetadataKey] = name;
         return this;
     }
 
@@ -132,9 +132,10 @@ public class ClientBuilder : IClientBuilder
     }
 
     /// <inheritdoc/>
-    public IClientBuilder UseIdentityProvider<T>() where T : IIdentityProvider
+    public IClientBuilder UseIdentityProvider<T>()
+        where T : IIdentityProvider
     {
-        _causedByIdentityProviderType = typeof(T);
+        _identityProviderType = typeof(T);
         return this;
     }
 
@@ -197,6 +198,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
             .AddSingleton<ICausationManager, CausationManager>()
+            .AddSingleton(typeof(IIdentityProvider), _identityProviderType)
             .AddSingleton<IRules, Rules.Rules>()
             .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));

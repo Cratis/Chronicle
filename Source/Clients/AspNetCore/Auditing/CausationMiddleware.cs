@@ -13,11 +13,6 @@ namespace Aksio.Cratis.AspNetCore.Auditing;
 public class CausationMiddleware
 {
     /// <summary>
-    /// The causation type for ASP.NET requests.
-    /// </summary>
-    public static readonly CausationType CausationType = new("ASP.NET Request");
-
-    /// <summary>
     /// The causation property for the route.
     /// </summary>
     public const string CausationRouteProperty = "route";
@@ -51,6 +46,11 @@ public class CausationMiddleware
     /// The causation property prefix for route values.
     /// </summary>
     public const string CausationRouteValuePrefix = "route-value";
+
+    /// <summary>
+    /// The causation type for ASP.NET requests.
+    /// </summary>
+    public static readonly CausationType CausationType = new("ASP.NET Request");
 
     readonly RequestDelegate _next;
     readonly ICausationManager _causationManager;

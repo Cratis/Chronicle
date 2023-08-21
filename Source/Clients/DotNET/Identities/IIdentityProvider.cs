@@ -5,7 +5,7 @@ namespace Aksio.Cratis.Identities;
 
 /// <summary>
 /// Defines a system that can provide the current <see cref="Identity"/>.
-/// /// </summary>
+/// </summary>
 public interface IIdentityProvider
 {
     /// <summary>

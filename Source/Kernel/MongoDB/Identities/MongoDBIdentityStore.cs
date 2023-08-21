@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.MongoDB;
 using MongoDB.Driver;
@@ -43,7 +42,7 @@ public class MongoDBIdentityStore : IIdentityStore
     public async Task<IImmutableList<IdentityId>> GetFor(Identity identity)
     {
         var chain = new List<IdentityId>();
-        Identity? current = identity;
+        var current = identity;
         while (current is not null)
         {
             chain.Add(await GetSingleFor(current));

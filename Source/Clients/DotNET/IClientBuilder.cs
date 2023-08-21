@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,7 +57,8 @@ public interface IClientBuilder
     /// </summary>
     /// <typeparam name="T">Type of <see cref="IIdentityProvider"/>.</typeparam>
     /// <returns>The builder to build.</returns>
-    IClientBuilder UseIdentityProvider<T>() where T : IIdentityProvider;
+    IClientBuilder UseIdentityProvider<T>()
+        where T : IIdentityProvider;
 
     /// <summary>
     /// Configure any metadata to associate with the client.
