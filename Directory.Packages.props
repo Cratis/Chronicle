@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>1.1.15</ApplicationModel>
+        <ApplicationModel>1.1.17</ApplicationModel>
         <Orleans>7.1.2</Orleans>
 	</PropertyGroup>
 	<ItemGroup>
@@ -9,7 +9,7 @@
 
 		<PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
-		<PackageVersion Include="Aksio.Fundamentals" Version="1.4.2" />
+		<PackageVersion Include="Aksio.Fundamentals" Version="1.5.1" />
 		<PackageVersion Include="Aksio.MongoDB" Version="1.0.18" />
 		<PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
 		<PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
