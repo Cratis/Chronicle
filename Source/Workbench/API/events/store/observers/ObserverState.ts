@@ -8,7 +8,6 @@ import { EventType } from './EventType';
 import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
 import { FailedPartition } from './FailedPartition';
-import { Object } from './Object';
 
 export class ObserverState {
 
@@ -52,5 +51,5 @@ export class ObserverState {
     currentSubscriptionType!: string;
 
     @field(Object)
-    currentSubscriptionArguments?: Object;
+    currentSubscriptionArguments?: any;
 }

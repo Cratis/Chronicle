@@ -13,6 +13,6 @@ export class Causation {
     @field(String)
     type!: string;
 
-    @field(String, true)
-    properties!: string[];
+    @field(Object)
+    properties!: [key: string, value: string];
 }
