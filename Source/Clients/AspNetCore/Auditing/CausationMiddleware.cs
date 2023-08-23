@@ -43,9 +43,20 @@ public class CausationMiddleware
     public const string CausationQueryProperty = "query";
 
     /// <summary>
+    /// The causation property for the HTTP Origin header value.
+    /// </summary>
+    public const string CausationOriginProperty = "origin";
+
+    /// <summary>
+    /// The causation property for the HTTP Referer value.
+    /// </summary>
+    public const string CausationRefererProperty = "referer";
+
+    /// <summary>
     /// The causation property prefix for route values.
     /// </summary>
     public const string CausationRouteValuePrefix = "route-value";
+
 
     /// <summary>
     /// The causation type for ASP.NET requests.
@@ -82,6 +93,8 @@ public class CausationMiddleware
                     { CausationHostProperty, context.Request.Host.Value },
                     { CausationProtocolProperty, context.Request.Protocol },
                     { CausationSchemeProperty, context.Request.Scheme },
+                    { CausationOriginProperty, context.Request.Headers.Origin.ToString() },
+                    { CausationRefererProperty, context.Request.Headers.Referer.ToString() },
                     { CausationQueryProperty, context.Request.QueryString.ToString() },
                 };
             context.Request.RouteValues.ForEach(_ => properties.Add($"{CausationRouteValuePrefix}:{_.Key}", _.Value?.ToString() ?? string.Empty));

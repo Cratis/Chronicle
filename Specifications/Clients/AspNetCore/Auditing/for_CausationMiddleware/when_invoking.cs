@@ -14,6 +14,8 @@ public class when_invoking : given.a_causation_middleware
     const string protocol = "HTTP/1.1";
     const string scheme = "https";
     const string query = "?some=query&string=here";
+    const string origin = "Some origin";
+    const string referer = "Some referer";
 
     const string first_route_value_key = "first";
     const string first_route_value_value = "first-value";
@@ -34,6 +36,10 @@ public class when_invoking : given.a_causation_middleware
             { first_route_value_key, first_route_value_value },
             { second_route_value_key, second_route_value_value }
         }));
+
+        http_request_headers.SetupGet(_ => _.Origin).Returns(origin);
+        http_request_headers.SetupGet(_ => _.Referer).Returns(referer);
+
     }
 
     async Task Because() => await middleware.InvokeAsync(http_context.Object);
@@ -45,6 +51,8 @@ public class when_invoking : given.a_causation_middleware
     [Fact] void should_add_protocol_property() => causation_properties[CausationMiddleware.CausationProtocolProperty].ShouldEqual(protocol);
     [Fact] void should_add_scheme_property() => causation_properties[CausationMiddleware.CausationSchemeProperty].ShouldEqual(scheme);
     [Fact] void should_add_query_property() => causation_properties[CausationMiddleware.CausationQueryProperty].ShouldEqual(query);
+    [Fact] void should_add_origin_property() => causation_properties[CausationMiddleware.CausationOriginProperty].ShouldEqual(origin);
+    [Fact] void should_add_referer_property() => causation_properties[CausationMiddleware.CausationRefererProperty].ShouldEqual(referer);
     [Fact] void should_add_first_route_value_property() => causation_properties[$"{CausationMiddleware.CausationRouteValuePrefix}:{first_route_value_key}"].ShouldEqual(first_route_value_value);
     [Fact] void should_add_second_route_value_property() => causation_properties[$"{CausationMiddleware.CausationRouteValuePrefix}:{second_route_value_key}"].ShouldEqual(second_route_value_value);
 }
