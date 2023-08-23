@@ -3,7 +3,7 @@
 
 using System.Globalization;
 using Main;
-using Aksio.Cratis.AspNetCore.Identities;
+using Aksio.Cratis;
 
 // Force invariant culture for the Kernel
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args)
                     .WithSoftwareVersion("1.0.0", "1234567890")
                     .IdentifiedAs("Bank")
                     //.UseIdentityProvider<CustomIdentityProvider>()
-                    .UseAspNetCoreCausedByIdentityProvider()
+                    .UseAspNetCoreIdentityProvider()
                     .ForMicroservice("eaf02867-79b9-4967-be67-3e93cee7c601", "Bank"));
 builder.Host
         .UseMongoDB()

@@ -1,9 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.AspNetCore.Identities;
 using Aksio.Cratis.Identities;
 
-namespace Aksio.Cratis.AspNetCore.Identities;
+namespace Aksio.Cratis;
 
 /// <summary>
 /// Extension methods for <see cref="IClientBuilder"/> for configuring the caused by identity provider.
@@ -15,5 +16,5 @@ public static class IdentityProviderClientBuildExtensions
     /// </summary>
     /// <param name="builder"><see cref="IClientBuilder"/> to work with.</param>
     /// <returns><see cref="IClientBuilder"/> for continuation.</returns>
-    public static IClientBuilder UseAspNetCoreCausedByIdentityProvider(this IClientBuilder builder) => builder.UseIdentityProvider<IdentityProvider>();
+    public static IClientBuilder UseAspNetCoreIdentityProvider(this IClientBuilder builder) => builder.UseIdentityProvider<IdentityProvider>();
 }
