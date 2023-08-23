@@ -4,6 +4,7 @@
 using Aksio.Collections;
 using Aksio.Cratis.Auditing;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 
 namespace Aksio.Cratis.AspNetCore.Auditing;
 
@@ -93,10 +94,19 @@ public class CausationMiddleware
                     { CausationHostProperty, context.Request.Host.Value },
                     { CausationProtocolProperty, context.Request.Protocol },
                     { CausationSchemeProperty, context.Request.Scheme },
-                    { CausationOriginProperty, context.Request.Headers.Origin.ToString() },
-                    { CausationRefererProperty, context.Request.Headers.Referer.ToString() },
                     { CausationQueryProperty, context.Request.QueryString.ToString() },
                 };
+
+            if (context.Request.Headers.Origin != StringValues.Empty)
+            {
+                properties[CausationOriginProperty] = context.Request.Headers.Origin.ToString();
+            }
+
+            if (context.Request.Headers.Origin != StringValues.Empty)
+            {
+                properties[CausationRefererProperty] = context.Request.Headers.Referer.ToString();
+            }
+
             context.Request.RouteValues.ForEach(_ => properties.Add($"{CausationRouteValuePrefix}:{_.Key}", _.Value?.ToString() ?? string.Empty));
             _causationManager.Add(CausationType, properties);
         }

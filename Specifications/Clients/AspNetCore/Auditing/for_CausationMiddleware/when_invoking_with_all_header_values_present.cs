@@ -1,45 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-
 namespace Aksio.Cratis.AspNetCore.Auditing.for_CausationMiddleware;
 
-public class when_invoking : given.a_causation_middleware
+public class when_invoking_with_all_header_values_present : given.a_causation_middleware_with_required_properties_present
 {
-    const string route = "/some/route";
-    const string method = "POST";
-    const string host = "somehost";
-    const string protocol = "HTTP/1.1";
-    const string scheme = "https";
-    const string query = "?some=query&string=here";
-    const string origin = "Some origin";
-    const string referer = "Some referer";
-
-    const string first_route_value_key = "first";
-    const string first_route_value_value = "first-value";
-    const string second_route_value_key = "second";
-    const string second_route_value_value = "second-value";
-
-
     void Establish()
     {
-        http_request.SetupGet(_ => _.Path).Returns(route);
-        http_request.SetupGet(_ => _.Method).Returns(method);
-        http_request.SetupGet(_ => _.Host).Returns(new HostString(host));
-        http_request.SetupGet(_ => _.Protocol).Returns(protocol);
-        http_request.SetupGet(_ => _.Scheme).Returns(scheme);
-        http_request.SetupGet(_ => _.QueryString).Returns(new QueryString(query));
-        http_request.SetupGet(_ => _.RouteValues).Returns(new RouteValueDictionary(new Dictionary<string, object>
-        {
-            { first_route_value_key, first_route_value_value },
-            { second_route_value_key, second_route_value_value }
-        }));
-
         http_request_headers.SetupGet(_ => _.Origin).Returns(origin);
         http_request_headers.SetupGet(_ => _.Referer).Returns(referer);
-
     }
 
     async Task Because() => await middleware.InvokeAsync(http_context.Object);
