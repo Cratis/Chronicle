@@ -26,6 +26,7 @@ public static class WebApplicationBuilderExtensions
         Action<IClientBuilder>? configureDelegate = default)
     {
         webApplicationBuilder.Services.AddRules();
+        webApplicationBuilder.Services.AddHttpContextAccessor();
         webApplicationBuilder.Host.UseCratis(configureDelegate);
         return webApplicationBuilder;
     }
