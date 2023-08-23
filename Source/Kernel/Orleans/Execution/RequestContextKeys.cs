@@ -25,14 +25,4 @@ public static class RequestContextKeys
     /// The correlation identifier key.
     /// </summary>
     public const string CorrelationId = "CorrelationId";
-
-    /// <summary>
-    /// The causation identifier key.
-    /// </summary>
-    public const string CausationId = "CausationId";
-
-    /// <summary>
-    /// The caused by identifier key.
-    /// </summary>
-    public const string CausedBy = "CausedBy";
 }

@@ -26,6 +26,7 @@ public static class WebApplicationBuilderExtensions
         Action<IClientBuilder>? configureDelegate = default)
     {
         webApplicationBuilder.Services.AddRules();
+        webApplicationBuilder.Services.AddHttpContextAccessor();
         webApplicationBuilder.Host.UseCratis(configureDelegate);
         return webApplicationBuilder;
     }
@@ -37,6 +38,7 @@ public static class WebApplicationBuilderExtensions
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
+        app.UseCausation();
         app.UseExecutionContext();
 
         app.UseRouting();

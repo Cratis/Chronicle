@@ -4,6 +4,16 @@
 
 import { field } from '@aksio/fundamentals';
 
+import { EventType } from './EventType';
 
-export class StorageForTenants {
+export class EventToAppend {
+
+    @field(EventType)
+    eventType!: EventType;
+
+    @field(Object)
+    content!: any;
+
+    @field(Date)
+    validFrom?: Date;
 }

@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Grains.Workers;
 
 namespace Aksio.Cratis.Kernel.Grains.EventSequences;
@@ -30,16 +32,20 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
     /// <param name="content">The JSON payload of the event.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
+    /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
     /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default);
+    Task Append(EventSourceId eventSourceId, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy, DateTimeOffset? validFrom = default);
 
     /// <summary>
     /// Append a single event to the event store.
     /// </summary>
     /// <param name="events">Collection of <see cref="EventToAppend">events</see> to append.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
+    /// <param name="causedBy">The person, system or service that caused the events, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task AppendMany(IEnumerable<EventToAppend> events);
+    Task AppendMany(IEnumerable<EventToAppend> events, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Compensate a specific event in the event store.
@@ -47,21 +53,25 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to compensate.</param>
     /// <param name="eventType">The <see cref="EventType">type of event</see> to compensate.</param>
     /// <param name="content">The JSON payload of the event.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
+    /// <param name="causedBy">The person, system or service that caused the compensation, defined by <see cref="Identity"/>.</param>
     /// <param name="validFrom">Optional date and time for when the compensation is valid from. </param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     /// <remarks>
     /// The type of the event has to be the same as the original event at the sequence number.
     /// Its generational information is taken into account when compensating.
     /// </remarks>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content, DateTimeOffset? validFrom = default);
+    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, JsonObject content, IEnumerable<Causation> causation, Identity causedBy, DateTimeOffset? validFrom = default);
 
     /// <summary>
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
-        /// <param name="reason">Reason for redacting.</param>
+    /// <param name="reason">Reason for redacting.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
+    /// <param name="causedBy">The person, system or service that caused the redaction, defined by <see cref="Identity"/>.</param>
     /// <returns>A <see cref="IWorker{TRequest, TResponse}"/>.</returns>
-    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSequenceNumber sequenceNumber, RedactionReason reason);
+    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSequenceNumber sequenceNumber, RedactionReason reason, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.
@@ -69,6 +79,8 @@ public interface IEventSequence : IGrainWithGuidCompoundKey
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
     /// <param name="reason">Reason for redacting.</param>
     /// <param name="eventTypes">Optionally any specific event types.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/>.</param>
+    /// <param name="causedBy">The person, system or service that caused the redaction, defined by <see cref="Identity"/>.</param>
     /// <returns>A <see cref="IWorker{TRequest, TResponse}"/>.</returns>
-    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes);
+    Task<IWorker<RewindPartitionForObserversAfterRedactRequest, RewindPartitionForObserversAfterRedactResponse>> Redact(EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType> eventTypes, IEnumerable<Causation> causation, Identity causedBy);
 }

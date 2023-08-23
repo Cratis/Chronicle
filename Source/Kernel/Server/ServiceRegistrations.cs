@@ -3,8 +3,9 @@
 
 using Aksio.Applications.Autofac;
 using Aksio.Cratis.Compliance.MongoDB;
-using Aksio.Cratis.Events.Schemas.MongoDB;
+using Aksio.Cratis.Events.MongoDB.Schemas;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Engines.Compliance;
 using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Definitions;
@@ -12,6 +13,7 @@ using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Clients;
 using Aksio.Cratis.Kernel.MongoDB.EventSequences;
+using Aksio.Cratis.Kernel.MongoDB.Identities;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Projections;
 using Aksio.Cratis.Kernel.Observation;
@@ -39,5 +41,6 @@ public class ServiceRegistrations : Module
         builder.RegisterType<MongoDBObserversState>().As<IObserversState>().SingleInstance();
         builder.RegisterType<MongoDBFailedPartitionState>().As<IFailedPartitionsState>().SingleInstance();
         builder.RegisterType<MongoDBConnectedClientsState>().As<IConnectedClientsState>().SingleInstance();
+        builder.RegisterType<MongoDBIdentityStore>().As<IIdentityStore>().InstancePerTenant();
     }
 }

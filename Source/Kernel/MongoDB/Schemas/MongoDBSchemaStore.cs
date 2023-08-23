@@ -1,13 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
 using MongoDB.Driver;
 using NJsonSchema;
 
-namespace Aksio.Cratis.Events.Schemas.MongoDB;
+namespace Aksio.Cratis.Events.MongoDB.Schemas;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISchemaStore"/>.

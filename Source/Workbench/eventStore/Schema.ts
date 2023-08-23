@@ -10,6 +10,7 @@ export enum PropertyType {
     Guid = "guid",
     Object = "object",
     Enum = "enum",
+    Array = "array",
     Unknown = "unknown"
 }
 

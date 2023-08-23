@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
-using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Microsoft.AspNetCore.Mvc;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -55,6 +54,8 @@ public class EventSequence : Controller
             eventToAppend.EventSourceId,
             eventToAppend.EventType,
             eventToAppend.Content,
+            eventToAppend.Causation,
+            eventToAppend.CausedBy,
             eventToAppend.ValidFrom);
     }
 
@@ -71,11 +72,12 @@ public class EventSequence : Controller
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] EventSequenceId eventSequenceId,
         [FromRoute] TenantId tenantId,
-        [FromBody] IEnumerable<AppendEvent> eventsToAppend)
+        [FromBody] AppendManyEvents eventsToAppend)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        await eventSequence.AppendMany(eventsToAppend.Select(_ => new EventToAppend(_.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray());
+        var events = eventsToAppend.Events.Select(_ => new Grains.EventSequences.EventToAppend(eventsToAppend.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray();
+        await eventSequence.AppendMany(events, eventsToAppend.Causation, eventsToAppend.CausedBy);
     }
 
     /// <summary>
@@ -95,7 +97,11 @@ public class EventSequence : Controller
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        var worker = await eventSequence.Redact(redaction.SequenceNumber, redaction.Reason);
+        var worker = await eventSequence.Redact(
+            redaction.SequenceNumber,
+            redaction.Reason,
+            redaction.Causation,
+            redaction.CausedBy);
         await worker.WaitForResult();
     }
 
@@ -119,7 +125,9 @@ public class EventSequence : Controller
         var worker = await eventSequence.Redact(
             redaction.EventSourceId,
             redaction.Reason,
-            redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray());
+            redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray(),
+            redaction.Causation,
+            redaction.CausedBy);
         await worker.WaitForResult();
     }
 

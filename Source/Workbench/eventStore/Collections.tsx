@@ -34,15 +34,13 @@ const columns: IColumn[] = [
         key: 'name',
         name: 'Name',
         fieldName: 'name',
-        minWidth: 200,
-        isResizable: true
+        minWidth: 200
     },
     {
         key: 'documentCount',
         name: 'Document Count',
         fieldName: 'documentCount',
-        minWidth: 200,
-        isResizable: true
+        minWidth: 200
     }
 ];
 

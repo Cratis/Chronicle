@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Outbox;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Net;
@@ -37,9 +39,16 @@ public class ClientBuilder : IClientBuilder
     protected readonly ILogger<ClientBuilder> _logger;
     protected IClientArtifactsProvider? _clientArtifactsProvider;
     protected IModelNameConvention? _modelNameConvention;
+
+    const string VersionMetadataKey = "softwareVersion";
+    const string CommitMetadataKey = "softwareCommit";
+    const string ProgramIdentifierMetadataKey = "programIdentifier";
+
     readonly OptionsBuilder<ClientOptions> _optionsBuilder;
+    readonly Dictionary<string, string> _metadata = new();
     bool _inKernel;
     bool _isMultiTenanted;
+    Type _identityProviderType;
 
     /// <inheritdoc/>
     public IServiceCollection Services { get; }
@@ -53,6 +62,14 @@ public class ClientBuilder : IClientBuilder
         IServiceCollection services,
         ILogger<ClientBuilder> logger)
     {
+        _metadata[VersionMetadataKey] = "0.0.0";
+        _metadata[CommitMetadataKey] = "[N/A]";
+        _metadata[ProgramIdentifierMetadataKey] = "[N/A]";
+        _metadata["os"] = Environment.OSVersion.ToString();
+        _metadata["machineName"] = Environment.MachineName;
+        _metadata["process"] = Environment.ProcessPath ?? string.Empty;
+        _identityProviderType = typeof(BaseIdentityProvider);
+
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
         _optionsBuilder.BindConfiguration("cratis")
@@ -77,6 +94,28 @@ public class ClientBuilder : IClientBuilder
     }
 
     /// <inheritdoc/>
+    public IClientBuilder WithSoftwareVersion(string version, string commit)
+    {
+        _metadata[VersionMetadataKey] = version;
+        _metadata[CommitMetadataKey] = commit;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder WithMetadata(string key, string value)
+    {
+        _metadata[key] = value;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder IdentifiedAs(string name)
+    {
+        _metadata[ProgramIdentifierMetadataKey] = name;
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IClientBuilder MultiTenanted()
     {
         _isMultiTenanted = true;
@@ -89,6 +128,14 @@ public class ClientBuilder : IClientBuilder
     {
         ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
         _inKernel = true;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder UseIdentityProvider<T>()
+        where T : IIdentityProvider
+    {
+        _identityProviderType = typeof(T);
         return this;
     }
 
@@ -116,6 +163,8 @@ public class ClientBuilder : IClientBuilder
         var clientArtifacts = _clientArtifactsProvider ?? new DefaultClientArtifactsProvider(ProjectReferencedAssemblies.Instance);
 
         _logger.ConfiguringServices();
+
+        CausationManager.DefineRoot(_metadata);
 
         Services
             .AddHttpClient()
@@ -148,6 +197,8 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ITenantConfiguration, TenantConfiguration>()
             .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
+            .AddSingleton<ICausationManager, CausationManager>()
+            .AddSingleton(typeof(IIdentityProvider), _identityProviderType)
             .AddSingleton<IRules, Rules.Rules>()
             .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));

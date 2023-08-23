@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 
 #pragma warning disable SA1600, IDE0060
 
@@ -14,5 +16,13 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 /// <param name="EventSourceId">The <see cref="EventSourceId"/>.</param>
 /// <param name="EventType">The <see cref="EventType"/> to append.</param>
 /// <param name="Content">The content of the event represented as <see cref="JsonObject"/>.</param>
+/// <param name="Causation">Collection of <see cref="Causation"/>.</param>
+/// <param name="CausedBy"><see cref="CausedBy"/> to identify the person, system or service that caused the event.</param>
 /// <param name="ValidFrom">Optional valid from.</param>
-public record AppendEvent(EventSourceId EventSourceId, EventType EventType, JsonObject Content, DateTimeOffset? ValidFrom);
+public record AppendEvent(
+    EventSourceId EventSourceId,
+    EventType EventType,
+    JsonObject Content,
+    IEnumerable<Causation> Causation,
+    Identity CausedBy,
+    DateTimeOffset? ValidFrom);

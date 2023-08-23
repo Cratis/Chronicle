@@ -12,7 +12,6 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
     protected Model mapped;
     protected ExternalModel incoming;
     protected ImportOperations<Model, ExternalModel> operations;
-    protected Mock<IObjectsComparer> objects_comparer;
 
     void Establish()
     {
@@ -41,7 +40,7 @@ public class one_property_changed_for<TEvent> : all_dependencies_for<TEvent>
             mapper.Object,
             objects_comparer.Object,
             event_log.Object,
-            event_outbox.Object
-        );
+            event_outbox.Object,
+            causation_manager.Object);
     }
 }

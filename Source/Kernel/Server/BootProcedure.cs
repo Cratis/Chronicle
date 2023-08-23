@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Boot;
 using Aksio.Cratis.EventSequences.Inboxes;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.EventSequences.Inbox;
 using Aksio.Cratis.Kernel.Grains.Projections;
@@ -46,8 +47,11 @@ public class BootProcedure : IPerformBootProcedure
             foreach (var (microserviceId, microservice) in _configuration.Microservices)
             {
                 _executionContextManager.Establish(microserviceId);
-                var schemaStore = _serviceProvider.GetService<Schemas.ISchemaStore>()!;
+                var schemaStore = _serviceProvider.GetRequiredService<Schemas.ISchemaStore>()!;
                 schemaStore.Populate().Wait();
+
+                var identityStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
+                identityStore.Populate().Wait();
 
                 var projections = _grainFactory.GetGrain<IProjections>(0);
                 projections.Rehydrate().Wait();

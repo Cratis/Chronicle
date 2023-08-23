@@ -81,7 +81,6 @@ export const EventList = (props: EventListProps) => {
         severity: 'success' as AlertColor
     });
 
-
     const [showRedactEventModal, closeRedactEventModal] = useModal('Redact Event',
         ModalButtons.OkCancel,
         RedactEventModal,

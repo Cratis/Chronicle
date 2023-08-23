@@ -5,5 +5,11 @@
 import { field } from '@aksio/fundamentals';
 
 
-export class Object {
+export class StorageType {
+
+    @field(String)
+    type!: string;
+
+    @field(Object)
+    connectionDetails!: any;
 }

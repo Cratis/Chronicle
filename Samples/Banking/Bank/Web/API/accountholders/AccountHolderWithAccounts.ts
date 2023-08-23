@@ -4,9 +4,9 @@
 
 import { field } from '@aksio/fundamentals';
 
+import { IAccount } from './IAccount';
 import { CreditAccount } from './CreditAccount';
 import { DebitAccount } from './DebitAccount';
-import { IAccount } from './IAccount';
 
 export class AccountHolderWithAccounts {
 

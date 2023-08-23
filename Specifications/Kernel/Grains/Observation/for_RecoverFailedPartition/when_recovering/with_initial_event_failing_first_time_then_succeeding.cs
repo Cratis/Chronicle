@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.when_recovering;
@@ -30,7 +32,7 @@ public class with_initial_event_failing_first_time_then_succeeding : given.a_rec
     {
         var @event = new AppendedEvent(
             new(current, event_type),
-            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, partitioned_observer_key.TenantId, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, partitioned_observer_key.TenantId, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System),
             new ExpandoObject());
         current++;
         return @event;

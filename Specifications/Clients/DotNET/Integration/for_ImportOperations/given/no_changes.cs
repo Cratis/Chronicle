@@ -11,7 +11,6 @@ public class no_changes : all_dependencies_for<SomeEvent>
     protected Model initial;
     protected ExternalModel incoming;
     protected ImportOperations<Model, ExternalModel> operations;
-    protected Mock<IObjectsComparer> objects_comparer;
 
     void Establish()
     {
@@ -20,8 +19,6 @@ public class no_changes : all_dependencies_for<SomeEvent>
 
         projection.Setup(_ => _.GetById(key)).Returns(Task.FromResult(new AdapterProjectionResult<Model>(initial, Array.Empty<PropertyPath>(), 0)));
         mapper.Setup(_ => _.Map<Model>(incoming)).Returns(initial);
-
-        objects_comparer = new();
         objects_comparer.Setup(_ => _.Equals(initial, IsAny<Model>(), out Ref<IEnumerable<PropertyDifference>>.IsAny)).Returns(true);
 
         operations = new(
@@ -30,7 +27,7 @@ public class no_changes : all_dependencies_for<SomeEvent>
             mapper.Object,
             objects_comparer.Object,
             event_log.Object,
-            event_outbox.Object
-        );
+            event_outbox.Object,
+            causation_manager.Object);
     }
 }
