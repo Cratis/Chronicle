@@ -1,3 +1,17 @@
+# [v9.2.0] - 2023-8-23 [PR: #933](https://github.com/aksio-insurtech/Cratis/pull/933)
+
+### Added
+
+- Adding capturing of what causes an event. (#277)
+- Adding cause type for ASP.NET requests and automatically capturing information around this.
+- Adding cause type for observers.
+- Adding cause type for integration adapters (Import Operation).
+- Adding a specific root cause type that captures software version, process, commit and details. (#858)
+- Introducing a client API for configuring software version with commit details. (#858)
+- Adding capturing of caused by with the introduction of an identity store (#278).
+- Adding ASP.NET identity provider for capturing caused by, leveraging the HttpContext and the current user.
+
+
 # [v9.1.0] - 2023-8-16 [PR: #912](https://github.com/aksio-insurtech/Cratis/pull/912)
 
 ### Added
