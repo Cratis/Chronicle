@@ -4,6 +4,7 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Observation;
 
@@ -102,6 +103,7 @@ public class ObserverHandler
     /// <returns>Awaitable task.</returns>
     public async Task OnNext(AppendedEvent @event)
     {
+        BaseIdentityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = @event.Context.CausedBy });
         var eventType = _eventTypes.GetClrTypeFor(@event.Metadata.Type.Id);
 
         _causationManager.Add(CausationType, new Dictionary<string, string>
@@ -117,5 +119,7 @@ public class ObserverHandler
         var json = await _eventSerializer.Serialize(@event.Content);
         var content = await _eventSerializer.Deserialize(eventType, json);
         await _observerInvoker.Invoke(content, @event.Context);
+
+        BaseIdentityProvider.ClearCurrentIdentity();
     }
 }
