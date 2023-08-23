@@ -10,12 +10,16 @@ public class BaseIdentityProvider : IIdentityProvider
 {
     static readonly AsyncLocal<Identity> _current = new();
 
+    /// <inheritdoc/>
+    Identity IIdentityProvider.GetCurrent() => GetCurrent();
+
     internal static void SetCurrentIdentity(Identity identity) => _current.Value = identity;
 
     internal static void ClearCurrentIdentity() => _current.Value = Identity.System;
 
-    /// <inheritdoc/>
-    public virtual Identity GetCurrent() => _current.Value ?? Identity.System;
-
-    Identity IIdentityProvider.GetCurrent() => GetCurrent();
+    /// <summary>
+    /// Gets the current identity.
+    /// </summary>
+    /// <returns>The <see cref="Identity"/>.</returns>
+    protected virtual Identity GetCurrent() => _current.Value ?? Identity.System;
 }

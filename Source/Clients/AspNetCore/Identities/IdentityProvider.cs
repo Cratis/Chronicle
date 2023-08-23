@@ -23,11 +23,11 @@ public class IdentityProvider : BaseIdentityProvider
     }
 
     /// <inheritdoc/>
-    public override Identity GetCurrent()
+    protected override Identity GetCurrent()
     {
         var context = _httpContextAccessor.HttpContext;
 
-        if (context is null || context.Request.Path.StartsWithSegments("/.cratis")) return base.GetCurrent();
+        if (context?.Request.Path.StartsWithSegments("/.cratis") ?? true) return base.GetCurrent();
 
         var subject = context.User.Claims.FirstOrDefault(_ => _.Type == "sub")?.Value ?? string.Empty;
         var name = context.User.Claims.FirstOrDefault(_ => _.Type == "name")?.Value ?? string.Empty;

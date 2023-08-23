@@ -58,7 +58,6 @@ public class CausationMiddleware
     /// </summary>
     public const string CausationRouteValuePrefix = "route-value";
 
-
     /// <summary>
     /// The causation type for ASP.NET requests.
     /// </summary>
