@@ -68,7 +68,7 @@ public class ClientBuilder : IClientBuilder
         _metadata["os"] = Environment.OSVersion.ToString();
         _metadata["machineName"] = Environment.MachineName;
         _metadata["process"] = Environment.ProcessPath ?? string.Empty;
-        _identityProviderType = typeof(NullIdentityProvider);
+        _identityProviderType = typeof(BaseIdentityProvider);
 
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
