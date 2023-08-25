@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 
@@ -14,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Engines.Projections.Definitions;
 public class ProjectionPipelineDefinitions : IProjectionPipelineDefinitions
 {
     readonly IProjectionPipelineDefinitionsStorage _storage;
-    readonly ConcurrentDictionary<ProjectionId, ProjectionPipelineDefinition> _definitions = new();
+    readonly Dictionary<ProjectionId, ProjectionPipelineDefinition> _definitions = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionDefinition"/> class.
@@ -65,7 +64,7 @@ public class ProjectionPipelineDefinitions : IProjectionPipelineDefinitions
 
     async Task PopulateIfEmpty()
     {
-        if (_definitions.IsEmpty)
+        if (_definitions.Count == 0)
         {
             await Populate();
         }
