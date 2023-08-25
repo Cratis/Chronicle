@@ -61,10 +61,10 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     }
 
     /// <inheritdoc/>
-    public Task<long> GetCount(EventSequenceId eventSequenceId)
+    public async Task<long> GetCount(EventSequenceId eventSequenceId)
     {
         var collection = GetCollectionFor(eventSequenceId);
-        return collection.CountDocumentsAsync(FilterDefinition<Event>.Empty);
+        return await collection.CountDocumentsAsync(FilterDefinition<Event>.Empty).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -103,7 +103,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
                 },
                 Array.Empty<EventCompensation>());
             var collection = GetCollectionFor(eventSequenceId);
-            await collection.InsertOneAsync(@event);
+            await collection.InsertOneAsync(@event).ConfigureAwait(false);
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
@@ -156,7 +156,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         }
 
         var updateModel = CreateRedactionUpdateModelFor(@event, reason, causation, causedByChain);
-        collection.UpdateOne(updateModel.Filter, updateModel.Update);
+        await collection.UpdateOneAsync(updateModel.Filter, updateModel.Update).ConfigureAwait(false);
 
         return @event;
     }
