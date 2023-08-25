@@ -20,6 +20,12 @@ public interface IEventSequenceCaches
     IEventSequenceCache GetFor(MicroserviceId microserviceId, TenantId tenantId, EventSequenceId eventSequenceId);
 
     /// <summary>
+    /// Prime all caches.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task PrimeAll();
+
+    /// <summary>
     /// Check if any of the caches are under pressure.
     /// </summary>
     /// <returns>True if any is, false if not.</returns>

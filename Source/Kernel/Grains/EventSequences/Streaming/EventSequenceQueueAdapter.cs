@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
@@ -17,7 +16,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </summary>
 public class EventSequenceQueueAdapter : IQueueAdapter
 {
-    readonly ConcurrentDictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
+    readonly Dictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
 
     readonly IStreamQueueMapper _mapper;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
