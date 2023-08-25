@@ -16,7 +16,7 @@ export interface IRedactEvent {
     tenantId?: string;
     sequenceNumber?: number;
     reason?: string;
-    causation?: Causation[];
+    causation?: Causation;
     causedBy?: Identity;
 }
 
@@ -42,7 +42,7 @@ export class RedactEvent extends Command<IRedactEvent> implements IRedactEvent {
     private _tenantId!: string;
     private _sequenceNumber!: number;
     private _reason!: string;
-    private _causation!: Causation[];
+    private _causation!: Causation;
     private _causedBy!: Identity;
 
     constructor() {
@@ -109,11 +109,11 @@ export class RedactEvent extends Command<IRedactEvent> implements IRedactEvent {
         this._reason = value;
         this.propertyChanged('reason');
     }
-    get causation(): Causation[] {
+    get causation(): Causation {
         return this._causation;
     }
 
-    set causation(value: Causation[]) {
+    set causation(value: Causation) {
         this._causation = value;
         this.propertyChanged('causation');
     }

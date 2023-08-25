@@ -1,8 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Microsoft.AspNetCore.Mvc;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
@@ -19,18 +21,26 @@ public class EventSequence : Controller
 {
     readonly IGrainFactory _grainFactory;
     readonly IExecutionContextManager _executionContextManager;
+    readonly ICausationManager _causationManager;
+    readonly IIdentityProvider _identityProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
     /// <param name="grainFactory"><see cref="IGrainFactory"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
+    /// <param name="causationManager">The <see cref="ICausationManager"/> for working with causation.</param>
+    /// <param name="identityProvider">The <see cref="IIdentityProvider"/> for getting current identity.</param>
     public EventSequence(
         IGrainFactory grainFactory,
-        IExecutionContextManager executionContextManager)
+        IExecutionContextManager executionContextManager,
+        ICausationManager causationManager,
+        IIdentityProvider identityProvider)
     {
         _grainFactory = grainFactory;
         _executionContextManager = executionContextManager;
+        _causationManager = causationManager;
+        _identityProvider = identityProvider;
     }
 
     /// <summary>
@@ -95,13 +105,16 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] RedactEvent redaction)
     {
+        var causation = redaction.Causation ?? _causationManager.GetCurrentChain();
+        var causedBy = redaction.CausedBy ?? _identityProvider.GetCurrent();
+
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         var worker = await eventSequence.Redact(
             redaction.SequenceNumber,
             redaction.Reason,
-            redaction.Causation,
-            redaction.CausedBy);
+            causation,
+            causedBy);
         await worker.WaitForResult();
     }
 
@@ -120,14 +133,17 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] RedactEvents redaction)
     {
+        var causation = redaction.Causation ?? _causationManager.GetCurrentChain();
+        var causedBy = redaction.CausedBy ?? _identityProvider.GetCurrent();
+
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         var worker = await eventSequence.Redact(
             redaction.EventSourceId,
             redaction.Reason,
             redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray(),
-            redaction.Causation,
-            redaction.CausedBy);
+            causation,
+            causedBy);
         await worker.WaitForResult();
     }
 
