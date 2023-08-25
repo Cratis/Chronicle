@@ -1,3 +1,12 @@
+# [v9.2.1] - 2023-8-25 [PR: #935](https://github.com/aksio-insurtech/Cratis/pull/935)
+
+### Fixed
+
+- Dead lock situation when starting kernel with observers needing to replay. Solved this by explicitly priming the event sequence caches at startup, rather than lazily through the streaming infrastructure.
+- Moving the decision of what time an event operation occurred to the owning systems (e.g. EventSequence grain), rather than letting the persistence layer do this.
+- Fixing underlying problem with observer state with regards to current subscriptions, causing replays to only work once and sometimes never. 
+- Making redaction work in the workbench again by making causation and caused optional and setting these on server side if not set. The endpoints got a 409 with validation error messages before this change.
+
 # [v9.2.0] - 2023-8-23 [PR: #933](https://github.com/aksio-insurtech/Cratis/pull/933)
 
 ### Added
