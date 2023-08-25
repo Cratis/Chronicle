@@ -74,6 +74,7 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                         appendedEvent.Metadata.Type,
                         appendedEvent.Context.Causation,
                         await _identityStoreProvider().GetFor(appendedEvent.Context.CausedBy),
+                        DateTimeOffset.UtcNow,
                         appendedEvent.Context.ValidFrom,
                         appendedEvent.Content);
 

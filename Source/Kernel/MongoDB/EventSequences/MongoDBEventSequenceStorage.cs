@@ -75,6 +75,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventType eventType,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred,
         DateTimeOffset validFrom,
         ExpandoObject content)
     {
@@ -94,7 +95,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
                 causation,
                 causedByChain,
                 eventType.Id,
-                DateTimeOffset.UtcNow,
+                occurred,
                 validFrom,
                 eventSourceId,
                 new Dictionary<string, BsonDocument>
@@ -134,6 +135,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventType eventType,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred,
         DateTimeOffset validFrom,
         ExpandoObject content) => throw new NotImplementedException();
 
@@ -143,7 +145,8 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         EventSequenceNumber sequenceNumber,
         RedactionReason reason,
         IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain)
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred)
     {
         _logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = GetCollectionFor(eventSequenceId);
@@ -155,7 +158,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
             return @event;
         }
 
-        var updateModel = CreateRedactionUpdateModelFor(@event, reason, causation, causedByChain);
+        var updateModel = CreateRedactionUpdateModelFor(@event, reason, causation, causedByChain, occurred);
         await collection.UpdateOneAsync(updateModel.Filter, updateModel.Update).ConfigureAwait(false);
 
         return @event;
@@ -168,7 +171,8 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         RedactionReason reason,
         IEnumerable<EventType>? eventTypes,
         IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain)
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred)
     {
         _logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? Enumerable.Empty<EventType>());
         var collection = GetCollectionFor(eventSequenceId);
@@ -186,7 +190,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
                     continue;
                 }
 
-                updates.Add(CreateRedactionUpdateModelFor(@event, reason, causation, causedByChain));
+                updates.Add(CreateRedactionUpdateModelFor(@event, reason, causation, causedByChain, occurred));
                 affectedEventTypes.Add(@event.Metadata.Type);
             }
 
@@ -407,13 +411,14 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         AppendedEvent @event,
         RedactionReason reason,
         IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedById)
+        IEnumerable<IdentityId> causedById,
+        DateTimeOffset occurred)
     {
         var executionContext = _executionContextManager.Current;
         var content = new RedactionEventContent(
             reason,
             @event.Metadata.Type.Id,
-            DateTimeOffset.UtcNow,
+            occurred,
             executionContext.CorrelationId,
             causation,
             causedById);
