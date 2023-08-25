@@ -18,11 +18,6 @@ namespace Aksio.Cratis.Rules;
 [Singleton]
 public class RulesProjections : IRulesProjections
 {
-    sealed class RulesClass : RulesFor<RulesClass, object>
-    {
-        public override RuleId Identifier => Guid.Empty;
-    }
-
     readonly IEventTypes _eventTypes;
     readonly IModelNameConvention _modelNameConvention;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
@@ -86,7 +81,7 @@ public class RulesProjections : IRulesProjections
 
         var ruleType = typeof(TTarget);
 
-        var defineStateMethod = ruleType.GetMethod(nameof(RulesClass.DefineState), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        var defineStateMethod = ruleType.GetMethod("DefineState", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         if (defineStateMethod is not null)
         {
             var parameters = defineStateMethod.GetParameters();
