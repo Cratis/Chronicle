@@ -42,7 +42,7 @@ public interface IEventSequence
     Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default);
 
     /// <summary>
-    /// Append a single event to the event store.
+    /// Append a collection of events to the event store.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of events to append.</param>
@@ -50,7 +50,7 @@ public interface IEventSequence
     Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events);
 
     /// <summary>
-    /// Append a single event to the event store.
+    /// Append a collection of events to the event store with valid from per event.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
     /// <param name="events">Collection of events with valid from to append.</param>
