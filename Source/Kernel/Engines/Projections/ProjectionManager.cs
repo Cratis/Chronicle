@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
@@ -16,8 +15,8 @@ public class ProjectionManager : IProjectionManager
 {
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
-    readonly ConcurrentDictionary<ProjectionId, IProjection> _projections = new();
-    readonly ConcurrentDictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
+    readonly Dictionary<ProjectionId, IProjection> _projections = new();
+    readonly Dictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionManager"/> class.

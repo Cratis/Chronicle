@@ -17,7 +17,7 @@ export interface IRedactEvents {
     eventSourceId?: string;
     reason?: string;
     eventTypes?: string[];
-    causation?: Causation[];
+    causation?: Causation;
     causedBy?: Identity;
 }
 
@@ -45,7 +45,7 @@ export class RedactEvents extends Command<IRedactEvents> implements IRedactEvent
     private _eventSourceId!: string;
     private _reason!: string;
     private _eventTypes!: string[];
-    private _causation!: Causation[];
+    private _causation!: Causation;
     private _causedBy!: Identity;
 
     constructor() {
@@ -121,11 +121,11 @@ export class RedactEvents extends Command<IRedactEvents> implements IRedactEvent
         this._eventTypes = value;
         this.propertyChanged('eventTypes');
     }
-    get causation(): Causation[] {
+    get causation(): Causation {
         return this._causation;
     }
 
-    set causation(value: Causation[]) {
+    set causation(value: Causation) {
         this._causation = value;
         this.propertyChanged('causation');
     }

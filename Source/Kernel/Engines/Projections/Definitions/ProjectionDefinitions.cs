@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
@@ -16,7 +15,7 @@ public class ProjectionDefinitions : IProjectionDefinitions
 {
     readonly IProjectionDefinitionsStorage _storage;
     readonly IJsonProjectionSerializer _projectionSerializer;
-    readonly ConcurrentDictionary<ProjectionId, ProjectionDefinition> _definitions = new();
+    readonly Dictionary<ProjectionId, ProjectionDefinition> _definitions = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionDefinition"/> class.
@@ -87,7 +86,7 @@ public class ProjectionDefinitions : IProjectionDefinitions
 
     async Task PopulateIfEmpty()
     {
-        if (_definitions.IsEmpty)
+        if (_definitions.Count == 0)
         {
             await Populate();
         }

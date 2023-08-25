@@ -17,5 +17,5 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 public record RedactEvent(
     EventSequenceNumber SequenceNumber,
     RedactionReason Reason,
-    IEnumerable<Causation> Causation,
-    Identity CausedBy);
+    IEnumerable<Causation>? Causation,
+    Identity? CausedBy);

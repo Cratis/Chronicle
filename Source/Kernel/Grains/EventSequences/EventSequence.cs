@@ -247,7 +247,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             sequenceNumber,
             reason,
             causation,
-            await _identityStoreProvider().GetFor(causedBy));
+            await _identityStoreProvider().GetFor(causedBy),
+            DateTimeOffset.UtcNow);
         return await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, sequenceNumber, new[] { affectedEvent.Metadata.Type });
     }
 
@@ -272,7 +273,8 @@ public class EventSequence : Grain<EventSequenceState>, IEventSequence
             reason,
             eventTypes,
             causation,
-            await _identityStoreProvider().GetFor(causedBy));
+            await _identityStoreProvider().GetFor(causedBy),
+            DateTimeOffset.UtcNow);
         return await RewindPartitionForAffectedObservers(eventSourceId, EventSequenceNumber.First, affectedEventTypes);
     }
 

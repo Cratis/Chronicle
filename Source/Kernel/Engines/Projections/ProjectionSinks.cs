@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Aksio.Cratis.Projections;
 using Aksio.Types;
 
@@ -16,7 +15,7 @@ public class ProjectionSinks : IProjectionSinks
     sealed record Key(ProjectionSinkTypeId TypeId, ProjectionId ProjectionId);
 
     readonly IDictionary<ProjectionSinkTypeId, IProjectionSinkFactory> _factories;
-    readonly ConcurrentDictionary<Key, IProjectionSink> _stores = new();
+    readonly Dictionary<Key, IProjectionSink> _stores = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionSinks"/> class.

@@ -19,5 +19,5 @@ public record RedactEvents(
     EventSourceId EventSourceId,
     RedactionReason Reason,
     IEnumerable<EventTypeId> EventTypes,
-    IEnumerable<Causation> Causation,
-    Identity CausedBy);
+    IEnumerable<Causation>? Causation,
+    Identity? CausedBy);
