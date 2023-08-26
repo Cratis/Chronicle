@@ -37,6 +37,6 @@ public class two_identities_registered : all_dependencies
         };
         identities_from_database.Add(second_identity_from_database);
 
-        store = new(tenant_database.Object);
+        store = new(database.Object);
     }
 }

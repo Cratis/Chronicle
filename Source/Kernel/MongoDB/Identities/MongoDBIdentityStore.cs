@@ -11,10 +11,9 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities;
 /// <summary>
 /// Represents an implementation of <see cref="IIdentityStore"/> using MongoDB.
 /// </summary>
-[SingletonPerTenant]
 public class MongoDBIdentityStore : IIdentityStore
 {
-    readonly ITenantDatabase _database;
+    readonly IClusterDatabase _database;
     Dictionary<IdentityId, Identity> _identitiesByIdentityId = new();
     Dictionary<string, IdentityId> _identityIdsBySubject = new();
     Dictionary<string, IdentityId> _identityIdsByUserName = new();
@@ -22,8 +21,8 @@ public class MongoDBIdentityStore : IIdentityStore
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBIdentityStore"/> class.
     /// </summary>
-    /// <param name="database">The database for the current tenant.</param>
-    public MongoDBIdentityStore(ITenantDatabase database)
+    /// <param name="database">The cluster database.</param>
+    public MongoDBIdentityStore(IClusterDatabase database)
     {
         _database = database;
     }
