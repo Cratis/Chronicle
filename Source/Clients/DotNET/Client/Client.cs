@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Connections;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aksio.Cratis.Client;
 
@@ -11,19 +12,37 @@ namespace Aksio.Cratis.Client;
 public class Client : IClient
 {
     readonly IConnection _connection;
+    readonly IServiceProvider _serviceProvider;
+    readonly bool _isMultiTenanted;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Client"/> class.
     /// </summary>
     /// <param name="connection"><see cref="IConnection"/> to use.</param>
-    public Client(IConnection connection)
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="isMultiTenanted">Whether or not it is a multi tenanted client.</param>
+    public Client(IConnection connection, IServiceProvider serviceProvider, bool isMultiTenanted = false)
     {
         _connection = connection;
+        _serviceProvider = serviceProvider;
+        _isMultiTenanted = isMultiTenanted;
     }
 
     /// <inheritdoc/>
     public Task Connect()
     {
         return _connection.Connect();
+    }
+
+    /// <inheritdoc/>
+    public IEventSequences GetEventSequences(TenantId? tenantId = default)
+    {
+        if (!_isMultiTenanted) return _serviceProvider.GetRequiredService<IEventSequences>();
+        if (tenantId is null)
+        {
+            throw new TenantIsRequired("getting event sequences");
+        }
+
+        return _serviceProvider.GetRequiredService<IMultiTenantEventSequences>().ForTenant(tenantId);
     }
 }
