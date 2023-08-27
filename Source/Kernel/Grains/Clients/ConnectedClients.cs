@@ -52,13 +52,20 @@ public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
         ConnectionId connectionId,
         Uri clientUri,
         string version,
-        bool isRunningWithDebugger)
+        bool isRunningWithDebugger,
+        bool isMultiTenanted)
     {
         var microserviceId = (MicroserviceId)this.GetPrimaryKey();
 
         _logger.ClientConnected(microserviceId, connectionId);
         State.Clients.Where(_ => _.ClientUri == clientUri).ToList().ForEach(_ => State.Clients.Remove(_));
-        State.Clients.Add(new ConnectedClient(connectionId, clientUri, version, DateTimeOffset.UtcNow, isRunningWithDebugger));
+        State.Clients.Add(new ConnectedClient(
+            connectionId,
+            clientUri,
+            version,
+            DateTimeOffset.UtcNow,
+            isRunningWithDebugger,
+            isMultiTenanted));
         _metrics?.SetConnectedClients(State.Clients.Count);
 
         await WriteStateAsync();

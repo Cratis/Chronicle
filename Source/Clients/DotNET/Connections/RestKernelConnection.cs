@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Commands;
+using Aksio.Cratis.Client;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Net;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -27,6 +29,7 @@ namespace Aksio.Cratis.Connections;
 public abstract class RestKernelConnection : IConnection, IDisposable
 {
     readonly IOptions<ClientOptions> _options;
+    readonly IServiceProvider _serviceProvider;
     readonly ITaskFactory _taskFactory;
     readonly ITimerFactory _timerFactory;
     readonly IExecutionContextManager _executionContextManager;
@@ -50,6 +53,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     /// </summary>
     /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core server.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
@@ -59,6 +63,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     protected RestKernelConnection(
         IOptions<ClientOptions> options,
         IServer server,
+        IServiceProvider serviceProvider,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
@@ -67,6 +72,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         ILogger<RestKernelConnection> logger)
     {
         _options = options;
+        _serviceProvider = serviceProvider;
         _taskFactory = taskFactory;
         _timerFactory = timerFactory;
         _executionContextManager = executionContextManager;
@@ -105,7 +111,8 @@ public abstract class RestKernelConnection : IConnection, IDisposable
 
                 var attribute = typeof(SingleKernelConnection).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
                 var version = attribute?.InformationalVersion ?? "1.0.0";
-                var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached);
+                var client = _serviceProvider.GetRequiredService<IClient>();
+                var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached, client.IsMultiTenanted);
 
                 for (; ; )
                 {

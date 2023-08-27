@@ -5,10 +5,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Commands;
-using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Client;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Identities;
 using Aksio.Tasks;
 using Aksio.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -17,7 +16,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
+namespace Aksio.Cratis.Clients.for_RestKernelConnection.given;
 
 public class a_rest_kernel_connection : Specification
 {
@@ -38,15 +37,16 @@ public class a_rest_kernel_connection : Specification
     protected Mock<IOptions<ClientOptions>> options;
     protected ClientOptions options_instance;
     protected Mock<IServer> server;
+    protected Mock<IServiceProvider> service_provider;
     protected Mock<IFeatureCollection> features;
     protected Mock<IServerAddressesFeature> server_addresses;
     protected Mock<ITaskFactory> task_factory;
     protected Mock<ITimerFactory> timer_factory;
     protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IConnectionLifecycle> connection_lifecycle;
-    protected KernelConnection client;
+    protected Mock<IClient> client;
+    protected KernelConnection connection;
     protected ExecutionContext execution_context;
-
     protected MicroserviceId microservice_id;
     protected ConnectionId connection_id;
     protected Mock<ITimer> timer;
@@ -64,11 +64,15 @@ public class a_rest_kernel_connection : Specification
         options_instance = new();
         options.SetupGet(_ => _.Value).Returns(options_instance);
         server = new();
+        service_provider = new();
         features = new();
         server.SetupGet(_ => _.Features).Returns(features.Object);
         server_addresses = new();
         features.Setup(_ => _.Get<IServerAddressesFeature>()).Returns(server_addresses.Object);
         server_addresses.SetupGet(_ => _.Addresses).Returns(new[] { "http://localhost:5000" });
+
+        client = new();
+        service_provider.Setup(_ => _.GetService(typeof(IClient))).Returns(client.Object);
 
         task_factory = new();
         timer_factory = new();
@@ -103,9 +107,10 @@ public class a_rest_kernel_connection : Specification
                     return timer.Object;
                 });
 
-        client = new(
+        connection = new(
             options.Object,
             server.Object,
+            service_provider.Object,
             task_factory.Object,
             timer_factory.Object,
             execution_context_manager.Object,

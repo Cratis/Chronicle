@@ -18,8 +18,9 @@ public class SingleTenantClient : Client, ISingleTenantClient
     /// </summary>
     /// <param name="eventStore">The <see cref="ISingleTenantEventStore"/>.</param>
     /// <param name="connection">The <see cref="IConnection"/> to connect to Cratis.</param>
-    public SingleTenantClient(ISingleTenantEventStore eventStore, IConnection connection)
-        : base(connection)
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    public SingleTenantClient(ISingleTenantEventStore eventStore, IConnection connection, IServiceProvider serviceProvider)
+        : base(connection, serviceProvider)
     {
         EventStore = eventStore;
     }

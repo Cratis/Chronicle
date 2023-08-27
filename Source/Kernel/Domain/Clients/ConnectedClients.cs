@@ -82,7 +82,8 @@ public class ConnectedClients : Controller
             connectionId,
             uri,
             clientInformation.ClientVersion,
-            clientInformation.IsRunningWithDebugger);
+            clientInformation.IsRunningWithDebugger,
+            clientInformation.isMultiTenanted);
     }
 
     /// <summary>

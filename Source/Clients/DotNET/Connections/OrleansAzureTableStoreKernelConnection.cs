@@ -27,6 +27,7 @@ public class OrleansAzureTableStoreKernelConnection : ClusteredKernelClient
     /// </summary>
     /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core <see cref="IServer"/>.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
     /// <param name="httpClientFactory">The <see cref="ILoadBalancedHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
@@ -38,6 +39,7 @@ public class OrleansAzureTableStoreKernelConnection : ClusteredKernelClient
     public OrleansAzureTableStoreKernelConnection(
         IOptions<ClientOptions> options,
         IServer server,
+        IServiceProvider serviceProvider,
         ILoadBalancedHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
@@ -48,6 +50,7 @@ public class OrleansAzureTableStoreKernelConnection : ClusteredKernelClient
         ILogger<RestKernelConnection> logger) : base(
             options,
             server,
+            serviceProvider,
             httpClientFactory,
             taskFactory,
             timerFactory,

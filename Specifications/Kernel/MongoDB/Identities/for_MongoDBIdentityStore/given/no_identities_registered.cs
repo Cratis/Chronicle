@@ -9,6 +9,6 @@ public class no_identities_registered : all_dependencies
 
     void Establish()
     {
-        store = new(tenant_database.Object);
+        store = new(database.Object);
     }
 }

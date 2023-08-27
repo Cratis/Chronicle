@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Aksio.Cratis.Clients.for_RestKernelClient.given;
+namespace Aksio.Cratis.Clients.for_RestKernelConnection.given;
 
 public class KernelConnection : RestKernelConnection
 {
@@ -20,6 +20,7 @@ public class KernelConnection : RestKernelConnection
     public KernelConnection(
         IOptions<ClientOptions> options,
         IServer server,
+        IServiceProvider serviceProvider,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
@@ -28,6 +29,7 @@ public class KernelConnection : RestKernelConnection
         ILogger<RestKernelConnection> logger) : base(
             options,
             server,
+            serviceProvider,
             taskFactory,
             timerFactory,
             executionContextManager,

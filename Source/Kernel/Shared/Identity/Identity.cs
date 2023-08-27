@@ -18,10 +18,10 @@ public record Identity(string Subject, string Name, string UserName = "", Identi
     /// <summary>
     /// The identity used when not set.
     /// </summary>
-    public static readonly Identity NotSet = new("[Not Set]", "[Not Set]");
+    public static readonly Identity NotSet = new("1efc9b81-0612-4466-962c-86acc4e9a028", "[Not Set]", "[Not Set]");
 
     /// <summary>
     /// The identity used when the system is the cause.
     /// </summary>
-    public static readonly Identity System = new("5d032c92-9d5e-41eb-947a-ee5314ed0032", "[System]");
+    public static readonly Identity System = new("5d032c92-9d5e-41eb-947a-ee5314ed0032", "[System]", "[System]");
 }

@@ -8,16 +8,16 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.given;
 
 public class all_dependencies : Specification
 {
-    protected Mock<ITenantDatabase> tenant_database;
+    protected Mock<IClusterDatabase> database;
     protected Mock<IMongoCollection<MongoDBIdentity>> collection;
     protected List<MongoDBIdentity> identities_from_database;
     protected List<MongoDBIdentity> inserted_identities;
 
     void Establish()
     {
-        tenant_database = new();
+        database = new();
         collection = new();
-        tenant_database.Setup(_ => _.GetCollection<MongoDBIdentity>(CollectionNames.Identities)).Returns(collection.Object);
+        database.Setup(_ => _.GetCollection<MongoDBIdentity>(CollectionNames.Identities)).Returns(collection.Object);
 
         identities_from_database = new();
         inserted_identities = new();

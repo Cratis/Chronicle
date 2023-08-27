@@ -15,6 +15,15 @@ namespace Aksio.Cratis.Client;
 /// </summary>
 public class EventSequences : IEventSequences
 {
+    readonly TenantId _tenantId;
+    readonly IEventTypes _eventTypes;
+    readonly IEventSerializer _eventSerializer;
+    readonly IConnection _connection;
+    readonly IObserversRegistrar _observerRegistrar;
+    readonly ICausationManager _causationManager;
+    readonly IIdentityProvider _identityProvider;
+    readonly IExecutionContextManager _executionContextManager;
+
     /// <inheritdoc/>
     public IEventLog EventLog { get; }
 
@@ -61,5 +70,26 @@ public class EventSequences : IEventSequences
             causationManager,
             identityProvider,
             executionContextManager);
+        _tenantId = tenantId;
+        _eventTypes = eventTypes;
+        _eventSerializer = eventSerializer;
+        _connection = connection;
+        _observerRegistrar = observerRegistrar;
+        _causationManager = causationManager;
+        _identityProvider = identityProvider;
+        _executionContextManager = executionContextManager;
     }
+
+    /// <inheritdoc/>
+    public IEventSequence GetEventSequence(EventSequenceId eventSequenceId) =>
+        new EventSequence(
+            _tenantId,
+            eventSequenceId,
+            _eventTypes,
+            _eventSerializer,
+            _connection,
+            _observerRegistrar,
+            _causationManager,
+            _identityProvider,
+            _executionContextManager);
 }

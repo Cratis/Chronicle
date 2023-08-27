@@ -84,6 +84,7 @@ public class ClientBuilder : IClientBuilder
     {
         ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
         ExecutionContextManager.SetGlobalMicroserviceName(microserviceName);
+        ExecutionContextManager.SetCurrent(new ExecutionContext(microserviceId, TenantId.NotSet, CorrelationId.New(), _inKernel));
 
         _optionsBuilder.Configure(options =>
         {
@@ -126,8 +127,8 @@ public class ClientBuilder : IClientBuilder
     /// <inheritdoc/>
     public IClientBuilder InKernel()
     {
-        ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
         _inKernel = true;
+        ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
         return this;
     }
 

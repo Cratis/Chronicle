@@ -24,6 +24,7 @@ public class SingleKernelConnection : RestKernelConnection
     /// </summary>
     /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core server.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
@@ -34,6 +35,7 @@ public class SingleKernelConnection : RestKernelConnection
     public SingleKernelConnection(
         IOptions<ClientOptions> options,
         IServer server,
+        IServiceProvider serviceProvider,
         IHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
@@ -43,6 +45,7 @@ public class SingleKernelConnection : RestKernelConnection
         ILogger<RestKernelConnection> logger) : base(
             options,
             server,
+            serviceProvider,
             taskFactory,
             timerFactory,
             executionContextManager,

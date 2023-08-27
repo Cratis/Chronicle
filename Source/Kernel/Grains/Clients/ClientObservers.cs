@@ -4,7 +4,6 @@
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
-using TenantsConfig = Aksio.Cratis.Kernel.Configuration.Tenants;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 
@@ -13,24 +12,19 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 /// </summary>
 public class ClientObservers : Grain, IClientObservers
 {
-    readonly TenantsConfig _tenants;
     readonly ILogger<ClientObservers> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObservers"/> class.
     /// </summary>
-    /// <param name="tenants">The configured <see cref="TenantsConfig"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ClientObservers(
-        TenantsConfig tenants,
-        ILogger<ClientObservers> logger)
+    public ClientObservers(ILogger<ClientObservers> logger)
     {
-        _tenants = tenants;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public async Task Register(ConnectionId connectionId, IEnumerable<ClientObserverRegistration> registrations)
+    public async Task Register(ConnectionId connectionId, IEnumerable<ClientObserverRegistration> registrations, IEnumerable<TenantId> tenants)
     {
         _logger.RegisterObservers();
 
@@ -38,7 +32,7 @@ public class ClientObservers : Grain, IClientObservers
 
         foreach (var registration in registrations)
         {
-            foreach (var tenantId in _tenants.GetTenantIds())
+            foreach (var tenantId in tenants)
             {
                 _logger.RegisterObserver(
                     registration.ObserverId,
