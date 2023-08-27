@@ -15,9 +15,6 @@ public class SpecificationAdapterProjectionFor<TModel> : IAdapterProjectionFor<T
 {
     readonly ProjectionSpecificationContext<TModel> _context;
 
-    /// <inheritdoc/>
-    public ProjectionDefinition Definition => _context.Definition;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SpecificationAdapterProjectionFor{TModel}"/> class.
     /// </summary>
@@ -26,6 +23,9 @@ public class SpecificationAdapterProjectionFor<TModel> : IAdapterProjectionFor<T
     {
         _context = context;
     }
+
+    /// <inheritdoc/>
+    public ProjectionDefinition Definition => _context.Definition;
 
     /// <inheritdoc/>
     public void Dispose() => _context.Dispose();

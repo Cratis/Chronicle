@@ -18,6 +18,38 @@ public class Projection : IProjection
     readonly ISubject<ProjectionEventContext> _subject = new Subject<ProjectionEventContext>();
     IDictionary<EventType, KeyResolver> _eventTypesToKeyResolver = new Dictionary<EventType, KeyResolver>();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Projection"/> class.
+    /// </summary>
+    /// <param name="identifier">The unique identifier of the projection.</param>
+    /// <param name="initialModelState">The initial state to use for new model instances.</param>
+    /// <param name="name">The name of the projection.</param>
+    /// <param name="path">The qualified path of the projection.</param>
+    /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
+    /// <param name="model">The target <see cref="Model"/>.</param>
+    /// <param name="rewindable">Whether or not the projection is rewindable.</param>
+    /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
+    public Projection(
+        ProjectionId identifier,
+        ExpandoObject initialModelState,
+        ProjectionName name,
+        ProjectionPath path,
+        PropertyPath childrenPropertyPath,
+        Model model,
+        bool rewindable,
+        IEnumerable<IProjection> childProjections)
+    {
+        Identifier = identifier;
+        InitialModelState = initialModelState;
+        Name = name;
+        Model = model;
+        IsRewindable = rewindable;
+        Event = FilterEventTypes(_subject);
+        Path = path;
+        ChildrenPropertyPath = childrenPropertyPath;
+        ChildProjections = childProjections;
+    }
+
     /// <inheritdoc/>
     public ProjectionId Identifier { get; }
 
@@ -59,38 +91,6 @@ public class Projection : IProjection
 
     /// <inheritdoc/>
     public IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; private set; } = Array.Empty<EventTypeWithKeyResolver>();
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Projection"/> class.
-    /// </summary>
-    /// <param name="identifier">The unique identifier of the projection.</param>
-    /// <param name="initialModelState">The initial state to use for new model instances.</param>
-    /// <param name="name">The name of the projection.</param>
-    /// <param name="path">The qualified path of the projection.</param>
-    /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
-    /// <param name="model">The target <see cref="Model"/>.</param>
-    /// <param name="rewindable">Whether or not the projection is rewindable.</param>
-    /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
-    public Projection(
-        ProjectionId identifier,
-        ExpandoObject initialModelState,
-        ProjectionName name,
-        ProjectionPath path,
-        PropertyPath childrenPropertyPath,
-        Model model,
-        bool rewindable,
-        IEnumerable<IProjection> childProjections)
-    {
-        Identifier = identifier;
-        InitialModelState = initialModelState;
-        Name = name;
-        Model = model;
-        IsRewindable = rewindable;
-        Event = FilterEventTypes(_subject);
-        Path = path;
-        ChildrenPropertyPath = childrenPropertyPath;
-        ChildProjections = childProjections;
-    }
 
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Event.Metadata.Type.Id));

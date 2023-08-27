@@ -26,11 +26,6 @@ public class EventSequenceForSpecifications
     EventSequenceNumber _sequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
-    /// Gets the appended events.
-    /// </summary>
-    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _appendedEvents;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceForSpecifications"/> class.
     /// </summary>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/>.</param>
@@ -42,6 +37,11 @@ public class EventSequenceForSpecifications
         _expandoObjectConverter = expandoObjectConverter;
         _schemaGenerator = schemaGenerator;
     }
+
+    /// <summary>
+    /// Gets the appended events.
+    /// </summary>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _appendedEvents;
 
     /// <summary>
     /// Append event to sequence.

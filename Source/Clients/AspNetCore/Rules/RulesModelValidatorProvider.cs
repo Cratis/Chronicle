@@ -15,16 +15,16 @@ public class RulesModelValidatorProvider : IModelValidatorProvider
     IRules? _rules;
     IServiceProvider? _serviceProvider;
 
-    IRules Rules => _rules ??= GlobalInstances.ServiceProvider.GetRequiredService<IRules>();
-
-    IServiceProvider ServiceProvider => _serviceProvider ??= GlobalInstances.ServiceProvider;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="RulesModelValidatorProvider"/> class.
     /// </summary>
     public RulesModelValidatorProvider()
     {
     }
+
+    IRules Rules => _rules ??= GlobalInstances.ServiceProvider.GetRequiredService<IRules>();
+
+    IServiceProvider ServiceProvider => _serviceProvider ??= GlobalInstances.ServiceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RulesModelValidatorProvider"/> class.

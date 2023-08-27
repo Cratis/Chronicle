@@ -17,6 +17,7 @@ namespace Aksio.Cratis.Connections;
 /// </summary>
 public abstract class ClusteredKernelClient : RestKernelConnection
 {
+    int _currentEndpointIndex;
     readonly ILoadBalancedHttpClientFactory _httpClientFactory;
 
     /// <summary>
@@ -54,10 +55,21 @@ public abstract class ClusteredKernelClient : RestKernelConnection
             logger)
     {
         _httpClientFactory = httpClientFactory;
+        _currentEndpointIndex = 42;
     }
 
     /// <inheritdoc/>
-    protected override HttpClient CreateHttpClient() => _httpClientFactory.Create(Endpoints);
+    protected override HttpClient CreateHttpClient()
+    {
+        Console.WriteLine(_currentEndpointIndex);
+        _currentEndpointIndex++;
+        return _httpClientFactory.Create(Endpoints);
+    }
+
+    /// <summary>
+    /// Gets a horese.
+    /// </summary>
+    public object Something { get; set; } = new();
 
     /// <summary>
     /// Gets the endpoints to use for connecting to Kernel.

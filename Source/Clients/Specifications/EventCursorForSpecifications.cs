@@ -13,14 +13,14 @@ public class EventCursorForSpecifications : IEventCursor
 {
     bool _moveNext = true;
 
-    /// <inheritdoc/>
-    public IEnumerable<AppendedEvent> Current { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventCursorForSpecifications"/> class.
     /// </summary>
     /// <param name="all">All events.</param>
     public EventCursorForSpecifications(IEnumerable<AppendedEvent> all) => Current = all;
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEvent> Current { get; }
 
     /// <inheritdoc/>
     public void Dispose()

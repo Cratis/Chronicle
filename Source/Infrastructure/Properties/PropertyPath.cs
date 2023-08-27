@@ -17,6 +17,70 @@ namespace Aksio.Cratis.Properties;
 public class PropertyPath
 {
     /// <summary>
+    /// Represents the not set value.
+    /// </summary>
+    public const string NotSetValue = "*NotSet*";
+
+    /// <summary>
+    /// Represents the root path.
+    /// </summary>
+    public static readonly PropertyPath Root = new(string.Empty);
+
+    /// <summary>
+    /// Get the value that identifies a <see cref="PropertyPath"/> that is not set.
+    /// </summary>
+    public static readonly PropertyPath NotSet = NotSetValue;
+
+    static Regex? _arrayIndexRegex;
+    readonly IPropertyPathSegment[] _segments = Array.Empty<IPropertyPathSegment>();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PropertyPath"/> class.
+    /// </summary>
+    /// <param name="path">Path to the property relative within an object.</param>
+    public PropertyPath(string path)
+    {
+        _segments = path.Split('.').Select<string, IPropertyPathSegment>(_ =>
+        {
+            var match = ArrayIndexRegex!.Match(_);
+            if (match.Success)
+            {
+                return new ArrayProperty(match.Groups["property"].Value.ToCamelCase());
+            }
+            return new PropertyName(_.ToCamelCase());
+        }).ToArray();
+
+        Path = string.Join('.', (IEnumerable<object>)_segments);
+    }
+
+    /// <summary>
+    /// Gets the full path of the property.
+    /// </summary>
+    public string Path { get; }
+
+    /// <summary>
+    /// Gets the segments the full property path consists of.
+    /// </summary>
+    public IEnumerable<IPropertyPathSegment> Segments => _segments;
+
+    /// <summary>
+    /// Gets the last segment of the path.
+    /// </summary>
+    public IPropertyPathSegment LastSegment => _segments[^1];
+
+    /// <summary>
+    /// Gets whether or not this is the root path.
+    /// </summary>
+    public bool IsRoot => Path?.Length == 0;
+
+    /// <summary>
+    /// Gets whether or not the value is set.
+    /// </summary>
+    public bool IsSet => Path?.Equals(NotSetValue) == false;
+
+    static Regex ArrayIndexRegex => _arrayIndexRegex ??= new("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+
+    /// <summary>
     /// Implicitly convert from <see cref="PropertyPath"/> to <see cref="string"/>.
     /// </summary>
     /// <param name="property"><see cref="PropertyPath"/> to convert from.</param>
@@ -87,70 +151,6 @@ public class PropertyPath
             ArrayProperty => left.AddArrayIndex(segment.Value),
             _ => left
         };
-    }
-
-    /// <summary>
-    /// Represents the not set value.
-    /// </summary>
-    public const string NotSetValue = "*NotSet*";
-
-    /// <summary>
-    /// Represents the root path.
-    /// </summary>
-    public static readonly PropertyPath Root = new(string.Empty);
-
-    /// <summary>
-    /// Get the value that identifies a <see cref="PropertyPath"/> that is not set.
-    /// </summary>
-    public static readonly PropertyPath NotSet = NotSetValue;
-
-    static Regex? _arrayIndexRegex;
-    readonly IPropertyPathSegment[] _segments = Array.Empty<IPropertyPathSegment>();
-
-    /// <summary>
-    /// Gets the full path of the property.
-    /// </summary>
-    public string Path { get; }
-
-    /// <summary>
-    /// Gets the segments the full property path consists of.
-    /// </summary>
-    public IEnumerable<IPropertyPathSegment> Segments => _segments;
-
-    /// <summary>
-    /// Gets the last segment of the path.
-    /// </summary>
-    public IPropertyPathSegment LastSegment => _segments[^1];
-
-    /// <summary>
-    /// Gets whether or not this is the root path.
-    /// </summary>
-    public bool IsRoot => Path?.Length == 0;
-
-    /// <summary>
-    /// Gets whether or not the value is set.
-    /// </summary>
-    public bool IsSet => Path?.Equals(NotSetValue) == false;
-
-    static Regex ArrayIndexRegex => _arrayIndexRegex ??= new("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PropertyPath"/> class.
-    /// </summary>
-    /// <param name="path">Path to the property relative within an object.</param>
-    public PropertyPath(string path)
-    {
-        _segments = path.Split('.').Select<string, IPropertyPathSegment>(_ =>
-        {
-            var match = ArrayIndexRegex!.Match(_);
-            if (match.Success)
-            {
-                return new ArrayProperty(match.Groups["property"].Value.ToCamelCase());
-            }
-            return new PropertyName(_.ToCamelCase());
-        }).ToArray();
-
-        Path = string.Join('.', (IEnumerable<object>)_segments);
     }
 
     /// <summary>

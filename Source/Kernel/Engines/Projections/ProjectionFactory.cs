@@ -179,7 +179,7 @@ public class ProjectionFactory : IProjectionFactory
 
         foreach (var child in childProjections)
         {
-            var childTypes = child.EventTypesWithKeyResolver.Where(_ => !eventsForProjection.Any(e => e.EventType == _.EventType));
+            var childTypes = child.EventTypesWithKeyResolver.Where(_ => !eventsForProjection.Exists(e => e.EventType == _.EventType));
             eventsForProjection.AddRange(childTypes);
         }
         var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();

@@ -15,9 +15,6 @@ public class ArrayIndexers : IArrayIndexers
 
     readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers;
 
-    /// <inheritdoc/>
-    public IEnumerable<ArrayIndexer> All => _arrayIndexers.Values;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ArrayIndexers"/> class.
     /// </summary>
@@ -26,6 +23,9 @@ public class ArrayIndexers : IArrayIndexers
     {
         _arrayIndexers = arrayIndexers.ToDictionary(_ => _.ArrayProperty, _ => _);
     }
+
+    /// <inheritdoc/>
+    public IEnumerable<ArrayIndexer> All => _arrayIndexers.Values;
 
     /// <inheritdoc/>
     public ArrayIndexer GetFor(PropertyPath propertyPath)

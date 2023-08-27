@@ -12,8 +12,6 @@ namespace Aksio.Cratis.Kernel.Engines.Projections;
 [Singleton]
 public class ProjectionSinks : IProjectionSinks
 {
-    sealed record Key(ProjectionSinkTypeId TypeId, ProjectionId ProjectionId);
-
     readonly IDictionary<ProjectionSinkTypeId, IProjectionSinkFactory> _factories;
     readonly Dictionary<Key, IProjectionSink> _stores = new();
 
@@ -42,4 +40,6 @@ public class ProjectionSinks : IProjectionSinks
     {
         if (!HasType(typeId)) throw new UnknownProjectionSink(typeId);
     }
+
+    sealed record Key(ProjectionSinkTypeId TypeId, ProjectionId ProjectionId);
 }

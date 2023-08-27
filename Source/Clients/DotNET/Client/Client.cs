@@ -14,9 +14,6 @@ public class Client : IClient
     readonly IConnection _connection;
     readonly IServiceProvider _serviceProvider;
 
-    /// <inheritdoc/>
-    public bool IsMultiTenanted { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Client"/> class.
     /// </summary>
@@ -29,6 +26,9 @@ public class Client : IClient
         _serviceProvider = serviceProvider;
         IsMultiTenanted = isMultiTenanted;
     }
+
+    /// <inheritdoc/>
+    public bool IsMultiTenanted { get; }
 
     /// <inheritdoc/>
     public Task Connect()

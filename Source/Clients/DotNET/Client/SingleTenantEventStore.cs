@@ -8,9 +8,6 @@ namespace Aksio.Cratis.Client;
 /// </summary>
 public class SingleTenantEventStore : ISingleTenantEventStore
 {
-    /// <inheritdoc/>
-    public IEventSequences Sequences { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleTenantEventStore"/> class.
     /// </summary>
@@ -19,4 +16,7 @@ public class SingleTenantEventStore : ISingleTenantEventStore
     {
         Sequences = eventSequences;
     }
+
+    /// <inheritdoc/>
+    public IEventSequences Sequences { get; }
 }
