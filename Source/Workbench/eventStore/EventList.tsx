@@ -37,6 +37,7 @@ export interface EventListProps {
     onEventsRedacted?: () => void;
     sequenceNumber?: string;
     registerRefreshEvents: (refreshEvents: () => void) => void;
+    canRedactEvents: boolean;
 }
 
 export const EventList = (props: EventListProps) => {
@@ -187,26 +188,30 @@ export const EventList = (props: EventListProps) => {
             width: 100,
             getActions: (params: GridRowParams) => {
                 const disabled = params.row.metadata.type.id === GlobalEventTypes.redaction;
-                return [
-                    <GridActionsCellItem
-                        key={1}
-                        label='Redact this event'
-                        showInMenu
-                        disabled={disabled}
-                        onClick={() => {
-                            redactEvent(params.row as AppendedEvent);
-                        }}
-                    />,
-                    <GridActionsCellItem
-                        key={1}
-                        label='Redact all with same event source ID'
-                        showInMenu
-                        onClick={() => {
-                            redactAllWithSameEventSourceId(params.row as AppendedEvent);
-                        }}
-                    />
-                ];
 
+                if (props.canRedactEvents) {
+                    return [
+                        <GridActionsCellItem
+                            key={1}
+                            label='Redact this event'
+                            showInMenu
+                            disabled={disabled}
+                            onClick={() => {
+                                redactEvent(params.row as AppendedEvent);
+                            }}
+                        />,
+                        <GridActionsCellItem
+                            key={1}
+                            label='Redact all with same event source ID'
+                            showInMenu
+                            onClick={() => {
+                                redactAllWithSameEventSourceId(params.row as AppendedEvent);
+                            }}
+                        />
+                    ];
+                }
+
+                return [];
             }
         }
     ];

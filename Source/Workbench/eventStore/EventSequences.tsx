@@ -136,7 +136,8 @@ export const EventSequences = () => {
                                     microserviceId={microserviceId}
                                     eventTypes={eventTypes.data.map(_ => _.eventType)} onEventSelected={eventSelected}
                                     onEventsRedacted={() => { }}
-                                    sequenceNumber={selectedEventSequence!.id} />
+                                    sequenceNumber={selectedEventSequence!.id}
+                                    canRedactEvents={true} />
                             </Grid>
 
                             <Grid item xs={4} sx={{ height: '100%' }}>
