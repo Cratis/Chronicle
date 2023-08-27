@@ -13,7 +13,9 @@ public class Client : IClient
 {
     readonly IConnection _connection;
     readonly IServiceProvider _serviceProvider;
-    readonly bool _isMultiTenanted;
+
+    /// <inheritdoc/>
+    public bool IsMultiTenanted { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Client"/> class.
@@ -25,7 +27,7 @@ public class Client : IClient
     {
         _connection = connection;
         _serviceProvider = serviceProvider;
-        _isMultiTenanted = isMultiTenanted;
+        IsMultiTenanted = isMultiTenanted;
     }
 
     /// <inheritdoc/>
@@ -37,7 +39,7 @@ public class Client : IClient
     /// <inheritdoc/>
     public IEventSequences GetEventSequences(TenantId? tenantId = default)
     {
-        if (!_isMultiTenanted) return _serviceProvider.GetRequiredService<IEventSequences>();
+        if (!IsMultiTenanted) return _serviceProvider.GetRequiredService<IEventSequences>();
         if (tenantId is null)
         {
             throw new TenantIsRequired("getting event sequences");

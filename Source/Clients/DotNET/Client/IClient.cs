@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Client;
 public interface IClient
 {
     /// <summary>
+    /// Gets whether or not the client is multi-tenanted.
+    /// </summary>
+    bool IsMultiTenanted { get; }
+
+    /// <summary>
     /// Connect to Cratis kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>

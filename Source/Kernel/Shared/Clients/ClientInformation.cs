@@ -9,4 +9,5 @@ namespace Aksio.Cratis.Connections;
 /// <param name="ClientVersion">The version of the client.</param>
 /// <param name="AdvertisedUri">The URI that the client is advertised with.</param>
 /// <param name="IsRunningWithDebugger">Whether or not the client is running with debugger attached.</param>
-public record ClientInformation(string ClientVersion, string AdvertisedUri, bool IsRunningWithDebugger);
+/// <param name="isMultiTenanted">Whether or not the client is multi-tenanted.</param>
+public record ClientInformation(string ClientVersion, string AdvertisedUri, bool IsRunningWithDebugger, bool isMultiTenanted = true);
