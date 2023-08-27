@@ -1,22 +1,81 @@
 <Project>
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
+
+        <Version>1.0.0</Version>
+        <Copyright>Copyright Aksio Insurtech</Copyright>
+        <Authors>all contributors</Authors>
+        <DebugType>portable</DebugType>
+        <PackageIcon>logo.png</PackageIcon>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryType>git</RepositoryType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <RepositoryUrl>https://github.com/aksio-insurtech/Cratis</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/aksio-insurtech/Cratis</PackageProjectUrl>
+
+        <GenerateAssemblyTitleAttribute>true</GenerateAssemblyTitleAttribute>
+        <GenerateAssemblyDescriptionAttribute>true</GenerateAssemblyDescriptionAttribute>
+
         <ImplicitUsings>true</ImplicitUsings>
-        <NoWarn>$(NoWarn);CS1591;RCS1090;CA2252;CS8632;RCS1217;SA1310;CA1707;AS0003</NoWarn>
+        <LangVersion>10.0</LangVersion>
+
+        <Nullable>enable</Nullable>
+
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsTestProject>false</IsTestProject>
+
+        <!-- Debuggability -->
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>True</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <IncludeSource>True</IncludeSource>
+        <!-- Debuggability - End -->
+
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+        <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
+        <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
+        <RunAnalyzers>True</RunAnalyzers>
+        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+
+        <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
+        <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
+        <RunAnalyzers>True</RunAnalyzers>
+        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
 
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <IsPackable>true</IsPackable>
-        <Copyright>Copyright Aksio Insurtech</Copyright>
-        <Authors>all contributors</Authors>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <RepositoryUrl>https://github.com/aksio-insurtech/Cratis</RepositoryUrl>
-        <PackageProjectUrl>https://github.com/aksio-insurtech/Cratis</PackageProjectUrl>
         <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)'==''">
+        <Configuration>Debug</Configuration>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+        <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+        <MSBuildTreatWarningsAsErrors>False</MSBuildTreatWarningsAsErrors>
+        <CodeAnalysisTreatWarningsAsErrors>False</CodeAnalysisTreatWarningsAsErrors>
+        <StyleCopTreatErrorsAsWarnings>True</StyleCopTreatErrorsAsWarnings>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+        <MSBuildTreatWarningsAsErrors>True</MSBuildTreatWarningsAsErrors>
+        <CodeAnalysisTreatWarningsAsErrors>True</CodeAnalysisTreatWarningsAsErrors>
+        <StyleCopTreatErrorsAsWarnings>False</StyleCopTreatErrorsAsWarnings>
+    </PropertyGroup>
+
     <ItemGroup>
-        <PackageReference Include="Aksio.Defaults" PrivateAssets="All" Condition="'$(PublishReadyToRun)' != 'true'" />
+        <!-- <PackageReference Include="Aksio.Defaults" PrivateAssets="All" Condition="'$(PublishReadyToRun)' != 'true'" /> -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" />
+        <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" />
+        <PackageReference Include="StyleCop.Analyzers" />
+        <PackageReference Include="Roslynator.Analyzers" />
+        <PackageReference Include="Meziantou.Analyzer" />
+
         <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
     </ItemGroup>
 

@@ -53,6 +53,14 @@
         <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.0.0-beta.10" NoWarn="NU5104" />
         <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.5.0-alpha.2" NoWarn="NU5104" />
 
+        <!-- Analysis -->
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" Version="4.5.0" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.3" />
+        <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.376" />
+        <PackageVersion Include="Roslynator.Analyzers" Version="4.5.0" />
+        <PackageVersion Include="Meziantou.Analyzer" Version="2.0.82" />
+
+
         <!-- Specifications -->
 		<PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
 		<PackageVersion Include="xunit" Version="2.4.2" />
