@@ -38,23 +38,25 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
     where TAddress : notnull
     where TObserver : notnull
 {
-    sealed class ObserverEntry
-    {
-        public TObserver Observer { get; set; }
-        public DateTime LastSeen { get; set; }
-
-        public ObserverEntry(TObserver observer, DateTime lastSeen)
-        {
-            Observer = observer;
-            LastSeen = lastSeen;
-        }
-    }
-
     readonly string _loggerPrefix;
 
     readonly ConcurrentDictionary<TAddress, ObserverEntry> _observers = new();
 
     readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverManager{TAddress,TObserver}"/> class.
+    /// </summary>
+    /// <param name="expiration">The expiration for subscribers.</param>
+    /// <param name="logger">Logger to use for logging.</param>
+    /// <param name="loggerPrefix">Logger prefix.</param>
+    public ObserverManager(TimeSpan expiration, ILogger logger, string loggerPrefix)
+    {
+        ExpirationDuration = expiration;
+        _logger = logger;
+        _loggerPrefix = loggerPrefix;
+        GetDateTime = () => DateTime.UtcNow;
+    }
 
     /// <summary>
     /// Gets or sets the delegate used to get the date and time, for expiry.
@@ -75,20 +77,6 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
     /// Gets a copy of the observers.
     /// </summary>
     public IDictionary<TAddress, TObserver> Observers => _observers.ToDictionary(_ => _.Key, _ => _.Value.Observer);
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverManager{TAddress,TObserver}"/> class.
-    /// </summary>
-    /// <param name="expiration">The expiration for subscribers.</param>
-    /// <param name="logger">Logger to use for logging.</param>
-    /// <param name="loggerPrefix">Logger prefix.</param>
-    public ObserverManager(TimeSpan expiration, ILogger logger, string loggerPrefix)
-    {
-        ExpirationDuration = expiration;
-        _logger = logger;
-        _loggerPrefix = loggerPrefix;
-        GetDateTime = () => DateTime.UtcNow;
-    }
 
     /// <summary>
     /// Removes all observers.
@@ -278,5 +266,17 @@ public class ObserverManager<TAddress, TObserver> : IEnumerable<TObserver>
     IEnumerator IEnumerable.GetEnumerator()
     {
         return GetEnumerator();
+    }
+
+    sealed class ObserverEntry
+    {
+        public ObserverEntry(TObserver observer, DateTime lastSeen)
+        {
+            Observer = observer;
+            LastSeen = lastSeen;
+        }
+
+        public TObserver Observer { get; set; }
+        public DateTime LastSeen { get; set; }
     }
 }

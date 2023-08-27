@@ -10,16 +10,6 @@ namespace Aksio.Cratis.Events;
 public sealed class EventTypeAttribute : Attribute
 {
     /// <summary>
-    /// Gets the <see cref="EventType"/>.
-    /// </summary>
-    public EventType Type { get; }
-
-    /// <summary>
-    /// Gets or sets whether or not this event type should be available publicly.
-    /// </summary>
-    public bool IsPublic { get; }
-
-    /// <summary>
     /// Initializes a new instance of <see cref="EventTypeAttribute"/>.
     /// </summary>
     /// <param name="idAsGuid"><see cref="EventTypeId">Identifier</see> as string representation of a <see cref="Guid"/>.</param>
@@ -30,4 +20,14 @@ public sealed class EventTypeAttribute : Attribute
         IsPublic = isPublic;
         Type = new(Guid.Parse(idAsGuid), generation, isPublic);
     }
+
+    /// <summary>
+    /// Gets the <see cref="EventType"/>.
+    /// </summary>
+    public EventType Type { get; }
+
+    /// <summary>
+    /// Gets or sets whether or not this event type should be available publicly.
+    /// </summary>
+    public bool IsPublic { get; }
 }

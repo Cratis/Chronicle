@@ -74,7 +74,7 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
             return;
         }
 
-        if (_failedPartitions.Any(_ => _.Partition == partitionId))
+        if (_failedPartitions.Exists(_ => _.Partition == partitionId))
             return;
         await StartRecovery(partitionId, sequenceNumber, exceptionMessages, exceptionStackTrace, occurred);
     }

@@ -15,14 +15,14 @@ public record IdentityId(Guid Value) : ConceptAs<Guid>(Value)
     public static readonly IdentityId NotSet = Guid.Empty;
 
     /// <summary>
-    /// Creates a new <see cref="IdentityId"/>.
-    /// </summary>
-    /// <returns>Newly created <see cref="IdentityId"/>.</returns>
-    public static IdentityId New() => Guid.NewGuid();
-
-    /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="IdentityId"/>.
     /// </summary>
     /// <param name="value">Guid to convert from.</param>
     public static implicit operator IdentityId(Guid value) => new(value);
+
+    /// <summary>
+    /// Creates a new <see cref="IdentityId"/>.
+    /// </summary>
+    /// <returns>Newly created <see cref="IdentityId"/>.</returns>
+    public static IdentityId New() => Guid.NewGuid();
 }

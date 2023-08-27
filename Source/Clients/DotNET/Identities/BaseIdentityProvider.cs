@@ -13,8 +13,15 @@ public class BaseIdentityProvider : IIdentityProvider
     /// <inheritdoc/>
     Identity IIdentityProvider.GetCurrent() => GetCurrent();
 
+    /// <summary>
+    /// Set the current identity internally.
+    /// </summary>
+    /// <param name="identity">Identity to set.</param>
     internal static void SetCurrentIdentity(Identity identity) => _current.Value = identity;
 
+    /// <summary>
+    /// Clear the current identity internally.
+    /// </summary>
     internal static void ClearCurrentIdentity() => _current.Value = Identity.System;
 
     /// <summary>

@@ -13,9 +13,6 @@ namespace Aksio.Cratis.Projections;
 /// <typeparam name="TProperty">The type of the property we're targeting.</typeparam>
 public class CountBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilder
 {
-    /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="CountBuilder{TModel, TEvent, TProperty}"/> class.
     /// </summary>
@@ -24,6 +21,9 @@ public class CountBuilder<TModel, TEvent, TProperty> : IPropertyExpressionBuilde
     {
         TargetProperty = targetProperty;
     }
+
+    /// <inheritdoc/>
+    public PropertyPath TargetProperty { get; }
 
     /// <inheritdoc/>
     public string Build() => "$count()";

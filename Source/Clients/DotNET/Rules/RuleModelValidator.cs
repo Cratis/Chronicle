@@ -18,11 +18,6 @@ public class RuleModelValidator : IModelValidator
     readonly IRules _rules;
 
     /// <summary>
-    /// Gets the rule sets for the validator.
-    /// </summary>
-    public IEnumerable<IRule> RuleSets { get; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="RuleModelValidator"/> class.
     /// </summary>
     /// <param name="ruleSets">The actual collection of <see cref="IRule">business rules</see>.</param>
@@ -34,6 +29,11 @@ public class RuleModelValidator : IModelValidator
         RuleSets = ruleSets;
         _rules = rules;
     }
+
+    /// <summary>
+    /// Gets the rule sets for the validator.
+    /// </summary>
+    public IEnumerable<IRule> RuleSets { get; }
 
     /// <inheritdoc/>
     public IEnumerable<ModelValidationResult> Validate(ModelValidationContext context)

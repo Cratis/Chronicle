@@ -14,7 +14,7 @@ public class InvalidNumberOfModelKeys : Exception
     /// <param name="type">Type that is invalid.</param>
     /// <param name="properties">Properties that has model key.</param>
     public InvalidNumberOfModelKeys(Type type, IEnumerable<string> properties)
-        : base($"Invalid number of model keys on '{type.FullName}'. Only one allowed. (Keys = {string.Join(",", properties)}) ")
+        : base($"Invalid number of model keys on '{type.FullName}'. Only one allowed. (Keys = {string.Join(',', properties)}) ")
     {
     }
 }

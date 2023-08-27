@@ -21,6 +21,26 @@ namespace Aksio.Cratis;
 /// </remarks>
 public class DefaultClientArtifactsProvider : IClientArtifactsProvider
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultClientArtifactsProvider"/> class.
+    /// </summary>
+    /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
+    public DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider)
+    {
+        assembliesProvider.Initialize();
+        EventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
+        ComplianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
+        ComplianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
+        Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
+        Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
+        Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
+        ImmediateProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IImmediateProjectionFor<>))).ToArray();
+        OutboxProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IOutboxProjections))).ToArray();
+        Observers = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<ObserverAttribute>()).ToArray();
+        ObserverMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IObserverMiddleware))).ToArray();
+        AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
+    }
+
     /// <inheritdoc/>
     public IEnumerable<Type> EventTypes { get; }
 
@@ -53,24 +73,4 @@ public class DefaultClientArtifactsProvider : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> AdditionalEventInformationProviders { get; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultClientArtifactsProvider"/> class.
-    /// </summary>
-    /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
-    public DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider)
-    {
-        assembliesProvider.Initialize();
-        EventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
-        ComplianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
-        ComplianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
-        Rules = assembliesProvider.DefinedTypes.Where(_ => _.BaseType?.IsGenericType == true && _.BaseType?.GetGenericTypeDefinition() == typeof(RulesFor<,>)).ToArray();
-        Adapters = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IAdapterFor<,>)) && !_.IsGenericType).ToArray();
-        Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-        ImmediateProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IImmediateProjectionFor<>))).ToArray();
-        OutboxProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IOutboxProjections))).ToArray();
-        Observers = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<ObserverAttribute>()).ToArray();
-        ObserverMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IObserverMiddleware))).ToArray();
-        AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(ICanProvideAdditionalEventInformation))).ToArray();
-    }
 }

@@ -22,10 +22,6 @@ public class RulesModelValidatorProvider : IModelValidatorProvider
     {
     }
 
-    IRules Rules => _rules ??= GlobalInstances.ServiceProvider.GetRequiredService<IRules>();
-
-    IServiceProvider ServiceProvider => _serviceProvider ??= GlobalInstances.ServiceProvider;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="RulesModelValidatorProvider"/> class.
     /// </summary>
@@ -38,6 +34,10 @@ public class RulesModelValidatorProvider : IModelValidatorProvider
         _rules = rules;
         _serviceProvider = serviceProvider;
     }
+
+    IRules Rules => _rules ??= GlobalInstances.ServiceProvider.GetRequiredService<IRules>();
+
+    IServiceProvider ServiceProvider => _serviceProvider ??= GlobalInstances.ServiceProvider;
 
     /// <inheritdoc/>
     public void CreateValidators(ModelValidatorProviderContext context)

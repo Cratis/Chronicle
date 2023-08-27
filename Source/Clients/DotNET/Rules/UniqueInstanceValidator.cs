@@ -17,9 +17,6 @@ public class UniqueInstanceValidator<T, TProperty> : PropertyValidator<T, TPrope
 {
     readonly Func<object, object> _getValue;
 
-    /// <inheritdoc/>
-    public override string Name => nameof(UniqueInstanceValidator<T, TProperty>);
-
     /// <summary>
     /// Initializes a new instance of the <see cref="UniqueInstanceValidator{T, TProperty}"/> class.
     /// </summary>
@@ -28,6 +25,9 @@ public class UniqueInstanceValidator<T, TProperty> : PropertyValidator<T, TPrope
     {
         _getValue = getValue;
     }
+
+    /// <inheritdoc/>
+    public override string Name => nameof(UniqueInstanceValidator<T, TProperty>);
 
     /// <inheritdoc/>
     public override bool IsValid(ValidationContext<T> context, TProperty value)

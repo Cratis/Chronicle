@@ -18,21 +18,6 @@ public class AdapterArtifacts<TModel, TExternalModel>
     readonly IAdapterMapperFactory _adapterMapperFactory;
 
     /// <summary>
-    /// Gets the adapter.
-    /// </summary>
-    public IAdapterFor<TModel, TExternalModel>? Adapter { get; private set; }
-
-    /// <summary>
-    /// Gets the projection.
-    /// </summary>
-    public IAdapterProjectionFor<TModel>? Projection { get; private set; }
-
-    /// <summary>
-    /// Gets the mapper.
-    /// </summary>
-    public IMapper? Mapper { get; private set; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="AdapterArtifacts{TModel, TExternalModel}"/> class.
     /// </summary>
     /// <param name="adapterType">Type of adapter.</param>
@@ -50,6 +35,21 @@ public class AdapterArtifacts<TModel, TExternalModel>
         _adapterProjectionFactory = adapterProjectionFactory;
         _adapterMapperFactory = adapterMapperFactory;
     }
+
+    /// <summary>
+    /// Gets the adapter.
+    /// </summary>
+    public IAdapterFor<TModel, TExternalModel>? Adapter { get; private set; }
+
+    /// <summary>
+    /// Gets the projection.
+    /// </summary>
+    public IAdapterProjectionFor<TModel>? Projection { get; private set; }
+
+    /// <summary>
+    /// Gets the mapper.
+    /// </summary>
+    public IMapper? Mapper { get; private set; }
 
     /// <summary>
     /// Initialize all artifacts.

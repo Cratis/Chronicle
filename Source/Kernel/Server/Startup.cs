@@ -28,8 +28,4 @@ public class Startup
         appLifetime.ApplicationStarted.Register(() => app.PerformBootProcedures());
         app.UseAksio();
     }
-
-    public async Task Something()
-    {
-    }
 }
