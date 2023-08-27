@@ -1,3 +1,24 @@
+# [v9.3.0] - 2023-8-27 [PR: #937](https://github.com/aksio-insurtech/Cratis/pull/937)
+
+### Changed
+
+- Internal change: Moving redactions from happening on the command handler to be a reaction to events.
+
+### Added
+
+- Introducing a system event sequence.
+- Added a way to see system events in the workbench.
+- Adding a way to get a specific event sequence in the client.
+- Adding a boolean to tell if the client is multi-tenanted or not.
+- Adding the ability to specify specific event sequence to observe.
+
+### Fixed
+
+- Fixing identity store to store in the correct database; the cluster database.
+- Consistency of Kernel as its own Microservice. It was accidently using different identifiers, which caused confusion in the code.
+- FIxing order of initialization on the Kernel, letting the HTTP server be ready before initiating boot procedures for Kernel
+
+
 # [v9.2.1] - 2023-8-25 [PR: #936](https://github.com/aksio-insurtech/Cratis/pull/936)
 
 ### Fixed
