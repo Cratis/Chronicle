@@ -18,16 +18,6 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
     /// <summary>
-    /// Gets the <see cref="IExecutionContextManager"/> for working with the execution context.
-    /// </summary>
-    protected IExecutionContextManager ExecutionContextManager { get; }
-
-    /// <summary>
-    /// Gets the <ze cref="IMongoCollection{TDocument}"/> for <see cref="RecoverFailedPartitionState"/>.
-    /// </summary>
-    protected IMongoCollection<RecoverFailedPartitionState> Collection => _eventStoreDatabaseProvider().GetCollection<RecoverFailedPartitionState>(CollectionNames.FailedPartitions);
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="RecoverFailedPartitionStorageProvider"/> class.
     /// </summary>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
@@ -39,6 +29,16 @@ public class RecoverFailedPartitionStorageProvider : IGrainStorage
         ExecutionContextManager = executionContextManager;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
+
+    /// <summary>
+    /// Gets the <see cref="IExecutionContextManager"/> for working with the execution context.
+    /// </summary>
+    protected IExecutionContextManager ExecutionContextManager { get; }
+
+    /// <summary>
+    /// Gets the <ze cref="IMongoCollection{TDocument}"/> for <see cref="RecoverFailedPartitionState"/>.
+    /// </summary>
+    protected IMongoCollection<RecoverFailedPartitionState> Collection => _eventStoreDatabaseProvider().GetCollection<RecoverFailedPartitionState>(CollectionNames.FailedPartitions);
 
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)

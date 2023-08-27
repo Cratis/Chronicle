@@ -13,6 +13,9 @@ namespace Aksio.Cratis.Kernel.Read.Metrics;
 [Route("/api/metrics")]
 public class Metrics : Controller
 {
+    /// <summary>
+    /// Gets the internal collection of metrics.
+    /// </summary>
     internal static MetricCollection _metrics = new();
 
     /// <summary>

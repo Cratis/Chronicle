@@ -56,7 +56,7 @@ public class MongoDBProjectionPipelineDefinitionsStorage : IProjectionPipelineDe
 
         await _collection.ReplaceOneAsync(
             filter: new BsonDocument("_id", id),
-            options: new ReplaceOptions { IsUpsert = true },
-            replacement: document);
+            replacement: document,
+            options: new ReplaceOptions { IsUpsert = true });
     }
 }

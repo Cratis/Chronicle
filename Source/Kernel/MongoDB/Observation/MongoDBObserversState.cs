@@ -17,6 +17,19 @@ public class MongoDBObserversState : IObserversState
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
     readonly ILogger<MongoDBObserversState> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MongoDBObserversState"/> class.
+    /// </summary>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    /// <param name="logger">Logger for logging.</param>
+    public MongoDBObserversState(
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
+        ILogger<MongoDBObserversState> logger)
+    {
+        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+        _logger = logger;
+    }
+
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverState>> All
     {
@@ -75,19 +88,6 @@ public class MongoDBObserversState : IObserversState
 
             return observable;
         }
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBObserversState"/> class.
-    /// </summary>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
-    /// <param name="logger">Logger for logging.</param>
-    public MongoDBObserversState(
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
-        ILogger<MongoDBObserversState> logger)
-    {
-        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
-        _logger = logger;
     }
 
     IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetObserverStateCollection();

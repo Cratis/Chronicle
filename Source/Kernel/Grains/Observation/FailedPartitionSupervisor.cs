@@ -20,11 +20,6 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
     readonly List<FailedPartition> _failedPartitions;
 
     /// <summary>
-    /// Indicates whether or not the supervisor is currently supervising any failed partitions.
-    /// </summary>
-    public bool HasFailedPartitions => _failedPartitions.Count != 0;
-
-    /// <summary>
     /// Instantiates an instance of <see cref="FailedPartitionSupervisor"/>.
     /// </summary>
     /// <param name="observerId">The Observer Id.</param>
@@ -49,6 +44,11 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
         _failedPartitions = failedPartitions?.ToList() ?? new List<FailedPartition>();
         _grainFactory = grainFactory;
     }
+
+    /// <summary>
+    /// Indicates whether or not the supervisor is currently supervising any failed partitions.
+    /// </summary>
+    public bool HasFailedPartitions => _failedPartitions.Count != 0;
 
     /// <inheritdoc/>
     public FailedPartitionsState GetState() => new() { FailedPartitions = _failedPartitions.ToArray() };

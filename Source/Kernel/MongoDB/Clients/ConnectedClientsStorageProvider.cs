@@ -16,7 +16,6 @@ namespace Aksio.Cratis.Kernel.MongoDB.Clients;
 public class ConnectedClientsStorageProvider : IGrainStorage
 {
     readonly ISharedDatabase _database;
-    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _database.GetCollection<MongoDBConnectedClientsForMicroserviceState>(CollectionNames.ConnectedClients);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectedClientsStorageProvider"/> class.
@@ -26,6 +25,8 @@ public class ConnectedClientsStorageProvider : IGrainStorage
     {
         _database = database;
     }
+
+    IMongoCollection<MongoDBConnectedClientsForMicroserviceState> Collection => _database.GetCollection<MongoDBConnectedClientsForMicroserviceState>(CollectionNames.ConnectedClients);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
