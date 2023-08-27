@@ -7,10 +7,10 @@ public class and_kernel_is_available : given.a_rest_kernel_connection
 {
     void Establish()
     {
-        client.http_client.Setup(_ => _.SendAsync(IsAny<HttpRequestMessage>(), CancellationToken.None)).Returns(() => Task.FromResult(success_message));
+        connection.http_client.Setup(_ => _.SendAsync(IsAny<HttpRequestMessage>(), CancellationToken.None)).Returns(() => Task.FromResult(success_message));
     }
 
-    async Task Because() => await client.Connect();
+    async Task Because() => await connection.Connect();
 
     [Fact] void client_should_notify_client_lifecycle_about_being_connected() => connection_lifecycle.Verify(_ => _.Connected(), Once);
 }

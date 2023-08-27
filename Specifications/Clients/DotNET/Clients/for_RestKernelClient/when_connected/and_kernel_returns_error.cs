@@ -9,7 +9,7 @@ public class and_kernel_returns_error : given.a_connected_connection
     {
         if (route == ping_route)
         {
-            client.should_connect = false;
+            connection.should_connect = false;
             return failed_message;
         }
 

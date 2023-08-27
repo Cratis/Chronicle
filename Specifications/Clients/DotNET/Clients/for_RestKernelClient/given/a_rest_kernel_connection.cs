@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Commands;
+using Aksio.Cratis.Client;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
 using Aksio.Tasks;
@@ -43,9 +44,8 @@ public class a_rest_kernel_connection : Specification
     protected Mock<ITimerFactory> timer_factory;
     protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IConnectionLifecycle> connection_lifecycle;
-    protected KernelConnection client;
+    protected KernelConnection connection;
     protected ExecutionContext execution_context;
-
     protected MicroserviceId microservice_id;
     protected ConnectionId connection_id;
     protected Mock<ITimer> timer;
@@ -103,7 +103,7 @@ public class a_rest_kernel_connection : Specification
                     return timer.Object;
                 });
 
-        client = new(
+        connection = new(
             options.Object,
             server.Object,
             service_provider.Object,
