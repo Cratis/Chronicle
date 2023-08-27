@@ -33,6 +33,13 @@ public class IdentityProvider : BaseIdentityProvider
         var name = context.User.Claims.FirstOrDefault(_ => _.Type == "name")?.Value ?? string.Empty;
         var username = context.User.Claims.FirstOrDefault(_ => _.Type == "preferred_username")?.Value ?? string.Empty;
 
+        if (string.IsNullOrEmpty(subject) &&
+            string.IsNullOrEmpty(name) &&
+            string.IsNullOrEmpty(username))
+        {
+            return Identity.NotSet;
+        }
+
         return new Identity(subject, name, username);
     }
 }
