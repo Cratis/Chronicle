@@ -21,4 +21,7 @@ export class ConnectedClient {
 
     @field(Boolean)
     isRunningWithDebugger!: boolean;
+
+    @field(Boolean)
+    isMultiTenanted!: boolean;
 }

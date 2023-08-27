@@ -2,12 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Client;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.Grains.Workers;
 using Microsoft.AspNetCore.Mvc;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
+using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
+using Aksio.Cratis.Kernel.Events.EventSequences;
 
 #pragma warning disable SA1600, IDE0060
 
@@ -23,6 +26,7 @@ public class EventSequence : Controller
     readonly IExecutionContextManager _executionContextManager;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
+    readonly IClient _client;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
@@ -31,16 +35,19 @@ public class EventSequence : Controller
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     /// <param name="causationManager">The <see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="identityProvider">The <see cref="IIdentityProvider"/> for getting current identity.</param>
+    /// <param name="client"><see cref="IClient"/> for working with Cratis artifacts.</param>
     public EventSequence(
         IGrainFactory grainFactory,
         IExecutionContextManager executionContextManager,
         ICausationManager causationManager,
-        IIdentityProvider identityProvider)
+        IIdentityProvider identityProvider,
+        IClient client)
     {
         _grainFactory = grainFactory;
         _executionContextManager = executionContextManager;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
+        _client = client;
     }
 
     /// <summary>
@@ -107,15 +114,16 @@ public class EventSequence : Controller
     {
         var causation = redaction.Causation ?? _causationManager.GetCurrentChain();
         var causedBy = redaction.CausedBy ?? _identityProvider.GetCurrent();
-
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        var worker = await eventSequence.Redact(
-            redaction.SequenceNumber,
-            redaction.Reason,
-            causation,
-            causedBy);
-        await worker.WaitForResult();
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, MicroserviceId.Kernel);
+        var sequence = _client.GetEventSequences(TenantId.NotSet).GetEventSequence(EventSequenceId.SystemId);
+        await sequence.Append(
+            EventSequenceId.Log.Value,
+            new EventRedacted(
+                microserviceId,
+                tenantId,
+                EventSequenceId.Log,
+                redaction.SequenceNumber,
+                redaction.Reason));
     }
 
     /// <summary>
@@ -136,15 +144,17 @@ public class EventSequence : Controller
         var causation = redaction.Causation ?? _causationManager.GetCurrentChain();
         var causedBy = redaction.CausedBy ?? _identityProvider.GetCurrent();
 
-        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
-        var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
-        var worker = await eventSequence.Redact(
-            redaction.EventSourceId,
-            redaction.Reason,
-            redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray(),
-            causation,
-            causedBy);
-        await worker.WaitForResult();
+        _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, MicroserviceId.Kernel);
+        var sequence = _client.GetEventSequences(TenantId.NotSet).GetEventSequence(EventSequenceId.SystemId);
+        await sequence.Append(
+            EventSequenceId.Log.Value,
+            new EventsRedactedForEventSource(
+                microserviceId,
+                tenantId,
+                EventSequenceId.Log,
+                redaction.EventSourceId,
+                redaction.EventTypes.Select(_ => new EventType(_, EventGeneration.Unspecified)).ToArray(),
+                redaction.Reason));
     }
 
     IEventSequence GetEventSequence(MicroserviceId microserviceId, EventSequenceId eventSequenceId, TenantId tenantId) =>
