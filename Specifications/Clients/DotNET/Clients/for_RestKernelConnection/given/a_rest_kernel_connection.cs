@@ -44,6 +44,7 @@ public class a_rest_kernel_connection : Specification
     protected Mock<ITimerFactory> timer_factory;
     protected Mock<IExecutionContextManager> execution_context_manager;
     protected Mock<IConnectionLifecycle> connection_lifecycle;
+    protected Mock<IClient> client;
     protected KernelConnection connection;
     protected ExecutionContext execution_context;
     protected MicroserviceId microservice_id;
@@ -69,6 +70,9 @@ public class a_rest_kernel_connection : Specification
         server_addresses = new();
         features.Setup(_ => _.Get<IServerAddressesFeature>()).Returns(server_addresses.Object);
         server_addresses.SetupGet(_ => _.Addresses).Returns(new[] { "http://localhost:5000" });
+
+        client = new();
+        service_provider.Setup(_ => _.GetService(typeof(IClient))).Returns(client.Object);
 
         task_factory = new();
         timer_factory = new();
