@@ -15,7 +15,6 @@ namespace Aksio.Cratis.Kernel.Events.EventSequences;
 /// <param name="EventSourceId"><see cref="EventSourceId"/> representing the events that was redacted.</param>
 /// <param name="EventTypes">Collection of <see cref="EventType"/> to redact.</param>
 /// <param name="Reason"><see cref="RedactionReason"/> representing why it was redacted.</param>
-/// <returns></returns>
 [EventType("54d6962c-2ef5-43c9-8251-c62426ef857e")]
 public record EventsRedactedForEventSource(
     MicroserviceId Microservice,

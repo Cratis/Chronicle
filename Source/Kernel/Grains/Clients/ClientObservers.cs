@@ -4,7 +4,6 @@
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
-using TenantsConfig = Aksio.Cratis.Kernel.Configuration.Tenants;
 
 namespace Aksio.Cratis.Kernel.Grains.Clients;
 

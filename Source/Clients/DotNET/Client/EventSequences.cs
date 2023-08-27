@@ -91,6 +91,5 @@ public class EventSequences : IEventSequences
             _observerRegistrar,
             _causationManager,
             _identityProvider,
-            _executionContextManager
-        );
+            _executionContextManager);
 }

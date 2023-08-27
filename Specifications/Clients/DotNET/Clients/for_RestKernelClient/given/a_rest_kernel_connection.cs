@@ -5,10 +5,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aksio.Commands;
-using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Identities;
 using Aksio.Tasks;
 using Aksio.Timers;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -38,6 +36,7 @@ public class a_rest_kernel_connection : Specification
     protected Mock<IOptions<ClientOptions>> options;
     protected ClientOptions options_instance;
     protected Mock<IServer> server;
+    protected Mock<IServiceProvider> service_provider;
     protected Mock<IFeatureCollection> features;
     protected Mock<IServerAddressesFeature> server_addresses;
     protected Mock<ITaskFactory> task_factory;
@@ -64,6 +63,7 @@ public class a_rest_kernel_connection : Specification
         options_instance = new();
         options.SetupGet(_ => _.Value).Returns(options_instance);
         server = new();
+        service_provider = new();
         features = new();
         server.SetupGet(_ => _.Features).Returns(features.Object);
         server_addresses = new();
@@ -106,6 +106,7 @@ public class a_rest_kernel_connection : Specification
         client = new(
             options.Object,
             server.Object,
+            service_provider.Object,
             task_factory.Object,
             timer_factory.Object,
             execution_context_manager.Object,

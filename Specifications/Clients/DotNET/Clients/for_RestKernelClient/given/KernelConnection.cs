@@ -20,6 +20,7 @@ public class KernelConnection : RestKernelConnection
     public KernelConnection(
         IOptions<ClientOptions> options,
         IServer server,
+        IServiceProvider serviceProvider,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
@@ -28,6 +29,7 @@ public class KernelConnection : RestKernelConnection
         ILogger<RestKernelConnection> logger) : base(
             options,
             server,
+            serviceProvider,
             taskFactory,
             timerFactory,
             executionContextManager,

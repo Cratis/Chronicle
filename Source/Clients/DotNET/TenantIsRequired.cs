@@ -8,8 +8,11 @@ namespace Aksio.Cratis;
 /// </summary>
 public class TenantIsRequired : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantIsRequired"/> class.
+    /// </summary>
+    /// <param name="action">Specific action that is failing.</param>
     public TenantIsRequired(string action) : base($"Tenant is required for a multi tenanted client when {action}")
     {
     }
-
 }

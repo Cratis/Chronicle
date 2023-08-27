@@ -8,7 +8,6 @@ using Aksio.Cratis.Observation;
 using EventRedacted = Aksio.Cratis.Kernel.Events.EventSequences.EventRedacted;
 using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
-
 namespace Aksio.Cratis.Kernel.Reactions.EventSequences;
 
 /// <summary>

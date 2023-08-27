@@ -33,7 +33,7 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     /// The name of the sequence representing the system sequence.
     /// </summary>
     /// <remarks>
-    /// This is represented as a string name, as part of the transition away from GUIDs representing sequences to strings: https://github.com/aksio-insurtech/Cratis/issues/921
+    /// This is represented as a string name, as part of the transition away from GUIDs representing sequences to strings: https://github.com/aksio-insurtech/Cratis/issues/921.
     /// </remarks>
     public const string System = "system";
 
