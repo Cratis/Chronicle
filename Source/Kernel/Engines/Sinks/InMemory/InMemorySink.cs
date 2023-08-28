@@ -28,17 +28,6 @@ public class InMemorySink : ISink, IDisposable
     readonly IObjectComparer _comparer;
     bool _isReplaying;
 
-    /// <inheritdoc/>
-    public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
-
-    /// <inheritdoc/>
-    public SinkTypeName Name => "InMemory";
-
-    /// <summary>
-    /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
-    /// </summary>
-    public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemorySink"/> class.
     /// </summary>
@@ -54,6 +43,17 @@ public class InMemorySink : ISink, IDisposable
         _typeFormats = typeFormats;
         _comparer = comparer;
     }
+
+    /// <inheritdoc/>
+    public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
+
+    /// <inheritdoc/>
+    public SinkTypeName Name => "InMemory";
+
+    /// <summary>
+    /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
+    /// </summary>
+    public IDictionary<object, ExpandoObject> Collection => _isReplaying ? _rewindCollection : _collection;
 
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)

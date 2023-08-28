@@ -19,10 +19,12 @@ public class when_next_event_is_a_public_event : given.a_projection
     void Establish()
     {
         changeset = new();
-        projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
-        {
-                new EventTypeWithKeyResolver(public_event_type, KeyResolvers.FromEventSourceId)
-        }, new[] {public_event_type });
+        projection.SetEventTypesWithKeyResolvers(
+            new EventTypeWithKeyResolver[]
+            {
+                    new EventTypeWithKeyResolver(public_event_type, KeyResolvers.FromEventSourceId)
+            },
+            new[] { public_event_type });
 
         public_event = new(
             new(0, public_event_type),
@@ -30,7 +32,7 @@ public class when_next_event_is_a_public_event : given.a_projection
             new ExpandoObject());
 
         observed_events = new();
-        projection.Event.Subscribe(_ => observed_events.Add(_));
+        projection.Event.Subscribe(observed_events.Add);
     }
 
     void Because() => projection.OnNext(new(new(public_event.Context.EventSourceId, ArrayIndexers.NoIndexers), public_event, changeset.Object));

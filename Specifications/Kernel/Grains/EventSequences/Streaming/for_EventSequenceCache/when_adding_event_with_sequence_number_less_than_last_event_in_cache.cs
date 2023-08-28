@@ -17,4 +17,3 @@ public class when_adding_event_with_sequence_number_less_than_last_event_in_cach
 
     [Fact] void should_throw_event_sequence_number_is_less_than_last_event_in_cache() => exception.ShouldBeOfExactType<EventSequenceNumberIsLessThanLastEventInCache>();
 }
-

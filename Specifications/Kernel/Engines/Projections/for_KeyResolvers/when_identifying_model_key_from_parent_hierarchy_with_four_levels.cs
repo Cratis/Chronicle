@@ -50,7 +50,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
     Mock<IProjection> SetupProjection(EventType eventType, string key, string childrenProperty = "no-levels", IProjection? parent = null)
     {
         var projection = new Mock<IProjection>();
-        projection.SetupGet(_ => _.EventTypes).Returns(new [] { eventType });
+        projection.SetupGet(_ => _.EventTypes).Returns(new[] { eventType });
         projection.SetupGet(_ => _.OwnEventTypes).Returns(new[] { eventType });
         projection.SetupGet(_ => _.Path).Returns(childrenProperty);
         projection.SetupGet(_ => _.ChildrenPropertyPath).Returns(childrenProperty);

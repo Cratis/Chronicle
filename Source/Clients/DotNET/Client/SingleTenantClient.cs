@@ -10,9 +10,6 @@ namespace Aksio.Cratis.Client;
 /// </summary>
 public class SingleTenantClient : Client, ISingleTenantClient
 {
-    /// <inheritdoc/>
-    public ISingleTenantEventStore EventStore { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SingleTenantClient"/> class.
     /// </summary>
@@ -24,4 +21,7 @@ public class SingleTenantClient : Client, ISingleTenantClient
     {
         EventStore = eventStore;
     }
+
+    /// <inheritdoc/>
+    public ISingleTenantEventStore EventStore { get; }
 }

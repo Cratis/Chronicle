@@ -23,6 +23,6 @@ public class changes_on_two_properties : no_changes
                     new(nameof(Model.SomeString)),
                     original_model,
                     modified_model)
-            }));
+        }));
     }
 }

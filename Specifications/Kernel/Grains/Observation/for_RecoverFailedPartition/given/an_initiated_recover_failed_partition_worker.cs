@@ -10,7 +10,7 @@ public class an_initiated_recover_failed_partition_worker : a_recover_failed_par
     protected override RecoverFailedPartitionState BuildState() => new()
     {
         ObserverId = ObserverId,
-        SubscriberKey = SubscriberKey,
+        SubscriberKey = subscriber_key,
         ObserverKey = ObserverKey
     };
 }

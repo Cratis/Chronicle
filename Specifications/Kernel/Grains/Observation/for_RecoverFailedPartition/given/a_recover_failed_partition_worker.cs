@@ -27,7 +27,7 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
     protected ObserverKey ObserverKey { get; } = new(MicroserviceId, TenantId, EventSequenceId);
 
     protected PartitionedObserverKey PartitionedObserverKey { get; } = new(MicroserviceId, TenantId, EventSequenceId, EventSourceId);
-    protected ObserverSubscriberKey SubscriberKey = new(MicroserviceId, TenantId, EventSequenceId, EventSourceId);
+    protected ObserverSubscriberKey subscriber_key = new(MicroserviceId, TenantId, EventSequenceId, EventSourceId);
     protected override string GrainKeyExtension => PartitionedObserverKey;
 
     protected virtual IEnumerable<AppendedEvent> events => Enumerable.Empty<AppendedEvent>();
@@ -63,11 +63,9 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
         grain_factory.Setup(_ => _.GetGrain<IObserverSupervisor>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(supervisor.Object);
 
         event_sequence_storage_provider
-            .Setup(_ => _.GetFromSequenceNumber(IsAny<EventSequenceId>(), IsAny<EventSequenceNumber>(),
-                IsAny<EventSourceId>(), IsAny<IEnumerable<EventType>>()))
+            .Setup(_ => _.GetFromSequenceNumber(IsAny<EventSequenceId>(), IsAny<EventSequenceNumber>(), IsAny<EventSourceId>(), IsAny<IEnumerable<EventType>>()))
             .Returns((EventSequenceId _, EventSequenceNumber sequenceNumber, EventSourceId? __, IEnumerable<EventType>? ___) =>
-                FetchEvents(sequenceNumber)
-            );
+                FetchEvents(sequenceNumber));
 
         timer_registry
             .Setup(_ => _.RegisterTimer(IsAny<IGrainContext>(), IsAny<Func<object, Task>>(), IsAny<object>(), IsAny<TimeSpan>(), IsAny<TimeSpan>()))

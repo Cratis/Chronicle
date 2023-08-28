@@ -17,6 +17,11 @@ public record ModelKey(string Value) : ConceptAs<string>(Value)
     public static readonly ModelKey Unspecified = new("*");
 
     /// <summary>
+    /// Check whether or not the <see cref="ModelKey"/> is specified.
+    /// </summary>
+    public bool IsSpecified => this != Unspecified;
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ModelKey"/>.
     /// </summary>
     /// <param name="id"><see cref="string"/> to convert from.</param>
@@ -43,9 +48,4 @@ public record ModelKey(string Value) : ConceptAs<string>(Value)
     /// <param name="id"><see cref="ModelKey"/> to convert from.</param>
     /// <returns>A converted <see cref="EventSourceId"/>.</returns>;
     public static implicit operator EventSourceId(ModelKey id) => new(id.Value);
-
-    /// <summary>
-    /// Check whether or not the <see cref="ModelKey"/> is specified.
-    /// </summary>
-    public bool IsSpecified => this != Unspecified;
 }

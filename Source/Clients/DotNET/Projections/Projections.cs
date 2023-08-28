@@ -17,26 +17,6 @@ namespace Aksio.Cratis.Projections;
 /// </summary>
 public class Projections : IProjections
 {
-    static class ProjectionDefinitionCreator<TModel>
-    {
-        public static ProjectionDefinition CreateAndDefine(
-            Type type,
-            IModelNameResolver modelNameResolver,
-            IEventTypes eventTypes,
-            IJsonSchemaGenerator schemaGenerator,
-            IServiceProvider serviceProvider,
-            JsonSerializerOptions jsonSerializerOptions)
-        {
-            var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TModel>)!;
-            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameResolver, eventTypes, schemaGenerator, jsonSerializerOptions);
-            instance.Define(builder);
-            return builder.Build();
-        }
-    }
-
-    /// <inheritdoc/>
-    public IImmutableList<ProjectionDefinition> Definitions { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
     /// </summary>
@@ -63,6 +43,9 @@ public class Projections : IProjections
             jsonSerializerOptions).ToImmutableList();
     }
 
+    /// <inheritdoc/>
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
+
     IEnumerable<ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
@@ -86,4 +69,21 @@ public class Projections : IProjections
                         jsonSerializerOptions
                     }) as ProjectionDefinition)!;
                 }).ToArray();
+
+    static class ProjectionDefinitionCreator<TModel>
+    {
+        public static ProjectionDefinition CreateAndDefine(
+            Type type,
+            IModelNameConvention modelNameConvention,
+            IEventTypes eventTypes,
+            IJsonSchemaGenerator schemaGenerator,
+            IServiceProvider serviceProvider,
+            JsonSerializerOptions jsonSerializerOptions)
+        {
+            var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TModel>)!;
+            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions);
+            instance.Define(builder);
+            return builder.Build();
+        }
+    }
 }

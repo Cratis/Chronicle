@@ -18,11 +18,6 @@ public class EventOutboxForSpecifications : IEventOutbox
     readonly EventSequenceForSpecifications _sequence;
 
     /// <summary>
-    /// Gets the appended events.
-    /// </summary>
-    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="EventOutboxForSpecifications"/> class.
     /// </summary>
     public EventOutboxForSpecifications()
@@ -36,6 +31,11 @@ public class EventOutboxForSpecifications : IEventOutbox
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         _sequence = new(expandoObjectConverter, schemaGenerator);
     }
+
+    /// <summary>
+    /// Gets the appended events.
+    /// </summary>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
 
     /// <inheritdoc/>
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default) => _sequence.Append(eventSourceId, @event);

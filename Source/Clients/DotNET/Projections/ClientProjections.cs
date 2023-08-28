@@ -14,9 +14,6 @@ namespace Aksio.Cratis.Projections;
 [Singleton]
 public class ClientProjections : IClientProjections
 {
-    /// <inheritdoc/>
-    public IImmutableList<ProjectionDefinition> Definitions { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientProjections"/> class.
     /// </summary>
@@ -37,4 +34,7 @@ public class ClientProjections : IClientProjections
         projectionDefinitions.AddRange(rulesProjections.Definitions);
         Definitions = projectionDefinitions.ToImmutableList();
     }
+
+    /// <inheritdoc/>
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 }

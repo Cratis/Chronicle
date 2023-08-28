@@ -30,18 +30,10 @@ namespace Aksio.Cratis.Specifications.Integration;
 /// <typeparam name="TModel">Type of target model the projection is for.</typeparam>
 public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
 {
-    internal readonly EventLogForSpecifications _eventLog;
-
-    /// <inheritdoc/>
-    public IEventLog EventLog => _eventLog;
-
-    /// <inheritdoc/>
-    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _eventLog.AppendedEvents;
-
     /// <summary>
-    /// Gets the <see cref="ProjectionDefinition"/> for the projection.
+    /// Gets the internal event log.
     /// </summary>
-    public ProjectionDefinition Definition { get; }
+    internal readonly EventLogForSpecifications _eventLog;
 
     readonly IProjection _projection;
     readonly IEventSequenceStorage _eventSequenceStorage;
@@ -95,6 +87,17 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             typeFormats,
             new NullLogger<ProjectionPipeline>());
     }
+
+    /// <inheritdoc/>
+    public IEventLog EventLog => _eventLog;
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _eventLog.AppendedEvents;
+
+    /// <summary>
+    /// Gets the <see cref="ProjectionDefinition"/> for the projection.
+    /// </summary>
+    public ProjectionDefinition Definition { get; }
 
     /// <inheritdoc/>
     public void Dispose() => _sink.Dispose();

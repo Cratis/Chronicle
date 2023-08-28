@@ -16,6 +16,11 @@ public class MetricCollection : ICollection<MetricSnapshot>
     readonly Dictionary<string, MetricMeasurement> _measurements = new();
 
     /// <summary>
+    /// Content changed event.
+    /// </summary>
+    public event MetricCollectionContentChanged ContentChanged = () => { };
+
+    /// <summary>
     /// Gets the collection og <see cref="MetricMeasurement"/>.
     /// </summary>
     public IEnumerable<MetricMeasurement> Measurements => _measurements.Values;
@@ -25,11 +30,6 @@ public class MetricCollection : ICollection<MetricSnapshot>
 
     /// <inheritdoc/>
     public bool IsReadOnly => false;
-
-    /// <summary>
-    /// Content changed event.
-    /// </summary>
-    public event MetricCollectionContentChanged ContentChanged = () => { };
 
     /// <inheritdoc/>
     public void Add(MetricSnapshot item)

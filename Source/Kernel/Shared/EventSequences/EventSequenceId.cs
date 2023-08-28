@@ -43,6 +43,21 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     public static readonly EventSequenceId SystemId = Guid.Parse("cf3612a4-48fe-462a-af3e-2bd9ad6f6825");
 
     /// <summary>
+    /// Get whether or not this is the default log event sequence.
+    /// </summary>
+    public bool IsEventLog => this == Log;
+
+    /// <summary>
+    /// Get whether or not this is the default outbox event sequence.
+    /// </summary>
+    public bool IsOutbox => this == Outbox;
+
+    /// <summary>
+    /// Get whether or not this is the default outbox event sequence.
+    /// </summary>
+    public bool IsInbox => this == Inbox;
+
+    /// <summary>
     /// Implicitly convert from a string representation of a <see cref="Guid"/> to <see cref="EventSequenceId"/>.
     /// </summary>
     /// <param name="id"><see cref="Guid"/> to convert from.</param>
@@ -64,19 +79,4 @@ public record EventSequenceId(Guid Value) : ConceptAs<Guid>(Value)
     /// </summary>
     /// <param name="bytes">Bytes to convert from.</param>
     public static implicit operator EventSequenceId(ReadOnlyMemory<byte> bytes) => new(new Guid(bytes.Span));
-
-    /// <summary>
-    /// Get whether or not this is the default log event sequence.
-    /// </summary>
-    public bool IsEventLog => this == Log;
-
-    /// <summary>
-    /// Get whether or not this is the default outbox event sequence.
-    /// </summary>
-    public bool IsOutbox => this == Outbox;
-
-    /// <summary>
-    /// Get whether or not this is the default outbox event sequence.
-    /// </summary>
-    public bool IsInbox => this == Inbox;
 }

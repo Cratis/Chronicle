@@ -20,6 +20,19 @@ public class ObserverStorageProvider : IGrainStorage
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
+    /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
+    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
+    public ObserverStorageProvider(
+        IExecutionContextManager executionContextManager,
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
+    {
+        ExecutionContextManager = executionContextManager;
+        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
+    }
+
+    /// <summary>
     /// Gets the <see cref="IExecutionContextManager"/> for working with the execution context.
     /// </summary>
     protected IExecutionContextManager ExecutionContextManager { get; }
@@ -33,19 +46,6 @@ public class ObserverStorageProvider : IGrainStorage
     /// Gets the <ze cref="IMongoCollection{TDocument}"/> for <see cref="RecoverFailedPartitionState"/>.
     /// </summary>
     protected IMongoCollection<RecoverFailedPartitionState> RecoverFailedPartitionCollection => _eventStoreDatabaseProvider().GetCollection<RecoverFailedPartitionState>(CollectionNames.FailedPartitions);
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverStorageProvider"/> class.
-    /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
-    public ObserverStorageProvider(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
-    {
-        ExecutionContextManager = executionContextManager;
-        _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
-    }
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;

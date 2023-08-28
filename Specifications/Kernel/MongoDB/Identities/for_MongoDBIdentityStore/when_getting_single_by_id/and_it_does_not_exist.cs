@@ -13,5 +13,3 @@ public class and_it_does_not_exist : given.no_identities_registered
 
     [Fact] void should_throw_unknown_identity_identifier() => exception.ShouldBeOfExactType<UnknownIdentityIdentifier>();
 }
-
-

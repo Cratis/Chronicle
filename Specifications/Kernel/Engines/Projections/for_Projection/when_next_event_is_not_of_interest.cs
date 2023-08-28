@@ -19,10 +19,12 @@ public class when_next_event_is_not_of_interest : given.a_projection
     void Establish()
     {
         var eventType = new EventType("cb1f33dd-8725-4bd2-a1a1-f372d352a7c6", 1);
-        projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
-        {
-                new EventTypeWithKeyResolver(eventType, KeyResolvers.FromEventSourceId)
-        }, new[] { eventType });
+        projection.SetEventTypesWithKeyResolvers(
+            new EventTypeWithKeyResolver[]
+            {
+                    new EventTypeWithKeyResolver(eventType, KeyResolvers.FromEventSourceId)
+            },
+            new[] { eventType });
 
         @event = new(
             new(0,

@@ -18,9 +18,6 @@ public class EventCursor : IEventCursor
     readonly IEventConverter _converter;
     readonly IAsyncCursor<Event>? _innerCursor;
 
-    /// <inheritdoc/>
-    public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventCursor"/> class.
     /// </summary>
@@ -33,6 +30,9 @@ public class EventCursor : IEventCursor
         _converter = converter;
         _innerCursor = innerCursor;
     }
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEvent> Current { get; private set; } = Array.Empty<AppendedEvent>();
 
     /// <inheritdoc/>
     public async Task<bool> MoveNext()

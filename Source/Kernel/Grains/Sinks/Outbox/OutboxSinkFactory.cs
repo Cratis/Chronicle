@@ -19,9 +19,6 @@ public class OutboxSinkFactory : ISinkFactory
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IGrainFactory _grainFactory;
 
-    /// <inheritdoc/>
-    public SinkTypeId TypeId => WellKnownSinkTypes.Outbox;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxSinkFactory"/> class.
     /// </summary>
@@ -40,6 +37,9 @@ public class OutboxSinkFactory : ISinkFactory
         _jsonSerializerOptions = jsonSerializerOptions;
         _grainFactory = grainFactory;
     }
+
+    /// <inheritdoc/>
+    public SinkTypeId TypeId => WellKnownSinkTypes.Outbox;
 
     /// <inheritdoc/>
     public ISink CreateFor(Model model) =>

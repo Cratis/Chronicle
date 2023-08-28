@@ -74,40 +74,6 @@ dotnet_naming_symbols.public_symbols.applicable_kinds = property,method,field,ev
 dotnet_naming_symbols.public_symbols.applicable_accessibilities = public
 dotnet_naming_symbols.public_symbols.required_modifiers = readonly
 
-## Specific rule suppression
-# CA1822: Mark members as static
-dotnet_diagnostic.CA1822.severity = none
-# CA2016: Forward the CancellationToken parameter to methods that take one
-dotnet_diagnostic.CA2016.severity = none
-# CA1716: Identifiers should not match keywords
-dotnet_diagnostic.CA1716.severity = none
-# CA1725: Parameter names should match base declaration
-dotnet_diagnostic.CA1725.severity = none
-# CA1710: Identifiers should have correct suffix
-dotnet_diagnostic.CA1710.severity = none
-#CA1711: Identifiers should not have incorrect suffix
-dotnet_diagnostic.CA1711.severity = none
-# Add missing cases to switch expression (IDE0072 and IDE0010)
-# a bug in roslyn: https://github.com/dotnet/roslyn/issues/48876
-dotnet_diagnostic.IDE0072.severity = none
-dotnet_diagnostic.IDE0010.severity = none
-# IDE0130: Namespace does not match folder structure
-dotnet_diagnostic.IDE0130.severity = none
-# CA1834: Use StringBuilder.Append(char) for single character strings
-dotnet_diagnostic.CA1834.severity = none
-# CA1805: Do not initialize unnecessarily.
-dotnet_diagnostic.CA1805.severity = none
-# Use pattern matching (not operator) (IDE0083)
-dotnet_diagnostic.IDE0083.severity = none
-# CA1309: Use ordinal StringComparison
-dotnet_diagnostic.CA1309.severity = none
-# CA1000: Do not declare static members on generic types
-dotnet_diagnostic.CA1000.severity = none
-# RCS1018: Add accessibility modifiers
-dotnet_diagnostic.RCS1018.severity = none
-# RCS1194: Implement exception constructors
-dotnet_diagnostic.RCS1194.severity = none
-
 #### C# Coding Conventions ####
 
 # File scoped namespace

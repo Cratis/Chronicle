@@ -18,7 +18,7 @@ public class when_updating_with_latest_success_and_was_not_the_current_error : S
         initial = now.AddDays(-1);
         last = now.AddMinutes(-10);
 
-        //This is not a valid state, but we want to test that it does not change
+        // This is not a valid state, but we want to test that it does not change
         state = new RecoverFailedPartitionState()
         {
             InitialError = EventSequenceNumber.First,

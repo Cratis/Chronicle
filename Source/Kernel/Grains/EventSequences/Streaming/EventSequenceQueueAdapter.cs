@@ -22,15 +22,6 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ProviderFor<IIdentityStore> _identityStoreProvider;
 
-    /// <inheritdoc/>
-    public string Name { get; }
-
-    /// <inheritdoc/>
-    public bool IsRewindable => true;
-
-    /// <inheritdoc/>
-    public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceQueueAdapter"/> class.
     /// </summary>
@@ -49,6 +40,15 @@ public class EventSequenceQueueAdapter : IQueueAdapter
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _identityStoreProvider = identityStoreProvider;
     }
+
+    /// <inheritdoc/>
+    public string Name { get; }
+
+    /// <inheritdoc/>
+    public bool IsRewindable => true;
+
+    /// <inheritdoc/>
+    public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
 
     /// <inheritdoc/>
     public IQueueAdapterReceiver CreateReceiver(QueueId queueId) => CreateReceiverIfNotExists(queueId);

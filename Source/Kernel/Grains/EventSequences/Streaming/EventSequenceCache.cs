@@ -48,15 +48,6 @@ public class EventSequenceCache : IEventSequenceCache
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<EventSequenceCache> _logger;
 
-    /// <inheritdoc/>
-    public int Count => _eventsBySequenceNumber.Count;
-
-    /// <inheritdoc/>
-    public EventSequenceNumber Head => _head?.Event.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable;
-
-    /// <inheritdoc/>
-    public EventSequenceNumber Tail => _tail?.Event.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceCache"/> class.
     /// </summary>
@@ -82,6 +73,15 @@ public class EventSequenceCache : IEventSequenceCache
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;
     }
+
+    /// <inheritdoc/>
+    public int Count => _eventsBySequenceNumber.Count;
+
+    /// <inheritdoc/>
+    public EventSequenceNumber Head => _head?.Event.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable;
+
+    /// <inheritdoc/>
+    public EventSequenceNumber Tail => _tail?.Event.Metadata.SequenceNumber ?? EventSequenceNumber.Unavailable;
 
     /// <inheritdoc/>
     public void Dispose()

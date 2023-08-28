@@ -28,7 +28,6 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
     TenantId _tenantId = TenantId.NotSet;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
-    IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientObserverSubscriber"/> class.
@@ -45,6 +44,8 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
         _httpClientFactory = httpClientFactory;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
+
+    IConnectedClients ConnectedClients => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)

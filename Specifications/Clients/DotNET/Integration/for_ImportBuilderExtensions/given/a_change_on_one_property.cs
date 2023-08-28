@@ -18,6 +18,6 @@ public class a_change_on_one_property : no_changes
                     new(nameof(Model.SomeString)),
                     original_model.SomeString,
                     modified_model.SomeString)
-            }));
+        }));
     }
 }

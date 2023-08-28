@@ -16,5 +16,3 @@ public class and_it_exists : given.two_identities_registered
     [Fact] void should_return_identity_with_expected_name() => identity.Name.ShouldEqual(first_identity_from_database.Name);
     [Fact] void should_return_identity_with_expected_user_name() => identity.UserName.ShouldEqual(first_identity_from_database.UserName);
 }
-
-

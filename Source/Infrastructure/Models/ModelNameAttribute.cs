@@ -10,11 +10,6 @@ namespace Aksio.Cratis.Models;
 public sealed class ModelNameAttribute : Attribute
 {
     /// <summary>
-    /// Gets the name of the model.
-    /// </summary>
-    public string Name { get; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="ModelNameAttribute"/> class.
     /// </summary>
     /// <param name="name">Name of the model.</param>
@@ -22,4 +17,9 @@ public sealed class ModelNameAttribute : Attribute
     {
         Name = name;
     }
+
+    /// <summary>
+    /// Gets the name of the model.
+    /// </summary>
+    public string Name { get; }
 }

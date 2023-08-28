@@ -39,7 +39,7 @@ public class a_change_on_a_nested_property : Specification
         changeset.Add(new PropertiesChanged<ComplexModel>(modified_model, new[]
         {
                 new PropertyDifference(new($"{nameof(ComplexModel.Child)}.{nameof(Model.SomeInteger)}"), 43, 44)
-            }));
+        }));
 
         events_to_append = new();
     }

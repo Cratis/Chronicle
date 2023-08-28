@@ -15,6 +15,11 @@ public record EventSourceId(string Value) : ConceptAs<string>(Value)
     public static readonly EventSourceId Unspecified = new(string.Empty);
 
     /// <summary>
+    /// Check whether or not the <see cref="EventSourceId"/> is specified.
+    /// </summary>
+    public bool IsSpecified => this != Unspecified;
+
+    /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="id"><see cref="Guid"/> to convert from.</param>
@@ -33,9 +38,4 @@ public record EventSourceId(string Value) : ConceptAs<string>(Value)
     /// </summary>
     /// <returns>A new <see cref="EventSourceId"/>.</returns>
     public static EventSourceId New() => Guid.NewGuid();
-
-    /// <summary>
-    /// Check whether or not the <see cref="EventSourceId"/> is specified.
-    /// </summary>
-    public bool IsSpecified => this != Unspecified;
 }

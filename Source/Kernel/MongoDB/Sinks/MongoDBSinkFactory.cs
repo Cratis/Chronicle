@@ -23,9 +23,6 @@ public class MongoDBSinkFactory : ISinkFactory
     readonly Storage _configuration;
     readonly IExecutionContextManager _executionContextManager;
 
-    /// <inheritdoc/>
-    public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
-
     /// <summary>
     /// /// Initializes a new instance of the <see cref="MongoDBSinkFactory"/> class.
     /// </summary>
@@ -47,6 +44,9 @@ public class MongoDBSinkFactory : ISinkFactory
         _clientFactory = clientFactory;
         _configuration = configuration;
     }
+
+    /// <inheritdoc/>
+    public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
     public ISink CreateFor(Model model)

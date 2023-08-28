@@ -10,7 +10,7 @@ public class and_issuing_event_with_type_that_is_included : given.an_observable_
     void Establish()
     {
         filtered = observable.WhereEventTypeEquals(event_context.Event.Metadata.Type);
-        filtered.Subscribe(_ => received.Add(_));
+        filtered.Subscribe(received.Add);
     }
 
     void Because() => observable.OnNext(event_context);

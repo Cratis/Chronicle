@@ -19,9 +19,6 @@ public class AllSetBuilder<TModel, TParentBuilder> : IAllSetBuilder<TModel, TPar
     readonly TParentBuilder _parent;
     IEventValueExpression? _expression;
 
-    /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
     /// </summary>
@@ -32,6 +29,9 @@ public class AllSetBuilder<TModel, TParentBuilder> : IAllSetBuilder<TModel, TPar
         _parent = parent;
         TargetProperty = targetProperty;
     }
+
+    /// <inheritdoc/>
+    public PropertyPath TargetProperty { get; }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventSourceId()

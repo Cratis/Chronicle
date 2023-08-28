@@ -30,6 +30,8 @@ public class ObserverState
     /// </summary>
     public const string ReplayStorageProvider = "observer-state-replay";
 
+    List<FailedPartition> _failedPartitions = new();
+
     /// <summary>
     /// Gets or sets the identifier of the observer state.
     /// </summary>
@@ -102,9 +104,7 @@ public class ObserverState
     /// <summary>
     /// Gets or sets the current subscription arguments.
     /// </summary>
-    public object? CurrentSubscriptionArguments { get; set; }
-
-    List<FailedPartition> _failedPartitions = new();
+    public object? CurrentSubscriptionArguments { get; set; }
 
     /// <summary>
     /// Add a failed partition.
@@ -117,7 +117,7 @@ public class ObserverState
     /// </summary>
     /// <param name="partition">Partition to check.</param>
     /// <returns>True if failed, false if not.</returns>
-    public bool IsPartitionFailed(EventSourceId partition) => _failedPartitions.Any(_ => _.Partition == partition);
+    public bool IsPartitionFailed(EventSourceId partition) => _failedPartitions.Exists(_ => _.Partition == partition);
 
     /// <summary>
     /// Gets a failed partition by its partition identifier.

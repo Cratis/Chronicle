@@ -15,12 +15,6 @@ public class ConnectionLifecycle : IConnectionLifecycle
     readonly IInstancesOf<IParticipateInConnectionLifecycle> _participants;
     readonly ILogger<ConnectionLifecycle> _logger;
 
-    /// <inheritdoc/>
-    public bool IsConnected { get; private set; }
-
-    /// <inheritdoc/>
-    public ConnectionId ConnectionId { get; private set; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionLifecycle"/>.
     /// </summary>
@@ -34,6 +28,12 @@ public class ConnectionLifecycle : IConnectionLifecycle
         _logger = logger;
         ConnectionId = ConnectionId.New();
     }
+
+    /// <inheritdoc/>
+    public bool IsConnected { get; private set; }
+
+    /// <inheritdoc/>
+    public ConnectionId ConnectionId { get; private set; }
 
     /// <inheritdoc/>
     public async Task Connected()

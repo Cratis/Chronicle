@@ -15,4 +15,3 @@ public class when_adding_event_with_sequence_number_greater_than_last_event_in_c
 
     [Fact] void should_add_event() => cache.Count.ShouldEqual(3);
 }
-

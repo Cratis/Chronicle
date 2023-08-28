@@ -12,6 +12,35 @@ namespace Aksio.Cratis.Kernel.Observation;
 public record FailedPartition
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
+    /// </summary>
+    public FailedPartition()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
+    /// <param name="tail">The event sequence number (tail) where the error occurred.</param>
+    /// <param name="messages">Any messages that caused the partition failure.</param>
+    /// <param name="stackTrace">The stack trace that caused the partition failure.</param>
+    /// <param name="occurred">When the error occurred.</param>
+    public FailedPartition(
+        EventSourceId eventSourceId,
+        EventSequenceNumber tail,
+        IEnumerable<string> messages,
+        string stackTrace,
+        DateTimeOffset? occurred = null)
+    {
+        Partition = eventSourceId;
+        Tail = tail;
+        Messages = messages;
+        StackTrace = stackTrace;
+        Occurred = occurred ?? DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Gets the EventSourceId that is the partition.
     /// </summary>
     public EventSourceId Partition { get; }
@@ -55,35 +84,6 @@ public record FailedPartition
     /// A recovered partition is one that has been successfully processed from the event that triggered the failure to the Head for the partition.
     /// </summary>
     public bool IsRecovered => Head is null || Head.Value <= (RecoveredTo?.Value ?? EventSequenceNumber.First);
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
-    /// </summary>
-    public FailedPartition()
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="FailedPartition"/> class.
-    /// </summary>
-    /// <param name="eventSourceId">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
-    /// <param name="tail">The event sequence number (tail) where the error occurred.</param>
-    /// <param name="messages">Any messages that caused the partition failure.</param>
-    /// <param name="stackTrace">The stack trace that caused the partition failure.</param>
-    /// <param name="occurred">When the error occurred.</param>
-    public FailedPartition(
-        EventSourceId eventSourceId,
-        EventSequenceNumber tail,
-        IEnumerable<string> messages,
-        string stackTrace,
-        DateTimeOffset? occurred = null)
-    {
-        Partition = eventSourceId;
-        Tail = tail;
-        Messages = messages;
-        StackTrace = stackTrace;
-        Occurred = occurred ?? DateTimeOffset.UtcNow;
-    }
 
     /// <summary>
     /// Sets the recovered to sequence number.  This is used by the RecoverFailedPartition job to indicate that it has successfully processed events to this point.

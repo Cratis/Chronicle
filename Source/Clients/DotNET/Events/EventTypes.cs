@@ -12,9 +12,6 @@ public class EventTypes : IEventTypes
 {
     readonly IDictionary<EventType, Type> _typesByEventType;
 
-    /// <inheritdoc/>
-    public IEnumerable<EventType> All { get; }
-
     /// <summary>
     /// /// Initializes a new instance of <see cref="EventTypes"/>.
     /// </summary>
@@ -26,6 +23,9 @@ public class EventTypes : IEventTypes
 
         All = _typesByEventType.Keys.ToArray();
     }
+
+    /// <inheritdoc/>
+    public IEnumerable<EventType> All { get; }
 
     /// <inheritdoc/>
     public bool HasFor(EventTypeId eventTypeId) => _typesByEventType.Any(_ => _.Key.Id == eventTypeId);

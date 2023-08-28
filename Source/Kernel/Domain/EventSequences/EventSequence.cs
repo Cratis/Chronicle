@@ -67,14 +67,17 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] AppendEvent eventToAppend)
     {
+        var causation = eventToAppend.Causation ?? _causationManager.GetCurrentChain();
+        var causedBy = eventToAppend.CausedBy ?? _identityProvider.GetCurrent();
+
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         await eventSequence.Append(
             eventToAppend.EventSourceId,
             eventToAppend.EventType,
             eventToAppend.Content,
-            eventToAppend.Causation,
-            eventToAppend.CausedBy,
+            causation,
+            causedBy,
             eventToAppend.ValidFrom);
     }
 
@@ -93,10 +96,13 @@ public class EventSequence : Controller
         [FromRoute] TenantId tenantId,
         [FromBody] AppendManyEvents eventsToAppend)
     {
+        var causation = eventsToAppend.Causation ?? _causationManager.GetCurrentChain();
+        var causedBy = eventsToAppend.CausedBy ?? _identityProvider.GetCurrent();
+
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
         var eventSequence = GetEventSequence(microserviceId, eventSequenceId, tenantId);
         var events = eventsToAppend.Events.Select(_ => new Grains.EventSequences.EventToAppend(eventsToAppend.EventSourceId, _.EventType, _.Content, _.ValidFrom)).ToArray();
-        await eventSequence.AppendMany(events, eventsToAppend.Causation, eventsToAppend.CausedBy);
+        await eventSequence.AppendMany(events, causation, causedBy);
     }
 
     /// <summary>

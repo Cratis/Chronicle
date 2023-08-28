@@ -13,8 +13,10 @@ public class when_validating_with_simple_is_valid_with_failure : given.a_validat
 
     void Establish()
     {
-        rule = new();
-        rule.simple_is_valid_return = false;
+        rule = new()
+        {
+            simple_is_valid_return = false
+        };
     }
 
     void Because()

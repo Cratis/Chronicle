@@ -26,12 +26,6 @@ public class ProjectionPipeline : IProjectionPipeline
     readonly ILogger<ProjectionPipeline> _logger;
     readonly IEventSequenceStorage _eventProvider;
 
-    /// <inheritdoc/>
-    public IProjection Projection { get; }
-
-    /// <inheritdoc/>
-    public ISink Sink { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="IProjectionPipeline"/>.
     /// </summary>
@@ -59,6 +53,12 @@ public class ProjectionPipeline : IProjectionPipeline
         Projection = projection;
         _logger = logger;
     }
+
+    /// <inheritdoc/>
+    public IProjection Projection { get; }
+
+    /// <inheritdoc/>
+    public ISink Sink { get; }
 
     /// <inheritdoc/>
     public async Task Handle(AppendedEvent @event)

@@ -25,10 +25,12 @@ public class when_next_event_is_of_interest : given.a_projection
 
     void Establish()
     {
-        projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
-        {
-                new EventTypeWithKeyResolver(event_b, KeyResolvers.FromEventSourceId)
-        }, new[] { event_b });
+        projection.SetEventTypesWithKeyResolvers(
+            new EventTypeWithKeyResolver[]
+            {
+                    new EventTypeWithKeyResolver(event_b, KeyResolvers.FromEventSourceId)
+            },
+            new[] { event_b });
 
         dynamic state = initial_state = new();
         state.Integer = 42;
@@ -51,7 +53,7 @@ public class when_next_event_is_of_interest : given.a_projection
         second_changeset = new(objects_comparer.Object, second_event, initial_state);
 
         observed_events = new();
-        projection.Event.Subscribe(_ => observed_events.Add(_));
+        projection.Event.Subscribe(observed_events.Add);
     }
 
     void Because()

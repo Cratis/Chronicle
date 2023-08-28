@@ -16,11 +16,6 @@ public class EventLogForSpecifications : IEventLog
     readonly EventSequenceForSpecifications _sequence;
 
     /// <summary>
-    /// Gets the appended events.
-    /// </summary>
-    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="EventLogForSpecifications"/> class.
     /// </summary>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/>.</param>
@@ -31,6 +26,11 @@ public class EventLogForSpecifications : IEventLog
     {
         _sequence = new(expandoObjectConverter, schemaGenerator);
     }
+
+    /// <summary>
+    /// Gets the appended events.
+    /// </summary>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _sequence.AppendedEvents;
 
     /// <inheritdoc/>
     public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null) => _sequence.Append(eventSourceId, @event, validFrom);

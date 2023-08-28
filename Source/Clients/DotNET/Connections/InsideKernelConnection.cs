@@ -21,12 +21,6 @@ public class InsideKernelConnection : IConnection, IDisposable
 {
     readonly SingleKernelConnection _innerClient;
 
-    /// <inheritdoc/>
-    public bool IsConnected => _innerClient.IsConnected;
-
-    /// <inheritdoc/>
-    public ConnectionId ConnectionId => _innerClient.ConnectionId;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="InsideKernelConnection"/> class.
     /// </summary>
@@ -76,6 +70,12 @@ public class InsideKernelConnection : IConnection, IDisposable
             jsonSerializerOptions,
             singleKernelClientLogger);
     }
+
+    /// <inheritdoc/>
+    public bool IsConnected => _innerClient.IsConnected;
+
+    /// <inheritdoc/>
+    public ConnectionId ConnectionId => _innerClient.ConnectionId;
 
     /// <inheritdoc/>
     public void Dispose() => _innerClient.Dispose();

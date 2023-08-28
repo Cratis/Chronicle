@@ -49,26 +49,6 @@ public class ObserverHandler
     readonly IEventSerializer _eventSerializer;
 
     /// <summary>
-    /// Gets the unique identifier of the observer.
-    /// </summary>
-    public ObserverId ObserverId { get; }
-
-    /// <summary>
-    /// Gets the name of the observer.
-    /// </summary>
-    public ObserverName Name { get; }
-
-    /// <summary>
-    /// Gets the event sequence the observer is observing.
-    /// </summary>
-    public EventSequenceId EventSequenceId { get; }
-
-    /// <summary>
-    /// Gets the event types for the observer.
-    /// </summary>
-    public IEnumerable<EventType> EventTypes => _observerInvoker.EventTypes;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="ObserverHandler"/>.
     /// </summary>
     /// <param name="observerId">Unique identifier.</param>
@@ -95,6 +75,26 @@ public class ObserverHandler
         _causationManager = causationManager;
         _eventSerializer = eventSerializer;
     }
+
+    /// <summary>
+    /// Gets the unique identifier of the observer.
+    /// </summary>
+    public ObserverId ObserverId { get; }
+
+    /// <summary>
+    /// Gets the name of the observer.
+    /// </summary>
+    public ObserverName Name { get; }
+
+    /// <summary>
+    /// Gets the event log for the observer.
+    /// </summary>
+    public EventSequenceId EventSequenceId { get; }
+
+    /// <summary>
+    /// Gets the event types for the observer.
+    /// </summary>
+    public IEnumerable<EventType> EventTypes => _observerInvoker.EventTypes;
 
     /// <summary>
     /// Handle next event.
