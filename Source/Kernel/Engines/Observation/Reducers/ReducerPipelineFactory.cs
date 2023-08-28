@@ -21,7 +21,7 @@ public class ReducerPipelineFactory : IReducerPipelineFactory
     /// Initializes a new instance of the <see cref="ReducerPipelineFactory"/> class.
     /// </summary>
     /// <param name="projectionSinks"><see cref="ISinks"/> in the system.</param>
-    /// <param name="objectComparer"></param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
     public ReducerPipelineFactory(
         ISinks projectionSinks,
         IObjectComparer objectComparer)

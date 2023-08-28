@@ -18,12 +18,6 @@ public class ReducerInvoker : IReducerInvoker
     readonly IEventTypes _eventTypes;
     readonly Type _targetType;
 
-    /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => _reduceMethodsByEventType.Keys;
-
-    /// <inheritdoc/>
-    public Type ReadModelType { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
     /// </summary>
@@ -45,6 +39,12 @@ public class ReducerInvoker : IReducerInvoker
                                         .Where(_ => _.IsReducerMethod(readModelType))
                                         .ToDictionary(_ => eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
     }
+
+    /// <inheritdoc/>
+    public IEnumerable<EventType> EventTypes => _reduceMethodsByEventType.Keys;
+
+    /// <inheritdoc/>
+    public Type ReadModelType { get; }
 
     /// <inheritdoc/>
     public Task<InternalReduceResult> Invoke(IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)

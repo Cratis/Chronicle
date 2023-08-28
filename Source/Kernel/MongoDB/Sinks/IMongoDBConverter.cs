@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Properties;
 using MongoDB.Bson;
 using NJsonSchema;

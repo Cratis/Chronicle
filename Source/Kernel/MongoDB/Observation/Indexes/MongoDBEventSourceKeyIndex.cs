@@ -30,7 +30,7 @@ public class MongoDBEventSourceKeyIndex : IObserverKeyIndex
     public async Task<IObserverKeys> GetKeysFor()
     {
         var cursor = await _collection.DistinctAsync(_ => _.EventSourceId, _ => true);
-        return new MongoDBObserverKeys(cursor);
+        return new MongoDBObserverKeys(null!);
     }
 
     /// <inheritdoc/>

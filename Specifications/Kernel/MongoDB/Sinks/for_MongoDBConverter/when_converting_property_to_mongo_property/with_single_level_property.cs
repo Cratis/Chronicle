@@ -14,5 +14,3 @@ public class with_single_level_property : given.a_mongodb_converter
     [Fact] void should_have_the_correct_property_name() => result.Property.ShouldEqual("someProperty");
     [Fact] void should_not_have_any_array_filters() => result.ArrayFilters.ShouldBeEmpty();
 }
-
-

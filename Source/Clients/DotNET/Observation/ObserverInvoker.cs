@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Aksio.Cratis.Events;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Observation;

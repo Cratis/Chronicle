@@ -16,9 +16,6 @@ public class InMemorySinkFactory : ISinkFactory
     readonly ITypeFormats _typeFormats;
     readonly IObjectComparer _comparer;
 
-    /// <inheritdoc/>
-    public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemorySinkFactory"/> class.
     /// </summary>
@@ -29,6 +26,9 @@ public class InMemorySinkFactory : ISinkFactory
         _typeFormats = typeFormats;
         _comparer = comparer;
     }
+
+    /// <inheritdoc/>
+    public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
     public ISink CreateFor(Model model) => new InMemorySink(model, _typeFormats, _comparer);

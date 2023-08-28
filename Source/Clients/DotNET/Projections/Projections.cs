@@ -74,14 +74,14 @@ public class Projections : IProjections
     {
         public static ProjectionDefinition CreateAndDefine(
             Type type,
-            IModelNameConvention modelNameConvention,
+            IModelNameResolver modelNameResolver,
             IEventTypes eventTypes,
             IJsonSchemaGenerator schemaGenerator,
             IServiceProvider serviceProvider,
             JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TModel>)!;
-            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameResolver, eventTypes, schemaGenerator, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }

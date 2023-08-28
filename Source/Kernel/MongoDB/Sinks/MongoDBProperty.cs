@@ -11,5 +11,4 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 /// </summary>
 /// <param name="Property">The name of the property.</param>
 /// <param name="ArrayFilters">Collection of array filters.</param>
-/// <returns></returns>
 public record MongoDBProperty(string Property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters);

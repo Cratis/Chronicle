@@ -14,6 +14,10 @@ public class MongoDBObserverKeys : IObserverKeys
 {
     readonly IMongoCollection<Event> _collection;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MongoDBObserverKeys"/> class.
+    /// </summary>
+    /// <param name="collection">The <see cref="IMongoCollection{T}"/> that holds the keys.</param>
     public MongoDBObserverKeys(IMongoCollection<Event> collection)
     {
         _collection = collection;
@@ -23,37 +27,6 @@ public class MongoDBObserverKeys : IObserverKeys
     public IAsyncEnumerator<Key> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
         var cursor = _collection.Distinct(_ => _.EventSourceId, _ => true, cancellationToken: cancellationToken);
-        return new MongoDBObserverKeysAsyncEnumerator(cursor);
+        return new MongoDBObserverKeysAsyncEnumerator(null!);
     }
-}
-
-/// <summary>
-/// Represents an implementation of <see cref="IAsyncEnumerator{T}"/> for MongoDB.
-/// </summary>
-public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
-{
-    readonly IAsyncCursor<Key> _cursor;
-    readonly Key? _current;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBObserverKeysAsyncEnumerator"/> class.
-    /// </summary>
-    /// <param name="cursor"></param>
-    public MongoDBObserverKeysAsyncEnumerator(IAsyncCursor<Key> cursor)
-    {
-        _cursor = cursor;
-    }
-
-    /// <inheritdoc/>
-    public Key Current => _current!;
-
-    /// <inheritdoc/>
-    public ValueTask DisposeAsync()
-    {
-        _cursor.Dispose();
-        return ValueTask.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public async ValueTask<bool> MoveNextAsync() => await _cursor.MoveNextAsync();
 }

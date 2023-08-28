@@ -23,5 +23,3 @@ public class with_single_level_array_property_with_array_indexers : given.a_mong
     [Fact] void should_have_the_correct_property_name() => result.Property.ShouldEqual("arrayProperty.$[arrayProperty]");
     [Fact] void should_have_array_filter_for_property() => result.ArrayFilters.First().Document["arrayProperty.identifier"].ShouldEqual(new BsonBinaryData(key, GuidRepresentation.Standard));
 }
-
-

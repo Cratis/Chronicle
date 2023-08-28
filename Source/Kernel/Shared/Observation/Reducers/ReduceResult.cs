@@ -9,6 +9,6 @@ namespace Aksio.Cratis.Observation.Reducers;
 /// <summary>
 /// Represents the result of a reduce operation.
 /// </summary>
-/// <param name="State">Potential state, unless errored</param>
+/// <param name="State">Potential state, unless errored.</param>
 /// <param name="LastSuccessfullyObservedEvent">The sequence number of the last successfully observed event.</param>
 public record ReduceResult(JsonObject? State, EventSequenceNumber LastSuccessfullyObservedEvent);

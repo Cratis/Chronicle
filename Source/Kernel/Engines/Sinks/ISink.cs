@@ -5,7 +5,6 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Engines.Sinks;

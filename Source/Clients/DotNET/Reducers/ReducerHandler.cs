@@ -17,21 +17,6 @@ public class ReducerHandler : IReducerHandler
     readonly IEventSerializer _eventSerializer;
     readonly IEventTypes _eventTypes;
 
-    /// <inheritdoc/>
-    public ReducerId ReducerId { get; }
-
-    /// <inheritdoc/>
-    public ObserverName Name { get; }
-
-    /// <inheritdoc/>
-    public EventSequenceId EventSequenceId { get; }
-
-    /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => _reducerInvoker.EventTypes;
-
-    /// <inheritdoc/>
-    public Type ReadModelType => _reducerInvoker.ReadModelType;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerHandler"/> class.
     /// </summary>
@@ -56,6 +41,21 @@ public class ReducerHandler : IReducerHandler
         _reducerInvoker = reducerInvoker;
         _eventSerializer = eventSerializer;
     }
+
+    /// <inheritdoc/>
+    public ReducerId ReducerId { get; }
+
+    /// <inheritdoc/>
+    public ObserverName Name { get; }
+
+    /// <inheritdoc/>
+    public EventSequenceId EventSequenceId { get; }
+
+    /// <inheritdoc/>
+    public IEnumerable<EventType> EventTypes => _reducerInvoker.EventTypes;
+
+    /// <inheritdoc/>
+    public Type ReadModelType => _reducerInvoker.ReadModelType;
 
     /// <inheritdoc/>
     public async Task<InternalReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial)

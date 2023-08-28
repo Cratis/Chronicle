@@ -16,8 +16,6 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
     readonly IMongoDatabase _database;
     readonly Model _model;
 
-    string ReplayCollectionName => $"replay-{_model.Name}";
-
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSinkCollections"/> class.
     /// </summary>
@@ -28,6 +26,8 @@ public class MongoDBSinkCollections : IMongoDBSinkCollections
         _database = database;
         _model = model;
     }
+
+    string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <inheritdoc/>
     public Task BeginReplay() => PrepareInitialRun(true);

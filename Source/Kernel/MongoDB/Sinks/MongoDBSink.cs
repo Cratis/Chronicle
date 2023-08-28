@@ -4,9 +4,8 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Sinks;
 using MongoDB.Bson;
@@ -27,19 +26,13 @@ public class MongoDBSink : ISink
     readonly IMongoDBChangesetConverter _changesetConverter;
     readonly IExpandoObjectConverter _expandoObjectConverter;
 
-    /// <inheritdoc/>
-    public SinkTypeName Name => "MongoDB";
-
-    /// <inheritdoc/>
-    public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBSink"/> class.
     /// </summary>
     /// <param name="model">The <see cref="Model"/> the sink is for.</param>
     /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
     /// <param name="collections"><see cref="IMongoDBSinkCollections"/> to use.</param>
-    /// <param name="changesetConverter"></param>
+    /// <param name="changesetConverter"><see cref="IMongoDBChangesetConverter"/> for converting changesets.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
     public MongoDBSink(
         Model model,
@@ -54,6 +47,12 @@ public class MongoDBSink : ISink
         _collections = collections;
         _changesetConverter = changesetConverter;
     }
+
+    /// <inheritdoc/>
+    public SinkTypeName Name => "MongoDB";
+
+    /// <inheritdoc/>
+    public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)

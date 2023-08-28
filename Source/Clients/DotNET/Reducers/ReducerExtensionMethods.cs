@@ -22,7 +22,7 @@ public static class ReducerExtensionMethods
     /// <param name="readModelType">Type of read model.</param>
     /// <returns>True if it is a reducer method, false if not.</returns>
     /// <remarks>
-    /// The following are considered valid reducer method signatures:
+    /// The following are considered valid reducer method signatures.
     /// <![CDATA[
     /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? initial, EventContext context)
     /// Task<TReadModel> {MethodName}(TEvent event, TReadModel? initial)

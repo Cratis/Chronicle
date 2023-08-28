@@ -5,7 +5,6 @@ using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;
@@ -151,7 +150,7 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
         }
     }
 
-void BuildJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined)
+    void BuildJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, bool isReplaying, List<Task> joinTasks, Joined joined)
     {
         var (property, _) = _converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
 

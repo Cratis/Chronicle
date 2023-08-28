@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Reducers;
 /// <summary>
 /// Defines a reducer.
 /// </summary>
-/// <typeparam name="TReadModel"></typeparam>
-public interface IReducerFor<TReadModel>
+/// <typeparam name="TTarget">Type of target the reducer is for.</typeparam>
+public interface IReducerFor<TTarget>
 {
 }

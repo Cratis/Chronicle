@@ -24,7 +24,6 @@ public class a_reducer_invoker_for<TReducer> : Specification
             service_provider.Object,
             event_types.Object,
             typeof(TReducer),
-            typeof(ReadModel)
-        );
+            typeof(ReadModel));
     }
 }

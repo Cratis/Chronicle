@@ -21,11 +21,13 @@ public interface IMongoDBSinkCollections
     /// <summary>
     /// Signals that a replay is about to begin.
     /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task BeginReplay();
 
     /// <summary>
     /// Signals that a replay has ended.
     /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task EndReplay();
 
     /// <summary>

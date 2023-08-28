@@ -5,7 +5,6 @@ using System.Collections;
 using System.Dynamic;
 using System.Text;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Schemas;

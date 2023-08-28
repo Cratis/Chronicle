@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Reducers;
 /// <summary>
 /// Defines a key builder for a specific event.
 /// </summary>
-/// <typeparam name="TEvent"></typeparam>
+/// <typeparam name="TEvent">Type of event the builder is for.</typeparam>
 public interface IKeyBuilder<TEvent>
 {
     /// <summary>

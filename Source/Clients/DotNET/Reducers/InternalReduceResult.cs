@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Reducers;
 /// <summary>
 /// Represents the result of a reduce operation.
 /// </summary>
-/// <param name="State">Potential state, unless errored</param>
+/// <param name="State">Potential state, unless errored.</param>
 /// <param name="LastSuccessfullyObservedEvent">The sequence number of the last successfully observed event.</param>
 /// <param name="Error">Potential error that occurred.</param>
 public record InternalReduceResult(object? State, EventSequenceNumber LastSuccessfullyObservedEvent,  Exception? Error = default)

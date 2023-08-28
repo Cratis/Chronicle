@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.EventSequences;

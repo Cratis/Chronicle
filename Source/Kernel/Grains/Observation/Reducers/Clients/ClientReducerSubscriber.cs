@@ -11,10 +11,9 @@ using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
-using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Engines.Observation.Reducers;
-using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.Grains.Clients;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.Cratis.Properties;
@@ -42,7 +41,6 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     IConnectedClients? _connectedClients;
     IReducerPipeline? _pipeline;
-    IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientReducerSubscriber"/> class.
@@ -71,6 +69,8 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
         _expandoObjectConverter = expandoObjectConverter;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
+
+    IConnectedClients ConnectedClientsGrain => _connectedClients ??= GrainFactory.GetGrain<IConnectedClients>(_microserviceId);
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -121,9 +121,7 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 {
                     var reduce = new Reduce(
                         events,
-                        initial is not null ?
-                            _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) :
-                            null);
+                        initial is not null ? _expandoObjectConverter.ToJsonObject(initial, _pipeline.ReadModel.Schema) : null);
                     using var jsonContent = JsonContent.Create(reduce, options: _jsonSerializerOptions);
                     httpClient.DefaultRequestHeaders.Add(ExecutionContextAppBuilderExtensions.TenantIdHeader, _tenantId.ToString());
                     var response = await httpClient.PostAsync($"/.cratis/reducers/{_reducerId}", jsonContent);

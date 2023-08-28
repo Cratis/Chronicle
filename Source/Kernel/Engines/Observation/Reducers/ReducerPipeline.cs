@@ -16,18 +16,12 @@ public class ReducerPipeline : IReducerPipeline
 {
     readonly IObjectComparer _objectComparer;
 
-    /// <inheritdoc/>
-    public Model ReadModel { get; }
-
-    /// <inheritdoc/>
-    public ISink Sink { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerPipeline"/> class.
     /// </summary>
     /// <param name="readModel">The <see cref="Model"/> the sink is for.</param>
-    /// <param name="sink"></param>
-    /// /// <param name="objectComparer"></param>
+    /// <param name="sink"><see cref="ISink"/> to use in pipeline.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
     public ReducerPipeline(
         Model readModel,
         ISink sink,
@@ -37,6 +31,12 @@ public class ReducerPipeline : IReducerPipeline
         Sink = sink;
         _objectComparer = objectComparer;
     }
+
+    /// <inheritdoc/>
+    public Model ReadModel { get; }
+
+    /// <inheritdoc/>
+    public ISink Sink { get; }
 
     /// <inheritdoc/>
     public async Task Handle(ReducerContext context, ReducerDelegate reducer)

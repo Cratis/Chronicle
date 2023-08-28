@@ -22,6 +22,7 @@ public static class ClientReducersEndpoints
     /// Maps the endpoints for the client reducers.
     /// </summary>
     /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to extend.</param>
+    /// <returns><see cref="IEndpointRouteBuilder"/> for build continuation.</returns>
     public static IEndpointRouteBuilder MapClientReducers(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/.cratis/reducers/{reducerId}", async (HttpContext context) =>

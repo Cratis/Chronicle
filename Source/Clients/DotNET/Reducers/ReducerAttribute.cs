@@ -13,6 +13,15 @@ namespace Aksio.Cratis.Reducers;
 public class ReducerAttribute : Attribute
 {
     /// <summary>
+    /// Initializes a new instance of <see cref="ReducerAttribute"/>.
+    /// </summary>
+    /// <param name="reducerIdAsString"><see cref="ReducerId"/> represented as string. Must be a valid Guid.</param>
+    public ReducerAttribute(string reducerIdAsString)
+    {
+        ReducerId = reducerIdAsString;
+    }
+
+    /// <summary>
     /// Gets the unique identifier for the reducer.
     /// </summary>
     public ReducerId ReducerId { get; }
@@ -21,13 +30,4 @@ public class ReducerAttribute : Attribute
     /// Gets the unique identifier for an event sequence.
     /// </summary>
     public EventSequenceId EventSequenceId { get; } = EventSequenceId.Log;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="ReducerAttribute"/>.
-    /// </summary>
-    /// <param name="reducerIdAsString"><see cref="ReducerId"/> represented as string. Must be a valid Guid.</param>
-    public ReducerAttribute(string reducerIdAsString)
-    {
-        ReducerId = reducerIdAsString;
-    }
 }

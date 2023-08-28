@@ -21,7 +21,7 @@ public class ClientReducers
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientReducers"/> class.
     /// </summary>
-    /// <param name="reducers">The <see cref="IReducersRegistrar"/> in the system</param>
+    /// <param name="reducers">The <see cref="IReducersRegistrar"/> in the system.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientReducers(
