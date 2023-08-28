@@ -18,7 +18,7 @@ export interface IAppend {
     eventSourceId?: string;
     eventType?: EventType;
     content?: any;
-    causation?: Causation[];
+    causation?: Causation;
     causedBy?: Identity;
     validFrom?: Date;
 }
@@ -48,7 +48,7 @@ export class Append extends Command<IAppend> implements IAppend {
     private _eventSourceId!: string;
     private _eventType!: EventType;
     private _content!: any;
-    private _causation!: Causation[];
+    private _causation!: Causation;
     private _causedBy!: Identity;
     private _validFrom!: Date;
 
@@ -126,11 +126,11 @@ export class Append extends Command<IAppend> implements IAppend {
         this._content = value;
         this.propertyChanged('content');
     }
-    get causation(): Causation[] {
+    get causation(): Causation {
         return this._causation;
     }
 
-    set causation(value: Causation[]) {
+    set causation(value: Causation) {
         this._causation = value;
         this.propertyChanged('causation');
     }

@@ -23,6 +23,6 @@ public record AppendEvent(
     EventSourceId EventSourceId,
     EventType EventType,
     JsonObject Content,
-    IEnumerable<Causation> Causation,
-    Identity CausedBy,
+    IEnumerable<Causation>? Causation,
+    Identity? CausedBy,
     DateTimeOffset? ValidFrom);

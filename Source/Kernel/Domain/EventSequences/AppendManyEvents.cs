@@ -19,5 +19,5 @@ namespace Aksio.Cratis.Kernel.Domain.EventSequences;
 public record AppendManyEvents(
     EventSourceId EventSourceId,
     IEnumerable<EventToAppend> Events,
-    IEnumerable<Causation> Causation,
-    Identity CausedBy);
+    IEnumerable<Causation>? Causation,
+    Identity? CausedBy);
