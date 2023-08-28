@@ -22,12 +22,14 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     /// <summary>
     /// The result that represents a failed observer.
     /// </summary>
-    /// <param name="LastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
-    public static ObserverSubscriberResult Failed(EventSequenceNumber LastSuccessfulObservation) => new(ObserverSubscriberState.Failed, LastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
+    /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
+    /// <returns>The result object to use.</returns>
+    public static ObserverSubscriberResult Failed(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Failed, lastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
 
     /// <summary>
     /// The result that represents a disconnected observer.
     /// </summary>
-    /// <param name="LastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
-    public static ObserverSubscriberResult Disconnected(EventSequenceNumber LastSuccessfulObservation) => new(ObserverSubscriberState.Disconnected, LastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
+    /// <param name="lastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
+    /// <returns>The result object to use.</returns>
+    public static ObserverSubscriberResult Disconnected(EventSequenceNumber lastSuccessfulObservation) => new(ObserverSubscriberState.Disconnected, lastSuccessfulObservation, Enumerable.Empty<string>(), string.Empty);
 }
