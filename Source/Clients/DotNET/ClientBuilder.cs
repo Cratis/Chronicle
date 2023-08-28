@@ -203,6 +203,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
             .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
             .AddSingleton<ITenantConfiguration, TenantConfiguration>()
+            .AddSingleton<IProjections, Projections.Projections>()
             .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
             .AddSingleton<ICausationManager, CausationManager>()

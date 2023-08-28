@@ -139,8 +139,8 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
 
                     if (commandResult.Response is not null && commandResult.Response is JsonElement jsonElement)
                     {
-                        var responseAsJson = JsonObject.Create(jsonElement);
-                        return _expandoObjectConverter.ToExpandoObject(responseAsJson!, _pipeline.ReadModel.Schema);
+                        var result = jsonElement.Deserialize<ReduceResult>(_jsonSerializerOptions)!;
+                        return _expandoObjectConverter.ToExpandoObject(result.State ?? new JsonObject(), _pipeline.ReadModel.Schema);
                     }
 
                     return new ExpandoObject();
