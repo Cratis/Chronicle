@@ -17,7 +17,7 @@ export interface IAppendMany {
     tenantId?: string;
     eventSourceId?: string;
     events?: EventToAppend[];
-    causation?: Causation[];
+    causation?: Causation;
     causedBy?: Identity;
 }
 
@@ -43,7 +43,7 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
     private _tenantId!: string;
     private _eventSourceId!: string;
     private _events!: EventToAppend[];
-    private _causation!: Causation[];
+    private _causation!: Causation;
     private _causedBy!: Identity;
 
     constructor() {
@@ -110,11 +110,11 @@ export class AppendMany extends Command<IAppendMany> implements IAppendMany {
         this._events = value;
         this.propertyChanged('events');
     }
-    get causation(): Causation[] {
+    get causation(): Causation {
         return this._causation;
     }
 
-    set causation(value: Causation[]) {
+    set causation(value: Causation) {
         this._causation = value;
         this.propertyChanged('causation');
     }

@@ -1,3 +1,10 @@
+# [v9.3.1] - 2023-8-28 [PR: #938](https://github.com/aksio-insurtech/Cratis/pull/938)
+
+### Fixed
+
+- Making `Causation` and `CausedBy` on the server side optional and automatically injected if not there based on context in the server. This is for backwards compability with any 9.x clients
+
+
 # [v9.3.0] - 2023-8-27 [PR: #937](https://github.com/aksio-insurtech/Cratis/pull/937)
 
 ### Changed
