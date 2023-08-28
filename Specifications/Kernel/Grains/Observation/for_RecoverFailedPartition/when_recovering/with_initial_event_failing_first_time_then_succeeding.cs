@@ -20,12 +20,13 @@ public class with_initial_event_failing_first_time_then_succeeding : given.a_rec
 
     protected override IEnumerable<AppendedEvent> events => appended_events;
 
-    protected override Task<ObserverSubscriberResult> ProcessEvent(AppendedEvent evt)
+    protected override Task<ObserverSubscriberResult> ProcessEvents(IEnumerable<AppendedEvent> events)
     {
-        if (evt.Metadata.SequenceNumber != initial_error) return Task.FromResult(ObserverSubscriberResult.Ok);
+        var @event = events.First();
+        if (@event.Metadata.SequenceNumber != initial_error) return Task.FromResult(ObserverSubscriberResult.Ok);
         if (countOfAttempts != 0) return Task.FromResult(ObserverSubscriberResult.Ok);
         countOfAttempts++;
-        return Task.FromResult(ObserverSubscriberResult.Failed(evt.Metadata.SequenceNumber));
+        return Task.FromResult(ObserverSubscriberResult.Failed(@event.Metadata.SequenceNumber));
     }
 
     AppendedEvent BuildAppendedEvent(EventSourceId eventSourceId)

@@ -16,7 +16,9 @@ public class when_replaying_with_two_events_to_replay : given.a_replay_with_two_
         event_sequence_storage_provider.Setup(_ => _.GetHeadSequenceNumber(IsAny<EventSequenceId>(), event_types, null)).ReturnsAsync(first_appended_event.Metadata.SequenceNumber);
         event_sequence_storage_provider.Setup(_ => _.GetTailSequenceNumber(IsAny<EventSequenceId>(), event_types, null)).ReturnsAsync(second_appended_event.Metadata.SequenceNumber);
         state.LastHandled = second_appended_event.Metadata.SequenceNumber;
-        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Callback((AppendedEvent @event, ObserverSubscriberContext _) => events_replayed.Add(@event));
+        subscriber
+            .Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()))
+            .Callback((IEnumerable<AppendedEvent> events, ObserverSubscriberContext _) => events_replayed.AddRange(events));
     }
 
     Task Because() => replay.Start(new(GrainId, ObserverKey.Parse(GrainKeyExtension), event_types, typeof(ObserverSubscriber), subscriber_args));

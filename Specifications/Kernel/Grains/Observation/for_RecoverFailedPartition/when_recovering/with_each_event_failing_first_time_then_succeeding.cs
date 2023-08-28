@@ -20,11 +20,12 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
 
     protected override IEnumerable<AppendedEvent> events => appended_events;
 
-    protected override Task<ObserverSubscriberResult> ProcessEvent(AppendedEvent evt)
+    protected override Task<ObserverSubscriberResult> ProcessEvents(IEnumerable<AppendedEvent> events)
     {
-        if (countOfAttempts[evt.Metadata.SequenceNumber] != 0) return Task.FromResult(ObserverSubscriberResult.Ok);
-        countOfAttempts[evt.Metadata.SequenceNumber] = 1;
-        return Task.FromResult(ObserverSubscriberResult.Failed(evt.Metadata.SequenceNumber));
+        var @event = events.First();
+        if (countOfAttempts[@event.Metadata.SequenceNumber] != 0) return Task.FromResult(ObserverSubscriberResult.Ok);
+        countOfAttempts[@event.Metadata.SequenceNumber] = 1;
+        return Task.FromResult(ObserverSubscriberResult.Failed(@event.Metadata.SequenceNumber));
     }
 
     protected override Task<IEventCursor> FetchEvents(EventSequenceNumber sequenceNumber)
