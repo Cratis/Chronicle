@@ -8,11 +8,8 @@ public class no_rules : all_dependencies
     protected Rules rules;
 
     void Establish() => rules = new(
-        execution_context,
-        model_name_resolver.Object,
-        event_types.Object,
-        json_schema_generator.Object,
         json_serializer_options,
+        rules_projections.Object,
         immediate_projections.Object,
         client_artifacts.Object);
 }

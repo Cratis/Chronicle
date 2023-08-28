@@ -20,12 +20,22 @@ public abstract class ObserverWorker : Grain
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProviderProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IPersistentState<ObserverState> _observerState;
+    ObserverSubscription _currentSubscription = ObserverSubscription.Unsubscribed;
     IObserverSupervisor? _supervisor;
 
     /// <summary>
     /// Gets or sets the subscriber type.
     /// </summary>
-    protected ObserverSubscription CurrentSubscription { get; set; } = ObserverSubscription.Unsubscribed;
+    protected ObserverSubscription CurrentSubscription
+    {
+        get => _currentSubscription;
+        set
+        {
+            _currentSubscription = value;
+            State.CurrentSubscriptionType = _currentSubscription.SubscriberType.AssemblyQualifiedName;
+            State.CurrentSubscriptionArguments = _currentSubscription.Arguments;
+        }
+    }
 
     /// <summary>
     /// Gets the <see cref="ObserverState"/>.
@@ -251,10 +261,5 @@ public abstract class ObserverWorker : Grain
     /// Write the observer state.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    protected Task WriteStateAsync()
-    {
-        State.CurrentSubscriptionType = CurrentSubscription.SubscriberType.AssemblyQualifiedName;
-        State.CurrentSubscriptionArguments = CurrentSubscription.Arguments;
-        return _observerState.WriteStateAsync();
-    }
+    protected Task WriteStateAsync() => _observerState.WriteStateAsync();
 }

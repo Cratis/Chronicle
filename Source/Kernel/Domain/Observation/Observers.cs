@@ -4,6 +4,8 @@
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Configuration;
+using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Grains.Observation.Clients;
 using Aksio.Cratis.Observation;
@@ -18,18 +20,22 @@ namespace Aksio.Cratis.Kernel.Domain.Observation;
 [Route("/api/events/store/{microserviceId}/observers")]
 public class Observers : Controller
 {
+    readonly KernelConfiguration _configuration;
     readonly IGrainFactory _grainFactory;
     readonly ILogger<Observers> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
+    /// <param name="configuration">The Kernel configuration.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Observers(
+        KernelConfiguration configuration,
         IGrainFactory grainFactory,
         ILogger<Observers> logger)
     {
+        _configuration = configuration;
         _grainFactory = grainFactory;
         _logger = logger;
     }
@@ -49,10 +55,14 @@ public class Observers : Controller
     {
         _logger.RegisterObservers();
 
-        _ = Task.Run(() =>
+        _ = Task.Run(async () =>
         {
+            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+            var client = await connectedClients.GetConnectedClient(connectionId);
+            var tenants = client.IsMultiTenanted ? _configuration.Tenants.GetTenantIds() : new TenantId[] { TenantId.NotSet };
+
             var observers = _grainFactory.GetGrain<IClientObservers>(microserviceId);
-            return observers.Register(connectionId, registrations);
+            return observers.Register(connectionId, registrations, tenants);
         });
 
         return Task.CompletedTask;

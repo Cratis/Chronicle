@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using System.Reflection;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -17,10 +18,31 @@ namespace Aksio.Cratis.Integration;
 /// <typeparam name="TExternalModel">Type of external model the operations are for.</typeparam>
 public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel, TExternalModel>
 {
+    /// <summary>
+    /// The causation adapter id property.
+    /// </summary>
+    public const string CausationAdapterIdProperty = "adapterId";
+
+    /// <summary>
+    /// The causation adapter type property.
+    /// </summary>
+    public const string CausationAdapterTypeProperty = "adapterType";
+
+    /// <summary>
+    /// The causation key property.
+    /// </summary>
+    public const string CausationKeyProperty = "Key";
+
+    /// <summary>
+    /// The causation type for client observer.
+    /// </summary>
+    public static readonly CausationType CausationType = new("Import Operation");
+
     readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
     readonly IObjectComparer _objectComparer;
     readonly IEventSequence _eventLog;
     readonly IEventSequence _eventOutbox;
+    readonly ICausationManager _causationManager;
 
     /// <inheritdoc/>
     public IAdapterFor<TModel, TExternalModel> Adapter { get; }
@@ -40,13 +62,15 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventLog">The <see cref="IEventSequence"/> for appending private events.</param>
     /// <param name="eventOutbox">The <see cref="IEventSequence"/> for appending public events.</param>
+    /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     public ImportOperations(
         IAdapterFor<TModel, TExternalModel> adapter,
         IAdapterProjectionFor<TModel> adapterProjection,
         IMapper mapper,
         IObjectComparer objectComparer,
         IEventSequence eventLog,
-        IEventSequence eventOutbox)
+        IEventSequence eventOutbox,
+        ICausationManager causationManager)
     {
         Adapter = adapter;
         Projection = adapterProjection;
@@ -56,12 +80,21 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         Adapter.DefineImport(new ImportBuilderFor<TModel, TExternalModel>(_importContexts));
         _eventLog = eventLog;
         _eventOutbox = eventOutbox;
+        _causationManager = causationManager;
     }
 
     /// <inheritdoc/>
     public async Task Apply(TExternalModel instance)
     {
         var keyValue = Adapter.KeyResolver(instance)!;
+
+        _causationManager.Add(CausationType, new Dictionary<string, string>
+        {
+            { CausationAdapterIdProperty, Adapter.Identifier.ToString() },
+            { CausationAdapterTypeProperty, Adapter.GetType().AssemblyQualifiedName! },
+            { CausationKeyProperty, keyValue.ToString()! }
+        });
+
         var eventSourceId = keyValue;
         eventSourceId ??= new(keyValue.ToString()!);
         var initialProjectionResult = await Projection.GetById(eventSourceId!);
@@ -76,15 +109,15 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         var context = new ImportContext<TModel, TExternalModel>(initialProjectionResult, changeset, new EventsToAppend());
         _importContexts.OnNext(context);
 
-        foreach (var @event in context.Events)
-        {
-            await _eventLog.Append(eventSourceId!, @event.Event, @event.ValidFrom);
+        if (!context.Events.Any()) return;
 
-            if (@event.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false)
-            {
-                await _eventOutbox.Append(eventSourceId!, @event.Event, @event.ValidFrom);
-            }
-        }
+        var eventsToAppend = context.Events.Select(_ => new EventAndValidFrom(_.Event, _.ValidFrom)).ToArray();
+        await _eventLog.AppendMany(eventSourceId!, eventsToAppend);
+
+        var publicEventsToAppend = eventsToAppend.Where(_ => _.Event.GetType().GetCustomAttribute<EventTypeAttribute>()?.IsPublic ?? false).ToArray();
+
+        if (publicEventsToAppend.Length == 0) return;
+        await _eventOutbox.AppendMany(eventSourceId!, publicEventsToAppend);
     }
 
     /// <inheritdoc/>

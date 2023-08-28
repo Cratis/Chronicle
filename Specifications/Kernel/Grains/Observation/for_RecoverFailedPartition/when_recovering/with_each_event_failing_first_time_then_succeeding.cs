@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Specifications;
 using Orleans.Runtime;
 
@@ -35,7 +37,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
     {
         var @event = new AppendedEvent(
             new(current, event_type),
-            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, PartitionedObserverKey.TenantId, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, PartitionedObserverKey.TenantId, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System),
             new ExpandoObject());
         current++;
         return @event;

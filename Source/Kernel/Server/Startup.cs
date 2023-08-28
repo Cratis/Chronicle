@@ -14,7 +14,7 @@ public class Startup
         services.AddMongoDBReadModels();
         services.AddHttpClient(ConnectedClients.ConnectedClientsHttpClient).ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
         {
-            #pragma warning disable MA0039 // Allowing self-signed certificates for clients connecting to the Kernel
+#pragma warning disable MA0039 // Allowing self-signed certificates for clients connecting to the Kernel
             ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         });
     }
@@ -24,7 +24,8 @@ public class Startup
         app.UseRouting();
         app.UseWebSockets();
         app.UseCratis();
+        var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+        appLifetime.ApplicationStarted.Register(() => app.PerformBootProcedures());
         app.UseAksio();
-        app.PerformBootProcedures();
     }
 }

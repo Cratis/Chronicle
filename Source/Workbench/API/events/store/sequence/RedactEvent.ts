@@ -4,6 +4,8 @@
 
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/applications/commands';
 import { Validator } from '@aksio/applications/validation';
+import { Causation } from './Causation';
+import { Identity } from './Identity';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}/redact-event');
@@ -14,6 +16,8 @@ export interface IRedactEvent {
     tenantId?: string;
     sequenceNumber?: number;
     reason?: string;
+    causation?: Causation;
+    causedBy?: Identity;
 }
 
 export class RedactEventValidator extends CommandValidator {
@@ -23,6 +27,8 @@ export class RedactEventValidator extends CommandValidator {
         tenantId: new Validator(),
         sequenceNumber: new Validator(),
         reason: new Validator(),
+        causation: new Validator(),
+        causedBy: new Validator(),
     };
 }
 
@@ -36,6 +42,8 @@ export class RedactEvent extends Command<IRedactEvent> implements IRedactEvent {
     private _tenantId!: string;
     private _sequenceNumber!: number;
     private _reason!: string;
+    private _causation!: Causation;
+    private _causedBy!: Identity;
 
     constructor() {
         super(Object, false);
@@ -56,6 +64,8 @@ export class RedactEvent extends Command<IRedactEvent> implements IRedactEvent {
             'tenantId',
             'sequenceNumber',
             'reason',
+            'causation',
+            'causedBy',
         ];
     }
 
@@ -98,6 +108,22 @@ export class RedactEvent extends Command<IRedactEvent> implements IRedactEvent {
     set reason(value: string) {
         this._reason = value;
         this.propertyChanged('reason');
+    }
+    get causation(): Causation {
+        return this._causation;
+    }
+
+    set causation(value: Causation) {
+        this._causation = value;
+        this.propertyChanged('causation');
+    }
+    get causedBy(): Identity {
+        return this._causedBy;
+    }
+
+    set causedBy(value: Identity) {
+        this._causedBy = value;
+        this.propertyChanged('causedBy');
     }
 
     static use(initialValues?: IRedactEvent): [RedactEvent, SetCommandValues<IRedactEvent>, ClearCommandValues] {

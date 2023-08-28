@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
 using Orleans.Runtime;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_RecoverFailedPartition.when_catching_up;
@@ -19,7 +21,7 @@ public class with_no_errors_on_processing_from_catchup_event : given.an_initiate
     {
         var @event = new AppendedEvent(
             new(current, event_type),
-            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, PartitionedObserverKey.TenantId, CorrelationId.New(), CausationId.System, CausedBy.System),
+            new(eventSourceId, current, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, PartitionedObserverKey.TenantId, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System),
             new ExpandoObject());
         current++;
         return @event;

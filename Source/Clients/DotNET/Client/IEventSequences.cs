@@ -19,4 +19,11 @@ public interface IEventSequences
     /// Gets the <see cref="IEventOutbox"/> event sequence.
     /// </summary>
     IEventOutbox Outbox { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSequence"/> for a specific event sequence.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
+    /// <returns><see cref="IEventSequence"/> instance.</returns>
+    IEventSequence GetEventSequence(EventSequenceId eventSequenceId);
 }

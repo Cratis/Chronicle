@@ -76,6 +76,7 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
             _name ?? modelType.FullName ?? "[N/A]",
             new ModelDefinition(_modelName, modelSchema.ToJson()),
             _isRewindable,
+            true,
             _initialValues,
             _fromDefinitions,
             _joinDefinitions,

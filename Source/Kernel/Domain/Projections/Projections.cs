@@ -8,6 +8,7 @@ using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Projections.Json;
 using Microsoft.AspNetCore.Mvc;
 using ImmediateProjectionResult = Aksio.Cratis.Kernel.Grains.Projections.ImmediateProjectionResult;
+using IProjections = Aksio.Cratis.Kernel.Grains.Projections.IProjections;
 
 namespace Aksio.Cratis.Kernel.Domain.Projections;
 
@@ -20,7 +21,6 @@ public class Projections : Controller
     readonly IGrainFactory _grainFactory;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Projections"/> class.
@@ -28,17 +28,14 @@ public class Projections : Controller
     /// <param name="grainFactory">Orleans <see cref="IGrainFactory"/>.</param>
     /// <param name="projectionSerializer"><see cref="IJsonProjectionSerializer"/> for deserializing projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/>.</param>
     public Projections(
         IGrainFactory grainFactory,
         IJsonProjectionSerializer projectionSerializer,
-        JsonSerializerOptions jsonSerializerOptions,
-        IExecutionContextManager executionContextManager)
+        JsonSerializerOptions jsonSerializerOptions)
     {
         _grainFactory = grainFactory;
         _projectionSerializer = projectionSerializer;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _executionContextManager = executionContextManager;
     }
 
     /// <summary>
@@ -52,15 +49,13 @@ public class Projections : Controller
         [FromRoute] MicroserviceId microserviceId,
         [FromBody] RegisterProjections payload)
     {
-        _executionContextManager.Establish(microserviceId);
-
-        var projections = _grainFactory.GetGrain<IProjections>(microserviceId.Value);
+        var projections = _grainFactory.GetGrain<IProjections>(0);
         var projectionsAndPipelines = payload.Projections.Select(_ =>
             new ProjectionAndPipeline(
                 _projectionSerializer.Deserialize(_.Projection),
                 _.Pipeline.Deserialize<ProjectionPipelineDefinition>(_jsonSerializerOptions)!)).ToArray();
 
-        await projections.Register(projectionsAndPipelines);
+        await projections.Register(microserviceId, projectionsAndPipelines);
     }
 
     /// <summary>
@@ -82,8 +77,7 @@ public class Projections : Controller
             immediateProjection.EventSequenceId,
             immediateProjection.ModelKey);
 
-        var projectionDefinition = _projectionSerializer.Deserialize(immediateProjection.Projection);
         var projection = _grainFactory.GetGrain<IImmediateProjection>(immediateProjection.ProjectionId, key);
-        return await projection.GetModelInstance(projectionDefinition);
+        return await projection.GetModelInstance(immediateProjection.ProjectionId);
     }
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.Logging;
@@ -29,7 +30,9 @@ public class ObserversRegistrar : IObserversRegistrar
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="connection"><see cref="IConnection"/> for working with kernel.</param>
+    /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="invokerLogger">Logger for invoker.</param>
     public ObserversRegistrar(
         IExecutionContextManager executionContextManager,
         IServiceProvider serviceProvider,
@@ -38,20 +41,23 @@ public class ObserversRegistrar : IObserversRegistrar
         IEventSerializer eventSerializer,
         IClientArtifactsProvider clientArtifacts,
         IConnection connection,
-        ILogger<ObserversRegistrar> logger)
+        ICausationManager causationManager,
+        ILogger<ObserversRegistrar> logger,
+        ILogger<ObserverInvoker> invokerLogger)
     {
         _handlers = clientArtifacts.Observers
                             .ToDictionary(
                                 _ => _,
-                                _ =>
+                                observerType =>
                                 {
-                                    var observer = _.GetCustomAttribute<ObserverAttribute>()!;
+                                    var observer = observerType.GetCustomAttribute<ObserverAttribute>()!;
                                     return new ObserverHandler(
                                         observer.ObserverId,
-                                        _.FullName ?? $"{_.Namespace}.{_.Name}",
+                                        observerType.FullName ?? $"{observerType.Namespace}.{observerType.Name}",
                                         observer.EventSequenceId,
                                         eventTypes,
-                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, _),
+                                        new ObserverInvoker(serviceProvider, eventTypes, middlewares, observerType, invokerLogger),
+                                        causationManager,
                                         eventSerializer);
                                 });
         _executionContextManager = executionContextManager;

@@ -52,6 +52,12 @@ public interface IEventSequenceCache : IDisposable
     void Prime(EventSequenceNumber from);
 
     /// <summary>
+    /// Prime the cache with the tail window.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task PrimeWithTailWindow();
+
+    /// <summary>
     /// Check if the cache is under pressure.
     /// </summary>
     /// <returns>True if it is, false if not.</returns>

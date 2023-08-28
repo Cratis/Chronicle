@@ -14,6 +14,7 @@ export interface IConnect {
     clientVersion?: string;
     advertisedUri?: string;
     isRunningWithDebugger?: boolean;
+    isMultiTenanted?: boolean;
 }
 
 export class ConnectValidator extends CommandValidator {
@@ -23,6 +24,7 @@ export class ConnectValidator extends CommandValidator {
         clientVersion: new Validator(),
         advertisedUri: new Validator(),
         isRunningWithDebugger: new Validator(),
+        isMultiTenanted: new Validator(),
     };
 }
 
@@ -36,6 +38,7 @@ export class Connect extends Command<IConnect> implements IConnect {
     private _clientVersion!: string;
     private _advertisedUri!: string;
     private _isRunningWithDebugger!: boolean;
+    private _isMultiTenanted!: boolean;
 
     constructor() {
         super(Object, false);
@@ -55,6 +58,7 @@ export class Connect extends Command<IConnect> implements IConnect {
             'clientVersion',
             'advertisedUri',
             'isRunningWithDebugger',
+            'isMultiTenanted',
         ];
     }
 
@@ -97,6 +101,14 @@ export class Connect extends Command<IConnect> implements IConnect {
     set isRunningWithDebugger(value: boolean) {
         this._isRunningWithDebugger = value;
         this.propertyChanged('isRunningWithDebugger');
+    }
+    get isMultiTenanted(): boolean {
+        return this._isMultiTenanted;
+    }
+
+    set isMultiTenanted(value: boolean) {
+        this._isMultiTenanted = value;
+        this.propertyChanged('isMultiTenanted');
     }
 
     static use(initialValues?: IConnect): [Connect, SetCommandValues<IConnect>, ClearCommandValues] {

@@ -13,6 +13,9 @@ export class Projection {
     @field(String)
     name!: string;
 
+    @field(Boolean)
+    isActive!: boolean;
+
     @field(String)
     modelName!: string;
 }

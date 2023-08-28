@@ -1,8 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Schemas;
@@ -98,6 +101,14 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
                 lastSuccessfullyObservedEvent = @event;
             }
 
+            var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
+            var causation = new Causation(DateTimeOffset.UtcNow, "Inbox", ImmutableDictionary<string, string>.Empty);
+            await _inboxEventSequence!.Append(
+                @event.Context.EventSourceId,
+                @event.Metadata.Type,
+                content!,
+                new Causation[] { causation },
+                Identity.System);
             return ObserverSubscriberResult.Ok;
         }
         catch (Exception ex)

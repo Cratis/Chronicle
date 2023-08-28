@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { TreeItem, TreeItemProps, TreeView, treeItemClasses } from '@mui/lab';
-import { Box, SvgIconProps, Typography, styled } from '@mui/material';
+import { Box, SvgIconProps, Typography, alpha, styled } from '@mui/material';
 import { AppendedEventWithJsonAsContent as AppendedEvent } from 'API/events/store/sequence/AppendedEventWithJsonAsContent';
 import { EventTypeInformation } from 'API/events/store/types/EventTypeInformation';
 import * as icons from '@mui/icons-material';
-import { PropertyType, Schema } from './Schema';
+import { EnumValueAndName, PropertyType, Schema } from './Schema';
+import { Constructor, Fields, Field } from '@aksio/fundamentals';
+import { EventContext } from 'API/events/store/sequence/EventContext';
+import { Causation } from '../API/events/store/sequence/Causation';
 
 type StyledTreeItemProps = TreeItemProps & {
     labelIcon: React.ElementType<SvgIconProps>;
@@ -77,8 +80,7 @@ export interface EventDetailsProps {
     schema: any;
 }
 
-function getIconFor(propertyPath: string, schema: Schema) {
-    const propertyType = schema.getPropertyType(propertyPath);
+function getIconFor(propertyType: PropertyType) {
     switch (propertyType) {
         case PropertyType.String:
             return icons.TextFormat;
@@ -94,6 +96,8 @@ function getIconFor(propertyPath: string, schema: Schema) {
             return icons.Info;
         case PropertyType.Object:
             return icons.DataObject;
+        case PropertyType.Array:
+            return icons.List;
         case PropertyType.Enum:
             return icons.ListAlt;
         case PropertyType.Unknown:
@@ -103,47 +107,158 @@ function getIconFor(propertyPath: string, schema: Schema) {
     return icons.QuestionMark;
 }
 
+type SchemaOrType = Schema | Constructor;
 
-const PropertiesFor = (props: { propertyPath: string, level: number, value: any, schema: Schema }) => {
+const PropertiesFor = (props: { propertyPath: string, value: any, schemaOrType: SchemaOrType }) => {
+    const fields: Field[] = [];
+    if (!(props.schemaOrType instanceof Schema)) {
+        fields.push(...Fields.getFieldsForType(props.schemaOrType));
+    }
+
+    const getPropertyType = (fullPropertyPath: string, item: any) => {
+        if (props.schemaOrType instanceof Schema) {
+            return props.schemaOrType.getPropertyType(fullPropertyPath);
+        }
+
+        const segments = fullPropertyPath.split('.');
+        let field: Field | undefined = undefined;
+        let currentFields = fields;
+        for (const segment of segments) {
+            field = currentFields.find(_ => _.name == segment);
+            if (field) {
+                currentFields = Fields.getFieldsForType(field.type);
+            }
+        }
+
+        if (field?.enumerable) return PropertyType.Array;
+
+        let constructor = field?.type;
+        if (!constructor) {
+            constructor = item[fullPropertyPath]?.constructor;
+        }
+        if (constructor) {
+            switch (constructor) {
+                case String:
+                    return PropertyType.String;
+
+                case Number:
+                    return PropertyType.Number;
+
+                case Boolean:
+                    return PropertyType.Boolean;
+
+                case Date:
+                    return PropertyType.Date;
+
+                case Object:
+                    return PropertyType.Object;
+            }
+
+            return PropertyType.Object;
+        }
+
+        return PropertyType.Unknown;
+    }
+
+    const getEnumValuesAndNames = (fullPropertyPath: string): EnumValueAndName[] => {
+        if (props.schemaOrType instanceof Schema) {
+            props.schemaOrType.getEnumValuesAndNames(fullPropertyPath)
+        }
+
+        return []
+    }
+
+    const getTextForArrayItem = (item: any, index: number) => {
+        if (item instanceof Causation) {
+            return item.type;
+        }
+
+        return index.toString();
+    }
+
+    const getLabelForArrayItem = (item: any, index: number) => {
+        if (item instanceof Causation) {
+            return item.occurred.toLocaleString();
+        }
+
+        return '';
+    }
+
+    const getPropertiesForArrayItem = (item: any, index: number) => {
+        if (item instanceof Causation) {
+            return item.properties;
+        }
+
+        return Object.keys(item).sort();
+    }
+
     return (
         <>
             {
-                Object.keys(props.value).map((item, index) => {
+                Object.keys(props.value).sort().map((item, index) => {
+                    let value = props.value[item];
+                    if (value === null || value === undefined) return (<></>);
+
                     const fullPropertyPath = props.propertyPath === '' ? item : `${props.propertyPath}.${item}`;
-                    const propertyType = props.schema.getPropertyType(fullPropertyPath);
+                    const key = `${fullPropertyPath}`;
+                    const propertyType = getPropertyType(fullPropertyPath, props.value);
+                    console.log(key);
+
                     if (propertyType === PropertyType.Object) {
-                        return (
-                            <StyledTreeItem
-                                key={index}
-                                nodeId={index.toString()}
-                                labelText={item}
-                                labelIcon={icons.DataObject}>
-                                <PropertiesFor
-                                    propertyPath={fullPropertyPath}
-                                    level={props.level + 1}
-                                    value={props.value[item]}
-                                    schema={props.schema} />
-                            </StyledTreeItem>
-                        );
-                    } else {
-                        let value = props.value[item];
-
-                        if (propertyType == PropertyType.Enum) {
-                            value = props.schema.getEnumValuesAndNames(fullPropertyPath).find(_ => _.value == value)?.name || value;
-                        } else if (propertyType == PropertyType.Date) {
-                            value = new Date(value.toString()).toLocaleString();
-                        } else {
-                            value = value.toString();
-
-                        }
-
-                        const key = `${props.level}-${index}`;
                         return (
                             <StyledTreeItem
                                 key={key}
                                 nodeId={key}
                                 labelText={item}
-                                labelIcon={getIconFor(fullPropertyPath, props.schema)}
+                                labelIcon={icons.DataObject}>
+                                <PropertiesFor
+                                    propertyPath={fullPropertyPath}
+                                    value={value}
+                                    schemaOrType={props.schemaOrType} />
+                            </StyledTreeItem>
+                        );
+                    } if (propertyType === PropertyType.Array) {
+                        return (
+                            <StyledTreeItem
+                                key={key}
+                                nodeId={key}
+                                labelText={item}
+                                labelIcon={icons.DataArray}>
+
+                                {props.value[item].map((arrayItem: any, arrayIndex) => {
+                                    return (
+                                        <StyledTreeItem
+                                            key={`${key}-${arrayIndex}`}
+                                            nodeId={`${key}-${arrayIndex}`}
+                                            labelText={getTextForArrayItem(arrayItem, arrayIndex)}
+                                            labelInfo={getLabelForArrayItem(arrayItem, arrayIndex)}
+                                            labelIcon={icons.DataObject}>
+
+                                            <PropertiesFor
+                                                propertyPath=""
+                                                value={getPropertiesForArrayItem(arrayItem, arrayIndex)}
+                                                schemaOrType={Causation} />
+
+                                        </StyledTreeItem>
+                                    )
+                                })}
+                            </StyledTreeItem>
+                        );
+                    } else {
+                        if (propertyType == PropertyType.Enum) {
+                            value = getEnumValuesAndNames(fullPropertyPath).find(_ => _.value == value)?.name || value;
+                        } else if (propertyType == PropertyType.Date) {
+                            value = new Date(value.toString()).toLocaleString();
+                        } else {
+                            value = value.toString();
+                        }
+
+                        return (
+                            <StyledTreeItem
+                                key={key}
+                                nodeId={key}
+                                labelText={item}
+                                labelIcon={getIconFor(propertyType)}
                                 labelInfo={value} />
                         );
                     }
@@ -158,13 +273,18 @@ export const EventDetails = (props: EventDetailsProps) => {
 
     const schema = new Schema(props.schema);
 
+    const fields = Fields.getFieldsForType(EventContext);
+
     return (
         <TreeView
             defaultCollapseIcon={<icons.ArrowDropDown />}
             defaultExpandIcon={<icons.ArrowRight />}
             defaultEndIcon={<div style={{ width: 24 }} />}
             sx={{ height: '100%', flexGrow: 1, maxWidth: 700, overflowY: 'auto' }}>
-            <PropertiesFor propertyPath="" level={0} value={props.event.content} schema={schema} />
+            <StyledTreeItem nodeId="EventContext" labelText="Context" labelIcon={icons.BorderAllOutlined}>
+                <PropertiesFor propertyPath="" value={props.event.context} schemaOrType={EventContext} />
+            </StyledTreeItem>
+            <PropertiesFor propertyPath="" value={props.event.content} schemaOrType={schema} />
         </TreeView>
     );
 };

@@ -1,9 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.DependencyInversion;
 using Orleans.Runtime;
@@ -16,10 +16,11 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </summary>
 public class EventSequenceQueueAdapter : IQueueAdapter
 {
-    readonly ConcurrentDictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
+    readonly Dictionary<QueueId, EventSequenceQueueAdapterReceiver> _receivers = new();
 
     readonly IStreamQueueMapper _mapper;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
+    readonly ProviderFor<IIdentityStore> _identityStoreProvider;
 
     /// <inheritdoc/>
     public string Name { get; }
@@ -36,14 +37,17 @@ public class EventSequenceQueueAdapter : IQueueAdapter
     /// <param name="name">Name of stream.</param>
     /// <param name="mapper"><see cref="IStreamQueueMapper"/> for getting queue identifiers.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
+    /// <param name="identityStoreProvider">Provider for <see cref="IIdentityStore"/>.</param>
     public EventSequenceQueueAdapter(
         string name,
         IStreamQueueMapper mapper,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider)
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
+        ProviderFor<IIdentityStore> identityStoreProvider)
     {
         Name = name;
         _mapper = mapper;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _identityStoreProvider = identityStoreProvider;
     }
 
     /// <inheritdoc/>
@@ -68,6 +72,9 @@ public class EventSequenceQueueAdapter : IQueueAdapter
                         appendedEvent.Metadata.SequenceNumber,
                         appendedEvent.Context.EventSourceId,
                         appendedEvent.Metadata.Type,
+                        appendedEvent.Context.Causation,
+                        await _identityStoreProvider().GetFor(appendedEvent.Context.CausedBy),
+                        DateTimeOffset.UtcNow,
                         appendedEvent.Context.ValidFrom,
                         appendedEvent.Content);
 

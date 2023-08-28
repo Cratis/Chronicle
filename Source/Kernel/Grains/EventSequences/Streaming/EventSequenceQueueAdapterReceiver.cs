@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Aksio.Cratis.Events;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -13,13 +12,13 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 /// </summary>
 public class EventSequenceQueueAdapterReceiver : IQueueAdapterReceiver
 {
-    readonly ConcurrentBag<IBatchContainer> _eventBatches = new();
+    readonly List<IBatchContainer> _eventBatches = new();
     readonly List<IBatchContainer> _empty = new();
 
     /// <inheritdoc/>
     public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
     {
-        if (!_eventBatches.IsEmpty)
+        if (_eventBatches.Count != 0)
         {
             var result = _eventBatches.OrderBy(_ => _.SequenceToken).ToArray().ToList();
             _eventBatches.Clear();

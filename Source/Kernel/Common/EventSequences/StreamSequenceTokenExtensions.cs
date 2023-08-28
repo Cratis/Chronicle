@@ -1,8 +1,11 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Dynamic;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.EventSequences;
@@ -35,8 +38,8 @@ public static class StreamSequenceTokenExtensions
                 DateTimeOffset.UtcNow,
                 TenantId.NotSet,
                 CorrelationId.New(),
-                CausationId.System,
-                CausedBy.System,
+                ImmutableList<Causation>.Empty,
+                Identity.System,
                 EventObservationState.Initial),
             new ExpandoObject());
         await stream!.OnNextAsync(@event, new EventSequenceNumberToken());

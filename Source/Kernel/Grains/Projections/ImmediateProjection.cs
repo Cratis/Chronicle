@@ -12,8 +12,8 @@ using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Kernel.Engines.Projections;
 using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
+using Aksio.DependencyInversion;
 using EngineProjection = Aksio.Cratis.Kernel.Engines.Projections.IProjection;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
@@ -23,30 +23,29 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// </summary>
 public class ImmediateProjection : Grain, IImmediateProjection
 {
-    readonly IProjectionFactory _projectionFactory;
+    readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
     readonly IObjectComparer _objectComparer;
     readonly IEventSequenceStorage _eventProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
-    EngineProjection? _projection;
     ImmediateProjectionKey? _projectionKey;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjection"/> class.
     /// </summary>
-    /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating engine projections.</param>
+    /// <param name="projectionManagerProvider"><see cref="IProjectionManager"/> for working with engine projections.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public ImmediateProjection(
-        IProjectionFactory projectionFactory,
+        ProviderFor<IProjectionManager> projectionManagerProvider,
         IObjectComparer objectComparer,
         IEventSequenceStorage eventProvider,
         IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager)
     {
-        _projectionFactory = projectionFactory;
+        _projectionManagerProvider = projectionManagerProvider;
         _objectComparer = objectComparer;
         _eventProvider = eventProvider;
         _expandoObjectConverter = expandoObjectConverter;
@@ -63,23 +62,23 @@ public class ImmediateProjection : Grain, IImmediateProjection
     }
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResult> GetModelInstance(ProjectionDefinition projectionDefinition)
+    public async Task<ImmediateProjectionResult> GetModelInstance(ProjectionId projectionId)
     {
         if (_projectionKey is null)
         {
             return new ImmediateProjectionResult(new JsonObject(), Array.Empty<PropertyPath>(), 0);
         }
 
-        _projection ??= await _projectionFactory.CreateFrom(projectionDefinition);
-
         // TODO: This is a temporary work-around till we fix #264 & #265
         _executionContextManager.Establish(_projectionKey.TenantId, CorrelationId.New(), _projectionKey.MicroserviceId);
+
+        var projection = _projectionManagerProvider().Get(projectionId);
 
         var affectedProperties = new HashSet<PropertyPath>();
 
         var modelKey = _projectionKey.ModelKey.IsSpecified ? (EventSourceId)_projectionKey.ModelKey.Value : null!;
 
-        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, modelKey, _projection.EventTypes);
+        var cursor = await _eventProvider.GetFromSequenceNumber(EventSequenceId.Log, EventSequenceNumber.First, modelKey, projection.EventTypes);
         var projectedEventsCount = 0;
         var state = new ExpandoObject();
         while (await cursor.MoveNext())
@@ -92,11 +91,11 @@ public class ImmediateProjection : Grain, IImmediateProjection
             foreach (var @event in cursor.Current)
             {
                 var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, state);
-                var keyResolver = _projection.GetKeyResolverFor(@event.Metadata.Type);
+                var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
                 var key = await keyResolver(_eventProvider!, @event);
                 var context = new ProjectionEventContext(key, @event, changeset);
 
-                await HandleEventFor(_projection!, context);
+                await HandleEventFor(projection!, context);
 
                 projectedEventsCount++;
 
@@ -104,7 +103,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
             }
         }
 
-        var jsonObject = _expandoObjectConverter.ToJsonObject(state, _projection.Model.Schema);
+        var jsonObject = _expandoObjectConverter.ToJsonObject(state, projection.Model.Schema);
         return new(jsonObject, affectedProperties, projectedEventsCount);
     }
 

@@ -1,3 +1,89 @@
+# [v9.3.0] - 2023-8-27 [PR: #937](https://github.com/aksio-insurtech/Cratis/pull/937)
+
+### Changed
+
+- Internal change: Moving redactions from happening on the command handler to be a reaction to events.
+
+### Added
+
+- Introducing a system event sequence.
+- Added a way to see system events in the workbench.
+- Adding a way to get a specific event sequence in the client.
+- Adding a boolean to tell if the client is multi-tenanted or not.
+- Adding the ability to specify specific event sequence to observe.
+
+### Fixed
+
+- Fixing identity store to store in the correct database; the cluster database.
+- Consistency of Kernel as its own Microservice. It was accidently using different identifiers, which caused confusion in the code.
+- FIxing order of initialization on the Kernel, letting the HTTP server be ready before initiating boot procedures for Kernel
+
+
+# [v9.2.1] - 2023-8-25 [PR: #936](https://github.com/aksio-insurtech/Cratis/pull/936)
+
+### Fixed
+
+- Dead lock situation when starting kernel with observers needing to replay. Solved this by explicitly priming the event sequence caches at startup, rather than lazily through the streaming infrastructure.
+- Moving the decision of what time an event operation occurred to the owning systems (e.g. EventSequence grain), rather than letting the persistence layer do this.
+- Fixing underlying problem with observer state with regards to current subscriptions, causing replays to only work once and sometimes never. 
+- Making redaction work in the workbench again by making causation and caused optional and setting these on server side if not set. The endpoints got a 409 with validation error messages before this change.
+
+# [v9.2.1] - 2023-8-25 [PR: #935](https://github.com/aksio-insurtech/Cratis/pull/935)
+
+### Fixed
+
+- Dead lock situation when starting kernel with observers needing to replay. Solved this by explicitly priming the event sequence caches at startup, rather than lazily through the streaming infrastructure.
+- Moving the decision of what time an event operation occurred to the owning systems (e.g. EventSequence grain), rather than letting the persistence layer do this.
+- Fixing underlying problem with observer state with regards to current subscriptions, causing replays to only work once and sometimes never. 
+- Making redaction work in the workbench again by making causation and caused optional and setting these on server side if not set. The endpoints got a 409 with validation error messages before this change.
+
+# [v9.2.0] - 2023-8-23 [PR: #933](https://github.com/aksio-insurtech/Cratis/pull/933)
+
+### Added
+
+- Adding capturing of what causes an event. (#277)
+- Adding cause type for ASP.NET requests and automatically capturing information around this.
+- Adding cause type for observers.
+- Adding cause type for integration adapters (Import Operation).
+- Adding a specific root cause type that captures software version, process, commit and details. (#858)
+- Introducing a client API for configuring software version with commit details. (#858)
+- Adding capturing of caused by with the introduction of an identity store (#278).
+- Adding ASP.NET identity provider for capturing caused by, leveraging the HttpContext and the current user.
+
+
+# [v9.1.0] - 2023-8-16 [PR: #912](https://github.com/aksio-insurtech/Cratis/pull/912)
+
+### Added
+
+- Adding support for appending many events at a time.
+- Centralized all projections and registering all; integration adapters, immediate projections and rule based.
+- Added persistence for all types of projections.
+- Introducing the concept of active vs non active projections. Active projections will automatically observe an event sequence, while an inactive (passive) will not. Immediate projections, rules or adapters fall into the category of passive projections.
+- Making it possible to use any projections for immediate projection by specifying the projection identifier you want to use.
+
+### Fixed
+
+- Added missing logging for when an observer invocation fails on the client.
+- Adding service registration for `ITenantConfiguration` to the client builder.
+- Fixing so that `ValidFrom` information is included on the Kernel receiver side when appending.
+- Optimizing performance for `Importer` by using the new `AppendMany` API.
+- A bug in the Kernel causing failed partition information not to be written to the event store immediately.
+- Projection sinks are now only created once per projection and sink type.
+- The engine representation of a Projection and its Pipeline is now managed by a manager and created only once per node.
+- Changed internal implementation of how we keep projections and pipeline definitions in sync across multiple silos when changed. Leveraging Broadcast channels.
+
+
+
+# [v9.0.2] - 2023-7-25 [PR: #908](https://github.com/aksio-insurtech/Cratis/pull/908)
+
+### Fixed
+
+- The `ClientOptions` type was in the wrong namespace, fixed to be in `Aksio.Cratis.Configuration` as expected.
+
+# [v9.0.1] - 2023-7-25 [PR: #0]()
+
+- Fixing `ClientBuilder` to use the `SingleKernelOptions` as a fallback only if none of the other options are set.
+- Removing current subscription information from the Observer state being stored, as this has only an in-memory value.
 
 # [v9.0.0] - 2023-7-19
 

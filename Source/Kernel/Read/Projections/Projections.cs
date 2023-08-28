@@ -44,6 +44,7 @@ public class Projections : Controller
         return projections.Select(_ => new Projection(
             _.Identifier,
             _.Name,
+            _.IsActive,
             _.Model.Name)).ToArray();
     }
 

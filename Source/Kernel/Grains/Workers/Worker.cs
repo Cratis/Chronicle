@@ -50,7 +50,7 @@ public abstract class Worker<TRequest, TResult> : Grain, IWorker<TRequest, TResu
 
         _logger.WorkerStarted(_name);
         _executionContext = _executionContextManager.Current;
-        _startTimer = RegisterTimer(HandlePerformWork, request, TimeSpan.Zero, TimeSpan.MaxValue);
+        _startTimer = RegisterTimer(HandlePerformWork, request, TimeSpan.Zero, new TimeSpan(-1));
 
         return Task.CompletedTask;
     }

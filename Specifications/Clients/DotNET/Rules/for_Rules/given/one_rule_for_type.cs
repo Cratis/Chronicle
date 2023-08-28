@@ -14,11 +14,8 @@ public class one_rule_for_type : all_dependencies
         client_artifacts.SetupGet(_ => _.Rules).Returns(new[] { typeof(RulesForTypeForRules) });
 
         rules = new(
-            execution_context,
-            model_name_resolver.Object,
-            event_types.Object,
-            json_schema_generator.Object,
             json_serializer_options,
+            rules_projections.Object,
             immediate_projections.Object,
             client_artifacts.Object);
     }

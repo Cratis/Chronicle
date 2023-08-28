@@ -71,10 +71,9 @@ public class Replay : ObserverWorker, IReplay
             return;
         }
 
-        await ReadStateAsync();
-
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         CurrentSubscription = subscription;
+        await ReadStateAsync();
         _isRunning = true;
         _timer = RegisterTimer(PerformReplay, null, TimeSpan.Zero, TimeSpan.FromHours(1));
     }

@@ -42,6 +42,22 @@ public interface IEventSequence
     Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = default);
 
     /// <summary>
+    /// Append a collection of events to the event store.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
+    /// <param name="events">Collection of events to append.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events);
+
+    /// <summary>
+    /// Append a collection of events to the event store with valid from per event.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to append for.</param>
+    /// <param name="events">Collection of events with valid from to append.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events);
+
+    /// <summary>
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>

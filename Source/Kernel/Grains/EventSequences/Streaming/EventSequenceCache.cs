@@ -81,8 +81,6 @@ public class EventSequenceCache : IEventSequenceCache
         _executionContextManager = executionContextManager;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;
-
-        PreFillWithTailWindow();
     }
 
     /// <inheritdoc/>
@@ -156,6 +154,16 @@ public class EventSequenceCache : IEventSequenceCache
         }
     }
 
+    /// <inheritdoc/>
+    public async Task PrimeWithTailWindow()
+    {
+        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
+        var tail = await _eventSequenceStorageProvider().GetTailSequenceNumber(_eventSequenceId);
+        tail -= NumberOfEventsToFetch;
+        if ((long)tail.Value < 0) tail = 0;
+        Prime(tail);
+    }
+
     void AddImplementation(AppendedEvent @event)
     {
         if (_eventsBySequenceNumber.ContainsKey(@event.Metadata.SequenceNumber))
@@ -192,14 +200,5 @@ public class EventSequenceCache : IEventSequenceCache
                 _head = _head.Next;
             }
         }
-    }
-
-    void PreFillWithTailWindow()
-    {
-        _executionContextManager.Establish(_tenantId, CorrelationId.New(), _microserviceId);
-        var tail = _eventSequenceStorageProvider().GetTailSequenceNumber(_eventSequenceId).GetAwaiter().GetResult();
-        tail -= NumberOfEventsToFetch;
-        if ((long)tail.Value < 0) tail = 0;
-        Prime(tail);
     }
 }

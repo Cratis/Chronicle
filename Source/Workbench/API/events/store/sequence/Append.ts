@@ -4,7 +4,9 @@
 
 import { Command, CommandValidator, CommandPropertyValidators, useCommand, SetCommandValues, ClearCommandValues } from '@aksio/applications/commands';
 import { Validator } from '@aksio/applications/validation';
-import { EventType } from '../sequence/EventType';
+import { EventType } from './EventType';
+import { Causation } from './Causation';
+import { Identity } from './Identity';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}');
@@ -16,6 +18,9 @@ export interface IAppend {
     eventSourceId?: string;
     eventType?: EventType;
     content?: any;
+    causation?: Causation[];
+    causedBy?: Identity;
+    validFrom?: Date;
 }
 
 export class AppendValidator extends CommandValidator {
@@ -26,6 +31,9 @@ export class AppendValidator extends CommandValidator {
         eventSourceId: new Validator(),
         eventType: new Validator(),
         content: new Validator(),
+        causation: new Validator(),
+        causedBy: new Validator(),
+        validFrom: new Validator(),
     };
 }
 
@@ -40,6 +48,9 @@ export class Append extends Command<IAppend> implements IAppend {
     private _eventSourceId!: string;
     private _eventType!: EventType;
     private _content!: any;
+    private _causation!: Causation[];
+    private _causedBy!: Identity;
+    private _validFrom!: Date;
 
     constructor() {
         super(Object, false);
@@ -61,6 +72,9 @@ export class Append extends Command<IAppend> implements IAppend {
             'eventSourceId',
             'eventType',
             'content',
+            'causation',
+            'causedBy',
+            'validFrom',
         ];
     }
 
@@ -111,6 +125,30 @@ export class Append extends Command<IAppend> implements IAppend {
     set content(value: any) {
         this._content = value;
         this.propertyChanged('content');
+    }
+    get causation(): Causation[] {
+        return this._causation;
+    }
+
+    set causation(value: Causation[]) {
+        this._causation = value;
+        this.propertyChanged('causation');
+    }
+    get causedBy(): Identity {
+        return this._causedBy;
+    }
+
+    set causedBy(value: Identity) {
+        this._causedBy = value;
+        this.propertyChanged('causedBy');
+    }
+    get validFrom(): Date {
+        return this._validFrom;
+    }
+
+    set validFrom(value: Date) {
+        this._validFrom = value;
+        this.propertyChanged('validFrom');
     }
 
     static use(initialValues?: IAppend): [Append, SetCommandValues<IAppend>, ClearCommandValues] {

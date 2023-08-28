@@ -72,9 +72,7 @@ public class EventSequenceQueueCacheCursor : IQueueCacheCursor
                 {
                     { RequestContextKeys.MicroserviceId, _microserviceId },
                     { RequestContextKeys.TenantId, _tenantId },
-                    { RequestContextKeys.CorrelationId, @event.Context.CorrelationId },
-                    { RequestContextKeys.CausationId, @event.Context.CausationId },
-                    { RequestContextKeys.CausedBy, @event.Context.CausedBy }
+                    { RequestContextKeys.CorrelationId, @event.Context.CorrelationId }
                 });
         }
         catch (Exception ex)

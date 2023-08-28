@@ -18,8 +18,9 @@ public class MultiTenantClient : Client, IMultiTenantClient
     /// </summary>
     /// <param name="eventStore">The <see cref="IMultiTenantEventStore"/>.</param>
     /// <param name="connection">The <see cref="IConnection"/> to connect to Cratis.</param>
-    public MultiTenantClient(IMultiTenantEventStore eventStore, IConnection connection)
-        : base(connection)
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    public MultiTenantClient(IMultiTenantEventStore eventStore, IConnection connection, IServiceProvider serviceProvider)
+        : base(connection, serviceProvider, true)
     {
         EventStore = eventStore;
     }

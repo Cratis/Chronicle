@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Configuration;
 using Aksio.Cratis.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,7 +21,7 @@ public static class KernelConnectivityClientBuilderExtensions
     {
         builder.Services.Configure<ClientOptions>(_ =>
         {
-            var options = _.Kernel.SingleKernelOptions ?? new SingleKernelOptions();
+            var options = _.Kernel.SingleKernel ?? new SingleKernelOptions();
             configure?.Invoke(options);
         });
 
@@ -39,7 +38,7 @@ public static class KernelConnectivityClientBuilderExtensions
     {
         builder.Services.Configure<ClientOptions>(_ =>
         {
-            var options = _.Kernel.StaticClusterOptions ?? new StaticClusterOptions
+            var options = _.Kernel.StaticCluster ?? new StaticClusterOptions
             {
                 Endpoints = Enumerable.Empty<Uri>()
             };
@@ -59,7 +58,7 @@ public static class KernelConnectivityClientBuilderExtensions
     {
         builder.Services.Configure<ClientOptions>(_ =>
         {
-            var options = _.Kernel.AzureStorageClusterOptions ?? new AzureStorageClusterOptions
+            var options = _.Kernel.AzureStorageCluster ?? new AzureStorageClusterOptions
             {
                 TableName = AzureStorageClusterOptions.DEFAULT_TABLE_NAME,
                 ConnectionString = string.Empty,

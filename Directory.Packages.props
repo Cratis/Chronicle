@@ -1,7 +1,7 @@
 <Project>
-    <PropertyGroup>
-        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <ApplicationModel>1.1.12</ApplicationModel>
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+        <ApplicationModel>1.1.17</ApplicationModel>
         <Orleans>7.1.2</Orleans>
     </PropertyGroup>
     <ItemGroup>
@@ -41,6 +41,7 @@
         <PackageVersion Include="Microsoft.Orleans.Reminders" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Sdk" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.Streaming" Version="$(Orleans)" />
+        <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="$(Orleans)" />
         <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="$(Orleans)" />
 
         <PackageVersion Include="OrleansDashboard" Version="7.2.1" />

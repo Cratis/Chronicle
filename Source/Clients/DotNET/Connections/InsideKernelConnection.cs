@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Aksio.Commands;
-using Aksio.Configuration;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Net;
 using Aksio.Tasks;
@@ -33,6 +32,7 @@ public class InsideKernelConnection : IConnection, IDisposable
     /// </summary>
     /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core <see cref="IServer"/>.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
     /// <param name="httpClientFactory"><see cref="IHttpClientFactory"/> to use.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
@@ -44,6 +44,7 @@ public class InsideKernelConnection : IConnection, IDisposable
     public InsideKernelConnection(
         IOptions<ClientOptions> options,
         IServer server,
+        IServiceProvider serviceProvider,
         IHttpClientFactory httpClientFactory,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
@@ -58,7 +59,7 @@ public class InsideKernelConnection : IConnection, IDisposable
         endpoint = new Uri($"http://127.0.0.1:{endpoint.Port}");
         logger.InsideKernelConfigured(endpoint);
 
-        options.Value.Kernel.SingleKernelOptions = new SingleKernelOptions
+        options.Value.Kernel.SingleKernel = new SingleKernelOptions
         {
             Endpoint = endpoint
         };
@@ -66,6 +67,7 @@ public class InsideKernelConnection : IConnection, IDisposable
         _innerClient = new(
             options,
             server,
+            serviceProvider,
             httpClientFactory,
             taskFactory,
             timerFactory,

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis;
+using Aksio.Cratis.AspNetCore;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Reducers;
@@ -26,6 +27,7 @@ public static class WebApplicationBuilderExtensions
         Action<IClientBuilder>? configureDelegate = default)
     {
         webApplicationBuilder.Services.AddRules();
+        webApplicationBuilder.Services.AddHttpContextAccessor();
         webApplicationBuilder.Host.UseCratis(configureDelegate);
         return webApplicationBuilder;
     }
@@ -37,6 +39,7 @@ public static class WebApplicationBuilderExtensions
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder UseCratis(this IApplicationBuilder app)
     {
+        app.UseCausation();
         app.UseExecutionContext();
 
         app.UseRouting();
@@ -45,7 +48,11 @@ public static class WebApplicationBuilderExtensions
             .MapClientReducers());
 
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStarted.Register(() => app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait());
+        appLifetime.ApplicationStarted.Register(() =>
+        {
+            GlobalInstances.ServiceProvider = app.ApplicationServices;
+            app.ApplicationServices.GetRequiredService<IClient>().Connect().Wait();
+        });
 
         return app;
     }

@@ -34,6 +34,7 @@ public static class Program
             .UseOrleans(_ => _
                 .UseCluster()
                 .UseStreamCaching()
+                .AddBroadcastChannel(WellKnownBroadcastChannelNames.ProjectionChanged, _ => _.FireAndForgetDelivery = true)
                 .ConfigureSerialization()
                 .UseTelemetry()
                 .UseDashboard(options =>

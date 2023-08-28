@@ -8,7 +8,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.
 /// </summary>
-public interface IProjections : IGrainWithGuidKey
+public interface IProjections : IGrainWithIntegerKey
 {
     /// <summary>
     /// Rehydrate all projections for all microservices and tenants.
@@ -19,11 +19,12 @@ public interface IProjections : IGrainWithGuidKey
     /// <summary>
     /// Register a <see cref="ProjectionDefinition"/> with a <see cref="ProjectionPipelineDefinition"/>.
     /// </summary>
+    /// <param name="microserviceId"><see cref="MicroserviceId"/> to register for.</param>
     /// <param name="registrations">A collection of <see cref="ProjectionAndPipeline"/>.</param>
     /// <returns>Async task.</returns>
     /// <remarks>
     /// If any of the projections are already in the system, it will look for changes in the definition
     /// and possibly rewind the projection.
     /// </remarks>
-    Task Register(IEnumerable<ProjectionAndPipeline> registrations);
+    Task Register(MicroserviceId microserviceId, IEnumerable<ProjectionAndPipeline> registrations);
 }

@@ -1,8 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+using Aksio.Collections;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -23,7 +25,6 @@ public class ImmediateProjections : IImmediateProjections
     {
         public static TProjection? Instance;
         public static ProjectionDefinition? Definition;
-        public static JsonNode? DefinitionAsJson;
     }
 
     readonly IModelNameResolver _modelNameResolver;
@@ -35,6 +36,10 @@ public class ImmediateProjections : IImmediateProjections
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly IConnection _connection;
+    readonly List<ProjectionDefinition> _definitions = new();
+
+    /// <inheritdoc/>
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
@@ -68,45 +73,45 @@ public class ImmediateProjections : IImmediateProjections
         _projectionSerializer = projectionSerializer;
         _connection = connection;
         _executionContextManager = executionContextManager;
+
+        _clientArtifacts.ImmediateProjections.ForEach(_ =>
+        {
+            var immediateProjectionType = _.GetInterfaces().Single(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IImmediateProjectionFor<>));
+            GetType()
+                .GetMethod(nameof(HandleProjectionTypeCache), BindingFlags.NonPublic | BindingFlags.Instance)!
+                .MakeGenericMethod(immediateProjectionType.GetGenericArguments()[0])!
+                .Invoke(this, null);
+        });
+        Definitions = _definitions.ToImmutableList();
     }
 
     /// <inheritdoc/>
-    public Task<ImmediateProjectionResult> GetInstanceById(ModelKey modelKey, ProjectionDefinition projectionDefinition)
+    public Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
     {
-        var projectionDefinitionAsJson = _projectionSerializer.Serialize(projectionDefinition);
-        return GetInstanceById(projectionDefinition.Identifier, modelKey, projectionDefinitionAsJson);
+        var projectionDefinition = (typeof(ImmediateProjectionsCache<>).MakeGenericType(modelType)
+            .GetField(nameof(ImmediateProjectionsCache<object>.Definition))!
+            .GetValue(null) as ProjectionDefinition)!;
+        return GetInstanceById(projectionDefinition.Identifier, modelKey);
     }
 
     /// <inheritdoc/>
-    public async Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey, ProjectionDefinition? projectionDefinition = null)
+    public async Task<ImmediateProjectionResult<TModel>> GetInstanceById<TModel>(ModelKey modelKey)
     {
-        ImmediateProjectionResult result;
-        if (projectionDefinition is null)
-        {
-            HandleProjectionTypeCache<TModel>();
-
-            result = await GetInstanceById(
-                ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier,
-                modelKey,
-                ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.DefinitionAsJson!);
-        }
-        else
-        {
-            var projectionDefinitionAsJson = _projectionSerializer.Serialize(projectionDefinition);
-            result = await GetInstanceById(projectionDefinition.Identifier, modelKey, projectionDefinitionAsJson);
-        }
+        var result = await GetInstanceById(
+            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance!.Identifier,
+            modelKey);
 
         var model = result.Model.Deserialize<TModel>(_jsonSerializerOptions)!;
         return new(model, result.AffectedProperties, result.ProjectedEventsCount);
     }
 
-    async Task<ImmediateProjectionResult> GetInstanceById(ProjectionId identifier, ModelKey modelKey, JsonNode projectionDefinition)
+    /// <inheritdoc/>
+    public async Task<ImmediateProjectionResult> GetInstanceById(ProjectionId identifier, ModelKey modelKey)
     {
         var immediateProjection = new ImmediateProjection(
             identifier,
             EventSequenceId.Log,
-            modelKey,
-            projectionDefinition);
+            modelKey);
 
         var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
 
@@ -131,8 +136,10 @@ public class ImmediateProjections : IImmediateProjections
                 _jsonSerializerOptions);
 
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Define(builder);
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition = builder.Build();
-            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.DefinitionAsJson = _projectionSerializer.Serialize(ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition);
+
+            var projectionDefinition = builder.Build() with { IsActive = false };
+            _definitions.Add(projectionDefinition);
+            ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition = projectionDefinition;
         }
     }
 }

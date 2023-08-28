@@ -1,10 +1,13 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Schemas;
 using Aksio.Execution;
@@ -62,8 +65,8 @@ public class EventSequenceForSpecifications
                 validFrom ?? DateTimeOffset.MinValue,
                 TenantId.Development,
                 CorrelationId.New(),
-                CausationId.System,
-                CausedBy.System),
+                ImmutableList<Causation>.Empty,
+                Identity.System),
             eventAsExpando,
             @event));
         _sequenceNumber++;

@@ -55,7 +55,7 @@ public class ProjectionPipelineFactory : IProjectionPipelineFactory
         if (definition.Sinks.Any())
         {
             var sinkDefinition = definition.Sinks.First();
-            sink = _projectionSinks.GetForTypeAndModel(sinkDefinition.TypeId, projection.Model);
+            sink = _projectionSinks.GetForTypeAndModel(projection.Identifier, sinkDefinition.TypeId, projection.Model);
         }
 
         return new ProjectionPipeline(

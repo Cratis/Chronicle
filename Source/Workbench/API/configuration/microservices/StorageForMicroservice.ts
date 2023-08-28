@@ -4,14 +4,14 @@
 
 import { field } from '@aksio/fundamentals';
 
+import { StorageType } from './StorageType';
 import { StorageTypes } from './StorageTypes';
-import { StorageForTenants } from './StorageForTenants';
 
 export class StorageForMicroservice {
 
-    @field(StorageTypes, true)
-    shared!: StorageTypes[];
+    @field(Object)
+    shared!: [key: string, value: StorageType];
 
-    @field(StorageForTenants, true)
-    tenants!: StorageForTenants[];
+    @field(Object)
+    tenants!: [key: string, value: StorageTypes];
 }

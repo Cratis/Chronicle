@@ -20,6 +20,11 @@ const columns: GridColDef[] = [
         width: 700
     },
     {
+        headerName: 'Active',
+        field: 'isActive',
+        width: 400
+    },
+    {
         headerName: 'Model Name',
         field: 'modelName',
         width: 400

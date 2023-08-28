@@ -71,10 +71,9 @@ public class CatchUp : ObserverWorker, ICatchUp
             return;
         }
 
-        await ReadStateAsync();
-
         _logger.Starting(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
         CurrentSubscription = subscription;
+        await ReadStateAsync();
         _isRunning = true;
         _timer = RegisterTimer(PerformCatchUp, null, TimeSpan.Zero, TimeSpan.FromHours(1));
     }

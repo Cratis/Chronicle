@@ -59,6 +59,7 @@
         "Brotli",
         "Bson",
         "camelcase",
+        "causations",
         "changesets",
         "Cratis",
         "datetime",
@@ -86,6 +87,7 @@
         "propertymapper",
         "Proto",
         "protobuf",
+        "Referer",
         "Remindable",
         "Swashbuckle",
         "tinycolor",
@@ -95,5 +97,6 @@
         "upserted",
         "Upserting",
         "Xunit"
-    ]
+    ],
+    "dotnet.defaultSolution": "cratis.sln"
 }

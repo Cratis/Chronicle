@@ -9,19 +9,19 @@ namespace Aksio.Cratis.Configuration;
 public class KernelConnectivity
 {
     /// <summary>
-    /// Gets or sets the <see cref="SingleKernelOptions"/> to use.
+    /// Gets or sets the <see cref="SingleKernel"/> to use.
     /// </summary>
-    public SingleKernelOptions? SingleKernelOptions { get; set; }
+    public SingleKernelOptions? SingleKernel { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="StaticClusterOptions"/> to use.
+    /// Gets or sets the <see cref="StaticCluster"/> to use.
     /// </summary>
-    public StaticClusterOptions? StaticClusterOptions { get; set; }
+    public StaticClusterOptions? StaticCluster { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="AzureStorageClusterOptions"/> to use.
+    /// Gets or sets the <see cref="AzureStorageCluster"/> to use.
     /// </summary>
-    public AzureStorageClusterOptions? AzureStorageClusterOptions { get; set; }
+    public AzureStorageClusterOptions? AzureStorageCluster { get; set; }
 
     /// <summary>
     /// Gets the advertised client endpoint.

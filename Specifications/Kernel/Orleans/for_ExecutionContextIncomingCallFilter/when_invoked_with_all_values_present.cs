@@ -14,8 +14,6 @@ public class when_invoked_with_all_values_present : Specification
     MicroserviceId microservice_id = Guid.Parse("06a4c7e6-8aa8-44af-ba68-b1b0093590e4");
     TenantId tenant_id = Guid.Parse("32a4fdd3-0a96-4a8e-aa42-95a45ac379b4");
     CorrelationId correlation_id = "21ece3b1-324a-4933-9d22-cd769d041fec";
-    CausationId causation_id = "badc92a8-95d5-4df5-9e3e-9162b103f4c2";
-    CausedBy caused_by = Guid.Parse("5e3bae13-7fd2-42e9-a72f-124588a200a9");
 
     ExecutionContext execution_context;
 
@@ -34,8 +32,6 @@ public class when_invoked_with_all_values_present : Specification
         RequestContext.Set(RequestContextKeys.MicroserviceId, microservice_id);
         RequestContext.Set(RequestContextKeys.TenantId, tenant_id);
         RequestContext.Set(RequestContextKeys.CorrelationId, correlation_id);
-        RequestContext.Set(RequestContextKeys.CausationId, causation_id);
-        RequestContext.Set(RequestContextKeys.CausedBy, caused_by);
 
         return filter.Invoke(call_context.Object);
     }
@@ -43,6 +39,4 @@ public class when_invoked_with_all_values_present : Specification
     [Fact] void should_hold_correct_microservice_id() => execution_context.MicroserviceId.ShouldEqual(microservice_id);
     [Fact] void should_hold_correct_tenant_id() => execution_context.TenantId.ShouldEqual(tenant_id);
     [Fact] void should_hold_correct_correlation_id() => execution_context.CorrelationId.ShouldEqual(correlation_id);
-    [Fact] void should_hold_correct_causation_id() => execution_context.CausationId.ShouldEqual(causation_id);
-    [Fact] void should_hold_correct_caused_by() => execution_context.CausedBy.ShouldEqual(caused_by);
 }

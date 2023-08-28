@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/applications/queries';
-import { PagedQueryResult } from '../sequence/PagedQueryResult';
+import { PagedQueryResult } from './PagedQueryResult';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/sequence/{{eventSequenceId}}?pageSize={{pageSize}}&pageNumber={{pageNumber}}');

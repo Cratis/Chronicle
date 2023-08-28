@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.EventSequences;
 
@@ -15,6 +16,7 @@ public class Importer : IImporter
     readonly IAdapters _adapters;
     readonly IEventLog _eventLog;
     readonly IEventOutbox _eventOutbox;
+    readonly ICausationManager _causationManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Importer"/> class.
@@ -23,16 +25,19 @@ public class Importer : IImporter
     /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventLog"><see cref="IEventSequence"/> for appending events.</param>
     /// <param name="eventOutbox"><see cref="IEventSequence"/> for appending public events.</param>
+    /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     public Importer(
         IAdapters adapters,
         IObjectComparer objectComparer,
         IEventLog eventLog,
-        IEventOutbox eventOutbox)
+        IEventOutbox eventOutbox,
+        ICausationManager causationManager)
     {
         _objectComparer = objectComparer;
         _adapters = adapters;
         _eventLog = eventLog;
         _eventOutbox = eventOutbox;
+        _causationManager = causationManager;
     }
 
     /// <inheritdoc/>
@@ -41,6 +46,6 @@ public class Importer : IImporter
         var adapter = _adapters.GetFor<TModel, TExternalModel>();
         var projection = _adapters.GetProjectionFor<TModel, TExternalModel>();
         var mapper = _adapters.GetMapperFor<TModel, TExternalModel>();
-        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectComparer, _eventLog, _eventOutbox);
+        return new ImportOperations<TModel, TExternalModel>(adapter, projection, mapper, _objectComparer, _eventLog, _eventOutbox, _causationManager);
     }
 }

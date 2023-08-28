@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Specifications;
 
@@ -102,16 +104,16 @@ public class EventSequenceStorageProviderForSpecifications : IEventSequenceStora
     }
 
     /// <inheritdoc/>
-    public Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, DateTimeOffset validFrom, ExpandoObject content) => throw new NotImplementedException();
+    public Task Append(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, DateTimeOffset validFrom, ExpandoObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, DateTimeOffset validFrom, ExpandoObject content) => throw new NotImplementedException();
+    public Task Compensate(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, DateTimeOffset validFrom, ExpandoObject content) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<AppendedEvent> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason) => throw new NotImplementedException();
+    public Task<AppendedEvent> Redact(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, RedactionReason reason, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventType>> Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes) => throw new NotImplementedException();
+    public Task<IEnumerable<EventType>> Redact(EventSequenceId eventSequenceId, EventSourceId eventSourceId, RedactionReason reason, IEnumerable<EventType>? eventTypes, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task<AppendedEvent> GetEventAt(EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();

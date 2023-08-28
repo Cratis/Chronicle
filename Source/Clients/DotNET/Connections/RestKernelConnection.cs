@@ -6,7 +6,8 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Commands;
-using Aksio.Configuration;
+using Aksio.Cratis.Client;
+using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Net;
 using Aksio.Queries;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -27,6 +29,7 @@ namespace Aksio.Cratis.Connections;
 public abstract class RestKernelConnection : IConnection, IDisposable
 {
     readonly IOptions<ClientOptions> _options;
+    readonly IServiceProvider _serviceProvider;
     readonly ITaskFactory _taskFactory;
     readonly ITimerFactory _timerFactory;
     readonly IExecutionContextManager _executionContextManager;
@@ -34,7 +37,6 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IConnectionLifecycle _connectionLifecycle;
     readonly ILogger<RestKernelConnection> _logger;
-    readonly MicroserviceId _microserviceId;
     TaskCompletionSource<bool> _connectCompletion;
     ITimer? _timer;
 
@@ -44,11 +46,14 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     /// <inheritdoc/>
     public ConnectionId ConnectionId => _connectionLifecycle.ConnectionId;
 
+    MicroserviceId MicroserviceId => _executionContextManager.Current.MicroserviceId;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RestKernelConnection"/> class.
     /// </summary>
     /// <param name="options">The <see cref="ClientOptions"/>.</param>
     /// <param name="server">The ASP.NET Core server.</param>
+    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting service instances.</param>
     /// <param name="taskFactory">A <see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="timerFactory">A <see cref="ITimerFactory"/> for creating timers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
@@ -58,6 +63,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     protected RestKernelConnection(
         IOptions<ClientOptions> options,
         IServer server,
+        IServiceProvider serviceProvider,
         ITaskFactory taskFactory,
         ITimerFactory timerFactory,
         IExecutionContextManager executionContextManager,
@@ -66,13 +72,13 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         ILogger<RestKernelConnection> logger)
     {
         _options = options;
+        _serviceProvider = serviceProvider;
         _taskFactory = taskFactory;
         _timerFactory = timerFactory;
         _executionContextManager = executionContextManager;
         _jsonSerializerOptions = jsonSerializerOptions;
         _connectionLifecycle = connectionLifecycle;
         _logger = logger;
-        _microserviceId = ExecutionContextManager.GlobalMicroserviceId;
         _connectCompletion = new TaskCompletionSource<bool>();
 
         var addresses = server.Features.Get<IServerAddressesFeature>();
@@ -105,14 +111,15 @@ public abstract class RestKernelConnection : IConnection, IDisposable
 
                 var attribute = typeof(SingleKernelConnection).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
                 var version = attribute?.InformationalVersion ?? "1.0.0";
-                var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached);
+                var client = _serviceProvider.GetRequiredService<IClient>();
+                var info = new ClientInformation(version, _clientEndpoint.ToString(), Debugger.IsAttached, client.IsMultiTenanted);
 
                 for (; ; )
                 {
                     try
                     {
                         _logger.AttemptingConnect();
-                        var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/connect/{ConnectionId}", info);
+                        var result = await PerformCommandInternal($"/api/clients/{MicroserviceId}/connect/{ConnectionId}", info);
                         if (result.IsSuccess)
                         {
                             break;
@@ -155,7 +162,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         _timer?.Dispose();
         _timer = null;
 
-        await PerformCommandInternal($"/api/clients/{_microserviceId}/disconnect/{ConnectionId}");
+        await PerformCommandInternal($"/api/clients/{MicroserviceId}/disconnect/{ConnectionId}");
     }
 
     /// <inheritdoc/>
@@ -263,7 +270,7 @@ public abstract class RestKernelConnection : IConnection, IDisposable
         bool failed;
         try
         {
-            var result = await PerformCommandInternal($"/api/clients/{_microserviceId}/ping/{ConnectionId}", logResult: false);
+            var result = await PerformCommandInternal($"/api/clients/{MicroserviceId}/ping/{ConnectionId}", logResult: false);
             failed = !result.IsSuccess;
         }
         catch

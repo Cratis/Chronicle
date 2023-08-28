@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Aksio.Cratis.Projections.Definitions;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;
@@ -11,10 +13,9 @@ namespace Aksio.Cratis.Integration;
 public interface IAdapters
 {
     /// <summary>
-    /// Initialize all adapters.
+    /// Gets all the <see cref="ProjectionDefinition">projection definitions</see> for all adapters.
     /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task Initialize();
+    IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Gets an <see cref="IAdapterFor{TModel, TExternalModel}"/> for the specific model and external model.

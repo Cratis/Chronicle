@@ -2,19 +2,24 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Collections;
-using Aksio.Configuration;
+using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences.Outbox;
+using Aksio.Cratis.Identities;
 using Aksio.Cratis.Integration;
 using Aksio.Cratis.Models;
+using Aksio.Cratis.Net;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Reducers;
+using Aksio.Cratis.Rules;
 using Aksio.Cratis.Schemas;
+using Aksio.Cratis.Tenants;
 using Aksio.Json;
 using Aksio.Tasks;
 using Aksio.Timers;
@@ -35,9 +40,16 @@ public class ClientBuilder : IClientBuilder
     protected readonly ILogger<ClientBuilder> _logger;
     protected IClientArtifactsProvider? _clientArtifactsProvider;
     protected IModelNameConvention? _modelNameConvention;
+
+    const string VersionMetadataKey = "softwareVersion";
+    const string CommitMetadataKey = "softwareCommit";
+    const string ProgramIdentifierMetadataKey = "programIdentifier";
+
     readonly OptionsBuilder<ClientOptions> _optionsBuilder;
+    readonly Dictionary<string, string> _metadata = new();
     bool _inKernel;
     bool _isMultiTenanted;
+    Type _identityProviderType;
 
     /// <inheritdoc/>
     public IServiceCollection Services { get; }
@@ -51,6 +63,14 @@ public class ClientBuilder : IClientBuilder
         IServiceCollection services,
         ILogger<ClientBuilder> logger)
     {
+        _metadata[VersionMetadataKey] = "0.0.0";
+        _metadata[CommitMetadataKey] = "[N/A]";
+        _metadata[ProgramIdentifierMetadataKey] = "[N/A]";
+        _metadata["os"] = Environment.OSVersion.ToString();
+        _metadata["machineName"] = Environment.MachineName;
+        _metadata["process"] = Environment.ProcessPath ?? string.Empty;
+        _identityProviderType = typeof(BaseIdentityProvider);
+
         _optionsBuilder = services.AddOptions<ClientOptions>();
         SetDefaultOptions();
         _optionsBuilder.BindConfiguration("cratis")
@@ -65,12 +85,35 @@ public class ClientBuilder : IClientBuilder
     {
         ExecutionContextManager.SetGlobalMicroserviceId(microserviceId);
         ExecutionContextManager.SetGlobalMicroserviceName(microserviceName);
+        ExecutionContextManager.SetCurrent(new ExecutionContext(microserviceId, TenantId.NotSet, CorrelationId.New(), _inKernel));
 
         _optionsBuilder.Configure(options =>
         {
             options.MicroserviceId = microserviceId;
             options.MicroserviceName = microserviceName;
         });
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder WithSoftwareVersion(string version, string commit)
+    {
+        _metadata[VersionMetadataKey] = version;
+        _metadata[CommitMetadataKey] = commit;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder WithMetadata(string key, string value)
+    {
+        _metadata[key] = value;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder IdentifiedAs(string name)
+    {
+        _metadata[ProgramIdentifierMetadataKey] = name;
         return this;
     }
 
@@ -85,8 +128,16 @@ public class ClientBuilder : IClientBuilder
     /// <inheritdoc/>
     public IClientBuilder InKernel()
     {
-        ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
         _inKernel = true;
+        ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IClientBuilder UseIdentityProvider<T>()
+        where T : IIdentityProvider
+    {
+        _identityProviderType = typeof(T);
         return this;
     }
 
@@ -115,6 +166,8 @@ public class ClientBuilder : IClientBuilder
 
         _logger.ConfiguringServices();
 
+        CausationManager.DefineRoot(_metadata);
+
         Services
             .AddHttpClient()
             .AddSingleton(clientArtifacts)
@@ -138,7 +191,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ITaskFactory, TaskFactory>()
             .AddSingleton<ITimerFactory, TimerFactory>()
             .AddSingleton<OutboxProjectionsRegistrar>()
-            .AddSingleton<AdaptersConnectionLifecycleParticipant>()
             .AddSingleton<ObserversConnectionLifecycleParticipant>()
             .AddSingleton<SchemasConnectionLifecycleParticipant>()
             .AddSingleton<RegistrarsConnectionLifecycleParticipant>()
@@ -148,6 +200,15 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
             .AddSingleton<IAdapterMapperFactory, AdapterMapperFactory>()
             .AddSingleton<IImmediateProjections, ImmediateProjections>()
+            .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
+            .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
+            .AddSingleton<ITenantConfiguration, TenantConfiguration>()
+            .AddSingleton<IClientProjections, ClientProjections>()
+            .AddSingleton<IRulesProjections, RulesProjections>()
+            .AddSingleton<ICausationManager, CausationManager>()
+            .AddSingleton(typeof(IIdentityProvider), _identityProviderType)
+            .AddSingleton<IRules, Rules.Rules>()
+            .AddTransient<ClientObservers>()
             .AddTransient(typeof(IInstancesOf<>), typeof(InstancesOf<>));
 
         _logger.ConfiguringCompliance();
@@ -162,20 +223,20 @@ public class ClientBuilder : IClientBuilder
             ExecutionContextManager.SetKernelMode();
             Services.AddSingleton<IConnection, InsideKernelConnection>();
         }
-        else if (options.Value.Kernel.SingleKernelOptions is not null)
+        else if (options.Value.Kernel.AzureStorageCluster is not null)
         {
-            _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernelOptions.Endpoint);
-            Services.AddSingleton<IConnection, SingleKernelConnection>();
+            _logger.UsingOrleansAzureStorageKernelClient();
+            Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
         }
-        else if (options.Value.Kernel.StaticClusterOptions is not null)
+        else if (options.Value.Kernel.StaticCluster is not null)
         {
             _logger.UsingStaticClusterKernelClient();
             Services.AddSingleton<IConnection, StaticClusteredKernelConnection>();
         }
-        else if (options.Value.Kernel.AzureStorageClusterOptions is not null)
+        else if (options.Value.Kernel.SingleKernel is not null)
         {
-            _logger.UsingOrleansAzureStorageKernelClient();
-            Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
+            _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernel.Endpoint);
+            Services.AddSingleton<IConnection, SingleKernelConnection>();
         }
 
         if (_isMultiTenanted)
@@ -214,7 +275,7 @@ public class ClientBuilder : IClientBuilder
                 options.MicroserviceName = MicroserviceName.Unspecified;
                 options.Kernel = new()
                 {
-                    SingleKernelOptions = new()
+                    SingleKernel = new()
                 };
             });
     }

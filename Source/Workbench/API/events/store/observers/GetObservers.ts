@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QueryFor, QueryResultWithState, useQuery, PerformQuery } from '@aksio/applications/queries';
-import { ObserverInformation } from '../observers/ObserverInformation';
+import { ObserverInformation } from './ObserverInformation';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/observers');

@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Projections;
 
 namespace Aksio.Cratis.Kernel.Grains.Projections;
 
@@ -18,7 +18,7 @@ public interface IImmediateProjection : IGrainWithGuidCompoundKey
     /// <summary>
     /// Get the model instance.
     /// </summary>
-    /// <param name="projectionDefinition">The <see cref="ProjectionDefinition"/> to use.</param>
+    /// <param name="projectionId"><see cref="ProjectionId"/> to get for.</param>
     /// <returns>The <see cref="ImmediateProjectionResult"/>.</returns>
-    Task<ImmediateProjectionResult> GetModelInstance(ProjectionDefinition projectionDefinition);
+    Task<ImmediateProjectionResult> GetModelInstance(ProjectionId projectionId);
 }

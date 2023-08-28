@@ -7,15 +7,14 @@ import { Configuration } from './configuration/Configuration';
 import { Clients } from './clients/Clients';
 import { EventStore } from './eventStore/EventStore';
 import { Metrics } from './metrics/Metrics';
+import { Home } from './Home';
 
 export const App = () => {
     return (
         <>
             <Header />
             <Routes>
-                <Route path="/">
-                    Home
-                </Route>
+                <Route path="/" element={<Home />} />
                 <Route path="/event-store/*" element={<EventStore />} />
                 <Route path="/metrics/*" element={<Metrics />} />
                 <Route path="/clients/*" element={<Clients />} />
