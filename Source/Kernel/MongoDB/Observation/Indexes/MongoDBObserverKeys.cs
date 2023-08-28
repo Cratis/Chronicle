@@ -55,11 +55,5 @@ public class MongoDBObserverKeysAsyncEnumerator : IAsyncEnumerator<Key>
     }
 
     /// <inheritdoc/>
-    public async ValueTask<bool> MoveNextAsync()
-    {
-        _cursor.Current
-
-
-        await _cursor.MoveNextAsync();
-    }
+    public async ValueTask<bool> MoveNextAsync() => await _cursor.MoveNextAsync();
 }

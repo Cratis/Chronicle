@@ -97,18 +97,10 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
                 _logger.ForwardingEvent(_key!.TenantId, _microserviceId!, @event.Metadata.Type.Id, eventSchema.Schema.GetDisplayName(), @event.Metadata.SequenceNumber);
 
                 var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
-                await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, content!);
+                await _inboxEventSequence!.Append(@event.Context.EventSourceId, @event.Metadata.Type, content!, @event.Context.Causation, @event.Context.CausedBy);
                 lastSuccessfullyObservedEvent = @event;
             }
 
-            var content = _expandoObjectConverter.ToJsonObject(@event.Content, eventSchema.Schema);
-            var causation = new Causation(DateTimeOffset.UtcNow, "Inbox", ImmutableDictionary<string, string>.Empty);
-            await _inboxEventSequence!.Append(
-                @event.Context.EventSourceId,
-                @event.Metadata.Type,
-                content!,
-                new Causation[] { causation },
-                Identity.System);
             return ObserverSubscriberResult.Ok;
         }
         catch (Exception ex)

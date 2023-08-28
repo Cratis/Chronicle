@@ -11,9 +11,9 @@ public class when_replaying_with_failure : given.a_replay_with_two_pending_event
 
     void Establish()
     {
-        subscriber.SetupSequence(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>()))
+        subscriber.SetupSequence(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()))
             .Returns(Task.FromResult(ObserverSubscriberResult.Ok))
-            .Returns(Task.FromResult(ObserverSubscriberResult.Failed));
+            .Returns(Task.FromResult(ObserverSubscriberResult.Failed(second_appended_event.Metadata.SequenceNumber)));
 
         supervisor.Setup(_ => _.NotifyCatchUpComplete(IsAny<IEnumerable<FailedPartition>>())).Callback((IEnumerable<FailedPartition> partitions) => failed_partitions = partitions);
     }

@@ -4,7 +4,7 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.EventSequences;
 
 /// <summary>
 /// Exception that gets thrown when the storage mechanism is not able to append the event to the event sequence.

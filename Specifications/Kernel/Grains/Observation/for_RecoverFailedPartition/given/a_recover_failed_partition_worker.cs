@@ -49,7 +49,7 @@ public class a_recover_failed_partition_worker : GrainSpecification<RecoverFaile
         event_sequence_storage_provider = new();
 
         subscriber = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns((AppendedEvent evt, ObserverSubscriberContext _) => ProcessEvent(evt));
+        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns((AppendedEvent evt, ObserverSubscriberContext _) => ProcessEvent(evt));
 
         return new RecoverFailedPartition(
             Mock.Of<IExecutionContextManager>(),

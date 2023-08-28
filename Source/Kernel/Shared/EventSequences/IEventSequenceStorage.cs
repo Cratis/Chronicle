@@ -7,7 +7,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.EventSequences;
 
 /// <summary>
 /// Defines a storage provider for the event sequence.

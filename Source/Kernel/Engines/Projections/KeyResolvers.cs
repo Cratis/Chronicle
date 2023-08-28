@@ -6,7 +6,6 @@ using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;

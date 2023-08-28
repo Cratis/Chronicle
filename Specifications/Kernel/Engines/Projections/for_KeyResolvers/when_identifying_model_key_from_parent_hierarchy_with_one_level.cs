@@ -6,6 +6,7 @@ using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.for_KeyResolvers;

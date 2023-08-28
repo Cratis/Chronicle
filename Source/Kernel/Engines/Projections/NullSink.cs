@@ -4,20 +4,23 @@
 using System.Dynamic;
 using Aksio.Cratis.Changes;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Engines.Sinks;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections;
+using Aksio.Cratis.Sinks;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjectionSink"/> that does nothing.
+/// Represents an implementation of <see cref="ISink"/> that does nothing.
 /// </summary>
-public class NullProjectionSink : IProjectionSink
+public class NullSink : ISink
 {
     /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => ProjectionSinkTypeId.Null;
+    public SinkTypeId TypeId => WellKnownSinkTypes.Null;
 
     /// <inheritdoc/>
-    public ProjectionSinkTypeName Name => "Null sink";
+    public SinkTypeName Name => "Null sink";
 
     /// <inheritdoc/>
     public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isReplaying) => Task.CompletedTask;

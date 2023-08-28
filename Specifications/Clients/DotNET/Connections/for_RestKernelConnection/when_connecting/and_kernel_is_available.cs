@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Clients.for_RestKernelConnection.when_connecting;
 
-public class and_kernel_is_available : given.a_rest_kernel_client
+public class and_kernel_is_available : given.a_rest_kernel_connection
 {
     void Establish()
     {

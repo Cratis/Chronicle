@@ -19,6 +19,6 @@ public class MongoDBObserverKeyIndexes : IObserverKeyIndexes
         ObserverId observerId,
         EventSequenceId eventSequenceId)
     {
-
+        throw new NotImplementedException();
     }
 }

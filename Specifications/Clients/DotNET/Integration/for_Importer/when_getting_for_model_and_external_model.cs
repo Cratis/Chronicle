@@ -16,7 +16,7 @@ public class when_getting_for_model_and_external_model : Specification
     Mock<IAdapterFor<Model, ExternalModel>> adapter;
     Mock<IAdapterProjectionFor<Model>> projection;
     Mock<IMapper> mapper;
-    Mock<IObjectsComparer> objects_comparer;
+    Mock<IObjectComparer> object_comparer;
     Mock<ICausationManager> causation_manager;
 
     Importer importer;
@@ -37,8 +37,8 @@ public class when_getting_for_model_and_external_model : Specification
         adapters.Setup(_ => _.GetProjectionFor<Model, ExternalModel>()).Returns(projection.Object);
         adapters.Setup(_ => _.GetMapperFor<Model, ExternalModel>()).Returns(mapper.Object);
 
-        objects_comparer = new();
-        importer = new(adapters.Object, objects_comparer.Object, event_log.Object, event_outbox.Object, causation_manager.Object);
+        object_comparer = new();
+        importer = new(adapters.Object, object_comparer.Object, event_log.Object, event_outbox.Object, causation_manager.Object);
     }
 
     void Because() => operations = importer.For<Model, ExternalModel>();

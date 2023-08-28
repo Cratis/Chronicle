@@ -3,7 +3,7 @@
 
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Kernel.EventSequences;
+namespace Aksio.Cratis.EventSequences;
 
 /// <summary>
 /// Defines a cursor API for walking through events.

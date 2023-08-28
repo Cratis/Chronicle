@@ -47,7 +47,7 @@ public class with_no_errors_on_processing_from_catchup_event : given.an_initiate
     void should_call_the_subscriber_for_each_event()
     {
         foreach (var @event in appended_events)
-            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Once);
+            subscriber.Verify(_ => _.OnNext(Is<IEnumerable<AppendedEvent>>(m => m.First() == @event), IsAny<ObserverSubscriberContext>()), Once);
     }
 
     [Fact] void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(6);

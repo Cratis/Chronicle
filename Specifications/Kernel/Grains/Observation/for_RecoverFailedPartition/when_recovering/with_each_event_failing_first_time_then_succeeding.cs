@@ -25,7 +25,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
     {
         if (countOfAttempts[evt.Metadata.SequenceNumber] != 0) return Task.FromResult(ObserverSubscriberResult.Ok);
         countOfAttempts[evt.Metadata.SequenceNumber] = 1;
-        return Task.FromResult(ObserverSubscriberResult.Failed);
+        return Task.FromResult(ObserverSubscriberResult.Failed(evt.Metadata.SequenceNumber));
     }
 
     protected override Task<IEventCursor> FetchEvents(EventSequenceNumber sequenceNumber)
@@ -68,7 +68,7 @@ public class with_each_event_failing_first_time_then_succeeding : given.a_recove
     void should_call_the_subscriber_for_each_successful_event_twice()
     {
         foreach (var @event in appended_events)
-            subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Exactly(2));
+            subscriber.Verify(_ => _.OnNext(Is<IEnumerable<AppendedEvent>>(m => m.First() == @event), IsAny<ObserverSubscriberContext>()), Exactly(2));
     }
 
     [Fact] void should_persist_the_state_on_activation_and_after_each_event_is_processed() => written_states.Count.ShouldEqual(11);

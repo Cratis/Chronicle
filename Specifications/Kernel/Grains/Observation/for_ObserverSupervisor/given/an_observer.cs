@@ -93,7 +93,7 @@ public class an_observer_supervisor : GrainSpecification
         grain_factory.Setup(_ => _.GetGrain<IReplay>(IsAny<Guid>(), IsAny<string>(), IsAny<string>())).Returns(replay.Object);
 
         subscriber = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
+        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
         grain_factory.Setup(_ => _.GetGrain(typeof(ObserverSubscriber), observer_id, IsAny<string>())).Returns(subscriber.Object);
 
         sequence_stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<StreamSequenceToken>(), IsAny<string>()))

@@ -1,14 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.for_ProjectionSinks;
+namespace Aksio.Cratis.Kernel.Engines.Sinks.for_Sinks;
 
 public class when_asking_for_unknown_type : Specification
 {
-    ProjectionSinks stores;
+    Sinks stores;
     bool result;
 
-    void Establish() => stores = new ProjectionSinks(new KnownInstancesOf<IProjectionSinkFactory>(Array.Empty<IProjectionSinkFactory>()));
+    void Establish() => stores = new Sinks(new KnownInstancesOf<ISinkFactory>(Array.Empty<ISinkFactory>()));
 
     void Because() => result = stores.HasType("bc5e82fd-9845-4464-9802-a7e21bd8a919");
 

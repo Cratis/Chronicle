@@ -45,7 +45,7 @@ public class an_observer_worker : GrainSpecification
         supervisor = new();
         event_sequence_storage_provider = new();
         subscriber = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
+        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
 
         worker = new ObserverWorkerImplementation(
             Mock.Of<IExecutionContextManager>(),

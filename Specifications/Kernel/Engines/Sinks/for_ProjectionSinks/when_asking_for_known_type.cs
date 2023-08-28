@@ -1,14 +1,16 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Kernel.Engines.Projections.for_ProjectionSinks;
+using Aksio.Cratis.Sinks;
+
+namespace Aksio.Cratis.Kernel.Engines.Sinks.for_Sinks;
 
 public class when_asking_for_known_type : Specification
 {
-    static ProjectionSinkTypeId type = "df371e5d-b244-48d0-aaad-f298a127dd92";
-    ProjectionSinks stores;
-    Mock<IProjectionSinkFactory> factory;
-    Mock<IProjectionSink> store;
+    static SinkTypeId type = "df371e5d-b244-48d0-aaad-f298a127dd92";
+    Sinks stores;
+    Mock<ISinkFactory> factory;
+    Mock<ISink> store;
     bool result;
     Model model;
 
@@ -19,7 +21,7 @@ public class when_asking_for_known_type : Specification
         factory = new();
         factory.SetupGet(_ => _.TypeId).Returns(type);
         factory.Setup(_ => _.CreateFor(model)).Returns(store.Object);
-        stores = new ProjectionSinks(new KnownInstancesOf<IProjectionSinkFactory>(new[] { factory.Object }));
+        stores = new Sinks(new KnownInstancesOf<ISinkFactory>(new[] { factory.Object }));
     }
 
     void Because() => result = stores.HasType(type);
