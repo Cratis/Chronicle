@@ -69,7 +69,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- <PackageReference Include="Aksio.Defaults" PrivateAssets="All" Condition="'$(PublishReadyToRun)' != 'true'" /> -->
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" />
         <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" />
         <PackageReference Include="StyleCop.Analyzers" />

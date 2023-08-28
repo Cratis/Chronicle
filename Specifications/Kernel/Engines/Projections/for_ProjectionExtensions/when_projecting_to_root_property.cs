@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Properties;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.for_ProjectionExtensions.when_applying_from_filter;
@@ -11,7 +10,7 @@ public class when_projecting_to_root_property : given.an_observable_and_event_se
 {
     IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> property_mappers = Array.Empty<PropertyMapper<AppendedEvent, ExpandoObject>>();
 
-    void Establish() => observable.Project("", "Id", property_mappers);
+    void Establish() => observable.Project(string.Empty, "Id", property_mappers);
 
     void Because() => observable.OnNext(event_context);
 

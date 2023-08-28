@@ -11,7 +11,7 @@ public class a_connected_connection : a_rest_kernel_connection
         {
             var route = message.RequestUri.ToString();
 
-            if ( route == connect_route)
+            if (route == connect_route)
             {
                 return Task.FromResult(success_message);
             }

@@ -36,7 +36,7 @@ public class when_applying_external_model_with_one_property_changed : given.one_
     [Fact] void should_add_causation() => causation_manager.Verify(_ => _.Add(ImportOperations<string, string>.CausationType, IsAny<IDictionary<string, string>>()), Once);
     [Fact] void should_have_adapter_id_in_causation() => causation_properties[ImportOperations<string, string>.CausationAdapterIdProperty].ShouldEqual(adapter_id.ToString());
     [Fact] void should_have_adapter_type_in_causation() => causation_properties[ImportOperations<string, string>.CausationAdapterTypeProperty].ShouldEqual(adapter.Object.GetType().AssemblyQualifiedName);
-    [Fact] void should_have_key_in_causation() => causation_properties[ImportOperations<string, string>.CausationKeyProperty].ShouldEqual(key.ToString());
+    [Fact] void should_have_key_in_causation() => causation_properties[ImportOperations<string, string>.CausationKeyProperty].ShouldEqual(key);
     [Fact] void should_have_one_event_in_event_log() => event_appended_to_event_log.ShouldNotBeNull();
     [Fact] void should_append_to_event_log_with_correct_valid_from() => event_log_valid_from.ShouldEqual(valid_from_to_append_with);
     [Fact] void should_not_have_one_event_in_event_outbox() => event_appended_to_outbox.ShouldBeNull();

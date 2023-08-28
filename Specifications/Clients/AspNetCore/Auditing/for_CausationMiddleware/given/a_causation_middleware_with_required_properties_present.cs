@@ -22,7 +22,6 @@ public class a_causation_middleware_with_required_properties_present : a_causati
     protected const string second_route_value_key = "second";
     protected const string second_route_value_value = "second-value";
 
-
     void Establish()
     {
         http_request.SetupGet(_ => _.Path).Returns(route);
@@ -37,5 +36,4 @@ public class a_causation_middleware_with_required_properties_present : a_causati
             { second_route_value_key, second_route_value_value }
         }));
     }
-
 }

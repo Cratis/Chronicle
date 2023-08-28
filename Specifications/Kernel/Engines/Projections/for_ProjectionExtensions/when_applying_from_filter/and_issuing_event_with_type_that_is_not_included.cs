@@ -10,7 +10,7 @@ public class and_issuing_event_with_type_that_is_not_included : given.an_observa
     void Establish()
     {
         filtered = observable.WhereEventTypeEquals(new EventType("745a8adb-aec5-4bf7-af29-b23d14e5c7bc", 1));
-        filtered.Subscribe(_ => received.Add(_));
+        filtered.Subscribe(received.Add);
     }
 
     void Because() => observable.OnNext(event_context);

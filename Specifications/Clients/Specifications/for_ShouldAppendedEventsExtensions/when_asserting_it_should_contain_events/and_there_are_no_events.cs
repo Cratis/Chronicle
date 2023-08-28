@@ -10,8 +10,8 @@ public class and_there_are_no_events : given.no_events
     Exception result;
 
     void Because() => result = Catch.Exception(() => events.ShouldContainEvents(
-        new MyEvent(42,"forty two"),
-        new MyOtherEvent(42,"forty two")));
+        new MyEvent(42, "forty two"),
+        new MyOtherEvent(42, "forty two")));
 
     [Fact] void should_assert_that_the_event_should_contain() => result.ShouldBeOfExactType<ContainsException>();
 }

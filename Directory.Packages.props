@@ -7,8 +7,6 @@
 	<ItemGroup>
         <PackageVersion Include="docfx.console" Version="2.59.3"/>
 
-		<PackageVersion Include="Aksio.Defaults" Version="1.6.10" />
-		<PackageVersion Include="Aksio.Defaults.Specs" Version="1.6.10" />
 		<PackageVersion Include="Aksio.Fundamentals" Version="1.5.1" />
 		<PackageVersion Include="Aksio.MongoDB" Version="1.0.18" />
 		<PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />

@@ -31,4 +31,3 @@ public class when_getting_boolean_false_value_from_event_content : Specification
 
     [Fact] void should_return_content_of_source_property() => result.ShouldEqual(expected);
 }
-

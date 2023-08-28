@@ -3,12 +3,6 @@
 
 namespace Aksio.Cratis.Kernel.MongoDB.for_ExpandoObjectConverter;
 
-public enum AnEnumValue
-{
-    First = 1,
-    Second = 2,
-}
-
 public record TargetType(
     int IntValue,
     float FloatValue,

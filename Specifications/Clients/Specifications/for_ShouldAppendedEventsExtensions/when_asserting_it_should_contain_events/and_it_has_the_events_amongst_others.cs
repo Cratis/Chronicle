@@ -11,8 +11,8 @@ public class and_it_has_the_events_amongst_others : given.no_events
 
     void Establish()
     {
-        first_event = new MyEvent(42,"forty two");
-        second_event = new MyOtherEvent(42,"forty two");
+        first_event = new MyEvent(42, "forty two");
+        second_event = new MyOtherEvent(42, "forty two");
         events.Add(new AppendedEventForSpecifications(null!, null!, null!, new MyEvent(43, "something")));
         events.Add(new AppendedEventForSpecifications(null!, null!, null!, first_event));
         events.Add(new AppendedEventForSpecifications(null!, null!, null!, second_event));

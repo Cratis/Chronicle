@@ -14,17 +14,17 @@ public class an_appended_event : Specification
 {
     protected AppendedEvent @event;
     protected DateTimeOffset occurred;
-    protected MyEvent MyEvent;
+    protected MyEvent my_event;
 
     void Establish()
     {
-        MyEvent = new MyEvent(42, "Forty two");
+        my_event = new MyEvent(42, "Forty two");
         occurred = DateTimeOffset.UtcNow;
 
         var content = new ExpandoObject();
         var contentAsDictionary = content as IDictionary<string, object?>;
-        contentAsDictionary.Add(nameof(given.MyEvent.Something).ToCamelCase(), MyEvent.Something);
-        contentAsDictionary.Add(nameof(given.MyEvent.SomethingElse).ToCamelCase(), MyEvent.SomethingElse);
+        contentAsDictionary.Add(nameof(MyEvent.Something).ToCamelCase(), my_event.Something);
+        contentAsDictionary.Add(nameof(MyEvent.SomethingElse).ToCamelCase(), my_event.SomethingElse);
 
         @event = new(
             new(0,

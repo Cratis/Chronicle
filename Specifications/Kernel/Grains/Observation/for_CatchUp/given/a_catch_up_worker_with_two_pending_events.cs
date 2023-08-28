@@ -39,5 +39,4 @@ public class a_catch_up_worker_with_two_pending_events : a_catch_up_worker
             new(second_event_source_id, EventSequenceNumber.First + 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System),
             new ExpandoObject());
     }
-
 }
