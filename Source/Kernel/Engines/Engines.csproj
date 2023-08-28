@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
         <AssemblyName>Aksio.Cratis.Kernel.Engines</AssemblyName>
         <RootNamespace>Aksio.Cratis.Kernel.Engines</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="../Shared/Shared.csproj"/>
-        <ProjectReference Include="../Common/Common.csproj"/>
     </ItemGroup>
 </Project>
