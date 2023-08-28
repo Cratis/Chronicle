@@ -13,7 +13,7 @@ public class a_rules_projections : all_dependencies
             service_provider.Object,
             client_artifacts.Object,
             event_types.Object,
-            model_name_convention.Object,
+            model_name_resolver.Object,
             json_schema_generator.Object,
             serializer_options);
     }

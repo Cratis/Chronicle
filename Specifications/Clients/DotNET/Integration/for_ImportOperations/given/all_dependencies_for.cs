@@ -16,7 +16,7 @@ public class all_dependencies_for<TEvent> : Specification
     protected Mock<IMapper> mapper;
     protected Mock<IEventLog> event_log;
     protected Mock<IEventOutbox> event_outbox;
-    protected Mock<IObjectsComparer> objects_comparer;
+    protected Mock<IObjectComparer> objects_comparer;
     protected Mock<ICausationManager> causation_manager;
 
     protected AdapterId adapter_id;

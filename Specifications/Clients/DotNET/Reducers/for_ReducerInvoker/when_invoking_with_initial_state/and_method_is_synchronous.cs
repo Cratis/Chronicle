@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
+
 namespace Aksio.Cratis.Reducers.for_ReducerInvoker.when_invoking_with_initial_state;
 
 public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer>
@@ -14,7 +17,7 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
     {
         @event = new();
         current = new();
-        event_context = new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System);
+        event_context = new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System);
     }
 
     async Task Because() => result = await invoker.Invoke(new EventAndContext[] { new(@event, event_context) }, current);

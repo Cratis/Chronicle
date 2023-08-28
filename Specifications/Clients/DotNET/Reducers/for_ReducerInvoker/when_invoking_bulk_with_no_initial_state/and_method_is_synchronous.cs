@@ -1,6 +1,9 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Auditing;
+using Aksio.Cratis.Identities;
+
 namespace Aksio.Cratis.Reducers.for_ReducerInvoker.when_invoking_bulk_with_no_initial_state;
 
 public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer>
@@ -13,10 +16,10 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
     {
         events_and_contexts = new EventAndContext[]
         {
-            new(new ValidEvent(), new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System)),
-            new(new ValidEvent(), new(Guid.Empty, 1, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System)),
-            new(new ValidEvent(), new(Guid.Empty, 2, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System)),
-            new(new ValidEvent(), new(Guid.Empty, 3, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), CausationId.System, CausedBy.System))
+            new(new ValidEvent(), new(Guid.Empty, 0, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System)),
+            new(new ValidEvent(), new(Guid.Empty, 1, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System)),
+            new(new ValidEvent(), new(Guid.Empty, 2, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System)),
+            new(new ValidEvent(), new(Guid.Empty, 3, DateTimeOffset.Now, DateTimeOffset.Now, TenantId.Development, CorrelationId.New(), Enumerable.Empty<Causation>(), Identity.System))
         };
     }
 
