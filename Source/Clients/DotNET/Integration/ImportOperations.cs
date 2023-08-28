@@ -44,15 +44,6 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     readonly IEventSequence _eventOutbox;
     readonly ICausationManager _causationManager;
 
-    /// <inheritdoc/>
-    public IAdapterFor<TModel, TExternalModel> Adapter { get; }
-
-    /// <inheritdoc/>
-    public IAdapterProjectionFor<TModel> Projection { get; }
-
-    /// <inheritdoc/>
-    public IMapper Mapper { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ImportOperations{TModel, TExternalModel}"/> class.
     /// </summary>
@@ -82,6 +73,15 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         _eventOutbox = eventOutbox;
         _causationManager = causationManager;
     }
+
+    /// <inheritdoc/>
+    public IAdapterFor<TModel, TExternalModel> Adapter { get; }
+
+    /// <inheritdoc/>
+    public IAdapterProjectionFor<TModel> Projection { get; }
+
+    /// <inheritdoc/>
+    public IMapper Mapper { get; }
 
     /// <inheritdoc/>
     public async Task Apply(TExternalModel instance)

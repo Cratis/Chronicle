@@ -26,7 +26,7 @@ public class and_the_recovered_to_event_is_at_the_head : a_supervisor
         supervisor.EventBelongsToFailingPartition(partition_id, 3);
     }
 
-    Task Because() =>  supervisor.AssessRecovery(partition_id, 3);
+    Task Because() => supervisor.AssessRecovery(partition_id, 3);
 
     [Fact] void should_have_removed_the_failed_partition() => supervisor.GetState().FailedPartitions.Any(_ => _.Partition == partition_id).ShouldBeFalse();
     [Fact] void should_have_reset_the_failed_partition_job() => failed_partition_mock.Verify(_ => _.Reset(), Once);

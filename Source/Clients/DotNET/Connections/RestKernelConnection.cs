@@ -40,14 +40,6 @@ public abstract class RestKernelConnection : IConnection, IDisposable
     TaskCompletionSource<bool> _connectCompletion;
     ITimer? _timer;
 
-    /// <inheritdoc/>
-    public bool IsConnected => _connectionLifecycle.IsConnected;
-
-    /// <inheritdoc/>
-    public ConnectionId ConnectionId => _connectionLifecycle.ConnectionId;
-
-    MicroserviceId MicroserviceId => _executionContextManager.Current.MicroserviceId;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="RestKernelConnection"/> class.
     /// </summary>
@@ -89,6 +81,14 @@ public abstract class RestKernelConnection : IConnection, IDisposable
 
         _clientEndpoint = options.Value.Kernel.AdvertisedClientEndpoint ?? addresses!.GetFirstAddressAsUri();
     }
+
+    /// <inheritdoc/>
+    public bool IsConnected => _connectionLifecycle.IsConnected;
+
+    /// <inheritdoc/>
+    public ConnectionId ConnectionId => _connectionLifecycle.ConnectionId;
+
+    MicroserviceId MicroserviceId => _executionContextManager.Current.MicroserviceId;
 
     /// <inheritdoc/>
     public void Dispose()

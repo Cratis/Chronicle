@@ -18,9 +18,6 @@ public class OutboxProjectionSinkFactory : IProjectionSinkFactory
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IGrainFactory _grainFactory;
 
-    /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.Outbox;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxProjectionSinkFactory"/> class.
     /// </summary>
@@ -39,6 +36,9 @@ public class OutboxProjectionSinkFactory : IProjectionSinkFactory
         _jsonSerializerOptions = jsonSerializerOptions;
         _grainFactory = grainFactory;
     }
+
+    /// <inheritdoc/>
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.Outbox;
 
     /// <inheritdoc/>
     public IProjectionSink CreateFor(Model model) =>

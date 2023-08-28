@@ -34,14 +34,6 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
     readonly Storage _configuration;
     readonly IMongoDatabase _database;
 
-    /// <inheritdoc/>
-    public ProjectionSinkTypeName Name => "MongoDB";
-
-    /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
-
-    string ReplayCollectionName => $"replay-{_model.Name}";
-
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBProjectionSink"/> class.
     /// </summary>
@@ -67,6 +59,14 @@ public class MongoDBProjectionSink : IProjectionSink, IDisposable
         _configuration = configuration;
         _database = GetDatabase();
     }
+
+    /// <inheritdoc/>
+    public ProjectionSinkTypeName Name => "MongoDB";
+
+    /// <inheritdoc/>
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
+
+    string ReplayCollectionName => $"replay-{_model.Name}";
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key, bool isReplaying)

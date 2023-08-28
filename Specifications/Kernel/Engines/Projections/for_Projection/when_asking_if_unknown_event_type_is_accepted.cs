@@ -10,10 +10,12 @@ public class when_asking_if_unknown_event_type_is_accepted : given.a_projection
 
     void Establish()
     {
-        projection.SetEventTypesWithKeyResolvers(new EventTypeWithKeyResolver[]
-        {
-                new EventTypeWithKeyResolver(event_type, KeyResolvers.FromEventSourceId)
-        }, new[] { event_type });
+        projection.SetEventTypesWithKeyResolvers(
+            new EventTypeWithKeyResolver[]
+            {
+                    new EventTypeWithKeyResolver(event_type, KeyResolvers.FromEventSourceId)
+            },
+            new[] { event_type });
     }
 
     void Because() => result = projection.Accepts(new EventType("5f6e10c6-f687-4e1c-b9a9-4007810c48da", 1));

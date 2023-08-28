@@ -15,9 +15,6 @@ public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
     readonly ITypeFormats _typeFormats;
     readonly IObjectsComparer _comparer;
 
-    /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.InMemory;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemoryProjectionSinkFactory"/> class.
     /// </summary>
@@ -28,6 +25,9 @@ public class InMemoryProjectionSinkFactory : IProjectionSinkFactory
         _typeFormats = typeFormats;
         _comparer = comparer;
     }
+
+    /// <inheritdoc/>
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.InMemory;
 
     /// <inheritdoc/>
     public IProjectionSink CreateFor(Model model) => new InMemoryProjectionSink(model, _typeFormats, _comparer);

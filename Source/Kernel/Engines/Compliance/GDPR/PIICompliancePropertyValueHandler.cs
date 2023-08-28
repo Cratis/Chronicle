@@ -15,9 +15,6 @@ public class PIICompliancePropertyValueHandler : IJsonCompliancePropertyValueHan
     readonly IEncryptionKeyStore _encryptionKeyStore;
     readonly IEncryption _encryption;
 
-    /// <inheritdoc/>
-    public ComplianceMetadataType Type => ComplianceMetadataType.PII;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="PIICompliancePropertyValueHandler"/>.
     /// </summary>
@@ -28,6 +25,9 @@ public class PIICompliancePropertyValueHandler : IJsonCompliancePropertyValueHan
         _encryptionKeyStore = encryptionKeyStore;
         _encryption = encryption;
     }
+
+    /// <inheritdoc/>
+    public ComplianceMetadataType Type => ComplianceMetadataType.PII;
 
     /// <inheritdoc/>
     public async Task<JsonNode> Apply(string identifier, JsonNode value)

@@ -25,22 +25,6 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     IDisposable? _timer;
 
     /// <summary>
-    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
-    /// </summary>
-    protected IEventSequenceStorage EventSequenceStorageProvider
-    {
-        get
-        {
-            var tenantId = _key!.TenantId;
-            var microserviceId = _key.MicroserviceId;
-
-            // TODO: This is a temporary work-around till we fix #264 & #265
-            _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
-            return _eventSequenceStorageProvider();
-        }
-    }
-
-    /// <summary>
     /// Instantiates an instance of <see cref="RecoverFailedPartition"/>.
     /// </summary>
     /// <param name="executionContextManager">The Execution Context Manager.</param>
@@ -54,6 +38,22 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         _executionContextManager = executionContextManager;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSequenceStorage"/> in the correct context.
+    /// </summary>
+    protected IEventSequenceStorage EventSequenceStorageProvider
+    {
+        get
+        {
+            var tenantId = _key!.TenantId;
+            var microserviceId = _key.MicroserviceId;
+
+            // TODO: This is a temporary work-around till we fix #264 & #265
+            _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
+            return _eventSequenceStorageProvider();
+        }
     }
 
     /// <inheritdoc/>

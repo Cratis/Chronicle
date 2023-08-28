@@ -24,12 +24,6 @@ public class EventSequences : IEventSequences
     readonly IIdentityProvider _identityProvider;
     readonly IExecutionContextManager _executionContextManager;
 
-    /// <inheritdoc/>
-    public IEventLog EventLog { get; }
-
-    /// <inheritdoc/>
-    public IEventOutbox Outbox { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequences"/> class.
     /// </summary>
@@ -79,6 +73,12 @@ public class EventSequences : IEventSequences
         _identityProvider = identityProvider;
         _executionContextManager = executionContextManager;
     }
+
+    /// <inheritdoc/>
+    public IEventLog EventLog { get; }
+
+    /// <inheritdoc/>
+    public IEventOutbox Outbox { get; }
 
     /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId eventSequenceId) =>

@@ -28,9 +28,6 @@ public class SetBuilder<TModel, TEvent, TParentBuilder> : ISetBuilder<TModel, TE
 #pragma warning restore CA1051 // Visible instance fields
     readonly bool _forceEventProperty;
 
-    /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SetBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
     /// </summary>
@@ -43,6 +40,9 @@ public class SetBuilder<TModel, TEvent, TParentBuilder> : ISetBuilder<TModel, TE
         TargetProperty = targetProperty;
         _forceEventProperty = forceEventProperty;
     }
+
+    /// <inheritdoc/>
+    public PropertyPath TargetProperty { get; }
 
     /// <inheritdoc/>
     public TParentBuilder To(PropertyPath propertyPath)
@@ -139,7 +139,7 @@ public class SetBuilder<TModel, TEvent, TProperty, TParentBuilder> : SetBuilder<
             DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
             DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
             TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
-            _ => FormattableString.Invariant($"{actualValue}")
+            _ => string.Create(CultureInfo.InvariantCulture, $"{actualValue}")
         };
 
         _expression = new ValueExpression(invariantString);

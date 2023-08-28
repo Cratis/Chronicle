@@ -17,8 +17,6 @@ public class EventSequencesStorageProvider : IGrainStorage
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
 
-    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(CollectionNames.EventSequences);
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
     /// </summary>
@@ -29,6 +27,8 @@ public class EventSequencesStorageProvider : IGrainStorage
         _executionContextManager = executionContextManager;
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
+
+    IMongoCollection<EventSequenceState> Collection => _eventStoreDatabaseProvider().GetCollection<EventSequenceState>(CollectionNames.EventSequences);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;

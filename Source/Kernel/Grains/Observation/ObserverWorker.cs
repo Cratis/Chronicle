@@ -23,6 +23,25 @@ public abstract class ObserverWorker : Grain
     IObserverSupervisor? _supervisor;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverWorker"/> class.
+    /// </summary>
+    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
+    /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorage"/> for working with the underlying event sequence.</param>
+    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    protected ObserverWorker(
+        IExecutionContextManager executionContextManager,
+        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
+        IPersistentState<ObserverState> observerState,
+        ILogger<ObserverWorker> logger)
+    {
+        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
+        _executionContextManager = executionContextManager;
+        _observerState = observerState;
+        _logger = logger;
+    }
+
+    /// <summary>
     /// Gets or sets the subscriber type.
     /// </summary>
     protected ObserverSubscription CurrentSubscription
@@ -104,25 +123,6 @@ public abstract class ObserverWorker : Grain
             _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
             return _eventSequenceStorageProviderProvider();
         }
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverWorker"/> class.
-    /// </summary>
-    /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
-    /// <param name="eventSequenceStorageProviderProvider"><see creF="IEventSequenceStorage"/> for working with the underlying event sequence.</param>
-    /// <param name="observerState"><see cref="IPersistentState{T}"/> for the <see cref="ObserverState"/>.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    protected ObserverWorker(
-        IExecutionContextManager executionContextManager,
-        ProviderFor<IEventSequenceStorage> eventSequenceStorageProviderProvider,
-        IPersistentState<ObserverState> observerState,
-        ILogger<ObserverWorker> logger)
-    {
-        _eventSequenceStorageProviderProvider = eventSequenceStorageProviderProvider;
-        _executionContextManager = executionContextManager;
-        _observerState = observerState;
-        _logger = logger;
     }
 
     /// <summary>

@@ -15,7 +15,6 @@ namespace Aksio.Cratis.Kernel.MongoDB.Tenants;
 public class TenantConfigurationStorageProvider : IGrainStorage
 {
     readonly IClusterDatabase _database;
-    IMongoCollection<MongoDBTenantConfigurationState> Collection => _database.GetCollection<MongoDBTenantConfigurationState>(CollectionNames.TenantConfiguration);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantConfigurationStorageProvider"/> class.
@@ -25,6 +24,8 @@ public class TenantConfigurationStorageProvider : IGrainStorage
     {
         _database = database;
     }
+
+    IMongoCollection<MongoDBTenantConfigurationState> Collection => _database.GetCollection<MongoDBTenantConfigurationState>(CollectionNames.TenantConfiguration);
 
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;

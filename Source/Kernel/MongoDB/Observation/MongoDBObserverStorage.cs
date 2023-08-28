@@ -28,6 +28,8 @@ public class MongoDBObserverStorage : IObserverStorage
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
     }
 
+    IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetObserverStateCollection();
+
     /// <inheritdoc/>
     public Task<ObserverInformation> GetObserver(ObserverId observerId) =>
         Task.FromResult(ToObserverInformation(Collection
@@ -60,6 +62,4 @@ public class MongoDBObserverStorage : IObserverStorage
         state.EventTypes,
         state.NextEventSequenceNumber,
         state.RunningState);
-
-    IMongoCollection<ObserverState> Collection => _eventStoreDatabaseProvider().GetObserverStateCollection();
 }

@@ -16,33 +16,6 @@ namespace Aksio.Cratis.Integration;
 /// </summary>
 public static class ImportBuilderExtensions
 {
-    static class ModelToEventMapperFor<TModel, TEvent>
-    {
-        public static IMapper Mapper;
-
-        static ModelToEventMapperFor()
-        {
-            var eventProperties = typeof(TEvent).GetProperties(BindingFlags.Instance | BindingFlags.Public);
-            var modelProperties = typeof(TModel).GetProperties(BindingFlags.Instance | BindingFlags.Public);
-            var configuration = new MapperConfiguration(cfg =>
-            {
-                var map = cfg.CreateMap<TModel, TEvent>();
-                foreach (var eventProperty in eventProperties)
-                {
-                    if (!modelProperties.Any(_ => _.Name == eventProperty.Name))
-                    {
-                        throw new MissingExpectedEventPropertyOnModel(typeof(TEvent), typeof(TModel), eventProperty.Name);
-                    }
-
-                    map.ForMember(eventProperty.Name, _ => _.MapFrom(eventProperty.Name));
-                    map.ForCtorParam(eventProperty.Name, _ => _.MapFrom(eventProperty.Name));
-                }
-            });
-
-            Mapper = configuration.CreateMapper();
-        }
-    }
-
     /// <summary>
     /// Filter down to when a model already exists.
     /// </summary>
@@ -262,4 +235,31 @@ public static class ImportBuilderExtensions
 
                 return false;
             });
+
+    static class ModelToEventMapperFor<TModel, TEvent>
+    {
+        public static IMapper Mapper;
+
+        static ModelToEventMapperFor()
+        {
+            var eventProperties = typeof(TEvent).GetProperties(BindingFlags.Instance | BindingFlags.Public);
+            var modelProperties = typeof(TModel).GetProperties(BindingFlags.Instance | BindingFlags.Public);
+            var configuration = new MapperConfiguration(cfg =>
+            {
+                var map = cfg.CreateMap<TModel, TEvent>();
+                foreach (var eventProperty in eventProperties)
+                {
+                    if (!modelProperties.Any(_ => _.Name == eventProperty.Name))
+                    {
+                        throw new MissingExpectedEventPropertyOnModel(typeof(TEvent), typeof(TModel), eventProperty.Name);
+                    }
+
+                    map.ForMember(eventProperty.Name, _ => _.MapFrom(eventProperty.Name));
+                    map.ForCtorParam(eventProperty.Name, _ => _.MapFrom(eventProperty.Name));
+                }
+            });
+
+            Mapper = configuration.CreateMapper();
+        }
+    }
 }

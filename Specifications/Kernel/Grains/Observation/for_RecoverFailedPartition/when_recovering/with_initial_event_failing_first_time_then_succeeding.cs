@@ -16,7 +16,7 @@ public class with_initial_event_failing_first_time_then_succeeding : given.a_rec
     EventType event_type;
     IEnumerable<AppendedEvent> appended_events;
     EventSequenceNumber initial_error;
-    int countOfAttempts = 0;
+    int countOfAttempts;
 
     protected override IEnumerable<AppendedEvent> events => appended_events;
 

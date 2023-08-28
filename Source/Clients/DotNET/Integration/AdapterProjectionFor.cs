@@ -16,9 +16,6 @@ public class AdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>
     readonly IImmediateProjections _immediateProjections;
     readonly JsonSerializerOptions _jsonSerializerOptions;
 
-    /// <inheritdoc/>
-    public ProjectionDefinition Definition { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="AdapterProjectionFor{TModel}"/> class.
     /// </summary>
@@ -34,6 +31,9 @@ public class AdapterProjectionFor<TModel> : IAdapterProjectionFor<TModel>
         _immediateProjections = immediateProjections;
         _jsonSerializerOptions = jsonSerializerOptions;
     }
+
+    /// <inheritdoc/>
+    public ProjectionDefinition Definition { get; }
 
     /// <inheritdoc/>
     public async Task<AdapterProjectionResult<TModel>> GetById(ModelKey modelKey)

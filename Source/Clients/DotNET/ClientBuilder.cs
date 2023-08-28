@@ -50,9 +50,6 @@ public class ClientBuilder : IClientBuilder
     bool _isMultiTenanted;
     Type _identityProviderType;
 
-    /// <inheritdoc/>
-    public IServiceCollection Services { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientBuilder"/> class.
     /// </summary>
@@ -78,6 +75,9 @@ public class ClientBuilder : IClientBuilder
         Services = services;
         _logger = logger;
     }
+
+    /// <inheritdoc/>
+    public IServiceCollection Services { get; }
 
     /// <inheritdoc/>
     public IClientBuilder ForMicroservice(MicroserviceId microserviceId, MicroserviceName microserviceName)

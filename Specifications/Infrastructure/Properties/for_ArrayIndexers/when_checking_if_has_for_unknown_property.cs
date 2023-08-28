@@ -6,7 +6,7 @@ namespace Aksio.Cratis.Properties.for_ArrayIndexers;
 public class when_checking_if_has_for_unknown_property : given.no_array_indexers
 {
     bool result;
-    void Because() => result = indexers.HasFor("");
+    void Because() => result = indexers.HasFor(string.Empty);
 
     [Fact] void should_not_have_the_indexer() => result.ShouldBeFalse();
 }

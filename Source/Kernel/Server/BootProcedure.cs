@@ -47,11 +47,11 @@ public class BootProcedure : IPerformBootProcedure
     /// <inheritdoc/>
     public void Perform()
     {
-        _ = Task.Run(() =>
+        _ = Task.Run(async () =>
         {
             _logger.PrimingEventSequenceCaches();
             var eventSequenceCaches = _serviceProvider.GetRequiredService<IEventSequenceCaches>()!;
-            eventSequenceCaches.PrimeAll().Wait();
+            await eventSequenceCaches.PrimeAll();
 
             foreach (var (microserviceId, microservice) in _configuration.Microservices)
             {
@@ -59,15 +59,15 @@ public class BootProcedure : IPerformBootProcedure
 
                 this._logger.PopulateSchemaStore();
                 var schemaStore = _serviceProvider.GetRequiredService<Schemas.ISchemaStore>()!;
-                schemaStore.Populate().Wait();
+                await schemaStore.Populate();
 
                 this._logger.PopulateIdentityStore();
                 var identityStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
-                identityStore.Populate().Wait();
+                await identityStore.Populate();
 
                 _logger.RehydrateProjections();
                 var projections = _grainFactory.GetGrain<IProjections>(0);
-                projections.Rehydrate().Wait();
+                await projections.Rehydrate();
 
                 foreach (var outbox in microservice.Inbox.FromOutboxes)
                 {
@@ -75,7 +75,7 @@ public class BootProcedure : IPerformBootProcedure
                     {
                         var key = new InboxKey(tenantId, outbox.Microservice);
                         var inbox = _grainFactory.GetGrain<IInbox>((MicroserviceId)microserviceId, key);
-                        inbox.Start().Wait();
+                        await inbox.Start();
                     }
                 }
             }

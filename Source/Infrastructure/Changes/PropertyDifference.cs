@@ -11,6 +11,19 @@ namespace Aksio.Cratis.Changes;
 public class PropertyDifference
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="PropertyDifference"/> class.
+    /// </summary>
+    /// <param name="propertyPath">Raw difference.</param>
+    /// <param name="original">Original value.</param>
+    /// <param name="changed">Changed value.</param>
+    public PropertyDifference(PropertyPath propertyPath, object? original, object? changed)
+    {
+        PropertyPath = propertyPath;
+        Original = original;
+        Changed = changed;
+    }
+
+    /// <summary>
     /// Gets the full member path to the property that has changed.
     /// </summary>
     public PropertyPath PropertyPath { get; }
@@ -24,17 +37,4 @@ public class PropertyDifference
     /// Gets the changed value - possibly default.
     /// </summary>
     public object? Changed { get; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PropertyDifference"/> class.
-    /// </summary>
-    /// <param name="propertyPath">Raw difference.</param>
-    /// <param name="original">Original value.</param>
-    /// <param name="changed">Changed value.</param>
-    public PropertyDifference(PropertyPath propertyPath, object? original, object? changed)
-    {
-        PropertyPath = propertyPath;
-        Original = original;
-        Changed = changed;
-    }
 }

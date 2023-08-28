@@ -15,24 +15,6 @@ public class EventSequenceNumberToken : StreamSequenceToken
     int _eventIndex;
 
     /// <summary>
-    /// Gets the number sequence number within the event log.
-    /// </summary>
-    public override long SequenceNumber
-    {
-        get => _sequenceNumber;
-        protected set => _sequenceNumber = value;
-    }
-
-    /// <summary>
-    /// Gets an event index - not used!.
-    /// </summary>
-    public override int EventIndex
-    {
-        get => _eventIndex;
-        protected set => _eventIndex = value;
-    }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceNumberToken"/>.
     /// </summary>
     public EventSequenceNumberToken()
@@ -49,6 +31,24 @@ public class EventSequenceNumberToken : StreamSequenceToken
     {
         _sequenceNumber = (long)sequenceNumber.Value;
         _eventIndex = 0;
+    }
+
+    /// <summary>
+    /// Gets the number sequence number within the event log.
+    /// </summary>
+    public override long SequenceNumber
+    {
+        get => _sequenceNumber;
+        protected set => _sequenceNumber = value;
+    }
+
+    /// <summary>
+    /// Gets an event index - not used!.
+    /// </summary>
+    public override int EventIndex
+    {
+        get => _eventIndex;
+        protected set => _eventIndex = value;
     }
 
     /// <inheritdoc/>

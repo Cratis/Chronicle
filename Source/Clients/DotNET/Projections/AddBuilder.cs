@@ -20,9 +20,6 @@ public class AddBuilder<TModel, TEvent, TProperty, TParentBuilder> : IAddBuilder
     readonly TParentBuilder _parent;
     string _expression = string.Empty;
 
-    /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="AddBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
     /// </summary>
@@ -33,6 +30,9 @@ public class AddBuilder<TModel, TEvent, TProperty, TParentBuilder> : IAddBuilder
         _parent = parent;
         TargetProperty = targetProperty;
     }
+
+    /// <inheritdoc/>
+    public PropertyPath TargetProperty { get; }
 
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)

@@ -19,9 +19,6 @@ public class ObserverInvoker : IObserverInvoker
     readonly Type _targetType;
     readonly ILogger<ObserverInvoker> _logger;
 
-    /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => _methodsByEventTypeId.Keys;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverInvoker"/> class.
     /// </summary>
@@ -46,6 +43,9 @@ public class ObserverInvoker : IObserverInvoker
                                         .Where(_ => IsObservingMethod(_))
                                         .ToDictionary(_ => _eventTypes.GetEventTypeFor(_.GetParameters()[0].ParameterType), _ => _);
     }
+
+    /// <inheritdoc/>
+    public IEnumerable<EventType> EventTypes => _methodsByEventTypeId.Keys;
 
     /// <inheritdoc/>
     public async Task Invoke(object content, EventContext eventContext)

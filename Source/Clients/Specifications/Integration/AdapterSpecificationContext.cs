@@ -21,23 +21,6 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog
     readonly EventOutboxForSpecifications _outbox = new();
     int _eventCountBeforeImport;
 
-    /// <inheritdoc/>
-    public IEventLog EventLog => _projectionSpecificationContext.EventLog;
-
-    /// <inheritdoc/>
-    public IEventOutbox EventOutbox => _outbox;
-
-    /// <inheritdoc/>
-    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _projectionSpecificationContext.AppendedEvents;
-
-    /// <inheritdoc/>
-    public IEnumerable<AppendedEventForSpecifications> AppendedEventsToOutbox => _outbox.AppendedEvents;
-
-    /// <summary>
-    /// Gets the <see cref="IAdapterProjectionFor{TModel}"/> used.
-    /// </summary>
-    public IAdapterProjectionFor<TModel> Projection { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="AdapterSpecificationContext{TModel, TExternalModel}"/> class.
     /// </summary>
@@ -59,6 +42,23 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog
             EventOutbox,
             new NullCausationManager());
     }
+
+    /// <inheritdoc/>
+    public IEventLog EventLog => _projectionSpecificationContext.EventLog;
+
+    /// <inheritdoc/>
+    public IEventOutbox EventOutbox => _outbox;
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEvents => _projectionSpecificationContext.AppendedEvents;
+
+    /// <inheritdoc/>
+    public IEnumerable<AppendedEventForSpecifications> AppendedEventsToOutbox => _outbox.AppendedEvents;
+
+    /// <summary>
+    /// Gets the <see cref="IAdapterProjectionFor{TModel}"/> used.
+    /// </summary>
+    public IAdapterProjectionFor<TModel> Projection { get; }
 
     /// <inheritdoc/>
     public void Dispose()

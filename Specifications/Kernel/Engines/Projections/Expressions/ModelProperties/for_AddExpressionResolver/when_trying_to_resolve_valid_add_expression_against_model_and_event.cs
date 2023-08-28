@@ -20,11 +20,11 @@ public class when_trying_to_resolve_valid_add_expression_against_model_and_event
     {
         target = new();
         event_value_resolvers = new();
-        event_value_resolvers.Setup(_ => _.Resolve(IsAny<JsonSchemaProperty>(), IsAny<string>())).Returns((AppendedEvent _) => MyEvent.Something);
+        event_value_resolvers.Setup(_ => _.Resolve(IsAny<JsonSchemaProperty>(), IsAny<string>())).Returns((AppendedEvent _) => my_event.Something);
         resolver = new(event_value_resolvers.Object);
     }
 
-    void Because() => resolver.Resolve("targetProperty", new(), $"$add({nameof(MyEvent.Something).ToCamelCase()})")(@event, target, ArrayIndexers.NoIndexers);
+    void Because() => resolver.Resolve("targetProperty", new(), $"$add({nameof(my_event.Something).ToCamelCase()})")(@event, target, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((int)((dynamic)target).targetProperty).ShouldEqual(MyEvent.Something);
+    [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((int)((dynamic)target).targetProperty).ShouldEqual(my_event.Something);
 }

@@ -10,6 +10,6 @@ public class FromEveryProjection : IProjectionFor<Model>
     public void Define(IProjectionBuilderFor<Model> builder) => builder
         .FromEvery(_ => _
             .Set(m => m.LastUpdated).ToEventContextProperty(c => c.Occurred))
-        .From<EmptyEvent>(_ => {})
-        .From<EventWithPropertiesForAllSupportedTypes>(_ => {});
+        .From<EmptyEvent>(_ => { })
+        .From<EventWithPropertiesForAllSupportedTypes>(_ => { });
 }

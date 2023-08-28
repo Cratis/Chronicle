@@ -16,22 +16,17 @@ public abstract class GrainSpecification<TState> : GrainSpecification
 {
     protected Mock<IStorage<TState>> storage;
     protected TState state;
-    protected List<TState> written_states = new();
+    protected IList<TState> written_states = new List<TState>();
     protected TState most_recent_written_state;
     protected Type grain_type = typeof(Grain<TState>);
-
 
     protected override void OnStateManagement()
     {
         state ??= new TState();
 
-        var storageProperty = grain_type.GetField("storage", BindingFlags.FlattenHierarchy |
-                                                             BindingFlags.Instance |
-                                                             BindingFlags.NonPublic);
-
-        if (storageProperty is null)
-            throw new MissingMemberException(grain.GetType().Name, "storage");
-
+        var storageProperty = grain_type.GetField(
+            "storage",
+            BindingFlags.FlattenHierarchy | BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new MissingMemberException(grain.GetType().Name, "storage");
         storage = new Mock<IStorage<TState>>();
         storageProperty.SetValue(grain, storage.Object);
 
@@ -77,7 +72,7 @@ public abstract class GrainSpecification : Specification
         {
             var grainType = grain.GetType().FullName;
             var grainTypeBytes = Encoding.UTF8.GetBytes(grainType);
-            var grainIdentifier = GrainId.ToString().Replace("-", "");
+            var grainIdentifier = GrainId.ToString().Replace("-", string.Empty);
             if (!string.IsNullOrEmpty(GrainKeyExtension))
             {
                 grainIdentifier = $"{grainIdentifier}+{GrainKeyExtension}";

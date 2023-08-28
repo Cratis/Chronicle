@@ -20,9 +20,6 @@ public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISubtr
     readonly TParentBuilder _parent;
     string _expression = string.Empty;
 
-    /// <inheritdoc/>
-    public PropertyPath TargetProperty { get; }
-
     /// <summary>
     /// /// Initializes a new instance of the <see cref="SubtractBuilder{TModel, TEvent, TProperty, TParentBuilder}"/> class.
     /// </summary>
@@ -33,6 +30,9 @@ public class SubtractBuilder<TModel, TEvent, TProperty, TParentBuilder> : ISubtr
         _parent = parent;
         TargetProperty = targetProperty;
     }
+
+    /// <inheritdoc/>
+    public PropertyPath TargetProperty { get; }
 
     /// <inheritdoc/>
     public TParentBuilder With(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)

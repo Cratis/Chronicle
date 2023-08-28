@@ -7,7 +7,7 @@ public class when_resolving_expression_with_wrong_key_value_format : given.a_res
 {
     Exception result;
 
-    void Because() => result = Catch.Exception(() => resolver.Resolve(projection.Object, "$composite(nothing)", ""));
+    void Because() => result = Catch.Exception(() => resolver.Resolve(projection.Object, "$composite(nothing)", string.Empty));
 
     [Fact] void should_throw_missing_composite_expression() => result.ShouldBeOfExactType<InvalidCompositeKeyPropertyMappingExpression>();
 }

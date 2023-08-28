@@ -10,11 +10,6 @@ namespace Aksio.Cratis.Compliance;
 public sealed class ComplianceDetailsAttribute : Attribute
 {
     /// <summary>
-    /// Gets the details as to why or to what purpose/extent the type or property marked is classified as PII.
-    /// </summary>
-    public string Details { get; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="ComplianceDetailsAttribute"/> class.
     /// </summary>
     /// <param name="details">The details as to why or to what purpose/extent the type or property marked is classified as PII.</param>
@@ -22,4 +17,9 @@ public sealed class ComplianceDetailsAttribute : Attribute
     {
         Details = details;
     }
+
+    /// <summary>
+    /// Gets the details as to why or to what purpose/extent the type or property marked is classified as PII.
+    /// </summary>
+    public string Details { get; }
 }

@@ -21,12 +21,6 @@ namespace Aksio.Cratis.Projections;
 /// </summary>
 public class ImmediateProjections : IImmediateProjections
 {
-    static class ImmediateProjectionsCache<TProjection>
-    {
-        public static TProjection? Instance;
-        public static ProjectionDefinition? Definition;
-    }
-
     readonly IModelNameConvention _modelNameConvention;
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
@@ -37,9 +31,6 @@ public class ImmediateProjections : IImmediateProjections
     readonly IJsonProjectionSerializer _projectionSerializer;
     readonly IConnection _connection;
     readonly List<ProjectionDefinition> _definitions = new();
-
-    /// <inheritdoc/>
-    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
@@ -84,6 +75,9 @@ public class ImmediateProjections : IImmediateProjections
         });
         Definitions = _definitions.ToImmutableList();
     }
+
+    /// <inheritdoc/>
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <inheritdoc/>
     public Task<ImmediateProjectionResult> GetInstanceById(Type modelType, ModelKey modelKey)
@@ -141,5 +135,11 @@ public class ImmediateProjections : IImmediateProjections
             _definitions.Add(projectionDefinition);
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition = projectionDefinition;
         }
+    }
+
+    static class ImmediateProjectionsCache<TProjection>
+    {
+        public static TProjection? Instance;
+        public static ProjectionDefinition? Definition;
     }
 }

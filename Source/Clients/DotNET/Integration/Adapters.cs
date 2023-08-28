@@ -20,9 +20,6 @@ public class Adapters : IAdapters
     readonly IAdapterProjectionFactory _adapterProjectionFactory;
     readonly IAdapterMapperFactory _adapterMapperFactory;
 
-    /// <inheritdoc/>
-    public IImmutableList<ProjectionDefinition> Definitions { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Adapters"/> class.
     /// </summary>
@@ -42,6 +39,9 @@ public class Adapters : IAdapters
         _adapterMapperFactory = adapterMapperFactory;
         Definitions = Initialize().GetAwaiter().GetResult().ToImmutableList();
     }
+
+    /// <inheritdoc/>
+    public IImmutableList<ProjectionDefinition> Definitions { get; }
 
     /// <inheritdoc/>
     public IAdapterFor<TModel, TExternalModel> GetFor<TModel, TExternalModel>()

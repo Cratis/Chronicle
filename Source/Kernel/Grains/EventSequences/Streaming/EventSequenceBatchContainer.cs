@@ -15,17 +15,6 @@ public class EventSequenceBatchContainer : IBatchContainer
 {
     readonly IEnumerable<AppendedEvent> _events;
 
-    /// <inheritdoc/>
-    public StreamId StreamId { get; }
-
-    /// <inheritdoc/>
-    public StreamSequenceToken SequenceToken { get; }
-
-    /// <summary>
-    /// Gets the associated request context.
-    /// </summary>
-    public IDictionary<string, object> AssociatedRequestContext { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceBatchContainer"/> class.
     /// </summary>
@@ -49,6 +38,17 @@ public class EventSequenceBatchContainer : IBatchContainer
             SequenceToken = new EventSequenceNumberToken();
         }
     }
+
+    /// <inheritdoc/>
+    public StreamId StreamId { get; }
+
+    /// <inheritdoc/>
+    public StreamSequenceToken SequenceToken { get; }
+
+    /// <summary>
+    /// Gets the associated request context.
+    /// </summary>
+    public IDictionary<string, object> AssociatedRequestContext { get; }
 
     /// <inheritdoc/>
     public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>() =>

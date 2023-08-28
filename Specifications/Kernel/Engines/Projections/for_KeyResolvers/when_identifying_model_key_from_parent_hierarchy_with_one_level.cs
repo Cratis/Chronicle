@@ -39,7 +39,8 @@ public class when_identifying_model_key_from_parent_hierarchy_with_one_level : S
             }.AsExpandoObject());
 
         root_projection = new();
-        root_projection.SetupGet(_ => _.EventTypes).Returns(new EventType[] {
+        root_projection.SetupGet(_ => _.EventTypes).Returns(new EventType[]
+        {
             root_event_type
         });
 

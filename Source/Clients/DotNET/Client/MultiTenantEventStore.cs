@@ -8,12 +8,12 @@ namespace Aksio.Cratis.Client;
 /// </summary>
 public class MultiTenantEventStore : IMultiTenantEventStore
 {
-    /// <inheritdoc/>
-    public IMultiTenantEventSequences Sequences { get; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="MultiTenantEventStore"/> class.
     /// </summary>
     /// <param name="eventSequences"><see cref="IMultiTenantEventSequences"/> instance.</param>
     public MultiTenantEventStore(IMultiTenantEventSequences eventSequences) => Sequences = eventSequences;
+
+    /// <inheritdoc/>
+    public IMultiTenantEventSequences Sequences { get; }
 }

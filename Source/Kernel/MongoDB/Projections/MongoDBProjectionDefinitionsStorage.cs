@@ -20,7 +20,6 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
 {
     readonly ISharedDatabase _sharedDatabase;
     readonly IJsonProjectionSerializer _projectionSerializer;
-    IMongoCollection<BsonDocument> Collection => _sharedDatabase.GetCollection<BsonDocument>("projection-definitions");
 
     /// <summary>
     /// Initializes a new instance of <see cref="IMongoDBClientFactory"/>.
@@ -32,6 +31,8 @@ public class MongoDBProjectionDefinitionsStorage : IProjectionDefinitionsStorage
         _sharedDatabase = sharedDatabase;
         _projectionSerializer = projectionSerializer;
     }
+
+    IMongoCollection<BsonDocument> Collection => _sharedDatabase.GetCollection<BsonDocument>("projection-definitions");
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()

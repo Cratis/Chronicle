@@ -34,12 +34,6 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
     readonly IGrainFactory _grainFactory;
     bool _replaying;
 
-    /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.Outbox;
-
-    /// <inheritdoc/>
-    public ProjectionSinkTypeName Name => "MongoDB Outbox";
-
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxProjectionSink"/> class.
     /// </summary>
@@ -61,6 +55,12 @@ public class OutboxProjectionSink : IProjectionSink, IDisposable
         _jsonSerializerOptions = jsonSerializerOptions;
         _grainFactory = grainFactory;
     }
+
+    /// <inheritdoc/>
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.Outbox;
+
+    /// <inheritdoc/>
+    public ProjectionSinkTypeName Name => "MongoDB Outbox";
 
     /// <inheritdoc/>
     public void Dispose()

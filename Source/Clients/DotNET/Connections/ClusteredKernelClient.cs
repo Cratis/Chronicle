@@ -56,11 +56,11 @@ public abstract class ClusteredKernelClient : RestKernelConnection
         _httpClientFactory = httpClientFactory;
     }
 
-    /// <inheritdoc/>
-    protected override HttpClient CreateHttpClient() => _httpClientFactory.Create(Endpoints);
-
     /// <summary>
     /// Gets the endpoints to use for connecting to Kernel.
     /// </summary>
     protected abstract IEnumerable<Uri> Endpoints { get; }
+
+    /// <inheritdoc/>
+    protected override HttpClient CreateHttpClient() => _httpClientFactory.Create(Endpoints);
 }

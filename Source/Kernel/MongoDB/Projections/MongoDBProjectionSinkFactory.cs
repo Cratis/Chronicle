@@ -21,9 +21,6 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
     readonly IExecutionContextManager _executionContextManager;
     readonly Storage _configuration;
 
-    /// <inheritdoc/>
-    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
-
     /// <summary>
     /// /// Initializes a new instance of the <see cref="MongoDBProjectionSinkFactory"/> class.
     /// </summary>
@@ -45,6 +42,9 @@ public class MongoDBProjectionSinkFactory : IProjectionSinkFactory
         _typeFormats = typeFormats;
         _configuration = configuration;
     }
+
+    /// <inheritdoc/>
+    public ProjectionSinkTypeId TypeId => WellKnownProjectionSinkTypes.MongoDB;
 
     /// <inheritdoc/>
     public IProjectionSink CreateFor(Model model) =>
