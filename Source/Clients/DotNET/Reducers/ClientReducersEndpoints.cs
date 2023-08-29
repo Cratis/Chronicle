@@ -62,9 +62,9 @@ public static class ClientReducersEndpoints
             }
 
             CommandResult commandResult;
-            var reducers = context.RequestServices.GetRequiredService<ClientReducers>();
             try
             {
+                var reducers = context.RequestServices.GetRequiredService<ClientReducers>();
                 var result = await reducers.OnNext(reducerId, reduce.Events, reduce.InitialState);
 
                 var stateAsJson = JsonSerializer.SerializeToNode(result.State, Globals.JsonSerializerOptions)?.AsObject();
