@@ -208,7 +208,7 @@ public class ProjectionFactory : IProjectionFactory
 
     KeyResolver GetKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty)
     {
-        if (key is not null && key.Value != string.Empty && _keyExpressionResolvers.CanResolve(key))
+        if (key is not null && key.Value.Length != 0 && _keyExpressionResolvers.CanResolve(key))
         {
             return _keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
         }
