@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
 
@@ -12,7 +13,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences.Streaming;
 [Singleton]
 public class EventSequenceCaches : IEventSequenceCaches
 {
-    readonly Dictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
+    readonly ConcurrentDictionary<(MicroserviceId, TenantId, EventSequenceId), IEventSequenceCache> _caches = new();
     readonly IEventSequenceCacheFactory _eventSequenceCacheFactory;
     readonly KernelConfiguration _configuration;
 

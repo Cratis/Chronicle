@@ -1,10 +1,10 @@
 {
     "tenants": {
-        "3352d47d-c154-4457-b3fb-8a2efb725113": {
+        "00000000-0000-0000-0000-000000000000": {
         }
     },
     "microservices": {
-        "95166a40-617f-4c40-ae8c-3337d7f9c59c": {
+        "12c737d2-e816-46f4-96fd-67fc1bf71086": {
             "name": "Benchmark"
         }
     },
@@ -24,7 +24,7 @@
             "connectionDetails": "mongodb://localhost:27017/cratis-shared"
         },
         "microservices": {
-            "95166a40-617f-4c40-ae8c-3337d7f9c59c": {
+            "12c737d2-e816-46f4-96fd-67fc1bf71086": {
                 "shared": {
                     "eventStore": {
                         "type": "MongoDB",
@@ -32,7 +32,7 @@
                     }
                 },
                 "tenants": {
-                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
+                    "00000000-0000-0000-0000-000000000000": {
                         "readModels": {
                             "type": "MongoDB",
                             "connectionDetails": "mongodb://localhost:27017/benchmark-dev-read-models"

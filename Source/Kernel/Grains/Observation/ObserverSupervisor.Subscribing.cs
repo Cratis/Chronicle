@@ -32,12 +32,10 @@ public partial class ObserverSupervisor
         IEnumerable<EventType> eventTypes,
         object? subscriberArgs = default)
     {
-        await ReadStateAsync();
-
-        _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
-
         _logger.Subscribing(_observerId, subscriberType, _microserviceId, _eventSequenceId, _tenantId);
+        _failedPartitionSupervisor = new(_observerId, _observerKey, State.Name, eventTypes, State.FailedPartitions, GrainFactory);
         CurrentSubscription = new(_observerId, _observerKey, eventTypes, subscriberType, subscriberArgs!);
+        await ReadStateAsync();
 
         if (State.RunningState == ObserverRunningState.Rewinding)
         {

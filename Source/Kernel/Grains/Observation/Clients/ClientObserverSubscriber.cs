@@ -10,6 +10,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Observation;
+using Aksio.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 
@@ -86,7 +87,7 @@ public class ClientObserverSubscriber : Grain, IClientObserverSubscriber
                 var response = await httpClient.PostAsync($"/.cratis/observers/{_observerId}", jsonContent);
                 var commandResult = (await response.Content.ReadFromJsonAsync<CommandResult>(_jsonSerializerOptions))!;
                 var state = ObserverSubscriberState.Ok;
-                var lastSuccessfullyObservedEvent = (EventSequenceNumber)(ulong)commandResult.Response!;
+                var lastSuccessfullyObservedEvent = ((JsonElement)commandResult.Response!).Deserialize<EventSequenceNumber>(Globals.JsonSerializerOptions)!;
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
