@@ -1,15 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
-using System.Text.Json.Nodes;
 using Aksio.Cratis;
-using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.MongoDB;
-using Aksio.Cratis.Kernel.Schemas;
-using Aksio.Cratis.Schemas;
 using Aksio.Execution;
 using Aksio.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,44 +13,9 @@ using IEventSequence = Aksio.Cratis.Kernel.Grains.EventSequences.IEventSequence;
 
 namespace Benchmarks.EventSequences;
 
-public abstract class EventLogJob
+public abstract class EventLogJob : BenchmarkJob
 {
-    protected abstract IEnumerable<Type> EventTypes { get; }
-
     protected IEventSequence? EventSequence { get; private set; }
-    protected IExecutionContextManager? ExecutionContextManager { get; private set; }
-    protected IEventSerializer? EventSerializer { get; private set; }
-
-    protected virtual void Setup()
-    {
-    }
-
-    [GlobalSetup]
-    public void GlobalSetup()
-    {
-        var grainFactory = GlobalVariables.ServiceProvider.GetRequiredService<IGrainFactory>();
-        EventSequence = grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: new MicroserviceAndTenant(GlobalVariables.MicroserviceId, TenantId.Development));
-        ExecutionContextManager = GlobalVariables.ServiceProvider.GetRequiredService<IExecutionContextManager>();
-        EventSerializer = GlobalVariables.ServiceProvider.GetRequiredService<IEventSerializer>();
-
-        ExecutionContextManager?.Establish(TenantId.Development, CorrelationId.New(), GlobalVariables.MicroserviceId);
-
-        var schemaStore = GlobalVariables.ServiceProvider.GetRequiredService<ISchemaStore>();
-        var schemaGenerator = GlobalVariables.ServiceProvider.GetRequiredService<IJsonSchemaGenerator>();
-
-        foreach (var eventType in EventTypes)
-        {
-            var eventTypeAttribute = eventType.GetCustomAttribute<EventTypeAttribute>()!;
-            schemaStore.Register(eventTypeAttribute.Type, eventType.Name, schemaGenerator.Generate(eventType));
-        }
-
-        Setup();
-    }
-
-    [GlobalCleanup]
-    public void GlobalCleanup()
-    {
-    }
 
     [IterationSetup]
     public void CleanEventStore()
@@ -77,11 +37,19 @@ public abstract class EventLogJob
         database.DropCollection(CollectionNames.EventSequences);
     }
 
+    protected override void Setup()
+    {
+        base.Setup();
+
+        var grainFactory = GlobalVariables.ServiceProvider.GetRequiredService<IGrainFactory>();
+        EventSequence = grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: new MicroserviceAndTenant(GlobalVariables.MicroserviceId, TenantId.Development));
+
+        ExecutionContextManager?.Establish(TenantId.Development, CorrelationId.New(), GlobalVariables.MicroserviceId);
+    }
+
     protected async Task Perform(Func<IEventSequence, Task> action)
     {
         ExecutionContextManager?.Establish(TenantId.Development, CorrelationId.New(), GlobalVariables.MicroserviceId);
         await action(EventSequence!);
     }
-
-    protected JsonObject SerializeEvent(object @event) => EventSerializer!.Serialize(@event).GetAwaiter().GetResult();
 }

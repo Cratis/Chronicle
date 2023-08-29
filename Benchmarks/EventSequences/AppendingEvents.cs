@@ -46,6 +46,8 @@ public class AppendingEvents : EventLogJob
 
     protected override void Setup()
     {
+        base.Setup();
+
         var eventTypes = EventTypes.ToArray();
 
         _eventsToAppend = Enumerable.Range(0, EventsToCommit).Select(index =>
