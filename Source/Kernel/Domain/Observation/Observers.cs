@@ -7,10 +7,10 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.Clients;
 using Aksio.Cratis.Kernel.Grains.Observation;
-using Aksio.Cratis.Kernel.Grains.Observation.Clients;
 using Aksio.Cratis.Observation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using IClientObservers = Aksio.Cratis.Kernel.Grains.Observation.Clients.IClientObservers;
 
 namespace Aksio.Cratis.Kernel.Domain.Observation;
 

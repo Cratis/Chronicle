@@ -2,10 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Keys;
-using Aksio.Cratis.Kernel.Observation;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Observation.Indexes;
+namespace Aksio.Cratis.Kernel.MongoDB.Keys;
 
 /// <summary>
 /// Represents an implementation of <see cref="IObserverKeyIndex"/> for MongoDB.

@@ -4,7 +4,7 @@
 using Aksio.Cratis.Kernel.Keys;
 using MongoDB.Driver;
 
-namespace Aksio.Cratis.Kernel.MongoDB.Observation.Indexes;
+namespace Aksio.Cratis.Kernel.MongoDB.Keys;
 
 /// <summary>
 /// Represents an implementation of <see cref="IAsyncEnumerator{T}"/> for MongoDB.

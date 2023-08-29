@@ -4,7 +4,7 @@
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Observation;
 
-namespace Aksio.Cratis.Kernel.Observation;
+namespace Aksio.Cratis.Kernel.Keys;
 
 /// <summary>
 /// Defines a system for managing <see cref="IObserverKeyIndex">observer key indexes</see>.
