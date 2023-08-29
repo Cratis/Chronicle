@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Reducers;
 /// <summary>
 /// Represents the endpoint called for receiving events from the kernel.
 /// </summary>
-public class ClientReducers
+public class ClientReducers : IClientReducers
 {
     readonly IReducersRegistrar _reducers;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -34,13 +34,7 @@ public class ClientReducers
         _logger = logger;
     }
 
-    /// <summary>
-    /// Called for events to be handled.
-    /// </summary>
-    /// <param name="reducerId">The <see cref="ReducerId"/> of the reducer it is for.</param>
-    /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
-    /// <param name="initialAsJson">The initial state.</param>
-    /// <returns>Reduced result.</returns>
+    /// <inheritdoc/>
     public async Task<InternalReduceResult> OnNext(
         ReducerId reducerId,
         IEnumerable<AppendedEvent> events,
