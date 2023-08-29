@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Reducers;
 /// Attribute to specify which event sequence to use.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
-public class EventSequenceAttribute : Attribute
+public sealed class EventSequenceAttribute : Attribute
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequenceAttribute"/> class.

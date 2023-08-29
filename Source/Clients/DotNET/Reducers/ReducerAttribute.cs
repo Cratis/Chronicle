@@ -10,7 +10,7 @@ namespace Aksio.Cratis.Reducers;
 /// Attribute used to adorn classes to identify a reducer uniquely. The reducer also needs to implement <see cref="IReducerFor{TReadModel}"/>.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-public class ReducerAttribute : Attribute
+public sealed class ReducerAttribute : Attribute
 {
     /// <summary>
     /// Initializes a new instance of <see cref="ReducerAttribute"/>.

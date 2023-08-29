@@ -7,7 +7,7 @@ namespace Aksio.Cratis.Keys;
 /// Represents metadata for defining which property on the event to use as key.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
-public class ContextKeyAttribute : Attribute
+public sealed class ContextKeyAttribute : Attribute
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="KeyAttribute"/> class.
