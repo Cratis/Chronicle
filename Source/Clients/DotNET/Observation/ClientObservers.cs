@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
-/// Represents the endpoint called for receiving events from the kernel.
+/// Represents an implementation of <see cref="IClientObservers"/>.
 /// </summary>
-public class ClientObservers
+public class ClientObservers : IClientObservers
 {
     readonly IObserversRegistrar _observers;
     readonly ILogger<ClientObservers> _logger;
@@ -27,12 +27,7 @@ public class ClientObservers
         _logger = logger;
     }
 
-    /// <summary>
-    /// Called for events to be handled.
-    /// </summary>
-    /// <param name="observerId">The <see cref="ObserverId"/> of the observer it is for.</param>
-    /// <param name="events">The collection of <see cref="AppendedEvent"/>.</param>
-    /// <returns>Sequence number of last successfully processed event.</returns>
+    /// <inheritdoc/>
     public async Task<EventSequenceNumber> OnNext(
         ObserverId observerId,
         IEnumerable<AppendedEvent> events)

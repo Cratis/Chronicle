@@ -178,7 +178,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IObserversRegistrar, ObserversRegistrar>()
-            .AddTransient<ClientObservers>()
+            .AddTransient<IClientObservers, ClientObservers>()
             .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
             .AddSingleton<IReducerValidator, ReducerValidator>()
             .AddTransient<ClientReducers>()
