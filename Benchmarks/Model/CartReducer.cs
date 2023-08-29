@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Keys;
 using Aksio.Cratis.Reducers;
 
 namespace Benchmark.Model;
@@ -10,8 +9,6 @@ namespace Benchmark.Model;
 [Reducer("ff449077-0adb-4c5c-90e6-15631cd9e2b1")]
 public class CartReducer : IReducerFor<Cart>
 {
-    public Key<ItemAddedToCart> Key => _ => _.UsingKey(_ => _.PersonId);
-
     public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
     {
         initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());

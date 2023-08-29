@@ -26,6 +26,10 @@ public abstract class EventLogJob
     protected IExecutionContextManager? ExecutionContextManager { get; private set; }
     protected IEventSerializer? EventSerializer { get; private set; }
 
+    protected virtual void Setup()
+    {
+    }
+
     [GlobalSetup]
     public void GlobalSetup()
     {
@@ -44,6 +48,8 @@ public abstract class EventLogJob
             var eventTypeAttribute = eventType.GetCustomAttribute<EventTypeAttribute>()!;
             schemaStore.Register(eventTypeAttribute.Type, eventType.Name, schemaGenerator.Generate(eventType));
         }
+
+        Setup();
     }
 
     [GlobalCleanup]
@@ -77,5 +83,5 @@ public abstract class EventLogJob
         await action(EventSequence!);
     }
 
-    protected Task<JsonObject> SerializeEvent(object @event) => EventSerializer!.Serialize(@event);
+    protected JsonObject SerializeEvent(object @event) => EventSerializer!.Serialize(@event).GetAwaiter().GetResult();
 }

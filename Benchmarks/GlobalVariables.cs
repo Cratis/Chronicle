@@ -14,5 +14,4 @@ internal static class GlobalVariables
     internal static IServiceProvider ServiceProvider { get; private set; } = new DefaultServiceProviderFactory().CreateServiceProvider(new ServiceCollection());
 
     internal static void SetServiceProvider(IServiceProvider serviceProvider) => ServiceProvider = serviceProvider;
-
 }
