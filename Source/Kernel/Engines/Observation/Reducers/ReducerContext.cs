@@ -11,5 +11,5 @@ namespace Aksio.Cratis.Kernel.Engines.Observation.Reducers;
 /// </summary>
 /// <param name="Events">Collection of <see cref="AppendedEvent"/> to reduce from.</param>
 /// <param name="Key"><see cref="Key"/> the events are for.</param>
-/// <param name="IsReplaying">Whether or not the events are part of a replay.</param>
-public record ReducerContext(IEnumerable<AppendedEvent> Events, Key Key, bool IsReplaying);
+/// <param name="ObservationState"><see cref="EventObservationState"/> for the context. Each individual event context on each event will be exact what the events observation state is.</param>
+public record ReducerContext(IEnumerable<AppendedEvent> Events, Key Key, EventObservationState ObservationState);

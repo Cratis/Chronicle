@@ -230,7 +230,7 @@ public abstract class ObserverWorker : Grain
             SourceTenantId);
 
         var subscriber = (GrainFactory.GetGrain(CurrentSubscription.SubscriberType, ObserverId, key) as IObserverSubscriber)!;
-        return subscriber.OnNext(new[] { @event }, new(CurrentSubscription.Arguments));
+        return subscriber.OnNext(new[] { @event }, new(@event.Context.ObservationState, CurrentSubscription.Arguments));
     }
 
     /// <summary>

@@ -111,11 +111,20 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                 var state = ObserverSubscriberState.Ok;
                 var commandResult = CommandResult.Success;
 
+                var isReplaying = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.Replay));
+                var isHeadOfReplay = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.HeadOfReplay));
+                var isTailOfReplay = events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.TailOfReplay));
+
+                var observationState = EventObservationState.None;
+                if (isReplaying) observationState |= EventObservationState.Replay;
+                if (isHeadOfReplay) observationState |= EventObservationState.HeadOfReplay;
+                if (isTailOfReplay) observationState |= EventObservationState.TailOfReplay;
+
                 var firstEvent = events.First();
                 var reducerContext = new ReducerContext(
                     events,
                     new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers),
-                    firstEvent.Context.ObservationState.HasFlag(EventObservationState.Replay));
+                    observationState);
 
                 await (_pipeline?.Handle(reducerContext, async (_, initial) =>
                 {
