@@ -7,39 +7,12 @@ using Aksio.Cratis.Reducers;
 
 namespace Basic;
 
-public record CartId(Guid Value) : ConceptAs<Guid>(Value)
-{
-    public static implicit operator CartId(Guid value) => new(value);
-
-    public static implicit operator CartId(EventSourceId value) => new(Guid.Parse(value.Value));
-}
-
-public record PersonId(Guid Value) : ConceptAs<Guid>(Value);
-
-public record MaterialId(Guid Value) : ConceptAs<Guid>(Value);
-
-[EventType("cf3a0eef-42a6-44e9-9d1c-3d48c22cafc0")]
-public record MyEvent();
-
-[EventType("147077c9-3954-4931-9a29-ea750bff97c1")]
-public record ItemAddedToCart(PersonId PersonId, MaterialId MaterialId, int Quantity);
-
-[EventType("b2581e78-eff8-4609-b166-6d0387d0f149")]
-public record ItemRemovedFromCart(PersonId PersonId, MaterialId MaterialId);
-
-[EventType("f3927a33-7028-4242-bc06-a06f8ad62b68")]
-public record QuantityAdjustedForItemInCart(PersonId PersonId, MaterialId MaterialId, int Quantity);
-
-public record CartItem(MaterialId MaterialId, int Quantity);
-
-public record Cart(CartId Id, IEnumerable<CartItem> Items);
-
-public record EventKeyContext<TEvent>(TEvent Event, EventContext EventContext);
-
 [Reducer("ff449077-0adb-4c5c-90e6-15631cd9e2b1")]
 public class CartReducer : IReducerFor<Cart>
 {
-    public Task<Cart> On(ItemAddedToCart @event, Cart? initial, EventContext context)
+    public Key<ItemAddedToCart> Key => _ => _.UsingKey(_ => _.PersonId);
+
+    public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
     {
         initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
@@ -49,7 +22,7 @@ public class CartReducer : IReducerFor<Cart>
         });
     }
 
-    public Task<Cart> On(ItemRemovedFromCart @event, Cart? initial, EventContext context)
+    public Task<Cart> ItemRemoved(ItemRemovedFromCart @event, Cart? initial, EventContext context)
     {
         initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
@@ -59,7 +32,7 @@ public class CartReducer : IReducerFor<Cart>
         });
     }
 
-    public Task<Cart> On(QuantityAdjustedForItemInCart @event, Cart? initial, EventContext context)
+    public Task<Cart> QuantityAdjusted(QuantityAdjustedForItemInCart @event, Cart? initial, EventContext context)
     {
         initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
         return Task.FromResult(initial with
