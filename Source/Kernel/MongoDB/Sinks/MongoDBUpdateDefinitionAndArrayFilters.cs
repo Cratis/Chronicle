@@ -12,4 +12,4 @@ namespace Aksio.Cratis.Kernel.MongoDB.Sinks;
 /// <param name="UpdateDefinition">The actual update definition.</param>
 /// <param name="ArrayFilters">Any array filters associated.</param>
 /// <param name="hasChanges">Whether or not there are changes.</param>
-public record MongoDBUpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> UpdateDefinition, BsonDocumentArrayFilterDefinition<BsonDocument>[] ArrayFilters, bool hasChanges);
+public record MongoDBUpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> UpdateDefinition, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, bool hasChanges);
