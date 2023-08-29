@@ -47,7 +47,7 @@ public class BootProcedure : IPerformBootProcedure
     /// <inheritdoc/>
     public void Perform()
     {
-        _ = Task.Run(async () =>
+        Task.Run(async () =>
         {
             _logger.PrimingEventSequenceCaches();
             var eventSequenceCaches = _serviceProvider.GetRequiredService<IEventSequenceCaches>()!;
@@ -57,11 +57,11 @@ public class BootProcedure : IPerformBootProcedure
             {
                 _executionContextManager.Establish(microserviceId);
 
-                this._logger.PopulateSchemaStore();
+                _logger.PopulateSchemaStore();
                 var schemaStore = _serviceProvider.GetRequiredService<Schemas.ISchemaStore>()!;
                 await schemaStore.Populate();
 
-                this._logger.PopulateIdentityStore();
+                _logger.PopulateIdentityStore();
                 var identityStore = _serviceProvider.GetRequiredService<IIdentityStore>()!;
                 await identityStore.Populate();
 
@@ -79,6 +79,6 @@ public class BootProcedure : IPerformBootProcedure
                     }
                 }
             }
-        });
+        }).Wait();
     }
 }

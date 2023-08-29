@@ -47,5 +47,7 @@ public abstract class BenchmarkJob
     {
     }
 
+    protected void SetExecutionContext() => ExecutionContextManager?.Establish(TenantId.Development, CorrelationId.New(), GlobalVariables.MicroserviceId);
+
     protected JsonObject SerializeEvent(object @event) => EventSerializer!.Serialize(@event).GetAwaiter().GetResult();
 }

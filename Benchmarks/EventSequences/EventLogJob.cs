@@ -44,7 +44,7 @@ public abstract class EventLogJob : BenchmarkJob
         var grainFactory = GlobalVariables.ServiceProvider.GetRequiredService<IGrainFactory>();
         EventSequence = grainFactory.GetGrain<IEventSequence>(EventSequenceId.Log, keyExtension: new MicroserviceAndTenant(GlobalVariables.MicroserviceId, TenantId.Development));
 
-        ExecutionContextManager?.Establish(TenantId.Development, CorrelationId.New(), GlobalVariables.MicroserviceId);
+        SetExecutionContext();
     }
 
     protected async Task Perform(Func<IEventSequence, Task> action)

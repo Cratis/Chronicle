@@ -17,6 +17,8 @@ GlobalVariables.SetServiceProvider(host.Services);
 
 await host.StartAsync();
 
+await Task.Delay(1000);
+
 BenchmarkSwitcher
     .FromAssembly(typeof(Program).Assembly)
     .Run(args, new DebugInProcessConfig());
