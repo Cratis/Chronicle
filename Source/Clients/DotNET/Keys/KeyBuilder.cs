@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using Aksio.Cratis.Events;
 
-namespace Aksio.Cratis.Reducers;
+namespace Aksio.Cratis.Keys;
 
 /// <summary>
 /// Represents an implementation of <see cref="IKeyBuilder{TEvent}"/>.

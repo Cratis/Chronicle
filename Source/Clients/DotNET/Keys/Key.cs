@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Reducers;
+namespace Aksio.Cratis.Keys;
 
 /// <summary>
 /// Delegate that gets called when building a key for a specific event.
