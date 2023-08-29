@@ -73,6 +73,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Source\In
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB", "Source\Clients\MongoDB\MongoDB.csproj", "{386CDF2A-92C6-444E-9529-CEB777016DFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{C922D61D-3CFF-470E-8845-4EBC974257A5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -198,6 +200,10 @@ Global
 		{386CDF2A-92C6-444E-9529-CEB777016DFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{386CDF2A-92C6-444E-9529-CEB777016DFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{386CDF2A-92C6-444E-9529-CEB777016DFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C922D61D-3CFF-470E-8845-4EBC974257A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C922D61D-3CFF-470E-8845-4EBC974257A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C922D61D-3CFF-470E-8845-4EBC974257A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C922D61D-3CFF-470E-8845-4EBC974257A5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F1A70D86-CE4A-443C-B4F9-EEFBC3E896F3} = {216800F4-7820-46A5-A3AD-4FCE82927B8D}

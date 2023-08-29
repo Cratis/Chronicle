@@ -301,3 +301,6 @@ out
 !.yarn/versions
 
 .DS_Store
+
+# Benachmark .NET
+BenchmarkDotNet.Artifacts/
