@@ -10,7 +10,7 @@ public class HandlingEvents : ClientObserverJob
     IEnumerable<AppendedEvent> _eventsToHandle = Enumerable.Empty<AppendedEvent>();
 
     [Params(10, 100, 1000)]
-    public int EventsToCommit { get; set; } = 1000;
+    public int EventsToCommit { get; set; } = 100;
 
     protected override IEnumerable<Type> EventTypes => TestData.EventTypes;
 
