@@ -1,6 +1,8 @@
 {
     "tenants": {
         "00000000-0000-0000-0000-000000000000": {
+            "name": "Benchmark",
+            "configuration": {}
         }
     },
     "microservices": {
@@ -16,8 +18,7 @@
         "gatewayPort": 30000,
         "options": {}
     },
-    "telemetry": {
-    },
+    "telemetry": {},
     "storage": {
         "cluster": {
             "type": "MongoDB",
