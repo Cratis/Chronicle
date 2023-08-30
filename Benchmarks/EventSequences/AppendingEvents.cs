@@ -11,7 +11,7 @@ public class AppendingEvents : EventLogJob
     IEnumerable<EventToAppend> _eventsToAppend = Enumerable.Empty<EventToAppend>();
 
     [Params(10, 100, 1000)]
-    public int EventsToCommit { get; set; } = 1000;
+    public int NumberOfEvents { get; set; } = 1000;
 
     protected override IEnumerable<Type> EventTypes => TestData.EventTypes;
 
@@ -38,6 +38,6 @@ public class AppendingEvents : EventLogJob
     {
         base.Setup();
 
-        _eventsToAppend = TestData.GenerateEventsToAppend(EventsToCommit);
+        _eventsToAppend = TestData.GenerateEventsToAppend(NumberOfEvents);
     }
 }
