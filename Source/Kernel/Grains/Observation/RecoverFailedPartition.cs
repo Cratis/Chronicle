@@ -84,11 +84,11 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
     }
 
     /// <inheritdoc/>
-    public async Task Recover(ObserverKey observerKey, ObserverName observerName, EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, IEnumerable<string> messages, string stackTrace)
+    public async Task Recover(ObserverKey observerKey, ObserverName observerName, EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, IEnumerable<string> messages, string stackTrace, DateTimeOffset occurred)
     {
         _observerKey = observerKey;
         _subscriberKey = ObserverSubscriberKey.FromObserverKey(observerKey, _key!.EventSourceId);
-        State.InitializeError(_observerKey, observerName, _subscriberKey, fromEvent, eventTypes, messages, stackTrace);
+        State.InitializeError(_observerKey, observerName, _subscriberKey, fromEvent, eventTypes, messages, stackTrace, occurred);
         _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, fromEvent);
         await WriteStateAsync();
         await SetSubscriberSubscription();
@@ -103,6 +103,17 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
         await WriteStateAsync();
         await SetSubscriberSubscription();
         ScheduleNextTimer(isForced: true);
+    }
+
+    /// <inheritdoc/>
+    public async Task ResumeRecovery()
+    {
+        await ReadStateAsync();
+        _observerKey = ObserverKey.Parse(State.ObserverKey);
+        _subscriberKey = ObserverSubscriberKey.FromObserverKey(_observerKey, _key!.EventSourceId);
+        _logger.RecoveryRequested(State.ObserverId, _key!.MicroserviceId, _key!.TenantId, _key!.EventSequenceId, _key!.EventSourceId, State.CurrentError);
+        await SetSubscriberSubscription();
+        ScheduleNextTimer(true);
     }
 
     /// <inheritdoc/>
