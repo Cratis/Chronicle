@@ -16,6 +16,7 @@ public interface IClientReducers : IGrainWithGuidKey
     /// </summary>
     /// <param name="connectionId"><see cref="ConnectionId"/> to register with.</param>
     /// <param name="definitions">Collection of <see cref="ReducerDefinition"/>.</param>
+    /// <param name="tenants">Collection of <see cref="TenantId">tenants</see> to register for.</param>
     /// <returns>Awaitable task.</returns>
-    Task Register(ConnectionId connectionId, IEnumerable<ReducerDefinition> definitions);
+    Task Register(ConnectionId connectionId, IEnumerable<ReducerDefinition> definitions, IEnumerable<TenantId> tenants);
 }

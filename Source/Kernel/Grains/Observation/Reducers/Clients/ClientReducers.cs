@@ -7,7 +7,6 @@ using Aksio.Cratis.Observation;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
-using TenantsConfig = Aksio.Cratis.Kernel.Configuration.Tenants;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
 
@@ -16,7 +15,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Reducers.Clients;
 /// </summary>
 public class ClientReducers : Grain, IClientReducers
 {
-    readonly TenantsConfig _tenants;
     readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IReducerPipelineDefinitions> _reducerPipelineDefinitionsProvider;
     readonly ILogger<ClientReducers> _logger;
@@ -24,24 +22,24 @@ public class ClientReducers : Grain, IClientReducers
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientReducers"/> class.
     /// </summary>
-    /// <param name="tenants">The configured <see cref="TenantsConfig"/>.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="reducerPipelineDefinitionsProvider">Provider for <see cref="IReducerPipelineDefinitions"/> for registering pipeline definitions.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ClientReducers(
-        TenantsConfig tenants,
         IExecutionContextManager executionContextManager,
         ProviderFor<IReducerPipelineDefinitions> reducerPipelineDefinitionsProvider,
         ILogger<ClientReducers> logger)
     {
-        _tenants = tenants;
         _executionContextManager = executionContextManager;
         _reducerPipelineDefinitionsProvider = reducerPipelineDefinitionsProvider;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public async Task Register(ConnectionId connectionId, IEnumerable<ReducerDefinition> definitions)
+    public async Task Register(
+        ConnectionId connectionId,
+        IEnumerable<ReducerDefinition> definitions,
+        IEnumerable<TenantId> tenants)
     {
         _logger.RegisterReducers();
 
@@ -49,7 +47,7 @@ public class ClientReducers : Grain, IClientReducers
 
         foreach (var definition in definitions)
         {
-            foreach (var tenantId in _tenants.GetTenantIds())
+            foreach (var tenantId in tenants)
             {
                 _logger.RegisterReducer(
                     definition.ReducerId,
