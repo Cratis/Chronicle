@@ -45,7 +45,7 @@ public class with_no_errors_on_processing_from_failed_event : given.a_recover_fa
         };
     }
 
-    Task Because() => (grain as RecoverFailedPartition).Recover(observer_key, string.Empty, initial_error, Enumerable.Empty<EventType>(), Enumerable.Empty<string>(), string.Empty);
+    Task Because() => (grain as RecoverFailedPartition).Recover(observer_key, string.Empty, initial_error, Enumerable.Empty<EventType>(), Enumerable.Empty<string>(), string.Empty, DateTimeOffset.UtcNow);
 
     [Fact]
     void should_call_the_subscriber_for_each_event()

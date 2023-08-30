@@ -139,13 +139,7 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
         if (failedPartition is null) return;
 
         await GetRecoveryGrain(failedPartition.Partition)
-            .Recover(
-                _observerKey,
-                _observerName,
-                failedPartition.RecoveredTo ?? failedPartition.Tail,
-                _eventTypes,
-                failedPartition.Messages,
-                failedPartition.StackTrace);
+            .ResumeRecovery();
     }
 
     /// <summary>
@@ -176,7 +170,8 @@ public class FailedPartitionSupervisor : IChildStateProvider<FailedPartitionsSta
                 sequenceNumber,
                 _eventTypes,
                 messages,
-                stackTrace);
+                stackTrace,
+                occurred);
     }
 
     IRecoverFailedPartition GetRecoveryGrain(EventSourceId partitionId) => _grainFactory.GetGrain<IRecoverFailedPartition>(_observerId, PartitionedObserverKey.FromObserverKey(_observerKey, partitionId));

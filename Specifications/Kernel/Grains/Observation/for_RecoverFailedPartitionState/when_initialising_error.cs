@@ -26,7 +26,7 @@ public class when_initialising_error : Specification
         state = new RecoverFailedPartitionState();
     }
 
-    void Because() => state.InitializeError(observer_key, string.Empty, subscriber_key, initial_error, event_types, Enumerable.Empty<string>(), string.Empty);
+    void Because() => state.InitializeError(observer_key, string.Empty, subscriber_key, initial_error, event_types, Enumerable.Empty<string>(), string.Empty, DateTimeOffset.UtcNow);
 
     [Fact] void should_set_the_initial_error() => state.InitialError.ShouldEqual(initial_error);
 

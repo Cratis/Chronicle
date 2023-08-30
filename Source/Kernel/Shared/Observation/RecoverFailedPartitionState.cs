@@ -195,6 +195,7 @@ public class RecoverFailedPartitionState
     /// <param name="eventTypes">Types of event that are in the event sequence.</param>
     /// <param name="messages">Any messages associated with the error.</param>
     /// <param name="stacktrace">A stack trace associated with the error.</param>
+    /// <param name="occurred">The date and time for when the error initially occurred.</param>
     public void InitializeError(
         ObserverKey observerKey,
         ObserverName observerName,
@@ -202,14 +203,15 @@ public class RecoverFailedPartitionState
         EventSequenceNumber fromEvent,
         IEnumerable<EventType> eventTypes,
         IEnumerable<string> messages,
-        string stacktrace)
+        string stacktrace,
+        DateTimeOffset occurred)
     {
         ObserverKey = observerKey.ToString();
         ObserverName = observerName;
         SubscriberKey = subscriberKey.ToString();
         CurrentError = fromEvent;
         InitialError = fromEvent;
-        InitialPartitionFailedOn = DateTimeOffset.UtcNow;
+        InitialPartitionFailedOn = occurred;
         EventTypes = eventTypes;
         Messages = messages;
         StackTrace = stacktrace;
