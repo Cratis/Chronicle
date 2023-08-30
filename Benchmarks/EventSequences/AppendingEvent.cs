@@ -16,7 +16,7 @@ public class AppendingEvent : EventLogJob
 
     [Benchmark]
     [InvocationCount(1)]
-    public Task SingleEvent() => Perform(async eventSequence =>
+    public Task Single() => Perform(async eventSequence =>
     {
         await eventSequence.Append(
            "5753c26b-8f09-4e29-8f1e-2c4518d42260",
