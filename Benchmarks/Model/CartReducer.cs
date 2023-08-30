@@ -6,9 +6,11 @@ using Aksio.Cratis.Reducers;
 
 namespace Benchmark.Model;
 
-[Reducer("ff449077-0adb-4c5c-90e6-15631cd9e2b1")]
+[Reducer(Identifier)]
 public class CartReducer : IReducerFor<Cart>
 {
+    public const string Identifier = "ff449077-0adb-4c5c-90e6-15631cd9e2b1";
+
     public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
     {
         initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
