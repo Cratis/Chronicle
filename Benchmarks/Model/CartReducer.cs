@@ -3,10 +3,11 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Reducers;
+using Benchmarks;
 
 namespace Benchmark.Model;
 
-[Reducer(Identifier)]
+[Reducer(Identifier, GlobalVariables.ObserverEventSequence)]
 public class CartReducer : IReducerFor<Cart>
 {
     public const string Identifier = "ff449077-0adb-4c5c-90e6-15631cd9e2b1";

@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.MongoDB;
 using Aksio.Cratis.Observation;
@@ -26,7 +25,7 @@ public class ClientObserverJob : BenchmarkJob
         SetExecutionContext();
         base.Setup();
 
-        var key = new ObserverKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId, EventSequenceId.Log);
+        var key = new ObserverKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId, GlobalVariables.ObserverEventSequence);
         ObserverSupervisor = GrainFactory.GetGrain<IObserverSupervisor>(Guid.Parse(CartObserver.Identifier), key);
     }
 }

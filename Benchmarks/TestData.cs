@@ -43,7 +43,7 @@ public static class TestData
             var appendedEvent = AppendedEvent.EmptyWithEventType(@event.GetType().GetEventType());
             return appendedEvent with
             {
-                Content = @event.AsExpandoObject(),
+                Content = @event.AsExpandoObject(true),
                 Metadata = appendedEvent.Metadata with
                 {
                     SequenceNumber = (ulong)index

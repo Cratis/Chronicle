@@ -3,11 +3,12 @@
 
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Observation;
+using Benchmarks;
 using MongoDB.Driver;
 
 namespace Benchmark.Model;
 
-[Observer(Identifier)]
+[Observer(Identifier, eventSequence: GlobalVariables.ObserverEventSequence)]
 public class CartObserver
 {
     public const string Identifier = "744d9b53-1b59-487b-bda2-377680f366cd";

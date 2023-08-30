@@ -9,6 +9,8 @@ namespace Benchmarks;
 
 internal static class GlobalVariables
 {
+    internal const string ObserverEventSequence = "141094c6-3f6f-4d4b-989d-0541c02bdfea";
+
     internal static readonly IEnumerable<Causation> BenchmarkCausation = new[] { new Causation(DateTimeOffset.UtcNow, "Benchmark", new Dictionary<string, string>()) };
     internal static readonly MicroserviceId MicroserviceId = MicroserviceId.Kernel;
     internal static readonly TenantId TenantId = Guid.Empty;

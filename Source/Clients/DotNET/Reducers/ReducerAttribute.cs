@@ -16,15 +16,17 @@ public sealed class ReducerAttribute : Attribute
     /// Initializes a new instance of <see cref="ReducerAttribute"/>.
     /// </summary>
     /// <param name="reducerIdAsString"><see cref="ReducerId"/> represented as string. Must be a valid Guid.</param>
-    public ReducerAttribute(string reducerIdAsString)
+    /// <param name="eventSequence">Optional the name of the event sequence to observe, this will take precedence over inbox.</param>
+    public ReducerAttribute(string reducerIdAsString, string? eventSequence = default)
     {
         ReducerId = reducerIdAsString;
+        EventSequenceId = eventSequence ?? EventSequenceId.Log;
     }
 
     /// <summary>
     /// Gets the unique identifier for the reducer.
     /// </summary>
-    public ReducerId ReducerId { get; }
+    public ReducerId ReducerId { get; }
 
     /// <summary>
     /// Gets the unique identifier for an event sequence.
