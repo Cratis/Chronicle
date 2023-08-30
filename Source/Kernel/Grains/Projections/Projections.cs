@@ -26,7 +26,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
     readonly IExecutionContextManager _executionContextManager;
     readonly IClusterClient _clusterClient;
-    readonly Tenants _tenants;
+    readonly KernelConfiguration _configuration;
     readonly Microservices _microservices;
     readonly ILogger<Projections> _logger;
     readonly IBroadcastChannelProvider _projectionChangedChannel;
@@ -39,7 +39,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// <param name="projectionManagerProvider">Provider for the <see cref="IProjectionManager"/> to use.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
-    /// <param name="tenants">All configured tenants.</param>
+    /// <param name="configuration">The Kernel configuration.</param>
     /// <param name="microservices">All configured microservices.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Projections(
@@ -48,7 +48,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         ProviderFor<IProjectionManager> projectionManagerProvider,
         IExecutionContextManager executionContextManager,
         IClusterClient clusterClient,
-        Tenants tenants,
+        KernelConfiguration configuration,
         Microservices microservices,
         ILogger<Projections> logger)
     {
@@ -57,7 +57,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         _projectionManagerProvider = projectionManagerProvider;
         _executionContextManager = executionContextManager;
         _clusterClient = clusterClient;
-        _tenants = tenants;
+        _configuration = configuration;
         _microservices = microservices;
         _logger = logger;
         _projectionChangedChannel = _clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ProjectionChanged);
@@ -74,7 +74,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
                 _executionContextManager.Establish(microserviceId);
                 if (await _projectionDefinitions().HasFor(pipeline.ProjectionId))
                 {
-                    foreach (var tenant in _tenants.GetTenantIds())
+                    foreach (var tenant in _configuration.Tenants.GetTenantIds())
                     {
                         _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
                         var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
@@ -154,7 +154,7 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
         await _projectionDefinitions().Register(projectionDefinition);
         await _projectionPipelineDefinitions().Register(pipelineDefinition);
 
-        foreach (var tenant in _tenants.GetTenantIds())
+        foreach (var tenant in _configuration.Tenants.GetTenantIds())
         {
             _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
             await _projectionManagerProvider().Register(projectionDefinition, pipelineDefinition);
