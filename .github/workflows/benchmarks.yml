@@ -1,0 +1,53 @@
+name: Benchmarks
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "7.0.x"
+
+      - name: Run Mongo container
+        run: docker run -p 27017:27017 -d aksioinsurtech/mongodb
+
+      - name: Run Benchmarks
+        working-directory: ./Benchmarks
+        run: ./run.sh
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Cratis Benchmarks
+          tool: 'benchmarkdotnet'
+          output-file-path: Benchmarks/results/results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: true
+          alert-comment-cc-users: '@einari'
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Cratis Benchmarks
+          tool: 'benchmarkdotnet'
+          output-file-path: Benchmarks/results/results.json
+          # Access token to deploy GitHub Pages branch
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Push and deploy GitHub pages branch automatically
+          auto-push: true
