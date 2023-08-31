@@ -45,18 +45,23 @@ public class Reducers : Controller
     /// <param name="definitions">Collection of <see cref="ReducerDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("register/{connectionId}")]
-    public async Task Register(
+    public Task Register(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] ConnectionId connectionId,
         [FromBody] IEnumerable<ReducerDefinition> definitions)
     {
         _logger.RegisterReducers();
 
-        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
-        var client = await connectedClients.GetConnectedClient(connectionId);
-        var tenants = client.IsMultiTenanted ? _configuration.Tenants.GetTenantIds() : new TenantId[] { TenantId.NotSet };
+        _ = Task.Run(async () =>
+        {
+            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+            var client = await connectedClients.GetConnectedClient(connectionId);
+            var tenants = client.IsMultiTenanted ? _configuration.Tenants.GetTenantIds() : new TenantId[] { TenantId.NotSet };
 
-        var reducers = _grainFactory.GetGrain<IClientReducers>(microserviceId);
-        await reducers.Register(connectionId, definitions, tenants);
+            var reducers = _grainFactory.GetGrain<IClientReducers>(microserviceId);
+            await reducers.Register(connectionId, definitions, tenants);
+        });
+
+        return Task.CompletedTask;
     }
 }
