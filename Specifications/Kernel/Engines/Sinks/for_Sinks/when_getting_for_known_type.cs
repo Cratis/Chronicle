@@ -7,7 +7,6 @@ namespace Aksio.Cratis.Kernel.Engines.Sinks.for_Sinks;
 
 public class when_getting_for_known_type : Specification
 {
-    static ProjectionId projection_id = "080a817f-ae60-4bbf-aeb6-75b7e89f97fc";
     static SinkTypeId type = "df371e5d-b244-48d0-aaad-f298a127dd92";
     Sinks stores;
     Mock<ISinkFactory> factory;

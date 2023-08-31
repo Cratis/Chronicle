@@ -5,8 +5,6 @@ namespace Aksio.Cratis.Properties.for_PropertyPath;
 
 public class when_checking_not_equals_using_operator_for_two_unequal_property_paths : Specification
 {
-    const string path = "some.[path]";
-
     PropertyPath left = new("some.[path]");
     PropertyPath right = new("some.other.[path]");
 
