@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using System.Text.Json.Nodes;
+using Aksio.Collections;
 using Aksio.Cratis;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Configuration;
@@ -23,6 +24,8 @@ public abstract class BenchmarkJob
     protected ISchemaStore? SchemaStore { get; private set; }
     protected IJsonSchemaGenerator? SchemaGenerator { get; private set; }
     protected virtual IEnumerable<Type> EventTypes => Enumerable.Empty<Type>();
+
+    protected IMongoClient? MongoClient { get; private set; }
     protected IMongoDatabase? Database { get; private set; }
 
     [GlobalSetup]
@@ -45,8 +48,8 @@ public abstract class BenchmarkJob
         var eventStoreForTenant = storageTypes.Get(WellKnownStorageTypes.EventStore);
 
         var url = new MongoUrl(eventStoreForTenant.ConnectionDetails.ToString());
-        var client = clientFactory.Create(url);
-        Database = client.GetDatabase(url.DatabaseName);
+        MongoClient = clientFactory.Create(url);
+        Database = MongoClient.GetDatabase(url.DatabaseName);
 
         foreach (var eventType in EventTypes)
         {
@@ -60,6 +63,10 @@ public abstract class BenchmarkJob
     [GlobalCleanup]
     public void GlobalCleanup()
     {
+        if (MongoClient is null) return;
+        var databases = MongoClient.ListDatabases().ToList().Select(db => db["name"].AsString).ToArray();
+        databases = databases.Where(_ => _ != "admin" && _ != "config" && _ != "local").ToArray();
+        databases.ForEach(db => MongoClient.DropDatabase(db));
     }
 
     protected virtual void Setup()
