@@ -1,3 +1,19 @@
+# [v9.3.5] - 2023-8-31 [PR: #0]()
+
+No release notes
+
+# [v9.3.3] - 2023-8-31 [PR: #0]()
+
+### Fixed
+
+- Fixing NuGet package setup for logo, it was missing the logo file as content.
+
+# [v9.3.2] - 2023-8-31 [PR: #0]()
+
+### Fixed
+
+- Client Observer registrations seems to fail under some circumstances and not necessarily for all. This could be linked to an attempt of an optimization of doing a `Task.Run()` for calling the `ClientObservers` grain for registering and returning to the client as soon as possible. This seems to fail sometimes. Taking it out and it seems to be consistent.
+
 # [v9.3.1] - 2023-8-28 [PR: #938](https://github.com/aksio-insurtech/Cratis/pull/938)
 
 ### Fixed
@@ -32,7 +48,7 @@
 
 - Dead lock situation when starting kernel with observers needing to replay. Solved this by explicitly priming the event sequence caches at startup, rather than lazily through the streaming infrastructure.
 - Moving the decision of what time an event operation occurred to the owning systems (e.g. EventSequence grain), rather than letting the persistence layer do this.
-- Fixing underlying problem with observer state with regards to current subscriptions, causing replays to only work once and sometimes never. 
+- Fixing underlying problem with observer state with regards to current subscriptions, causing replays to only work once and sometimes never.
 - Making redaction work in the workbench again by making causation and caused optional and setting these on server side if not set. The endpoints got a 409 with validation error messages before this change.
 
 # [v9.2.1] - 2023-8-25 [PR: #935](https://github.com/aksio-insurtech/Cratis/pull/935)
@@ -41,7 +57,7 @@
 
 - Dead lock situation when starting kernel with observers needing to replay. Solved this by explicitly priming the event sequence caches at startup, rather than lazily through the streaming infrastructure.
 - Moving the decision of what time an event operation occurred to the owning systems (e.g. EventSequence grain), rather than letting the persistence layer do this.
-- Fixing underlying problem with observer state with regards to current subscriptions, causing replays to only work once and sometimes never. 
+- Fixing underlying problem with observer state with regards to current subscriptions, causing replays to only work once and sometimes never.
 - Making redaction work in the workbench again by making causation and caused optional and setting these on server side if not set. The endpoints got a 409 with validation error messages before this change.
 
 # [v9.2.0] - 2023-8-23 [PR: #933](https://github.com/aksio-insurtech/Cratis/pull/933)

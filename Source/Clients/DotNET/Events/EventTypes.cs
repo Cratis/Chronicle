@@ -16,10 +16,21 @@ public class EventTypes : IEventTypes
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     public EventTypes(IClientArtifactsProvider clientArtifacts)
     {
-        _typesByEventType = clientArtifacts.EventTypes
-                        .ToDictionary(_ => _.GetEventType(), _ => _);
+        var eventTypes = clientArtifacts.EventTypes.Select(_ => new
+        {
+            ClrType = _,
+            EventType = _.GetEventType()
+        }).ToArray();
 
-        All = _typesByEventType.Keys.ToArray();
+        var duplicateEventTypes = eventTypes.GroupBy(_ => _.EventType.Id).Where(_ => _.Count() > 1).ToArray();
+        if (duplicateEventTypes.Length > 0)
+        {
+            var clrTypes = duplicateEventTypes.SelectMany(_ => _).Select(_ => _.ClrType).ToArray();
+            throw new MultipleEventTypesWithSameIdFound(clrTypes);
+        }
+
+        _typesByEventType = eventTypes.ToDictionary(_ => _.EventType, _ => _.ClrType);
+        All = eventTypes.Select(_ => _.EventType).ToArray();
     }
 
     /// <inheritdoc/>

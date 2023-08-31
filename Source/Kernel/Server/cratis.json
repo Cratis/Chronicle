@@ -5,6 +5,11 @@
             "configuration": {
                 "something": "42.42"
             }
+        },
+        "00000000-0000-0000-0000-000000000000": {
+            "name": "None",
+            "configuration": {
+            }
         }
     },
     "microservices": {
@@ -63,6 +68,16 @@
                     }
                 },
                 "tenants": {
+                    "00000000-0000-0000-0000-000000000000": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/basic-dev-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/basic-dev-event-store"
+                        }
+                    },
                     "3352d47d-c154-4457-b3fb-8a2efb725113": {
                         "readModels": {
                             "type": "MongoDB",

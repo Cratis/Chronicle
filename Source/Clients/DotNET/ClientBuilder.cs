@@ -199,6 +199,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IAdapters, Adapters>()
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
             .AddSingleton<IAdapterMapperFactory, AdapterMapperFactory>()
+            .AddSingleton<IProjections, Projections.Projections>()
             .AddSingleton<IImmediateProjections, ImmediateProjections>()
             .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
             .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
