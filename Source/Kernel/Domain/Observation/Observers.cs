@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
@@ -47,19 +48,28 @@ public class Observers : Controller
     /// <param name="registrations">Collection of <see cref="ClientObserverRegistration"/>.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("register/{connectionId}")]
-    public async Task Register(
+    public Task Register(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] ConnectionId connectionId,
         [FromBody] IEnumerable<ClientObserverRegistration> registrations)
     {
         _logger.RegisterObservers();
+        _ = Task.Run(async () =>
+        {
+            var stopwatch = Stopwatch.StartNew();
 
-        var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
-        var client = await connectedClients.GetConnectedClient(connectionId);
-        var tenants = client.IsMultiTenanted ? _configuration.Tenants.GetTenantIds() : new TenantId[] { TenantId.NotSet };
+            var connectedClients = _grainFactory.GetGrain<IConnectedClients>(microserviceId);
+            var client = await connectedClients.GetConnectedClient(connectionId);
+            var tenants = client.IsMultiTenanted ? _configuration.Tenants.GetTenantIds() : new TenantId[] { TenantId.NotSet };
 
-        var observers = _grainFactory.GetGrain<IClientObservers>(microserviceId);
-        await observers.Register(connectionId, registrations, tenants);
+            var observers = _grainFactory.GetGrain<IClientObservers>(microserviceId);
+            await observers.Register(connectionId, registrations, tenants);
+
+            stopwatch.Stop();
+            _logger.ObserversRegistered(stopwatch.Elapsed);
+        });
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
