@@ -1,3 +1,9 @@
+# [v9.3.3] - 2023-8-31 [PR: #0]()
+
+### Fixed
+
+- Fixing NuGet package setup for logo, it was missing the logo file as content.
+
 # [v9.3.2] - 2023-8-31 [PR: #0]()
 
 ### Fixed
