@@ -44,6 +44,12 @@ public interface IObserverSupervisor : IGrainWithGuidCompoundKey
     Task<ObserverSubscription> GetCurrentSubscription();
 
     /// <summary>
+    /// Get the current in-memory state of the observer.
+    /// </summary>
+    /// <returns>The current <see cref="ObserverState"/>.</returns>
+    Task<ObserverState> GetCurrentState();
+
+    /// <summary>
     /// Unsubscribe from the observer.
     /// </summary>
     /// <returns>Awaitable task.</returns>

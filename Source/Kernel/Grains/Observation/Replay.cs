@@ -18,6 +18,7 @@ public class Replay : ObserverWorker, IReplay
 {
     readonly ILogger<Replay> _logger;
     readonly List<FailedPartition> _failedPartitions = new();
+
     ObserverKey? _observerKey;
     IDisposable? _timer;
     bool _isRunning;
@@ -96,6 +97,7 @@ public class Replay : ObserverWorker, IReplay
     async Task PerformReplay(object arg)
     {
         _timer?.Dispose();
+
         try
         {
             var provider = EventSequenceStorageProvider;
@@ -138,7 +140,7 @@ public class Replay : ObserverWorker, IReplay
 
             _isRunning = false;
             _logger.Replayed(ObserverId, MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId);
-            await Supervisor.NotifyCatchUpComplete(_failedPartitions.ToArray());
+            await Supervisor.NotifyReplayComplete(_failedPartitions.ToArray());
             _failedPartitions.Clear();
         }
         catch (Exception ex)
