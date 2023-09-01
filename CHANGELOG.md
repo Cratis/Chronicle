@@ -1,3 +1,13 @@
+# [v9.3.7] - 2023-9-1 [PR: #956](https://github.com/aksio-insurtech/Cratis/pull/956)
+
+### Fixed
+
+- Replay now calls the replay completed method rather than the catchup completed method when it is done.
+- Making sure the subscription information is kept in memory when reading state, so that it is not lost.
+- Ignoring replay if there are no events to replay.
+
+
+
 # [v9.3.6] - 2023-9-1 [PR: #0]()
 
 No release notes
