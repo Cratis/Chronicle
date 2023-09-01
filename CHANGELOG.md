@@ -1,3 +1,7 @@
+# [v9.3.6] - 2023-9-1 [PR: #0]()
+
+No release notes
+
 # [v9.3.5] - 2023-8-31 [PR: #0]()
 
 No release notes
