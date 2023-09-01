@@ -239,8 +239,10 @@ public abstract class ObserverWorker : Grain
     /// <returns>Awaitable task.</returns>
     protected async Task ReadStateAsync()
     {
+        var subscriptionType = State.CurrentSubscriptionType;
+        var subscriptionArguments = State.CurrentSubscriptionArguments;
         await _observerState.ReadStateAsync();
-        if (string.IsNullOrEmpty(State.CurrentSubscriptionType))
+        if (string.IsNullOrEmpty(subscriptionType))
         {
             CurrentSubscription = ObserverSubscription.Unsubscribed;
         }
@@ -251,8 +253,8 @@ public abstract class ObserverWorker : Grain
                 ObserverId,
                 new(MicroserviceId, TenantId, EventSequenceId, SourceMicroserviceId, SourceTenantId),
                 State.EventTypes,
-                Type.GetType(State.CurrentSubscriptionType)!,
-                State.CurrentSubscriptionArguments!);
+                Type.GetType(subscriptionType)!,
+                subscriptionArguments!);
         }
     }
 
