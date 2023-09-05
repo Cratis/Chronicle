@@ -33,8 +33,7 @@ public static class ReducerExtensionMethods
     public static bool IsReducerMethod(this MethodInfo methodInfo, Type readModelType)
     {
         var isReducerMethod = methodInfo.ReturnType == readModelType ||
-                              methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType) ||
-                              methodInfo.ReturnType == typeof(void);
+                              methodInfo.ReturnType == typeof(Task<>).MakeGenericType(readModelType);
 
         if (!isReducerMethod) return false;
         var parameters = methodInfo.GetParameters();
