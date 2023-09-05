@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,5 +57,13 @@ public class EventSerializer : IEventSerializer
         }
 
         return eventAsJson;
+    }
+
+    /// <inheritdoc/>
+    public async Task<object> Deserialize(Type type, ExpandoObject expandoObject)
+    {
+        // TODO: Optimize this. It shouldn't be necessary to go from Expando to Json and back to the actual type.
+        var json = await Serialize(expandoObject);
+        return await Deserialize(type, json);
     }
 }

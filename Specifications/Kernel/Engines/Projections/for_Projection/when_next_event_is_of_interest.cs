@@ -21,7 +21,7 @@ public class when_next_event_is_of_interest : given.a_projection
 
     AppendedEvent second_event;
     Changeset<AppendedEvent, ExpandoObject> second_changeset;
-    Mock<IObjectsComparer> objects_comparer;
+    Mock<IObjectComparer> objects_comparer;
 
     void Establish()
     {

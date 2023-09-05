@@ -21,7 +21,7 @@ namespace Aksio.Cratis.Projections;
 /// </summary>
 public class ImmediateProjections : IImmediateProjections
 {
-    readonly IModelNameConvention _modelNameConvention;
+    readonly IModelNameResolver _modelNameResolver;
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
     readonly IEventTypes _eventTypes;
@@ -35,7 +35,7 @@ public class ImmediateProjections : IImmediateProjections
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmediateProjections"/> class.
     /// </summary>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="modelNameResolver">The <see cref="IModelNameResolver"/> to use for naming the models.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing projections.</param>
     /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
@@ -45,7 +45,7 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="connection">The <see cref="IConnection"/> for connecting to the kernel.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
-        IModelNameConvention modelNameConvention,
+        IModelNameResolver modelNameResolver,
         IClientArtifactsProvider clientArtifacts,
         IServiceProvider serviceProvider,
         IEventTypes eventTypes,
@@ -55,7 +55,7 @@ public class ImmediateProjections : IImmediateProjections
         IConnection connection,
         IExecutionContextManager executionContextManager)
     {
-        _modelNameConvention = modelNameConvention;
+        _modelNameResolver = modelNameResolver;
         _clientArtifacts = clientArtifacts;
         _serviceProvider = serviceProvider;
         _eventTypes = eventTypes;
@@ -124,7 +124,7 @@ public class ImmediateProjections : IImmediateProjections
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance = (_serviceProvider.GetService(projectionType) as IImmediateProjectionFor<TModel>)!;
             var builder = new ProjectionBuilderFor<TModel>(
                 ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Identifier,
-                _modelNameConvention,
+                _modelNameResolver,
                 _eventTypes,
                 _schemaGenerator,
                 _jsonSerializerOptions);

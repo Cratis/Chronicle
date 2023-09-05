@@ -12,7 +12,7 @@ public class all_dependencies : Specification
     protected Mock<IEventTypes> event_types;
     protected Mock<IClientArtifactsProvider> client_artifacts;
     protected Mock<IJsonSchemaGenerator> schema_generator;
-    protected Mock<IModelNameConvention> model_name_convention;
+    protected Mock<IModelNameResolver> model_name_resolver;
     protected Mock<IServiceProvider> service_provider;
     protected JsonSerializerOptions json_serializer_options;
 
@@ -21,7 +21,7 @@ public class all_dependencies : Specification
         event_types = new();
         client_artifacts = new();
         schema_generator = new();
-        model_name_convention = new();
+        model_name_resolver = new();
         service_provider = new();
         json_serializer_options = new();
     }

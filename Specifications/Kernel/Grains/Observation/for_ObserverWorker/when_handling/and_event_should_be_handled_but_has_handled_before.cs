@@ -21,7 +21,7 @@ public class and_event_should_be_handled_but_has_handled_before : given.an_obser
 
     Task Because() => worker.Handle(@event);
 
-    [Fact] void should_call_the_subscriber() => subscriber.Verify(_ => _.OnNext(@event, IsAny<ObserverSubscriberContext>()), Once);
+    [Fact] void should_call_the_subscriber() => subscriber.Verify(_ => _.OnNext(Is<IEnumerable<AppendedEvent>>(m => m.First() == @event), IsAny<ObserverSubscriberContext>()), Once);
     [Fact] void should_move_the_sequence_number() => state.NextEventSequenceNumber.ShouldEqual(sequence_number + 1);
     [Fact] void should_not_set_last_handled() => state.LastHandled.ShouldEqual(last_handled);
 }

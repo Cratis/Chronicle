@@ -18,47 +18,86 @@ namespace Aksio.Cratis.Observation;
 public static class ClientObserversEndpoints
 {
     /// <summary>
+    /// Gets the base path for the observers endpoint.
+    /// </summary>
+    public const string BasePath = "/.cratis/observers";
+
+    /// <summary>
     /// Maps the endpoints for the client observers.
     /// </summary>
     /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to extend.</param>
-    public static void MapClientObservers(this IEndpointRouteBuilder endpoints)
+    /// <returns><see cref="IEndpointRouteBuilder"/> for build continuation.</returns>
+    public static IEndpointRouteBuilder MapClientObservers(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/.cratis/observers/{observerId}", async (HttpContext context) =>
+        endpoints.MapPost($"{BasePath}/{{observerId}}", Handler);
+
+        return endpoints;
+    }
+
+    /// <summary>
+    /// Handler for the client observers.
+    /// </summary>
+    /// <param name="context"><see cref="HttpContext"/> to work with. </param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task Handler(HttpContext context)
+    {
+        if (context.GetRouteValue("observerId") is not string observerIdAsString)
         {
-            if (context.GetRouteValue("observerId") is not string observerId)
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return;
+        }
+
+        ObserverId observerId;
+        try
+        {
+            observerId = (ObserverId)observerIdAsString;
+        }
+        catch
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return;
+        }
+
+        IEnumerable<AppendedEvent>? events;
+
+        try
+        {
+            events = await context.Request.ReadFromJsonAsync<IEnumerable<AppendedEvent>>(Globals.JsonSerializerOptions);
+            if (events is null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
+        }
+        catch
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return;
+        }
 
-            var observer = (ObserverId)observerId;
-            var @event = await context.Request.ReadFromJsonAsync<AppendedEvent>(Globals.JsonSerializerOptions);
-            if (@event is null)
+        CommandResult result;
+        var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
+        try
+        {
+            var observers = context.RequestServices.GetRequiredService<IClientObservers>();
+            lastSuccessfullyObservedEvent = await observers.OnNext(observerId, events);
+            context.Response.StatusCode = (int)HttpStatusCode.OK;
+            result = new CommandResult
             {
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                return;
-            }
-
-            CommandResult result;
-            var observers = context.RequestServices.GetRequiredService<ClientObservers>();
-            try
+                Response = lastSuccessfullyObservedEvent
+            };
+        }
+        catch (Exception ex)
+        {
+            result = new CommandResult
             {
-                await observers.OnNext(observerId, @event);
+                ExceptionMessages = ex.GetAllMessages(),
+                ExceptionStackTrace = ex.StackTrace ?? string.Empty,
+                Response = lastSuccessfullyObservedEvent
+            };
+            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
 
-                context.Response.StatusCode = (int)HttpStatusCode.OK;
-                result = CommandResult.Success;
-            }
-            catch (Exception ex)
-            {
-                result = new CommandResult
-                {
-                    ExceptionMessages = ex.GetAllMessages(),
-                    ExceptionStackTrace = ex.StackTrace ?? string.Empty
-                };
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            }
-
-            await context.Response.WriteAsJsonAsync(result, Globals.JsonSerializerOptions);
-        });
+        await context.Response.WriteAsJsonAsync(result, Globals.JsonSerializerOptions);
     }
 }

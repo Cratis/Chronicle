@@ -7,13 +7,13 @@ using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
+using Aksio.Cratis.Kernel.Engines.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections;
-using Aksio.Cratis.Kernel.Engines.Projections.Changes;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.EventValues;
 using Aksio.Cratis.Kernel.Engines.Projections.Expressions.Keys;
-using Aksio.Cratis.Kernel.Engines.Projections.InMemory;
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+using Aksio.Cratis.Kernel.Engines.Sinks.InMemory;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
@@ -38,7 +38,7 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
     readonly IProjection _projection;
     readonly IEventSequenceStorage _eventSequenceStorage;
     readonly IProjectionPipeline _pipeline;
-    readonly InMemoryProjectionSink _sink;
+    readonly InMemorySink _sink;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectionSpecificationContext{TModel}"/> class.
@@ -56,7 +56,12 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
         _eventLog = new(expandoObjectConverter, schemaGenerator);
 
-        var builder = new ProjectionBuilderFor<TModel>(identifier.Value, new DefaultModelNameConvention(), new EventTypesForSpecifications(), schemaGenerator, Globals.JsonSerializerOptions);
+        var builder = new ProjectionBuilderFor<TModel>(
+            identifier.Value,
+            new ModelNameResolver(new DefaultModelNameConvention()),
+            new EventTypesForSpecifications(),
+            schemaGenerator,
+            Globals.JsonSerializerOptions);
         defineProjection(builder);
         Definition = builder.Build();
 
@@ -69,15 +74,15 @@ public class ProjectionSpecificationContext<TModel> : IHaveEventLog, IDisposable
             new EventSequenceStorageProviderForSpecifications(_eventLog));
         _projection = factory.CreateFrom(Definition).GetAwaiter().GetResult();
 
-        var objectsComparer = new ObjectsComparer();
+        var objectComparer = new ObjectComparer();
 
         _eventSequenceStorage = new EventSequenceStorageProviderForSpecifications(_eventLog);
-        _sink = new InMemoryProjectionSink(_projection.Model, typeFormats, objectsComparer);
+        _sink = new InMemorySink(_projection.Model, typeFormats, objectComparer);
         _pipeline = new ProjectionPipeline(
             _projection,
             _eventSequenceStorage,
             _sink,
-            objectsComparer,
+            objectComparer,
             new NullChangesetStorage(),
             typeFormats,
             new NullLogger<ProjectionPipeline>());

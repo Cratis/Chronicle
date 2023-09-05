@@ -3,6 +3,7 @@
 
 using Aksio.Cratis.Events.Schemas;
 using Aksio.Cratis.Kernel.MongoDB;
+using Aksio.Cratis.Kernel.Schemas;
 using Aksio.Cratis.MongoDB;
 using Aksio.Cratis.Schemas;
 using MongoDB.Driver;

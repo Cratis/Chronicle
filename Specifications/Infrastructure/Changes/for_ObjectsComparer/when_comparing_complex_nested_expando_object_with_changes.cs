@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 
-namespace Aksio.Cratis.Changes.for_ObjectsComparer;
+namespace Aksio.Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_complex_nested_expando_object_with_changes : given.an_object_comparer
 {

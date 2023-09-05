@@ -16,6 +16,7 @@ using Aksio.Cratis.Net;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Json;
+using Aksio.Cratis.Reducers;
 using Aksio.Cratis.Rules;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Tenants;
@@ -171,11 +172,16 @@ public class ClientBuilder : IClientBuilder
             .AddHttpClient()
             .AddSingleton(clientArtifacts)
             .AddSingleton(_modelNameConvention ?? new DefaultModelNameConvention())
+            .AddSingleton<IModelNameResolver, ModelNameResolver>()
             .AddObservers(clientArtifacts)
             .AddSingleton(Globals.JsonSerializerOptions)
             .AddSingleton<IConnectionLifecycle, ConnectionLifecycle>()
             .AddSingleton<IObserverMiddlewares, ObserverMiddlewares>()
             .AddSingleton<IObserversRegistrar, ObserversRegistrar>()
+            .AddTransient<IClientObservers, ClientObservers>()
+            .AddSingleton<IReducersRegistrar, ReducersRegistrar>()
+            .AddSingleton<IReducerValidator, ReducerValidator>()
+            .AddTransient<IClientReducers, ClientReducers>()
             .AddSingleton<IComplianceMetadataResolver, ComplianceMetadataResolver>()
             .AddSingleton<IJsonSchemaGenerator, JsonSchemaGenerator>()
             .AddSingleton<IEventTypes, EventTypes>()
@@ -186,8 +192,9 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ITimerFactory, TimerFactory>()
             .AddSingleton<OutboxProjectionsRegistrar>()
             .AddSingleton<ObserversConnectionLifecycleParticipant>()
-            .AddSingleton<ProjectionsRegistrar>()
             .AddSingleton<SchemasConnectionLifecycleParticipant>()
+            .AddSingleton<RegistrarsConnectionLifecycleParticipant>()
+            .AddSingleton<ProjectionsRegistrar>()
             .AddSingleton<IJsonProjectionSerializer, JsonProjectionSerializer>()
             .AddSingleton<IAdapters, Adapters>()
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
@@ -197,6 +204,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<ILoadBalancerStrategy, RoundRobinLoadBalancerStrategy>()
             .AddSingleton<ILoadBalancedHttpClientFactory, LoadBalancedHttpClientFactory>()
             .AddSingleton<ITenantConfiguration, TenantConfiguration>()
+            .AddSingleton<IProjections, Projections.Projections>()
             .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
             .AddSingleton<ICausationManager, CausationManager>()

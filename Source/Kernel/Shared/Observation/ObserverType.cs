@@ -26,5 +26,10 @@ public enum ObserverType
     /// <summary>
     /// Inbox type of observer.
     /// </summary>
-    Inbox = 3
+    Inbox = 3,
+
+    /// <summary>
+    /// Reducer type of observer.
+    /// </summary>
+    Reducer = 4
 }

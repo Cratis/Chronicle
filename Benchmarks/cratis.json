@@ -1,0 +1,50 @@
+{
+    "tenants": {
+        "00000000-0000-0000-0000-000000000000": {
+            "name": "Benchmark",
+            "configuration": {}
+        }
+    },
+    "microservices": {
+        "12c737d2-e816-46f4-96fd-67fc1bf71086": {
+            "name": "Benchmark"
+        }
+    },
+    "cluster": {
+        "name": "Cratis",
+        "type": "single",
+        "advertisedIP": "127.0.0.1",
+        "siloPort": 11111,
+        "gatewayPort": 30000,
+        "options": {}
+    },
+    "telemetry": {},
+    "storage": {
+        "cluster": {
+            "type": "MongoDB",
+            "connectionDetails": "mongodb://localhost:27017/cratis-shared"
+        },
+        "microservices": {
+            "12c737d2-e816-46f4-96fd-67fc1bf71086": {
+                "shared": {
+                    "eventStore": {
+                        "type": "MongoDB",
+                        "connectionDetails": "mongodb://localhost:27017/benchmark-event-store-shared"
+                    }
+                },
+                "tenants": {
+                    "00000000-0000-0000-0000-000000000000": {
+                        "readModels": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/benchmark-dev-read-models"
+                        },
+                        "eventStore": {
+                            "type": "MongoDB",
+                            "connectionDetails": "mongodb://localhost:27017/benchmark-dev-event-store"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

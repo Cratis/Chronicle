@@ -13,8 +13,8 @@ public interface IObserverSubscriber : IGrainWithGuidCompoundKey
     /// <summary>
     /// Called whenever an event is ready to be observed.
     /// </summary>
-    /// <param name="event">The actual <see cref="AppendedEvent"/>.</param>
+    /// <param name="events">A collection of <see cref="AppendedEvent"/>.</param>
     /// <param name="context">The <see cref="ObserverSubscriberContext"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task<ObserverSubscriberResult> OnNext(AppendedEvent @event, ObserverSubscriberContext context);
+    Task<ObserverSubscriberResult> OnNext(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context);
 }

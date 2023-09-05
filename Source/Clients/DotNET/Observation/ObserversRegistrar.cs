@@ -110,7 +110,7 @@ public class ObserversRegistrar : IObserversRegistrar
             _.ObserverId,
             _.Name,
             _.EventSequenceId,
-            _.EventTypes));
+            _.EventTypes)).ToArray();
         await _connection.PerformCommand(route, registrations);
     }
 

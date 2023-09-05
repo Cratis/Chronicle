@@ -4,7 +4,7 @@
 using System.Collections;
 using Aksio.Strings;
 
-namespace Aksio.Cratis.Changes.for_ObjectsComparer;
+namespace Aksio.Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_unequal_collections_and_different_element_types : given.an_object_comparer
 {

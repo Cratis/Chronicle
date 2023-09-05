@@ -17,7 +17,7 @@ public class and_observer_is_ahead : given.an_observer_and_two_event_types_and_o
         await observers[0].OnNextAsync(appended_event);
     }
 
-    [Fact] void should_not_forward_event_to_observer_subscriber() => subscriber.Verify(_ => _.OnNext(appended_event, IsAny<ObserverSubscriberContext>()), Never);
+    [Fact] void should_not_forward_event_to_observer_subscriber() => subscriber.Verify(_ => _.OnNext(Is<IEnumerable<AppendedEvent>>(m => m.First() == appended_event), IsAny<ObserverSubscriberContext>()), Never);
     [Fact] void should_not_change_offset() => state_on_write.NextEventSequenceNumber.Value.ShouldEqual(42U);
     [Fact] void should_not_change_set_last_handled() => state_on_write.LastHandled.Value.ShouldEqual(41U);
 }

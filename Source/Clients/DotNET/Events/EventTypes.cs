@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
-
 namespace Aksio.Cratis.Events;
 
 /// <summary>
@@ -21,7 +19,7 @@ public class EventTypes : IEventTypes
         var eventTypes = clientArtifacts.EventTypes.Select(_ => new
         {
             ClrType = _,
-            EventType = _.GetCustomAttribute<EventTypeAttribute>()!.Type!
+            EventType = _.GetEventType()
         }).ToArray();
 
         var duplicateEventTypes = eventTypes.GroupBy(_ => _.EventType.Id).Where(_ => _.Count() > 1).ToArray();

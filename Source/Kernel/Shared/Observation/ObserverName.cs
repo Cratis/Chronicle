@@ -15,7 +15,7 @@ public record ObserverName(string Value) : ConceptAs<string>(Value)
     public static readonly ObserverName NotSpecified = "[not specified]";
 
     /// <summary>
-    /// Implicitly convert from a string to <see cref="ObserverId"/>.
+    /// Implicitly convert from a string to <see cref="ObserverName"/>.
     /// </summary>
     /// <param name="name">String  to convert from.</param>
     public static implicit operator ObserverName(string name) => new(name);

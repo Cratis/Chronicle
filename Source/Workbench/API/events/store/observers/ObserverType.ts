@@ -7,4 +7,5 @@ export enum ObserverType {
     client = 1,
     projection = 2,
     inbox = 3,
+    reducer = 4,
 }

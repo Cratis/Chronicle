@@ -9,14 +9,22 @@ using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 //builder.UseCratis();
-builder.UseCratis(_ => _.MultiTenanted());
-var app = builder.Build();
-app.UseCratis();
+builder.UseCratis(_ => _
+    .ForMicroservice("cd51c091-3bba-4608-87a8-93da1f88c4dd", "Basic Sample")
+    .MultiTenanted());
 
-app.MapGet("/", () =>
+builder.Services.AddTransient<CartReducer>();
+var app = builder.Build();
+
+app.MapGet("/add", () =>
 {
     var eventLog = app.Services.GetRequiredService<IEventLog>();
-    eventLog.Append(Guid.NewGuid().ToString(), new MyEvent());
+    eventLog.Append("299681c4-f100-4dea-bfea-633115349ed1", new ItemAddedToCart(
+        new(Guid.NewGuid()),
+        new(Guid.NewGuid()),
+        1));
 });
+
+app.UseCratis();
 
 app.Run();

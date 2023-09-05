@@ -19,5 +19,5 @@ public class EventContentPropertyExpression : IEventValueExpression
     public EventContentPropertyExpression(PropertyPath propertyPath) => _propertyPath = propertyPath;
 
     /// <inheritdoc/>
-    public string Build() => _propertyPath;
+    public PropertyExpression Build() => (string)_propertyPath;
 }

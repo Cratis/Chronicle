@@ -34,6 +34,8 @@ public static class TelemetryConfigurationExtensions
                 .WithTracing(tracing =>
                 {
                     tracing
+                        .AddSource("Microsoft.Orleans.Runtime")
+                        .AddSource("Microsoft.Orleans.Application")
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation();
 
@@ -61,6 +63,7 @@ public static class TelemetryConfigurationExtensions
                 {
                     metrics
                         .AddMeter(meter.Name)
+                        .AddMeter("Microsoft.Orleans")
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()

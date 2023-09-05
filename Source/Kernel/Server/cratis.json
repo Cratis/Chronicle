@@ -16,8 +16,8 @@
         "eaf02867-79b9-4967-be67-3e93cee7c601": {
             "name": "Bank"
         },
-        "00000000-0000-0000-0000-000000000000": {
-            "name": "Basic"
+        "cd51c091-3bba-4608-87a8-93da1f88c4dd": {
+            "name": "Basic Sample"
         }
     },
     "cluster": {
@@ -60,7 +60,7 @@
                     }
                 }
             },
-            "00000000-0000-0000-0000-000000000000": {
+            "cd51c091-3bba-4608-87a8-93da1f88c4dd": {
                 "shared": {
                     "eventStore": {
                         "type": "MongoDB",

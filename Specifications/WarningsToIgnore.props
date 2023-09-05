@@ -3,9 +3,13 @@
 		<NoWarn>
 			$(NoWarn);
 			CA1001;
+			CA1008;
+			CA1024;
+			CA1034;
 			CA1051;
 			CA1305;
 			CA1707;
+			CA1813;
 			CA1852;
 			CA2201;
 			CA2211;

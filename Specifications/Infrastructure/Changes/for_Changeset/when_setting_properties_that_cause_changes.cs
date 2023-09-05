@@ -4,7 +4,7 @@
 using System.Dynamic;
 using Aksio.Cratis.Properties;
 
-namespace Aksio.Cratis.Changes;
+namespace Aksio.Cratis.Changes.for_Changeset;
 
 public class when_setting_properties_that_cause_changes : Specification
 {
@@ -12,7 +12,7 @@ public class when_setting_properties_that_cause_changes : Specification
     ExpandoObject initial_state;
     ExpandoObject source;
     IEnumerable<PropertyMapper<ExpandoObject, ExpandoObject>> property_mappers;
-    Mock<IObjectsComparer> objects_comparer;
+    Mock<IObjectComparer> objects_comparer;
 
     void Establish()
     {

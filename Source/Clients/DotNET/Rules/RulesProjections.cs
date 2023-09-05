@@ -19,7 +19,7 @@ namespace Aksio.Cratis.Rules;
 public class RulesProjections : IRulesProjections
 {
     readonly IEventTypes _eventTypes;
-    readonly IModelNameConvention _modelNameConvention;
+    readonly IModelNameResolver _modelNameResolver;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly JsonSerializerOptions _serializerOptions;
     readonly Dictionary<RuleId, ProjectionDefinition> _projectionDefinitionsPerRuleId;
@@ -30,19 +30,19 @@ public class RulesProjections : IRulesProjections
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> used for generating projection definitions.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> used for generating projection definitions.</param>
     /// <param name="serializerOptions"><see cref="JsonSerializerOptions"/> to use for deserialization.</param>
     public RulesProjections(
         IServiceProvider serviceProvider,
         IClientArtifactsProvider clientArtifacts,
         IEventTypes eventTypes,
-        IModelNameConvention modelNameConvention,
+        IModelNameResolver modelNameResolver,
         IJsonSchemaGenerator jsonSchemaGenerator,
         JsonSerializerOptions serializerOptions)
     {
         _eventTypes = eventTypes;
-        _modelNameConvention = modelNameConvention;
+        _modelNameResolver = modelNameResolver;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _serializerOptions = serializerOptions;
 
@@ -77,7 +77,7 @@ public class RulesProjections : IRulesProjections
 
     ProjectionDefinition CreateProjection<TTarget>(IRule rule)
     {
-        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _modelNameConvention, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
+        var projectionBuilder = new ProjectionBuilderFor<TTarget>(rule.Identifier.Value, _modelNameResolver, _eventTypes, _jsonSchemaGenerator, _serializerOptions);
 
         var ruleType = typeof(TTarget);
 

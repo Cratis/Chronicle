@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": ".NET Core Launch (Server)",
             "type": "coreclr",
@@ -110,6 +109,19 @@
             "program": "${workspaceFolder}/Samples/Basic/bin/Debug/net6.0/Basic.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Samples/Basic",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Launch (Benchmarks)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build benchmarks",
+            "program": "${workspaceFolder}/Benchmarks/bin/Debug/net7.0/Benchmarks.dll",
+            "args": ["@run.rsp"],
+            "cwd": "${workspaceFolder}/Benchmarks",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"

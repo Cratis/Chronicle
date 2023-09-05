@@ -1,8 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Events;
-
 namespace Aksio.Cratis.Observation;
 
 /// <summary>
@@ -12,7 +10,7 @@ namespace Aksio.Cratis.Observation;
 public record ObserverId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
-    /// Gets the representation of an unspecified <see cref="EventSourceId"/>.
+    /// Gets the representation of an unspecified <see cref="ObserverId"/>.
     /// </summary>
     public static readonly ObserverId Unspecified = new(Guid.Empty);
 

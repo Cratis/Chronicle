@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Engines.Sinks;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 
@@ -16,9 +17,9 @@ public interface IProjectionPipeline
     IProjection Projection { get; }
 
     /// <summary>
-    /// Gets the <see cref="IProjectionSink">sink</see> to use for output.
+    /// Gets the <see cref="ISink">sink</see> to use for output.
     /// </summary>
-    IProjectionSink Sink { get; }
+    ISink Sink { get; }
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

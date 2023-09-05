@@ -19,5 +19,5 @@ public class KeyBuilder : IKeyBuilder
     public KeyBuilder(IEventValueExpression expression) => _expression = expression;
 
     /// <inheritdoc/>
-    public string Build() => _expression.Build();
+    public PropertyExpression Build() => _expression.Build();
 }

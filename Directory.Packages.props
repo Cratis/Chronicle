@@ -5,6 +5,7 @@
         <Orleans>7.1.2</Orleans>
 	</PropertyGroup>
 	<ItemGroup>
+        <PackageVersion Include="BenchmarkDotNet" Version="0.13.7" />
         <PackageVersion Include="docfx.console" Version="2.59.3"/>
 
 		<PackageVersion Include="Aksio.Fundamentals" Version="1.5.1" />
@@ -58,7 +59,6 @@
         <PackageVersion Include="Roslynator.Analyzers" Version="4.5.0" />
         <PackageVersion Include="Meziantou.Analyzer" Version="2.0.82" />
 
-
         <!-- Specifications -->
 		<PackageVersion Include="Aksio.Specifications" Version="2.0.1" />
 		<PackageVersion Include="xunit" Version="2.4.2" />
@@ -67,3 +67,4 @@
 		<PackageVersion Include="Microsoft.NET.Test.SDK" Version="16.10.0" />
 	</ItemGroup>
 </Project>
+

@@ -9,6 +9,7 @@ using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Json;
 using Aksio.Cratis.Kernel.Engines.Projections;
+using Aksio.Cratis.Kernel.Keys;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.DependencyInversion;
@@ -22,7 +23,7 @@ namespace Aksio.Cratis.Kernel.Grains.Projections;
 public class ImmediateProjection : Grain, IImmediateProjection
 {
     readonly ProviderFor<IProjectionManager> _projectionManagerProvider;
-    readonly IObjectsComparer _objectsComparer;
+    readonly IObjectComparer _objectComparer;
     readonly IEventSequenceStorage _eventProvider;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly IExecutionContextManager _executionContextManager;
@@ -32,19 +33,19 @@ public class ImmediateProjection : Grain, IImmediateProjection
     /// Initializes a new instance of the <see cref="ImmediateProjection"/> class.
     /// </summary>
     /// <param name="projectionManagerProvider"><see cref="IProjectionManager"/> for working with engine projections.</param>
-    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventProvider"><see cref="IEventSequenceStorage"/> for getting events from storage.</param>
     /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
     /// <param name="executionContextManager">The <see cref="IExecutionContextManager"/>.</param>
     public ImmediateProjection(
         ProviderFor<IProjectionManager> projectionManagerProvider,
-        IObjectsComparer objectsComparer,
+        IObjectComparer objectComparer,
         IEventSequenceStorage eventProvider,
         IExpandoObjectConverter expandoObjectConverter,
         IExecutionContextManager executionContextManager)
     {
         _projectionManagerProvider = projectionManagerProvider;
-        _objectsComparer = objectsComparer;
+        _objectComparer = objectComparer;
         _eventProvider = eventProvider;
         _expandoObjectConverter = expandoObjectConverter;
         _executionContextManager = executionContextManager;
@@ -88,7 +89,7 @@ public class ImmediateProjection : Grain, IImmediateProjection
 
             foreach (var @event in cursor.Current)
             {
-                var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectsComparer, @event, state);
+                var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, state);
                 var keyResolver = projection.GetKeyResolverFor(@event.Metadata.Type);
                 var key = await keyResolver(_eventProvider!, @event);
                 var context = new ProjectionEventContext(key, @event, changeset);

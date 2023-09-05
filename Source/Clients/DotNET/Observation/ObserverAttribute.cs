@@ -14,7 +14,7 @@ public sealed class ObserverAttribute : Attribute
     /// <summary>
     /// Initializes a new instance of <see cref="ObserverAttribute"/>.
     /// </summary>
-    /// <param name="observerIdAsString">Unique identifier as string.</param>
+    /// <param name="observerIdAsString"><see cref="ObserverId"/> represented as string. Must be a valid Guid.</param>
     /// <param name="inbox">Whether or not to observe inbox. If false, it will observe the default event log.</param>
     /// <param name="eventSequence">Optional the name of the event sequence to observe, this will take precedence over inbox.</param>
     public ObserverAttribute(string observerIdAsString, bool inbox = false, string? eventSequence = default)

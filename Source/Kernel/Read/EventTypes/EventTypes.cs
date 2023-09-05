@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Schemas;
 using Aksio.Cratis.Schemas;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;

@@ -139,7 +139,7 @@ public class RecoverFailedPartition : Grain<RecoverFailedPartitionState>, IRecov
             if (_subscriberSubscription is not null)
             {
                 var subscriber = (GrainFactory.GetGrain(_subscriberSubscription.SubscriberType, State.ObserverId, _subscriberKey!) as IObserverSubscriber)!;
-                var result = await subscriber.OnNext(@event, new ObserverSubscriberContext(_subscriberSubscription.Arguments));
+                var result = await subscriber.OnNext(new[] { @event }, new ObserverSubscriberContext(EventObservationState.None, _subscriberSubscription.Arguments));
                 switch (result.State)
                 {
                     case ObserverSubscriberState.Failed:

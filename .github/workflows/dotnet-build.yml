@@ -27,7 +27,7 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: "7.0.305"
+          dotnet-version: "7.0.x"
 
       - name: Build & run tests for root
         run: dotnet test --configuration Release

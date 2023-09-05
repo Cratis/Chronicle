@@ -2,7 +2,7 @@ name: Publish
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
-  DOTNET_VERSION: "7.0.305"
+  DOTNET_VERSION: "7.0.x"
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"

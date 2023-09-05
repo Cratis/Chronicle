@@ -39,7 +39,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     public static readonly CausationType CausationType = new("Import Operation");
 
     readonly Subject<ImportContext<TModel, TExternalModel>> _importContexts;
-    readonly IObjectsComparer _objectsComparer;
+    readonly IObjectComparer _objectComparer;
     readonly IEventSequence _eventLog;
     readonly IEventSequence _eventOutbox;
     readonly ICausationManager _causationManager;
@@ -50,7 +50,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
     /// <param name="adapter">The <see cref="IAdapterFor{TModel, TExternalModel}"/>.</param>
     /// <param name="adapterProjection">The <see cref="IAdapterProjectionFor{TModel}"/> for the model.</param>
     /// <param name="mapper"><see cref="IMapper"/> to use for mapping between external model and model.</param>
-    /// <param name="objectsComparer"><see cref="IObjectsComparer"/> to compare objects with.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> to compare objects with.</param>
     /// <param name="eventLog">The <see cref="IEventSequence"/> for appending private events.</param>
     /// <param name="eventOutbox">The <see cref="IEventSequence"/> for appending public events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
@@ -58,7 +58,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         IAdapterFor<TModel, TExternalModel> adapter,
         IAdapterProjectionFor<TModel> adapterProjection,
         IMapper mapper,
-        IObjectsComparer objectsComparer,
+        IObjectComparer objectComparer,
         IEventSequence eventLog,
         IEventSequence eventOutbox,
         ICausationManager causationManager)
@@ -66,7 +66,7 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         Adapter = adapter;
         Projection = adapterProjection;
         Mapper = mapper;
-        _objectsComparer = objectsComparer;
+        _objectComparer = objectComparer;
         _importContexts = new();
         Adapter.DefineImport(new ImportBuilderFor<TModel, TExternalModel>(_importContexts));
         _eventLog = eventLog;
@@ -99,9 +99,9 @@ public class ImportOperations<TModel, TExternalModel> : IImportOperations<TModel
         eventSourceId ??= new(keyValue.ToString()!);
         var initialProjectionResult = await Projection.GetById(eventSourceId!);
         var mappedInstance = Mapper.Map<TModel>(instance)!;
-        var changeset = new Changeset<TModel, TModel>(_objectsComparer, mappedInstance, initialProjectionResult.Model);
+        var changeset = new Changeset<TModel, TModel>(_objectComparer, mappedInstance, initialProjectionResult.Model);
 
-        if (!_objectsComparer.Equals(initialProjectionResult.Model, mappedInstance, out var differences))
+        if (!_objectComparer.Equals(initialProjectionResult.Model, mappedInstance, out var differences))
         {
             changeset.Add(new PropertiesChanged<TModel>(mappedInstance, differences));
         }

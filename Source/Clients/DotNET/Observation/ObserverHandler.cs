@@ -53,7 +53,7 @@ public class ObserverHandler
     /// </summary>
     /// <param name="observerId">Unique identifier.</param>
     /// <param name="name">Name of the observer.</param>
-    /// <param name="eventSequenceId">Event log identifier.</param>
+    /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the observer is for.</param>
     /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
     /// <param name="observerInvoker">The actual invoker.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>

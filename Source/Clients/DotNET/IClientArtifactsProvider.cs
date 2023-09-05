@@ -39,6 +39,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> Observers { get; }
 
     /// <summary>
+    /// Gets all the available reducer types.
+    /// </summary>
+    IEnumerable<Type> Reducers { get; }
+
+    /// <summary>
     /// Gets all the available observer middleware types.
     /// </summary>
     IEnumerable<Type> ObserverMiddlewares { get; }

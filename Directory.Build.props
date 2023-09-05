@@ -1,0 +1,35 @@
+<Project>
+    <PropertyGroup>
+        <ImplicitUsings>true</ImplicitUsings>
+        <LangVersion>10.0</LangVersion>
+        <Nullable>enable</Nullable>
+
+        <!-- Debuggability -->
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>True</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <IncludeSource>True</IncludeSource>
+        <!-- Debuggability - End -->
+
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+        <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
+        <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
+        <RunAnalyzers>True</RunAnalyzers>
+        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+
+        <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
+        <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
+        <RunAnalyzers>True</RunAnalyzers>
+        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeStyle" PrivateAssets="All"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" PrivateAssets="All"/>
+        <PackageReference Include="StyleCop.Analyzers" PrivateAssets="All"/>
+        <PackageReference Include="Roslynator.Analyzers" PrivateAssets="All"/>
+        <PackageReference Include="Meziantou.Analyzer" PrivateAssets="All"/>
+    </ItemGroup>
+</Project>

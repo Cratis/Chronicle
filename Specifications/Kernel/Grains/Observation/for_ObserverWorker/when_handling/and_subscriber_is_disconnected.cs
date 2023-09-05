@@ -14,7 +14,9 @@ public class and_subscriber_is_disconnected : given.an_observer_worker
         sequence_number = (ulong)Random.Shared.Next();
         state.NextEventSequenceNumber = sequence_number;
         @event = new AppendedEvent(EventMetadata.EmptyWithEventSequenceNumber(sequence_number), EventContext.Empty with { EventSourceId = Guid.NewGuid() }, new System.Dynamic.ExpandoObject());
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Disconnected));
+        subscriber
+            .Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()))
+            .Returns((IEnumerable<AppendedEvent> e, ObserverSubscriberContext _) => Task.FromResult(ObserverSubscriberResult.Disconnected(e.First().Metadata.SequenceNumber)));
     }
 
     Task Because() => worker.Handle(@event);

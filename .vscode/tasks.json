@@ -54,6 +54,20 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "build benchmarks",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "--no-restore",
+                "${workspaceFolder}/Benchmarks/Benchmarks.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+
+        {
             "label": "Client and server",
             "group": {
                 "kind": "build",

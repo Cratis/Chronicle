@@ -32,7 +32,8 @@ const observerTypes: { [key: number]: string; } = {
     0: 'Unknown',
     1: 'Client',
     2: 'Projection',
-    3: 'Inbox'
+    3: 'Inbox',
+    4: 'Reducer'
 };
 
 const columns: GridColDef[] = [

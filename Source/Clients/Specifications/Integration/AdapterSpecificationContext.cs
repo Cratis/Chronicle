@@ -27,7 +27,7 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog
     /// <param name="adapter"><see cref="IAdapterFor{TModel, TExternalModel}"/> instance.</param>
     public AdapterSpecificationContext(IAdapterFor<TModel, TExternalModel> adapter)
     {
-        var objectsComparer = new ObjectsComparer();
+        var objectComparer = new ObjectComparer();
         _projectionSpecificationContext = new ProjectionSpecificationContext<TModel>(adapter.Identifier.Value, adapter.DefineModel);
         Projection = new SpecificationAdapterProjectionFor<TModel>(_projectionSpecificationContext);
         var adapterMapperFactory = new AdapterMapperFactory();
@@ -37,7 +37,7 @@ public class AdapterSpecificationContext<TModel, TExternalModel> : IHaveEventLog
             adapter,
             Projection,
             mapper,
-            objectsComparer,
+            objectComparer,
             EventLog,
             EventOutbox,
             new NullCausationManager());

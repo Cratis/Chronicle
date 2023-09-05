@@ -194,7 +194,7 @@ public class ProjectionFactory : IProjectionFactory
         }
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, string key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, string? parentKey = null)
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolverFor(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent = false, PropertyExpression? parentKey = null)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
         if (hasParent)
@@ -206,9 +206,9 @@ public class ProjectionFactory : IProjectionFactory
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
 
-    KeyResolver GetKeyResolverFor(IProjection projection, string? key, PropertyPath actualIdentifiedByProperty)
+    KeyResolver GetKeyResolverFor(IProjection projection, PropertyExpression? key, PropertyPath actualIdentifiedByProperty)
     {
-        if (!string.IsNullOrEmpty(key) && _keyExpressionResolvers.CanResolve(key))
+        if (key is not null && key.Value.Length != 0 && _keyExpressionResolvers.CanResolve(key))
         {
             return _keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty);
         }

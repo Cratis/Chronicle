@@ -15,7 +15,7 @@ public class no_changes : Specification
     protected EventsToAppend events_to_append;
     protected Model original_model;
     protected Model modified_model;
-    protected Mock<IObjectsComparer> objects_comparer;
+    protected Mock<IObjectComparer> objects_comparer;
 
     void Establish()
     {

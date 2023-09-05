@@ -50,7 +50,7 @@ public class a_replay_worker : GrainSpecification
         event_sequence_storage_provider = new();
 
         subscriber = new();
-        subscriber.Setup(_ => _.OnNext(IsAny<AppendedEvent>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
+        subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok));
 
         replay = new Replay(
             Mock.Of<IExecutionContextManager>(),

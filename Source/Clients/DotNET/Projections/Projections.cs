@@ -23,14 +23,14 @@ public class Projections : IProjections
     /// <param name="eventTypes"><see cref="IEventTypes"/> to use.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="modelNameConvention">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
+    /// <param name="modelNameResolver">The <see cref="IModelNameConvention"/> to use for naming the models.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
     public Projections(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
-        IModelNameConvention modelNameConvention,
+        IModelNameResolver modelNameResolver,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions)
     {
@@ -38,7 +38,7 @@ public class Projections : IProjections
             eventTypes,
             clientArtifacts,
             schemaGenerator,
-            modelNameConvention,
+            modelNameResolver,
             serviceProvider,
             jsonSerializerOptions).ToImmutableList();
     }
@@ -50,7 +50,7 @@ public class Projections : IProjections
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
         IJsonSchemaGenerator schemaGenerator,
-        IModelNameConvention modelNameConvention,
+        IModelNameResolver modelNameResolver,
         IServiceProvider serviceProvider,
         JsonSerializerOptions jsonSerializerOptions) =>
         clientArtifacts.Projections
@@ -62,7 +62,7 @@ public class Projections : IProjections
                     return (method.Invoke(null, new object[]
                     {
                         _,
-                        modelNameConvention,
+                        modelNameResolver,
                         eventTypes,
                         schemaGenerator,
                         serviceProvider,
@@ -74,14 +74,14 @@ public class Projections : IProjections
     {
         public static ProjectionDefinition CreateAndDefine(
             Type type,
-            IModelNameConvention modelNameConvention,
+            IModelNameResolver modelNameResolver,
             IEventTypes eventTypes,
             IJsonSchemaGenerator schemaGenerator,
             IServiceProvider serviceProvider,
             JsonSerializerOptions jsonSerializerOptions)
         {
             var instance = (serviceProvider.GetRequiredService(type) as IProjectionFor<TModel>)!;
-            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameConvention, eventTypes, schemaGenerator, jsonSerializerOptions);
+            var builder = new ProjectionBuilderFor<TModel>(instance.Identifier, modelNameResolver, eventTypes, schemaGenerator, jsonSerializerOptions);
             instance.Define(builder);
             return builder.Build();
         }

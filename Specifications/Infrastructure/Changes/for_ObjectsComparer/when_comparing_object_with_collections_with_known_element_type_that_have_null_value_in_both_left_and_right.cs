@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Aksio.Cratis.Changes.for_ObjectsComparer;
+namespace Aksio.Cratis.Changes.for_ObjectComparer;
 
 public class when_comparing_object_with_collections_with_known_element_type_that_have_null_value_in_both_left_and_right : given.an_object_comparer
 {

@@ -12,5 +12,5 @@ public interface IKeyBuilder
     /// Builds the expression.
     /// </summary>
     /// <returns>The expression built.</returns>
-    string Build();
+    PropertyExpression Build();
 }
