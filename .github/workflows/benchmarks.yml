@@ -6,6 +6,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'Benchmarks/**'
+      - 'Source/**'
 
 permissions:
   contents: write
