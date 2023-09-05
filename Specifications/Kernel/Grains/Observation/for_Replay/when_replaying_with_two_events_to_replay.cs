@@ -27,5 +27,5 @@ public class when_replaying_with_two_events_to_replay : given.a_replay_with_two_
     [Fact] void should_replay_second_event() => events_replayed[1].Content.ShouldEqual(first_appended_event.Content);
     [Fact] void should_have_head_of_replay_state_for_first_event() => events_replayed[0].Context.ObservationState.HasFlag(EventObservationState.HeadOfReplay).ShouldBeTrue();
     [Fact] void should_have_tail_of_replay_state_for_first_event() => events_replayed[1].Context.ObservationState.HasFlag(EventObservationState.TailOfReplay).ShouldBeTrue();
-    [Fact] void should_notify_supervisor_that_catch_up_is_complete() => supervisor.Verify(_ => _.NotifyCatchUpComplete(IsAny<IEnumerable<FailedPartition>>()), Once);
+    [Fact] void should_notify_supervisor_that_replay_is_complete() => supervisor.Verify(_ => _.NotifyReplayComplete(IsAny<IEnumerable<FailedPartition>>()), Once);
 }

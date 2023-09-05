@@ -9,5 +9,5 @@ public class when_replaying_with_no_events_to_replay : given.a_replay_worker
 {
     Task Because() => replay.Start(new(GrainId, ObserverKey.Parse(GrainKeyExtension), Enumerable.Empty<EventType>(), typeof(ObserverSubscriber), subscriber_args));
 
-    [Fact] void should_notify_supervisor_that_catch_up_is_complete() => supervisor.Verify(_ => _.NotifyCatchUpComplete(IsAny<IEnumerable<FailedPartition>>()), Once);
+    [Fact] void should_notify_supervisor_that_replay_is_complete() => supervisor.Verify(_ => _.NotifyReplayComplete(IsAny<IEnumerable<FailedPartition>>()), Once);
 }

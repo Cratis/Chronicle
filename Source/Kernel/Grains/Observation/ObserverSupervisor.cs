@@ -126,7 +126,11 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
 #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
     public Task<ObserverSubscription> GetCurrentSubscription() => Task.FromResult(CurrentSubscription);
+
 #pragma warning restore CA1721 // Property names should not match get methods
+
+    /// <inheritdoc/>
+    public Task<ObserverState> GetCurrentState() => Task.FromResult(State);
 
     /// <inheritdoc/>
     public async Task NotifyCatchUpComplete(IEnumerable<FailedPartition> failedPartitions)
@@ -134,6 +138,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
         await ReadStateAsync();
 
         State.RunningState = ObserverRunningState.Active;
+        await UnsubscribeStream();
         await WriteStateAsync();
 
         await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
@@ -160,6 +165,7 @@ public partial class ObserverSupervisor : ObserverWorker, IObserverSupervisor
         State.RunningState = ObserverRunningState.Active;
         await WriteStateAsync();
 
+        await UnsubscribeStream();
         await SubscribeStream(HandleEventForPartitionedObserverWhenSubscribing);
 
         if (_failedPartitionSupervisor is not null)
