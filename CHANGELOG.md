@@ -1,3 +1,36 @@
+# [v9.4.0] - 2023-9-5 [PR: #957](https://github.com/aksio-insurtech/Cratis/pull/957)
+
+### Added
+
+- Introducing benchmarks for the most common operations; appending and observing events. This is the baseline and we'll be expanding on it.
+- Started the foundation of custom defined keys and indexing for observers.
+- New type of observer called **Reducer**. Its a cross between an imperative client observer and a declarative projection. The result of a reduction is dealt with by the kernel and leveraging the same sink mechanism as declarative projections. An example below:
+
+```csharp
+[Reducer("ff449077-0adb-4c5c-90e6-15631cd9e2b1")]
+public class CartReducer : IReducerFor<Cart>
+{
+    public Task<Cart> ItemAdded(ItemAddedToCart @event, Cart? initial, EventContext context)
+    {
+        initial ??= new Cart(context.EventSourceId, Array.Empty<CartItem>());
+        return Task.FromResult(initial with
+        {
+            Items = initial.Items?.Append(new CartItem(@event.MaterialId, @event.Quantity)) ??
+                new[] { new CartItem(@event.MaterialId, @event.Quantity) }
+        });
+    }
+}
+```
+
+### Fixed
+
+- Reorganizing internally for clarity, improved structure.
+- Renaming `ProjectionSink` to `Sink` internally, giving it a wider usecase.
+- Fixing WebSockets setup in Kernel for the Workbench by configuring it in the right order. ASP.NET Core is sensitive to ordering of its middlewares.
+
+
+
+
 # [v9.3.7] - 2023-9-1 [PR: #956](https://github.com/aksio-insurtech/Cratis/pull/956)
 
 ### Fixed
