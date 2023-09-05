@@ -46,6 +46,6 @@ jobs:
           fail-on-alert: true
           alert-comment-cc-users: '@einari'
           gh-pages-branch: 'main'
-          skip-fetch-gh-pages: false
+          skip-fetch-gh-pages: true
           benchmark-data-dir-path: 'Documentation/benchmarks'
 
