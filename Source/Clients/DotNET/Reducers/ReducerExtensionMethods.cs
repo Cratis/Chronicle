@@ -8,8 +8,6 @@ using Aksio.Reflection;
 
 namespace Aksio.Cratis.Reducers;
 
-#nullable disable
-
 /// <summary>
 /// Extension methods for identifying a <see cref="MethodInfo"/> as reducer method.
 /// </summary>
@@ -44,7 +42,7 @@ public static class ReducerExtensionMethods
             parameters[0].ParameterType.HasAttribute<EventTypeAttribute>() &&
             parameters[1].ParameterType.Equals(readModelType))
         {
-            if (methodInfo.DeclaringType.IsNullableContext() && !parameters[1].IsNullableReferenceType())
+            if ((methodInfo.DeclaringType?.IsNullableContext() ?? false) && !parameters[1].IsNullableReferenceType())
             {
                 return false;
             }
