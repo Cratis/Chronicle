@@ -20,5 +20,4 @@ public class NoOpState<TStoredState> : State<TStoredState>
 
     /// <inheritdoc/>
     public override Task<TStoredState> OnLeave(TStoredState state) => Task.FromResult(state);
-
 }
