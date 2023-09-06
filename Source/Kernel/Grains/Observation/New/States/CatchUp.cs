@@ -19,7 +19,7 @@ public class CatchUp : BaseObserverState
     public override ObserverRunningState RunningState => ObserverRunningState.CatchingUp;
 
     /// <inheritdoc/>
-    protected override IImmutableList<Type> SupportedStateTransitions => new[]
+    protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Replay),
         typeof(Indexing)

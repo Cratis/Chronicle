@@ -19,7 +19,7 @@ public class Replay : BaseObserverState
     public override ObserverRunningState RunningState => ObserverRunningState.Replaying;
 
     /// <inheritdoc/>
-    protected override IImmutableList<Type> SupportedStateTransitions => new[]
+    protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Indexing)
     }.ToImmutableList();

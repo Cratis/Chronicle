@@ -40,14 +40,14 @@ public interface IObserverSupervisor : IStateMachine<ObserverState>
     /// Rewind the observer.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    Task Rewind();
+    Task Replay();
 
     /// <summary>
     /// Rewind the observer for a specific partition.
     /// </summary>
     /// <param name="partition">The partition to rewind.</param>
     /// <returns>Awaitable task.</returns>
-    Task RewindPartition(EventSourceId partition);
+    Task ReplayPartition(EventSourceId partition);
 
     /// <summary>
     /// Rewind the observer for a specific partition to a specific sequence number.
@@ -55,7 +55,7 @@ public interface IObserverSupervisor : IStateMachine<ObserverState>
     /// <param name="partition">The partition to rewind.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to rewind to.</param>
     /// <returns>Awaitable task.</returns>
-    Task RewindPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber);
+    Task ReplayPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber);
 
     /// <summary>
     /// Notify that the partition has failed.

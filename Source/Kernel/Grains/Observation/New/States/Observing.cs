@@ -15,7 +15,7 @@ public class Observing : State<BaseObserverState>
     public override StateName Name => "CatchUp";
 
     /// <inheritdoc/>
-    protected override IImmutableList<Type> SupportedStateTransitions => new[]
+    protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(CatchUp),
         typeof(Replay),
