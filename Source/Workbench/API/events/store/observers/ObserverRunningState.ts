@@ -15,4 +15,5 @@ export enum ObserverRunningState {
     failed = 9,
     tailOfReplay = 10,
     disconnected = 11,
+    indexing = 12,
 }

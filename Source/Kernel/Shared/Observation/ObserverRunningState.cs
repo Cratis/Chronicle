@@ -67,4 +67,9 @@ public enum ObserverRunningState
     /// Observer is disconnected.
     /// </summary>
     Disconnected = 11,
+
+    /// <summary>
+    /// Observer is disconnected.
+    /// </summary>
+    Indexing = 12,
 }

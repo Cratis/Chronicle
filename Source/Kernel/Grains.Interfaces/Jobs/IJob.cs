@@ -9,6 +9,14 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public interface IJob : IGrainWithGuidKey
 {
     /// <summary>
+    /// Report progress of a job step.
+    /// </summary>
+    /// <param name="stepId"><see cref="JobStepId"/> to report on.</param>
+    /// <param name="progress">The progress to report.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportStepProgress(JobStepId stepId, StepProgress progress);
+
+    /// <summary>
     /// Report completion of a job step.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>
