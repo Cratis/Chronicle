@@ -11,5 +11,6 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Orleans.SyncWork" />
     </ItemGroup>
 </Project>
