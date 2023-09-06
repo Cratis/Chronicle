@@ -2,7 +2,7 @@
     "recommendations": [
         "netcorext.hash",
         "vsls-contrib.codetour",
-        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
         "k--kato.docomment",
         "josefpihrt-vscode.roslynator",
         "editorconfig.editorconfig",
