@@ -62,12 +62,13 @@ public class and_state_does_not_allow_it : a_state_machine
 {
     bool result;
 
-    protected override IEnumerable<IState<StateMachineState>> GetStates() => new[]
+    protected override IEnumerable<IState<StateMachineState>> GetStates() => new IState<StateMachineState>[]
     {
+        new StateThatSupportsTransitioning(),
         new StateThatDoesNotSupportTransitioning()
     };
 
-    async Task Because() => result = await state_machine.CanTransitionTo<StateThatSupportsTransitioning>();
+    async Task Because() => result = await state_machine.CanTransitionTo<StateThatDoesNotSupportTransitioning>();
 
     [Fact] void should_not_be_able_to_transition() => result.ShouldBeFalse();
 }
