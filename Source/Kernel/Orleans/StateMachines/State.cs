@@ -17,7 +17,7 @@ public abstract class State<TStoredState> : IState<TStoredState>
     /// <summary>
     /// Gets the supported state transitions from this state.
     /// </summary>
-    protected virtual IImmutableList<Type> SupportedStateTransitions => ImmutableList<Type>.Empty;
+    protected virtual IImmutableList<Type> AllowedTransitions => ImmutableList<Type>.Empty;
 
     /// <inheritdoc/>
     public virtual Task<bool> CanTransitionTo<TTargetState>(TStoredState state) => throw new NotImplementedException();
