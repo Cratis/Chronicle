@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
@@ -16,7 +17,6 @@ public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervis
 {
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
-
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -39,10 +39,14 @@ public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervis
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = null) where TObserverSubscriber : IObserverSubscriber
+    public async Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = null)
+        where TObserverSubscriber : IObserverSubscriber
     {
         await TransitionTo<States.CatchUp>();
     }
+
+    /// <inheritdoc/>
+    public override IImmutableList<IState<ObserverState>> GetStates() => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task Unsubscribe() => throw new NotImplementedException();

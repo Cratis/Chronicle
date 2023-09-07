@@ -9,6 +9,12 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public interface IJob : IGrainWithGuidKey
 {
     /// <summary>
+    /// Stop a running job.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Stop();
+
+    /// <summary>
     /// Report progress of a job step.
     /// </summary>
     /// <param name="stepId"><see cref="JobStepId"/> to report on.</param>

@@ -6,16 +6,27 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents an implementation of <see cref="IJob"/>.
 /// </summary>
-public class Job : IJob
+public class Job : Grain<JobState>, IJob
 {
     /// <inheritdoc/>
     public Task ReportStepProgress(JobStepId stepId, StepProgress progress) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task OnStepCompleted(JobStepId stepId) => throw new NotImplementedException();
+    public async Task OnStepCompleted(JobStepId stepId)
+    {
+        State.CompletedStepsCount++;
+        await WriteStateAsync();
+    }
 
     /// <inheritdoc/>
-    public Task OnStepFailed(JobStepId stepId) => throw new NotImplementedException();
+    public async Task OnStepFailed(JobStepId stepId)
+    {
+        State.FailedStepCount++;
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public virtual Task Stop() => Task.CompletedTask;
 
     /// <summary>
     /// Start the job.

@@ -20,14 +20,6 @@ public interface IJobsManager : IGrainWithIntegerKey
         where TJob : IJob;
 
     /// <summary>
-    /// Report progress of a job.
-    /// </summary>
-    /// <param name="jobId"><see cref="JobId"/> to report for.</param>
-    /// <param name="progress">The <see cref="JobProgress"/> for the job.</param>
-    /// <returns>Awaitable task.</returns>
-    Task ReportProgress(JobId jobId, JobProgress progress);
-
-    /// <summary>
     /// Report back completion of a job.
     /// </summary>
     /// <param name="jobId">The identifier of the job completed.</param>
