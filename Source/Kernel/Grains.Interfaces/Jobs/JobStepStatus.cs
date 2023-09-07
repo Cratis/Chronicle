@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public enum JobStepStatus
 {
     /// <summary>
+    /// Represents an unset status.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
     /// The job step has not started.
     /// </summary>
     NotStarted = 1,

@@ -9,6 +9,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public enum JobStatus
 {
     /// <summary>
+    /// Represents an unset status.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
     /// The job has been created.
     /// </summary>
     Created = 1,
