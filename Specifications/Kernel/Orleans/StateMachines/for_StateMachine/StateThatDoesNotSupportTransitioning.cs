@@ -3,13 +3,9 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
-public class StateThatDoesNotSupportTransitioning : State<StateMachineState>
+public class StateThatDoesNotSupportTransitioning : BaseState
 {
     public override StateName Name => "Transitioning state";
-
-    public override Task<StateMachineState> OnEnter(StateMachineState state) => Task.FromResult(state);
-
-    public override Task<StateMachineState> OnLeave(StateMachineState state) => Task.FromResult(state);
 
     public override Task<bool> CanTransitionTo<TState>(StateMachineState state) => Task.FromResult(false);
 }

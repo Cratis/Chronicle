@@ -28,8 +28,15 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
         await OnActivation(cancellationToken);
         _states = GetStates().ToDictionary(_ => _.GetType());
         _states[typeof(NoOpState<TStoredState>)] = new NoOpState<TStoredState>();
-        _currentState = _noOpState;
+
+        InvalidTypeForState.ThrowIfInvalid(InitialState);
+        ThrowIfUnknownStateType(InitialState);
+        _currentState = _states[InitialState];
+        await _currentState.OnEnter(State);
     }
+
+    /// <inheritdoc/>
+    public Task<IState<TStoredState>> GetCurrentState() => Task.FromResult(_currentState);
 
     /// <inheritdoc/>
     public Task<bool> CanTransitionTo<TState>()
@@ -39,6 +46,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     public async Task TransitionTo<TState>()
         where TState : IState<TStoredState>
     {
+        ThrowIfUnknownStateType(typeof(TState));
         if (await CanTransitionTo<TState>())
         {
             await _currentState.OnLeave(State);
@@ -59,4 +67,12 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     /// <param name="cancellationToken"><see cref="CancellationToken"/> for any cancellations.</param>
     /// <returns>Awaitable task.</returns>
     protected virtual Task OnActivation(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    void ThrowIfUnknownStateType(Type type)
+    {
+        if (!_states.ContainsKey(type))
+        {
+            throw new UnknownStateTypeInStateMachine(type, GetType());
+        }
+    }
 }

@@ -10,6 +10,12 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 public interface IStateMachine<TStoredState> : IGrainWithGuidKey
 {
     /// <summary>
+    /// Gets the current state.
+    /// </summary>
+    /// <returns>The current state.</returns>
+    Task<IState<TStoredState>> GetCurrentState();
+
+    /// <summary>
     /// Check if it can transition to a specific new state.
     /// </summary>
     /// <typeparam name="TState">Type of state to check.</typeparam>

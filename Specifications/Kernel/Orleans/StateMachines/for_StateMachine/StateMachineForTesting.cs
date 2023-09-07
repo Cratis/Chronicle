@@ -7,9 +7,16 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
 public class StateMachineForTesting : StateMachine<StateMachineState>
 {
+    readonly Type _initialState;
     IImmutableList<IState<StateMachineState>> _states;
 
-    public StateMachineForTesting(IEnumerable<IState<StateMachineState>> states) => _states = states.ToImmutableList();
+    public StateMachineForTesting(IEnumerable<IState<StateMachineState>> states, Type? initialState = default)
+    {
+        _states = states.ToImmutableList();
+        _initialState = initialState;
+    }
+
+    protected override Type InitialState => _initialState ?? base.InitialState;
 
     public override IImmutableList<IState<StateMachineState>> GetStates() => _states;
 }

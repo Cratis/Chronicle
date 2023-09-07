@@ -3,15 +3,9 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_asking_can_transition_to;
 
-public class and_state_does_not_allow_it : given.a_state_machine
+public class and_state_does_not_allow_it : given.a_state_machine_with_two_well_known_states
 {
     bool result;
-
-    protected override IEnumerable<IState<StateMachineState>> GetStates() => new IState<StateMachineState>[]
-    {
-        new StateThatSupportsTransitioning(),
-        new StateThatDoesNotSupportTransitioning()
-    };
 
     async Task Because() => result = await state_machine.CanTransitionTo<StateThatDoesNotSupportTransitioning>();
 

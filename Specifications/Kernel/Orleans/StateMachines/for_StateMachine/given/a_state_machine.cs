@@ -11,9 +11,11 @@ public abstract class a_state_machine : GrainSpecification<StateMachineState>
 
     protected override string GrainKeyExtension => string.Empty;
 
+    protected virtual Type? initial_state => default;
+
     protected override Grain GetGrainInstance()
     {
-        state_machine = new(GetStates());
+        state_machine = new(GetStates(), initial_state);
         return state_machine;
     }
 
