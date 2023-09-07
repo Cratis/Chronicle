@@ -20,7 +20,7 @@ public interface IJob : IGrainWithGuidKey
     /// <param name="stepId"><see cref="JobStepId"/> to report on.</param>
     /// <param name="progress">The progress to report.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReportStepProgress(JobStepId stepId, StepProgress progress);
+    Task ReportStepProgress(JobStepId stepId, JobStepProgress progress);
 
     /// <summary>
     /// Report completion of a job step.

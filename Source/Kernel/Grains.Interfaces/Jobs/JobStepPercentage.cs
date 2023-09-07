@@ -7,11 +7,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// Represents the progress percentage of a step.
 /// </summary>
 /// <param name="Value">Inner value.</param>
-public record StepPercentage(int Value) : ConceptAs<int>(Value)
+public record JobStepPercentage(int Value) : ConceptAs<int>(Value)
 {
     /// <summary>
-    /// Implicitly convert from <see cref="int"/> to <see cref="StepPercentage"/>.
+    /// Implicitly convert from <see cref="int"/> to <see cref="JobStepPercentage"/>.
     /// </summary>
     /// <param name="value">Integer to convert from.</param>
-    public static implicit operator StepPercentage(int value) => new(value);
+    public static implicit operator JobStepPercentage(int value) => new(value);
 }

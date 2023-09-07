@@ -24,17 +24,7 @@ public class JobState
     public IList<JobEvent> Events { get; set; } = new List<JobEvent>();
 
     /// <summary>
-    /// Gets or sets the total number of steps.
+    /// Gets or sets the <see cref="JobProgress"/>.
     /// </summary>
-    public int TotalStepsCount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of completed steps.
-    /// </summary>
-    public int CompletedStepsCount { get; set; }
-
-    /// <summary>
-    /// Gets or set the number of failed steps.
-    /// </summary>
-    public int FailedStepCount { get; set; }
+    public JobProgress Progress { get; set; } = new(0, 0, 0, JobProgressMessage.None);
 }

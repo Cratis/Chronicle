@@ -9,19 +9,19 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public class Job : Grain<JobState>, IJob
 {
     /// <inheritdoc/>
-    public Task ReportStepProgress(JobStepId stepId, StepProgress progress) => throw new NotImplementedException();
+    public Task ReportStepProgress(JobStepId stepId, JobStepProgress progress) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task OnStepCompleted(JobStepId stepId)
     {
-        State.CompletedStepsCount++;
+        State.Progress.CompletedSteps++;
         await WriteStateAsync();
     }
 
     /// <inheritdoc/>
     public async Task OnStepFailed(JobStepId stepId)
     {
-        State.FailedStepCount++;
+        State.Progress.FailedSteps++;
         await WriteStateAsync();
     }
 

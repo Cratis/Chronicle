@@ -10,6 +10,6 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// </summary>
 /// <typeparam name="TRequest">Type of the request for the job.</typeparam>
 /// <typeparam name="TResponse">Type of the response for the job.</typeparam>
-public interface IStep<TRequest, TResponse> : ISyncWorker<TRequest, TResponse>
+public interface IJobStep<TRequest, TResponse> : ISyncWorker<TRequest, TResponse>
 {
 }

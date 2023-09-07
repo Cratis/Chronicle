@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public record JobProgressMessage(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
+    /// Represents an empty <see cref="JobProgressMessage"/>.
+    /// </summary>
+    public static readonly JobProgressMessage None = string.Empty;
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="JobProgressMessage"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> value to convert.</param>

@@ -6,11 +6,11 @@ using Orleans.SyncWork.Enums;
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Represents an implementation of <see cref="IStep{TRequest, TResponse}"/>.
+/// Represents an implementation of <see cref="IJobStep{TRequest, TResponse}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object.</typeparam>
 /// <typeparam name="TResponse">Type of response object.</typeparam>
-public class Step<TRequest, TResponse> : IStep<TRequest, TResponse>
+public class Step<TRequest, TResponse> : IJobStep<TRequest, TResponse>
 {
     /// <inheritdoc/>
     public Task<Exception> GetException() => throw new NotImplementedException();
