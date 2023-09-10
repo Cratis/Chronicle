@@ -36,5 +36,5 @@ public class and_the_partition_is_already_failed : given.a_supervisor
     [Fact] void should_have_failed_partitions() => supervisor.HasFailedPartitions.ShouldBeTrue();
     [Fact] void should_have_the_failed_partition() => supervisor.GetState().FailedPartitions.SingleOrDefault(_ => _.Partition == partition_id).ShouldNotBeNull();
     [Fact] void should_have_the_details_of_the_original_failed_partition() => supervisor.GetState().FailedPartitions.SingleOrDefault(_ => _.Partition == partition_id).Tail.ShouldEqual(sequence_number);
-    [Fact] void should_not_initiate_the_failed_partition() => failed_partition_mock.Verify(_ => _.Recover(IsAny<ObserverKey>(), IsAny<ObserverName>(), next_sequence_number, event_types, IsAny<IEnumerable<string>>(), IsAny<string>()), Never);
+    [Fact] void should_not_initiate_the_failed_partition() => failed_partition_mock.Verify(_ => _.Recover(IsAny<ObserverKey>(), IsAny<ObserverName>(), next_sequence_number, event_types, IsAny<IEnumerable<string>>(), IsAny<string>(), occurred), Never);
 }

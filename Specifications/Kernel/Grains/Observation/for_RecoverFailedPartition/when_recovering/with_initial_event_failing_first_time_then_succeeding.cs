@@ -55,7 +55,7 @@ public class with_initial_event_failing_first_time_then_succeeding : given.a_rec
         };
     }
 
-    Task Because() => (grain as RecoverFailedPartition).Recover(observer_key, string.Empty, initial_error, Enumerable.Empty<EventType>(), Enumerable.Empty<string>(), string.Empty);
+    Task Because() => (grain as RecoverFailedPartition).Recover(observer_key, string.Empty, initial_error, Enumerable.Empty<EventType>(), Enumerable.Empty<string>(), string.Empty, DateTimeOffset.UtcNow);
 
     [Fact]
     void should_call_the_subscriber_for_the_failed_event_twice()

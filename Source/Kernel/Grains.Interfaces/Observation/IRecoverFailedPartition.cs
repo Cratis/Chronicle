@@ -20,8 +20,9 @@ public interface IRecoverFailedPartition : IGrainWithGuidCompoundKey
     /// <param name="eventTypes">Event types to filter.</param>
     /// <param name="messages">Any messages associated with the failure.</param>
     /// <param name="stackTrace">A stack trace associated with the failure.</param>
-    /// /// <returns>Awaitable task.</returns>
-    Task Recover(ObserverKey observerKey, ObserverName observerName, EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, IEnumerable<string> messages, string stackTrace);
+    /// <param name="occurred">The date and time of when the failure occurred.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Recover(ObserverKey observerKey, ObserverName observerName, EventSequenceNumber fromEvent, IEnumerable<EventType> eventTypes, IEnumerable<string> messages, string stackTrace, DateTimeOffset occurred);
 
     /// <summary>
     /// Catches up any additional events on a failed partition after recovery was completed.
@@ -29,6 +30,12 @@ public interface IRecoverFailedPartition : IGrainWithGuidCompoundKey
     /// <param name="fromEvent">The event to start catching up from.</param>
     /// <returns>Awaitable task.</returns>
     Task Catchup(EventSequenceNumber fromEvent);
+
+    /// <summary>
+    /// Resumes recovery of a failed partition.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ResumeRecovery();
 
     /// <summary>
     /// Resets the recovery state for a failed partition.
