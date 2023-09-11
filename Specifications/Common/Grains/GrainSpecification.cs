@@ -30,7 +30,8 @@ public abstract class GrainSpecification<TState> : GrainSpecification
         storage = new Mock<IStorage<TState>>();
         storageProperty.SetValue(grain, storage.Object);
 
-        storage.SetupGet(_ => _.State).Returns(state);
+        storage.SetupGet(_ => _.State).Returns(() => state);
+        storage.SetupSet(_ => _.State = IsAny<TState>()).Callback((TState value) => state = value);
         storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
         {
             var serialized = JsonSerializer.Serialize(state);

@@ -9,7 +9,7 @@ public class StateMachineWithUnknownInitialStateType : StateMachine<StateMachine
 {
     protected override Type InitialState => typeof(StateThatDoesNotSupportTransitioning);
 
-    public override ImmutableList<IState<StateMachineState>> GetStates() =>
+    public override ImmutableList<IState<StateMachineState>> CreateStates() =>
         new IState<StateMachineState>[]
         {
             new StateThatSupportsTransitioning()

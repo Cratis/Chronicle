@@ -11,8 +11,16 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 /// <typeparam name="TStoredState">Type of state object associated.</typeparam>
 public abstract class State<TStoredState> : IState<TStoredState>
 {
+    /// <summary>
+    /// Internal field for <see cref="StateMachine"/>.
+    /// </summary>
+    internal IStateMachine<TStoredState> _stateMachine = default!;
+
     /// <inheritdoc/>
     public abstract StateName Name { get; }
+
+    /// <inheritdoc/>
+    public IStateMachine<TStoredState> StateMachine => _stateMachine;
 
     /// <summary>
     /// Gets the supported state transitions from this state.

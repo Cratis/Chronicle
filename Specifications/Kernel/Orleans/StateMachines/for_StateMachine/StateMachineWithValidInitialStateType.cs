@@ -9,5 +9,5 @@ public class StateMachineWithValidInitialStateType : StateMachine<StateMachineSt
 {
     protected override Type InitialState => typeof(StateThatSupportsTransitioning);
 
-    public override IImmutableList<IState<StateMachineState>> GetStates() => ImmutableList<IState<StateMachineState>>.Empty;
+    public override IImmutableList<IState<StateMachineState>> CreateStates() => ImmutableList<IState<StateMachineState>>.Empty;
 }

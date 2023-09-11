@@ -8,7 +8,7 @@ public abstract class a_state_machine_with_two_well_known_states : a_state_machi
     protected StateThatSupportsTransitioning state_that_supports_transitioning;
     protected StateThatDoesNotSupportTransitioning state_that_does_not_support_transitioning;
 
-    protected override IEnumerable<IState<StateMachineState>> GetStates()
+    protected override IEnumerable<IState<StateMachineState>> CreateStates()
     {
         state_that_supports_transitioning = new();
         state_that_does_not_support_transitioning = new();

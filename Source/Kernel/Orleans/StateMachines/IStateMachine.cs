@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
 /// <summary>
@@ -14,6 +16,12 @@ public interface IStateMachine<TStoredState> : IGrainWithGuidKey
     /// </summary>
     /// <returns>The current state.</returns>
     Task<IState<TStoredState>> GetCurrentState();
+
+    /// <summary>
+    /// Get all the states.
+    /// </summary>
+    /// <returns>A collection of state instances.</returns>
+    Task<IImmutableList<IState<TStoredState>>> GetStates();
 
     /// <summary>
     /// Check if it can transition to a specific new state.

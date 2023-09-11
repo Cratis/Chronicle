@@ -16,4 +16,5 @@ public class with_unknown_initial_state_type : GrainSpecification<StateMachineSt
     async Task Because() => exception = await Catch.Exception(async () => await grain.OnActivateAsync(CancellationToken.None));
 
     [Fact] void should_throw_invalid_type_for_state_exception() => exception.ShouldBeOfExactType<UnknownStateTypeInStateMachine>();
+    [Fact] async Task should_set_state_machine_on_all_states() => (await ((StateMachineWithUnknownInitialStateType)grain).GetStates()).All(_ => _.StateMachine.Equals(grain)).ShouldBeTrue();
 }

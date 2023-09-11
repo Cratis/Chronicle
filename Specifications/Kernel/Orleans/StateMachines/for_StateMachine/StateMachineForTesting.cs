@@ -18,5 +18,5 @@ public class StateMachineForTesting : StateMachine<StateMachineState>
 
     protected override Type InitialState => _initialState ?? base.InitialState;
 
-    public override IImmutableList<IState<StateMachineState>> GetStates() => _states;
+    public override IImmutableList<IState<StateMachineState>> CreateStates() => _states;
 }

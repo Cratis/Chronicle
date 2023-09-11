@@ -15,9 +15,9 @@ public abstract class a_state_machine : GrainSpecification<StateMachineState>
 
     protected override Grain GetGrainInstance()
     {
-        state_machine = new(GetStates(), initial_state);
+        state_machine = new(CreateStates(), initial_state);
         return state_machine;
     }
 
-    protected abstract IEnumerable<IState<StateMachineState>> GetStates();
+    protected abstract IEnumerable<IState<StateMachineState>> CreateStates();
 }

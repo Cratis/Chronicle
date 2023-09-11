@@ -9,5 +9,5 @@ public class StateMachineWithInvalidInitialStateType : StateMachine<StateMachine
 {
     protected override Type InitialState => typeof(string);
 
-    public override IImmutableList<IState<StateMachineState>> GetStates() => ImmutableList<IState<StateMachineState>>.Empty;
+    public override IImmutableList<IState<StateMachineState>> CreateStates() => ImmutableList<IState<StateMachineState>>.Empty;
 }

@@ -3,4 +3,13 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
-public record StateMachineState();
+public class StateMachineState
+{
+    public string Something { get; set; } = string.Empty;
+
+    public override string ToString() => Something;
+
+    public override bool Equals(object obj) => Something.Equals(((StateMachineState)obj).Something);
+
+    public override int GetHashCode() => Something.GetHashCode();
+}

@@ -15,6 +15,11 @@ public interface IState<TStoredState>
     StateName Name { get; }
 
     /// <summary>
+    /// Gets the state machine.
+    /// </summary>
+    IStateMachine<TStoredState> StateMachine { get; }
+
+    /// <summary>
     /// Gets whether or not it is possible to transition to a given state.
     /// </summary>
     /// <param name="state">The state object associated.</param>

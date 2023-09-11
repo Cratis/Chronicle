@@ -26,8 +26,15 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await OnActivation(cancellationToken);
-        _states = GetStates().ToDictionary(_ => _.GetType());
+        _states = CreateStates().ToDictionary(_ => _.GetType());
         _states[typeof(NoOpState<TStoredState>)] = new NoOpState<TStoredState>();
+        foreach (var state in _states.Values)
+        {
+            if (state is State<TStoredState> actualState)
+            {
+                actualState._stateMachine = this;
+            }
+        }
 
         InvalidTypeForState.ThrowIfInvalid(InitialState);
         ThrowIfUnknownStateType(InitialState);
@@ -49,17 +56,21 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
         ThrowIfUnknownStateType(typeof(TState));
         if (await CanTransitionTo<TState>())
         {
-            await _currentState.OnLeave(State);
+            State = await _currentState.OnLeave(State);
             _currentState = _states[typeof(TState)];
-            await _currentState.OnEnter(State);
+            State = await _currentState.OnEnter(State);
+            await WriteStateAsync();
         }
     }
+
+    /// <inheritdoc/>
+    public Task<IImmutableList<IState<TStoredState>>> GetStates() => Task.FromResult<IImmutableList<IState<TStoredState>>>(_states.Values.ToImmutableList());
 
     /// <summary>
     /// Gets the states for this state machine.
     /// </summary>
     /// <returns>A collection of states.</returns>
-    public abstract IImmutableList<IState<TStoredState>> GetStates();
+    public abstract IImmutableList<IState<TStoredState>> CreateStates();
 
     /// <summary>
     /// Called when the state machine is activated.
