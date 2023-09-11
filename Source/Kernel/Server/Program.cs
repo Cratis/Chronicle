@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Aksio.Applications.Autofac;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 
 #pragma warning disable SA1600
@@ -47,6 +48,11 @@ public static class Program
                 .AddEventSequenceStreaming()
                 .AddExecutionContext())
             .ConfigureWebHostDefaults(_ => _
+                .ConfigureKestrel(options =>
+                {
+                    options.ListenAnyIP(35000, listenOptions => listenOptions.Protocols = HttpProtocols.Http2);
+                    options.Limits.Http2.MaxStreamsPerConnection = 100;
+                })
                 .UseStartup<Startup>());
 
     static void UnhandledExceptions(object sender, UnhandledExceptionEventArgs args)

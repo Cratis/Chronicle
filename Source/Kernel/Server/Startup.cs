@@ -4,6 +4,7 @@
 #pragma warning disable SA1600
 
 using Aksio.Cratis.Kernel.Grains.Clients;
+using ProtoBuf.Grpc.Server;
 
 namespace Aksio.Cratis.Kernel.Server;
 
@@ -11,6 +12,7 @@ public class Startup
 {
     public void ConfigureServices(IServiceCollection services)
     {
+        services.AddCodeFirstGrpc();
         services.AddMongoDBReadModels();
         services.AddHttpClient(ConnectedClients.ConnectedClientsHttpClient).ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
         {
@@ -27,5 +29,6 @@ public class Startup
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() => app.PerformBootProcedures());
         app.UseAksio();
+        // app.UseEndpoints(_ => _.MapGrpcService<Services.EventSequences.EventSequences>());
     }
 }

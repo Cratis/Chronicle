@@ -19,6 +19,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
     </ItemGroup>
 
     <ItemGroup>
