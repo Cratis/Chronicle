@@ -26,5 +26,5 @@ public class JobState
     /// <summary>
     /// Gets or sets the <see cref="JobProgress"/>.
     /// </summary>
-    public JobProgress Progress { get; set; } = new(0, 0, 0, JobProgressMessage.None);
+    public JobProgress Progress { get; set; } = new();
 }
