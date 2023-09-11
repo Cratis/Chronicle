@@ -56,9 +56,16 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
         ThrowIfUnknownStateType(typeof(TState));
         if (await CanTransitionTo<TState>())
         {
+            await OnBeforeLeavingState(_currentState);
             State = await _currentState.OnLeave(State);
+            await OnAfterLeavingState(_currentState);
+
             _currentState = _states[typeof(TState)];
+
+            await OnBeforeEnteringState(_currentState);
             State = await _currentState.OnEnter(State);
+            await OnAfterEnteringState(_currentState);
+
             await WriteStateAsync();
         }
     }
@@ -78,6 +85,34 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     /// <param name="cancellationToken"><see cref="CancellationToken"/> for any cancellations.</param>
     /// <returns>Awaitable task.</returns>
     protected virtual Task OnActivation(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// Method that gets called before entering a state.
+    /// </summary>
+    /// <param name="state">Instance of the state that will be entered.</param>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task OnBeforeEnteringState(IState<TStoredState> state) => Task.CompletedTask;
+
+    /// <summary>
+    /// Method that gets called after entering a state.
+    /// </summary>
+    /// <param name="state">Instance of the state that was entered.</param>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task OnAfterEnteringState(IState<TStoredState> state) => Task.CompletedTask;
+
+    /// <summary>
+    /// Method that gets called before leaving a state.
+    /// </summary>
+    /// <param name="state">Instance of the state that will be entered.</param>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task OnBeforeLeavingState(IState<TStoredState> state) => Task.CompletedTask;
+
+    /// <summary>
+    /// Method that gets called after leaving a state.
+    /// </summary>
+    /// <param name="state">Instance of the state that was entered.</param>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task OnAfterLeavingState(IState<TStoredState> state) => Task.CompletedTask;
 
     void ThrowIfUnknownStateType(Type type)
     {

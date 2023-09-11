@@ -30,4 +30,8 @@ public class and_state_can_be_transitioned_to : given.a_state_machine_with_two_w
     [Fact] void should_call_on_leave_with_the_state_transitioned_from() => on_calls[0].State.ShouldEqual(initial_stored_state);
     [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
     [Fact] void should_write_state_coming_from_on_enter() => written_states[0].ShouldEqual(state_that_supports_transitioning.StateToReturnOnEnter);
+    [Fact] void should_call_on_before_entering_state_for_state_entered() => state_machine.OnBeforeEnteringStates.ShouldContainOnly(new[] { state_that_supports_transitioning });
+    [Fact] void should_call_on_after_entering_state_for_state_entered() => state_machine.OnAfterEnteringStates.ShouldContainOnly(new[] { state_that_supports_transitioning });
+    [Fact] void should_call_on_before_leaving_state_for_state_entered() => state_machine.OnBeforeLeavingStates.ShouldContainOnly(new[] { state_that_does_not_support_transitioning });
+    [Fact] void should_call_on_after_leaving_state_for_state_entered() => state_machine.OnAfterLeavingStates.ShouldContainOnly(new[] { state_that_does_not_support_transitioning });
 }
