@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Contracts</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Contracts</RootNamespace>
+        <NoWarn>$(NoWarn);CS8618</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="protobuf-net.Grpc" />
+      <PackageReference Include="Aksio.Fundamentals" />
+    </ItemGroup>
+
+</Project>

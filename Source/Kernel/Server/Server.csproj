@@ -40,5 +40,7 @@
     <ItemGroup>
         <ProjectReference Include="../../Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Clients/MongoDB/MongoDB.csproj" />
+        <ProjectReference Include="..\Contracts\Contracts.csproj" />
+        <ProjectReference Include="..\Services\Services.csproj" />
     </ItemGroup>
 </Project>

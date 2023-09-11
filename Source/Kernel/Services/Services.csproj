@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>Aksio.Cratis.Kernel.Services</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Services</RootNamespace>
+        <NoWarn>$(NoWarn);CS8618</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.Fundamentals" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Contracts\Contracts.csproj" />
+      <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
+    </ItemGroup>
+
+</Project>
