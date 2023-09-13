@@ -365,7 +365,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     {
         _logger.GettingLastInstanceOfAny(eventSequenceId, eventSourceId, eventTypes);
 
-        var anyEventTypes = Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray());
+        var anyEventTypes = Builders<Event>.Filter.In(e => e.Type, eventTypes);
 
         var filter = Builders<Event>.Filter.And(
             anyEventTypes,
