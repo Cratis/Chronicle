@@ -30,10 +30,19 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     public static readonly EventSequenceNumber Unavailable = ulong.MaxValue - 2;
 
     /// <summary>
-    /// Check if the <see cref="EventSequenceNumber"/> can mutate.
+    /// Check if the <see cref="EventSequenceNumber"/> is an actual value representing a sequence number.
     /// </summary>
     /// <returns>True if it can, false if not.</returns>
+    /// <remarks>
+    /// Values such as <see cref="Unavailable"/>, <see cref="Max"/> and <see cref="WarmUp"/> are not actual values.
+    /// They are system values used for special purposes.
+    /// </remarks>
     public bool IsActualValue => this != Unavailable && this != Max && this != WarmUp;
+
+    /// <summary>
+    /// Check if the <see cref="EventSequenceNumber"/> is unavailable.
+    /// </summary>
+    public bool IsUnavailable => this == Unavailable;
 
     /// <summary>
     /// Implicitly convert from <see cref="ulong"/> to <see cref="EventSequenceNumber"/>.
