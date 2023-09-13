@@ -57,7 +57,7 @@ public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervis
     public async Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = null)
         where TObserverSubscriber : IObserverSubscriber
     {
-        await TransitionTo<States.CatchUp>();
+        await TransitionTo<States.Subscribing>();
     }
 
     /// <inheritdoc/>
