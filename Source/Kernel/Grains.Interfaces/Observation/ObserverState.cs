@@ -66,6 +66,10 @@ public class ObserverState
     /// <summary>
     /// Gets or sets the expected next event sequence number into the event log.
     /// </summary>
+    /// <remarks>
+    /// When setting a value that is not an actual value, such as the system well known values, it will be set to <see cref="EventSequenceNumber.First"/>.
+    /// We only want to see actual values here.
+    /// </remarks>
     public EventSequenceNumber NextEventSequenceNumber
     {
         get => _nextEventSequenceNumber;
