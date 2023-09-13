@@ -276,14 +276,17 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var sequenceNumbers = collection
             .Aggregate()
             .Facet(tailFacet, tailForEventTypesFacet)
-            .Project<TailEventSequenceNumbers>($"{{'{nameof(TailEventSequenceNumbers.Tail)}': {{ '$arrayElemAt': ['$tail.{nameof(TailEventSequenceNumbers.Tail)}',0] }}, '{nameof(TailEventSequenceNumbers.TailForEventTypes)}': {{ '$arrayElemAt': ['$tail2.{nameof(TailEventSequenceNumbers.TailForEventTypes)}',0] }} }}")
+            .Project<BsonDocument>($"{{'{nameof(TailEventSequenceNumbers.Tail)}': {{ '$arrayElemAt': ['$tail.{nameof(TailEventSequenceNumbers.Tail)}',0] }}, '{nameof(TailEventSequenceNumbers.TailForEventTypes)}': {{ '$arrayElemAt': ['$tail2.{nameof(TailEventSequenceNumbers.TailForEventTypes)}',0] }} }}")
             .Single();
 
-        return Task.FromResult(sequenceNumbers with
-        {
-            EventSequenceId = eventSequenceId,
-            EventTypes = eventTypes.ToImmutableList()
-        });
+        var hasTail = sequenceNumbers.TryGetValue("Tail", out var tail);
+        var hasTailForEventTypes = sequenceNumbers.TryGetValue("TailForEventTypes", out var tailForEventTypes);
+
+        return Task.FromResult(new TailEventSequenceNumbers(
+            eventSequenceId,
+            eventTypes.ToImmutableList(),
+            hasTail ? new EventSequenceNumber((ulong)tail.AsInt64) : EventSequenceNumber.Unavailable,
+            hasTailForEventTypes ? new EventSequenceNumber((ulong)tailForEventTypes.AsInt64) : EventSequenceNumber.Unavailable));
     }
 
     /// <inheritdoc/>
