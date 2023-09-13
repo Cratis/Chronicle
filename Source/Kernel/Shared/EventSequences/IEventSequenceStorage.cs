@@ -93,6 +93,14 @@ public interface IEventSequenceStorage
     Task<EventSequenceNumber> GetTailSequenceNumber(EventSequenceId eventSequenceId, IEnumerable<EventType>? eventTypes = null, EventSourceId? eventSourceId = null);
 
     /// <summary>
+    /// Get the tail sequence numbers for a specific event sequence and any of a given set of event types.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence to get for.</param>
+    /// <param name="eventTypes">Event types to get for.</param>
+    /// <returns>The <see cref="TailEventSequenceNumbers"/>.</returns>
+    Task<TailEventSequenceNumbers> GetTailSequenceNumbers(EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
+
+    /// <summary>
     /// Get the next sequence number greater or equal to a specific sequence number with optionally filtered on event types and event source id.
     /// </summary>
     /// <param name="eventSequenceId">The event sequence to get for.</param>

@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json;
 using Aksio.Cratis.Auditing;
@@ -11,6 +12,7 @@ using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Grains.EventSequences;
 using Aksio.Cratis.Kernel.Schemas;
 using Aksio.DependencyInversion;
+using Aksio.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -212,7 +214,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
         {
-            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
         if (eventSourceId?.IsSpecified == true)
@@ -237,7 +239,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var filters = new List<FilterDefinition<Event>>();
         if (eventTypes?.Any() ?? false)
         {
-            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
         if (eventSourceId?.IsSpecified == true)
         {
@@ -251,6 +253,37 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
         var filter = Builders<Event>.Filter.And(filters.ToArray());
         var highest = collection.Find(filter).SortByDescending(_ => _.SequenceNumber).Limit(1).SingleOrDefault();
         return Task.FromResult(highest?.SequenceNumber ?? EventSequenceNumber.Unavailable);
+    }
+
+    /// <inheritdoc/>
+    public Task<TailEventSequenceNumbers> GetTailSequenceNumbers(
+        EventSequenceId eventSequenceId,
+        IEnumerable<EventType> eventTypes)
+    {
+        var collection = _eventStoreDatabaseProvider().GetEventSequenceCollectionAsBsonFor(eventSequenceId);
+        var sort = PipelineStageDefinitionBuilder.Sort<BsonDocument>(/*lang=json*/ "{ '_id' : -1 }");
+        var limit = PipelineStageDefinitionBuilder.Limit<BsonDocument>(1);
+        var tailProjection = PipelineStageDefinitionBuilder.Project<BsonDocument>(/*lang=json*/ $"{{ '{nameof(TailEventSequenceNumbers.Tail)}': '$_id'}}");
+        var tailPipeline = PipelineDefinition<BsonDocument, BsonDocument>.Create(new[] { sort, limit, tailProjection });
+        var tailFacet = AggregateFacet.Create("tail", tailPipeline);
+
+        var filter = Builders<BsonDocument>.Filter.In(nameof(Event.Type).ToCamelCase(), eventTypes.Select(_ => _.Id));
+        var tailForEventTypesMatch = PipelineStageDefinitionBuilder.Match(filter);
+        var tailForEventTypesProjection = PipelineStageDefinitionBuilder.Project<BsonDocument>(/*lang=json*/ $"{{ '{nameof(TailEventSequenceNumbers.TailForEventTypes)}': '$_id'}}");
+        var tailForEventTypesPipeline = PipelineDefinition<BsonDocument, BsonDocument>.Create(new[] { tailForEventTypesMatch, sort, limit, tailForEventTypesProjection });
+        var tailForEventTypesFacet = AggregateFacet.Create("tailForEventTypes", tailForEventTypesPipeline);
+
+        var sequenceNumbers = collection
+            .Aggregate()
+            .Facet(tailFacet, tailForEventTypesFacet)
+            .Project<TailEventSequenceNumbers>($"{{'{nameof(TailEventSequenceNumbers.Tail)}': {{ '$arrayElemAt': ['$tail.{nameof(TailEventSequenceNumbers.Tail)}',0] }}, '{nameof(TailEventSequenceNumbers.TailForEventTypes)}': {{ '$arrayElemAt': ['$tail2.{nameof(TailEventSequenceNumbers.TailForEventTypes)}',0] }} }}")
+            .Single();
+
+        return Task.FromResult(sequenceNumbers with
+        {
+            EventSequenceId = eventSequenceId,
+            EventTypes = eventTypes.ToImmutableList()
+        });
     }
 
     /// <inheritdoc/>
@@ -268,7 +301,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         if (eventTypes?.Any() ?? false)
         {
-            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
         if (eventSourceId?.IsSpecified == true)
         {
@@ -332,7 +365,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
     {
         _logger.GettingLastInstanceOfAny(eventSequenceId, eventSourceId, eventTypes);
 
-        var anyEventTypes = Builders<Event>.Filter.Or(eventTypes.Select(et => Builders<Event>.Filter.Eq(_ => _.Type, et)));
+        var anyEventTypes = Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray());
 
         var filter = Builders<Event>.Filter.And(
             anyEventTypes,
@@ -365,7 +398,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         if (eventTypes?.Any() == true)
         {
-            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
@@ -396,7 +429,7 @@ public class MongoDBEventSequenceStorage : IEventSequenceStorage
 
         if (eventTypes?.Any() == true)
         {
-            filters.Add(Builders<Event>.Filter.Or(eventTypes.Select(_ => Builders<Event>.Filter.Eq(e => e.Type, _.Id)).ToArray()));
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
         var filter = Builders<Event>.Filter.And(filters.ToArray());
