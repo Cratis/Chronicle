@@ -5,6 +5,7 @@ using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Configuration;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.MongoDB;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB;
@@ -43,6 +44,22 @@ public class EventStoreDatabase : IEventStoreDatabase
     /// <inheritdoc/>
     public IMongoCollection<Event> GetEventSequenceCollectionFor(EventSequenceId eventSequenceId)
     {
+        var collectionName = GetCollectionNameFor(eventSequenceId);
+        return _database.GetCollection<Event>(collectionName);
+    }
+
+    /// <inheritdoc/>
+    public IMongoCollection<BsonDocument> GetEventSequenceCollectionAsBsonFor(EventSequenceId eventSequenceId)
+    {
+        var collectionName = GetCollectionNameFor(eventSequenceId);
+        return _database.GetCollection<BsonDocument>(collectionName);
+    }
+
+    /// <inheritdoc/>
+    public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(CollectionNames.Observers);
+
+    string GetCollectionNameFor(EventSequenceId eventSequenceId)
+    {
         var collectionName = CollectionNames.EventLog;
         if (!eventSequenceId.IsEventLog)
         {
@@ -60,9 +77,6 @@ public class EventStoreDatabase : IEventStoreDatabase
             }
         }
 
-        return _database.GetCollection<Event>(collectionName);
+        return collectionName;
     }
-
-    /// <inheritdoc/>
-    public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(CollectionNames.Observers);
 }
