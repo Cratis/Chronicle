@@ -13,4 +13,10 @@ namespace Aksio.Cratis.EventSequences;
 /// <param name="EventTypes">Collection of <see cref="EventType"/> the numbers are for.</param>
 /// <param name="Tail">The tail <see cref="EventSequenceNumber"/> for the event sequence.</param>
 /// <param name="TailForEventTypes">The tail <see cref="EventSequenceNumber"/> for any of the event types.</param>
-public record TailEventSequenceNumbers(EventSequenceId EventSequenceId, IImmutableList<EventType> EventTypes, EventSequenceNumber Tail, EventSequenceNumber TailForEventTypes);
+public record TailEventSequenceNumbers(EventSequenceId EventSequenceId, IImmutableList<EventType> EventTypes, EventSequenceNumber Tail, EventSequenceNumber TailForEventTypes)
+{
+    /// <summary>
+    /// Represents an empty instance of <see cref="TailEventSequenceNumbers"/>.
+    /// </summary>
+    public static readonly TailEventSequenceNumbers Empty = new(EventSequenceId.Unspecified, ImmutableList<EventType>.Empty, EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
+}
