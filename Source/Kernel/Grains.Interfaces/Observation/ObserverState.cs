@@ -31,6 +31,7 @@ public class ObserverState
     public const string ReplayStorageProvider = "observer-state-replay";
 
     List<FailedPartition> _failedPartitions = new();
+    EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
     /// <summary>
     /// Gets or sets the identifier of the observer state.
@@ -65,7 +66,11 @@ public class ObserverState
     /// <summary>
     /// Gets or sets the expected next event sequence number into the event log.
     /// </summary>
-    public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.First;
+    public EventSequenceNumber NextEventSequenceNumber
+    {
+        get => _nextEventSequenceNumber;
+        set => _nextEventSequenceNumber = !value.IsActualValue ? EventSequenceNumber.First : value;
+    }
 
     /// <summary>
     /// Gets or sets the last handled event in the event log, ever. This value will never reset during a rewind.
@@ -105,6 +110,16 @@ public class ObserverState
     /// Gets or sets the current subscription arguments.
     /// </summary>
     public object? CurrentSubscriptionArguments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current subscription.
+    /// </summary>
+    public ObserverSubscription Subscription { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tail event sequence numbers.
+    /// </summary>
+    public TailEventSequenceNumbers TailEventSequenceNumbers { get; set; } = TailEventSequenceNumbers.Empty;
 
     /// <summary>
     /// Add a failed partition.
