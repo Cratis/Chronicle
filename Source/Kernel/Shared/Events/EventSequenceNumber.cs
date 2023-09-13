@@ -30,6 +30,12 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     public static readonly EventSequenceNumber Unavailable = ulong.MaxValue - 2;
 
     /// <summary>
+    /// Check if the <see cref="EventSequenceNumber"/> can mutate.
+    /// </summary>
+    /// <returns>True if it can, false if not.</returns>
+    public bool IsActualValue => this != Unavailable && this != Max && this != WarmUp;
+
+    /// <summary>
     /// Implicitly convert from <see cref="ulong"/> to <see cref="EventSequenceNumber"/>.
     /// </summary>
     /// <param name="value">Value to convert from.</param>
@@ -42,7 +48,7 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
     /// <param name="right">Value to add.</param>
     /// <returns>new event sequence number.</returns>
-    public static EventSequenceNumber operator +(EventSequenceNumber left, ulong right) => new(left.Value + right);
+    public static EventSequenceNumber operator +(EventSequenceNumber left, ulong right) => left.IsActualValue ? new(left.Value + right) : left;
 
     /// <summary>
     /// Adds a event sequence number with a value.
@@ -50,7 +56,7 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="left"><see cref="EventSequenceNumber"/> to subtract from.</param>
     /// <param name="right">Value to add.</param>
     /// <returns>new event sequence number.</returns>
-    public static EventSequenceNumber operator -(EventSequenceNumber left, ulong right) => new(left.Value - right);
+    public static EventSequenceNumber operator -(EventSequenceNumber left, ulong right) => left.IsActualValue ? new(left.Value - right) : left;
 
     /// <summary>
     /// Adds a event sequence number with a value.
@@ -58,7 +64,7 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
     /// <param name="right">Value to add.</param>
     /// <returns>new event sequence number.</returns>
-    public static EventSequenceNumber operator +(EventSequenceNumber left, int right) => new(left.Value + (ulong)right);
+    public static EventSequenceNumber operator +(EventSequenceNumber left, int right) => left.IsActualValue ? new(left.Value + (ulong)right) : left;
 
     /// <summary>
     /// Adds a event sequence number with a value.
@@ -66,7 +72,7 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="left"><see cref="EventSequenceNumber"/> to subtract from.</param>
     /// <param name="right">Value to add.</param>
     /// <returns>new event sequence number.</returns>
-    public static EventSequenceNumber operator -(EventSequenceNumber left, int right) => new(left.Value - (ulong)right);
+    public static EventSequenceNumber operator -(EventSequenceNumber left, int right) => left.IsActualValue ? new(left.Value - (ulong)right) : left;
 
     /// <summary>
     /// Adds a event sequence number with another event sequence number.
@@ -74,7 +80,7 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
     /// <param name="right"><see cref="EventSequenceNumber"/> to add.</param>
     /// <returns>new event sequence number.</returns>
-    public static EventSequenceNumber operator +(EventSequenceNumber left, EventSequenceNumber right) => new(left.Value + right.Value);
+    public static EventSequenceNumber operator +(EventSequenceNumber left, EventSequenceNumber right) => left.IsActualValue ? new(left.Value + right.Value) : left;
 
     /// <summary>
     /// Adds a event sequence number with a value.
@@ -82,11 +88,11 @@ public record EventSequenceNumber(ulong Value) : ConceptAs<ulong>(Value)
     /// <param name="left"><see cref="EventSequenceNumber"/> to add from.</param>
     /// <param name="right"><see cref="EventSequenceNumber"/> to subtract.</param>
     /// <returns>new event sequence number.</returns>
-    public static EventSequenceNumber operator -(EventSequenceNumber left, EventSequenceNumber right) => new(left.Value - right.Value);
+    public static EventSequenceNumber operator -(EventSequenceNumber left, EventSequenceNumber right) => left.IsActualValue ? new(left.Value - right.Value) : left;
 
     /// <summary>
     /// Get the next <see cref="EventSequenceNumber"/>.
     /// </summary>
     /// <returns>The next <see cref="EventSequenceNumber"/>.</returns>
-    public EventSequenceNumber Next() => this + 1;
+    public EventSequenceNumber Next() => IsActualValue ? this + 1 : this;
 }
