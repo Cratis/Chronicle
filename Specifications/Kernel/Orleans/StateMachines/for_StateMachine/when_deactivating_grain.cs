@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 
-public class when_deactivating_grain : given.a_state_machine_with_two_well_known_states
+public class when_deactivating_grain : given.a_state_machine_with_well_known_states
 {
     protected override Type initial_state => typeof(StateThatDoesNotSupportTransitioning);
 

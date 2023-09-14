@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_transitioning;
 
-public class and_state_can_be_transitioned_to : given.a_state_machine_with_two_well_known_states
+public class and_state_can_be_transitioned_to : given.a_state_machine_with_well_known_states
 {
     protected override Type initial_state => typeof(StateThatDoesNotSupportTransitioning);
     StateMachineState initial_stored_state = new();

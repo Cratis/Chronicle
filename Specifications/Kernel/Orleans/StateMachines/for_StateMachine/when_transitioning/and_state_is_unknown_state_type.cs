@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_transitioning;
 
-public class and_state_is_unknown_state_type : given.a_state_machine_with_two_well_known_states
+public class and_state_is_unknown_state_type : given.a_state_machine_with_well_known_states
 {
     Exception exception;
 

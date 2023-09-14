@@ -15,6 +15,9 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
 
     IDictionary<Type, IState<TStoredState>> _states = new Dictionary<Type, IState<TStoredState>>();
     IState<TStoredState> _currentState = _noOpState;
+    bool _isTransitioning;
+    bool _isLeaving;
+    Type? _scheduledTransition;
 
     /// <summary>
     /// Gets the initial state of the state machine.
@@ -64,17 +67,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
         ThrowIfUnknownStateType(typeof(TState));
         if (await CanTransitionTo<TState>())
         {
-            await OnBeforeLeavingState(_currentState);
-            State = await _currentState.OnLeave(State);
-            await OnAfterLeavingState(_currentState);
-
-            _currentState = _states[typeof(TState)];
-
-            await OnBeforeEnteringState(_currentState);
-            State = await _currentState.OnEnter(State);
-            await OnAfterEnteringState(_currentState);
-
-            await WriteStateAsync();
+            await TransitionTo(typeof(TState));
         }
     }
 
@@ -121,6 +114,42 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     /// <param name="state">Instance of the state that was entered.</param>
     /// <returns>Awaitable task.</returns>
     protected virtual Task OnAfterLeavingState(IState<TStoredState> state) => Task.CompletedTask;
+
+    async Task TransitionTo(Type stateType)
+    {
+        if (_isTransitioning)
+        {
+            if (_isLeaving)
+            {
+                throw new TransitioningDuringOnLeaveIsNotSupported(_currentState.GetType(), stateType, GetType());
+            }
+            _scheduledTransition = stateType;
+            return;
+        }
+
+        _isTransitioning = true;
+        _isLeaving = true;
+        await OnBeforeLeavingState(_currentState);
+        State = await _currentState.OnLeave(State);
+        await OnAfterLeavingState(_currentState);
+        _isLeaving = false;
+
+        _currentState = _states[stateType];
+
+        await OnBeforeEnteringState(_currentState);
+        State = await _currentState.OnEnter(State);
+        await OnAfterEnteringState(_currentState);
+
+        await WriteStateAsync();
+
+        _isTransitioning = false;
+        if (_scheduledTransition != null)
+        {
+            var stateToTransitionTo = _scheduledTransition;
+            _scheduledTransition = null;
+            await TransitionTo(stateToTransitionTo);
+        }
+    }
 
     void ThrowIfUnknownStateType(Type type)
     {
