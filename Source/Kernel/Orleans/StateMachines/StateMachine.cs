@@ -39,7 +39,15 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
         InvalidTypeForState.ThrowIfInvalid(InitialState);
         ThrowIfUnknownStateType(InitialState);
         _currentState = _states[InitialState];
-        await _currentState.OnEnter(State);
+        State = await _currentState.OnEnter(State);
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        State = await _currentState.OnLeave(State);
+        await WriteStateAsync();
     }
 
     /// <inheritdoc/>
