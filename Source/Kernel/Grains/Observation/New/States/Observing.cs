@@ -51,7 +51,7 @@ public class Observing : BaseObserverState
     }
 
     /// <inheritdoc/>
-    public override StateName Name => "CatchUp";
+    public override StateName Name => "Observing";
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Active;
@@ -70,6 +70,7 @@ public class Observing : BaseObserverState
         var microserviceAndTenant = new MicroserviceAndTenant(_microserviceId, _tenantId);
         var streamId = StreamId.Create(microserviceAndTenant, _eventSequenceId);
         var stream = _streamProvider.GetStream<AppendedEvent>(streamId);
+
         _streamSubscription = await stream.SubscribeAsync(
             async (@event, _) =>
             {

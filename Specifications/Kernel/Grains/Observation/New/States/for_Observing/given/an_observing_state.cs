@@ -3,7 +3,9 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.New.States.for_Observing.given;
@@ -13,6 +15,8 @@ public class an_observing_state : Specification
     protected Mock<IObserverEventHandler> event_handler;
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IStateMachine<ObserverState>> state_machine;
+    protected Mock<IAsyncStream<AppendedEvent>> stream;
+    protected Mock<StreamSubscriptionHandle<AppendedEvent>> stream_subscription;
     protected Observing state;
     protected ObserverState stored_state;
     protected ObserverState resulting_stored_state;
@@ -26,6 +30,10 @@ public class an_observing_state : Specification
     {
         event_handler = new();
         stream_provider = new();
+        stream = new();
+        stream_provider.Setup(_ => _.GetStream<AppendedEvent>(It.IsAny<StreamId>())).Returns(stream.Object);
+        stream_subscription = new();
+        stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<EventSequenceNumberToken>(), null)).ReturnsAsync(stream_subscription.Object);
 
         observer_id = Guid.NewGuid();
         microservice_id = MicroserviceId.Unspecified;
@@ -51,6 +59,8 @@ public class an_observing_state : Specification
                 typeof(object),
                 string.Empty)
         };
+
+
 
         tail_event_sequence_numbers = new TailEventSequenceNumbers(stored_state.EventSequenceId, stored_state.Subscription.EventTypes.ToImmutableList(), 0, 0);
     }
