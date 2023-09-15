@@ -32,4 +32,6 @@ public class and_subscribers_event_types_are_different_but_there_are_no_events_i
 
     [Fact] void should_only_perform_one_transition() => state_machine.Verify(_ => _.TransitionTo<IState<ObserverState>>(), Once());
     [Fact] void should_transition_to_observing() => state_machine.Verify(_ => _.TransitionTo<Observing>(), Once());
+    [Fact] void should_set_next_event_sequence_number_to_first() => resulting_stored_state.NextEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);
+    [Fact] void should_set_event_types_to_subscribers_event_types() => resulting_stored_state.EventTypes.ShouldEqual(stored_state.Subscription.EventTypes);
 }
