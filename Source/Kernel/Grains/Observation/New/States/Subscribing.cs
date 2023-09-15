@@ -46,10 +46,13 @@ public class Subscribing : BaseObserverState
         {
             await StateMachine.TransitionTo<Replay>();
         }
+        else
+        {
+            await StateMachine.TransitionTo<Observing>();
+        }
 
         state.EventTypes = state.Subscription.EventTypes;
         state.NextEventSequenceNumber = state.TailEventSequenceNumbers.Tail.Next();
-        await StateMachine.TransitionTo<Observing>();
 
         return state;
     }
@@ -68,7 +71,10 @@ public class Subscribing : BaseObserverState
 
     bool NeedsToReplay(ObserverState state) =>
         state.RunningState == ObserverRunningState.Replaying ||
-        HasDefinitionChanged(state);
+        (HasDefinitionChanged(state) && HasEventsInSequence(state));
+
+    bool HasEventsInSequence(ObserverState state) =>
+        state.TailEventSequenceNumbers.Tail.IsActualValue && state.TailEventSequenceNumbers.TailForEventTypes.IsActualValue;
 
     bool HasDefinitionChanged(ObserverState state) =>
         state.EventTypes.Count() != state.Subscription.EventTypes.Count() ||
