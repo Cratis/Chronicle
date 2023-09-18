@@ -28,5 +28,9 @@ public class Replay : BaseObserverState
     public override Task<ObserverState> OnEnter(ObserverState state) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state) => throw new NotImplementedException();
+    public override Task<ObserverState> OnLeave(ObserverState state)
+    {
+        // Set the last event sequence number to the last event sequence number of the event sequence
+        return Task.FromResult(state);
+    }
 }

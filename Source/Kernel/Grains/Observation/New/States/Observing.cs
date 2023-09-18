@@ -17,9 +17,8 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.New.States;
 /// </summary>
 public class Observing : BaseObserverState
 {
-    readonly IObserverEventHandler _eventHandler;
+    readonly IObserverSupervisor _observerSupervisor;
     readonly IStreamProvider _streamProvider;
-    readonly ObserverId _observerId;
     readonly MicroserviceId _microserviceId;
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
@@ -28,23 +27,20 @@ public class Observing : BaseObserverState
     /// <summary>
     /// Initializes a new instance of the <see cref="Observing"/> class.
     /// </summary>
-    /// <param name="eventHandler"><see cref="IObserverEventHandler"/> for handling events.</param>
+    /// <param name="observerSupervisor"><see cref="IObserverSupervisor"/> for handling events.</param>
     /// <param name="streamProvider"><see cref="IStreamProvider"/> to use to work with streams.</param>
-    /// <param name="observerId"><see cref="ObserverId"/> that identifies the observer.</param>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the state is for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the state is for.</param>
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
     public Observing(
-        IObserverEventHandler eventHandler,
+        IObserverSupervisor observerSupervisor,
         IStreamProvider streamProvider,
-        ObserverId observerId,
         MicroserviceId microserviceId,
         TenantId tenantId,
         EventSequenceId eventSequenceId)
     {
-        _eventHandler = eventHandler;
+        _observerSupervisor = observerSupervisor;
         _streamProvider = streamProvider;
-        _observerId = observerId;
         _microserviceId = microserviceId;
         _tenantId = tenantId;
         _eventSequenceId = eventSequenceId;
@@ -76,7 +72,7 @@ public class Observing : BaseObserverState
             {
                 if (state.EventTypes.Any(et => et == @event.Metadata.Type))
                 {
-                    await _eventHandler.Handle(_observerId, _microserviceId, _tenantId, @event);
+                    await _observerSupervisor.Handle(@event.Context.EventSourceId, new[] { @event });
                 }
             },
             new EventSequenceNumberToken(state.NextEventSequenceNumber));

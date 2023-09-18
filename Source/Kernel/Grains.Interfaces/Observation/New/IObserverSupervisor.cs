@@ -66,4 +66,12 @@ public interface IObserverSupervisor : IStateMachine<ObserverState>
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace);
+
+    /// <summary>
+    /// Handle events for an <see cref="EventSourceId/">.
+    /// </summary>
+    /// <param name="eventSourceId"><see cref="EventSourceId"/> to handle events for.</param>
+    /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Handle(EventSourceId eventSourceId, IEnumerable<AppendedEvent> events);
 }

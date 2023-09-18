@@ -16,7 +16,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.New;
 [StorageProvider(ProviderName = ObserverState.StorageProvider)]
 public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervisor
 {
-    readonly IObserverEventHandler _observerEventHandler;
     IStreamProvider _streamProvider = null!;
 
     ObserverId _observerId = Guid.Empty;
@@ -25,10 +24,8 @@ public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervis
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverSupervisor"/> class.
     /// </summary>
-    /// <param name="observerEventHandler"><see cref="IObserverEventHandler"/> for handling the events.</param>
-    public ObserverSupervisor(IObserverEventHandler observerEventHandler)
+    public ObserverSupervisor()
     {
-        _observerEventHandler = observerEventHandler;
     }
 
     /// <inheritdoc/>
@@ -68,9 +65,8 @@ public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervis
         new States.Replay(),
         new States.Indexing(),
         new States.Observing(
-            _observerEventHandler,
+            this,
             _streamProvider,
-            _observerId,
             _observerKey.MicroserviceId,
             _observerKey.TenantId,
             _observerKey.EventSequenceId)
@@ -90,6 +86,25 @@ public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervis
 
     /// <inheritdoc/>
     public Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Handle(EventSourceId eventSourceId, IEnumerable<AppendedEvent> events)
+    {
+        // Info it needs:
+        // - Current subscription information
+        // - Failed Partitions
+        // - Current Sequence Number
+
+        // If observer is disconnected, we should not handle the event
+
+        // If sequence number is greater than or equal to next event sequence number, we should not handle the event
+
+        // If Partition is failed, we should not handle the event
+
+        // For replaying or failed partition recovery of a specific partition, the NextSequenceNumber shouldn't be updated.
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)

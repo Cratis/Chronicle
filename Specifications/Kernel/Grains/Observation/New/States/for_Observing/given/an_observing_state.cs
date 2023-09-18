@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.New.States.for_Observing.given;
 
 public class an_observing_state : Specification
 {
-    protected Mock<IObserverEventHandler> event_handler;
+    protected Mock<IObserverSupervisor> observer_supervisor;
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IStateMachine<ObserverState>> state_machine;
     protected Mock<IAsyncStream<AppendedEvent>> stream;
@@ -25,15 +25,22 @@ public class an_observing_state : Specification
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
+    protected IAsyncObserver<AppendedEvent> observer;
 
     void Establish()
     {
-        event_handler = new();
+        observer_supervisor = new();
         stream_provider = new();
         stream = new();
-        stream_provider.Setup(_ => _.GetStream<AppendedEvent>(It.IsAny<StreamId>())).Returns(stream.Object);
+        stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<StreamId>())).Returns(stream.Object);
         stream_subscription = new();
-        stream.Setup(_ => _.SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<EventSequenceNumberToken>(), null)).ReturnsAsync(stream_subscription.Object);
+        stream.Setup(_ => _
+            .SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<EventSequenceNumberToken>(), null))
+            .ReturnsAsync((IAsyncObserver<AppendedEvent> o, EventSequenceNumberToken _, string __) =>
+            {
+                observer = o;
+                return stream_subscription.Object;
+            });
 
         observer_id = Guid.NewGuid();
         microservice_id = MicroserviceId.Unspecified;
@@ -41,9 +48,8 @@ public class an_observing_state : Specification
         event_sequence_id = EventSequenceId.Log;
 
         state = new Observing(
-            event_handler.Object,
+            observer_supervisor.Object,
             stream_provider.Object,
-            observer_id,
             microservice_id,
             tenant_id,
             event_sequence_id);
@@ -59,8 +65,6 @@ public class an_observing_state : Specification
                 typeof(object),
                 string.Empty)
         };
-
-
 
         tail_event_sequence_numbers = new TailEventSequenceNumbers(stored_state.EventSequenceId, stored_state.Subscription.EventTypes.ToImmutableList(), 0, 0);
     }
