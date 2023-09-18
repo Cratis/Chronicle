@@ -1,3 +1,10 @@
+# [v9.4.2] - 2023-9-18 [PR: #964](https://github.com/aksio-insurtech/Cratis/pull/964)
+
+### Fixed
+
+- The resolution of identity for things like caused by looks for a match on subject first and if no subject is registered with that it will try to resolve using the username claim. If already have multiple registred users with subject set to null or empty string, then this would fail on startup. This version fixes this problem.
+
+
 # [v9.4.0] - 2023-9-5 [PR: #957](https://github.com/aksio-insurtech/Cratis/pull/957)
 
 ### Added
