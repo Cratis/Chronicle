@@ -140,7 +140,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public async Task Handle(EventSourceId eventSourceId, IEnumerable<AppendedEvent> events)
     {
-        if (!_subscription.IsSubscribed || !State.IsPartitionFailed(eventSourceId))
+        if (!_subscription.IsSubscribed || State.IsPartitionFailed(eventSourceId))
         {
             return;
         }
