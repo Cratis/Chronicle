@@ -68,10 +68,10 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     {
         foreach (var microserviceId in _microservices.GetMicroserviceIds())
         {
+            _executionContextManager.Establish(microserviceId);
             var projectionPipelineDefinitions = await _projectionPipelineDefinitions().GetAll();
             foreach (var pipeline in projectionPipelineDefinitions)
             {
-                _executionContextManager.Establish(microserviceId);
                 if (await _projectionDefinitions().HasFor(pipeline.ProjectionId))
                 {
                     foreach (var tenant in _configuration.Tenants.GetTenantIds())
