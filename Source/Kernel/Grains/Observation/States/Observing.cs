@@ -77,6 +77,8 @@ public class Observing : BaseObserverState
             },
             new EventSequenceNumberToken(state.NextEventSequenceNumber));
 
+        await stream.WarmUp();
+
         return state;
     }
 
