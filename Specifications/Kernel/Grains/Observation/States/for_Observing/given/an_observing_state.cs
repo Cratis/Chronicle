@@ -12,7 +12,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Observing.given;
 
 public class an_observing_state : Specification
 {
-    protected Mock<IObserverSupervisor> observer_supervisor;
+    protected Mock<IObserver> observer;
     protected Mock<IStreamProvider> stream_provider;
     protected Mock<IStateMachine<ObserverState>> state_machine;
     protected Mock<IAsyncStream<AppendedEvent>> stream;
@@ -25,12 +25,12 @@ public class an_observing_state : Specification
     protected MicroserviceId microservice_id;
     protected TenantId tenant_id;
     protected EventSequenceId event_sequence_id;
-    protected IAsyncObserver<AppendedEvent> observer;
+    protected IAsyncObserver<AppendedEvent> observed_stream;
     protected ObserverSubscription subscription;
 
     void Establish()
     {
-        observer_supervisor = new();
+        observer = new();
         stream_provider = new();
         stream = new();
         stream_provider.Setup(_ => _.GetStream<AppendedEvent>(IsAny<StreamId>())).Returns(stream.Object);
@@ -39,7 +39,7 @@ public class an_observing_state : Specification
             .SubscribeAsync(IsAny<IAsyncObserver<AppendedEvent>>(), IsAny<EventSequenceNumberToken>(), null))
             .ReturnsAsync((IAsyncObserver<AppendedEvent> o, EventSequenceNumberToken _, string __) =>
             {
-                observer = o;
+                observed_stream = o;
                 return stream_subscription.Object;
             });
 
@@ -49,7 +49,7 @@ public class an_observing_state : Specification
         event_sequence_id = EventSequenceId.Log;
 
         state = new Observing(
-            observer_supervisor.Object,
+            observer.Object,
             stream_provider.Object,
             microservice_id,
             tenant_id,
@@ -68,7 +68,7 @@ public class an_observing_state : Specification
             typeof(object),
             string.Empty);
 
-        observer_supervisor.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));
+        observer.Setup(_ => _.GetSubscription()).Returns(() => Task.FromResult(subscription));
 
         tail_event_sequence_numbers = new TailEventSequenceNumbers(stored_state.EventSequenceId, subscription.EventTypes.ToImmutableList(), 0, 0);
     }

@@ -8,9 +8,9 @@ using Aksio.Cratis.Observation;
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
 /// <summary>
-/// Represents a supervisor for observers.
+/// Represents an observer in the system.
 /// </summary>
-public interface IObserverSupervisor : IStateMachine<ObserverState>, IGrainWithGuidCompoundKey
+public interface IObserver : IStateMachine<ObserverState>, IGrainWithGuidCompoundKey
 {
     /// <summary>
     /// Set metadata associated with the observer.

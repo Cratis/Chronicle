@@ -19,7 +19,7 @@ public class ProjectingEvents : ProjectionJob
     {
         foreach (var @event in _eventsToHandle)
         {
-            await ObserverSupervisor.Handle(@event, true);
+            await Observer.Handle(@event, true);
         }
     }
 

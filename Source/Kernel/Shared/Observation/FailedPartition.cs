@@ -7,7 +7,7 @@ using Aksio.Cratis.Events;
 namespace Aksio.Cratis.Kernel.Observation;
 
 /// <summary>
-/// Represents the state of a failed partition within the ObserverSupervisor.
+/// Represents the state of a failed partition within an observer.
 /// </summary>
 public record FailedPartition
 {

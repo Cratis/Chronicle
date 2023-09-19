@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States.for_Subscribing.given;
 
 public class a_subscribing_state : Specification
 {
-    protected Mock<IObserverSupervisor> observer;
+    protected Mock<IObserver> observer;
     protected Mock<IEventSequenceStorage> event_sequence_storage;
     protected Mock<IStateMachine<ObserverState>> state_machine;
     protected Subscribing state;

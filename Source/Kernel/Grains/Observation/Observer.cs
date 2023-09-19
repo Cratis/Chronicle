@@ -14,26 +14,26 @@ using Orleans.Streams;
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
 /// <summary>
-/// Represents an implementation of <see cref="IObserverSupervisor"/>.
+/// Represents an implementation of <see cref="IObserver"/>.
 /// </summary>
 [StorageProvider(ProviderName = ObserverState.StorageProvider)]
-public class ObserverSupervisor : StateMachine<ObserverState>, IObserverSupervisor
+public class Observer : StateMachine<ObserverState>, IObserver
 {
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
-    readonly ILogger<ObserverSupervisor> _logger;
+    readonly ILogger<Observer> _logger;
     IStreamProvider _streamProvider = null!;
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
     ObserverSubscription _subscription;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObserverSupervisor"/> class.
+    /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ObserverSupervisor(
+    public Observer(
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
-        ILogger<ObserverSupervisor> logger)
+        ILogger<Observer> logger)
     {
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _logger = logger;

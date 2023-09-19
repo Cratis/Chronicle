@@ -12,17 +12,17 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.States;
 /// </summary>
 public class Subscribing : BaseObserverState
 {
-    readonly IObserverSupervisor _observer;
+    readonly IObserver _observer;
     readonly IEventSequenceStorage _eventSequenceStorage;
     ObserverSubscription _subscription;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscribing"/> class.
     /// </summary>
-    /// <param name="observer"><see cref="IObserverSupervisor"/> the state belongs to.</param>
+    /// <param name="observer"><see cref="IObserver"/> the state belongs to.</param>
     /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> provider.</param>
     public Subscribing(
-        IObserverSupervisor observer,
+        IObserver observer,
         IEventSequenceStorage eventSequenceStorage)
     {
         _observer = observer;

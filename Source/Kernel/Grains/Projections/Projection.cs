@@ -24,7 +24,7 @@ public class Projection : Grain, IProjection
     readonly IExecutionContextManager _executionContextManager;
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers;
     EngineProjection? _projection;
-    IObserverSupervisor? _observer;
+    IObserver? _observer;
     ProjectionId _projectionId;
     ProjectionDefinition? _definition;
     TenantId? _tenantId;
@@ -63,7 +63,7 @@ public class Projection : Grain, IProjection
 
         await RefreshDefinition();
 
-        _observer = GrainFactory.GetGrain<IObserverSupervisor>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
+        _observer = GrainFactory.GetGrain<IObserver>(_projectionId, new ObserverKey(key.MicroserviceId, key.TenantId, key.EventSequenceId));
 
         await _observer.SetNameAndType(_definition!.Name.Value, ObserverType.Projection);
         await _observer.Subscribe<IProjectionObserverSubscriber>(_projection!.EventTypes);

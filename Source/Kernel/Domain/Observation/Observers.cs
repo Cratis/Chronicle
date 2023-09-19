@@ -86,7 +86,7 @@ public class Observers : Controller
         [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId observerId)
     {
-        var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.Replay();
     }
 
@@ -105,7 +105,7 @@ public class Observers : Controller
         [FromRoute] ObserverId observerId,
         [FromRoute] EventSourceId partitionId)
     {
-        var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.TryResumePartition(partitionId);
     }
 
@@ -124,7 +124,7 @@ public class Observers : Controller
         [FromRoute] ObserverId observerId,
         [FromRoute] EventSourceId eventSourceId)
     {
-        var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
+        var observer = _grainFactory.GetGrain<IObserver>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
         await observer.ReplayPartition(eventSourceId);
     }
 }

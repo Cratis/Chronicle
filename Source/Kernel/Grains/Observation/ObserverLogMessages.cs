@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
 
-internal static partial class ObserverSupervisorLogMessages
+internal static partial class ObserverLogMessages
 {
     [LoggerMessage(0, LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber} observer {ObserverId} for sequence {EventSequenceId} for microservice '{MicroserviceId}' and tenant '{TenantId}' - observing source microservice '{SourceMicroserviceId}' and tenant '{SourceTenantId}'")]
-    internal static partial void PartitionFailed(this ILogger<ObserverSupervisor> logger, string partition, EventSequenceNumber eventSequenceNumber, ObserverId observerId, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, MicroserviceId sourceMicroserviceId, TenantId sourceTenantId);
+    internal static partial void PartitionFailed(this ILogger<Observer> logger, string partition, EventSequenceNumber eventSequenceNumber, ObserverId observerId, EventSequenceId eventSequenceId, MicroserviceId microserviceId, TenantId tenantId, MicroserviceId sourceMicroserviceId, TenantId sourceTenantId);
 }

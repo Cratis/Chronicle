@@ -10,7 +10,7 @@ namespace Benchmarks.Observation;
 
 public class ClientObserverJob : BenchmarkJob
 {
-    protected IObserverSupervisor ObserverSupervisor { get; private set; } = null!;
+    protected IObserver Observer { get; private set; } = null!;
 
     [IterationSetup]
     public void CleanEventStore()
@@ -26,6 +26,6 @@ public class ClientObserverJob : BenchmarkJob
         base.Setup();
 
         var key = new ObserverKey(GlobalVariables.MicroserviceId, GlobalVariables.TenantId, GlobalVariables.ObserverEventSequence);
-        ObserverSupervisor = GrainFactory.GetGrain<IObserverSupervisor>(Guid.Parse(CartObserver.Identifier), key);
+        Observer = GrainFactory.GetGrain<IObserver>(Guid.Parse(CartObserver.Identifier), key);
     }
 }
