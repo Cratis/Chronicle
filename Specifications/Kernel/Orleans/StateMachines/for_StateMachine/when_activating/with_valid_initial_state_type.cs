@@ -3,15 +3,14 @@
 
 namespace Aksio.Cratis.Kernel.Orleans.StateMachines.when_activating;
 
-public class with_valid_initial_state_type : Specification
+public class with_valid_initial_state_type : given.a_state_machine
 {
     Exception exception;
 
-    async Task Because() => exception = await Catch.Exception(async () =>
-    {
-        var stateMachine = new StateMachineWithValidInitialStateType();
-        await stateMachine.OnActivateAsync(CancellationToken.None);
-    });
+    protected override Type initial_state => typeof(StateThatSupportsTransitioningFrom);
+    protected override IEnumerable<IState<StateMachineState>> CreateStates() => new[] { new StateThatSupportsTransitioningFrom() };
+
+    async Task Because() => exception = await Catch.Exception(async () => await state_machine.OnActivateAsync(CancellationToken.None));
 
     [Fact] void should_not_throw_invalid_type_for_state_exception() => exception.ShouldBeNull();
 }

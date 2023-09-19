@@ -7,7 +7,9 @@ public class and_state_allows_it : given.a_state_machine_with_well_known_states
 {
     bool result;
 
-    async Task Because() => result = await state_machine.CanTransitionTo<StateThatSupportsTransitioning>();
+    protected override Type initial_state => typeof(StateThatSupportsTransitioningFrom);
+
+    async Task Because() => result = await state_machine.CanTransitionTo<StateThatDoesNotSupportTransitioningFrom>();
 
     [Fact] void should_be_able_to_transition() => result.ShouldBeTrue();
 }

@@ -9,7 +9,7 @@ namespace Aksio.Cratis.Kernel.Orleans.StateMachines;
 /// Defines a state machine.
 /// </summary>
 /// <typeparam name="TStoredState">Type of stored state.</typeparam>
-public interface IStateMachine<TStoredState> : IGrainWithGuidKey
+public interface IStateMachine<TStoredState>
 {
     /// <summary>
     /// Gets the current state.

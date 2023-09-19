@@ -13,13 +13,13 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <param name="ObserverKey">The <see cref="ObserverKey"/> that the subscription is for.</param>
 /// <param name="EventTypes">Represents the event types for the subscription.</param>
 /// <param name="SubscriberType">Type that is subscribing.</param>
-/// <param name="Arguments">Any arguments it passed.</param>
-public record ObserverSubscription(ObserverId ObserverId, ObserverKey ObserverKey, IEnumerable<EventType> EventTypes, Type SubscriberType, object Arguments)
+/// <param name="Arguments">Optional arguments for the subscriber.</param>
+public record ObserverSubscription(ObserverId ObserverId, ObserverKey ObserverKey, IEnumerable<EventType> EventTypes, Type SubscriberType, object? Arguments)
 {
     /// <summary>
     /// Gets a subscription representing no subscription.
     /// </summary>
-    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, Enumerable.Empty<EventType>(), typeof(IObserverSubscriber), null!);
+    public static readonly ObserverSubscription Unsubscribed = new(ObserverId.Unspecified, ObserverKey.NotSet, Enumerable.Empty<EventType>(), typeof(IObserverSubscriber), null);
 
     /// <summary>
     /// Check whether or not the subscription is subscribed.

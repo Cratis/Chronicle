@@ -93,7 +93,7 @@ public class Projection : Grain, IProjection
     /// <inheritdoc/>
     public Task Rewind()
     {
-        _observer?.Rewind();
+        _observer?.Replay();
         return Task.CompletedTask;
     }
 }

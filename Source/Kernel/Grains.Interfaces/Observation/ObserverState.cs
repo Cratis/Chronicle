@@ -20,16 +20,6 @@ public class ObserverState
     /// </summary>
     public const string StorageProvider = "observer-state";
 
-    /// <summary>
-    /// The name of the storage provider used for working with this type of state during catch-up.
-    /// </summary>
-    public const string CatchUpStorageProvider = "observer-state-catchup";
-
-    /// <summary>
-    /// The name of the storage provider used for working with this type of state during replay.
-    /// </summary>
-    public const string ReplayStorageProvider = "observer-state-replay";
-
     List<FailedPartition> _failedPartitions = new();
     EventSequenceNumber _nextEventSequenceNumber = EventSequenceNumber.First;
 
@@ -104,21 +94,6 @@ public class ObserverState
     /// Gets whether or not the observer is in disconnected state. Meaning that there is no subscriber to it.
     /// </summary>
     public bool IsDisconnected => RunningState == ObserverRunningState.Disconnected;
-
-    /// <summary>
-    /// Gets or sets the current subscription type.
-    /// </summary>
-    public string CurrentSubscriptionType { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the current subscription arguments.
-    /// </summary>
-    public object? CurrentSubscriptionArguments { get; set; }
-
-    /// <summary>
-    /// Gets or sets the current subscription.
-    /// </summary>
-    public ObserverSubscription Subscription { get; set; }
 
     /// <summary>
     /// Gets or sets the tail event sequence numbers.

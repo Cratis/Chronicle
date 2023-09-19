@@ -28,7 +28,7 @@ public abstract class State<TStoredState> : IState<TStoredState>
     protected virtual IImmutableList<Type> AllowedTransitions => ImmutableList<Type>.Empty;
 
     /// <inheritdoc/>
-    public virtual Task<bool> CanTransitionTo<TTargetState>(TStoredState state) => throw new NotImplementedException();
+    public virtual Task<bool> CanTransitionTo<TTargetState>(TStoredState state) => Task.FromResult(AllowedTransitions.Contains(typeof(TTargetState)));
 
     /// <inheritdoc/>
     public abstract Task<TStoredState> OnEnter(TStoredState state);

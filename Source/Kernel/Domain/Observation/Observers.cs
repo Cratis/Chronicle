@@ -80,14 +80,14 @@ public class Observers : Controller
     /// <param name="tenantId"><see cref="TenantId"/> the observer is for.</param>
     /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{observerId}/rewind/{tenantId}")]
-    public async Task Rewind(
+    [HttpPost("{observerId}/replay/{tenantId}")]
+    public async Task Replay(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId observerId)
     {
         var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
-        await observer.Rewind();
+        await observer.Replay();
     }
 
     /// <summary>
@@ -117,14 +117,14 @@ public class Observers : Controller
     /// <param name="observerId"><see cref="ObserverId"/> to rewind.</param>
     /// <param name="eventSourceId">Specific <see cref="EventSourceId"/> to rewind.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{observerId}/rewind/{tenantId}/{eventSourceId}")]
-    public async Task RewindPartition(
+    [HttpPost("{observerId}/replay/{tenantId}/{eventSourceId}")]
+    public async Task ReplayPartition(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId,
         [FromRoute] ObserverId observerId,
         [FromRoute] EventSourceId eventSourceId)
     {
         var observer = _grainFactory.GetGrain<IObserverSupervisor>(observerId, new ObserverKey(microserviceId, tenantId, EventSequenceId.Log));
-        await observer.RewindPartition(eventSourceId);
+        await observer.ReplayPartition(eventSourceId);
     }
 }

@@ -12,14 +12,14 @@ public class with_known_initial_state_type : GrainSpecification<StateMachineStat
     protected override Grain GetGrainInstance() => new StateMachineForTesting(
         new IState<StateMachineState>[]
         {
-            new StateThatDoesNotSupportTransitioning(),
-            new StateThatSupportsTransitioning { OnEnterCalled = _ => on_enter_called_state = _ }
+            new StateThatDoesNotSupportTransitioningFrom(),
+            new StateThatSupportsTransitioningFrom { OnEnterCalled = _ => on_enter_called_state = _ }
         },
-        typeof(StateThatSupportsTransitioning));
+        typeof(StateThatSupportsTransitioningFrom));
 
     async Task Because() => await grain.OnActivateAsync(CancellationToken.None);
 
-    [Fact] async Task should_set_current_state_to_expected_initial_state_type() => (await ((StateMachineForTesting)grain).GetCurrentState()).ShouldBeAssignableFrom<StateThatSupportsTransitioning>();
+    [Fact] async Task should_set_current_state_to_expected_initial_state_type() => (await ((StateMachineForTesting)grain).GetCurrentState()).ShouldBeAssignableFrom<StateThatSupportsTransitioningFrom>();
     [Fact] void should_call_on_enter_with_expected_state() => on_enter_called_state.ShouldEqual(state);
     [Fact] async Task should_set_state_machine_on_all_states() => (await ((StateMachineForTesting)grain).GetStates()).All(_ => _.StateMachine.Equals(grain)).ShouldBeTrue();
 }

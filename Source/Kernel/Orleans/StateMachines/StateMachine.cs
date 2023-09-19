@@ -58,7 +58,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
 
     /// <inheritdoc/>
     public Task<bool> CanTransitionTo<TState>()
-        where TState : IState<TStoredState> => _states[typeof(TState)].CanTransitionTo<TState>(State);
+        where TState : IState<TStoredState> => _currentState.CanTransitionTo<TState>(State);
 
     /// <inheritdoc/>
     public async Task TransitionTo<TState>()
@@ -85,7 +85,7 @@ public abstract class StateMachine<TStoredState> : Grain<TStoredState>, IStateMa
     /// </summary>
     /// <param name="cancellationToken"><see cref="CancellationToken"/> for any cancellations.</param>
     /// <returns>Awaitable task.</returns>
-    protected virtual Task OnActivation(CancellationToken cancellationToken) => Task.CompletedTask;
+    public virtual Task OnActivation(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>
     /// Method that gets called before entering a state.

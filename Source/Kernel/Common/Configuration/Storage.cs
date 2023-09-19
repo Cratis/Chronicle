@@ -37,11 +37,14 @@ public class Storage
             Tenants = new()
         };
 
-        Microservices[MicroserviceId.Kernel].Tenants[TenantId.NotSet.ToString()] = new StorageTypes
+        foreach (var microservice in Microservices.Values)
         {
-            ["readModels"] = Cluster,
-            ["eventStore"] = Cluster
-        };
+            microservice.Tenants[TenantId.NotSet.ToString()] = new StorageTypes
+            {
+                ["readModels"] = Cluster,
+                ["eventStore"] = Cluster
+            };
+        }
 
         foreach (var tenant in tenants)
         {
