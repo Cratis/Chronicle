@@ -1,6 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
@@ -35,6 +36,15 @@ public class Subscribing : BaseObserverState
 
     /// <inheritdoc/>
     public override StateName Name => "Subscribing";
+
+    /// <inheritdoc/>
+    protected override IImmutableList<Type> AllowedTransitions => new[]
+    {
+        typeof(Indexing),
+        typeof(CatchUp),
+        typeof(Replay),
+        typeof(Observing)
+    }.ToImmutableList();
 
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
