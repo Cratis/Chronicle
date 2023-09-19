@@ -69,6 +69,12 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public async Task Subscribe<TObserverSubscriber>(IEnumerable<EventType> eventTypes, object? subscriberArgs = null)
         where TObserverSubscriber : IObserverSubscriber
     {
+        _logger.Subscribing(
+            _observerId,
+            _observerKey.MicroserviceId,
+            _observerKey.TenantId,
+            _observerKey.EventSequenceId);
+
         _subscription = new ObserverSubscription(
             _observerId,
             _observerKey,
