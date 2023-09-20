@@ -151,7 +151,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
 
         try
         {
-            events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber);
+            events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
             if (events.Any())
             {
                 var key = new ObserverSubscriberKey(
