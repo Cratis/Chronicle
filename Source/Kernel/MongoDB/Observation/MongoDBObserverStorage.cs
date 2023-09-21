@@ -55,6 +55,33 @@ public class MongoDBObserverStorage : IObserverStorage
             .ToEnumerable()
             .Select(_ => ToObserverInformation(_)).ToArray().AsEnumerable());
 
+    /// <inheritdoc/>
+    public async Task<ObserverState> GetState(ObserverId observerId, ObserverKey observerKey)
+    {
+        var key = GetKeyFrom(observerKey, observerId);
+        var cursor = await Collection.FindAsync(_ => _.Id == key).ConfigureAwait(false);
+        return await cursor.FirstOrDefaultAsync().ConfigureAwait(false) ?? new ObserverState
+        {
+            Id = key,
+            EventSequenceId = observerKey.EventSequenceId,
+            ObserverId = observerId,
+            NextEventSequenceNumber = EventSequenceNumber.First,
+            LastHandled = EventSequenceNumber.First,
+            RunningState = ObserverRunningState.New
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task SaveState(ObserverId observerId, ObserverKey observerKey, ObserverState state)
+    {
+        var key = GetKeyFrom(observerKey, observerId);
+
+        await Collection.ReplaceOneAsync(
+            _ => _.Id == key,
+            state!,
+            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
     ObserverInformation ToObserverInformation(ObserverState state) => new(
         state.ObserverId,
         state.EventSequenceId,
@@ -63,4 +90,8 @@ public class MongoDBObserverStorage : IObserverStorage
         state.EventTypes,
         state.NextEventSequenceNumber,
         state.RunningState);
+
+    string GetKeyFrom(ObserverKey key, ObserverId observerId) => key.SourceMicroserviceId is not null ?
+        $"{key.EventSequenceId} : {observerId} : {key.SourceMicroserviceId}" :
+        $"{key.EventSequenceId} : {observerId}";
 }

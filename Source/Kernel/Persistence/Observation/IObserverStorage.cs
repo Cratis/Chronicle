@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Observation;
 
@@ -31,4 +32,21 @@ public interface IObserverStorage
     /// </summary>
     /// <returns>Collection of <see cref="ObserverInformation"/> holding all information about the observers.</returns>
     Task<IEnumerable<ObserverInformation>> GetAllObservers();
+
+    /// <summary>
+    /// Get the state of an observer.
+    /// </summary>
+    /// <param name="observerId"><see cref="ObserverId"/> to get for.</param>
+    /// <param name="observerKey"><see cref="ObserverKey"/> to get for.</param>
+    /// <returns><see cref="ObserverState"/> for the observer.</returns>
+    Task<ObserverState> GetState(ObserverId observerId, ObserverKey observerKey);
+
+    /// <summary>
+    /// Save the state of an observer.
+    /// </summary>
+    /// <param name="observerId"><see cref="ObserverId"/> to save for.</param>
+    /// <param name="observerKey"><see cref="ObserverKey"/> to save for.</param>
+    /// <param name="state"><see cref="ObserverState"/> to save.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SaveState(ObserverId observerId, ObserverKey observerKey, ObserverState state);
 }

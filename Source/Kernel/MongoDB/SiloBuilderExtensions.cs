@@ -11,6 +11,7 @@ using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Reminders;
 using Aksio.Cratis.Kernel.MongoDB.Tenants;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Persistence.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Orleans.Storage;
@@ -34,7 +35,7 @@ public static class SiloBuilderExtensions
         builder.ConfigureServices(services =>
         {
             services.AddSingletonNamedService<IGrainStorage>(EventSequenceState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<EventSequencesStorageProvider>());
-            services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ObserverStorageProvider>());
+            services.AddSingletonNamedService<IGrainStorage>(ObserverState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ObserverGrainStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(RecoverFailedPartitionState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<RecoverFailedPartitionStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(TenantConfigurationState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<TenantConfigurationStorageProvider>());
             services.AddSingletonNamedService<IGrainStorage>(ConnectedClientsState.StorageProvider, (serviceProvider, _) => serviceProvider.GetRequiredService<ConnectedClientsStorageProvider>());
