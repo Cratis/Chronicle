@@ -9,7 +9,7 @@ public class and_partition_is_failed : given.an_observer_with_subscription
 
     void Establish()
     {
-        state.AddFailedPartition(new(event_source_id, 42UL, new[] { "Something went wrong" }, "This is the stack trace"));
+        failed_partitions_state.Add(new(event_source_id, 42UL, new[] { "Something went wrong" }, "This is the stack trace"));
         state.NextEventSequenceNumber = 53UL;
         state.LastHandled = 54UL;
     }

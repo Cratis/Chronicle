@@ -24,9 +24,10 @@ public class and_subscriber_returns_failed : given.an_observer_with_subscription
     async Task Because() => await observer.Handle(event_source_id, new[] { AppendedEvent.EmptyWithEventSequenceNumber(0) });
 
     [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
-    [Fact] void should_add_failed_partition() => written_states[0].FailedPartitions.Count().ShouldEqual(1);
-    [Fact] void should_capture_partition() => written_states[0].FailedPartitions.First().Partition.ShouldEqual((EventSourceId)event_source_id);
-    [Fact] void should_capture_exception_message() => written_states[0].FailedPartitions.First().Messages.First().ShouldEqual(exception_message);
-    [Fact] void should_capture_exception_stack_Trace() => written_states[0].FailedPartitions.First().StackTrace.ShouldEqual(exception_stack_trace);
-    [Fact] void should_capture_event_sequence_number() => written_states[0].FailedPartitions.First().Tail.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_write_failed_partitions_state_once() => written_failed_partitions_states.Count.ShouldEqual(1);
+    [Fact] void should_add_failed_partition() => written_failed_partitions_states[0].Partitions.Count().ShouldEqual(1);
+    [Fact] void should_capture_partition() => written_failed_partitions_states[0].Partitions.First().Partition.ShouldEqual((EventSourceId)event_source_id);
+    [Fact] void should_capture_exception_message() => written_failed_partitions_states[0].Partitions.First().Messages.First().ShouldEqual(exception_message);
+    [Fact] void should_capture_exception_stack_Trace() => written_failed_partitions_states[0].Partitions.First().StackTrace.ShouldEqual(exception_stack_trace);
+    [Fact] void should_capture_event_sequence_number() => written_failed_partitions_states[0].Partitions.First().Tail.ShouldEqual((EventSequenceNumber)42UL);
 }
