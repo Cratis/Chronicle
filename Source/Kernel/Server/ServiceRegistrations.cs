@@ -16,7 +16,7 @@ using Aksio.Cratis.Kernel.MongoDB.EventSequences;
 using Aksio.Cratis.Kernel.MongoDB.Identities;
 using Aksio.Cratis.Kernel.MongoDB.Observation;
 using Aksio.Cratis.Kernel.MongoDB.Projections;
-using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Persistence.Observation;
 using Autofac;
 
 namespace Aksio.Cratis.Kernel.Server;

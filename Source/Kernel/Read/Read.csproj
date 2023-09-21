@@ -22,6 +22,7 @@
         <ProjectReference Include="../Events/Events.csproj" />
         <ProjectReference Include="../Engines/Engines.csproj"/>
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Persistence/Persistence.csproj" />
         <ProjectReference Include="../../Clients/DotNET/DotNET.csproj"/>
     </ItemGroup>
 </Project>

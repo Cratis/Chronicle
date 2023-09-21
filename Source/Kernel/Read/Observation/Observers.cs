@@ -4,6 +4,7 @@
 using Aksio.Applications.Queries;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
+using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.AspNetCore.Mvc;
 

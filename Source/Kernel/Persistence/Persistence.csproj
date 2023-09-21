@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <AssemblyName>Aksio.Cratis.Kernel.Persistence</AssemblyName>
+        <RootNamespace>Aksio.Cratis.Kernel.Persistence</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aksio.Fundamentals" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Shared/Shared.csproj" />
+    </ItemGroup>
+</Project>
