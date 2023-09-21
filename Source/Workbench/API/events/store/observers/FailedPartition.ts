@@ -8,7 +8,7 @@ import { field } from '@aksio/fundamentals';
 export class FailedPartition {
 
     @field(String)
-    eventSourceId!: string;
+    partition!: string;
 
     @field(Number)
     tail!: number;
@@ -21,9 +21,6 @@ export class FailedPartition {
 
     @field(Date)
     occurred?: Date;
-
-    @field(String)
-    partition!: string;
 
     @field(Number)
     head?: number;

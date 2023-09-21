@@ -21,19 +21,19 @@ public record FailedPartition
     /// <summary>
     /// Initializes a new instance of the <see cref="FailedPartition"/> class.
     /// </summary>
-    /// <param name="eventSourceId">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
+    /// <param name="partition">The <see cref="EventSourceId" /> that this failure is partitioned on.</param>
     /// <param name="tail">The event sequence number (tail) where the error occurred.</param>
     /// <param name="messages">Any messages that caused the partition failure.</param>
     /// <param name="stackTrace">The stack trace that caused the partition failure.</param>
     /// <param name="occurred">When the error occurred.</param>
     public FailedPartition(
-        EventSourceId eventSourceId,
+        EventSourceId partition,
         EventSequenceNumber tail,
         IEnumerable<string> messages,
         string stackTrace,
         DateTimeOffset? occurred = null)
     {
-        Partition = eventSourceId;
+        Partition = partition;
         Tail = tail;
         Messages = messages;
         StackTrace = stackTrace;
@@ -43,29 +43,29 @@ public record FailedPartition
     /// <summary>
     /// Gets the EventSourceId that is the partition.
     /// </summary>
-    public EventSourceId Partition { get; }
+    public EventSourceId Partition { get; init; }
 
     /// <summary>
     /// Gets the exception messages that caused the partition failure.
     /// </summary>
-    public IEnumerable<string> Messages { get; }
+    public IEnumerable<string> Messages { get; init; }
 
     /// <summary>
     /// Gets the exception stack trace that caused the partition failure.
     /// </summary>
-    public string StackTrace { get; }
+    public string StackTrace { get; init; }
 
     /// <summary>
     /// <para>Gets the <see cref="EventSequenceNumber"/> of the event that triggered the partition failure.</para>
     /// <para>The partition will be retried from this event. If this event succeeds but subsequent events fail, the partition will be retried from the last failed event
     /// but the Tail will continue to be reported as the event that first sparked a failure. This will be removed when the partition has successfully caught up.</para>
     /// </summary>
-    public EventSequenceNumber Tail { get; } = EventSequenceNumber.First;
+    public EventSequenceNumber Tail { get; init; } = EventSequenceNumber.First;
 
     /// <summary>
     /// Gets the occurred time of the failure.
     /// </summary>
-    public DateTimeOffset Occurred { get; }
+    public DateTimeOffset Occurred { get; init; }
 
     /// <summary>
     /// Gets or sets the Head of the partition.

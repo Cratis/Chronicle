@@ -25,6 +25,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
     ObserverSubscription _subscription;
+    bool _stateWritingSuspended;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
@@ -148,55 +149,73 @@ public class Observer : StateMachine<ObserverState>, IObserver
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
+        var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
-        try
+        using (new WriteSuspension(this))
         {
-            events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
-            if (events.Any())
+            try
             {
-                var key = new ObserverSubscriberKey(
-                    _observerKey.MicroserviceId,
-                    _observerKey.TenantId,
-                    _observerKey.EventSequenceId,
-                    eventSourceId,
-                    _observerKey.SourceMicroserviceId,
-                    _observerKey.SourceTenantId);
+                events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
+                if (events.Any())
+                {
+                    var key = new ObserverSubscriberKey(
+                        _observerKey.MicroserviceId,
+                        _observerKey.TenantId,
+                        _observerKey.EventSequenceId,
+                        eventSourceId,
+                        _observerKey.SourceMicroserviceId,
+                        _observerKey.SourceTenantId);
 
-                var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, _observerId, key) as IObserverSubscriber)!;
-                var result = await subscriber.OnNext(events, new(_subscription.Arguments));
-                if (result.State == ObserverSubscriberState.Failed)
-                {
-                    failed = true;
-                    exceptionMessages = result.ExceptionMessages;
-                    exceptionStackTrace = result.ExceptionStackTrace;
-                }
-                else if (result.State == ObserverSubscriberState.Disconnected)
-                {
-                    await Unsubscribe();
-                    return;
-                }
+                    var firstEvent = events.First();
+                    var lastEvent = events.Last();
 
-                var lastEvent = events.Last();
-                State.NextEventSequenceNumber = lastEvent.Metadata.SequenceNumber.Next();
-                if (State.LastHandled < lastEvent.Metadata.SequenceNumber)
-                {
-                    State.LastHandled = lastEvent.Metadata.SequenceNumber;
+                    var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, _observerId, key) as IObserverSubscriber)!;
+                    tailEventSequenceNumber = firstEvent.Metadata.SequenceNumber;
+                    var result = await subscriber.OnNext(events, new(_subscription.Arguments));
+                    if (result.State == ObserverSubscriberState.Failed)
+                    {
+                        failed = true;
+                        exceptionMessages = result.ExceptionMessages;
+                        exceptionStackTrace = result.ExceptionStackTrace;
+                        tailEventSequenceNumber = result.LastSuccessfulObservation;
+                    }
+                    else if (result.State == ObserverSubscriberState.Disconnected)
+                    {
+                        await Unsubscribe();
+                        if (result.LastSuccessfulObservation == EventSequenceNumber.Unavailable)
+                        {
+                            return;
+                        }
+                    }
+
+                    State.NextEventSequenceNumber = result.LastSuccessfulObservation.Next();
+                    if (State.LastHandled < result.LastSuccessfulObservation)
+                    {
+                        State.LastHandled = result.LastSuccessfulObservation;
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                failed = true;
+                exceptionMessages = ex.GetAllMessages().ToArray();
+                exceptionStackTrace = ex.StackTrace ?? string.Empty;
+            }
+            if (failed)
+            {
+                await PartitionFailed(eventSourceId, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
+            }
         }
-        catch (Exception ex)
-        {
-            failed = true;
-            exceptionMessages = ex.GetAllMessages().ToArray();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-        }
-
-        if (failed)
-        {
-            await PartitionFailed(eventSourceId, State.NextEventSequenceNumber, exceptionMessages, exceptionStackTrace);
-        }
-
         await WriteStateAsync();
+    }
+
+    /// <summary>
+    /// Set subscription explicitly, without subscribing. This method is internal and visible to the test suite and only meant to be used with testing.
+    /// </summary>
+    /// <param name="subscription">Subscription to set.</param>
+    internal void SetSubscription(ObserverSubscription subscription)
+    {
+        _subscription = subscription;
     }
 
     /// <inheritdoc/>
@@ -207,5 +226,25 @@ public class Observer : StateMachine<ObserverState>, IObserver
             State.RunningState = observerState.RunningState;
             await WriteStateAsync();
         }
+    }
+
+    /// <inheritdoc/>
+    protected override Task WriteStateAsync()
+    {
+        if (_stateWritingSuspended) return Task.CompletedTask;
+        return base.WriteStateAsync();
+    }
+
+    class WriteSuspension : IDisposable
+    {
+        readonly Observer _observer;
+
+        public WriteSuspension(Observer observer)
+        {
+            _observer = observer;
+            _observer._stateWritingSuspended = true;
+        }
+
+        public void Dispose() => _observer._stateWritingSuspended = false;
     }
 }

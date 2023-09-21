@@ -98,7 +98,7 @@ public class InboxObserverSubscriber : Grain, IInboxObserverSubscriber
                 lastSuccessfullyObservedEvent = @event;
             }
 
-            return ObserverSubscriberResult.Ok;
+            return ObserverSubscriberResult.Ok(events.Last().Metadata.SequenceNumber);
         }
         catch (Exception ex)
         {

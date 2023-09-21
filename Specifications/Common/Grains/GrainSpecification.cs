@@ -4,6 +4,7 @@
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using Aksio.Json;
 using Orleans.Core;
 using Orleans.Runtime;
 using Orleans.Streams;
@@ -34,8 +35,8 @@ public abstract class GrainSpecification<TState> : GrainSpecification
         storage.SetupSet(_ => _.State = IsAny<TState>()).Callback((TState value) => state = value);
         storage.Setup(_ => _.WriteStateAsync()).Returns(() =>
         {
-            var serialized = JsonSerializer.Serialize(state);
-            most_recent_written_state = JsonSerializer.Deserialize<TState>(serialized);
+            var serialized = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
+            most_recent_written_state = JsonSerializer.Deserialize<TState>(serialized, Globals.JsonSerializerOptions);
             written_states.Add(most_recent_written_state);
             return Task.CompletedTask;
         });
@@ -62,6 +63,10 @@ public abstract class GrainSpecification : Specification
     }
 
     protected virtual void OnStateManagement()
+    {
+    }
+
+    protected virtual void OnAfterGrainActivate()
     {
     }
 
@@ -108,5 +113,7 @@ public abstract class GrainSpecification : Specification
         GrainReferenceExtensions.GetReferenceOverride = (grain) => grain;
 
         grain.OnActivateAsync(CancellationToken.None);
+
+        OnAfterGrainActivate();
     }
 }
