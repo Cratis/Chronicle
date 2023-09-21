@@ -3,7 +3,7 @@
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
-public class and_subsciption_is_disconnected : given.an_observer
+public class and_events_has_already_been_handled : given.an_observer_with_subscription
 {
     void Establish()
     {
@@ -17,8 +17,4 @@ public class and_subsciption_is_disconnected : given.an_observer
     [Fact] void should_not_set_next_sequence_number() => state.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)53UL);
     [Fact] void should_not_set_last_handled_event_sequence_number() => state.LastHandled.ShouldEqual((EventSequenceNumber)54UL);
     [Fact] void should_not_write_state() => written_states.Count.ShouldEqual(0);
-}
-
-public class and_some_events_has_already_been_handled : given.an_observer_with_subscription
-{
 }

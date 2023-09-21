@@ -151,12 +151,12 @@ public class Observer : StateMachine<ObserverState>, IObserver
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
-        using (new WriteSuspension(this))
+        events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
+        if (events.Any())
         {
-            try
+            using (new WriteSuspension(this))
             {
-                events = events.Where(_ => _.Metadata.SequenceNumber >= State.NextEventSequenceNumber).ToArray();
-                if (events.Any())
+                try
                 {
                     var key = new ObserverSubscriberKey(
                         _observerKey.MicroserviceId,
@@ -194,19 +194,21 @@ public class Observer : StateMachine<ObserverState>, IObserver
                         State.LastHandled = result.LastSuccessfulObservation;
                     }
                 }
+                catch (Exception ex)
+                {
+                    failed = true;
+                    exceptionMessages = ex.GetAllMessages().ToArray();
+                    exceptionStackTrace = ex.StackTrace ?? string.Empty;
+                }
             }
-            catch (Exception ex)
-            {
-                failed = true;
-                exceptionMessages = ex.GetAllMessages().ToArray();
-                exceptionStackTrace = ex.StackTrace ?? string.Empty;
-            }
+
             if (failed)
             {
                 await PartitionFailed(eventSourceId, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
             }
+
+            await WriteStateAsync();
         }
-        await WriteStateAsync();
     }
 
     /// <summary>
