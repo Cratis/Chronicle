@@ -13,11 +13,6 @@ namespace Aksio.Cratis.Kernel.Observation;
 public class RecoverFailedPartitionState
 {
     /// <summary>
-    /// Key for the storage provider for this state.
-    /// </summary>
-    public const string StorageProvider = "recover-failed-partition";
-
-    /// <summary>
     /// Unique identifier of the failed partition.
     /// </summary>
     public string Id { get; set; } = string.Empty;

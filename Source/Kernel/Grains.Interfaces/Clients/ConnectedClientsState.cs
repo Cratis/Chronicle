@@ -13,11 +13,6 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 public class ConnectedClientsState
 {
     /// <summary>
-    /// The name of the storage provider used for working with this type of state.
-    /// </summary>
-    public const string StorageProvider = "connected-clients-state";
-
-    /// <summary>
     /// Gets or sets the connected clients.
     /// </summary>
     public IList<ConnectedClient> Clients { get; set; } = new List<ConnectedClient>();

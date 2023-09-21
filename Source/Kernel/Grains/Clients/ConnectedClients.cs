@@ -11,7 +11,7 @@ namespace Aksio.Cratis.Kernel.Grains.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
-[StorageProvider(ProviderName = ConnectedClientsState.StorageProvider)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.ConnectedClients)]
 public class ConnectedClients : Grain<ConnectedClientsState>, IConnectedClients
 {
     /// <summary>

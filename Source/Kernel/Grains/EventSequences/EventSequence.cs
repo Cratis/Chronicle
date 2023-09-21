@@ -23,7 +23,7 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IEventSequence"/>.
 /// </summary>
-[StorageProvider(ProviderName = EventSequenceState.StorageProvider)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence : Grain<EventSequenceState>, IEventSequence
 {
     readonly ProviderFor<ISchemaStore> _schemaStoreProvider;

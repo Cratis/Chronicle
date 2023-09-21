@@ -13,11 +13,6 @@ namespace Aksio.Cratis.Kernel.Grains.EventSequences;
 public class EventSequenceState
 {
     /// <summary>
-    /// The name of the storage provider used for working with this type of state.
-    /// </summary>
-    public const string StorageProvider = "event-sequence-state";
-
-    /// <summary>
     /// Gets or sets the next event sequence number for the next event being appended.
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; set; } = EventSequenceNumber.First;

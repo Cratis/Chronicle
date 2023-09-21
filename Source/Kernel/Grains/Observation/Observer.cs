@@ -4,11 +4,13 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
+using Orleans.Runtime;
 using Orleans.Streams;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation;
@@ -16,11 +18,12 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 /// <summary>
 /// Represents an implementation of <see cref="IObserver"/>.
 /// </summary>
-[StorageProvider(ProviderName = ObserverState.StorageProvider)]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
 public class Observer : StateMachine<ObserverState>, IObserver
 {
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<Observer> _logger;
+    readonly IPersistentState<FailedPartitions> _failuresState;
     IStreamProvider _streamProvider = null!;
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
@@ -31,15 +34,21 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
+    /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Observer(
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
+        [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
+        IPersistentState<FailedPartitions> failures,
         ILogger<Observer> logger)
     {
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
+        _failuresState = failures;
         _logger = logger;
         _subscription = ObserverSubscription.Unsubscribed;
     }
+
+    FailedPartitions Failures => _failuresState.State;
 
     /// <inheritdoc/>
     public override Task OnActivation(CancellationToken cancellationToken)
@@ -119,7 +128,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     public Task ReplayPartitionTo(EventSourceId partition, EventSequenceNumber sequenceNumber) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
+    public async Task PartitionFailed(EventSourceId partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace)
     {
         _logger.PartitionFailed(
             partition,
@@ -131,8 +140,8 @@ public class Observer : StateMachine<ObserverState>, IObserver
             _observerKey.SourceMicroserviceId ?? MicroserviceId.Unspecified,
             _observerKey.SourceTenantId ?? TenantId.NotSet);
 
-        State.AddFailedPartition(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
-        return Task.CompletedTask;
+        Failures.Add(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
+        await _failuresState.WriteStateAsync();
     }
 
     /// <inheritdoc/>
@@ -141,7 +150,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <inheritdoc/>
     public async Task Handle(EventSourceId eventSourceId, IEnumerable<AppendedEvent> events)
     {
-        if (!_subscription.IsSubscribed || State.IsPartitionFailed(eventSourceId))
+        if (!_subscription.IsSubscribed || Failures.IsFailed(eventSourceId))
         {
             return;
         }

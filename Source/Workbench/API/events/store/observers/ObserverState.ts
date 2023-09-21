@@ -7,7 +7,6 @@ import { field } from '@aksio/fundamentals';
 import { EventType } from './EventType';
 import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
-import { FailedPartition } from './FailedPartition';
 import { TailEventSequenceNumbers } from './TailEventSequenceNumbers';
 
 export class ObserverState {
@@ -38,15 +37,6 @@ export class ObserverState {
 
     @field(Number)
     runningState!: ObserverRunningState;
-
-    @field(FailedPartition, true)
-    failedPartitions!: FailedPartition[];
-
-    @field(Boolean)
-    hasFailedPartitions!: boolean;
-
-    @field(Boolean)
-    isDisconnected!: boolean;
 
     @field(TailEventSequenceNumbers)
     tailEventSequenceNumbers!: TailEventSequenceNumbers;
