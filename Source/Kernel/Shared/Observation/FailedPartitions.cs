@@ -45,4 +45,42 @@ public class FailedPartitions
     /// <param name="partition">Partition to get.</param>
     /// <returns>The failed partition.</returns>
     public FailedPartition? Get(EventSourceId partition) => _partitions.Find(_ => _.Partition == partition);
+
+    /// <summary>
+    /// Register an attempt for a partition.
+    /// </summary>
+    /// <param name="partition"><see cref="EventSourceId"/> to register for.</param>
+    /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the attempt was for.</param>
+    /// <param name="messages">Collection of messages associated with the error.</param>
+    /// <param name="stackTrace">The stack trace associated with the error.</param>
+    public void RegisterAttempt(
+        EventSourceId partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> messages,
+        string stackTrace)
+    {
+        FailedPartition failure;
+        if (IsFailed(partition))
+        {
+            failure = Get(partition)!;
+        }
+        else
+        {
+            failure = new FailedPartition
+            {
+                Id = FailedPartitionId.New(),
+                Partition = partition
+            };
+
+            Add(failure);
+        }
+
+        failure.AddAttempt(new()
+        {
+            Occurred = DateTimeOffset.UtcNow,
+            SequenceNumber = sequenceNumber,
+            Messages = messages,
+            StackTrace = stackTrace
+        });
+    }
 }

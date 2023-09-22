@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
 /// <summary>
-/// Holds the log messages for <see cref="MongoDBObserversState"/>.
+/// Holds the log messages for <see cref="MongoDBObserverStorage"/>.
 /// </summary>
 internal static partial class MongoDBObserverStorageLogMessages
 {

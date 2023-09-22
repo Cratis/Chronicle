@@ -4,7 +4,6 @@
 
 import { field } from '@aksio/fundamentals';
 
-import { EventType } from './EventType';
 import { FailedPartitionAttempt } from './FailedPartitionAttempt';
 
 export class FailedPartition {
@@ -16,13 +15,7 @@ export class FailedPartition {
     partition!: string;
 
     @field(String)
-    eventSequenceId!: string;
-
-    @field(String)
     observerId!: string;
-
-    @field(EventType, true)
-    eventTypes!: EventType[];
 
     @field(FailedPartitionAttempt, true)
     attempts!: FailedPartitionAttempt[];

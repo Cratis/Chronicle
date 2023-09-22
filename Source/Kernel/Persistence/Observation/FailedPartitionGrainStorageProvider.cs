@@ -53,6 +53,11 @@ public class FailedPartitionGrainStorageProvider : IGrainStorage
         var observerKey = ObserverKey.Parse(observerKeyAsString!);
 
         _executionContextManager.Establish(observerKey.TenantId, CorrelationId.New(), observerKey.MicroserviceId);
+        foreach (var failedPartition in actualGrainState.State.Partitions)
+        {
+            failedPartition.ObserverId = observerId;
+        }
+
         await _failedPartitionsStorageProvider().Save(observerId, actualGrainState.State);
     }
 }
