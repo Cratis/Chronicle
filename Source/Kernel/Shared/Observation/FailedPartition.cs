@@ -12,6 +12,8 @@ namespace Aksio.Cratis.Kernel.Observation;
 /// </summary>
 public class FailedPartition
 {
+    List<FailedPartitionAttempt> _attempts = new();
+
     /// <summary>
     /// Unique identifier of the failed partition.
     /// </summary>
@@ -40,7 +42,11 @@ public class FailedPartition
     /// <summary>
     /// Gets or sets a collection of <see cref="FailedPartitionAttempt"/> for the failed partition.
     /// </summary>
-    public IEnumerable<FailedPartitionAttempt> Attempts { get; set; } = Enumerable.Empty<FailedPartitionAttempt>();
+    public IEnumerable<FailedPartitionAttempt> Attempts
+    {
+        get => _attempts;
+        set => _attempts = new(value);
+    }
 
     /// <summary>
     /// Gets or sets whether or not the failure is resolved.

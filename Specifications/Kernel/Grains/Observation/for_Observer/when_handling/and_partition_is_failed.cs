@@ -18,7 +18,7 @@ public class and_partition_is_failed : given.an_observer_with_subscription
             {
                 new FailedPartitionAttempt
                 {
-                    Tail = 42UL,
+                    SequenceNumber = 42UL,
                     Messages = new[] { "Something went wrong" },
                     StackTrace = "This is the stack trace"
                 }

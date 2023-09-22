@@ -163,7 +163,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         failure.AddAttempt(new()
         {
             Occurred = DateTimeOffset.UtcNow,
-            Tail = sequenceNumber,
+            SequenceNumber = sequenceNumber,
             Messages = exceptionMessages,
             StackTrace = exceptionStackTrace
         });
@@ -213,7 +213,9 @@ public class Observer : StateMachine<ObserverState>, IObserver
                         failed = true;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
-                        tailEventSequenceNumber = result.LastSuccessfulObservation;
+                        tailEventSequenceNumber = result.LastSuccessfulObservation == EventSequenceNumber.Unavailable ?
+                            firstEvent.Metadata.SequenceNumber :
+                            result.LastSuccessfulObservation;
                     }
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {

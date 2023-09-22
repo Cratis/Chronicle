@@ -27,7 +27,7 @@ public class and_partition_is_already_failed : given.an_observer
                 new FailedPartitionAttempt
                 {
                     Occurred = DateTimeOffset.Now.Subtract(TimeSpan.FromDays(1)),
-                    Tail = 42UL,
+                    SequenceNumber = 42UL,
                     Messages = new[] { first_message },
                     StackTrace = first_stack_trace
                 }
@@ -41,10 +41,10 @@ public class and_partition_is_already_failed : given.an_observer
     [Fact] void should_have_only_one_failed_partition() => failed_partitions_state.Partitions.Count().ShouldEqual(1);
     [Fact] void should_have_two_attempts() => failed_partitions_state.Partitions.First().Attempts.Count().ShouldEqual(2);
     [Fact] void should_have_the_correct_partition() => failed_partitions_state.Partitions.First().Partition.ShouldEqual((EventSourceId)event_source_id);
-    [Fact] void should_have_the_correct_tail_for_the_first_attempt() => failed_partitions_state.Partitions.First().Attempts.First().Tail.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_have_the_correct_tail_for_the_first_attempt() => failed_partitions_state.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_have_the_correct_message_for_the_first_attempt() => failed_partitions_state.Partitions.First().Attempts.First().Messages.First().ShouldEqual(first_message);
     [Fact] void should_have_the_correct_stack_trace_for_the_first_attempt() => failed_partitions_state.Partitions.First().Attempts.First().StackTrace.ShouldEqual(first_stack_trace);
-    [Fact] void should_have_the_correct_tail_for_the_second_attempt() => failed_partitions_state.Partitions.First().Attempts.ToArray()[1].Tail.ShouldEqual((EventSequenceNumber)44UL);
+    [Fact] void should_have_the_correct_tail_for_the_second_attempt() => failed_partitions_state.Partitions.First().Attempts.ToArray()[1].SequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
     [Fact] void should_have_the_correct_message_for_the_second_attempt() => failed_partitions_state.Partitions.First().Attempts.ToArray()[1].Messages.First().ShouldEqual(second_message);
     [Fact] void should_have_the_correct_stack_trace_for_the_second_attempt() => failed_partitions_state.Partitions.First().Attempts.ToArray()[1].StackTrace.ShouldEqual(second_stack_trace);
 }

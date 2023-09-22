@@ -11,7 +11,7 @@ export class FailedPartitionAttempt {
     occurred!: Date;
 
     @field(Number)
-    tail!: number;
+    sequenceNumber!: number;
 
     @field(String, true)
     messages!: string[];

@@ -13,7 +13,7 @@ public class first_time : given.an_observer
 
     [Fact] void should_have_only_one_failed_partition() => failed_partitions_state.Partitions.Count().ShouldEqual(1);
     [Fact] void should_have_the_correct_partition() => failed_partitions_state.Partitions.First().Partition.ShouldEqual((EventSourceId)event_source_id);
-    [Fact] void should_have_the_correct_tail() => failed_partitions_state.Partitions.First().Attempts.First().Tail.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_have_the_correct_tail() => failed_partitions_state.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_have_the_correct_message() => failed_partitions_state.Partitions.First().Attempts.First().Messages.First().ShouldEqual(message);
     [Fact] void should_have_the_correct_stack_trace() => failed_partitions_state.Partitions.First().Attempts.First().StackTrace.ShouldEqual(stack_trace);
 }

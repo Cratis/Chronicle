@@ -77,7 +77,7 @@ public class MongoDBFailedPartitionStorage : IFailedPartitionsStorage
     {
         foreach (var failedPartition in failedPartitions.Partitions)
         {
-            if (!failedPartition.IsResolved)
+            if (failedPartition.IsResolved)
             {
                 await Collection.DeleteOneAsync(_ => _.Id == failedPartition.Id).ConfigureAwait(false);
             }
