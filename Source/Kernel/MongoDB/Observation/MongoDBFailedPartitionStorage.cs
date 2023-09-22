@@ -17,16 +17,16 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 public class MongoDBFailedPartitionStorage : IFailedPartitionsStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
-    readonly ILogger<MongoDBObserversState> _logger;
+    readonly ILogger<MongoDBObserverStorage> _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBObserversState"/> class.
+    /// Initializes a new instance of the <see cref="MongoDBObserverStorage"/> class.
     /// </summary>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
     /// <param name="logger">Logger for logging.</param>
     public MongoDBFailedPartitionStorage(
         ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
-        ILogger<MongoDBObserversState> logger)
+        ILogger<MongoDBObserverStorage> logger)
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
         _logger = logger;

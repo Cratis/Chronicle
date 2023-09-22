@@ -17,22 +17,18 @@ namespace Aksio.Cratis.Kernel.Read.Observation;
 public class Observers : Controller
 {
     readonly ProviderFor<IObserverStorage> _observerStorageProvider;
-    readonly ProviderFor<IObserversState> _observersStateProvider;
     readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
     /// <param name="observerStorageProvider">Provider for <see cref="IObserverStorage"/>.</param>
-    /// <param name="observersStateProvider">Provider for <see cref="IObserversState"/> for working with the state of observers.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public Observers(
         ProviderFor<IObserverStorage> observerStorageProvider,
-        ProviderFor<IObserversState> observersStateProvider,
         IExecutionContextManager executionContextManager)
     {
         _observerStorageProvider = observerStorageProvider;
-        _observersStateProvider = observersStateProvider;
         _executionContextManager = executionContextManager;
     }
 
@@ -66,7 +62,7 @@ public class Observers : Controller
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
         var clientObservable = new ClientObservable<IEnumerable<ObserverState>>();
-        var observable = _observersStateProvider().All;
+        var observable = _observerStorageProvider().All;
         var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
         clientObservable.ClientDisconnected = () =>
         {
