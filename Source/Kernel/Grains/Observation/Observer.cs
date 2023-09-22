@@ -163,7 +163,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         failure.AddAttempt(new()
         {
             Occurred = DateTimeOffset.UtcNow,
-            EventSequenceNumber = sequenceNumber,
+            Tail = sequenceNumber,
             Messages = exceptionMessages,
             StackTrace = exceptionStackTrace
         });

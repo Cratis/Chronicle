@@ -18,7 +18,7 @@ public class FailedPartitionAttempt
     /// <summary>
     /// Gets or sets the <see cref="EventSequenceNumber"/> for the event that caused the failure.
     /// </summary>
-    public EventSequenceNumber EventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+    public EventSequenceNumber Tail { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
     /// Gets or sets the Error Messages for the last error on this failed partition.
