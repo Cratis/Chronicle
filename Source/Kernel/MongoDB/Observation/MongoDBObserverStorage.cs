@@ -9,6 +9,7 @@ using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
@@ -116,11 +117,13 @@ public class MongoDBObserverStorage : IObserverStorage
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ObserverInformation>> GetAllObservers() =>
-        Task.FromResult(Collection
-            .Find(_ => true)
-            .ToEnumerable()
-            .Select(_ => ToObserverInformation(_)).ToArray().AsEnumerable());
+    public async Task<IEnumerable<ObserverInformation>> GetAllObservers()
+    {
+        var aggregation = CreateObserverInformationAggregation();
+
+        var cursor = await aggregation.ToCursorAsync();
+        return cursor.ToList();
+    }
 
     /// <inheritdoc/>
     public async Task<ObserverState> GetState(ObserverId observerId, ObserverKey observerKey)
@@ -148,6 +151,14 @@ public class MongoDBObserverStorage : IObserverStorage
             state!,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
+
+    IAggregateFluent<ObserverInformation> CreateObserverInformationAggregation() => Collection
+                .Aggregate()
+                .Lookup(
+                    CollectionNames.FailedPartitions,
+                    new ExpressionFieldDefinition<ObserverState>((ObserverState _) => _.ObserverId),
+                    new ExpressionFieldDefinition<FailedPartition>((FailedPartition _) => _.ObserverId),
+                    new ExpressionFieldDefinition<ObserverInformation>((ObserverInformation _) => _.FailedPartitions));
 
     ObserverInformation ToObserverInformation(ObserverState state) => new(
         state.ObserverId,
