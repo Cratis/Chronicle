@@ -16,7 +16,9 @@ namespace Aksio.Cratis.Kernel.Observation;
 /// <param name="Type">Type of observer.</param>
 /// <param name="EventTypes">Types of events the observer is observing.</param>
 /// <param name="NextEventSequenceNumber">The next event sequence number the observer will observe.</param>
+/// <param name="LastHandledEventSequenceNumber">The event sequence number the observer last handled.</param>
 /// <param name="RunningState">The running state of the observer.</param>
+/// <param name="FailedPartitions">Collection of <see cref="FailedPartition"/>.</param>
 public record ObserverInformation(
     ObserverId ObserverId,
     EventSequenceId EventSequenceId,
@@ -24,4 +26,6 @@ public record ObserverInformation(
     ObserverType Type,
     IEnumerable<EventType> EventTypes,
     EventSequenceNumber NextEventSequenceNumber,
-    ObserverRunningState RunningState);
+    EventSequenceNumber LastHandledEventSequenceNumber,
+    ObserverRunningState RunningState,
+    IEnumerable<FailedPartition> FailedPartitions);

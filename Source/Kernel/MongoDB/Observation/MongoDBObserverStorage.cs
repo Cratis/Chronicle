@@ -156,7 +156,9 @@ public class MongoDBObserverStorage : IObserverStorage
         state.Type,
         state.EventTypes,
         state.NextEventSequenceNumber,
-        state.RunningState);
+        state.LastHandledEventSequenceNumber,
+        state.RunningState,
+        Enumerable.Empty<FailedPartition>());
 
     string GetKeyFrom(ObserverKey key, ObserverId observerId) => key.SourceMicroserviceId is not null ?
         $"{key.EventSequenceId} : {observerId} : {key.SourceMicroserviceId}" :

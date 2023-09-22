@@ -7,6 +7,7 @@ import { field } from '@aksio/fundamentals';
 import { ObserverType } from './ObserverType';
 import { EventType } from './EventType';
 import { ObserverRunningState } from './ObserverRunningState';
+import { FailedPartition } from './FailedPartition';
 
 export class ObserverInformation {
 
@@ -29,5 +30,11 @@ export class ObserverInformation {
     nextEventSequenceNumber!: number;
 
     @field(Number)
+    lastHandledEventSequenceNumber!: number;
+
+    @field(Number)
     runningState!: ObserverRunningState;
+
+    @field(FailedPartition, true)
+    failedPartitions!: FailedPartition[];
 }

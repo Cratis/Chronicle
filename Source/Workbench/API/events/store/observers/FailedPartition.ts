@@ -4,30 +4,22 @@
 
 import { field } from '@aksio/fundamentals';
 
+import { FailedPartitionAttempt } from './FailedPartitionAttempt';
 
 export class FailedPartition {
 
     @field(String)
-    partition!: string;
-
-    @field(Number)
-    tail!: number;
-
-    @field(String, true)
-    messages!: string[];
+    id!: string;
 
     @field(String)
-    stackTrace!: string;
+    partition!: string;
 
-    @field(Date)
-    occurred?: Date;
+    @field(String)
+    observerId!: string;
 
-    @field(Number)
-    head?: number;
-
-    @field(Number)
-    recoveredTo?: number;
+    @field(FailedPartitionAttempt, true)
+    attempts!: FailedPartitionAttempt[];
 
     @field(Boolean)
-    isRecovered!: boolean;
+    isResolved!: boolean;
 }
