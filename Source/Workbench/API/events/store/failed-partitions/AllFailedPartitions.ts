@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ObservableQueryFor, QueryResultWithState, useObservableQuery } from '@aksio/applications/queries';
-import { RecoverFailedPartitionState } from './RecoverFailedPartitionState';
+import { FailedPartition } from './FailedPartition';
 import Handlebars from 'handlebars';
 
 const routeTemplate = Handlebars.compile('/api/events/store/{{microserviceId}}/{{tenantId}}/failed-partitions');
@@ -12,13 +12,13 @@ export interface AllFailedPartitionsArguments {
     microserviceId: string;
     tenantId: string;
 }
-export class AllFailedPartitions extends ObservableQueryFor<RecoverFailedPartitionState[], AllFailedPartitionsArguments> {
+export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], AllFailedPartitionsArguments> {
     readonly route: string = '/api/events/store/{{microserviceId}}/{{tenantId}}/failed-partitions';
     readonly routeTemplate: Handlebars.TemplateDelegate = routeTemplate;
-    readonly defaultValue: RecoverFailedPartitionState[] = [];
+    readonly defaultValue: FailedPartition[] = [];
 
     constructor() {
-        super(RecoverFailedPartitionState, true);
+        super(FailedPartition, true);
     }
 
     get requestArguments(): string[] {
@@ -28,7 +28,7 @@ export class AllFailedPartitions extends ObservableQueryFor<RecoverFailedPartiti
         ];
     }
 
-    static use(args?: AllFailedPartitionsArguments): [QueryResultWithState<RecoverFailedPartitionState[]>] {
-        return useObservableQuery<RecoverFailedPartitionState[], AllFailedPartitions, AllFailedPartitionsArguments>(AllFailedPartitions, args);
+    static use(args?: AllFailedPartitionsArguments): [QueryResultWithState<FailedPartition[]>] {
+        return useObservableQuery<FailedPartition[], AllFailedPartitions, AllFailedPartitionsArguments>(AllFailedPartitions, args);
     }
 }

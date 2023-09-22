@@ -39,7 +39,7 @@ public class ServiceRegistrations : Module
         builder.RegisterType<MongoDBEventSequenceStorage>().As<IEventSequenceStorage>().SingleInstance();
         builder.RegisterType<MongoDBObserverStorage>().As<IObserverStorage>().SingleInstance();
         builder.RegisterType<MongoDBObserversState>().As<IObserversState>().SingleInstance();
-        builder.RegisterType<MongoDBFailedPartitionState>().As<IFailedPartitionsState>().SingleInstance();
+        builder.RegisterType<MongoDBFailedPartitionStorage>().As<IFailedPartitionsStorage>().SingleInstance();
         builder.RegisterType<MongoDBConnectedClientsState>().As<IConnectedClientsState>().SingleInstance();
         builder.RegisterType<MongoDBIdentityStore>().As<IIdentityStore>().InstancePerTenant();
     }

@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#nullable disable
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.MongoDB;
 using MongoDB.Bson.Serialization;
@@ -9,12 +8,12 @@ using MongoDB.Bson.Serialization;
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 
 /// <summary>
-/// A class map for <see cref="RecoverFailedPartitionState"/>.
+/// A class map for <see cref="FailedPartition"/>.
 /// </summary>
-public class RecoverFailedPartitionStateClassMap : IBsonClassMapFor<RecoverFailedPartitionState>
+public class FailedPartitionClassMap : IBsonClassMapFor<FailedPartition>
 {
     /// <inheritdoc/>
-    public void Configure(BsonClassMap<RecoverFailedPartitionState> classMap)
+    public void Configure(BsonClassMap<FailedPartition> classMap)
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.Id);

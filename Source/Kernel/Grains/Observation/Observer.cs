@@ -140,7 +140,34 @@ public class Observer : StateMachine<ObserverState>, IObserver
             _observerKey.SourceMicroserviceId ?? MicroserviceId.Unspecified,
             _observerKey.SourceTenantId ?? TenantId.NotSet);
 
-        Failures.Add(new(partition, sequenceNumber, exceptionMessages, exceptionStackTrace));
+        FailedPartition failure;
+
+        if (Failures.IsFailed(partition))
+        {
+            failure = Failures.Get(partition)!;
+        }
+        else
+        {
+            failure = new FailedPartition
+            {
+                Id = FailedPartitionId.New(),
+                Partition = partition,
+                EventSequenceId = _observerKey.EventSequenceId,
+                ObserverId = _observerId,
+                EventTypes = _subscription.EventTypes
+            };
+
+            Failures.Add(failure);
+        }
+
+        failure.AddAttempt(new()
+        {
+            Occurred = DateTimeOffset.UtcNow,
+            EventSequenceNumber = sequenceNumber,
+            Messages = exceptionMessages,
+            StackTrace = exceptionStackTrace
+        });
+
         await _failuresState.WriteStateAsync();
     }
 

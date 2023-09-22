@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#nullable disable
 using Aksio.Cratis.Events;
 
 namespace Aksio.Cratis.Kernel.Observation;
@@ -45,5 +44,5 @@ public class FailedPartitions
     /// </summary>
     /// <param name="partition">Partition to get.</param>
     /// <returns>The failed partition.</returns>
-    public FailedPartition Get(EventSourceId partition) => _partitions.Find(_ => _.Partition == partition);
+    public FailedPartition? Get(EventSourceId partition) => _partitions.Find(_ => _.Partition == partition);
 }
