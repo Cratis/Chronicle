@@ -18,7 +18,7 @@ public class and_subscriber_throws_an_exception : given.an_observer_with_subscri
     [Fact] void should_write_failed_partitions_state_once() => written_failed_partitions_states.Count.ShouldEqual(1);
     [Fact] void should_add_failed_partition() => written_failed_partitions_states[0].Partitions.Count().ShouldEqual(1);
     [Fact] void should_capture_partition() => written_failed_partitions_states[0].Partitions.First().Partition.ShouldEqual((EventSourceId)event_source_id);
-    [Fact] void should_capture_exception_message() => written_failed_partitions_states[0].Partitions.First().Messages.First().ShouldEqual(exception_message);
-    [Fact] void should_capture_exception_stack_Trace() => written_failed_partitions_states[0].Partitions.First().StackTrace.ShouldEqual(exception_stack_trace);
-    [Fact] void should_capture_event_sequence_number() => written_failed_partitions_states[0].Partitions.First().Tail.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_capture_exception_message() => written_failed_partitions_states[0].Partitions.First().Attempts.First().Messages.First().ShouldEqual(exception_message);
+    [Fact] void should_capture_exception_stack_Trace() => written_failed_partitions_states[0].Partitions.First().Attempts.First().StackTrace.ShouldEqual(exception_stack_trace);
+    [Fact] void should_capture_event_sequence_number() => written_failed_partitions_states[0].Partitions.First().Attempts.First().Tail.ShouldEqual((EventSequenceNumber)42UL);
 }

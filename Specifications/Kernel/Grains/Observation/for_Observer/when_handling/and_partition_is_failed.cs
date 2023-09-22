@@ -1,6 +1,8 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Aksio.Cratis.Kernel.Observation;
+
 namespace Aksio.Cratis.Kernel.Grains.Observation.for_Observer.when_handling;
 
 public class and_partition_is_failed : given.an_observer_with_subscription
@@ -9,7 +11,19 @@ public class and_partition_is_failed : given.an_observer_with_subscription
 
     void Establish()
     {
-        failed_partitions_state.Add(new(event_source_id, 42UL, new[] { "Something went wrong" }, "This is the stack trace"));
+        failed_partitions_state.Add(new FailedPartition
+        {
+            Partition = event_source_id,
+            Attempts = new[]
+            {
+                new FailedPartitionAttempt
+                {
+                    Tail = 42UL,
+                    Messages = new[] { "Something went wrong" },
+                    StackTrace = "This is the stack trace"
+                }
+            }
+        });
         state.NextEventSequenceNumber = 53UL;
         state.LastHandled = 54UL;
     }
