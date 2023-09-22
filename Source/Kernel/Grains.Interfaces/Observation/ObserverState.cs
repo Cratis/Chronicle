@@ -66,9 +66,4 @@ public class ObserverState
     /// Gets or sets the running state.
     /// </summary>
     public ObserverRunningState RunningState { get; set; } = ObserverRunningState.New;
-
-    /// <summary>
-    /// Gets or sets the tail event sequence numbers.
-    /// </summary>
-    public TailEventSequenceNumbers TailEventSequenceNumbers { get; set; } = TailEventSequenceNumbers.Empty;
 }

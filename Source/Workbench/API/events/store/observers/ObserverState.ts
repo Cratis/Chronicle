@@ -7,7 +7,6 @@ import { field } from '@aksio/fundamentals';
 import { EventType } from './EventType';
 import { ObserverType } from './ObserverType';
 import { ObserverRunningState } from './ObserverRunningState';
-import { TailEventSequenceNumbers } from './TailEventSequenceNumbers';
 
 export class ObserverState {
 
@@ -37,7 +36,4 @@ export class ObserverState {
 
     @field(Number)
     runningState!: ObserverRunningState;
-
-    @field(TailEventSequenceNumbers)
-    tailEventSequenceNumbers!: TailEventSequenceNumbers;
 }

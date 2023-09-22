@@ -16,6 +16,7 @@ public class Subscribing : BaseObserverState
     readonly IObserver _observer;
     readonly IEventSequenceStorage _eventSequenceStorage;
     ObserverSubscription _subscription;
+    TailEventSequenceNumbers _tailEventSequenceNumbers = TailEventSequenceNumbers.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscribing"/> class.
@@ -50,7 +51,7 @@ public class Subscribing : BaseObserverState
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         _subscription = await _observer.GetSubscription();
-        state.TailEventSequenceNumbers = await _eventSequenceStorage.GetTailSequenceNumbers(state.EventSequenceId, _subscription.EventTypes);
+        _tailEventSequenceNumbers = await _eventSequenceStorage.GetTailSequenceNumbers(state.EventSequenceId, _subscription.EventTypes);
 
         if (IsIndexing(state))
         {
@@ -70,7 +71,7 @@ public class Subscribing : BaseObserverState
         }
 
         state.EventTypes = _subscription.EventTypes;
-        state.NextEventSequenceNumber = state.TailEventSequenceNumbers.Tail.Next();
+        state.NextEventSequenceNumber = _tailEventSequenceNumbers.Tail.Next();
 
         return state;
     }
@@ -82,17 +83,17 @@ public class Subscribing : BaseObserverState
 
     bool NeedsToCatchup(ObserverState state) =>
         state.RunningState == ObserverRunningState.CatchingUp ||
-        IsFallingBehind(state);
+        IsFallingBehind();
 
-    bool IsFallingBehind(ObserverState state) =>
-        !state.TailEventSequenceNumbers.TailForEventTypes.IsUnavailable && state.TailEventSequenceNumbers.TailForEventTypes < state.TailEventSequenceNumbers.Tail;
+    bool IsFallingBehind() =>
+        !_tailEventSequenceNumbers.TailForEventTypes.IsUnavailable && _tailEventSequenceNumbers.TailForEventTypes < _tailEventSequenceNumbers.Tail;
 
     bool NeedsToReplay(ObserverState state) =>
         state.RunningState == ObserverRunningState.Replaying ||
-        (HasDefinitionChanged(state) && HasEventsInSequence(state));
+        (HasDefinitionChanged(state) && HasEventsInSequence());
 
-    bool HasEventsInSequence(ObserverState state) =>
-        state.TailEventSequenceNumbers.Tail.IsActualValue && state.TailEventSequenceNumbers.TailForEventTypes.IsActualValue;
+    bool HasEventsInSequence() =>
+        _tailEventSequenceNumbers.Tail.IsActualValue && _tailEventSequenceNumbers.TailForEventTypes.IsActualValue;
 
     bool HasDefinitionChanged(ObserverState state) =>
         state.EventTypes.Count() != _subscription.EventTypes.Count() ||

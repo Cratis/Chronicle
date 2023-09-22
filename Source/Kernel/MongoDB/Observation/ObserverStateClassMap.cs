@@ -17,6 +17,5 @@ public class ObserverStateClassMap : IBsonClassMapFor<ObserverState>
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.Id);
-        classMap.UnmapProperty(_ => _.TailEventSequenceNumbers);
     }
 }
