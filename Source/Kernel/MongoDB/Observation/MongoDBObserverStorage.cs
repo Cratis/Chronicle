@@ -133,7 +133,7 @@ public class MongoDBObserverStorage : IObserverStorage
             EventSequenceId = observerKey.EventSequenceId,
             ObserverId = observerId,
             NextEventSequenceNumber = EventSequenceNumber.First,
-            LastHandled = EventSequenceNumber.First,
+            LastHandledEventSequenceNumber = EventSequenceNumber.First,
             RunningState = ObserverRunningState.New
         };
     }

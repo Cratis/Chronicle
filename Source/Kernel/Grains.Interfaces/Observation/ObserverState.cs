@@ -60,7 +60,7 @@ public class ObserverState
     /// <summary>
     /// Gets or sets the last handled event in the event log, ever. This value will never reset during a rewind.
     /// </summary>
-    public EventSequenceNumber LastHandled { get; set; } = EventSequenceNumber.First;
+    public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.First;
 
     /// <summary>
     /// Gets or sets the running state.

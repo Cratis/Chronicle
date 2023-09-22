@@ -12,6 +12,6 @@ public class and_subscriber_returns_disconnected : given.an_observer_with_subscr
 
     [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
     [Fact] void should_set_next_sequence_number() => written_states[0].NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
-    [Fact] void should_set_last_handled_event_sequence_number() => written_states[0].LastHandled.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_set_last_handled_event_sequence_number() => written_states[0].LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_set_subscription_to_unsubscribed() => observer.GetSubscription().GetAwaiter().GetResult().ShouldEqual(ObserverSubscription.Unsubscribed);
 }

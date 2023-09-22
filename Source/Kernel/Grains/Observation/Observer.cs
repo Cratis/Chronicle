@@ -200,9 +200,9 @@ public class Observer : StateMachine<ObserverState>, IObserver
                     }
 
                     State.NextEventSequenceNumber = result.LastSuccessfulObservation.Next();
-                    if (State.LastHandled < result.LastSuccessfulObservation)
+                    if (State.LastHandledEventSequenceNumber < result.LastSuccessfulObservation)
                     {
-                        State.LastHandled = result.LastSuccessfulObservation;
+                        State.LastHandledEventSequenceNumber = result.LastSuccessfulObservation;
                     }
                 }
                 catch (Exception ex)

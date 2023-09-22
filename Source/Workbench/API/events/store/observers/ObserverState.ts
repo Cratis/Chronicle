@@ -32,7 +32,7 @@ export class ObserverState {
     nextEventSequenceNumber!: number;
 
     @field(Number)
-    lastHandled!: number;
+    lastHandledEventSequenceNumber!: number;
 
     @field(Number)
     runningState!: ObserverRunningState;

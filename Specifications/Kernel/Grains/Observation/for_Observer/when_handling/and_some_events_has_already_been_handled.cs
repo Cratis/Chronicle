@@ -14,7 +14,7 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
     void Establish()
     {
         state.NextEventSequenceNumber = 43UL;
-        state.LastHandled = 42UL;
+        state.LastHandledEventSequenceNumber = 42UL;
         subscriber.Setup(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>())).Returns(Task.FromResult(ObserverSubscriberResult.Ok(43UL)));
     }
 
@@ -23,6 +23,6 @@ public class and_some_events_has_already_been_handled : given.an_observer_with_s
     [Fact] void should_forward_only_one_to_subscriber() => subscriber.Verify(_ => _.OnNext(IsAny<IEnumerable<AppendedEvent>>(), IsAny<ObserverSubscriberContext>()), Once());
     [Fact] void should_forward_last_event_to_subscriber() => subscriber.Verify(_ => _.OnNext(new[] { events.Last() }, IsAny<ObserverSubscriberContext>()), Once());
     [Fact] void should_not_set_next_sequence_number() => state.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)44UL);
-    [Fact] void should_not_set_last_handled_event_sequence_number() => state.LastHandled.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_not_set_last_handled_event_sequence_number() => state.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
     [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
 }

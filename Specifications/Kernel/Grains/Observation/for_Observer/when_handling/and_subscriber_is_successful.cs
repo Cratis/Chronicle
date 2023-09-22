@@ -11,6 +11,6 @@ public class and_subscriber_is_successful : given.an_observer_with_subscription
     async Task Because() => await observer.Handle("Something", new[] { AppendedEvent.EmptyWithEventSequenceNumber(42UL) });
 
     [Fact] void should_set_next_sequence_number() => written_states[0].NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
-    [Fact] void should_set_last_handled_event_sequence_number() => written_states[0].LastHandled.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_set_last_handled_event_sequence_number() => written_states[0].LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_write_state_once() => written_states.Count.ShouldEqual(1);
 }
