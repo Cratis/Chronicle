@@ -6,8 +6,8 @@ import { AllObservers } from 'API/events/store/observers/AllObservers';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
 import { AllObserversArguments } from 'API/events/store/observers/AllObservers';
-import { ObserverState } from 'API/events/store/observers/ObserverState';
-import { Rewind } from 'API/events/store/observers/Rewind';
+import { ObserverInformation } from 'API/events/store/observers/ObserverInformation';
+import { Replay } from 'API/events/store/observers/Replay';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
 import { Box, Button, Divider, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
 import { useRouteParams } from './RouteParams';
@@ -16,16 +16,15 @@ import * as icons from '@mui/icons-material';
 const observerRunningStates: { [key: number]: string; } = {
     0: 'Unknown',
     1: 'Subscribing',
-    2: 'Rewinding',
-    3: 'Replaying',
-    4: 'Catching up',
-    5: 'Active',
-    6: 'Paused',
-    7: 'Stopped',
-    8: 'Suspended',
-    9: 'Failed',
-    10: 'Tail of replay',
-    11: 'Disconnected'
+    2: 'Replaying',
+    3: 'Catching up',
+    4: 'Active',
+    5: 'Paused',
+    6: 'Stopped',
+    7: 'Suspended',
+    8: 'Failed',
+    9: 'Tail of replay',
+    10: 'Disconnected'
 };
 
 const observerTypes: { [key: number]: string; } = {
@@ -51,7 +50,7 @@ const columns: GridColDef[] = [
         headerName: 'Type',
         field: 'type',
         width: 200,
-        valueGetter: (params: GridValueGetterParams<ObserverState>) => {
+        valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
             return observerTypes[params.row.type as number];
         }
     },
@@ -59,7 +58,7 @@ const columns: GridColDef[] = [
         headerName: 'State',
         field: 'runningState',
         width: 200,
-        valueGetter: (params: GridValueGetterParams<ObserverState>) => {
+        valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
             return observerRunningStates[params.row.runningState as number];
         }
     },
@@ -76,7 +75,7 @@ export const Observers = () => {
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
 
-    const [selectedObserver, setSelectedObserver] = useState<ObserverState>();
+    const [selectedObserver, setSelectedObserver] = useState<ObserverInformation>();
 
     const getAllObserversArguments = () => {
         return {
@@ -93,10 +92,10 @@ export const Observers = () => {
         }
     }, [tenants.data]);
 
-    const [rewindCommand, setRewindCommandVales] = Rewind.use();
+    const [replayCommand, setReplayCommandVales] = Replay.use();
 
     const observerSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
-        const selectedItems = selectionModel.map(_ => observers.data.find(__ => __.id == _)) as ObserverState[];
+        const selectedItems = selectionModel.map(_ => observers.data.find(__ => __.observerId == _)) as ObserverInformation[];
         if (selectedItems.length > 0) {
             setSelectedObserver(selectedItems[0]);
         }
@@ -128,13 +127,13 @@ export const Observers = () => {
                     <Button
                         startIcon={<icons.Replay />}
                         onClick={() => {
-                            setRewindCommandVales({
+                            setReplayCommandVales({
                                 observerId: selectedObserver?.observerId,
                                 microserviceId: microserviceId,
                                 tenantId: selectedTenant?.id
                             });
-                            rewindCommand.execute();
-                        }}>Rewind</Button>
+                            replayCommand.execute();
+                        }}>Replay</Button>
                 }
 
             </Toolbar>
@@ -144,7 +143,7 @@ export const Observers = () => {
                     columns={columns}
                     filterMode="client"
                     sortingMode="client"
-                    getRowId={row => row.id}
+                    getRowId={row => row.observerId}
                     rows={observers.data}
                     onRowSelectionModelChange={observerSelected}
                 />

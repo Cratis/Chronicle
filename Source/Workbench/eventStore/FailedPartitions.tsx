@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { AllFailedPartitions } from 'API/events/store/failed-partitions/AllFailedPartitions';
 import { AllTenants } from 'API/configuration/tenants/AllTenants';
 import { TenantInfo } from 'API/configuration/tenants/TenantInfo';
-import { RecoverFailedPartitionState } from 'API/events/store/failed-partitions/RecoverFailedPartitionState';
+import { FailedPartition } from 'API/events/store/failed-partitions/FailedPartition';
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/applications/queries';
@@ -45,19 +45,11 @@ const columns: GridColDef[] = [
         width: 120
     },
     {
-        headerName: 'Event Sequence',
-        field: 'eventSequenceId',
-        width: 120,
-        valueGetter: (params: GridValueGetterParams<RecoverFailedPartitionState>) => {
-            return eventSequences.data.find(_ => _.id == params.row.eventSequenceId)?.name ?? params.row.id;
-        }
-    },
-    {
         headerName: 'Occurred',
         field: 'initialPartitionFailedOn',
         width: 250,
-        valueGetter: (params: GridValueGetterParams<RecoverFailedPartitionState>) => {
-            return params.row.initialPartitionFailedOn ? params.row.initialPartitionFailedOn.toLocaleString() : '';
+        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+            return params.row.attempts[0].occurred.toLocaleString();
         }
     }
 ];
@@ -70,7 +62,7 @@ export const FailedPartitions = () => {
     eventSequences = es;
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
-    const [selectedFailedPartition, setSelectedFailedPartition] = useState<RecoverFailedPartitionState>();
+    const [selectedFailedPartition, setSelectedFailedPartition] = useState<FailedPartition>();
 
     const [failedPartitions] = AllFailedPartitions.use({
         microserviceId: microserviceId,
@@ -88,7 +80,7 @@ export const FailedPartitions = () => {
     };
 
     const failedPartitionSelected = (selectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
-        const selectedItems = selectionModel.map(_ => failedPartitions.data.find(__ => __.id == _)) as RecoverFailedPartitionState[];
+        const selectedItems = selectionModel.map(_ => failedPartitions.data.find(__ => __.id == _)) as FailedPartition[];
         if (selectedItems.length > 0) {
             setSelectedFailedPartition(selectedItems[0]);
         }
@@ -149,17 +141,17 @@ export const FailedPartitions = () => {
                                 {selectedFailedPartition &&
                                     <>
 
-                                        <Typography variant='h6'>{selectedFailedPartition?.observerName}</Typography>
+                                        {/* <Typography variant='h6'>{selectedFailedPartition?.observerName}</Typography> */}
                                         <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
                                             <TextField label='Occurred' disabled
-                                                defaultValue={(selectedFailedPartition?.initialPartitionFailedOn || new Date()).toISOString().toLocaleString()} />
+                                                defaultValue={(selectedFailedPartition?.attempts[0].occurred || new Date()).toISOString().toLocaleString()} />
                                         </FormControl>
                                         <Label>Messages</Label>
                                         {
-                                            (selectedFailedPartition?.messages) && selectedFailedPartition.messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
+                                            (selectedFailedPartition?.attempts[0].messages) && selectedFailedPartition.attempts[0].messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
                                         }
                                         <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
-                                            <TextField label="Stack Trace" disabled defaultValue={selectedFailedPartition?.stackTrace} multiline title={selectedFailedPartition?.stackTrace.toString()} />
+                                            <TextField label="Stack Trace" disabled defaultValue={selectedFailedPartition?.attempts[0].stackTrace} multiline title={selectedFailedPartition?.attempts[0].stackTrace.toString()} />
                                         </FormControl>
                                     </>}
                             </Box>
