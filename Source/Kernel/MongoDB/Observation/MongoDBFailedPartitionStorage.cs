@@ -1,12 +1,10 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Subjects;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
-using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
@@ -17,19 +15,15 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 public class MongoDBFailedPartitionStorage : IFailedPartitionsStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
-    readonly ILogger<MongoDBObserverStorage> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBObserverStorage"/> class.
     /// </summary>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
-    /// <param name="logger">Logger for logging.</param>
     public MongoDBFailedPartitionStorage(
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
-        ILogger<MongoDBObserverStorage> logger)
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
-        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -38,36 +32,11 @@ public class MongoDBFailedPartitionStorage : IFailedPartitionsStorage
         get
         {
             var observers = Collection.Find(_ => true).ToList();
-            var observable = new BehaviorSubject<IEnumerable<FailedPartition>>(observers);
-            observable.OnNext(observers);
-            var cursor = Collection.Watch();
-            _ = Task.Run(async () =>
+            return Collection.Observe(observers, (cursor, items) =>
             {
-                try
-                {
-                    while (await cursor.MoveNextAsync())
-                    {
-                        if (observable.IsDisposed)
-                        {
-                            cursor.Dispose();
-                            return;
-                        }
-
-                        if (!cursor.Current.Any()) continue;
-                        var observers = await Collection.FindAsync(_ => true);
-                        if (!observable.IsDisposed)
-                        {
-                            observable.OnNext(observers.ToList());
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.WatchConnectionLost(ex);
-                }
+                items.Clear();
+                items.AddRange(Collection.Find(_ => true).ToList());
             });
-
-            return observable;
         }
     }
     IMongoCollection<FailedPartition> Collection => _eventStoreDatabaseProvider().GetCollection<FailedPartition>(CollectionNames.FailedPartitions);

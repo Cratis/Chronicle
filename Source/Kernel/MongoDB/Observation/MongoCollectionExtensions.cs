@@ -1,0 +1,68 @@
+// Copyright (c) Aksio Insurtech. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Reactive.Subjects;
+using MongoDB.Driver;
+
+namespace Aksio.Cratis.Kernel.MongoDB.Observation;
+
+/// <summary>
+/// Extensions for working with MongoDB collections.
+/// </summary>
+public static class MongoCollectionExtensions
+{
+    /// <summary>
+    /// Observe a collection for changes.
+    /// </summary>
+    /// <param name="collection">Collection to observe.</param>
+    /// <param name="initialItems">The initial items.</param>
+    /// <param name="handleChanges">Action to handle changes.</param>
+    /// <typeparam name="TResult">Type of the items in the result.</typeparam>
+    /// <typeparam name="TDocument">Type of document for the collection.</typeparam>
+    /// <returns>An observable for the items.</returns>
+    public static IObservable<IEnumerable<TResult>> Observe<TResult, TDocument>(
+        this IMongoCollection<TDocument> collection,
+        IEnumerable<TResult> initialItems,
+        Action<IChangeStreamCursor<ChangeStreamDocument<TDocument>>, List<TResult>> handleChanges)
+    {
+        var items = new List<TResult>();
+        var observable = new BehaviorSubject<IEnumerable<TResult>>(initialItems);
+        var filter = Builders<ChangeStreamDocument<TDocument>>.Filter.In(
+            new StringFieldDefinition<ChangeStreamDocument<TDocument>, string>("operationType"),
+            new[] { "insert", "replace", "update" });
+
+        var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<TDocument>>().Match(filter);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var cursor = await collection.WatchAsync(
+                    pipeline,
+                    new ChangeStreamOptions { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
+
+                while (await cursor.MoveNextAsync())
+                {
+                    if (observable.IsDisposed)
+                    {
+                        cursor.Dispose();
+                        return;
+                    }
+
+                    if (!cursor.Current.Any()) continue;
+                    if (!observable.IsDisposed)
+                    {
+                        handleChanges(cursor, items);
+                        observable.OnNext(items);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Watch failed: " + ex.Message);
+            }
+        });
+
+        return observable;
+    }
+}

@@ -53,15 +53,15 @@ public class Observers : Controller
     /// </summary>
     /// <param name="microserviceId"><see cref="MicroserviceId"/> the observers are for.</param>
     /// <param name="tenantId"><see cref="TenantId"/> the observers are for.</param>
-    /// <returns>Client observable of a collection of <see cref="ObserverState"/>.</returns>
+    /// <returns>Client observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [HttpGet("observe")]
-    public Task<ClientObservable<IEnumerable<ObserverState>>> AllObservers(
+    public Task<ClientObservable<IEnumerable<ObserverInformation>>> AllObservers(
         [FromRoute] MicroserviceId microserviceId,
         [FromRoute] TenantId tenantId)
     {
         _executionContextManager.Establish(tenantId, _executionContextManager.Current.CorrelationId, microserviceId);
 
-        var clientObservable = new ClientObservable<IEnumerable<ObserverState>>();
+        var clientObservable = new ClientObservable<IEnumerable<ObserverInformation>>();
         var observable = _observerStorageProvider().All;
         var subscription = observable.Subscribe(_ => clientObservable.OnNext(_));
         clientObservable.ClientDisconnected = () =>

@@ -14,9 +14,9 @@ namespace Aksio.Cratis.Kernel.Persistence.Observation;
 public interface IObserverStorage
 {
     /// <summary>
-    /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="ObserverState"/>.
+    /// Gets an <see cref="IObservable{T}"/> for all instances of <see cref="ObserverInformation"/>.
     /// </summary>
-    IObservable<IEnumerable<ObserverState>> All { get; }
+    IObservable<IEnumerable<ObserverInformation>> All { get; }
 
     /// <summary>
     /// Get the information for a specific observer.

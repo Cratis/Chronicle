@@ -1,15 +1,12 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Subjects;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Kernel.Grains.Observation;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Persistence.Observation;
 using Aksio.Cratis.Observation;
 using Aksio.DependencyInversion;
-using Microsoft.Extensions.Logging;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Observation;
@@ -22,78 +19,24 @@ namespace Aksio.Cratis.Kernel.MongoDB.Observation;
 public class MongoDBObserverStorage : IObserverStorage
 {
     readonly ProviderFor<IEventStoreDatabase> _eventStoreDatabaseProvider;
-    readonly ILogger<MongoDBObserverStorage> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDBObserverStorage"/> class.
     /// </summary>
     /// <param name="eventStoreDatabaseProvider">Provider for <see cref="IEventStoreDatabase"/>.</param>
-    /// <param name="logger">Logger for logging.</param>
     public MongoDBObserverStorage(
-        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider,
-        ILogger<MongoDBObserverStorage> logger)
+        ProviderFor<IEventStoreDatabase> eventStoreDatabaseProvider)
     {
         _eventStoreDatabaseProvider = eventStoreDatabaseProvider;
-        _logger = logger;
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ObserverState>> All
+    public IObservable<IEnumerable<ObserverInformation>> All
     {
         get
         {
-            var observers = Collection.Find(_ => true).ToList();
-            var observable = new BehaviorSubject<IEnumerable<ObserverState>>(observers);
-            var filter = Builders<ChangeStreamDocument<ObserverState>>.Filter.In(
-                new StringFieldDefinition<ChangeStreamDocument<ObserverState>, string>("operationType"),
-                new[] { "insert", "replace", "update" });
-
-            var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<ObserverState>>().Match(filter);
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    var cursor = await Collection.WatchAsync(
-                        pipeline,
-                        new ChangeStreamOptions { FullDocument = ChangeStreamFullDocumentOption.UpdateLookup });
-
-                    while (await cursor.MoveNextAsync())
-                    {
-                        if (observable.IsDisposed)
-                        {
-                            cursor.Dispose();
-                            return;
-                        }
-
-                        if (!cursor.Current.Any()) continue;
-                        if (!observable.IsDisposed)
-                        {
-                            foreach (var changedObserver in cursor.Current.Select(_ => _.FullDocument))
-                            {
-                                var observer = observers.Find(_ => _.Id == changedObserver.Id);
-                                if (observer is not null)
-                                {
-                                    var index = observers.IndexOf(observer);
-                                    observers[index] = changedObserver;
-                                }
-                                else
-                                {
-                                    observers.Add(changedObserver);
-                                }
-                            }
-
-                            observable.OnNext(observers);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.WatchConnectionLost(ex);
-                }
-            });
-
-            return observable;
+            var observerInformation = GetAllObservers().GetAwaiter().GetResult();
+            return Collection.Observe(observerInformation, HandleChangesForObservers);
         }
     }
 
@@ -101,26 +44,27 @@ public class MongoDBObserverStorage : IObserverStorage
 
     /// <inheritdoc/>
     public Task<ObserverInformation> GetObserver(ObserverId observerId) =>
-        Task.FromResult(ToObserverInformation(Collection
-            .Find(_ => _.ObserverId == observerId)
-            .First()));
+        Collection
+            .Aggregate()
+            .Match(_ => _.ObserverId == observerId)
+            .JoinWithFailedPartitions()
+            .FirstAsync();
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<EventType> eventTypes)
+    public async Task<IEnumerable<ObserverInformation>> GetObserversForEventTypes(IEnumerable<EventType> eventTypes)
     {
         var eventTypeIds = eventTypes.Select(_ => _.Id).ToArray();
-        return Task.FromResult(Collection
-            .Find(_ => true)
-            .ToEnumerable()
-            .Where(observer => observer.EventTypes.Any(_ => eventTypeIds.Contains(_.Id)))
-            .Select(_ => ToObserverInformation(_)).ToArray().AsEnumerable());
+        return await Collection
+            .Aggregate()
+            .Match(_ => _.EventTypes.Any(_ => eventTypeIds.Contains(_.Id)))
+            .JoinWithFailedPartitions()
+            .ToListAsync();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetAllObservers()
     {
-        var aggregation = CreateObserverInformationAggregation();
-
+        var aggregation = Collection.Aggregate().JoinWithFailedPartitions();
         var cursor = await aggregation.ToCursorAsync();
         return cursor.ToList();
     }
@@ -152,13 +96,23 @@ public class MongoDBObserverStorage : IObserverStorage
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
-    IAggregateFluent<ObserverInformation> CreateObserverInformationAggregation() => Collection
-                .Aggregate()
-                .Lookup(
-                    CollectionNames.FailedPartitions,
-                    new ExpressionFieldDefinition<ObserverState>((ObserverState _) => _.ObserverId),
-                    new ExpressionFieldDefinition<FailedPartition>((FailedPartition _) => _.ObserverId),
-                    new ExpressionFieldDefinition<ObserverInformation>((ObserverInformation _) => _.FailedPartitions));
+    void HandleChangesForObservers(IChangeStreamCursor<ChangeStreamDocument<ObserverState>> cursor, List<ObserverInformation> observers)
+    {
+        foreach (var changedObserver in cursor.Current.Select(_ => _.FullDocument))
+        {
+            var observerInformation = ToObserverInformation(changedObserver);
+            var observer = observers.Find(_ => _.ObserverId == changedObserver.Id);
+            if (observer is not null)
+            {
+                var index = observers.IndexOf(observer);
+                observers[index] = observerInformation;
+            }
+            else
+            {
+                observers.Add(observerInformation);
+            }
+        }
+    }
 
     ObserverInformation ToObserverInformation(ObserverState state) => new(
         state.ObserverId,
