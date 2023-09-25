@@ -5,11 +5,11 @@ using Aksio.Cratis.Identities;
 
 namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.when_getting_single_by_id;
 
-public class and_it_does_not_exist : given.no_identities_registered
+public class and_it_is_of_type_not_set : given.no_identities_registered
 {
     Identity result;
 
-    async Task Because() => result = await store.GetSingleFor(Guid.NewGuid());
+    async Task Because() => result = await store.GetSingleFor(IdentityId.NotSet);
 
-    [Fact] void should_be_an_unknown_identity() => result.ShouldEqual(Identity.Unknown);
+    [Fact] void should_be_a_not_set_identity() => result.ShouldEqual(Identity.NotSet);
 }

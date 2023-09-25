@@ -72,10 +72,8 @@ public class MongoDBIdentityStore : IIdentityStore
     /// <inheritdoc/>
     public async Task<Identity> GetSingleFor(IdentityId identityId)
     {
-        if (!await HasFor(identityId))
-        {
-            throw new UnknownIdentityIdentifier(identityId);
-        }
+        if (identityId == IdentityId.NotSet) return Identity.NotSet;
+        if (!await HasFor(identityId)) return Identity.Unknown;
 
         return _identitiesByIdentityId[identityId];
     }
