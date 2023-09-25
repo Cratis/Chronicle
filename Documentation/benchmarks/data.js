@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1695039165205,
+  "lastUpdate": 1695647729154,
   "repoUrl": "https://github.com/aksio-insurtech/Cratis",
   "entries": {
     "Cratis Benchmarks": [
@@ -356,6 +356,126 @@ window.BENCHMARK_DATA = {
             "value": 5531212677.3,
             "unit": "ns",
             "range": "± 646818456.6425856"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "einari@me.com",
+            "name": "Einar Ingebrigtsen",
+            "username": "einari"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a52634d4b467aba99af52f38eb8188d0075e5f28",
+          "message": "Merge pull request #968 from aksio-insurtech:fix/graceful-identities\n\nFallback to NotSet or Unknown for identity, instead of throwing an exception",
+          "timestamp": "2023-09-25T15:07:46+02:00",
+          "tree_id": "b596bc57c3e3828043a9b7db1b03bafe8090c567",
+          "url": "https://github.com/aksio-insurtech/Cratis/commit/a52634d4b467aba99af52f38eb8188d0075e5f28"
+        },
+        "date": 1695647729070,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvent.Single",
+            "value": 20924644.1,
+            "unit": "ns",
+            "range": "± 2809919.8076816457"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 65103813.4,
+            "unit": "ns",
+            "range": "± 6591435.709154927"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 73563746.8,
+            "unit": "ns",
+            "range": "± 9946197.628540251"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 44130030.8,
+            "unit": "ns",
+            "range": "± 2042033.8632387398"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 10)",
+            "value": 51690487.2,
+            "unit": "ns",
+            "range": "± 1610209.476556996"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 10)",
+            "value": 63799769.7,
+            "unit": "ns",
+            "range": "± 7887825.347809018"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 466692631.1,
+            "unit": "ns",
+            "range": "± 14159980.126204144"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 608328414.4,
+            "unit": "ns",
+            "range": "± 14556508.794197423"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 344379082.3,
+            "unit": "ns",
+            "range": "± 10805363.479631934"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 100)",
+            "value": 445913085.3,
+            "unit": "ns",
+            "range": "± 11684250.446994906"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 100)",
+            "value": 435552030.8,
+            "unit": "ns",
+            "range": "± 22258030.822238877"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 4221602827.125,
+            "unit": "ns",
+            "range": "± 46275391.5812317"
+          },
+          {
+            "name": "Benchmarks.Observation.HandlingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 5490077434.9,
+            "unit": "ns",
+            "range": "± 593754386.4014739"
+          },
+          {
+            "name": "Benchmarks.Projections.ProjectingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 3247803040.285714,
+            "unit": "ns",
+            "range": "± 25076380.846968636"
+          },
+          {
+            "name": "Benchmarks.Reducers.ReducingEvents.InSequence(NumberOfEvents: 1000)",
+            "value": 4196972670.5,
+            "unit": "ns",
+            "range": "± 2511719.8410950876"
+          },
+          {
+            "name": "Benchmarks.EventSequences.AppendingEvents.WithAppendMany(NumberOfEvents: 1000)",
+            "value": 3718193630.3,
+            "unit": "ns",
+            "range": "± 374808504.9854404"
           }
         ]
       }
