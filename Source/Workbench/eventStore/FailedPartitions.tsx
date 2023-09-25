@@ -132,7 +132,7 @@ export const FailedPartitions = () => {
                             label="Tenant"
                             autoWidth
                             value={selectedTenant?.id || ''}
-                            onChange={e => tenantChanged(tenants.data.find(_ => _.id == e.target.value))}>
+                            onChange={e => tenantChanged(tenants.data.find(_ => _.id == e.target.value)!)}>
 
                             {tenants.data.map(tenant => {
                                 return (

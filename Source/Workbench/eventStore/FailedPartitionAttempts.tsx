@@ -29,7 +29,7 @@ export const FailedPartitionAttempts = (props: FailedPartitionAttemptsProps) => 
 
                         {props.failedPartition.attempts.map(attempt => {
                             return (
-                                <MenuItem key={attempt.occurred} value={attempt.occurred}>{attempt.occurred.toLocaleString()}</MenuItem>
+                                <MenuItem key={attempt.occurred.toString()} value={attempt.occurred.toString()}>{attempt.occurred.toLocaleString()}</MenuItem>
                             );
                         })}
                     </Select>

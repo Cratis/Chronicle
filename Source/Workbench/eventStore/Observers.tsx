@@ -71,7 +71,7 @@ const columns: GridColDef[] = [
         headerName: 'Failures',
         field: 'failedPartitions',
         width: 200,
-        renderCell: (params: GridValueGetterParams<ObserverInformation>) => {
+        renderCell: (params) => {
             return (
                 <>
                     {params.row.failedPartitions.length > 0 &&
