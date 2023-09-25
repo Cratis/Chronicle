@@ -42,6 +42,7 @@ public class Storage
         {
             Shared = new StorageTypes
             {
+                ["readModels"] = Cluster,
                 ["eventStore"] = Cluster,
             },
             Tenants = new()
