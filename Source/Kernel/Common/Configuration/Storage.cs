@@ -37,6 +37,12 @@ public class Storage
             Tenants = new()
         };
 
+        Microservices[MicroserviceId.Unspecified].Tenants[TenantId.NotSet.ToString()] = new StorageTypes
+        {
+            ["readModels"] = Cluster,
+            ["eventStore"] = Cluster
+        };
+
         Microservices[MicroserviceId.Kernel].Tenants[TenantId.NotSet.ToString()] = new StorageTypes
         {
             ["readModels"] = Cluster,
