@@ -5,6 +5,7 @@ using Aksio.Collections;
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Client;
 using Aksio.Cratis.Compliance;
+using Aksio.Cratis.Compliance.GDPR;
 using Aksio.Cratis.Configuration;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
@@ -208,6 +209,7 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<IClientProjections, ClientProjections>()
             .AddSingleton<IRulesProjections, RulesProjections>()
             .AddSingleton<ICausationManager, CausationManager>()
+            .AddSingleton<PIIMetadataProvider>()
             .AddSingleton(typeof(IIdentityProvider), _identityProviderType)
             .AddSingleton<IRules, Rules.Rules>()
             .AddTransient<ClientObservers>()
