@@ -37,6 +37,16 @@ public class Storage
             Tenants = new()
         };
 
+        // We add unspecified for supporting single tenant scenarios
+        Microservices[MicroserviceId.Unspecified] = new()
+        {
+            Shared = new StorageTypes
+            {
+                ["eventStore"] = Cluster,
+            },
+            Tenants = new()
+        };
+
         Microservices[MicroserviceId.Unspecified].Tenants[TenantId.NotSet.ToString()] = new StorageTypes
         {
             ["readModels"] = Cluster,
