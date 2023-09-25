@@ -10,11 +10,12 @@ import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences'
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/applications/queries';
 import { useRouteParams } from './RouteParams';
-import { Box, Button, Divider, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
+import { Box, Button, Divider, Drawer, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
-import { Label } from '@mui/icons-material';
 import * as icons from '@mui/icons-material';
 import { RetryPartition } from 'API/events/store/observers/RetryPartition';
+import { GetObservers } from 'API/events/store/observers/GetObservers';
+import { FailedPartitionAttempts } from './FailedPartitionAttempts';
 
 let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
@@ -31,8 +32,11 @@ const columns: GridColDef[] = [
     },
     {
         headerName: 'Attempts',
-        field: 'numberOfAttemptsOnSinceInitialized',
-        width: 100
+        field: 'attempts',
+        width: 100,
+        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+            return params.row.attempts.length;
+        }
     },
     {
         headerName: 'Partition',
@@ -41,8 +45,12 @@ const columns: GridColDef[] = [
     },
     {
         headerName: 'Sequence Number',
-        field: 'currentError',
-        width: 120
+        field: 'sequenceNumber',
+        width: 120,
+        valueGetter: (params: GridValueGetterParams<FailedPartition>) => {
+            return params.row.attempts[params.row.attempts.length - 1].sequenceNumber;
+        }
+
     },
     {
         headerName: 'Occurred',
@@ -63,6 +71,10 @@ export const FailedPartitions = () => {
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
     const [selectedFailedPartition, setSelectedFailedPartition] = useState<FailedPartition>();
+    const [observers, setObserversQuery] = GetObservers.use({
+        microserviceId: microserviceId,
+        tenantId: selectedTenant?.id ?? undefined!
+    });
 
     const [failedPartitions] = AllFailedPartitions.use({
         microserviceId: microserviceId,
@@ -75,6 +87,14 @@ export const FailedPartitions = () => {
         }
     }, [tenants.data]);
 
+    const tenantChanged = (tenant: TenantInfo) => {
+        setSelectedTenant(tenant);
+        setObserversQuery({
+            microserviceId: microserviceId,
+            tenantId: tenant.id
+        });
+    }
+
     const closePanel = () => {
         setSelectedFailedPartition(undefined);
     };
@@ -85,6 +105,20 @@ export const FailedPartitions = () => {
             setSelectedFailedPartition(selectedItems[0]);
         }
     };
+
+    for (const partition of failedPartitions.data) {
+        const observer = observers.data.find(_ => _.observerId == partition.observerId);
+        if (observer) {
+            (partition as any).observerName = observer.name;
+        }
+    }
+
+    useEffect(() => {
+        console.log("Now we have observers", observers.data.length);
+
+    }, [observers.data])
+
+    const observerForSelectedPartition = observers.data.find(_ => _.observerId == selectedFailedPartition?.observerId)!
 
     return (
         <>
@@ -98,7 +132,7 @@ export const FailedPartitions = () => {
                             label="Tenant"
                             autoWidth
                             value={selectedTenant?.id || ''}
-                            onChange={e => setSelectedTenant(tenants.data.find(_ => _.id == e.target.value))}>
+                            onChange={e => tenantChanged(tenants.data.find(_ => _.id == e.target.value))}>
 
                             {tenants.data.map(tenant => {
                                 return (
@@ -110,53 +144,39 @@ export const FailedPartitions = () => {
 
                     {selectedFailedPartition &&
                         <Button
-                        startIcon={<icons.RestartAlt />}
-                        onClick={() => {
-                            setRetryCommandValues({
-                                observerId: selectedFailedPartition.observerId,
-                                microserviceId: microserviceId,
-                                tenantId: selectedTenant?.id,
-                                partitionId: selectedFailedPartition.partition,
-                            });
-                            retryCommand.execute();
-                        }}>Retry</Button>
+                            startIcon={<icons.RestartAlt />}
+                            onClick={() => {
+                                setRetryCommandValues({
+                                    observerId: selectedFailedPartition.observerId,
+                                    microserviceId: microserviceId,
+                                    tenantId: selectedTenant?.id,
+                                    partitionId: selectedFailedPartition.partition,
+                                });
+                                retryCommand.execute();
+                            }}>Retry</Button>
                     }
                 </Toolbar>
 
                 <Box sx={{ height: '100%', flex: 1 }}>
-                    <Grid container spacing={2} sx={{ height: '100%' }}>
-                        <Grid item xs={8}>
-                            <DataGrid
-                                columns={columns}
-                                filterMode="client"
-                                sortingMode="client"
-                                getRowId={row => row.id}
-                                rows={failedPartitions.data}
-                                onRowSelectionModelChange={failedPartitionSelected}
-                            />
-                        </Grid>
-                        <Grid item xs={4}>
-                            <Box>
-                                <Typography variant='h5'>Details</Typography>
-                                {selectedFailedPartition &&
-                                    <>
-
-                                        {/* <Typography variant='h6'>{selectedFailedPartition?.observerName}</Typography> */}
-                                        <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
-                                            <TextField label='Occurred' disabled
-                                                defaultValue={(selectedFailedPartition?.attempts[0].occurred || new Date()).toISOString().toLocaleString()} />
-                                        </FormControl>
-                                        <Label>Messages</Label>
-                                        {
-                                            (selectedFailedPartition?.attempts[0].messages) && selectedFailedPartition.attempts[0].messages.map((value, index) => <TextField key={index} disabled defaultValue={value.toString()} title={value.toString()} />)
-                                        }
-                                        <FormControl size='small' sx={{ m: 1, minWidth: '90%' }}>
-                                            <TextField label="Stack Trace" disabled defaultValue={selectedFailedPartition?.attempts[0].stackTrace} multiline title={selectedFailedPartition?.attempts[0].stackTrace.toString()} />
-                                        </FormControl>
-                                    </>}
-                            </Box>
-                        </Grid>
-                    </Grid>
+                    <DataGrid
+                        columns={columns}
+                        filterMode="client"
+                        sortingMode="client"
+                        getRowId={row => row.id}
+                        rows={failedPartitions.data}
+                        onRowSelectionModelChange={failedPartitionSelected}
+                    />
+                    <Drawer
+                        anchor="right"
+                        open={selectedFailedPartition != undefined} onClose={closePanel}
+                        sx={{
+                            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 500 },
+                        }}>
+                        <div style={{ padding: '24px' }}>
+                            <Typography variant='h5'>Details</Typography>
+                            {selectedFailedPartition && <FailedPartitionAttempts failedPartition={selectedFailedPartition} observer={observerForSelectedPartition} />}
+                        </div>
+                    </Drawer>
                 </Box>
             </Stack>
         </>

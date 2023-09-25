@@ -9,7 +9,7 @@ import { AllObserversArguments } from 'API/events/store/observers/AllObservers';
 import { ObserverInformation } from 'API/events/store/observers/ObserverInformation';
 import { Replay } from 'API/events/store/observers/Replay';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
-import { Box, Button, Divider, FormControl, InputLabel, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
+import { Box, Button, Divider, FormControl, InputLabel, Link, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
 import { useRouteParams } from './RouteParams';
 import * as icons from '@mui/icons-material';
 
@@ -66,6 +66,24 @@ const columns: GridColDef[] = [
         headerName: 'Next Event',
         field: 'nextEventSequenceNumber',
         width: 200,
+    },
+    {
+        headerName: 'Failures',
+        field: 'failedPartitions',
+        width: 200,
+        renderCell: (params: GridValueGetterParams<ObserverInformation>) => {
+            return (
+                <>
+                    {params.row.failedPartitions.length > 0 &&
+                        <Link href="#" onClick={(e) => {
+                            e.preventDefault();
+                            alert('hello')
+                        }
+                        }>{params.row.failedPartitions.length}</Link>
+                    }
+                </>
+            )
+        }
     },
 ];
 
