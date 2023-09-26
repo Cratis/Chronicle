@@ -1,24 +1,7 @@
 {
     "tenants": {
-        "3352d47d-c154-4457-b3fb-8a2efb725113": {
-            "name": "development",
-            "configuration": {
-                "something": "42.42"
-            }
-        },
-        "00000000-0000-0000-0000-000000000000": {
-            "name": "None",
-            "configuration": {
-            }
-        }
     },
     "microservices": {
-        "eaf02867-79b9-4967-be67-3e93cee7c601": {
-            "name": "Bank"
-        },
-        "cd51c091-3bba-4608-87a8-93da1f88c4dd": {
-            "name": "Basic Sample"
-        }
     },
     "cluster": {
         "name": "Cratis",
@@ -40,56 +23,6 @@
             "connectionDetails": "mongodb://localhost:27017/cratis-shared"
         },
         "microservices": {
-            "eaf02867-79b9-4967-be67-3e93cee7c601": {
-                "shared": {
-                    "eventStore": {
-                        "type": "MongoDB",
-                        "connectionDetails": "mongodb://localhost:27017/bank-event-store-shared"
-                    }
-                },
-                "tenants": {
-                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
-                        "readModels": {
-                            "type": "MongoDB",
-                            "connectionDetails": "mongodb://localhost:27017/bank-dev-read-models"
-                        },
-                        "eventStore": {
-                            "type": "MongoDB",
-                            "connectionDetails": "mongodb://localhost:27017/bank-dev-event-store"
-                        }
-                    }
-                }
-            },
-            "cd51c091-3bba-4608-87a8-93da1f88c4dd": {
-                "shared": {
-                    "eventStore": {
-                        "type": "MongoDB",
-                        "connectionDetails": "mongodb://localhost:27017/basic-event-store-shared"
-                    }
-                },
-                "tenants": {
-                    "00000000-0000-0000-0000-000000000000": {
-                        "readModels": {
-                            "type": "MongoDB",
-                            "connectionDetails": "mongodb://localhost:27017/basic-dev-read-models"
-                        },
-                        "eventStore": {
-                            "type": "MongoDB",
-                            "connectionDetails": "mongodb://localhost:27017/basic-dev-event-store"
-                        }
-                    },
-                    "3352d47d-c154-4457-b3fb-8a2efb725113": {
-                        "readModels": {
-                            "type": "MongoDB",
-                            "connectionDetails": "mongodb://localhost:27017/basic-dev-read-models"
-                        },
-                        "eventStore": {
-                            "type": "MongoDB",
-                            "connectionDetails": "mongodb://localhost:27017/basic-dev-event-store"
-                        }
-                    }
-                }
-            }
         }
     }
 }

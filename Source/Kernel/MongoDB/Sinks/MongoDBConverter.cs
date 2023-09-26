@@ -161,6 +161,12 @@ public class MongoDBConverter : IMongoDBConverter
             return input.ToBsonValue(targetType);
         }
 
+        var bsonValue = input.ToBsonValue();
+        if (bsonValue != BsonNull.Value)
+        {
+            return bsonValue;
+        }
+
         if (input is IEnumerable enumerable)
         {
             var items = new List<BsonValue>();

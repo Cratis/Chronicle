@@ -144,6 +144,12 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return document;
         }
 
+        var bsonValue = value.ToBsonValue();
+        if (bsonValue != BsonNull.Value)
+        {
+            return bsonValue;
+        }
+
         if (value is IEnumerable enumerable)
         {
             var array = new BsonArray();
@@ -156,7 +162,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return array;
         }
 
-        return value.ToBsonValue();
+        return BsonNull.Value;
     }
 
     object? ConvertUnknownSchemaTypeToClrType(BsonValue value)
