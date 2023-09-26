@@ -6,7 +6,7 @@ using Aksio.Cratis.Kernel.Grains.Jobs;
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
-/// Represents a job for replaying a partition.
+/// Represents a job for replaying an observer.
 /// </summary>
 public class ReplayJob : Job
 {

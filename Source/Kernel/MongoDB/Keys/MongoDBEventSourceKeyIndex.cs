@@ -26,7 +26,7 @@ public class MongoDBEventSourceKeyIndex : IObserverKeyIndex
     public Task Add(Key key) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task<IObserverKeys> GetKeysFor()
+    public async Task<IObserverKeys> GetKeys()
     {
         var cursor = await _collection.DistinctAsync(_ => _.EventSourceId, _ => true);
         return new MongoDBObserverKeys(null!);

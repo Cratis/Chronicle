@@ -12,7 +12,7 @@ public interface IObserverKeyIndex
     /// Get the keys for a specific microservice and tenant.
     /// </summary>
     /// <returns>All the <see cref="IObserverKeys"/>.</returns>
-    Task<IObserverKeys> GetKeysFor();
+    Task<IObserverKeys> GetKeys();
 
     /// <summary>
     /// Add a key to the index.
