@@ -324,9 +324,18 @@ Doing the same using [Postman](https://www.postman.com):
 
 ![](./postman-add-cart.png)
 
-By opening your tool of choice for working with the MongoDB server, you should now be able to
+Embedded together with the Cratis Kernel comes the Cratis Workbench. This is accessible by
+navigating the browser to the exposed port (8080). In the workbench you'll be able to work
+with the Cratis Kernel, view its content and configuration.
+
+Open up a browser and navigate it to http://localhost:8080 and follow the following steps:
+
+![](./workbench-view-event.png)
+
+To view the actual data that was produced, you can do so by opening your tool of choice for working with the MongoDB server, you should now be able to
 see an instance of a `Cart` with one `CartItem` on it. The `carts` collection will be in the
 `cratis-shared` database.
+
 
 ![](./mongodb-read-model.png)
 
