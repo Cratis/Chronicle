@@ -1,18 +1,27 @@
 # [v9.4.7] - 2023-9-25 [PR: #0]()
 
-No release notes
+### Fixed
+
+- Setting the default storage config for unspecified microservice and tenant scenarios.
 
 # [v9.4.6] - 2023-9-25 [PR: #0]()
 
-No release notes
+### Fixed
+
+- Adding unspecified microservice config for when microservice is unspecified.
+
 
 # [v9.4.5] - 2023-9-25 [PR: #0]()
 
-No release notes
+### Fixed
+
+- Adding unspecified tenant config for single tenant scenarios.
 
 # [v9.4.4] - 2023-9-25 [PR: #0]()
 
-No release notes
+### Fixed
+
+- Fixing so that the `PIIMetadataProvider` get registered correctly with the IoC by the `ClientBuilder`.
 
 # [v9.4.2] - 2023-9-18 [PR: #964](https://github.com/aksio-insurtech/Cratis/pull/964)
 
