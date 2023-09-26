@@ -336,3 +336,5 @@ Congratulations 🎉 you have produced your first end to end **event** to **read
 
 This is a fairly simple sample, we recommend reading more in our [recipes](../recipes/).
 For more complex configuration options, head over [here](../configuration/).
+If you want to use something like Docker Compose to run things, you can find a recipe for
+that [here](../recipes/docker-compose.md).
