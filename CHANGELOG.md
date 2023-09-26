@@ -1,3 +1,11 @@
+# [v9.4.8] - 2023-9-26 [PR: #970](https://github.com/aksio-insurtech/Cratis/pull/970)
+
+### Fixed
+
+- Fixing so that primitives are directly by the sink before it considers whether or not it is an enumerable. We saw it outputting strings into MongoDB collections as an array of characters.
+- Making sure the single tenancy scenario is dealt with properly throughout config and startup. This will be improved even further in a future version of Cratis.
+
+
 # [v9.4.7] - 2023-9-25 [PR: #0]()
 
 ### Fixed
