@@ -13,6 +13,12 @@ To work with Cratis you'll need the following installed:
 - [Docker](https://docs.docker.com/engine/install/)
 - [.NET 6.0 or better](https://dotnet.microsoft.com/en-us/download)
 
+
+Also recommend database tools to be able to see what is happening in the database:
+
+- [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
+- [MongoDB for VSCode](https://www.mongodb.com/products/tools/vs-code)
+
 ## Setup
 
 After making sure you have the prerequisites in place, you need to
@@ -38,11 +44,18 @@ This should yield something like the following:
 e04e1c02819a96ae3f85a2b4579cb1cab8623625fc272ece857ef37397dcd322
 ```
 
+The **development** image of Cratis comes with a built in MongoDB instance.
+For production workloads you would typically use the regular image.
+All Cratis images can be found [here](https://hub.docker.com/r/aksioinsurtech/cratis).
+
 > Note: Cratis is as of version 9.4.3 using an HTTP based protocol. This requires the
 > Cratis server to be able to call the client using HTTP as well. Therefor we add the
 > `--add-host` option to the `docker run`. This is only for localhost scenarios.
 > The client communicates to the server where the client is located, based on configuration
-> ASP.NET Core exposes.
+> ASP.NET Core exposes. This will be changed to gRPC in a future version of Cratis.
+
+Now that you have the server running, its time to create the client and
+start working with Cratis.
 
 ### Client
 
@@ -128,6 +141,9 @@ We recommend using a `record`, as that gives you an immutable type. Events are
 not be changed in any way, they represent a state change that happened to your
 system.
 
+> Note: You can read more about what we typically think of what an event is and how you
+> can name them [here](../concepts/event.md)
+
 Lets add an event type called `ItemAddedToCart` by adding a file called `ItemAddedToCart.cs`.
 Add the following to it:
 
@@ -140,10 +156,33 @@ namespace ECommerce;
 public record ItemAddedToCart(string ItemId, int Quantity);
 ```
 
-The event needs to have a unique identifier.
-
+The event needs to have a unique identifier. This helps on identifying the event uniquely in the
+system without having to rely on the .NET typename. This also means you can rename the event at
+any time and it will by the Cratis Kernel be identified as the same event.
 
 ## Turning into read model
+
+All systems need to be able to show the current state. In the context of event sourcing and specifically
+Cratis, we refer to this state as read models. Events are not necessarily the best way
+to show what a systems current state is. Therefor you typically want to transform the events
+into more digestible data (**read models**) that you can present a user or make available through an API.
+
+In Cratis you can do this in multiple ways, but in this tutorial we will focus on what is called
+a `Reducer`.
+
+> Note: Documentation on more ways of observing events and projecting to read state will come soon.
+
+A reducer specifies with its content what events it is interested in, you can view this as a
+**map** stage. The reducer then is responsible to define what the state should look like given
+the event it is passed. The reducer then typically looks at the current state of a **read model**,
+if any, and then makes changes to the model and returns the result.
+
+Cratis will then figure out what has changed and perform an optimal update towards the target
+database.
+
+> Note: MongoDB is the only database supported at this stage. This will be expanded on.
+
+First you will need a **read model**. Create a file called `Cart.cs` and add the following to it:
 
 ```csharp
 namespace ECommerce;
@@ -152,6 +191,11 @@ public record Cart(string Id, IEnumerable<CartItem> Items);
 public record CartItem(string ItemId, int Quantity);
 ```
 
+The code introduces a **read model** called `Cart` which can then hold multiple `CartItems`.
+The `Cart` is typically something you display to a user in an e-commerce solution.
+
+With the **read model** in place, we can move on to creating the actual reducer.
+Create a file called `CartReducer.cs` and add the following code to it:
 
 ```csharp
 using Aksio.Cratis.Events;
@@ -174,6 +218,27 @@ public class CartReducer : IReducerFor<Cart>
 }
 ```
 
+The code implements the `IReducerFor<>` interface, specifying the `Cart` as the **read model**
+the **reducer** is for. The interface itself is just a marker interface and helps the system
+know what the reducer is for. Within the **reducer** you add methods that represent the
+different events you want to *map* and *reduce* from.
+
+Cratis uses a discovery mechanism that looks for specific method signatures. The signatures are:
+
+```csharp
+public Task<TReadModel> {MethodName}(TEvent event, TReadModel? initial, EventContext context);
+public Task<TReadModel> {MethodName}(TEvent event, TReadModel? initial);
+public TReadModel {MethodName}(TEvent event, TReadModel? current, EventContext context);
+public TReadModel {MethodName}(TEvent event, TReadModel? current);
+```
+
+The `EventContext` is optional, and its also optional whether or not you want it to be asynchronous.
+If there already is an instance of the **read model**, you will get that passed to you, otherwise
+this will be null.
+
+> Note: Cratis resolves the key to the **read model** by using what is known as the [event source id](../concepts/event-source.md).
+> This is somewhat limiting and Cratis will in a future version support custom defined keys defined by the observer (e.g. reducer) itself.
+
 Since Cratis uses the configured service container to resolve instances, it relies on there
 being a registration of the `CartReducer`. By default, ASP.NET Core does not discover any
 types and automatically register them, so you have to manually register it with the `Services`.
@@ -183,6 +248,8 @@ Add the following line after the first `app.UseCratis()`.
 ```csharp
 builder.Services.AddTransient<CartReducer>();
 ```
+
+With all this in place, you're now ready to start producing and appending events.
 
 ## Appending the event
 
@@ -256,3 +323,16 @@ Server: Kestrel
 Doing the same using [Postman](https://www.postman.com):
 
 ![](./postman-add-cart.png)
+
+By opening your tool of choice for working with the MongoDB server, you should now be able to
+see an instance of a `Cart` with one `CartItem` on it. The `carts` collection will be in the
+`cratis-shared` database.
+
+![](./mongodb-read-model.png)
+
+Congratulations 🎉 you have produced your first end to end **event** to **read model** flow.
+
+## Whats next
+
+This is a fairly simple sample, we recommend reading more in our [recipes](../recipes/).
+For more complex configuration options, head over [here](../configuration/).
