@@ -12,3 +12,4 @@ This section contains different recipes for different aspects of Cratis:
 | [Appending an event to the outbox](./appending-an-event-to-outbox.md) | How to append an event to the event log |
 | [Observing events in the inbox](./observing-events-in-inbox.md) | How to observe and react to events that are appended to the inbox |
 | [Extending Rules](./rules/extending-rules.md) | How to create your own custom rules to be applied in your domain. |
+| [Docker Compose](./docker-compose.md) | How to use docker compose with Cratis. |

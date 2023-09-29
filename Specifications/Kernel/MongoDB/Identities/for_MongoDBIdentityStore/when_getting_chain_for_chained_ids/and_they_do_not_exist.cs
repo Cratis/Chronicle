@@ -7,9 +7,9 @@ namespace Aksio.Cratis.Kernel.MongoDB.Identities.for_MongoDBIdentityStore.when_g
 
 public class and_they_do_not_exist : given.no_identities_registered
 {
-    Exception exception;
+    Identity result;
 
-    async Task Because() => exception = await Catch.Exception(async () => await store.GetFor(new[] { IdentityId.New(), IdentityId.New() }.AsEnumerable()));
+    async Task Because() => result = await store.GetFor(new[] { IdentityId.New(), IdentityId.New() }.AsEnumerable());
 
-    [Fact] void should_throw_unknown_identity_identifier() => exception.ShouldBeOfExactType<UnknownIdentityIdentifier>();
+    [Fact] void should_be_an_unknown_identity_with_unknown_behalf_of() => result.ShouldEqual(Identity.Unknown with { OnBehalfOf = Identity.Unknown });
 }

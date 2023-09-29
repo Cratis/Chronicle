@@ -55,6 +55,12 @@ public class EventSequenceCaches : IEventSequenceCaches
         {
             foreach (var (tenantId, _) in _configuration.Tenants)
             {
+                if (!_configuration.Storage.Microservices.ContainsKey(microserviceId) ||
+                    !_configuration.Storage.Microservices.Get(microserviceId).Tenants.ContainsKey(tenantId))
+                {
+                    continue;
+                }
+
                 tasks.Add(GetFor(microserviceId, tenantId, EventSequenceId.Log).PrimeWithTailWindow());
             }
         }

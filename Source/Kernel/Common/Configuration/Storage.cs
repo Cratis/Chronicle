@@ -37,11 +37,25 @@ public class Storage
             Tenants = new()
         };
 
-        Microservices[MicroserviceId.Kernel].Tenants[TenantId.NotSet.ToString()] = new StorageTypes
+        // We add unspecified for supporting single tenant scenarios
+        Microservices[MicroserviceId.Unspecified] = new()
         {
-            ["readModels"] = Cluster,
-            ["eventStore"] = Cluster
+            Shared = new StorageTypes
+            {
+                ["readModels"] = Cluster,
+                ["eventStore"] = Cluster,
+            },
+            Tenants = new()
         };
+
+        foreach (var microservice in Microservices)
+        {
+            microservice.Value.Tenants[TenantId.NotSet.ToString()] = new StorageTypes
+            {
+                ["readModels"] = Cluster,
+                ["eventStore"] = Cluster
+            };
+        }
 
         foreach (var tenant in tenants)
         {
