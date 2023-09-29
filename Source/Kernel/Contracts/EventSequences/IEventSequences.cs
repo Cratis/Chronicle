@@ -1,14 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.ServiceModel;
+using ProtoBuf.Grpc.Configuration;
 
 namespace Aksio.Cratis.Kernel.Contracts.EventSequences;
 
 /// <summary>
 /// Defines the contract for working with event sequences.
 /// </summary>
-[ServiceContract]
+[Service]
 public interface IEventSequences
 {
     /// <summary>
@@ -16,6 +16,6 @@ public interface IEventSequences
     /// </summary>
     /// <param name="request">The <see cref="AppendRequest"/>.</param>
     /// <returns>The <see cref="AppendResponse"/>.</returns>
-    [OperationContract]
+    [Operation]
     Task<AppendResponse> Append(AppendRequest request);
 }

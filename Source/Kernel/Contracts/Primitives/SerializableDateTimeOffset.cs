@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Runtime.Serialization;
+using ProtoBuf;
 
 namespace Aksio.Cratis.Kernel.Contracts.Primitives;
 
@@ -11,19 +11,19 @@ namespace Aksio.Cratis.Kernel.Contracts.Primitives;
 /// <remarks>
 /// Based on implementation found here: https://stackoverflow.com/a/68572913/26049.
 /// </remarks>
-[DataContract]
+[ProtoContract]
 public class SerializableDateTimeOffset
 {
     /// <summary>
     /// Gets or sets the Utc ticks.
     /// </summary>
-    [DataMember(Order = 1)]
+    [ProtoMember(1)]
     public long Ticks { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC offset in minutes.
     /// </summary>
-    [DataMember(Order = 2)]
+    [ProtoMember(2)]
     public double OffsetMinutes { get; set; }
 
     /// <summary>
