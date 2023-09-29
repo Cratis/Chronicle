@@ -1,3 +1,10 @@
+# [v9.5.0] - 2023-9-29 [PR: #974](https://github.com/aksio-insurtech/Cratis/pull/974)
+
+### Added
+
+- Exposing functionality for getting available reducers and also getting a reducer by its Clr type and get a type by the reducer Id.
+
+
 # [v9.4.8] - 2023-9-26 [PR: #970](https://github.com/aksio-insurtech/Cratis/pull/970)
 
 ### Fixed
