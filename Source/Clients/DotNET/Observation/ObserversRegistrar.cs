@@ -118,7 +118,7 @@ public class ObserversRegistrar : IObserversRegistrar
     {
         if (!_handlers.ContainsKey(observerType))
         {
-            throw new TypeIsNotAnObserver(observerType);
+            throw new UnknownObserverType(observerType);
         }
     }
 }

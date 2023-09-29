@@ -5,6 +5,7 @@ using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Models;
+using Aksio.Cratis.Observation;
 using Aksio.Cratis.Observation.Reducers;
 using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
@@ -77,7 +78,30 @@ public class ReducersRegistrar : IReducersRegistrar
     }
 
     /// <inheritdoc/>
-    public IReducerHandler GetById(ReducerId id) => _handlers.Values.SingleOrDefault(_ => _.ReducerId == id)!;
+    public IEnumerable<IReducerHandler> GetAll() => _handlers.Values;
+
+    /// <inheritdoc/>
+    public IReducerHandler GetById(ReducerId reducerId)
+    {
+        var reducer = _handlers.Values.SingleOrDefault(_ => _.ReducerId == reducerId);
+        ReducerDoesNotExist.ThrowIfDoesNotExist(reducerId, reducer);
+        return reducer!;
+    }
+
+    /// <inheritdoc/>
+    public IReducerHandler GetByType(Type reducerType)
+    {
+        ThrowIfTypeIsNotAnObserver(reducerType);
+        return _handlers[reducerType];
+    }
+
+    /// <inheritdoc/>
+    public Type GetClrType(ReducerId reducerId)
+    {
+        var reducer = _handlers.SingleOrDefault(_ => _.Value.ReducerId == reducerId);
+        ReducerDoesNotExist.ThrowIfDoesNotExist(reducerId, reducer.Value);
+        return reducer.Key;
+    }
 
     /// <inheritdoc/>
     public async Task Initialize()
@@ -106,5 +130,13 @@ public class ReducersRegistrar : IReducersRegistrar
             WellKnownSinkTypes.MongoDB)).ToArray();
 
         await _connection.PerformCommand(route, registrations);
+    }
+
+    void ThrowIfTypeIsNotAnObserver(Type reducerType)
+    {
+        if (!_handlers.ContainsKey(reducerType))
+        {
+            throw new UnknownReducerType(reducerType);
+        }
     }
 }

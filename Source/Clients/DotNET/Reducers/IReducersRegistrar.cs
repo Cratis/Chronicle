@@ -17,9 +17,29 @@ public interface IReducersRegistrar
     Task Initialize();
 
     /// <summary>
+    /// Get all registered handlers.
+    /// </summary>
+    /// <returns>Collection of <see cref="IReducerHandler"/>.</returns>
+    IEnumerable<IReducerHandler> GetAll();
+
+    /// <summary>
     /// Get all registered reducers by its identifier.
     /// </summary>
-    /// <param name="id">The identifier of the reducer to get.</param>
+    /// <param name="reducerId">The identifier of the reducer to get.</param>
     /// <returns><see cref="IReducerHandler"/> instance.</returns>
-    IReducerHandler GetById(ReducerId id);
+    IReducerHandler GetById(ReducerId reducerId);
+
+    /// <summary>
+    /// Gets a specific handler by its id.
+    /// </summary>
+    /// <param name="reducerType">The reducer type to get for.</param>
+    /// <returns><see cref="IReducerHandler"/>.</returns>
+    IReducerHandler GetByType(Type reducerType);
+
+    /// <summary>
+    /// Get the CLR type for a specific reducer.
+    /// </summary>
+    /// <param name="reducerId"><see cref="ReducerId"/> to get for.</param>
+    /// <returns>The type.</returns>
+    Type GetClrType(ReducerId reducerId);
 }
