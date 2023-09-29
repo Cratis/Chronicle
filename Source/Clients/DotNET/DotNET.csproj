@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Kernel/Shared/Shared.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -13,5 +14,7 @@
       <PackageReference Include="automapper" />
       <PackageReference Include="Azure.Data.Tables" />
       <PackageReference Include="FluentValidation" />
+      <PackageReference Include="protobuf-net.Grpc" />
+      <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
 </Project>
