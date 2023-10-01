@@ -11,9 +11,15 @@ namespace Aksio.Cratis.Kernel.Contracts.Events;
 [ProtoContract]
 public class EventType
 {
+    /// <summary>
+    /// Gets or sets the unique identifier of the event type.
+    /// </summary>
     [ProtoMember(1)]
     public string Id { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the generation of the event type.
+    /// </summary>
     [ProtoMember(2)]
     public uint Generation { get; set; }
 }

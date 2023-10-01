@@ -1,7 +1,6 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Connections;
@@ -12,7 +11,7 @@ namespace Aksio.Cratis.Connections;
 [Singleton]
 public class ConnectionLifecycle : IConnectionLifecycle
 {
-    readonly IInstancesOf<IParticipateInConnectionLifecycle> _participants;
+    readonly IEnumerable<IParticipateInConnectionLifecycle> _participants;
     readonly ILogger<ConnectionLifecycle> _logger;
 
     /// <summary>
@@ -21,7 +20,7 @@ public class ConnectionLifecycle : IConnectionLifecycle
     /// <param name="participants">The participants of the client lifecycle.</param>
     /// <param name="logger">Logger for logging.</param>
     public ConnectionLifecycle(
-        IInstancesOf<IParticipateInConnectionLifecycle> participants,
+        IEnumerable<IParticipateInConnectionLifecycle> participants,
         ILogger<ConnectionLifecycle> logger)
     {
         _participants = participants;

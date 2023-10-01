@@ -22,6 +22,9 @@ public class CratisUrl
     /// <param name="connectionString">String representation of the connection string.</param>
     public CratisUrl(string connectionString)
     {
+        var uri = new Uri(connectionString);
+        var port = uri.Port == -1 ? 35000 : uri.Port;
+        ServerAddress = new CratisServerAddress(uri.Host, port);
     }
 
     /// <summary>

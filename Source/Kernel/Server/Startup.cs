@@ -27,11 +27,7 @@ public class Startup
     public void Configure(IApplicationBuilder app)
     {
         app.UseRouting();
-        app.UseEndpoints(_ =>
-        {
-            _.MapGrpcService<Services.EventSequences.EventSequences>();
-            _.MapCodeFirstGrpcReflectionService();
-        });
+        app.UseEndpoints(_ => _.MapGrpcService<Services.EventSequences.EventSequences>());
 
         app.UseWebSockets();
         app.UseCratis();

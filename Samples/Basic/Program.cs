@@ -1,12 +1,44 @@
 ﻿// Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.EventSequences;
+using Aksio.Cratis;
 using Basic;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
+var client = new CratisClient("cratis://localhost:35000");
+var eventStore = client.GetEventStore("cd51c091-3bba-4608-87a8-93da1f88c4dd");
+await eventStore.EventLog.Append(
+    "299681c4-f100-4dea-bfea-633115349ed1",
+    new ItemAddedToCart(
+        new(Guid.NewGuid()),
+        new(Guid.NewGuid()),
+        1));
+
+// GrpcClientFactory.AllowUnencryptedHttp2 = true;
+// using var channel = GrpcChannel.ForAddress("http://localhost:35000");
+// var eventSequences = channel.CreateGrpcService<IEventSequences>();
+// var result = await eventSequences.Append(new()
+// {
+//     MicroserviceId = Guid.Empty.ToString(),
+//     TenantId = Guid.Empty,
+//     EventSequenceId = EventSequenceId.Log.ToString(),
+//     EventSourceId = Guid.NewGuid().ToString(),
+//     Content = "{}",
+//     Causation = Enumerable.Empty<Causation>(),
+//     EventType = new()
+//     {
+//         Id = "123",
+//         Generation = 1
+//     },
+//     Identity = new()
+//     {
+//         Subject = "123",
+//         Name = "Horse",
+//         UserName = "horse"
+//     }
+// });
+
+
+/*
 var builder = WebApplication.CreateBuilder(args);
 //builder.UseCratis();
 builder.UseCratis(_ => _
@@ -28,3 +60,4 @@ app.MapGet("/add", () =>
 app.UseCratis();
 
 app.Run();
+*/
