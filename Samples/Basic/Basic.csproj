@@ -7,6 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Source\Clients\AspNetCore\AspNetCore.csproj" />
+        <ProjectReference Include="..\..\Source\Clients\DotNET\DotNET.csproj" />
     </ItemGroup>
 </Project>

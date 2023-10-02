@@ -14,31 +14,6 @@ await eventStore.EventLog.Append(
         new(Guid.NewGuid()),
         1));
 
-// GrpcClientFactory.AllowUnencryptedHttp2 = true;
-// using var channel = GrpcChannel.ForAddress("http://localhost:35000");
-// var eventSequences = channel.CreateGrpcService<IEventSequences>();
-// var result = await eventSequences.Append(new()
-// {
-//     MicroserviceId = Guid.Empty.ToString(),
-//     TenantId = Guid.Empty,
-//     EventSequenceId = EventSequenceId.Log.ToString(),
-//     EventSourceId = Guid.NewGuid().ToString(),
-//     Content = "{}",
-//     Causation = Enumerable.Empty<Causation>(),
-//     EventType = new()
-//     {
-//         Id = "123",
-//         Generation = 1
-//     },
-//     Identity = new()
-//     {
-//         Subject = "123",
-//         Name = "Horse",
-//         UserName = "horse"
-//     }
-// });
-
-
 /*
 var builder = WebApplication.CreateBuilder(args);
 //builder.UseCratis();
