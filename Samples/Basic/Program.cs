@@ -8,11 +8,11 @@ using var client = new CratisClient("cratis://localhost:35000");
 var eventStore = client.GetEventStore("cd51c091-3bba-4608-87a8-93da1f88c4dd");
 await eventStore.Observers.RegisterKnownObservers();
 await eventStore.EventLog.Append(
-    "299681c4-f100-4dea-bfea-633115349ed1",
+    eventSourceId: Guid.NewGuid(),
     new ItemAddedToCart(
-        new(Guid.NewGuid()),
-        new(Guid.NewGuid()),
-        1));
+        PersonId: new(Guid.NewGuid()),
+        MaterialId: new(Guid.NewGuid()),
+        Quantity: 1));
 
 /*
 var builder = WebApplication.CreateBuilder(args);
