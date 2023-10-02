@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.7" />
     <PackageVersion Include="docfx.console" Version="2.59.3" />
-    <PackageVersion Include="Aksio.Fundamentals" Version="1.5.1" />
+    <PackageVersion Include="Aksio.Fundamentals" Version="1.5.2" />
     <PackageVersion Include="Aksio.MongoDB" Version="1.0.18" />
     <PackageVersion Include="Aksio.Applications" Version="$(ApplicationModel)" />
     <PackageVersion Include="Aksio.Applications.CQRS" Version="$(ApplicationModel)" />
