@@ -12,19 +12,14 @@ namespace Aksio.Cratis.Observation;
 public class Observers : IObservers
 {
     readonly IEventTypes _eventTypes;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
-    public Observers(
-        IEventTypes eventTypes,
-        IExecutionContextManager executionContextManager)
+    public Observers(IEventTypes eventTypes)
     {
         _eventTypes = eventTypes;
-        _executionContextManager = executionContextManager;
     }
 
     /// <inheritdoc/>

@@ -13,10 +13,10 @@ namespace Aksio.Cratis;
 /// <summary>
 /// Represents the settings for connecting to Cratis.
 /// </summary>
-public class CratisSettings
+public class CratisOptions
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CratisSettings"/> class.
+    /// Initializes a new instance of the <see cref="CratisOptions"/> class.
     /// </summary>
     /// <param name="url"><see cref="CratisUrl"/> to use.</param>
     /// <param name="kernelConnectivity"><see cref="KernelConnectivity"/> to use.</param>
@@ -25,7 +25,7 @@ public class CratisSettings
     /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving instances of things like observers, reducers and other artifacts. Will revert to <see cref="DefaultServiceProvider"/> if not configured.</param>
     /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. If not specified, it will use the <see cref="DefaultClientArtifactsProvider"/> with both project and package referenced assemblies.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
-    public CratisSettings(
+    public CratisOptions(
         CratisUrl url,
         KernelConnectivity kernelConnectivity,
         IIdentityProvider? identityProvider = null,
@@ -79,18 +79,18 @@ public class CratisSettings
     public ILoggerFactory LoggerFactory { get; init; }
 
     /// <summary>
-    /// Create a <see cref="CratisSettings"/> from a connection string.
+    /// Create a <see cref="CratisOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
-    /// <returns>A new <see cref="CratisSettings"/>.</returns>
-    public static CratisSettings FromConnectionString(string connectionString) => FromUrl(new CratisUrl(connectionString));
+    /// <returns>A new <see cref="CratisOptions"/>.</returns>
+    public static CratisOptions FromConnectionString(string connectionString) => FromUrl(new CratisUrl(connectionString));
 
     /// <summary>
-    /// Create a <see cref="CratisSettings"/> from a <see cref="CratisUrl"/>.
+    /// Create a <see cref="CratisOptions"/> from a <see cref="CratisUrl"/>.
     /// </summary>
     /// <param name="url"><see cref="CratisUrl"/> to create from.</param>
-    /// <returns>A new <see cref="CratisSettings"/>.</returns>
-    public static CratisSettings FromUrl(CratisUrl url) =>
+    /// <returns>A new <see cref="CratisOptions"/>.</returns>
+    public static CratisOptions FromUrl(CratisUrl url) =>
         new(url, new KernelConnectivity
         {
             SingleKernel = new SingleKernelOptions()

@@ -16,7 +16,7 @@ namespace Aksio.Cratis;
 /// </summary>
 public class CratisConnection : ICratisConnection, IDisposable
 {
-    readonly CratisSettings _settings;
+    readonly CratisOptions _settings;
     readonly IConnectionLifecycle _connectionLifecycle;
     readonly ITasks _tasks;
     readonly CancellationToken _cancellationToken;
@@ -27,13 +27,13 @@ public class CratisConnection : ICratisConnection, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisConnection"/> class.
     /// </summary>
-    /// <param name="settings">The <see cref="CratisSettings"/> to use.</param>
+    /// <param name="settings">The <see cref="CratisOptions"/> to use.</param>
     /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
     /// <param name="tasks"><see cref="ITasks"/> to create tasks with.</param>
     /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public CratisConnection(
-        CratisSettings settings,
+        CratisOptions settings,
         IConnectionLifecycle connectionLifecycle,
         ITasks tasks,
         CancellationToken cancellationToken)

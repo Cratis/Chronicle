@@ -14,14 +14,12 @@ namespace Aksio.Cratis.Observation;
 [Singleton]
 public class ObserversRegistrar : IObserversRegistrar
 {
-    readonly IExecutionContextManager _executionContextManager;
     readonly ILogger<ObserversRegistrar> _logger;
     readonly IDictionary<Type, ObserverHandler> _handlers;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ObserversRegistrar"/>.
     /// </summary>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for establishing execution context.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
     /// <param name="middlewares"><see cref="IObserverMiddlewares"/> to call.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
@@ -31,7 +29,6 @@ public class ObserversRegistrar : IObserversRegistrar
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="invokerLogger">Logger for invoker.</param>
     public ObserversRegistrar(
-        IExecutionContextManager executionContextManager,
         IServiceProvider serviceProvider,
         IObserverMiddlewares middlewares,
         IEventTypes eventTypes,
@@ -56,7 +53,6 @@ public class ObserversRegistrar : IObserversRegistrar
                                         causationManager,
                                         eventSerializer);
                                 });
-        _executionContextManager = executionContextManager;
         _logger = logger;
     }
 

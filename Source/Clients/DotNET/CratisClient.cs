@@ -4,6 +4,7 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis;
@@ -13,7 +14,7 @@ namespace Aksio.Cratis;
 /// </summary>
 public class CratisClient : ICratisClient, IDisposable
 {
-    readonly CratisSettings _settings;
+    readonly CratisOptions _settings;
     readonly ICratisConnection? _connection;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
@@ -33,17 +34,19 @@ public class CratisClient : ICratisClient, IDisposable
     /// </summary>
     /// <param name="url"><see cref="CratisUrl"/> to connect with.</param>
     public CratisClient(CratisUrl url)
-        : this(CratisSettings.FromUrl(url))
+        : this(CratisOptions.FromUrl(url))
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisClient"/> class.
     /// </summary>
-    /// <param name="settings"><see cref="CratisSettings"/> to use.</param>
-    public CratisClient(CratisSettings settings)
+    /// <param name="settings"><see cref="CratisOptions"/> to use.</param>
+    /// <param name="services">Optional <see cref="Services"/> configured.</param>
+    public CratisClient(CratisOptions settings, Services? services = null)
     {
         _settings = settings;
+        services = new Services(_settings.ArtifactsProvider);
 
         _eventTypes = new EventTypes(_settings.ArtifactsProvider);
         _eventSerializer = new EventSerializer(
