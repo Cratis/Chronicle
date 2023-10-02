@@ -3,7 +3,7 @@
 
 using ProtoBuf;
 
-namespace Aksio.Cratis.Kernel.Contracts.Connections;
+namespace Aksio.Cratis.Kernel.Contracts.Clients;
 
 /// <summary>
 /// The request for connecting.
