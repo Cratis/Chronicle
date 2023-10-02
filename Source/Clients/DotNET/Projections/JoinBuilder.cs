@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 
@@ -39,10 +39,12 @@ public class JoinBuilder<TModel, TEvent, TParentBuilder> : ModelPropertiesBuilde
     {
         ThrowIfMissingOn();
 
-        return new(
-            On: _on!,
-            Properties: _propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()),
-            Key: _key.Build());
+        return new()
+        {
+            On = _on!,
+            Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()),
+            Key = _key.Build()
+        };
     }
 
     void ThrowIfMissingOn()

@@ -1,7 +1,7 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 
 namespace Aksio.Cratis.Projections;
 
@@ -23,8 +23,10 @@ public class FromBuilder<TModel, TEvent, TParentBuilder> : ModelPropertiesBuilde
     }
 
     /// <inheritdoc/>
-    public FromDefinition Build() => new(
-        Properties: _propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()),
-        Key: _key.Build(),
-        ParentKey: _parentKey.Build());
+    public FromDefinition Build() => new()
+    {
+        Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()),
+        Key = _key.Build(),
+        ParentKey = _parentKey.Build()
+    };
 }

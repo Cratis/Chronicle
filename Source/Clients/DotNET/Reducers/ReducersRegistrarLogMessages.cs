@@ -3,7 +3,6 @@
 
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Reducers;

@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
@@ -44,14 +44,20 @@ public class ChildrenBuilder<TParentModel, TChildModel> : ProjectionBuilder<TChi
     /// <inheritdoc/>
     public ChildrenDefinition Build()
     {
-        return new ChildrenDefinition(
-            _identifiedBy,
-            new ModelDefinition(_modelName, _schemaGenerator.Generate(typeof(TChildModel)).ToJson()),
-            _initialValues,
-            _fromDefinitions,
-            _joinDefinitions,
-            _childrenDefinitions,
-            _allDefinition,
-            _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
+        return new()
+        {
+            IdentifiedBy = _identifiedBy,
+            Model = new()
+            {
+                Name = _modelName,
+                Schema = _schemaGenerator.Generate(typeof(TChildModel)).ToJson()
+            },
+            InitialModelState = _initialValues.ToJsonString(),
+            From = _fromDefinitions,
+            Join = _joinDefinitions,
+            Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
+            All = _allDefinition,
+            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent }
+        };
     }
 }

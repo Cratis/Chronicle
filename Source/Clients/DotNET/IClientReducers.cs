@@ -3,7 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Observation.Reducers;
 
 namespace Aksio.Cratis.Reducers;
 

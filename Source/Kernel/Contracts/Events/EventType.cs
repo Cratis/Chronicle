@@ -22,4 +22,10 @@ public class EventType
     /// </summary>
     [ProtoMember(2)]
     public uint Generation { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether or not the event type is public.
+    /// </summary>
+    [ProtoMember(3)]
+    public bool IsPublic { get; set; }
 }

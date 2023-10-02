@@ -2,199 +2,104 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.Identities;
-using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis.EventSequences;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventSequence"/>.
+/// Represents an implementation of <see cref="IEventSequence"/> for gRPC.
 /// </summary>
 public class EventSequence : IEventSequence
 {
+    readonly EventStoreName _eventStoreName;
     readonly TenantId _tenantId;
     readonly EventSequenceId _eventSequenceId;
+    readonly ICratisConnection _connection;
     readonly IEventTypes _eventTypes;
     readonly IEventSerializer _eventSerializer;
-    readonly IConnection _connection;
-    readonly IObserversRegistrar _observerRegistrar;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
-    readonly IExecutionContextManager _executionContextManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSequence"/> class.
     /// </summary>
-    /// <param name="tenantId"><see cref="TenantId"/> the sequence is for.</param>
-    /// <param name="eventSequenceId">The event sequence it represents.</param>
+    /// <param name="eventStoreName">Name of the event store.</param>
+    /// <param name="tenantId">Tenant identifier for the event store.</param>
+    /// <param name="eventSequenceId">The identifier of the event sequence.</param>
+    /// <param name="connection"><see cref="ICratisConnection"/> for working with the connection to Cratis Kernel.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
-    /// <param name="connection"><see cref="IConnection"/> for getting connections.</param>
-    /// <param name="observerRegistrar"><see cref="IObserversRegistrar"/> for working with client observers.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
-    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     public EventSequence(
+        EventStoreName eventStoreName,
         TenantId tenantId,
         EventSequenceId eventSequenceId,
+        ICratisConnection connection,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
-        IConnection connection,
-        IObserversRegistrar observerRegistrar,
         ICausationManager causationManager,
-        IIdentityProvider identityProvider,
-        IExecutionContextManager executionContextManager)
+        IIdentityProvider identityProvider)
     {
+        _eventStoreName = eventStoreName;
         _tenantId = tenantId;
         _eventSequenceId = eventSequenceId;
+        _connection = connection;
         _eventTypes = eventTypes;
         _eventSerializer = eventSerializer;
-        _connection = connection;
-        _observerRegistrar = observerRegistrar;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
-        _executionContextManager = executionContextManager;
-    }
-
-    /// <inheritdoc/>
-    public async Task<EventSequenceNumber> GetNextSequenceNumber()
-    {
-        var route = $"{GetBaseRoute()}/next-sequence-number";
-        var result = await _connection.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
-        return result.Data;
-    }
-
-    /// <inheritdoc/>
-    public async Task<EventSequenceNumber> GetTailSequenceNumber()
-    {
-        var route = $"{GetBaseRoute()}/tail-sequence-number";
-        var result = await _connection.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
-        return result.Data;
-    }
-
-    /// <inheritdoc/>
-    public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)
-    {
-        var observer = _observerRegistrar.GetByType(type);
-        var route = $"{GetBaseRoute()}/tail-sequence-number/observer/{observer.ObserverId}";
-        var result = await _connection.PerformQuery<EventSequenceNumber>(route, metadata: new { EventSequenceId = _eventSequenceId });
-        return result.Data;
     }
 
     /// <inheritdoc/>
     public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
     {
-        var route = GetBaseRoute();
-        var payload = await CreateAppendEvent(
-            eventSourceId,
-            @event,
-            _causationManager.GetCurrentChain(),
-            _identityProvider.GetCurrent(),
-            validFrom);
-        await _connection.PerformCommand(
-            route,
-            payload,
-            new
-            {
-                EventSequenceId = _eventSequenceId,
-                EventSourceId = eventSourceId,
-                payload.EventType
-            });
-    }
-
-    /// <inheritdoc/>
-    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) =>
-        AppendMany(eventSourceId, events.Select(_ => new EventAndValidFrom(_, null)).ToArray());
-
-    /// <inheritdoc/>
-    public async Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events)
-    {
-        var tasks = events.Select(_ => CreateEventToAppend(
-            _.Event,
-            _.ValidFrom));
-        var eventsToAppend = await Task.WhenAll(tasks.ToArray());
-        var payload = new AppendManyEvents(
-            eventSourceId,
-            eventsToAppend,
-            _causationManager.GetCurrentChain(),
-            _identityProvider.GetCurrent());
-        var route = $"{GetBaseRoute()}/append-many";
-        await _connection.PerformCommand(
-            route,
-            payload,
-            new
-            {
-                EventSequenceId = _eventSequenceId,
-                EventSourceId = eventSourceId,
-            });
-    }
-
-    /// <inheritdoc/>
-    public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = default)
-    {
-        reason ??= RedactionReason.Unknown;
-        var payload = new RedactEvent(
-            sequenceNumber,
-            reason,
-            _causationManager.GetCurrentChain(),
-            _identityProvider.GetCurrent());
-        var route = $"{GetBaseRoute()}/redact-event";
-        await _connection.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
-    }
-
-    /// <inheritdoc/>
-    public async Task Redact(EventSourceId eventSourceId, RedactionReason? reason = default, params Type[] eventTypes)
-    {
-        reason ??= RedactionReason.Unknown;
-        var eventTypeIds = eventTypes.Select(_ => _eventTypes.GetEventTypeFor(_).Id).ToArray();
-        var payload = new RedactEvents(
-            eventSourceId,
-            reason,
-            eventTypeIds,
-            _causationManager.GetCurrentChain(),
-            _identityProvider.GetCurrent());
-        var route = $"{GetBaseRoute()}/redact-events";
-        await _connection.PerformCommand(route, payload, new { EventSequenceId = _eventSequenceId });
-    }
-
-    string GetBaseRoute() => $"/api/events/store/{_executionContextManager.Current.MicroserviceId}/{_tenantId}/sequence/{_eventSequenceId}";
-
-    async Task<AppendEvent> CreateAppendEvent(
-        EventSourceId eventSourceId,
-        object @event,
-        IEnumerable<Causation> causation,
-        Identity identity,
-        DateTimeOffset? validFrom = default)
-    {
-        var eventTypeClr = @event.GetType();
-        ThrowIfUnknownEventType(eventTypeClr);
         var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-        var serializedEvent = await _eventSerializer.Serialize(@event);
-        return new AppendEvent(
-            eventSourceId,
-            eventType,
-            serializedEvent,
-            causation,
-            identity,
-            validFrom);
-    }
-
-    async Task<EventToAppend> CreateEventToAppend(object @event, DateTimeOffset? validFrom = default)
-    {
-        var eventTypeClr = @event.GetType();
-        ThrowIfUnknownEventType(eventTypeClr);
-        var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-        var serializedEvent = await _eventSerializer.Serialize(@event);
-        return new EventToAppend(eventType, serializedEvent, validFrom);
-    }
-
-    void ThrowIfUnknownEventType(Type eventTypeClr)
-    {
-        if (!_eventTypes.HasFor(eventTypeClr))
+        var content = await _eventSerializer.Serialize(@event);
+        var causationChain = _causationManager.GetCurrentChain().Select(_ => new Aksio.Cratis.Kernel.Contracts.Auditing.Causation
         {
-            throw new UnknownEventType(eventTypeClr);
-        }
+            Occurred = _.Occurred!,
+            Type = _.Type,
+            Properties = _.Properties
+        });
+        var identity = _identityProvider.GetCurrent();
+        await _connection.EventSequences.Append(new()
+        {
+            EventStoreName = _eventStoreName,
+            TenantId = _tenantId,
+            EventSequenceId = _eventSequenceId.ToString(),
+            EventSourceId = eventSourceId,
+            EventType = new()
+            {
+                Id = eventType.Id.ToString(),
+                Generation = eventType.Generation
+            },
+            Content = content.ToJsonString(),
+            Causation = causationChain,
+            Identity = identity.ToContract(),
+            ValidFrom = validFrom
+        });
     }
+
+    /// <inheritdoc/>
+    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task AppendMany(EventSourceId eventSourceId, IEnumerable<EventAndValidFrom> events) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetTailSequenceNumber() => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = null) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
 }

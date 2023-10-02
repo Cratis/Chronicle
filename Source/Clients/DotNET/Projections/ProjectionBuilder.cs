@@ -6,14 +6,15 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Properties;
 using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Reflection;
 using Aksio.Strings;
 using Humanizer;
+using EventType = Aksio.Cratis.Kernel.Contracts.Events.EventType;
 
 namespace Aksio.Cratis.Projections;
 
@@ -34,7 +35,7 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
     protected readonly Dictionary<EventType, FromDefinition> _fromDefinitions = new();
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = new();
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = new();
-    protected AllDefinition _allDefinition = new(new Dictionary<PropertyPath, string>(), false);
+    protected AllDefinition _allDefinition = new() { Properties = new Dictionary<string, string>(), IncludeChildren = false };
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected EventType? _removedWithEvent;
     protected string _modelName;
@@ -80,7 +81,7 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
         var builder = new FromBuilder<TModel, TEvent, TBuilder>(this);
         builderCallback(builder);
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        _fromDefinitions[eventType] = builder.Build();
+        _fromDefinitions[eventType.ToContract()] = builder.Build();
         return (this as TBuilder)!;
     }
 
@@ -90,7 +91,7 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
         var builder = new JoinBuilder<TModel, TEvent, TBuilder>(this);
         builderCallback(builder);
         var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        _joinDefinitions[eventType] = builder.Build();
+        _joinDefinitions[eventType.ToContract()] = builder.Build();
         return (this as TBuilder)!;
     }
 
@@ -100,9 +101,11 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
         var builder = new FromEveryBuilder<TModel>();
         builderCallback(builder);
         var allDefinition = builder.Build();
-        _allDefinition = new AllDefinition(
-            new Dictionary<PropertyPath, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
-            allDefinition.IncludeChildren);
+        _allDefinition = new AllDefinition
+        {
+            Properties = new Dictionary<string, string>(_allDefinition.Properties.Concat(allDefinition.Properties)),
+            IncludeChildren = allDefinition.IncludeChildren
+        };
         return (this as TBuilder)!;
     }
 
@@ -114,7 +117,7 @@ public class ProjectionBuilder<TModel, TBuilder> : IProjectionBuilder<TModel, TB
             throw new RemovalAlreadyDefined(GetType());
         }
 
-        _removedWithEvent = _eventTypes.GetEventTypeFor(typeof(TEvent));
+        _removedWithEvent = _eventTypes.GetEventTypeFor(typeof(TEvent)).ToContract();
         return (this as TBuilder)!;
     }
 

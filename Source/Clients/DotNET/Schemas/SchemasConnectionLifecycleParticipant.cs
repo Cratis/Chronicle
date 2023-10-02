@@ -14,24 +14,20 @@ namespace Aksio.Cratis.Schemas;
 public class SchemasConnectionLifecycleParticipant : IParticipateInConnectionLifecycle
 {
     readonly IEnumerable<EventTypeRegistration> _definitions;
-    readonly IConnection _connection;
     readonly IEventTypes _eventTypes;
     readonly ILogger<SchemasConnectionLifecycleParticipant> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Schemas"/> class.
     /// </summary>
-    /// <param name="connection">The Kernel <see cref="IConnection"/>.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating schemas for event types.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public SchemasConnectionLifecycleParticipant(
-        IConnection connection,
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         ILogger<SchemasConnectionLifecycleParticipant> logger)
     {
-        _connection = connection;
         _eventTypes = eventTypes;
         _logger = logger;
         _definitions = eventTypes.All.Select(_ =>
@@ -48,8 +44,10 @@ public class SchemasConnectionLifecycleParticipant : IParticipateInConnectionLif
     public async Task ClientConnected()
     {
         _logger.RegisterEventTypes();
-        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/types";
-        await _connection.PerformCommand(route, new RegisterEventTypes(_definitions));
+        // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/types";
+        // await _connection.PerformCommand(route, new RegisterEventTypes(_definitions));
+
+        await Task.CompletedTask;
     }
 
     /// <inheritdoc/>

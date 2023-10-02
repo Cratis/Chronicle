@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
 using Aksio.Reflection;
 using FluentValidation;

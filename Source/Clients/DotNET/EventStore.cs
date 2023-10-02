@@ -40,7 +40,7 @@ public class EventStore : IEventStore
         ICausationManager causationManager,
         IIdentityProvider identityProvider)
     {
-        EventLog = new EventSequences.Grpc.EventLog(
+        EventLog = new EventLog(
             eventStoreName,
             tenantId,
             connection,
@@ -61,8 +61,11 @@ public class EventStore : IEventStore
     public IEventLog EventLog { get; }
 
     /// <inheritdoc/>
+    public IEventOutbox EventOutbox { get; }
+
+    /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>
-        new EventSequences.Grpc.EventSequence(
+        new EventSequence(
             _eventStoreName,
             _tenantId,
             id,

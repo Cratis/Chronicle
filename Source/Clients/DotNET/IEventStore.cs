@@ -16,6 +16,11 @@ public interface IEventStore
     IEventLog EventLog { get; }
 
     /// <summary>
+    /// Gets the <see cref="IEventOutbox"/> event sequence.
+    /// </summary>
+    IEventOutbox EventOutbox { get; }
+
+    /// <summary>
     /// Get an event sequence by id.
     /// </summary>
     /// <param name="id">The identifier of the event sequence to get.</param>

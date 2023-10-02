@@ -5,9 +5,9 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Rules;
@@ -51,7 +51,7 @@ public class RulesProjections : IRulesProjections
         {
             var rule = serviceProvider.GetService(ruleType);
             return (createProjectionMethod!.MakeGenericMethod(ruleType).Invoke(this, new[] { rule }) as ProjectionDefinition)!;
-        }).ToDictionary(_ => (RuleId)_.Identifier.Value, _ => _);
+        }).ToDictionary(_ => (RuleId)_.Identifier, _ => _);
 
         Definitions = _projectionDefinitionsPerRuleId.Values.ToImmutableList();
     }
@@ -89,7 +89,9 @@ public class RulesProjections : IRulesProjections
             defineStateMethod.Invoke(rule, new object[] { projectionBuilder });
         }
 
-        return projectionBuilder.Build() with { IsActive = false };
+        var definition = projectionBuilder.Build();
+        definition.IsActive = false;
+        return definition;
     }
 
     void ThrowIfInvalidSignatureForDefineState(Type ruleType, ParameterInfo[] parameters)

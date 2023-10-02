@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Reflection;
 
 namespace Aksio.Cratis.Projections;
@@ -35,5 +35,5 @@ public class FromEveryBuilder<TModel> : IFromEveryBuilder<TModel>
     /// Builds a <see cref="AllDefinition"/> from expressions.
     /// </summary>
     /// <returns>A new <see cref="AllDefinition"/> instance.</returns>
-    public AllDefinition Build() => new(_propertyExpressions.ToDictionary(_ => _.TargetProperty, _ => _.Build()), _includeChildren);
+    public AllDefinition Build() => new() { Properties = _propertyExpressions.ToDictionary(_ => (string)_.TargetProperty, _ => _.Build()), IncludeChildren = _includeChildren };
 }

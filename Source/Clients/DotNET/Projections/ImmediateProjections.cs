@@ -5,12 +5,10 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using Aksio.Collections;
-using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Schemas;
 using Aksio.Reflection;
 
@@ -28,8 +26,6 @@ public class ImmediateProjections : IImmediateProjections
     readonly IJsonSchemaGenerator _schemaGenerator;
     readonly IExecutionContextManager _executionContextManager;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IJsonProjectionSerializer _projectionSerializer;
-    readonly IConnection _connection;
     readonly List<ProjectionDefinition> _definitions = new();
 
     /// <summary>
@@ -41,8 +37,6 @@ public class ImmediateProjections : IImmediateProjections
     /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating model schema.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="projectionSerializer">The <see cref="IJsonProjectionSerializer"/> for serializing projection definitions.</param>
-    /// <param name="connection">The <see cref="IConnection"/> for connecting to the kernel.</param>
     /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> to work with the execution context.</param>
     public ImmediateProjections(
         IModelNameResolver modelNameResolver,
@@ -51,8 +45,6 @@ public class ImmediateProjections : IImmediateProjections
         IEventTypes eventTypes,
         IJsonSchemaGenerator schemaGenerator,
         JsonSerializerOptions jsonSerializerOptions,
-        IJsonProjectionSerializer projectionSerializer,
-        IConnection connection,
         IExecutionContextManager executionContextManager)
     {
         _modelNameResolver = modelNameResolver;
@@ -61,8 +53,6 @@ public class ImmediateProjections : IImmediateProjections
         _eventTypes = eventTypes;
         _schemaGenerator = schemaGenerator;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _projectionSerializer = projectionSerializer;
-        _connection = connection;
         _executionContextManager = executionContextManager;
 
         _clientArtifacts.ImmediateProjections.ForEach(_ =>
@@ -107,11 +97,14 @@ public class ImmediateProjections : IImmediateProjections
             EventSequenceId.Log,
             modelKey);
 
-        var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
+        // var route = $"/api/events/store/{ExecutionContextManager.GlobalMicroserviceId}/projections/immediate/{_executionContextManager.Current.TenantId}";
 
-        var result = await _connection.PerformCommand(route, immediateProjection);
-        var element = (JsonElement)result.Response!;
-        return element.Deserialize<ImmediateProjectionResult>(_jsonSerializerOptions)!;
+        // var result = await _connection.PerformCommand(route, immediateProjection);
+        // var element = (JsonElement)result.Response!;
+        // return element.Deserialize<ImmediateProjectionResult>(_jsonSerializerOptions)!;
+
+        await Task.CompletedTask;
+        return null!;
     }
 
     void HandleProjectionTypeCache<TModel>()
@@ -131,7 +124,8 @@ public class ImmediateProjections : IImmediateProjections
 
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Instance.Define(builder);
 
-            var projectionDefinition = builder.Build() with { IsActive = false };
+            var projectionDefinition = builder.Build();
+            projectionDefinition.IsActive = false;
             _definitions.Add(projectionDefinition);
             ImmediateProjectionsCache<IImmediateProjectionFor<TModel>>.Definition = projectionDefinition;
         }

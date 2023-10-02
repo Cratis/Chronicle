@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
-using Aksio.Cratis.Projections.Definitions;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using AutoMapper;
 
 namespace Aksio.Cratis.Integration;

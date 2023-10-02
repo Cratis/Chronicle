@@ -3,10 +3,10 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Contracts.Projections;
+using Aksio.Cratis.Kernel.Contracts.Projections.Outbox;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Definitions;
-using Aksio.Cratis.Projections.Outbox;
 using Aksio.Cratis.Schemas;
 using Aksio.Guids;
 
@@ -71,5 +71,5 @@ public class OutboxProjectionsBuilder : IOutboxProjectionsBuilder
     }
 
     /// <inheritdoc/>
-    public OutboxProjectionsDefinition Build() => new(_projectionDefinitionsPerEventType);
+    public OutboxProjectionsDefinition Build() => new() { TargetEventTypeProjections = _projectionDefinitionsPerEventType.ToDictionary(_ => _.Key.ToContract(), _ => _.Value) };
 }

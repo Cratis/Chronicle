@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +15,6 @@ namespace Aksio.Cratis.Observation;
 public class ObserversRegistrar : IObserversRegistrar
 {
     readonly IExecutionContextManager _executionContextManager;
-    readonly IConnection _connection;
     readonly ILogger<ObserversRegistrar> _logger;
     readonly IDictionary<Type, ObserverHandler> _handlers;
 
@@ -29,7 +27,6 @@ public class ObserversRegistrar : IObserversRegistrar
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    /// <param name="connection"><see cref="IConnection"/> for working with kernel.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="invokerLogger">Logger for invoker.</param>
@@ -40,7 +37,6 @@ public class ObserversRegistrar : IObserversRegistrar
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         IClientArtifactsProvider clientArtifacts,
-        IConnection connection,
         ICausationManager causationManager,
         ILogger<ObserversRegistrar> logger,
         ILogger<ObserverInvoker> invokerLogger)
@@ -61,7 +57,6 @@ public class ObserversRegistrar : IObserversRegistrar
                                         eventSerializer);
                                 });
         _executionContextManager = executionContextManager;
-        _connection = connection;
         _logger = logger;
     }
 
@@ -96,22 +91,24 @@ public class ObserversRegistrar : IObserversRegistrar
     {
         _logger.RegisterObservers();
 
-        foreach (var observerHandler in _handlers.Values)
-        {
-            _logger.RegisterObserver(
-                observerHandler.ObserverId,
-                observerHandler.Name,
-                observerHandler.EventSequenceId);
-        }
+        // foreach (var observerHandler in _handlers.Values)
+        // {
+        //     _logger.RegisterObserver(
+        //         observerHandler.ObserverId,
+        //         observerHandler.Name,
+        //         observerHandler.EventSequenceId);
+        // }
 
-        var microserviceId = _executionContextManager.Current.MicroserviceId;
-        var route = $"/api/events/store/{microserviceId}/observers/register/{_connection.ConnectionId}";
-        var registrations = _handlers.Values.Select(_ => new ClientObserverRegistration(
-            _.ObserverId,
-            _.Name,
-            _.EventSequenceId,
-            _.EventTypes)).ToArray();
-        await _connection.PerformCommand(route, registrations);
+        // var microserviceId = _executionContextManager.Current.MicroserviceId;
+        // var route = $"/api/events/store/{microserviceId}/observers/register/{_connection.ConnectionId}";
+        // var registrations = _handlers.Values.Select(_ => new ClientObserverRegistration(
+        //     _.ObserverId,
+        //     _.Name,
+        //     _.EventSequenceId,
+        //     _.EventTypes)).ToArray();
+        // await _connection.PerformCommand(route, registrations);
+
+        await Task.CompletedTask;
     }
 
     void ThrowIfTypeIsNotAnObserver(Type observerType)

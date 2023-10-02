@@ -4,10 +4,9 @@
 using System.Reflection;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Contracts.Observation.Reducers;
 using Aksio.Cratis.Models;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Observation.Reducers;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 using Aksio.Cratis.Sinks;
 using Microsoft.Extensions.Logging;
@@ -23,7 +22,6 @@ public class ReducersRegistrar : IReducersRegistrar
     readonly IExecutionContextManager _executionContextManager;
     readonly IModelNameResolver _modelNameResolver;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
-    readonly IConnection _connection;
     readonly ILogger<ReducersRegistrar> _logger;
 
     /// <summary>
@@ -37,7 +35,6 @@ public class ReducersRegistrar : IReducersRegistrar
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="modelNameResolver"><see cref="IModelNameResolver"/> for resolving read model names.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="connection"><see cref="IConnection"/> for working with kernel.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ReducersRegistrar(
         IExecutionContextManager executionContextManager,
@@ -48,7 +45,6 @@ public class ReducersRegistrar : IReducersRegistrar
         IEventSerializer eventSerializer,
         IModelNameResolver modelNameResolver,
         IJsonSchemaGenerator jsonSchemaGenerator,
-        IConnection connection,
         ILogger<ReducersRegistrar> logger)
     {
         _handlers = clientArtifacts.Reducers
@@ -73,7 +69,6 @@ public class ReducersRegistrar : IReducersRegistrar
         _executionContextManager = executionContextManager;
         _modelNameResolver = modelNameResolver;
         _jsonSchemaGenerator = jsonSchemaGenerator;
-        _connection = connection;
         _logger = logger;
     }
 
@@ -117,19 +112,25 @@ public class ReducersRegistrar : IReducersRegistrar
         }
 
         var microserviceId = _executionContextManager.Current.MicroserviceId;
-        var route = $"/api/events/store/{microserviceId}/reducers/register/{_connection.ConnectionId}";
+        // var route = $"/api/events/store/{microserviceId}/reducers/register/{_connection.ConnectionId}";
 
-        var registrations = _handlers.Values.Select(_ => new ReducerDefinition(
-            _.ReducerId,
-            _.Name,
-            _.EventSequenceId,
-            _.EventTypes.Select(et => new EventTypeWithKeyExpression(et, "$eventSourceId")).ToArray(),
-            new ModelDefinition(
-                _modelNameResolver.GetNameFor(_.ReadModelType),
-                _jsonSchemaGenerator.Generate(_.ReadModelType).ToJson()),
-            WellKnownSinkTypes.MongoDB)).ToArray();
+        var registrations = _handlers.Values.Select(_ => new ReducerDefinition()
+        {
+            ReducerId = _.ReducerId,
+            Name = _.Name,
+            EventSequenceId = _.EventSequenceId,
+            EventTypes = _.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = "$eventSourceId" }).ToArray(),
+            ReadModel = new()
+            {
+                Name = _modelNameResolver.GetNameFor(_.ReadModelType),
+                Schema = _jsonSchemaGenerator.Generate(_.ReadModelType).ToJson()
+            },
+            SinkTypeId = WellKnownSinkTypes.MongoDB
+        }).ToArray();
 
-        await _connection.PerformCommand(route, registrations);
+        // await _connection.PerformCommand(route, registrations);
+
+        await Task.CompletedTask;
     }
 
     void ThrowIfTypeIsNotAnObserver(Type reducerType)

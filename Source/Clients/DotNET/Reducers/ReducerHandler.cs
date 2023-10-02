@@ -4,7 +4,6 @@
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Observation;
-using Aksio.Cratis.Observation.Reducers;
 
 namespace Aksio.Cratis.Reducers;
 

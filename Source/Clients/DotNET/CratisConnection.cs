@@ -3,7 +3,7 @@
 
 using System.Diagnostics;
 using Aksio.Cratis.Connections;
-using Aksio.Cratis.Kernel.Contracts.Connections;
+using Aksio.Cratis.Kernel.Contracts.Clients;
 using Aksio.Cratis.Kernel.Contracts.EventSequences;
 using Aksio.Cratis.Tasks;
 using Grpc.Net.Client;

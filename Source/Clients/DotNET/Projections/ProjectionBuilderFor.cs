@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 using Aksio.Cratis.Events;
+using Aksio.Cratis.Kernel.Contracts.Projections;
 using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections.Definitions;
 using Aksio.Cratis.Schemas;
 
 namespace Aksio.Cratis.Projections;
@@ -71,17 +71,23 @@ public class ProjectionBuilderFor<TModel> : ProjectionBuilder<TModel, IProjectio
             modelSchema.SetEventType(_eventTypes.GetEventTypeFor(modelType));
         }
 
-        return new ProjectionDefinition(
-            _identifier,
-            _name ?? modelType.FullName ?? "[N/A]",
-            new ModelDefinition(_modelName, modelSchema.ToJson()),
-            _isRewindable,
-            true,
-            _initialValues,
-            _fromDefinitions,
-            _joinDefinitions,
-            _childrenDefinitions,
-            _allDefinition,
-            _removedWithEvent == default ? default : new RemovedWithDefinition(_removedWithEvent));
+        return new()
+        {
+            Identifier = _identifier,
+            Name = _name ?? modelType.FullName ?? "[N/A]",
+            Model = new()
+            {
+                Name = _modelName,
+                Schema = modelSchema.ToJson()
+            },
+            IsActive = true,
+            IsRewindable = _isRewindable,
+            InitialModelState = _initialValues.ToJsonString(),
+            From = _fromDefinitions,
+            Join = _joinDefinitions,
+            Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
+            All = _allDefinition,
+            RemovedWith = _removedWithEvent == default ? default : new() { Event = _removedWithEvent }
+        };
     }
 }

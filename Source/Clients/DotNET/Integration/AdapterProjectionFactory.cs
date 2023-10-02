@@ -47,7 +47,8 @@ public class AdapterProjectionFactory : IAdapterProjectionFactory
     {
         var projectionBuilder = new ProjectionBuilderFor<TModel>(adapter.Identifier.Value, _modelNameResolver, _eventTypes, _schemaGenerator, _jsonSerializerOptions);
         adapter.DefineModel(projectionBuilder);
-        var projectionDefinition = projectionBuilder.Build() with { IsActive = false };
+        var projectionDefinition = projectionBuilder.Build();
+        projectionDefinition.IsActive = false;
         return Task.FromResult<IAdapterProjectionFor<TModel>>(new AdapterProjectionFor<TModel>(projectionDefinition, _immediateProjections, _jsonSerializerOptions));
     }
 }

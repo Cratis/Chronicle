@@ -3,7 +3,6 @@
 
 using Aksio.Collections;
 using Aksio.Cratis.Auditing;
-using Aksio.Cratis.Client;
 using Aksio.Cratis.Compliance;
 using Aksio.Cratis.Compliance.GDPR;
 using Aksio.Cratis.Configuration;
@@ -16,7 +15,6 @@ using Aksio.Cratis.Models;
 using Aksio.Cratis.Net;
 using Aksio.Cratis.Observation;
 using Aksio.Cratis.Projections;
-using Aksio.Cratis.Projections.Json;
 using Aksio.Cratis.Reducers;
 using Aksio.Cratis.Rules;
 using Aksio.Cratis.Schemas;
@@ -196,7 +194,6 @@ public class ClientBuilder : IClientBuilder
             .AddSingleton<SchemasConnectionLifecycleParticipant>()
             .AddSingleton<RegistrarsConnectionLifecycleParticipant>()
             .AddSingleton<ProjectionsRegistrar>()
-            .AddSingleton<IJsonProjectionSerializer, JsonProjectionSerializer>()
             .AddSingleton<IAdapters, Adapters>()
             .AddSingleton<IAdapterProjectionFactory, AdapterProjectionFactory>()
             .AddSingleton<IAdapterMapperFactory, AdapterMapperFactory>()
@@ -225,49 +222,37 @@ public class ClientBuilder : IClientBuilder
             _logger.UsingInsideKernelClient();
             ForMicroservice(MicroserviceId.Kernel, "Cratis Kernel");
             ExecutionContextManager.SetKernelMode();
-            Services.AddSingleton<IConnection, InsideKernelConnection>();
         }
         else if (options.Value.Kernel.AzureStorageCluster is not null)
         {
             _logger.UsingOrleansAzureStorageKernelClient();
-            Services.AddSingleton<IConnection, OrleansAzureTableStoreKernelConnection>();
         }
         else if (options.Value.Kernel.StaticCluster is not null)
         {
             _logger.UsingStaticClusterKernelClient();
-            Services.AddSingleton<IConnection, StaticClusteredKernelConnection>();
         }
         else if (options.Value.Kernel.SingleKernel is not null)
         {
             _logger.UsingSingleKernelClient(options.Value.Kernel.SingleKernel.Endpoint);
-            Services.AddSingleton<IConnection, SingleKernelConnection>();
         }
 
-        if (_isMultiTenanted)
-        {
-            Services.AddSingleton<IMultiTenantEventSequences, MultiTenantEventSequences>();
-            Services.AddSingleton<IMultiTenantEventStore, MultiTenantEventStore>();
-            Services.AddSingleton<IClient, MultiTenantClient>();
-            Services.AddTransient(sp =>
-            {
-                var tenantId = ExecutionContextManager.GetCurrent().TenantId;
-                return sp.GetRequiredService<IMultiTenantEventSequences>().ForTenant(tenantId).EventLog;
-            });
-            Services.AddTransient(sp =>
-            {
-                var tenantId = ExecutionContextManager.GetCurrent().TenantId;
-                return sp.GetRequiredService<IMultiTenantEventSequences>().ForTenant(tenantId).Outbox;
-            });
-        }
-        else
-        {
-            Services.AddSingleton(TenantId.NotSet);
-            Services.AddSingleton<IEventSequences, Client.EventSequences>();
-            Services.AddSingleton<ISingleTenantEventStore, SingleTenantEventStore>();
-            Services.AddSingleton<IClient, SingleTenantClient>();
-            Services.AddSingleton(sp => sp.GetRequiredService<IEventSequences>().EventLog);
-            Services.AddSingleton(sp => sp.GetRequiredService<IEventSequences>().Outbox);
-        }
+        // if (_isMultiTenanted)
+        // {
+        //     Services.AddTransient(sp =>
+        //     {
+        //         var tenantId = ExecutionContextManager.GetCurrent().TenantId;
+        //         return null!;
+        //     });
+        //     Services.AddTransient(sp =>
+        //     {
+        //         var tenantId = ExecutionContextManager.GetCurrent().TenantId;
+        //         return null!;
+        //     });
+        // }
+        // else
+        // {
+        //     Services.AddSingleton(TenantId.NotSet);
+        // }
     }
 
     void SetDefaultOptions()
