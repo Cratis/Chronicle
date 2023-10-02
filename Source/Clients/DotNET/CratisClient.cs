@@ -4,7 +4,6 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis;
@@ -78,6 +77,7 @@ public class CratisClient : ICratisClient, IDisposable
             name,
             tenantId ?? TenantId.Development,
             _connection!,
+            _settings.ArtifactsProvider,
             _eventTypes,
             _eventSerializer,
             _causationManager,

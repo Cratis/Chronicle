@@ -5,6 +5,7 @@ using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
 using Aksio.Cratis.Identities;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis;
 
@@ -27,6 +28,7 @@ public class EventStore : IEventStore
     /// <param name="eventStoreName">Name of the event store.</param>
     /// <param name="tenantId">Tenant identifier for the event store.</param>
     /// <param name="connection"><see cref="ICratisConnection"/> for working with the connection to Cratis Kernel.</param>
+    /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="eventTypes">Known <see cref="IEventTypes"/>.</param>
     /// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
@@ -35,6 +37,7 @@ public class EventStore : IEventStore
         EventStoreName eventStoreName,
         TenantId tenantId,
         ICratisConnection connection,
+        IClientArtifactsProvider clientArtifactsProvider,
         IEventTypes eventTypes,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
@@ -58,6 +61,8 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider);
 
+        Observers = new Observers(clientArtifactsProvider, eventTypes);
+
         _eventStoreName = eventStoreName;
         _tenantId = tenantId;
         _connection = connection;
@@ -72,6 +77,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventOutbox EventOutbox { get; }
+
+    /// <inheritdoc/>
+    public IObservers Observers { get; }
 
     /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>

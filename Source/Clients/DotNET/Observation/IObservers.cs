@@ -11,6 +11,12 @@ namespace Aksio.Cratis.Observation;
 public interface IObservers
 {
     /// <summary>
+    /// Discover and register all observers from the entry assembly.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task RegisterKnownObservers();
+
+    /// <summary>
     /// Get all observers for specific event types.
     /// </summary>
     /// <param name="eventTypes">Collection of types representing events to get for.</param>

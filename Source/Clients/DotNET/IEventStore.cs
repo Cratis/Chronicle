@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Observation;
 
 namespace Aksio.Cratis;
 
@@ -19,6 +20,11 @@ public interface IEventStore
     /// Gets the <see cref="IEventOutbox"/> event sequence.
     /// </summary>
     IEventOutbox EventOutbox { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IObservers"/> for the event store.
+    /// </summary>
+    IObservers Observers { get; }
 
     /// <summary>
     /// Get an event sequence by id.

@@ -11,15 +11,26 @@ namespace Aksio.Cratis.Observation;
 /// </summary>
 public class Observers : IObservers
 {
+    readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly IEventTypes _eventTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Observers"/> class.
     /// </summary>
+    /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
-    public Observers(IEventTypes eventTypes)
+    public Observers(
+        IClientArtifactsProvider clientArtifactsProvider,
+        IEventTypes eventTypes)
     {
+        _clientArtifactsProvider = clientArtifactsProvider;
         _eventTypes = eventTypes;
+    }
+
+    /// <inheritdoc/>
+    public Task RegisterKnownObservers()
+    {
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
