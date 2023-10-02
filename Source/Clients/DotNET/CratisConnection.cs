@@ -39,12 +39,11 @@ public class CratisConnection : ICratisConnection, IDisposable
         CancellationToken cancellationToken)
     {
         GrpcClientFactory.AllowUnencryptedHttp2 = true;
-
-        Connect().GetAwaiter().GetResult();
         _settings = settings;
         _connectionLifecycle = connectionLifecycle;
         _tasks = tasks;
         _cancellationToken = cancellationToken;
+        Connect().GetAwaiter().GetResult();
     }
 #pragma warning restore CS8618
 

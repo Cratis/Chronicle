@@ -19,7 +19,7 @@ public class AppendRequest
     /// Gets or sets the microservice identifier.
     /// </summary>
     [ProtoMember(1)]
-    public string MicroserviceId { get; set; }
+    public string EventStoreName { get; set; }
 
     /// <summary>
     /// Gets or sets the tenant identifier.

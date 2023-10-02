@@ -4,7 +4,7 @@
 using Aksio.Cratis;
 using Basic;
 
-var client = new CratisClient("cratis://localhost:35000");
+using var client = new CratisClient("cratis://localhost:35000");
 var eventStore = client.GetEventStore("cd51c091-3bba-4608-87a8-93da1f88c4dd");
 await eventStore.EventLog.Append(
     "299681c4-f100-4dea-bfea-633115349ed1",

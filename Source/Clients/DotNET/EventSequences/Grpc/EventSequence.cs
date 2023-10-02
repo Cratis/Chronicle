@@ -53,7 +53,34 @@ public class EventSequence : IEventSequence
     }
 
     /// <inheritdoc/>
-    public Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null) => throw new NotImplementedException();
+    public async Task Append(EventSourceId eventSourceId, object @event, DateTimeOffset? validFrom = null)
+    {
+        var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
+        var content = await _eventSerializer.Serialize(@event);
+        var causationChain = _causationManager.GetCurrentChain().Select(_ => new Aksio.Cratis.Kernel.Contracts.Auditing.Causation
+        {
+            Occurred = _.Occurred!,
+            Type = _.Type,
+            Properties = _.Properties
+        });
+        var identity = _identityProvider.GetCurrent();
+        await _connection.EventSequences.Append(new()
+        {
+            EventStoreName = _eventStoreName,
+            TenantId = _tenantId,
+            EventSequenceId = _eventSequenceId.ToString(),
+            EventSourceId = eventSourceId,
+            EventType = new()
+            {
+                Id = eventType.Id.ToString(),
+                Generation = eventType.Generation
+            },
+            Content = content.ToJsonString(),
+            Causation = causationChain,
+            Identity = identity.ToContract(),
+            ValidFrom = validFrom
+        });
+    }
 
     /// <inheritdoc/>
     public Task AppendMany(EventSourceId eventSourceId, IEnumerable<object> events) => throw new NotImplementedException();

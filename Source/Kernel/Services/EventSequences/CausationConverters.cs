@@ -16,7 +16,7 @@ public static class CausationConverters
     /// <param name="causations">Collection of <see cref="Contracts.Auditing.Causation"/> to convert from..</param>
     /// <returns>Converted collection of <see cref="Causation"/>.</returns>
     public static IEnumerable<Causation> ToKernel(this IEnumerable<Contracts.Auditing.Causation> causations) =>
-        causations.Select(c => c.ToKernel());
+        causations.Select(c => c.ToKernel()).ToArray();
 
     /// <summary>
     /// Convert to Kernel representation.
@@ -24,5 +24,5 @@ public static class CausationConverters
     /// <param name="causation"><see cref="Contracts.Auditing.Causation"/> to convert from.</param>
     /// <returns>Converted <see cref="Causation"/>.</returns>
     public static Causation ToKernel(this Contracts.Auditing.Causation causation) =>
-        new(causation.Occurred, causation.Type, causation.Properties);
+        new(causation.Occurred, causation.Type, causation.Properties ?? new Dictionary<string, string>());
 }

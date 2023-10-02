@@ -4,7 +4,6 @@
 using Aksio.Cratis.Auditing;
 using Aksio.Cratis.Connections;
 using Aksio.Cratis.Events;
-using Aksio.Cratis.Identities;
 using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis;

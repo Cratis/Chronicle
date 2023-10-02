@@ -37,8 +37,8 @@ public class EventSequences : IEventSequences
     /// <inheritdoc/>
     public async Task<AppendResponse> Append(AppendRequest request)
     {
-        _executionContextManager.Establish(request.TenantId, CorrelationId.New(), request.MicroserviceId);
-        var eventSequence = GetEventSequence(request.MicroserviceId, request.EventSequenceId, request.TenantId);
+        _executionContextManager.Establish(request.TenantId, CorrelationId.New(), request.EventStoreName);
+        var eventSequence = GetEventSequence(request.EventStoreName, request.EventSequenceId, request.TenantId);
         await eventSequence.Append(
             request.EventSourceId,
             new(request.EventType.Id, request.EventType.Generation),

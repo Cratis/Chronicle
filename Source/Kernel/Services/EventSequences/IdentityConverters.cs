@@ -16,5 +16,5 @@ public static class IdentityConverters
     /// <param name="identity"><see cref="Contracts.Identities.Identity"/> to convert from.</param>
     /// <returns>Converted <see cref="Identity"/>.</returns>
     public static Identity ToKernel(this Contracts.Identities.Identity identity) =>
-        new(identity.Subject, identity.Name, identity.UserName, identity?.ToKernel());
+        new(identity.Subject, identity.Name, identity.UserName, identity.OnBehalfOf?.ToKernel());
 }
