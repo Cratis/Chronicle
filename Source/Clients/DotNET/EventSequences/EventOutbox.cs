@@ -10,7 +10,7 @@ namespace Aksio.Cratis.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IEventLog"/>.
 /// </summary>
-public class EventOutbox : EventSequence, IEventLog
+public class EventOutbox : EventSequence, IEventOutbox
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EventLog"/> class.

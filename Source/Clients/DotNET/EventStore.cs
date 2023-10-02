@@ -48,6 +48,16 @@ public class EventStore : IEventStore
             eventSerializer,
             causationManager,
             identityProvider);
+
+        EventOutbox = new EventOutbox(
+            eventStoreName,
+            tenantId,
+            connection,
+            eventTypes,
+            eventSerializer,
+            causationManager,
+            identityProvider);
+
         _eventStoreName = eventStoreName;
         _tenantId = tenantId;
         _connection = connection;

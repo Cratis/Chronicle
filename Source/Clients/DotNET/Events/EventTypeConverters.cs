@@ -22,5 +22,4 @@ public static class EventTypeConverters
             IsPublic = type.IsPublic
         };
     }
-
 }

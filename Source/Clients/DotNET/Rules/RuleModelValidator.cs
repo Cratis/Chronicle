@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using Aksio.Cratis.Models;
-using Aksio.Cratis.Projections;
 using Aksio.Reflection;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
