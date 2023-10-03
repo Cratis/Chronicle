@@ -1,3 +1,12 @@
+# [v9.5.1] - 2023-10-3 [PR: #975](https://github.com/aksio-insurtech/Cratis/pull/975)
+
+### Fixed
+
+- Skipping `_id` properties in changeset when creating update definition for Mongo, as this is implicitly set by the MongoDB C# driver and will cause an exception if its there.
+- FIxing conversion check ordering to make sure we get correct types (complex types first, then value types, dictionaries, enumerables).
+- Adding support for dictionary types for the entire Reducer & Projection pipelines, including the MongoDB Sink.
+
+
 # [v9.5.0] - 2023-9-29 [PR: #974](https://github.com/aksio-insurtech/Cratis/pull/974)
 
 ### Added
