@@ -71,7 +71,7 @@ public class ObjectComparer : IObjectComparer
                 continue;
             }
 
-            var propertyPath = currentPropertyPath + (type.IsEnumerable() ? $"[{key}]" : key);
+            var propertyPath = currentPropertyPath.AddProperty(key, type);
             CompareValues(type, leftValue, rightValue, propertyPath, differences);
         }
     }
