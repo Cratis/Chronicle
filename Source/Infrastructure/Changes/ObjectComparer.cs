@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Dynamic;
 using System.Reflection;
 using Aksio.Collections;
 using Aksio.Concepts;
 using Aksio.Cratis.Properties;
+using Aksio.Cratis.Reflection;
 using Aksio.Reflection;
 
 namespace Aksio.Cratis.Changes;
@@ -85,9 +87,23 @@ public class ObjectComparer : IObjectComparer
         {
             differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
         }
-        else if (type.IsAssignableTo(typeof(IDictionary<string, object>)))
+        else if (type.IsAssignableTo(typeof(ExpandoObject)))
         {
             CompareDictionaryValues((leftValue as IDictionary<string, object>)!, (rightValue as IDictionary<string, object>)!, propertyPath, differences);
+        }
+        else if (type.IsDictionary())
+        {
+            var leftKeyValuePairs = (leftValue as IEnumerable)!.GetKeyValuePairs();
+            var rightKeyValuePairs = (rightValue as IEnumerable)!.GetKeyValuePairs();
+            var leftKeys = string.Concat(leftKeyValuePairs.Select(_ => _.Key));
+            var rightKeys = string.Concat(rightKeyValuePairs.Select(_ => _.Key));
+            var leftValues = string.Concat(leftKeyValuePairs.Select(_ => _.Value));
+            var rightValues = string.Concat(rightKeyValuePairs.Select(_ => _.Value));
+
+            if (leftKeys != rightKeys || leftValues != rightValues)
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+            }
         }
         else if (!type.IsPrimitive &&
           type != typeof(Guid) &&
