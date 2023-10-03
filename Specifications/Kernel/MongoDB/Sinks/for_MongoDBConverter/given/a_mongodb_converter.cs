@@ -6,10 +6,9 @@ using Aksio.Cratis.Schemas;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
-
 namespace Aksio.Cratis.Kernel.MongoDB.Sinks.for_MongoDBConverter.given;
 
-public record ReadModel();
+public record ReadModel(string SomeProperty);
 
 public class a_mongodb_converter : Specification
 {
