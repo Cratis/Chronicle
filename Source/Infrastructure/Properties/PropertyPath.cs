@@ -1,12 +1,14 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using System.Dynamic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Aksio.Cratis.Dynamic;
 using Aksio.Cratis.Objects;
+using Aksio.Reflection;
 using Aksio.Strings;
 
 namespace Aksio.Cratis.Properties;
@@ -157,10 +159,16 @@ public class PropertyPath
     /// Add an <see cref="PropertyName"/> as segment by creating a new <see cref="PropertyPath"/>.
     /// </summary>
     /// <param name="name">Name of the property.</param>
+    /// <param name="type">Optional type. It will use this to determine things like if it is an array or not.</param>
     /// <returns>A new <see cref="PropertyPath"/> with the segment appended.</returns>
     /// <remarks>This operation does not mutate the original.</remarks>
-    public PropertyPath AddProperty(string name)
+    public PropertyPath AddProperty(string name, Type? type = null)
     {
+        if (type?.IsEnumerable() == true && type?.IsAssignableTo(typeof(IDictionary)) == false)
+        {
+            name = $"[{name}]]";
+        }
+
         if (Path.Length == 0)
         {
             return new(name);

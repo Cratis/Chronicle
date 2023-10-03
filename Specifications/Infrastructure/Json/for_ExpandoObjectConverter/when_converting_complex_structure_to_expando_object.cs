@@ -9,6 +9,7 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
 {
     JsonObject source;
     JsonObject reference;
+    JsonObject complex_type_for_dictionary;
     JsonObject child;
     dynamic result;
 
@@ -30,6 +31,14 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
             ["guidValue"] = "251b9fbe-83d4-4306-9a5d-9d0e7d4dd456",
         };
 
+        complex_type_for_dictionary = new JsonObject
+        {
+            ["intValue"] = 45,
+            ["floatValue"] = 45.45,
+            ["doubleValue"] = 45.45,
+            ["guidValue"] = Guid.Parse("251b9fbe-83d4-4306-9a5d-9d0e7d4dd456")
+        };
+
         source = new JsonObject
         {
             ["intValue"] = 42,
@@ -49,7 +58,21 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
             ["reference"] = reference,
             ["children"] = new JsonArray(child),
             ["stringArray"] = new JsonArray { "first", "second" },
-            ["intArray"] = new JsonArray { 42, 43 }
+            ["intArray"] = new JsonArray { 42, 43 },
+            ["stringDictionary"] = new JsonObject
+            {
+                ["first"] = "firstValue",
+                ["second"] = "secondValue"
+            },
+            ["intDictionary"] = new JsonObject
+            {
+                ["1"] = 42,
+                ["2"] = 43
+            },
+            ["complexTypeDictionary"] = new JsonObject
+            {
+                ["first"] = complex_type_for_dictionary
+            }
         };
     }
 
@@ -85,6 +108,14 @@ public class when_converting_complex_structure_to_expando_object : given.an_expa
     [Fact] void should_set_top_level_string_array_second_item() => ((string)result.stringArray[1]).ShouldEqual("second");
     [Fact] void should_set_top_level_int_array_first_item() => ((int)result.intArray[0]).ShouldEqual(42);
     [Fact] void should_set_top_level_int_array_second_item() => ((int)result.intArray[1]).ShouldEqual(43);
+    [Fact] void should_set_top_level_string_dictionary_first_item() => ((string)result.stringDictionary["first"]).ShouldEqual("firstValue");
+    [Fact] void should_set_top_level_string_dictionary_second_item() => ((string)result.stringDictionary["second"]).ShouldEqual("secondValue");
+    [Fact] void should_set_top_level_int_dictionary_first_item() => ((int)result.intDictionary["1"]).ShouldEqual(42);
+    [Fact] void should_set_top_level_int_dictionary_second_item() => ((int)result.intDictionary["2"]).ShouldEqual(43);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_int_value() => ((int)result.complexTypeDictionary["first"].intValue).ShouldEqual(45);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_float_value() => ((float)result.complexTypeDictionary["first"].floatValue).ShouldEqual((float)45.45f);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_double_value() => ((double)result.complexTypeDictionary["first"].doubleValue).ShouldEqual(45.45);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_guid_value() => ((Guid)result.complexTypeDictionary["first"].guidValue).ShouldEqual(Guid.Parse("251b9fbe-83d4-4306-9a5d-9d0e7d4dd456"));
 
     [Fact] void should_reference_level_int_value_to_be_of_int_type() => ((object)result.reference.intValue).ShouldBeOfExactType<int>();
     [Fact] void should_reference_level_int_value_to_hold_correct_value() => ((int)result.reference.intValue).ShouldEqual(reference["intValue"].GetValue<int>());

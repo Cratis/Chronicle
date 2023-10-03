@@ -102,7 +102,7 @@ public class MongoDBChangesetConverter : IMongoDBChangesetConverter
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
-        foreach (var propertyDifference in propertiesChanged.Differences)
+        foreach (var propertyDifference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey()).ToArray())
         {
             var (property, arrayFilters) = _converter.ToMongoDBProperty(propertyDifference.PropertyPath, key.ArrayIndexers);
             allArrayFilters.AddRange(arrayFilters);
