@@ -14,4 +14,7 @@ public record TargetType(
     DateOnly DateOnlyValue,
     TimeOnly TimeOnlyValue,
     OtherType Reference,
-    IEnumerable<OtherType> Children);
+    IEnumerable<OtherType> Children,
+    IDictionary<string, string> StringDictionary,
+    IDictionary<string, int> IntDictionary,
+    IDictionary<string, OtherType> ComplexTypeDictionary);
