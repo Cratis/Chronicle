@@ -117,6 +117,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         if (jsonNode is JsonObject childObject)
         {
+            if (schemaProperty.IsDictionary)
+            {
+                return ConvertJsonObjectToDictionary(childObject);
+            }
+
             return ToExpandoObject(
                 childObject,
                 schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
@@ -132,6 +137,17 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return ConvertJsonValueToSchemaType(jsonNode, schemaProperty);
         }
         return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
+    }
+
+    IDictionary<object, object> ConvertJsonObjectToDictionary(JsonObject childObject)
+    {
+        var dictionary = new Dictionary<object, object>();
+        foreach (var (key, value) in childObject)
+        {
+            dictionary[key] = ConvertUnknownSchemaTypeToClrType(value!)!;
+        }
+
+        return dictionary;
     }
 
     object? ConvertJsonValueFromUnknownFormat(JsonNode jsonNode, JsonSchema schemaProperty)
