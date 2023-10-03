@@ -78,6 +78,30 @@ public class ObjectComparer : IObjectComparer
         }
     }
 
+    void CompareDictionaryValues(IEnumerable left, IEnumerable right, PropertyPath currentPropertyPath, List<PropertyDifference> differences)
+    {
+        var leftDictionary = left.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
+        var rightDictionary = right.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
+
+        var keys = leftDictionary.Keys.ToList();
+        keys.AddRange(rightDictionary.Keys);
+
+        foreach (var key in keys.Distinct())
+        {
+            var leftValue = leftDictionary!.ContainsKey(key) ? leftDictionary[key] : null;
+            var rightValue = rightDictionary!.ContainsKey(key) ? rightDictionary[key] : null;
+
+            var type = leftValue?.GetType() ?? rightValue?.GetType();
+            if (type is null)
+            {
+                continue;
+            }
+
+            var propertyPath = currentPropertyPath.AddProperty(key, type);
+            CompareValues(type, leftValue, rightValue, propertyPath, differences);
+        }
+    }
+
     void CompareValues(Type type, object? leftValue, object? rightValue, PropertyPath propertyPath, List<PropertyDifference> differences)
     {
         if (leftValue is null && rightValue is null) return;
@@ -93,14 +117,9 @@ public class ObjectComparer : IObjectComparer
         }
         else if (type.IsDictionary())
         {
-            var leftKeyValuePairs = (leftValue as IEnumerable)!.GetKeyValuePairs();
-            var rightKeyValuePairs = (rightValue as IEnumerable)!.GetKeyValuePairs();
-            var leftKeys = string.Concat(leftKeyValuePairs.Select(_ => _.Key));
-            var rightKeys = string.Concat(rightKeyValuePairs.Select(_ => _.Key));
-            var leftValues = string.Concat(leftKeyValuePairs.Select(_ => _.Value));
-            var rightValues = string.Concat(rightKeyValuePairs.Select(_ => _.Value));
-
-            if (leftKeys != rightKeys || leftValues != rightValues)
+            var dictionaryDifferences = new List<PropertyDifference>();
+            CompareDictionaryValues((leftValue as IEnumerable)!, (rightValue as IEnumerable)!, propertyPath, dictionaryDifferences);
+            if (dictionaryDifferences.Count > 0)
             {
                 differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
             }

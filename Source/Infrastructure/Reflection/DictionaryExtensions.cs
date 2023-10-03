@@ -15,7 +15,9 @@ public static class DictionaryExtensions
     /// </summary>
     /// <param name="type">Type to check.</param>
     /// <returns>True if it is, false if not.</returns>
-    public static bool IsDictionary(this Type type) => type.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IDictionary<,>));
+    public static bool IsDictionary(this Type type) =>
+        (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IDictionary<,>)) ||
+        type.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IDictionary<,>));
 
     /// <summary>
     /// Get the key type of a dictionary.
@@ -48,12 +50,12 @@ public static class DictionaryExtensions
     /// </summary>
     /// <param name="enumerable"><see cref="IEnumerable"/> which is a dictionary to get from.</param>
     /// <returns>A collection of key value pairs of string type.</returns>
-    public static IEnumerable<KeyValuePair<string, string>> GetKeyValuePairs(this IEnumerable enumerable)
+    public static IEnumerable<KeyValuePair<string, object>> GetKeyValuePairs(this IEnumerable enumerable)
     {
         var dictionaryType = enumerable.GetType();
         if (!dictionaryType.IsDictionary())
         {
-            return Enumerable.Empty<KeyValuePair<string, string>>();
+            return Enumerable.Empty<KeyValuePair<string, object>>();
         }
 
         var keyType = dictionaryType.GetKeyType();
@@ -61,13 +63,13 @@ public static class DictionaryExtensions
         var keyValuePairType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
         var keyProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Key))!;
         var valueProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Value))!;
-        var keyValuePairs = new List<KeyValuePair<string, string>>();
+        var keyValuePairs = new List<KeyValuePair<string, object>>();
 
         foreach (var keyValuePair in enumerable)
         {
-            keyValuePairs.Add(new KeyValuePair<string, string>(
+            keyValuePairs.Add(new KeyValuePair<string, object>(
                 keyProperty.GetValue(keyValuePair)?.ToString() ?? string.Empty,
-                valueProperty.GetValue(keyValuePair)?.ToString() ?? string.Empty));
+                valueProperty.GetValue(keyValuePair)!));
         }
 
         return keyValuePairs;
