@@ -44,6 +44,29 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
         child_expando.guidValue = "633f3280-cb69-4a8b-9e03-7fec8c9e7845";
 
         expando.children = new ExpandoObject[] { child_expando };
+
+        expando.stringDictionary = new Dictionary<string, string>
+        {
+            { "first", "first value" },
+            { "second", "second value" }
+        };
+
+        expando.intDictionary = new Dictionary<string, int>
+        {
+            { "first", 42 },
+            { "second", 43 }
+        };
+
+        dynamic complexType = new ExpandoObject();
+        complexType.intValue = 45;
+        complexType.floatValue = 45.45f;
+        complexType.doubleValue = 45.45;
+        complexType.guidValue = Guid.Parse("a4134076-5823-4189-b017-d82756816305");
+        expando.complexTypeDictionary = new Dictionary<string, ExpandoObject>
+        {
+            { "first", complexType }
+        };
+
         source = expando;
         source_dynamic = expando;
 
@@ -63,6 +86,15 @@ public class when_converting_complex_structure_to_json_object : given.an_expando
     [Fact] void should_set_top_level_date_time_offset_value_to_hold_correct_value() => result["dateTimeOffsetValue"].GetValue<DateTimeOffset>().ShouldEqual(DateTimeOffset.Parse((string)source_dynamic.dateTimeOffsetValue));
     [Fact] void should_set_top_level_date_only_value_to_hold_correct_value() => result["dateOnlyValue"].GetValue<DateTime>().ShouldEqual(DateOnly.Parse((string)source_dynamic.dateOnlyValue).ToDateTime(JsonValueExtensions.Noon));
     [Fact] void should_set_top_level_time_only_value_to_hold_correct_value() => result["timeOnlyValue"].GetValue<DateTime>().ShouldEqual(DateTime.MinValue.Add(TimeOnly.FromDateTime(DateTime.Parse((string)source_dynamic.timeOnlyValue)).ToTimeSpan()));
+    [Fact] void should_set_top_level_string_dictionary_first_item() => result["stringDictionary"]["first"].GetValue<string>().ShouldEqual((string)source_dynamic.stringDictionary["first"]);
+    [Fact] void should_set_top_level_string_dictionary_second_item() => result["stringDictionary"]["second"].GetValue<string>().ShouldEqual((string)source_dynamic.stringDictionary["second"]);
+    [Fact] void should_set_top_level_int_dictionary_first_item() => result["intDictionary"]["first"].GetValue<int>().ShouldEqual((int)source_dynamic.intDictionary["first"]);
+    [Fact] void should_set_top_level_int_dictionary_second_item() => result["intDictionary"]["second"].GetValue<int>().ShouldEqual((int)source_dynamic.intDictionary["second"]);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_int_value() => result["complexTypeDictionary"]["first"]["intValue"].GetValue<int>().ShouldEqual((int)source_dynamic.complexTypeDictionary["first"].intValue);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_float_value() => result["complexTypeDictionary"]["first"]["floatValue"].GetValue<float>().ShouldEqual((float)source_dynamic.complexTypeDictionary["first"].floatValue);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_double_value() => result["complexTypeDictionary"]["first"]["doubleValue"].GetValue<double>().ShouldEqual((double)source_dynamic.complexTypeDictionary["first"].doubleValue);
+    [Fact] void should_set_top_level_complex_type_dictionary_first_item_correct_guid_value() => result["complexTypeDictionary"]["first"]["guidValue"].GetValue<Guid>().ShouldEqual((Guid)source_dynamic.complexTypeDictionary["first"].guidValue);
+
 
     [Fact] void should_set_reference_object_int_value_to_hold_correct_value() => result["reference"]["intValue"].GetValue<int>().ShouldEqual((int)source_dynamic.reference.intValue);
     [Fact] void should_set_reference_object_float_value_to_hold_correct_value() => result["reference"]["floatValue"].GetValue<float>().ShouldEqual((float)source_dynamic.reference.floatValue);

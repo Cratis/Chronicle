@@ -3,7 +3,9 @@
 
 using System.Collections;
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using Aksio.Json;
 using Aksio.Types;
@@ -88,6 +90,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
+        if (schemaProperty.IsDictionary)
+        {
+            return ConvertUnknownSchemaTypeToJsonValue(value);
+        }
+
         if (value is ExpandoObject expando)
         {
             return ToJsonObject(
@@ -119,7 +126,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         {
             if (schemaProperty.IsDictionary)
             {
-                return ConvertJsonObjectToDictionary(childObject);
+                return ToDictionary(childObject);
             }
 
             return ToExpandoObject(
@@ -139,7 +146,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return ConvertJsonValueFromUnknownFormat(jsonNode, schemaProperty);
     }
 
-    IDictionary<object, object> ConvertJsonObjectToDictionary(JsonObject childObject)
+    IDictionary<object, object> ToDictionary(JsonObject childObject)
     {
         var dictionary = new Dictionary<object, object>();
         foreach (var (key, value) in childObject)
@@ -222,6 +229,31 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return document;
         }
 
+        if (value?.GetType().IsDictionary() == true)
+        {
+            var dictionaryType = value.GetType();
+            var keyType = dictionaryType.GetKeyType();
+            var valueType = dictionaryType.GetValueType();
+            var keyValuePairType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
+            var keyProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Key))!;
+            var valueProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Value))!;
+
+            var dictionary = value as IEnumerable;
+            var document = new JsonObject();
+            foreach (var keyValuePair in dictionary!)
+            {
+                var key = keyProperty.GetValue(keyValuePair)?.ToString() ?? string.Empty;
+                document[key] = ConvertUnknownSchemaTypeToJsonValue(valueProperty.GetValue(keyValuePair));
+            }
+            return document;
+        }
+
+        var jsonValue = value.ToJsonValue();
+        if (jsonValue is not null)
+        {
+            return jsonValue;
+        }
+
         if (value is IEnumerable enumerable)
         {
             var array = new JsonArray();
@@ -234,7 +266,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return array;
         }
 
-        return value.ToJsonValue();
+        return null;
     }
 
     object? ConvertUnknownSchemaTypeToClrType(JsonNode value)
@@ -255,8 +287,21 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return array.Select(_ => ConvertUnknownSchemaTypeToClrType(_!)).ToArray();
         }
 
-        var jsonValue = value.AsValue();
-        return value.GetValue<object>();
+        var jsonValue = value.GetValue<object>();
+        if (jsonValue is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString(),
+                JsonValueKind.Number => element.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => null
+            };
+        }
+
+        return jsonValue;
     }
 
     object? ConvertJsonValueToSchemaType(JsonNode jsonNode, JsonSchema schemaProperty)
