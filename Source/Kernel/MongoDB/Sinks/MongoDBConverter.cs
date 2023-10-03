@@ -163,15 +163,15 @@ public class MongoDBConverter : IMongoDBConverter
             return input.ToBsonValue(targetType);
         }
 
+        if (input is ExpandoObject expandoObject)
+        {
+            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
+        }
+
         var bsonValue = input.ToBsonValue();
         if (bsonValue != BsonNull.Value)
         {
             return bsonValue;
-        }
-
-        if (input is ExpandoObject expandoObject)
-        {
-            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
         }
 
         if (input is IEnumerable enumerable)
