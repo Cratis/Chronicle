@@ -4,33 +4,69 @@
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Represents an implementation of <see cref="IJob"/>.
+/// Represents an implementation of <see cref="IJob{TRequest}"/>.
 /// </summary>
-public class Job : Grain<JobState>, IJob
+/// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
+public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
 {
+    /// <inheritdoc/>
+    public abstract Task Start(TRequest request);
+
+    /// <inheritdoc/>
+    public Task Stop() => throw new NotImplementedException();
+
     /// <inheritdoc/>
     public Task ReportStepProgress(JobStepId stepId, JobStepProgress progress) => throw new NotImplementedException();
 
     /// <inheritdoc/>
-    public async Task OnStepCompleted(JobStepId stepId)
+    public async Task OnStepSuccessful(JobStepId stepId)
     {
-        State.Progress.CompletedSteps++;
+        State.Steps.Remove(stepId);
+        State.Progress.SuccessfulSteps++;
+
         await WriteStateAsync();
+        await HandleCompletion();
     }
+
+    /// <inheritdoc/>
+    public Task OnStepStopped(JobStepId stepId) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task OnStepFailed(JobStepId stepId)
     {
+        var step = State.Steps[stepId];
+        State.Steps.Remove(stepId);
+        State.FailedSteps[stepId] = step;
         State.Progress.FailedSteps++;
+
         await WriteStateAsync();
+        await HandleCompletion();
     }
 
-    /// <inheritdoc/>
-    public virtual Task Stop() => Task.CompletedTask;
-
     /// <summary>
-    /// Start the job.
+    /// Add a step to the job.
     /// </summary>
+    /// <param name="request">Request for the step.</param>
+    /// <typeparam name="TJobStep">Type of job step.</typeparam>
+    /// <typeparam name="TJobStepRequest">Type of request for the step.</typeparam>
     /// <returns>Awaitable task.</returns>
-    protected virtual Task Start() => Task.CompletedTask;
+    protected async Task AddStep<TJobStep, TJobStepRequest>(TJobStepRequest request)
+        where TJobStep : IJobStep<TJobStepRequest>
+    {
+        var jobStepId = JobStepId.New();
+        var jobStep = GrainFactory.GetGrain<TJobStep>(jobStepId);
+        await jobStep.Start(request);
+        State.Steps[jobStepId] = new JobStepState
+        {
+            Status = JobStepStatus.Running
+        };
+    }
+
+    async Task HandleCompletion()
+    {
+        if (State.Progress.IsCompleted)
+        {
+            await GrainFactory.GetGrain<IJobsManager>(0).OnCompleted(this.GetPrimaryKey());
+        }
+    }
 }

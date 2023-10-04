@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Represents an event that occurred for a <see cref="IJob"/>.
+/// Represents an event that occurred for a <see cref="IJob{TRequest}"/>.
 /// </summary>
 public class JobEvent
 {

@@ -16,12 +16,17 @@ public class JobProgress
     /// <summary>
     /// Gets or sets the completed number of steps.
     /// </summary>
-    public int CompletedSteps { get; set; }
+    public int SuccessfulSteps { get; set; }
 
     /// <summary>
     /// Gets or sets the failed number of steps.
     /// </summary>
     public int FailedSteps { get; set; }
+
+    /// <summary>
+    /// Gets whether or not the job is completed.
+    /// </summary>
+    public bool IsCompleted => SuccessfulSteps + FailedSteps == TotalSteps;
 
     /// <summary>
     /// Gets or sets the current <see cref="JobProgressMessage"/> associated with the progress.

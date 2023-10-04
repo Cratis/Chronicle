@@ -9,16 +9,6 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public class JobStepState
 {
     /// <summary>
-    /// Gets or sets the <see cref="JobId"/> of the job.
-    /// </summary>
-    public JobId JobId { get; set; } = Guid.Empty;
-
-    /// <summary>
-    /// Gets or sets the <see cref="JobStepId"/> of the step.
-    /// </summary>
-    public JobStepId StepId { get; set; } = 0;
-
-    /// <summary>
     /// Gets or sets the <see cref="JobStepStatus"/>.
     /// </summary>
     public JobStepStatus Status { get; set; }

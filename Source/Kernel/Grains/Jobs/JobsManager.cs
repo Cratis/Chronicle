@@ -10,8 +10,15 @@ public class JobsManager : Grain, IJobsManager
 {
     /// <inheritdoc/>
     public Task Start<TJob, TRequest>(JobId jobId, TRequest request)
-        where TJob : IJob => throw new NotImplementedException();
+        where TJob : IJob<TRequest>
+    {
+        var job = GrainFactory.GetGrain<TJob>(jobId);
+        return job.Start(request);
+    }
 
     /// <inheritdoc/>
-    public Task OnCompleted(JobId jobId) => throw new NotImplementedException();
+    public Task OnCompleted(JobId jobId)
+    {
+        return Task.CompletedTask;
+    }
 }

@@ -17,7 +17,7 @@ public interface IJobsManager : IGrainWithIntegerKey
     /// <typeparam name="TRequest">Type of the request to pass along.</typeparam>
     /// <returns>Awaitable task.</returns>
     Task Start<TJob, TRequest>(JobId jobId, TRequest request)
-        where TJob : IJob;
+        where TJob : IJob<TRequest>;
 
     /// <summary>
     /// Report back completion of a job.

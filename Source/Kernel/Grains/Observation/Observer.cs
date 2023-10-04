@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Aksio.Cratis.Events;
 using Aksio.Cratis.EventSequences;
+using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Observation;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
@@ -28,6 +29,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     ObserverId _observerId = Guid.Empty;
     ObserverKey _observerKey = ObserverKey.NotSet;
     ObserverSubscription _subscription;
+    IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
 
     /// <summary>
@@ -60,6 +62,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         _observerKey = ObserverKey.Parse(keyAsString);
 
         _streamProvider = this.GetStreamProvider(WellKnownProviders.EventSequenceStreamProvider);
+        _jobsManager = GrainFactory.GetGrain<IJobsManager>(0);
 
         return Task.CompletedTask;
     }
@@ -100,7 +103,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
     {
         new States.Disconnected(),
         new States.Subscribing(this, _eventSequenceStorageProvider()),
-        new States.CatchUp(),
+        new States.CatchUp(_jobsManager),
         new States.Replay(),
         new States.Indexing(),
         new States.Observing(

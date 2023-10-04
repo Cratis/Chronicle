@@ -6,8 +6,16 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 /// <summary>
 /// Represents a job that is potentially long running with steps.
 /// </summary>
-public interface IJob : IGrainWithGuidKey
+/// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
+public interface IJob<TRequest> : IGrainWithGuidKey
 {
+    /// <summary>
+    /// Start the job.
+    /// </summary>
+    /// <param name="request">The request object for the job.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Start(TRequest request);
+
     /// <summary>
     /// Stop a running job.
     /// </summary>
@@ -23,11 +31,18 @@ public interface IJob : IGrainWithGuidKey
     Task ReportStepProgress(JobStepId stepId, JobStepProgress progress);
 
     /// <summary>
-    /// Report completion of a job step.
+    /// Report a successful completion of a job step.
     /// </summary>
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that was completed.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnStepCompleted(JobStepId stepId);
+    Task OnStepSuccessful(JobStepId stepId);
+
+    /// <summary>
+    /// Report that a job step has been stopped.
+    /// </summary>
+    /// <param name="stepId">The <see cref="JobStepId"/> of the step that was stopped.</param>
+    /// <returns>Awaitable task.</returns>
+    Task OnStepStopped(JobStepId stepId);
 
     /// <summary>
     /// Report failure of a job step.

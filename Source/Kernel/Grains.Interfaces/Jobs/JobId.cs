@@ -10,6 +10,11 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public record JobId(Guid Value) : ConceptAs<Guid>(Value)
 {
     /// <summary>
+    /// Represents the identifier for a job identifier not set.
+    /// </summary>
+    public static readonly JobId NotSet = Guid.Empty;
+
+    /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="JobId"/>.
     /// </summary>
     /// <param name="value">The <see cref="Guid"/> to convert from.</param>

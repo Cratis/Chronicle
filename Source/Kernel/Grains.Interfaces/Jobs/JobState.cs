@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Holds the state of a <see cref="IJob"/>.
+/// Holds the state of a <see cref="IJob{TRequest}"/>.
 /// </summary>
 public class JobState
 {
@@ -27,4 +27,14 @@ public class JobState
     /// Gets or sets the <see cref="JobProgress"/>.
     /// </summary>
     public JobProgress Progress { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the collection of <see cref="JobStepState"/>.
+    /// </summary>
+    public IDictionary<JobStepId, JobStepState> Steps { get; set; } = new Dictionary<JobStepId, JobStepState>();
+
+    /// <summary>
+    /// Gets or sets the collection of <see cref="JobStepState"/> for failed job steps.
+    /// </summary>
+    public IDictionary<JobStepId, JobStepState> FailedSteps { get; set; } = new Dictionary<JobStepId, JobStepState>();
 }
