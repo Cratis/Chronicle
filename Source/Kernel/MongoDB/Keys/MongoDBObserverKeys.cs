@@ -26,6 +26,6 @@ public class MongoDBObserverKeys : IObserverKeys
     public IAsyncEnumerator<Key> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
         var cursor = _collection.Distinct(_ => _.EventSourceId, _ => true, cancellationToken: cancellationToken);
-        return new MongoDBObserverKeysAsyncEnumerator(null!);
+        return new MongoDBObserverKeysAsyncEnumerator(cursor);
     }
 }

@@ -30,7 +30,7 @@ public class MongoDBObserverKeyIndexes : IObserverKeyIndexes
     }
 
     /// <inheritdoc/>
-    public Task<IObserverKeyIndex> GetFor(
+    public async Task<IObserverKeyIndex> GetFor(
         MicroserviceId microserviceId,
         TenantId tenantId,
         ObserverId observerId)
@@ -38,6 +38,7 @@ public class MongoDBObserverKeyIndexes : IObserverKeyIndexes
         _executionContextManager.Establish(tenantId, CorrelationId.New(), microserviceId);
         var database = _eventStoreDatabaseProvider();
         var collection = database.GetEventSequenceCollectionFor(EventSequenceId.Log);
-        return Task.FromResult<IObserverKeyIndex>(new MongoDBEventSourceKeyIndex(collection));
+        await Task.CompletedTask;
+        return new MongoDBEventSourceKeyIndex(collection);
     }
 }
