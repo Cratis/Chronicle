@@ -9,7 +9,7 @@ namespace Aksio.Cratis;
 public static class WellKnownGrainStorageProviders
 {
     /// <summary>
-    /// The name of the storage provider used for working with this type of state.
+    /// The name of the storage provider used for event sequences.
     /// </summary>
     public const string EventSequences = "event-sequence-state";
 
@@ -24,12 +24,17 @@ public static class WellKnownGrainStorageProviders
     public const string FailedPartitions = "failed-partitions";
 
     /// <summary>
-    /// The name of the storage provider used for working with this type of state.
+    /// The name of the storage provider used for tenant configuration.
     /// </summary>
     public const string TenantConfiguration = "tenant-configuration-state";
 
     /// <summary>
-    /// The name of the storage provider used for working with this type of state.
+    /// The name of the storage provider used for connected clients.
     /// </summary>
     public const string ConnectedClients = "connected-clients-state";
+
+    /// <summary>
+    /// THe name of the storage provider used for jobs.
+    /// </summary>
+    public const string Jobs = "job-state";
 }
