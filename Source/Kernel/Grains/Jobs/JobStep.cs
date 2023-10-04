@@ -28,7 +28,7 @@ public abstract class JobStep<TRequest> : SyncWorker<TRequest, object>, IJobStep
     /// The method that gets called when the step should do its work.
     /// </summary>
     /// <param name="request">The request object for the step.</param>
-    /// <returns>Awaitable task</returns>
+    /// <returns>Awaitable task.</returns>
     protected abstract Task PerformStep(TRequest request);
 
     /// <inheritdoc/>

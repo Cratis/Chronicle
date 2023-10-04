@@ -104,7 +104,7 @@ public class Observer : StateMachine<ObserverState>, IObserver
         new States.Disconnected(),
         new States.Subscribing(this, _eventSequenceStorageProvider()),
         new States.CatchUp(_jobsManager),
-        new States.Replay(),
+        new States.Replay(_observerKey, _jobsManager),
         new States.Indexing(),
         new States.Observing(
             this,

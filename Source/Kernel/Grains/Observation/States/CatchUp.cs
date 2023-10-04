@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Aksio.Cratis.Kernel.Grains.Jobs;
-using Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 using Aksio.Cratis.Kernel.Orleans.StateMachines;
 using Aksio.Cratis.Observation;
 
@@ -41,8 +40,7 @@ public class CatchUp : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        // _jobsManager.Start<CatchUpJob>(JobId.New(), )
-
+        await Task.CompletedTask;
         return state;
     }
 

@@ -3,12 +3,14 @@
 
 using Aksio.Cratis.Kernel.Grains.Jobs;
 using Aksio.Cratis.Kernel.Keys;
+using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for replaying an observer.
 /// </summary>
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
 public class ReplayJob : Job<ReplayRequest>, IReplayJob
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
