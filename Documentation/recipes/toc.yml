@@ -16,3 +16,5 @@
   href: observing-events-in-inbox.md
 - name: Extending Rules
   href: rules/extending-rules.md
+- name: Docker Compose
+  href: docker-compose.md

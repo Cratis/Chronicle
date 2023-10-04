@@ -6,14 +6,14 @@ namespace Aksio.Cratis.Observation;
 /// <summary>
 /// Exception that gets thrown when a type is not an observer.
 /// </summary>
-public class TypeIsNotAnObserver : Exception
+public class UnknownObserverType : Exception
 {
     /// <summary>
-    /// Initializes a new instance of <see cref="TypeIsNotAnObserver"/>.
+    /// Initializes a new instance of <see cref="UnknownObserverType"/>.
     /// </summary>
     /// <param name="type">The Type that is not an observer.</param>
-    public TypeIsNotAnObserver(Type type)
-        : base($"Type '{type}' is not an observer")
+    public UnknownObserverType(Type type)
+        : base($"Type '{type}' is not a known observer")
     {
     }
 }

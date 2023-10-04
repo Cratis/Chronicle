@@ -33,7 +33,9 @@ public class MongoDBIdentityStore : IIdentityStore
         var result = await GetCollection().FindAsync(_ => true);
         var allIdentities = await result.ToListAsync();
         _identitiesByIdentityId = allIdentities.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
-        _identityIdsBySubject = _identitiesByIdentityId.ToDictionary(_ => _.Value.Subject, _ => _.Key);
+        _identityIdsBySubject = _identitiesByIdentityId
+                                    .Where(_ => !string.IsNullOrEmpty(_.Value.Subject))
+                                    .ToDictionary(_ => _.Value.Subject, _ => _.Key);
         _identityIdsByUserName = _identitiesByIdentityId.ToDictionary(_ => _.Value.UserName, _ => _.Key);
     }
 
@@ -70,10 +72,8 @@ public class MongoDBIdentityStore : IIdentityStore
     /// <inheritdoc/>
     public async Task<Identity> GetSingleFor(IdentityId identityId)
     {
-        if (!await HasFor(identityId))
-        {
-            throw new UnknownIdentityIdentifier(identityId);
-        }
+        if (identityId == IdentityId.NotSet) return Identity.NotSet;
+        if (!await HasFor(identityId)) return Identity.Unknown;
 
         return _identitiesByIdentityId[identityId];
     }

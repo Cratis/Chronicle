@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
+using Aksio.Cratis.Reflection;
 using Aksio.Cratis.Schemas;
 using MongoDB.Bson;
 using NJsonSchema;
@@ -83,6 +84,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
 
     BsonValue ConvertToBsonValue(object? value, JsonSchema schemaProperty)
     {
+        if (schemaProperty.IsDictionary)
+        {
+            return ConvertUnknownSchemaTypeToBsonValue(value);
+        }
+
         if (value is ExpandoObject expando)
         {
             return ToBsonDocument(
@@ -112,6 +118,11 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
     {
         if (bsonValue is BsonDocument childDocument)
         {
+            if (schemaProperty.IsDictionary)
+            {
+                return ToDictionary(childDocument);
+            }
+
             return ToExpandoObject(
                 childDocument,
                 schemaProperty.IsArray ? schemaProperty.Item.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
@@ -129,6 +140,16 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
         return ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
     }
 
+    IDictionary<object, object> ToDictionary(BsonDocument childDocument)
+    {
+        var dictionary = new Dictionary<object, object>();
+        foreach (var element in childDocument.Elements)
+        {
+            dictionary[element.Name] = ConvertUnknownSchemaTypeToClrType(element.Value)!;
+        }
+        return dictionary;
+    }
+
     BsonValue ConvertUnknownSchemaTypeToBsonValue(object? value)
     {
         if (value is ExpandoObject expandoObject)
@@ -144,6 +165,17 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return document;
         }
 
+        var bsonValue = value.ToBsonValue();
+        if (bsonValue != BsonNull.Value)
+        {
+            return bsonValue;
+        }
+
+        if (value?.GetType().IsDictionary() == true)
+        {
+            return value.ToBsonValue();
+        }
+
         if (value is IEnumerable enumerable)
         {
             var array = new BsonArray();
@@ -156,7 +188,7 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             return array;
         }
 
-        return value.ToBsonValue();
+        return BsonNull.Value;
     }
 
     object? ConvertUnknownSchemaTypeToClrType(BsonValue value)
@@ -182,6 +214,10 @@ public class ExpandoObjectConverter : IExpandoObjectConverter
             case BsonType.Double:
                 return value.AsDouble;
             case BsonType.String:
+                if (Guid.TryParse(value.AsString, out var guid))
+                {
+                    return guid;
+                }
                 return value.AsString;
             case BsonType.ObjectId:
                 return value.AsObjectId;

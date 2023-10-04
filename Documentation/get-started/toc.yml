@@ -2,5 +2,3 @@
   href: index.md
 - name: Basic
   href: basic.md
-- name: Using only REST APIs
-  href: rest.md

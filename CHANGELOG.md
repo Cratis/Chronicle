@@ -1,3 +1,50 @@
+# [v9.5.0] - 2023-9-29 [PR: #974](https://github.com/aksio-insurtech/Cratis/pull/974)
+
+### Added
+
+- Exposing functionality for getting available reducers and also getting a reducer by its Clr type and get a type by the reducer Id.
+
+
+# [v9.4.8] - 2023-9-26 [PR: #970](https://github.com/aksio-insurtech/Cratis/pull/970)
+
+### Fixed
+
+- Fixing so that primitives are directly by the sink before it considers whether or not it is an enumerable. We saw it outputting strings into MongoDB collections as an array of characters.
+- Making sure the single tenancy scenario is dealt with properly throughout config and startup. This will be improved even further in a future version of Cratis.
+
+
+# [v9.4.7] - 2023-9-25 [PR: #0]()
+
+### Fixed
+
+- Setting the default storage config for unspecified microservice and tenant scenarios.
+
+# [v9.4.6] - 2023-9-25 [PR: #0]()
+
+### Fixed
+
+- Adding unspecified microservice config for when microservice is unspecified.
+
+
+# [v9.4.5] - 2023-9-25 [PR: #0]()
+
+### Fixed
+
+- Adding unspecified tenant config for single tenant scenarios.
+
+# [v9.4.4] - 2023-9-25 [PR: #0]()
+
+### Fixed
+
+- Fixing so that the `PIIMetadataProvider` get registered correctly with the IoC by the `ClientBuilder`.
+
+# [v9.4.2] - 2023-9-18 [PR: #964](https://github.com/aksio-insurtech/Cratis/pull/964)
+
+### Fixed
+
+- The resolution of identity for things like caused by looks for a match on subject first and if no subject is registered with that it will try to resolve using the username claim. If already have multiple registred users with subject set to null or empty string, then this would fail on startup. This version fixes this problem.
+
+
 # [v9.4.0] - 2023-9-5 [PR: #957](https://github.com/aksio-insurtech/Cratis/pull/957)
 
 ### Added

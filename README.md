@@ -17,10 +17,9 @@
 
 ## Introduction
 
-Cratis is an Event Sourcing platform built with ease of use, productivity, compliance and maintainability in mind.
-It provides the core platform, referred to as the **Kernel** with client SDK (.NET only for the time being) and tooling
-built into it. In addition Cratis offers an application model aimed towards productivity and bringing in concepts
-such as CQRS; opinionated and completely optional.
+Cratis is an Event Sourcing database built with ease of use, productivity, compliance and maintainability in mind.
+It provides the core server, referred to as the **Kernel** with a client SDK to access it (.NET only for the time being) and tooling
+built into it.
 
 Read the documentation on our site [https://cratis.io](https://cratis.io) for all the details.
 For general guidance on the core values and principles we @ Aksio use, read more [here](https://github.com/aksio-insurtech/Home/blob/main/profile/README.md).

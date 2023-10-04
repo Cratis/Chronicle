@@ -21,6 +21,11 @@ public record Identity(string Subject, string Name, string UserName = "", Identi
     public static readonly Identity NotSet = new("1efc9b81-0612-4466-962c-86acc4e9a028", "[Not Set]", "[Not Set]");
 
     /// <summary>
+    /// The identity used when the identity is not known.
+    /// </summary>
+    public static readonly Identity Unknown = new("3321cf62-db16-425e-8173-99fcfefe11dd", "[Unknown]", "[Unknown]");
+
+    /// <summary>
     /// The identity used when the system is the cause.
     /// </summary>
     public static readonly Identity System = new("5d032c92-9d5e-41eb-947a-ee5314ed0032", "[System]", "[System]");

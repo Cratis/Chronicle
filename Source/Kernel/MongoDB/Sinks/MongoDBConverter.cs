@@ -155,10 +155,23 @@ public class MongoDBConverter : IMongoDBConverter
     /// <inheritdoc/>
     public BsonValue ToBsonValue(object? input, JsonSchemaProperty schemaProperty)
     {
+        if (input is null) return BsonNull.Value;
+
         if (_typeFormats.IsKnown(schemaProperty.Format))
         {
             var targetType = _typeFormats.GetTypeForFormat(schemaProperty.Format);
             return input.ToBsonValue(targetType);
+        }
+
+        if (input is ExpandoObject expandoObject)
+        {
+            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
+        }
+
+        var bsonValue = input.ToBsonValue();
+        if (bsonValue != BsonNull.Value)
+        {
+            return bsonValue;
         }
 
         if (input is IEnumerable enumerable)
@@ -179,9 +192,9 @@ public class MongoDBConverter : IMongoDBConverter
         }
 
         var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
-        if (value == BsonNull.Value && input is ExpandoObject expandoObject)
+        if (value == BsonNull.Value)
         {
-            return _expandoObjectConverter.ToBsonDocument(expandoObject, schemaProperty.ActualTypeSchema);
+            return BsonNull.Value;
         }
 
         return value;
