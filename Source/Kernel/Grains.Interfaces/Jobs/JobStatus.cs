@@ -4,7 +4,7 @@
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
-/// Represents the status of a <see cref="IJob"/>.
+/// Represents the status of a <see cref="IJob{TRequest}"/>.
 /// </summary>
 public enum JobStatus
 {
