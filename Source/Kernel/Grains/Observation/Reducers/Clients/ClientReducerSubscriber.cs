@@ -126,6 +126,10 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
                     new Key(firstEvent.Context.EventSourceId, ArrayIndexers.NoIndexers),
                     observationState);
 
+                var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
+
+                ReduceResult? reduceResult = null;
+
                 await (_pipeline?.Handle(reducerContext, async (_, initial) =>
                 {
                     var reduce = new Reduce(
@@ -148,14 +152,19 @@ public class ClientReducerSubscriber : Grain, IClientReducerSubscriber
 
                     if (commandResult.Response is not null && commandResult.Response is JsonElement jsonElement)
                     {
-                        var result = jsonElement.Deserialize<ReduceResult>(_jsonSerializerOptions)!;
-                        return _expandoObjectConverter.ToExpandoObject(result.State ?? new JsonObject(), _pipeline.ReadModel.Schema);
+                        reduceResult = jsonElement.Deserialize<ReduceResult>(_jsonSerializerOptions)!;
+                        return _expandoObjectConverter.ToExpandoObject(reduceResult.State ?? new JsonObject(), _pipeline.ReadModel.Schema);
                     }
 
                     return new ExpandoObject();
                 }) ?? Task.CompletedTask);
 
-                return new ObserverSubscriberResult(state, EventSequenceNumber.Unavailable, commandResult.ExceptionMessages, commandResult.ExceptionStackTrace);
+                if (reduceResult is null)
+                {
+                    return new ObserverSubscriberResult(state, EventSequenceNumber.Unavailable, Enumerable.Empty<string>(), string.Empty);
+                }
+
+                return new ObserverSubscriberResult(state, reduceResult.LastSuccessfullyObservedEvent, reduceResult.ErrorMessages, reduceResult.StackTrace);
             }
         }
 

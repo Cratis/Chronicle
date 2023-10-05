@@ -22,6 +22,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Observers)]
 public class Observer : StateMachine<ObserverState>, IObserver
 {
+    readonly IExecutionContextManager _executionContextManager;
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly ILogger<Observer> _logger;
     readonly IPersistentState<FailedPartitions> _failuresState;
@@ -35,15 +36,18 @@ public class Observer : StateMachine<ObserverState>, IObserver
     /// <summary>
     /// Initializes a new instance of the <see cref="Observer"/> class.
     /// </summary>
+    /// <param name="executionContextManager"><see cref="IExecutionContextManager"/> for working with the execution context.</param>
     /// <param name="eventSequenceStorageProvider">Provider for <see cref="IEventSequenceStorage"/>.</param>
     /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Observer(
+        IExecutionContextManager executionContextManager,
         ProviderFor<IEventSequenceStorage> eventSequenceStorageProvider,
         [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
         IPersistentState<FailedPartitions> failures,
         ILogger<Observer> logger)
     {
+        _executionContextManager = executionContextManager;
         _eventSequenceStorageProvider = eventSequenceStorageProvider;
         _failuresState = failures;
         _logger = logger;
@@ -104,7 +108,11 @@ public class Observer : StateMachine<ObserverState>, IObserver
         new States.Disconnected(),
         new States.Subscribing(this, _eventSequenceStorageProvider()),
         new States.CatchUp(_jobsManager),
-        new States.Replay(_observerKey, _jobsManager),
+        new States.Replay(
+            _observerKey,
+            _executionContextManager,
+            _eventSequenceStorageProvider,
+            _jobsManager),
         new States.Indexing(),
         new States.Observing(
             this,

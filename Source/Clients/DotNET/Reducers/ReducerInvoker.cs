@@ -92,14 +92,17 @@ public class ReducerInvoker : IReducerInvoker
                         new InternalReduceResult(
                             initialReadModelContent,
                             lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                            ex));
+                            ex.GetAllMessages(),
+                            ex.StackTrace ?? string.Empty));
             }
         }
 
         return Task.FromResult(
             new InternalReduceResult(
                 initialReadModelContent,
-                lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable));
+                lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                Enumerable.Empty<string>(),
+                string.Empty));
     }
 
     TReadModel GetResult<TReadModel>(Task<TReadModel> task) => task.GetAwaiter().GetResult();

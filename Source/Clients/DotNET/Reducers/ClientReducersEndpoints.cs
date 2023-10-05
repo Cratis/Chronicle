@@ -68,15 +68,15 @@ public static class ClientReducersEndpoints
                 var result = await reducers.OnNext(reducerId, reduce.Events, reduce.InitialState);
 
                 var stateAsJson = JsonSerializer.SerializeToNode(result.State, Globals.JsonSerializerOptions)?.AsObject();
-                var reduceResult = new ReduceResult(stateAsJson, result.LastSuccessfullyObservedEvent);
+                var reduceResult = new ReduceResult(stateAsJson, result.LastSuccessfullyObservedEvent, result.ErrorMessages, result.StackTrace);
 
                 context.Response.StatusCode = result.IsSuccess ? (int)HttpStatusCode.OK : (int)HttpStatusCode.InternalServerError;
                 if (!result.IsSuccess)
                 {
                     commandResult = new CommandResult
                     {
-                        ExceptionMessages = result.Error!.GetAllMessages(),
-                        ExceptionStackTrace = result.Error!.StackTrace ?? string.Empty,
+                        ExceptionMessages = result.ErrorMessages,
+                        ExceptionStackTrace = result.StackTrace ?? string.Empty,
                         Response = reduceResult
                     };
                 }
@@ -91,7 +91,11 @@ public static class ClientReducersEndpoints
                 {
                     ExceptionMessages = ex.GetAllMessages(),
                     ExceptionStackTrace = ex.StackTrace ?? string.Empty,
-                    Response = new ReduceResult(reduce.InitialState, Events.EventSequenceNumber.Unavailable)
+                    Response = new ReduceResult(
+                        reduce.InitialState,
+                        Events.EventSequenceNumber.Unavailable,
+                        ex.GetAllMessages(),
+                        ex.StackTrace ?? string.Empty)
                 };
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             }
