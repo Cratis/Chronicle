@@ -1,12 +1,15 @@
 // Copyright (c) Aksio Insurtech. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Orleans.Providers;
+
 namespace Aksio.Cratis.Kernel.Grains.Jobs;
 
 /// <summary>
 /// Represents an implementation of <see cref="IJob{TRequest}"/>.
 /// </summary>
 /// <typeparam name="TRequest">Type of request object that gets passed to job.</typeparam>
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
 public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
 {
     /// <inheritdoc/>
@@ -17,6 +20,9 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
 
     /// <inheritdoc/>
     public Task ReportStepProgress(JobStepId stepId, JobStepProgress progress) => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public virtual Task OnCompleted() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task OnStepSuccessful(JobStepId stepId)
@@ -60,6 +66,7 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
         {
             Status = JobStepStatus.Running
         };
+        State.Progress.TotalSteps++;
     }
 
     async Task HandleCompletion()
@@ -67,6 +74,7 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
         if (State.Progress.IsCompleted)
         {
             await GrainFactory.GetGrain<IJobsManager>(0).OnCompleted(this.GetPrimaryKey());
+            await OnCompleted();
         }
     }
 }

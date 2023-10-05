@@ -117,6 +117,6 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             }
         }
 
-        return failed;
+        return !failed;
     }
 }

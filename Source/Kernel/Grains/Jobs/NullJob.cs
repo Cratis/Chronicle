@@ -9,6 +9,9 @@ namespace Aksio.Cratis.Kernel.Grains.Jobs;
 public class NullJob : IJob
 {
     /// <inheritdoc/>
+    public Task OnCompleted() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task OnStepFailed(JobStepId stepId) => Task.CompletedTask;
 
     /// <inheritdoc/>

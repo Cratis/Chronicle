@@ -37,7 +37,8 @@ public class Replay : BaseObserverState
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
-        typeof(Indexing)
+        typeof(Indexing),
+        typeof(Observing)
     }.ToImmutableList();
 
     /// <inheritdoc/>

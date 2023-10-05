@@ -42,6 +42,12 @@ public interface IJob : IGrainWithGuidKey
     /// <param name="stepId">The <see cref="JobStepId"/> of the step that failed.</param>
     /// <returns>Awaitable task.</returns>
     Task OnStepFailed(JobStepId stepId);
+
+    /// <summary>
+    /// Called when the job has completed.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task OnCompleted();
 }
 
 /// <summary>

@@ -36,7 +36,8 @@ public abstract class JobStep<TRequest> : SyncWorker<TRequest, object>, IJobStep
     /// <inheritdoc/>
     public async Task Start(GrainId jobId, TRequest request)
     {
-        Job = (GrainFactory.GetGrain(jobId) as IJob)!;
+        Job = GrainFactory.GetGrain(jobId).AsReference<IJob>();
+
         await PrepareStep(request);
         await Start(request);
     }

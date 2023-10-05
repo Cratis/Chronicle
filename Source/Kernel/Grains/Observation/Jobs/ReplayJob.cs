@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Grains.Jobs;
+using Aksio.Cratis.Kernel.Grains.Observation.States;
 using Aksio.Cratis.Kernel.Keys;
-using Orleans.Providers;
 
 namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 
 /// <summary>
 /// Represents a job for replaying an observer.
 /// </summary>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Jobs)]
 public class ReplayJob : Job<ReplayRequest>, IReplayJob
 {
     readonly IObserverKeyIndexes _observerKeyIndexes;
+    ReplayRequest? _request;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReplayJob"/> class.
@@ -27,6 +27,7 @@ public class ReplayJob : Job<ReplayRequest>, IReplayJob
     /// <inheritdoc/>
     public override async Task Start(ReplayRequest request)
     {
+        _request = request;
         var index = await _observerKeyIndexes.GetFor(
             request.ObserverKey.MicroserviceId,
             request.ObserverKey.TenantId,
@@ -45,5 +46,15 @@ public class ReplayJob : Job<ReplayRequest>, IReplayJob
 
             break;
         }
+
+        await WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public override async Task OnCompleted()
+    {
+        if (_request == null) return;
+        var observer = GrainFactory.GetGrain<IObserver>(_request.ObserverId, _request.ObserverKey);
+        await observer.TransitionTo<Observing>();
     }
 }
