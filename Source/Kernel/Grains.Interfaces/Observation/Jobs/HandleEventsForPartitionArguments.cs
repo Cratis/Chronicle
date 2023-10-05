@@ -14,7 +14,7 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <param name="ObserverKey">The <see cref="ObserverKey"/> with extended details about the observer.</param>
 /// <param name="Partition">The partition in the form a <see cref="Key"/>.</param>
 /// <param name="EventTypes">The event types that are to replay.</param>
-public record ReplayStepRequest(
+public record HandleEventsForPartitionArguments(
     ObserverId ObserverId,
     ObserverKey ObserverKey,
     Key Partition,

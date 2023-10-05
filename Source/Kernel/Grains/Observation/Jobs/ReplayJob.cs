@@ -35,8 +35,8 @@ public class ReplayJob : Job<ReplayRequest>, IReplayJob
         var keys = await index.GetKeys();
         await foreach (var key in keys)
         {
-            await AddStep<IReplayJobStep, ReplayStepRequest>(
-                new ReplayStepRequest(
+            await AddStep<IReplayJobStep, HandleEventsForPartitionArguments>(
+                new HandleEventsForPartitionArguments(
                     request.ObserverId,
                     request.ObserverKey,
                     key,
