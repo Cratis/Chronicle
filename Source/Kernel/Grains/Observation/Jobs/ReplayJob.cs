@@ -35,12 +35,15 @@ public class ReplayJob : Job<ReplayRequest>, IReplayJob
         var keys = await index.GetKeys();
         await foreach (var key in keys)
         {
-            await AddStep<IReplayJobStep, HandleEventsForPartitionArguments>(
+            await AddStep<IHandleEventsForPartition, HandleEventsForPartitionArguments>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverId,
                     request.ObserverKey,
+                    request.ObserverSubscription,
                     key,
                     request.EventTypes));
+
+            break;
         }
     }
 }

@@ -55,7 +55,7 @@ public abstract class Job<TRequest> : Grain<JobState>, IJob<TRequest>
     {
         var jobStepId = JobStepId.New();
         var jobStep = GrainFactory.GetGrain<TJobStep>(jobStepId);
-        await jobStep.Start(request);
+        await jobStep.Start(this.GetGrainId(), request);
         State.Steps[jobStepId] = new JobStepState
         {
             Status = JobStepStatus.Running

@@ -24,5 +24,5 @@ public record ObserverSubscription(ObserverId ObserverId, ObserverKey ObserverKe
     /// <summary>
     /// Check whether or not the subscription is subscribed.
     /// </summary>
-    public bool IsSubscribed => !Equals(Unsubscribed);
+    public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);
 }

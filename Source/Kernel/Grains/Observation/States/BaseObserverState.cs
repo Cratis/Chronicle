@@ -15,4 +15,9 @@ public abstract class BaseObserverState : State<ObserverState>
     /// Gets the <see cref="ObserverRunningState"/> that the state represents.
     /// </summary>
     public abstract ObserverRunningState RunningState { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IObserver"/> the state belongs to.
+    /// </summary>
+    public IObserver Observer => (StateMachine as IObserver)!;
 }

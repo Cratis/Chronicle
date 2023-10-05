@@ -43,11 +43,14 @@ public class Replay : BaseObserverState
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
+        var subscription = await Observer.GetSubscription();
+
         await _jobsManager.Start<IReplayJob, ReplayRequest>(
             JobId.New(),
             new ReplayRequest(
                 state.ObserverId,
                 _observerKey,
+                subscription,
                 state.EventTypes));
 
         return state;

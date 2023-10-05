@@ -14,10 +14,12 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Represents a step in a replay job.
 /// </summary>
-public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments>, IReplayJobStep
+public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArguments>, IHandleEventsForPartition
 {
     readonly ProviderFor<IEventSequenceStorage> _eventSequenceStorageProvider;
     readonly IExecutionContextManager _executionContextManager;
+    IObserver? _observer;
+    IObserverSubscriber? _subscriber;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HandleEventsForPartition"/> class.
@@ -37,16 +39,14 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
     }
 
     /// <inheritdoc/>
-    protected override async Task PerformStep(HandleEventsForPartitionArguments request)
+    protected override Task PrepareStep(HandleEventsForPartitionArguments request)
     {
         var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
-        var observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, request.ObserverKey);
-        var subscription = await observer.GetSubscription();
-        if (!subscription.IsSubscribed)
+        _observer = GrainFactory.GetGrain<IObserver>(request.ObserverId, request.ObserverKey);
+
+        if (!request.ObserverSubscription.IsSubscribed)
         {
-            // TODO: Talk back to the job and report status for the step.
-            // We can't perform the step.
-            return;
+            return Task.CompletedTask;
         }
 
         var key = new ObserverSubscriberKey(
@@ -57,8 +57,20 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             request.ObserverKey.SourceMicroserviceId,
             request.ObserverKey.SourceTenantId);
 
-        var subscriber = (GrainFactory.GetGrain(subscription.SubscriberType, subscription.ObserverId, key) as IObserverSubscriber)!;
+        _subscriber = (GrainFactory.GetGrain(request.ObserverSubscription.SubscriberType, request.ObserverSubscription.ObserverId, key) as IObserverSubscriber)!;
 
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    protected override async Task<bool> PerformStep(HandleEventsForPartitionArguments request)
+    {
+        if (_subscriber == null || !request.ObserverSubscription.IsSubscribed)
+        {
+            return false;
+        }
+
+        var eventSourceId = (EventSourceId)(request.Partition.Value.ToString() ?? string.Empty);
         _executionContextManager.Establish(request.ObserverKey.TenantId, CorrelationId.New(), request.ObserverKey.MicroserviceId);
         var eventSequenceStorage = _eventSequenceStorageProvider();
         var events = await eventSequenceStorage.GetFromSequenceNumber(
@@ -67,11 +79,44 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
             eventSourceId,
             request.EventTypes);
 
-        var subscriberContext = new ObserverSubscriberContext(subscription.Arguments);
+        var subscriberContext = new ObserverSubscriberContext(request.ObserverSubscription.Arguments);
+
+        var failed = false;
+        var exceptionMessages = Enumerable.Empty<string>();
+        var exceptionStackTrace = string.Empty;
+        var tailEventSequenceNumber = EventSequenceNumber.Unavailable;
 
         while (await events.MoveNext())
         {
-            await subscriber.OnNext(events.Current, subscriberContext);
+            try
+            {
+                tailEventSequenceNumber = events.Current.First().Metadata.SequenceNumber;
+                var result = await _subscriber!.OnNext(events.Current, subscriberContext);
+                switch (result.State)
+                {
+                    case ObserverSubscriberState.Failed:
+                        failed = true;
+                        exceptionMessages = result.ExceptionMessages;
+                        exceptionStackTrace = result.ExceptionStackTrace;
+                        tailEventSequenceNumber = result.LastSuccessfulObservation;
+                        break;
+                    case ObserverSubscriberState.Disconnected:
+                        return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                failed = true;
+                exceptionMessages = ex.GetAllMessages().ToArray();
+                exceptionStackTrace = ex.StackTrace ?? string.Empty;
+            }
+
+            if (failed)
+            {
+                await _observer!.PartitionFailed(eventSourceId, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace);
+            }
         }
+
+        return failed;
     }
 }

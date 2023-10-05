@@ -11,8 +11,10 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// </summary>
 /// <param name="ObserverId">The identifier of the observer to replay.</param>
 /// <param name="ObserverKey">The additional <see cref="ObserverKey"/> for the observer to replay.</param>
+/// <param name="ObserverSubscription">The <see cref="ObserverSubscription"/> for the observer.</param>
 /// <param name="EventTypes">The event types to replay.</param>
 public record ReplayRequest(
     ObserverId ObserverId,
     ObserverKey ObserverKey,
+    ObserverSubscription ObserverSubscription,
     IEnumerable<EventType> EventTypes);

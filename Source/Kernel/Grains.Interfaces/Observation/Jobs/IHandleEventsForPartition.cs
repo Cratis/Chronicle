@@ -8,6 +8,6 @@ namespace Aksio.Cratis.Kernel.Grains.Observation.Jobs;
 /// <summary>
 /// Defines a step in the replay job.
 /// </summary>
-public interface IReplayJobStep : IJobStep<HandleEventsForPartitionArguments>
+public interface IHandleEventsForPartition : IJobStep<HandleEventsForPartitionArguments>
 {
 }
