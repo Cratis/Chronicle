@@ -90,6 +90,11 @@ public class HandleEventsForPartition : JobStep<HandleEventsForPartitionArgument
         {
             try
             {
+                if (!events.Current.Any())
+                {
+                    break;
+                }
+
                 tailEventSequenceNumber = events.Current.First().Metadata.SequenceNumber;
                 var result = await _subscriber!.OnNext(events.Current, subscriberContext);
                 switch (result.State)
