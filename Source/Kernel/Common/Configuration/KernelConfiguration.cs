@@ -30,7 +30,7 @@ public class KernelConfiguration : IPerformPostBindOperations
     /// <summary>
     /// Gets the <see cref="Telemetry"/> configuration.
     /// </summary>
-    public Telemetry Telemetry { get; init; } = new ();
+    public Telemetry Telemetry { get; init; } = new();
 
     /// <summary>
     /// Gets the <see cref="Storage"/> configuration.
@@ -40,8 +40,14 @@ public class KernelConfiguration : IPerformPostBindOperations
     /// <inheritdoc/>
     public void Perform()
     {
-        Tenants[TenantId.NotSet.ToString()] = new();
-        Microservices[MicroserviceId.Unspecified.ToString()] = new();
+        Tenants[TenantId.NotSet.ToString()] = new()
+        {
+            Name = "Default Single Tenant"
+        };
+        Microservices[MicroserviceId.Unspecified.ToString()] = new()
+        {
+            Name = "Shared"
+        };
         Storage.ConfigureKernelMicroservice(Tenants.Select(_ => _.Key));
     }
 }
