@@ -12,6 +12,7 @@ import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridV
 import { Box, Button, Divider, FormControl, InputLabel, Link, MenuItem, Select, Stack, Toolbar, Typography } from '@mui/material';
 import { useRouteParams } from './RouteParams';
 import * as icons from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 const observerRunningStates: { [key: number]: string; } = {
     0: 'Unknown',
@@ -35,60 +36,9 @@ const observerTypes: { [key: number]: string; } = {
     4: 'Reducer'
 };
 
-const columns: GridColDef[] = [
-    {
-        headerName: 'Id',
-        field: 'observerId',
-        width: 250
-    },
-    {
-        headerName: 'Name',
-        field: 'name',
-        width: 300,
-    },
-    {
-        headerName: 'Type',
-        field: 'type',
-        width: 200,
-        valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
-            return observerTypes[params.row.type as number];
-        }
-    },
-    {
-        headerName: 'State',
-        field: 'runningState',
-        width: 200,
-        valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
-            return observerRunningStates[params.row.runningState as number];
-        }
-    },
-    {
-        headerName: 'Next Event',
-        field: 'nextEventSequenceNumber',
-        width: 200,
-    },
-    {
-        headerName: 'Failures',
-        field: 'failedPartitions',
-        width: 200,
-        renderCell: (params) => {
-            return (
-                <>
-                    {params.row.failedPartitions.length > 0 &&
-                        <Link href="#" onClick={(e) => {
-                            e.preventDefault();
-                            alert('hello')
-                        }
-                        }>{params.row.failedPartitions.length}</Link>
-                    }
-                </>
-            )
-        }
-    },
-];
-
 export const Observers = () => {
     const { microserviceId } = useRouteParams();
+    const navigate = useNavigate();
 
     const [tenants] = AllTenants.use();
     const [selectedTenant, setSelectedTenant] = useState<TenantInfo>();
@@ -103,6 +53,57 @@ export const Observers = () => {
     };
 
     const [observers] = AllObservers.use(getAllObserversArguments());
+
+
+    const columns: GridColDef[] = [
+        {
+            headerName: 'Id',
+            field: 'observerId',
+            width: 250
+        },
+        {
+            headerName: 'Name',
+            field: 'name',
+            width: 300,
+        },
+        {
+            headerName: 'Type',
+            field: 'type',
+            width: 200,
+            valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
+                return observerTypes[params.row.type as number];
+            }
+        },
+        {
+            headerName: 'State',
+            field: 'runningState',
+            width: 200,
+            valueGetter: (params: GridValueGetterParams<ObserverInformation>) => {
+                return observerRunningStates[params.row.runningState as number];
+            }
+        },
+        {
+            headerName: 'Next Event',
+            field: 'nextEventSequenceNumber',
+            width: 200,
+        },
+        {
+            headerName: 'Failures',
+            field: 'failedPartitions',
+            width: 200,
+            renderCell: (params) => {
+                return (
+                    <>
+                        {params.row.failedPartitions.length > 0 &&
+                            <Link style={{ cursor: 'pointer'}} onClick={() => {
+                                navigate(`/event-store/${microserviceId}/failed-partitions`);
+                            }}>{params.row.failedPartitions.length}</Link>
+                        }
+                    </>
+                )
+            }
+        }
+    ];
 
     useEffect(() => {
         if (tenants.data.length > 0) {
