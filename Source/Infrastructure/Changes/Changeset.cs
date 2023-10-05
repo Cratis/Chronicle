@@ -52,7 +52,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     }
 
     /// <inheritdoc/>
-    public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
+    public void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
         SetProperties(workingState, propertyMappers, arrayIndexers);
@@ -66,7 +66,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     }
 
     /// <inheritdoc/>
-    public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, IArrayIndexers arrayIndexers)
+    public IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers)
     {
         var workingState = InitialState.Clone()!;
         var changeset = new Changeset<TSource, TTarget>(_comparer, Incoming, workingState);
@@ -76,7 +76,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
     }
 
     /// <inheritdoc/>
-    public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, IArrayIndexers arrayIndexers)
+    public IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers)
     {
         var workingState = CurrentState.Clone()!;
         var changeset = new Changeset<TSource, TTarget>(_comparer, incoming, workingState);
@@ -91,7 +91,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
         PropertyPath identifiedByProperty,
         object key,
         IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers,
-        IArrayIndexers arrayIndexers)
+        ArrayIndexers arrayIndexers)
         where TChild : new()
     {
         var workingState = CurrentState.Clone()!;
@@ -172,7 +172,7 @@ public class Changeset<TSource, TTarget> : IChangeset<TSource, TTarget>
         return default!;
     }
 
-    void SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
+    void SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
     {
         foreach (var propertyMapper in propertyMappers)
         {

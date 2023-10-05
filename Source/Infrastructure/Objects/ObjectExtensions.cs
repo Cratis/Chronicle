@@ -57,7 +57,7 @@ public static class ObjectExtensions
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>Instance of the last segment in the path.</returns>
     /// <exception cref="UnableToResolvePropertyPathOnType">Thrown if not able to resolve parts of the property path on the type.</exception>
-    public static object EnsurePath(this object source, PropertyPath propertyPath, IArrayIndexers arrayIndexers)
+    public static object EnsurePath(this object source, PropertyPath propertyPath, ArrayIndexers arrayIndexers)
     {
         var currentType = source.GetType();
         var currentInstance = source;

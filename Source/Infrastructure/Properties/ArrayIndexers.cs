@@ -4,16 +4,23 @@
 namespace Aksio.Cratis.Properties;
 
 /// <summary>
-/// Represents an implementation of <see cref="IArrayIndexers"/>.
+/// Represents an implementation of <see cref="ArrayIndexers"/>.
 /// </summary>
-public class ArrayIndexers : IArrayIndexers
+public class ArrayIndexers
 {
     /// <summary>
     /// Represents no indexers - used when you don't have any indexers.
     /// </summary>
-    public static readonly IArrayIndexers NoIndexers = new ArrayIndexers(Array.Empty<ArrayIndexer>());
+    public static readonly ArrayIndexers NoIndexers = new(Enumerable.Empty<ArrayIndexer>());
 
-    readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers;
+    readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers = new Dictionary<PropertyPath, ArrayIndexer>();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ArrayIndexers"/> class.
+    /// </summary>
+    public ArrayIndexers()
+    {
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ArrayIndexers"/> class.
@@ -21,20 +28,35 @@ public class ArrayIndexers : IArrayIndexers
     /// <param name="arrayIndexers">A collection of <see cref="ArrayIndexer">array indexers</see>.</param>
     public ArrayIndexers(IEnumerable<ArrayIndexer> arrayIndexers)
     {
-        _arrayIndexers = arrayIndexers.ToDictionary(_ => _.ArrayProperty, _ => _);
+        All = arrayIndexers;
     }
 
-    /// <inheritdoc/>
-    public IEnumerable<ArrayIndexer> All => _arrayIndexers.Values;
+    /// <summary>
+    /// Gets all <see cref="ArrayIndexer"/>.
+    /// </summary>
+    /// <returns>Collection of <see cref="ArrayIndexer"/>.</returns>
+    public IEnumerable<ArrayIndexer> All
+    {
+        get => _arrayIndexers.Values;
+        init => _arrayIndexers = value.ToDictionary(_ => _.ArrayProperty, _ => _);
+    }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Get an <see cref="ArrayIndexer"/> for a <see cref="PropertyPath"/>.
+    /// </summary>
+    /// <param name="propertyPath"><see cref="PropertyPath"/> to get for.</param>
+    /// <returns>The <see cref="ArrayIndexer"/>.</returns>
     public ArrayIndexer GetFor(PropertyPath propertyPath)
     {
         ThrowIfMissingArrayIndexerForPropertyPath(propertyPath);
         return _arrayIndexers[propertyPath];
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Check if there is an <see cref="ArrayIndexer"/> for a <see cref="PropertyPath"/>.
+    /// </summary>
+    /// <param name="propertyPath"><see cref="PropertyPath"/> to check for.</param>
+    /// <returns>True if it has it, false if not.</returns>
     public bool HasFor(PropertyPath propertyPath) => _arrayIndexers.ContainsKey(propertyPath);
 
     void ThrowIfMissingArrayIndexerForPropertyPath(PropertyPath propertyPath)

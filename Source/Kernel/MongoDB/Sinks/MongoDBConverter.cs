@@ -41,7 +41,7 @@ public class MongoDBConverter : IMongoDBConverter
     }
 
     /// <inheritdoc/>
-    public MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, IArrayIndexers arrayIndexers)
+    public MongoDBProperty ToMongoDBProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers)
     {
         var arrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
         var propertyBuilder = new StringBuilder();

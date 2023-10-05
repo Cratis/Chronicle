@@ -47,11 +47,11 @@ public interface IChangeset<TSource, TTarget>
     /// Applies properties to the <see cref="Changeset{TSource, TTarget}"/>.
     /// </summary>
     /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
-    /// <param name="arrayIndexers"><see cref="IArrayIndexers"/> for accessing nested objects with arrays.</param>
+    /// <param name="arrayIndexers"><see cref="ArrayIndexers"/> for accessing nested objects with arrays.</param>
     /// <remarks>
     /// This will run a diff against the initial state and only produce changes that are new.
     /// </remarks>
-    void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers);
+    void SetProperties(IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Apply a join change to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -60,7 +60,7 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="key">Key representing the join.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>A changeset that is scoped for the join.</returns>
-    IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, IArrayIndexers arrayIndexers);
+    IChangeset<TSource, TTarget> Join(PropertyPath onProperty, object key, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Apply a join resolution change to the <see cref="Changeset{TSource, TTarget}"/>.
@@ -70,7 +70,7 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="incoming">The incoming change that resolved the join.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>A changeset that is scoped for the join.</returns>
-    IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, IArrayIndexers arrayIndexers);
+    IChangeset<TSource, TTarget> ResolvedJoin(PropertyPath onProperty, object key, TSource incoming, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Applies properties to the child in the model to the <see cref="IChangeset{TSource, TTarget}"/>.
@@ -82,7 +82,7 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-    void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, IArrayIndexers arrayIndexers)
+    void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
         where TChild : new();
 
     /// <summary>

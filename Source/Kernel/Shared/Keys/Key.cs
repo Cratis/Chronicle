@@ -10,4 +10,4 @@ namespace Aksio.Cratis.Kernel.Keys;
 /// </summary>
 /// <param name="Value">The actual key value.</param>
 /// <param name="ArrayIndexers">Any array indexers.</param>
-public record Key(object Value, IArrayIndexers ArrayIndexers);
+public record Key(object Value, ArrayIndexers ArrayIndexers);

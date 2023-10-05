@@ -40,7 +40,7 @@ public static class CollectionExtensions
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns>The ensured <see cref="ICollection{ExpandoObject}"/>.</returns>
     /// <exception cref="ChildrenPropertyIsNotEnumerableForType">Thrown if there is an existing property and it is not enumerable.</exception>
-    public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, IArrayIndexers arrayIndexers)
+    public static ICollection<TChild> EnsureCollection<TTarget, TChild>(this TTarget target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
         if (target is ExpandoObject targetAsExpandoObject)
         {
