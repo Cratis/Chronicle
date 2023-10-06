@@ -1,3 +1,11 @@
+# [v9.5.2] - 2023-10-6 [PR: #981](https://github.com/aksio-insurtech/Cratis/pull/981)
+
+### Fixed
+
+- Projection registration internally was registering per tenant, while it should be per microservice.
+- Added more logging for projection registration.
+
+
 # [v9.5.1] - 2023-10-3 [PR: #975](https://github.com/aksio-insurtech/Cratis/pull/975)
 
 ### Fixed
