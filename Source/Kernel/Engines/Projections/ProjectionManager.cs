@@ -4,6 +4,7 @@
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
 using Aksio.Cratis.Projections;
 using Aksio.Cratis.Projections.Definitions;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections;
 
@@ -15,6 +16,7 @@ public class ProjectionManager : IProjectionManager
 {
     readonly IProjectionFactory _projectionFactory;
     readonly IProjectionPipelineFactory _projectionPipelineFactory;
+    readonly ILogger<ProjectionManager> _logger;
     readonly Dictionary<ProjectionId, IProjection> _projections = new();
     readonly Dictionary<ProjectionId, IProjectionPipeline> _pipelines = new();
 
@@ -23,12 +25,15 @@ public class ProjectionManager : IProjectionManager
     /// </summary>
     /// <param name="projectionFactory"><see cref="IProjectionFactory"/> to use.</param>
     /// <param name="projectionPipelineFactory"><see cref="IProjectionPipelineFactory"/> to use.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ProjectionManager(
         IProjectionFactory projectionFactory,
-        IProjectionPipelineFactory projectionPipelineFactory)
+        IProjectionPipelineFactory projectionPipelineFactory,
+        ILogger<ProjectionManager> logger)
     {
         _projectionFactory = projectionFactory;
         _projectionPipelineFactory = projectionPipelineFactory;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -51,6 +56,8 @@ public class ProjectionManager : IProjectionManager
     /// <inheritdoc/>
     public async Task Register(ProjectionDefinition projectionDefinition, ProjectionPipelineDefinition pipelineDefinition)
     {
+        _logger.Registering(projectionDefinition.Identifier, projectionDefinition.Name);
+
         var projection = await _projectionFactory.CreateFrom(projectionDefinition);
         var pipeline = _projectionPipelineFactory.CreateFrom(projection, pipelineDefinition);
 
