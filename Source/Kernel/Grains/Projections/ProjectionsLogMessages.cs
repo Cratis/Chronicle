@@ -19,4 +19,7 @@ internal static partial class ProjectionsLogMessages
 
     [LoggerMessage(2, LogLevel.Information, "Registering projection '{Name} ({Identifier})' has changed its definition")]
     internal static partial void ProjectionHasChanged(this ILogger<Projections> logger, ProjectionId identifier, ProjectionName name);
+
+    [LoggerMessage(3, LogLevel.Information, "Rehydrating projections and pipelines")]
+    internal static partial void Rehydrate(this ILogger<Projections> logger);
 }
