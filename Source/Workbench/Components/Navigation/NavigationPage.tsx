@@ -79,7 +79,7 @@ export const NavigationPage = (props: NavigationPageProps) => {
                                         <>
                                             {item.children?.map((child, childIndex) => {
                                                 return (
-                                                    <Route key={`${index}-${childIndex}`} path={`${child.targetPath}`}
+                                                    <Route key={`${index}-${childIndex}`} path={`${child.routePath ?? child.targetPath}`}
                                                         element={child.content} />
                                                 );
                                             })}

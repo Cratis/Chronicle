@@ -31,11 +31,6 @@ export const EventStore = () => {
                 targetPath: 'sequences',
                 content: <EventSequences />
             }, {
-                title: 'Failed partitions',
-                icon: <icons.ErrorOutline />,
-                targetPath: 'failed-partitions',
-                content: <FailedPartitions />
-            }, {
                 title: 'Observers',
                 icon: <icons.LoupeOutlined />,
                 targetPath: 'observers',
@@ -45,6 +40,12 @@ export const EventStore = () => {
                 icon: <icons.Mediation />,
                 targetPath: 'projections',
                 content: <Projections />
+            }, {
+                title: 'Failed partitions',
+                icon: <icons.ErrorOutline />,
+                targetPath: 'failed-partitions',
+                routePath: 'failed-partitions/:observerId',
+                content: <FailedPartitions />
             }]
         } as NavigationItem;
     });

@@ -96,7 +96,7 @@ export const Observers = () => {
                     <>
                         {params.row.failedPartitions.length > 0 &&
                             <Link style={{ cursor: 'pointer'}} onClick={() => {
-                                navigate(`/event-store/${microserviceId}/failed-partitions`);
+                                navigate(`/event-store/${microserviceId}/failed-partitions/${params.row.observerId}`);
                             }}>{params.row.failedPartitions.length}</Link>
                         }
                     </>

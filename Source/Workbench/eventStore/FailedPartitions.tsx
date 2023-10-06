@@ -9,13 +9,14 @@ import { FailedPartition } from 'API/events/store/failed-partitions/FailedPartit
 import { AllEventSequences } from 'API/events/store/sequences/AllEventSequences';
 import { EventSequenceInformation } from 'API/events/store/sequences/EventSequenceInformation';
 import { QueryResultWithState } from '@aksio/applications/queries';
-import { useRouteParams } from './RouteParams';
+import { RouteParams } from './RouteParams';
 import { Box, Button, Divider, Drawer, FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField, Toolbar, Typography } from '@mui/material';
 import { DataGrid, GridCallbackDetails, GridColDef, GridRowSelectionModel, GridValueGetterParams } from '@mui/x-data-grid';
 import * as icons from '@mui/icons-material';
 import { RetryPartition } from 'API/events/store/observers/RetryPartition';
 import { GetObservers } from 'API/events/store/observers/GetObservers';
 import { FailedPartitionAttempts } from './FailedPartitionAttempts';
+import { useParams } from 'react-router-dom';
 
 let eventSequences: QueryResultWithState<EventSequenceInformation[]>;
 
@@ -62,8 +63,14 @@ const columns: GridColDef[] = [
     }
 ];
 
+interface FailedPartitionsRouteParams extends RouteParams {
+    observerId: string;
+}
+
+
+
 export const FailedPartitions = () => {
-    const { microserviceId } = useRouteParams();
+    const { microserviceId, observerId } = useParams() as unknown as FailedPartitionsRouteParams;
     const [retryCommand, setRetryCommandValues] = RetryPartition.use();
 
     const [es] = AllEventSequences.use();
@@ -112,11 +119,6 @@ export const FailedPartitions = () => {
             (partition as any).observerName = observer.name;
         }
     }
-
-    useEffect(() => {
-        console.log("Now we have observers", observers.data.length);
-
-    }, [observers.data])
 
     const observerForSelectedPartition = observers.data.find(_ => _.observerId == selectedFailedPartition?.observerId)!
 
