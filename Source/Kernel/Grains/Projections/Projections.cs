@@ -106,7 +106,9 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
             var isNew = !await _projectionDefinitions().HasFor(projectionDefinition.Identifier);
             var hasChanged = await _projectionDefinitions().HasChanged(projectionDefinition);
 
-            if (hasChanged || isNew)
+            _executionContextManager.Establish(microserviceId);
+
+            if (hasChanged || isNew || !_projectionManagerProvider().Exists(projectionDefinition.Identifier))
             {
                 await RegisterProjectionAndPipeline(
                     microserviceId,
