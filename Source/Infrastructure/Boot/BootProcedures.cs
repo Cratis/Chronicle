@@ -3,6 +3,7 @@
 
 using Aksio.Collections;
 using Aksio.Types;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Boot;
 
@@ -12,13 +13,25 @@ namespace Aksio.Cratis.Boot;
 public class BootProcedures : IBootProcedures
 {
     readonly IInstancesOf<IPerformBootProcedure> _procedures;
+    readonly ILogger<BootProcedures> _logger;
 
     /// <summary>
     /// Initializes a new instance of <see cref="BootProcedures"/>.
     /// </summary>
     /// <param name="procedures"><see cref="IInstancesOf{T}"/> <see cref="IPerformBootProcedure"/>.</param>
-    public BootProcedures(IInstancesOf<IPerformBootProcedure> procedures) => _procedures = procedures;
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    public BootProcedures(
+        IInstancesOf<IPerformBootProcedure> procedures,
+        ILogger<BootProcedures> logger)
+    {
+        _procedures = procedures;
+        _logger = logger;
+    }
 
     /// <inheritdoc/>
-    public void Perform() => _procedures.ForEach(_ => _.Perform());
+    public void Perform()
+    {
+        _logger.PerformingBootProcedures();
+        _procedures.ForEach(_ => _.Perform());
+    }
 }
