@@ -1,3 +1,11 @@
+# [v9.5.3] - 2023-10-6 [PR: #983](https://github.com/aksio-insurtech/Cratis/pull/983)
+
+### Fixed
+
+- Adding more logging to see what is going on @ startup.
+- Making sure we register projections that aren't registered with the `ProjectionManager`.
+
+
 # [v9.5.2] - 2023-10-6 [PR: #981](https://github.com/aksio-insurtech/Cratis/pull/981)
 
 ### Fixed
