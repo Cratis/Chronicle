@@ -66,6 +66,8 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
     /// <inheritdoc/>
     public async Task Rehydrate()
     {
+        _logger.Rehydrate();
+
         foreach (var microserviceId in _microservices.GetMicroserviceIds())
         {
             var projectionPipelineDefinitions = await _projectionPipelineDefinitions().GetAll();
@@ -74,12 +76,12 @@ public class Projections : Grain, IProjections, IOnBroadcastChannelSubscribed
                 _executionContextManager.Establish(microserviceId);
                 if (await _projectionDefinitions().HasFor(pipeline.ProjectionId))
                 {
+                    var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
+                    await _projectionManagerProvider().Register(projectionDefinition, pipeline);
+
                     foreach (var tenant in _configuration.Tenants.GetTenantIds())
                     {
                         _executionContextManager.Establish(tenant, CorrelationId.New(), microserviceId);
-                        var projectionDefinition = await _projectionDefinitions().GetFor(pipeline.ProjectionId);
-                        await _projectionManagerProvider().Register(projectionDefinition, pipeline);
-
                         var key = new ProjectionKey(microserviceId, tenant, EventSequenceId.Log);
                         await GrainFactory.GetGrain<IProjection>(pipeline.ProjectionId, key).Ensure();
                     }

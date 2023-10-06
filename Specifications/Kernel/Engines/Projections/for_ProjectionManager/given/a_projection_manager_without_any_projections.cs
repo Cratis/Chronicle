@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Aksio.Cratis.Kernel.Engines.Projections.Pipelines;
+using Microsoft.Extensions.Logging;
 
 namespace Aksio.Cratis.Kernel.Engines.Projections.for_ProjectionManager.given;
 
@@ -17,6 +18,7 @@ public class a_projection_manager_without_any_projections : Specification
         projection_pipeline_factory = new();
         manager = new ProjectionManager(
             projection_factory.Object,
-            projection_pipeline_factory.Object);
+            projection_pipeline_factory.Object,
+            Mock.Of<ILogger<ProjectionManager>>());
     }
 }
